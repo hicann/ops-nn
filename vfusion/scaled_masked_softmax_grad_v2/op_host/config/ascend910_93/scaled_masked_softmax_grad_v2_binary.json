@@ -1,0 +1,134 @@
+{
+    "op_type": "ScaledMaskedSoftmaxGradV2",
+    "op_list": [
+      {
+        "bin_filename": "ScaledMaskedSoftmaxGradV2_bf16_nd_false",
+        "inputs": [
+          {
+            "name": "yGrad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 2,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "xGrad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"        , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      },
+      {
+        "bin_filename": "ScaledMaskedSoftmaxGradV2_fp16_nd_false",
+        "inputs": [
+          {
+            "name": "yGrad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 2,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "xGrad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"        , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      },
+      {
+        "bin_filename": "ScaledMaskedSoftmaxGradV2_fp32_nd_false",
+        "inputs": [
+          {
+            "name": "yGrad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "y",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 2,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "xGrad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"        , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      }
+    ]
+}

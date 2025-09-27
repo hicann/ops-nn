@@ -1,0 +1,1013 @@
+{    
+  "op_type": "Conv3DV2",
+  "op_list": [
+    {
+      "bin_filename": "Conv3DV2_NDC1HWC0_BF16_FRACTAL_Z_3D_BF16_FP32_NDC1HWC0_BF16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "FRACTAL_Z_3D",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NDC1HWC0_FP32_FRACTAL_Z_3D_FP32_FP32_NDC1HWC0_FP32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float32",
+          "format": "FRACTAL_Z_3D",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NDC1HWC0_FP16_FRACTAL_Z_3D_FP16_FP16_NDC1HWC0_FP16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float16",
+          "format": "FRACTAL_Z_3D",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NCDHW_BF16_NCDHW_BF16_FP32_NCDHW_BF16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NCDHW_FP32_NCDHW_FP32_FP32_NCDHW_FP32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NCDHW_FP16_NCDHW_FP16_FP32_NCDHW_FP16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NDC1HWC0_BF16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int8",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "int8",
+          "format": "FRACTAL_Z_3D",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DV2_NDC1HWC0_INT8_FRACTAL_Z_3D_INT8_FP32_NDC1HWC0_FP16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int8",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "int8",
+          "format": "FRACTAL_Z_3D",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1]]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "ori_format": "ND",
+          "paramType": "optional",
+          "shape": [-1],
+          "ori_shape": [-1],
+          "range": [[1, -1]]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "ori_format": "NCDHW",
+          "paramType": "required",
+          "shape": [-1, -1, -1, -1, -1, -1],
+          "ori_shape": [-1, -1, -1, -1, -1],
+          "range": [[1, -1], [1, -1], [1, -1], [1, -1], [1, -1], [1, -1]]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1, -1]
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": [-1, -1, -1, -1, -1]
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": -1
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

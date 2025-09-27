@@ -1,0 +1,11 @@
+  --full                            Install full mode
+    --install-path=<path>           Install product to specific dir path
+    --install-for-all               Install for all user
+    --quiet                         Quiet install mode, skip human-computer interactions
+  --uninstall                       Uninstall product with compatible run package which is installed before
+    --install-path=<path>           Uninstall specific ops_nn dir path
+  --upgrade                         Upgrade product immediately
+    --install-path=<path>           Upgrade specific ops_nn dir path
+    --install-for-all               Install for all user
+    --quiet                         Quiet install mode, skip human-computer interactions
+    --feature                       Nothing is currently supported

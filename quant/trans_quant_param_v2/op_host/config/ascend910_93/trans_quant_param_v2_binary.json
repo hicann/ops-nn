@@ -1,0 +1,49 @@
+{
+    "op_type": "TransQuantParamV2",
+    "op_list": [
+        {
+            "bin_filename": "TransQuantParamV2",
+            "inputs": [
+                {
+                    "name": "scale",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "offset",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "round_mode",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        }
+    ]
+}

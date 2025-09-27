@@ -1,0 +1,111 @@
+{
+    "op_type": "ScaledMaskedSoftmaxV2",
+    "op_list": [
+      {
+        "bin_filename": "ScaledMaskedSoftmaxV2_bf16_nd_false",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 1,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"          , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      },
+      {
+        "bin_filename": "ScaledMaskedSoftmaxV2_fp16_nd_false",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 1,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"          , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      },
+      {
+        "bin_filename": "ScaledMaskedSoftmaxV2_fp32_nd_false",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "mask",
+            "index": 1,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {"name": "scale"          , "dtype": "float", "value": null },
+          {"name": "fixed_triu_mask", "dtype": "bool" , "value": false}
+        ]
+      }
+    ]
+  }
+  

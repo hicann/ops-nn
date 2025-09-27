@@ -1,0 +1,1013 @@
+{
+    "op_type": "CTCLossV3",
+    "op_list": [
+      {
+        "bin_filename": "CTCLossV3_ec11f4dfdb072b22127811ff002b428f",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "neg_log_likelihood",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_e3a5564764f5ac48e57fb19ca6de90bb",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "neg_log_likelihood",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_43042d4eb3b0c779ef36d7de77bb69ba",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_969ed6f0fcfeecd472170fafe70d9180",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_402db422c6cb5fd17baebcd4dfc6a688",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_ae60a562ce2962d2987d7fed7392bc53",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_9b28851b5c3cba3b63bcd6fc1ba58f4b",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_665d23aae640becc0f905cdb87809da8",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_723f7079b496ec03cf826104533c94a9",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_65bded2ac8d6d80b895e55ae3bf7dc32",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_a767cf1115841554cdada96b8237ab6f",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3_8166b46c23cd8dc1cfc44a051717f1ce",
+        "inputs": [
+          {
+            "name": "log_probs",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+              "name": "neg_log_likelihood",
+              "index": 0,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "log_alpha",
+              "index": 1,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      }
+    ]
+  }

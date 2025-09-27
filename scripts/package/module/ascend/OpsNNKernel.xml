@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<block name="OpsNNKernel" copy_type="delivery" src_path="lib/" dst_path="" install_path="" install_own="$username:$usergroup" install_mod="550" install_type="all" pkg_feature="opp_binary">
+    <file_info value="tbe" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe" install_path="ops_nn/built-in/op_impl/ai_core/tbe">
+        <file value="config" entity="true"/>
+        <file value="impl" entity="true"/>
+        <file value="kernel" entity="true" optional="true"/>
+    </file_info>
+
+
+    <file_info value="rtkb" copy_type="source" src_path="" dst_path="built-in/data" install_path="ops_nn/built-in/data">
+        <file value="op" entity="true" optional="true"/>
+    </file_info>
+
+    <dir_info value="OpsNNKernel" install_mod="750" install_type="all">
+        <path value="ops_nn/built-in/op_impl/ai_core/tbe"/>
+        <path value="ops_nn/built-in/data"/>
+        <path value="ops_nn/built-in/data/op"/>
+    </dir_info>
+</block>

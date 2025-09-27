@@ -1,0 +1,113 @@
+{
+    "op_type": "Logit",
+    "op_list": [
+      {
+        "bin_filename": "Logit_089252cb34d0fed19df572552264c236",
+        "inputs": [
+          {
+            "name": "input",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "bin_filename": "Logit_d54603fcb2b294656d0ea51ac8dd0265",
+        "inputs": [
+          {
+            "name": "input",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "bin_filename": "Logit_ed4a2eb7d3d42daf7b2dff60e7014fda",
+        "inputs": [
+          {
+            "name": "input",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "eps",
+            "dtype": "float",
+            "value": 0.0
+          }
+        ]
+      }
+    ]
+  }

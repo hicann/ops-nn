@@ -1,0 +1,137 @@
+{
+  "op_type": "AdaptiveMaxPool3d",
+  "op_list": [
+    {
+      "bin_filename": "AdaptiveMaxPool3d_299cf4d7f9ef0f745d89d88c666b45aa",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "AdaptiveMaxPool3d_a8d63cbe8795eef99c620173d4757e59",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "AdaptiveMaxPool3d_291664ae3e88b38b8b46c2efbbea27c9",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+            "name": "indices",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "output_size",
+          "dtype": "list_int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

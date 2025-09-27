@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<block name="OpsNNInfO" copy_type="delivery" src_path="lib/" dst_path="" install_path="" install_own="$username:$usergroup" install_mod="550" install_type="all">
+    <file_info value="op_host" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)" install_path="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)">
+        <file value="libophost_nn.so" file_type="shared"/>
+    </file_info>
+
+    <file_info value="op_graph" copy_type="delivery" src_path="" dst_path="built-in/op_graph/inc" install_path="ops_nn/built-in/op_graph/inc" install_type="devel">
+        <file value="nn_ops.h"/>
+    </file_info>
+
+    <file_info value="aclnn_api" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_api/lib64/$(ARCH)" install_path="ops_nn/built-in/op_api/lib64/$(ARCH)">
+        <file value="libopapi_nn.so"/>
+    </file_info>
+
+    <file_info value="aclnn_inc" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_api/include" install_path="ops_nn/built-in/op_api/include">
+        <file value="aclnnop" entity="true"/>
+    </file_info>
+
+    <dir_info value="OpsNNInfo" install_mod="750" install_type="all">
+        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host"/>
+        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib"/>
+        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux"/>
+        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)"/>
+        <path value="ops_nn/built-in/op_graph"/>
+        <path value="ops_nn/built-in/op_graph/inc"/>
+        <path value="ops_nn/built-in/op_api"/>
+        <path value="ops_nn/built-in/op_api/lib64"/>
+        <path value="ops_nn/built-in/op_api/lib64/$(ARCH)"/>
+        <path value="ops_nn/built-in/op_api/include"/>
+        <path value="ops_nn/built-in/op_api/include/aclnnop"/>
+    </dir_info>
+</block>
