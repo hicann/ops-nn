@@ -7,8 +7,8 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef _GE_GLU_V2_TILING_H_
-#define _GE_GLU_V2_TILING_H_
+#ifndef _GE_GLU_V2_TILING_DEF_H_
+#define _GE_GLU_V2_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 

@@ -15,8 +15,8 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_gelu_quant.h"
-#include "../data_utils.h"
+#include "gelu_quant_tiling_def.h"
+#include "data_utils.h"
 
 #include <cstdint>
 
