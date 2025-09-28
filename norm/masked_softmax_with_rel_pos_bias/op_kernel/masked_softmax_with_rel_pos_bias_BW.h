@@ -183,7 +183,7 @@ class MaskedSoftmaxWithRelPosBiasBW {
       } else {
         if constexpr (existMuls) {
           Muls(yLocal, xLocal, static_cast<T>(scaleValue), totalSizeAligned);
-          pipe_barrier(PIPE_V);
+          PipeBarrier<PIPE_V>();
         }
 
         if constexpr (existAtten) {
@@ -194,7 +194,7 @@ class MaskedSoftmaxWithRelPosBiasBW {
             Add(yLocal, xLocal, attenMaskLocal, totalSizeAligned);
           }
 
-          pipe_barrier(PIPE_V);
+          PipeBarrier<PIPE_V>();
           attenMaskQueue.FreeTensor(attenMaskLocal);
         }
         if constexpr (existMuls || existAtten) {
@@ -202,7 +202,7 @@ class MaskedSoftmaxWithRelPosBiasBW {
         } else {
           Add(yLocal, xLocal, biasMaskLocal, totalSizeAligned);
         }
-        pipe_barrier(PIPE_V);
+        PipeBarrier<PIPE_V>();
 
         SoftMaxShapeInfo softmaxShapeInfo{ns1, s2AlignedSize, ns1, s2_};
         AscendC::SoftMax<T, false, false>(yLocal, yLocal, softMaxTiling,
