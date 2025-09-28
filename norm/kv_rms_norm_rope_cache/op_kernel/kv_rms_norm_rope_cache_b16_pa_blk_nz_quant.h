@@ -22,8 +22,7 @@ constexpr int64_t D1_SIZE16_PA_BLK_NZ_QUANT = 16;
 constexpr int64_t D0_SIZE32_PA_BLK_NZ_QUANT = 32;
 
 template <bool isPagedAttention, typename KV_DTYPE, typename K_DTYPE, typename V_DTYPE>
-class KernelKvRmsNormRopeCacheQuantB16PABLKNZ
-{
+class KernelKvRmsNormRopeCacheQuantB16PABLKNZ {
 public:
     __aicore__ inline KernelKvRmsNormRopeCacheQuantB16PABLKNZ(TPipe* pipe, const KvRmsNormRopeCacheTilingData* tiling)
         : pipe_(pipe), tilingData_(tiling)
@@ -39,9 +38,9 @@ public:
                                  (tilingData_->blockDim - 1) * tilingData_->blockFactor;
         }
 
-        ubFactor = tilingData_->ubFactor;
-        ubLoop = currentBlockFactor / ubFactor;
-        ubTail = currentBlockFactor - ubLoop * ubFactor;
+        ubFactor = tilingData_->ubFactor;                // 16
+        ubLoop = currentBlockFactor / ubFactor;          // 循环处理token，循环次数（头循环）
+        ubTail = currentBlockFactor - ubLoop * ubFactor; // 尾循环
 
         // init global memory
         kvGm.SetGlobalBuffer(
@@ -62,11 +61,16 @@ public:
 
         // init pipe
         pipe_->InitBuffer(
-            inQueueGamma, 2, (2 * RMS_NORM_LENGTH + ROPE_LENGTH) * sizeof(float));     // 2*(2*512+64)*4/1024=8.5
-        pipe_->InitBuffer(inQueueX, 2, ubFactor * RMS_NORM_LENGTH * sizeof(KV_DTYPE)); // 2*16*512*2/1024=32
+            inQueueGamma, 2, (2 * RMS_NORM_LENGTH + ROPE_LENGTH) * sizeof(float)); // 2*(2*512+64)*4/1024=8.5
         pipe_->InitBuffer(
-            outQueue, 2, ubFactor * RMS_NORM_LENGTH * (sizeof(KV_DTYPE) + sizeof(int8_t))); // 2*16*512*3/1024=48
-        pipe_->InitBuffer(wsBuffer, 3 * ubFactor * RMS_NORM_LENGTH * sizeof(float));        // 3*16*512*4/1024=96
+            inQueueX, 2,
+            ubFactor * RMS_NORM_LENGTH * sizeof(KV_DTYPE)); // 2*16*512*2/1024=32 -> 容纳8192个bfloat16或float16
+        pipe_->InitBuffer(
+            outQueue, 2,
+            ubFactor * RMS_NORM_LENGTH *
+                (sizeof(KV_DTYPE) +
+                 sizeof(int8_t))); // 2*16*512*3/1024=48 -> 容纳8192个bfloat16或float16，以及8192个int8
+        pipe_->InitBuffer(wsBuffer, 3 * ubFactor * RMS_NORM_LENGTH * sizeof(float)); // 3*16*512*4/1024=96
     }
 
     __aicore__ inline void Process()
@@ -78,25 +82,33 @@ public:
         copyParamsContinguous.blockCount = 1;
         // CopyIn gamma: [RMS_NORM_LENGTH]
         LocalTensor<float> gammaLocalFp32 = inQueueGamma.AllocTensor<float>();
-        LocalTensor<KV_DTYPE> gammaLocal = gammaLocalFp32.template ReinterpretCast<KV_DTYPE>()[RMS_NORM_LENGTH];
+        LocalTensor<KV_DTYPE> gammaLo + cal =
+        gammaLocalFp32.template ReinterpretCast<KV_DTYPE>()
+                [RMS_NORM_LENGTH]; // float -> float16/bfloat16, 非类型转换，只是重解释类型，以便后续搬入，原地操作
+        //[RMS_NORM_LENGTH] 为起始地址偏移
         LocalTensor<float> localCkvScale = gammaLocalFp32[RMS_NORM_LENGTH];
         LocalTensor<float> localKpeScale = gammaLocalFp32[2 * RMS_NORM_LENGTH];
+
         copyParamsContinguous.blockLen = RMS_NORM_LENGTH * sizeof(KV_DTYPE);
         DataCopyPad(gammaLocal, gammaGm, copyParamsContinguous, padParams);
+
         copyParamsContinguous.blockLen = RMS_NORM_LENGTH * sizeof(float);
         if (tilingData_->isVQuant) {
             DataCopyPad(localCkvScale, ckvScaleGm, copyParamsContinguous, padParamsFp32);
         }
+
         copyParamsContinguous.blockLen = ROPE_LENGTH * sizeof(float);
         if (tilingData_->isKQuant) {
             DataCopyPad(localKpeScale, kpeScaleGm, copyParamsContinguous, padParamsFp32);
         }
         inQueueGamma.EnQue(gammaLocalFp32);
         gammaLocalFp32 = inQueueGamma.DeQue<float>();
-        gammaLocal = gammaLocalFp32.template ReinterpretCast<KV_DTYPE>()[RMS_NORM_LENGTH];
+        gammaLocal = gammaLocalFp32.template ReinterpretCast<KV_DTYPE>()[RMS_NORM_LENGTH]; // API这么用？
         localCkvScale = gammaLocalFp32[RMS_NORM_LENGTH];
         localKpeScale = gammaLocalFp32[2 * RMS_NORM_LENGTH];
-        Cast(gammaLocalFp32, gammaLocal, RoundMode::CAST_NONE, RMS_NORM_LENGTH);
+        Cast(
+            gammaLocalFp32, gammaLocal, RoundMode::CAST_NONE,
+            RMS_NORM_LENGTH); // float16/bfloat16 -> float, 类型转换结果存入dst
 
         LocalTensor<float> workspaceBuffer = wsBuffer.Get<float>();
         for (int64_t loopIdx = 0; loopIdx < ubLoop; ++loopIdx) {
@@ -109,12 +121,15 @@ public:
             LocalTensor<KV_DTYPE> cosLocal = ropeLocal[ubFactor * ROPE_LENGTH];
             LocalTensor<KV_DTYPE> sinLocal = cosLocal[ubFactor * ROPE_LENGTH];
             // CopyIn x/cos/sin [ubFactor, ROPE_LENGTH]
-            DataCopyExtParams copyParams{/* blockCount */ static_cast<uint16_t>(ubFactor),
-                                         /* blockLen (Byte) */ ROPE_LENGTH * sizeof(KV_DTYPE),
-                                         /* srcStride */ RMS_NORM_LENGTH * sizeof(KV_DTYPE),
-                                         /* dstStride */ 0,
-                                         /* rsv */ 0};
-            DataCopyPad(ropeLocal, kvGm[kvGlobalMemoryOffset + RMS_NORM_LENGTH], copyParams, padParams);
+            DataCopyExtParams copyParams{
+                /* blockCount */ static_cast<uint16_t>(ubFactor),
+                /* blockLen (Byte) */ ROPE_LENGTH * sizeof(KV_DTYPE),
+                /* srcStride */ RMS_NORM_LENGTH * sizeof(KV_DTYPE),
+                /* dstStride */ 0,
+                /* rsv */ 0};
+            DataCopyPad(
+                ropeLocal, kvGm[kvGlobalMemoryOffset + RMS_NORM_LENGTH], copyParams,
+                padParams); // 切分kv, 取出后64维,作为rope_in
             copyParamsContinguous.blockLen = ubFactor * ROPE_LENGTH * sizeof(KV_DTYPE);
             DataCopyPad(cosLocal, cosGm[freqGlobalMemoryOffset], copyParamsContinguous, padParams);
             DataCopyPad(sinLocal, sinGm[freqGlobalMemoryOffset], copyParamsContinguous, padParams);
@@ -189,11 +204,12 @@ public:
             LocalTensor<KV_DTYPE> cosLocal = ropeLocal[ubTail * ROPE_LENGTH];
             LocalTensor<KV_DTYPE> sinLocal = cosLocal[ubTail * ROPE_LENGTH];
             // CopyIn x/cos/sin [ubTail, ROPE_LENGTH]
-            DataCopyExtParams copyParams{/* blockCount */ static_cast<uint16_t>(ubTail),
-                                         /* blockLen (Byte) */ ROPE_LENGTH * sizeof(KV_DTYPE),
-                                         /* srcStride */ RMS_NORM_LENGTH * sizeof(KV_DTYPE),
-                                         /* dstStride */ 0,
-                                         /* rsv */ 0};
+            DataCopyExtParams copyParams{
+                /* blockCount */ static_cast<uint16_t>(ubTail),
+                /* blockLen (Byte) */ ROPE_LENGTH * sizeof(KV_DTYPE),
+                /* srcStride */ RMS_NORM_LENGTH * sizeof(KV_DTYPE),
+                /* dstStride */ 0,
+                /* rsv */ 0};
             DataCopyPad(ropeLocal, kvGm[kvGlobalMemoryOffset + RMS_NORM_LENGTH], copyParams, padParams);
             copyParamsContinguous.blockLen = ubTail * ROPE_LENGTH * sizeof(KV_DTYPE);
             DataCopyPad(cosLocal, cosGm[freqGlobalMemoryOffset], copyParamsContinguous, padParams);
@@ -308,9 +324,12 @@ public:
             PipeBarrier<PIPE_V>();
 
             // step #2: Gather out real and imag
+            // 完成reshape[32,2]->transpose->reshape[64,1] == 奇偶分组
             uint64_t rsvdCnt = 0;
-            GatherMask(realLocal, xLocal, NUM_ONE, true, rows * headSize, {1, 1, NUM_EIGHT, 0}, rsvdCnt);
-            GatherMask(imagLocal, xLocal, NUM_TWO, true, rows * headSize, {1, 1, NUM_EIGHT, 0}, rsvdCnt);
+            GatherMask(realLocal, xLocal, NUM_ONE, true, rows * headSize, {1, 1, NUM_EIGHT, 0}, rsvdCnt); // 偶数索引
+            GatherMask(imagLocal, xLocal, NUM_TWO, true, rows * headSize, {1, 1, NUM_EIGHT, 0}, rsvdCnt); // NUM_EIGHT ?
+            // realLocal、imagLocal应该GatherMask之后前rows * headSize / 2  的位置是有效元素，可以分为rows * (32)
+            // ，后续mul计算时，因为迭代次数为rows所以每次迭代只用到4个block
             PipeBarrier<PIPE_V>();
 
             // step #3: Cast realLocal and imagLocal to Fp32
@@ -328,10 +347,24 @@ public:
             // step #5: y1 = (-imagLocalFp32, realLocalFp32) * sinLocalFp32
             Muls<float>(imagLocalFp32, imagLocalFp32, -1.0f, rows * (headSize >> 1));
             PipeBarrier<PIPE_V>();
+            // Mul每次迭代读取256B（8 block个数据），mask值约束实际读取、计算、写入有效值范围
             Mul(y1, imagLocalFp32, sinLocalFp32, /*mask*/ (headSize >> 1), /*repeat*/ rows,
+                /*
+                dstBlkStride, src0BlkStride, stc1BlkStride = 1, 单次迭代内数据连续读取和写入
+                dstRepStride, src0RepStride, src1RepStride = 8, 4, 8,
+                dst、src0、src1相邻迭代间数据连续读取和写入（起始地址间隔）
+                读取时：每次计算芯片固定会读取8个block（32B为一个block）（8 * 32 =
+                256B），但是因为imagLocalFp32中不同迭代间（不同row)的有效数据的起始地址间隔为4个block，所以
+                src0RepStride=4， 以保证每次执行正确的和sinLocalFp32 rows对应有效数据
+                相当于每次迭代计算-imagLocalFp32 * sinLocalFp32 时 前4个block算的是对的
+                */
                 {1, 1, 1, NUM_EIGHT, NUM_FOUR, NUM_EIGHT});
+
             Mul(y1[(headSize >> 1)], realLocalFp32, sinLocalFp32[(headSize >> 1)], /*mask*/ (headSize >> 1),
-                /*repeat*/ rows, {1, 1, 1, NUM_EIGHT, NUM_FOUR, NUM_EIGHT});
+                /*repeat*/ rows,
+                /* 根据上面注释可知：每次迭代计算(每个row)realLocalFp32 * sinLocalFp32 时
+                   后4个block算的是对的，正好可以拼成一个完整正确的y1*/
+                {1, 1, 1, NUM_EIGHT, NUM_FOUR, NUM_EIGHT});
             PipeBarrier<PIPE_V>();
 
             // step #6: y0 = y0 + y1
@@ -367,9 +400,10 @@ public:
     __aicore__ inline void RoundFloat2Int8(
         const LocalTensor<int8_t>& dstTensor, const LocalTensor<float>& srcTensor, int32_t size)
     {
+        // float - > int32 -> half -> int8 （不直接从float->half 可能是因为精度损失？）
         Cast(srcTensor.ReinterpretCast<int32_t>(), srcTensor, RoundMode::CAST_RINT, size);
         PipeBarrier<PIPE_V>();
-        SetDeqScale((half)1.000000e+00f);
+        SetDeqScale((half)1.000000e+00f); // Cast int32->half时需要
         PipeBarrier<PIPE_V>();
         Cast(srcTensor.ReinterpretCast<half>(), srcTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, size);
         PipeBarrier<PIPE_V>();
@@ -382,26 +416,40 @@ public:
         const LocalTensor<T1>& quantOutLocal, int64_t startIdx, int64_t rows)
     {
         DataCopyExtParams copyParamsNz{
-            static_cast<uint16_t>(D1),              // 2
-            static_cast<uint32_t>(D0 * sizeof(T1)), // 32
-            0,
-            static_cast<uint32_t>(tilingData_->blockSize * D0 * sizeof(T1)) -
-                static_cast<uint32_t>(D0 * sizeof(T1)), // 256*32*1-32*1
+            static_cast<uint16_t>(D1),
+            static_cast<uint32_t>(D0 * sizeof(T1)), // eg：32 * 1 = 32 ->D0 * sizeof(T1)需要保证是32B，以便后续Nd转Nz
+            // D1 * D0 = RMS_LEN or ROPE_LEN = head_size
+            0, static_cast<uint32_t>(tilingData_->blockSize * D0 * sizeof(T1)) - static_cast<uint32_t>(D0 * sizeof(T1)),
+            // 256*32*1-32*1  blockSize写死256？blockSize=256指的是每个block里有256个token
             0};
-        int64_t indexPageLength = (tilingData_->seqLength + tilingData_->blockSize - 1) / tilingData_->blockSize; // 1
+        int64_t indexPageLength =
+            (tilingData_->seqLength + tilingData_->blockSize - 1) / tilingData_->blockSize; // 1  ---> 1 ？ 这扯不扯
         for (int64_t i = 0; i < rows; i++) {
             int64_t tokenId = startIdx + i;
             int64_t batchId = tokenId / tilingData_->seqLength;
             int64_t tokenIdInCurrentBatch = tokenId % tilingData_->seqLength;
             int64_t indexPageId = tokenIdInCurrentBatch / tilingData_->blockSize;
-            int64_t indexOffset = batchId * indexPageLength + indexPageId;
+            int64_t indexOffset =
+                batchId * indexPageLength + indexPageId; // 针对当前token映射到的哪个block（page)的行定位与列定位
             int64_t pageOffset = indexGmNz(indexOffset);
-            SToMTE3Sync();
-            int64_t tokenOffsetInCurrentPage = tokenIdInCurrentBatch % tilingData_->blockSize;
-            int64_t pageId = pageOffset / tilingData_->blockSize;
+            /*
+            indexGmNz.shape = [Bkv * ceil_div(Skv, blockSize)]，
+            pageOffset表示每个block的起始偏移,具体value应该是[0, blocksize, blocksize*2,...,blocksize*(blocknum-1)]
+            */
+            SToMTE3Sync(); // 放DataCopyPad前？
+            int64_t tokenOffsetInCurrentPage =
+                tokenIdInCurrentBatch % tilingData_->blockSize; // 当前token在当前block（page）内的具体偏移
+            int64_t pageId = pageOffset / tilingData_->blockSize; // pageId=已搬移的blocknum
             int64_t ubOffset = headSize * i;
             if (pageOffset >= 0) {
                 int64_t gmOffsetNz = pageId * D1 * tilingData_->blockSize * D0 + tokenOffsetInCurrentPage * D0;
+                /*
+                Nd->Nz,Nz引入数据块，32B为一个数据块（D0*1），每个token要把最后一维（RMS_LNE or
+                ROPE_LEN)分成多个32B大小的段， Nd中token的最后一维连续，然后才是token间连续 Nz中先token之间是连续的（32B
+                and 32B 排列），每个token的最后一维不连续 gmOffsetNz = 行定位 + 列定位 =
+                已搬运了多少个token（token数量=已搬运的blocknum * blocksize）* D0*D1（head_size） +
+                当前token在当前block中的起始偏移 * 32
+                */
                 DataCopyPad(dst[gmOffsetNz], quantOutLocal[ubOffset], copyParamsNz);
             }
             if (tilingData_->isOutputKv) {
@@ -434,7 +482,9 @@ public:
         PipeBarrier<PIPE_V>();
         int64_t repeatTimes = rows * (headSize >> 1) / NUM_SIXTY_FOUR;
         Add(xSquareLocal[0], xSquareLocal[0], xSquareLocal[NUM_SIXTY_FOUR], NUM_SIXTY_FOUR, repeatTimes,
-            {1, 1, 1, NUM_EIGHT, NUM_SIXTEEN, NUM_SIXTEEN}); // 256
+            {1, 1, 1, NUM_EIGHT, NUM_SIXTEEN, NUM_SIXTEEN});
+        // 512->256  xSquareLocal相邻的每个64 个和 64 个相加，所以srcRepSride=NUM_SIXTEEN-> 16个block *
+        // 8（8个元素每个block） = 128
         PipeBarrier<PIPE_V>();
         repeatTimes = repeatTimes / 2;
         Add(xSquareLocal[0], xSquareLocal[0], xSquareLocal[NUM_SIXTY_FOUR], NUM_SIXTY_FOUR, repeatTimes,
@@ -445,10 +495,11 @@ public:
             {1, 1, 1, NUM_EIGHT, NUM_SIXTEEN, NUM_SIXTEEN}); // 64
         PipeBarrier<PIPE_V>();
 
-        WholeReduceSum(xSumLocal, xSquareLocal, NUM_SIXTY_FOUR, rows, 1, 1, NUM_EIGHT);
+        WholeReduceSum(
+            xSumLocal, xSquareLocal, NUM_SIXTY_FOUR, rows, 1, 1, NUM_EIGHT); // 64 -> 1 xSumLocal.shape = [rows, ]
         PipeBarrier<PIPE_V>();
         // Calc: xSum = xSum * reciprocal
-        Muls<float>(xSumLocal, xSumLocal, tilingData_->reciprocal, rows);
+        Muls<float>(xSumLocal, xSumLocal, tilingData_->reciprocal, rows); // reciprocal = 1 / 512
         PipeBarrier<PIPE_V>();
         // Calc: xSum = xSum + epsilon
         Adds<float>(xSumLocal, xSumLocal, tilingData_->epsilon, rows);
@@ -460,12 +511,18 @@ public:
         // Brcb
         int64_t block_count = (rows + NUM_EIGHT - 1) / NUM_EIGHT;
         Brcb(xSquareLocal, xSumLocal, block_count, {1, NUM_EIGHT});
+        /*Brcb每次只能取8个数去填充，每个数复制成8个相同值（8个相同值是因为一个数复制到一个block里，一个block针对float32是8个数），
+        所以迭代次数为rows/8，以遍历所有xSumLocal数
+        {1, NUM_EIGHT}是固定写法，1表示单次迭代内，目的操作数不同block间是连续的，8表示不同迭代间间隔8个block*/
         PipeBarrier<PIPE_V>();
 
         // Calc: xLocalFp32 = xLocalFp32 / xSquareLocal
         for (int64_t rowId = 0; rowId < rows; rowId++) {
             Div(xLocalFp32[rowId * headSize], xLocalFp32[rowId * headSize], xSquareLocal[rowId * NUM_EIGHT],
                 NUM_SIXTY_FOUR, (headSize / NUM_SIXTY_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+            /*xSquareLocal.shape = [rows * 8] src1DataBlkStride =
+            0的原因是同一个计算迭代内，只会计算计算8个block（8*32B/4 = 64个元素)， 在这其中，每个block没有间隔，
+            单次迭代计算所用到的64个元素是复用xSquareLocal中存储的8个元素*/
         }
         PipeBarrier<PIPE_V>();
 
