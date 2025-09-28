@@ -15,7 +15,7 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "tiling_function_def.h"
-#include "../data_utils.h"
+#include "data_utils.h"
 
 extern "C" __global__ __aicore__ void ge_glu_grad_v2(
     GM_ADDR dy, GM_ADDR x, GM_ADDR g_gelu, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
@@ -74,7 +74,7 @@ protected:
         tilingObject.RunTiling4GeGluGradV2();
         int32_t tilingKey = tilingObject.GetTilingKey();
 
-        system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_grad_v2/ge_glu_grad_v2_data ./");
+        system("cp -r ../../../../activation/ge_glu_grad_v2/tests/ut/op_kernel/ge_glu_grad_v2_data ./");
         system("chmod -R 755 ./ge_glu_grad_v2_data/ && rm -rf ./ge_glu_grad_v2_data/*bin");
         std::string genCMD = "cd ./ge_glu_grad_v2_data/ && python3 gen_data.py '" + GetShapesString(shapeInfos) +
                              "' '" + GetShapesString(attrInfos) + "' " + std::to_string(tilingKey);

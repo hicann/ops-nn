@@ -14,8 +14,8 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_ge_glu_v2.h"
-#include "../data_utils.h"
+#include "ge_glu_v2_tiling_def.h"
+#include "data_utils.h"
 
 #include <cstdint>
 
@@ -48,7 +48,7 @@ TEST_F(ge_glu_v2_test, test_case_101)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -95,7 +95,7 @@ TEST_F(ge_glu_v2_test, test_case_201)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -142,7 +142,7 @@ TEST_F(ge_glu_v2_test, test_case_301)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float32");
@@ -190,7 +190,7 @@ TEST_F(ge_glu_v2_test, test_case_103)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 2 2 12352 float16");
@@ -238,7 +238,7 @@ TEST_F(ge_glu_v2_test, test_case_203)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -286,7 +286,7 @@ TEST_F(ge_glu_v2_test, test_case_303)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 2 2 12352 float32");
@@ -334,7 +334,7 @@ TEST_F(ge_glu_v2_test, test_case_111)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -381,7 +381,7 @@ TEST_F(ge_glu_v2_test, test_case_211)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -428,7 +428,7 @@ TEST_F(ge_glu_v2_test, test_case_311)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float32");
@@ -476,7 +476,7 @@ TEST_F(ge_glu_v2_test, test_case_113)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 2 2 12352 float16");
@@ -524,7 +524,7 @@ TEST_F(ge_glu_v2_test, test_case_213)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 1 80 2560 float16");
@@ -572,7 +572,7 @@ TEST_F(ge_glu_v2_test, test_case_313)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/ge_glu_v2/ge_glu_v2_data ./");
+    system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
     system("cd ./ge_glu_v2_data/ && python3 gen_data.py 2 2 12352 float32");

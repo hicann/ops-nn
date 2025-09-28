@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <map>
 #include <cmath>
-#include "ge_glu_grad_v2_tiling.h"
+#include "ge_glu_grad_v2_tiling_def.h"
 #include "exe_graph/runtime/shape.h"
 #include "graph/types.h"
 #include "graph/ge_error_codes.h"
