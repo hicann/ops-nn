@@ -82,21 +82,18 @@ public:
         copyParamsContinguous.blockCount = 1;
         // CopyIn gamma: [RMS_NORM_LENGTH]
         LocalTensor<float> gammaLocalFp32 = inQueueGamma.AllocTensor<float>();
-        LocalTensor<KV_DTYPE> gammaLo + cal =
+        LocalTensor<KV_DTYPE> gammaLocal =
         gammaLocalFp32.template ReinterpretCast<KV_DTYPE>()
                 [RMS_NORM_LENGTH]; // float -> float16/bfloat16, 非类型转换，只是重解释类型，以便后续搬入，原地操作
         //[RMS_NORM_LENGTH] 为起始地址偏移
         LocalTensor<float> localCkvScale = gammaLocalFp32[RMS_NORM_LENGTH];
         LocalTensor<float> localKpeScale = gammaLocalFp32[2 * RMS_NORM_LENGTH];
-
         copyParamsContinguous.blockLen = RMS_NORM_LENGTH * sizeof(KV_DTYPE);
         DataCopyPad(gammaLocal, gammaGm, copyParamsContinguous, padParams);
-
         copyParamsContinguous.blockLen = RMS_NORM_LENGTH * sizeof(float);
         if (tilingData_->isVQuant) {
             DataCopyPad(localCkvScale, ckvScaleGm, copyParamsContinguous, padParamsFp32);
         }
-
         copyParamsContinguous.blockLen = ROPE_LENGTH * sizeof(float);
         if (tilingData_->isKQuant) {
             DataCopyPad(localKpeScale, kpeScaleGm, copyParamsContinguous, padParamsFp32);
