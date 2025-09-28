@@ -18,12 +18,12 @@
 
 #include <gtest/gtest.h>  // NOLINT
 #include <iostream>
-#include "op_proto_test_util.h"  // NOLINT
-#include "nn_norm.h"             // NOLINT
-#include "graph/utils/op_desc_utils.h"
-#include "common/utils/ut_op_common.h"
-#include "util/util.h"
-#include "graph/utils/graph_utils.h"
+#include "infershape_test_util.h"  // NOLINT
+#include "../../../op_graph/group_norm_silu_proto.h"             // NOLINT
+// #include "graph/utils/op_desc_utils.h"
+#include "ut_op_common.h"
+// #include "util/util.h"
+// #include "graph/utils/graph_utils.h"
 #include "platform/platform_info.h"
 
 class GroupNormSiluProto : public testing::Test {
@@ -54,6 +54,13 @@ TEST_F(GroupNormSiluProto, group_norm_silu_infershape_test){
 }
 
 TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_test) {
+  fe::PlatformInfo platformInfo;
+  fe::OptionalInfo optiCompilationInfo;
+  platformInfo.soc_info.ai_core_cnt = 64;
+  platformInfo.str_info.short_soc_version = "Ascend910_95";
+  optiCompilationInfo.soc_version = "Ascend910_9589";
+  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_9589"] = platformInfo;
+  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
   ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("GroupNormSilu"), nullptr);
   auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GroupNormSilu")->infer_datatype;
 
@@ -98,7 +105,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test1) {
   auto mean_dtype = op.GetOutputDesc("mean").GetDataType();
   auto rstd_dtype = op.GetOutputDesc("rstd").GetDataType();
 
-  EXPECT_EQ(output_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(output_dtype, ge::DT_FLOAT);
   EXPECT_EQ(mean_dtype, ge::DT_FLOAT);
   EXPECT_EQ(rstd_dtype, ge::DT_FLOAT);
 }
@@ -124,7 +131,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test2) {
   auto mean_dtype = op.GetOutputDesc("mean").GetDataType();
   auto rstd_dtype = op.GetOutputDesc("rstd").GetDataType();
 
-  EXPECT_EQ(output_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(output_dtype, ge::DT_FLOAT);
   EXPECT_EQ(mean_dtype, ge::DT_FLOAT);
   EXPECT_EQ(rstd_dtype, ge::DT_FLOAT);
 }
@@ -150,7 +157,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test3) {
   auto mean_dtype = op.GetOutputDesc("mean").GetDataType();
   auto rstd_dtype = op.GetOutputDesc("rstd").GetDataType();
 
-  EXPECT_EQ(output_dtype, ge::DT_FLOAT16);
-  EXPECT_EQ(mean_dtype, ge::DT_FLOAT16);
-  EXPECT_EQ(rstd_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(output_dtype, ge::DT_FLOAT);
+  EXPECT_EQ(mean_dtype, ge::DT_FLOAT);
+  EXPECT_EQ(rstd_dtype, ge::DT_FLOAT);
 }

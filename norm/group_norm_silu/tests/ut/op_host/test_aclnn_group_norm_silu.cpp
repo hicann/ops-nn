@@ -10,7 +10,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "norm/group_norm_silu/op_host/op_api/aclnn_group_norm_silu.h"
+#include "../../../op_host/op_api/aclnn_group_norm_silu.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -212,16 +212,17 @@ TEST_F(l2_group_norm_silu_test, ascend910B2_case_5d_normal) {
 
 TEST_F(l2_group_norm_silu_test, ascend910B2_case_4d_normal_no_gamma) {
   auto self_desc = TensorDesc({2, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-
-  const int64_t group = 2;
+  auto gamma_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto beta_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+  const int64_t group = 1;
   const double eps = 0.00001;
   const bool activateSilu = true;
   auto out_desc = TensorDesc({2, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto mean_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto rstd_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
   auto ut = OP_API_UT(aclnnGroupNormSilu,
-                      INPUT(self_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, group, eps),
+                      INPUT(self_desc, gamma_desc, beta_desc, group, eps),
                       OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
   uint64_t workspace_size = 0;
@@ -261,7 +262,7 @@ TEST_F(l2_group_norm_silu_test, ascend910B2_case_gamma_nullptr_normal) {
   auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
   auto ut = OP_API_UT(aclnnGroupNormSilu,
-                      INPUT(self_desc, (aclTensor*)nullptr, beta_desc, group, eps),
+                      INPUT(self_desc, gamma_desc, beta_desc, group, eps),
                       OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
   uint64_t workspace_size = 0;
