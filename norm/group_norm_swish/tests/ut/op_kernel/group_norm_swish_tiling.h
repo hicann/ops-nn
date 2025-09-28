@@ -1,36 +1,20 @@
+/**
+ * This program is free software, you can redistribute it and/or modify.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
 #ifndef _GE_GROUP_NORM_SWISH_TILING_H_
 #define _GE_GROUP_NORM_SWISH_TILING_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define DT_BF16 bfloat16_t
-#define DTYPE_X half
-#define DTYPE_GAMMA float
 #define __CCE_UT_TEST__
 #define __CCE_AICORE__ 220
-
-#pragma pack(1)
-
-struct GroupNormSwishTilingData {
-  int64_t numGroups;
-  float epsilon;
-  int64_t activateSwish;
-  float swishScale;
-  int64_t hwNum;
-  int64_t shapeC;
-  int64_t shapeCAlign;
-  int64_t shapeD;
-  int64_t numPerGroup;
-  int64_t groupPerCore;
-  int64_t groupLastCore;
-  int64_t groupPerCoreAlign;
-  int64_t numPerLoop;
-  int64_t loopTimes;
-  int64_t loopTimesAlign;
-  int64_t numTailLoop;
-};
-
-#pragma pack()
 
 #define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
   __ubuf__ tilingStruct* tilingDataPointer =                                \
