@@ -1,0 +1,1977 @@
+{
+    "op_type": "WeightQuantBatchMatmulV2",
+    "op_list": [
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int8_fp16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int8_int8",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int8_bf16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int8_int8",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int4_fp16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int4_int8",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "dtypeForBinQuery":[
+                        "int8",
+                        "int8"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int4_bf16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int4_int8",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "dtypeForBinQuery":[
+                        "int8",
+                        "int8"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int8_fp16_weight_nz",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "FRACTAL_NZ",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int8_bf16_weight_nz",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "FRACTAL_NZ",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int8_fp16_uint64_fixpipe",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int8_fp16_int64_fixpipe",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_fp16_int4_fp16_weight_nz",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "FRACTAL_NZ",
+                    "formatForBinQuery":[
+                        "FRACTAL_NZ",
+                        "FRACTAL_NZ"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "dtypeForBinQuery":[
+                        "float16",
+                        "float16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "WeightQuantBatchMatmulV2_bf16_int4_bf16_weight_nz",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "weight",
+                    "index": 1,
+                    "dtype": "int4",
+                    "dtypeForBinQuery":[
+                        "int4",
+                        "int32"
+                    ],
+                    "format": "FRACTAL_NZ",
+                    "formatForBinQuery":[
+                        "FRACTAL_NZ",
+                        "FRACTAL_NZ"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_scale",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "antiquant_offset",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 4,
+                    "dtype": "uint64",
+                    "dtypeForBinQuery":[
+                        "uint64",
+                        "uint64"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_offset",
+                    "index": 5,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "bias",
+                    "index": 6,
+                    "dtype": "float32",
+                    "dtypeForBinQuery":[
+                        "float32",
+                        "float32"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "dtypeForBinQuery":[
+                        "bfloat16",
+                        "bfloat16"
+                    ],
+                    "format": "ND",
+                    "formatForBinQuery":[
+                        "ND",
+                        "ND"
+                    ],
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "transpose_x",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "transpose_weight",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        }
+    ]
+  }

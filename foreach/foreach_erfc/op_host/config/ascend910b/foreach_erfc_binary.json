@@ -1,0 +1,98 @@
+{
+    "op_type": "ForeachErfc",
+    "op_list": [
+        {
+            "bin_filename": "ForeachErfc_b029d079cf21f8c62d4aedd4870ae6a9",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachErfc_e78aa3b3168ca8965cec0f50d80e765c",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachErfc_b19517096f07ff0a146a5f82cdc1ec57",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        }
+    ]
+}

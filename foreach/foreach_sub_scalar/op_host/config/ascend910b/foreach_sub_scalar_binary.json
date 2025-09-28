@@ -1,0 +1,169 @@
+{
+    "op_type": "ForeachSubScalar",
+    "op_list": [
+        {
+            "bin_filename": "ForeachSubScalar_3573ef142522305c317056543192f77a",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachSubScalar_b9e24936062f36d7966645df2748e847",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachSubScalar_5ab31d75d63b630a6fdbb8beb6b2b8d2",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachSubScalar_32bb2abcd4570c6e6e9d43e14ec8d087",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        }
+    ]
+}

@@ -1,0 +1,250 @@
+/**
+ * This program is free software, you can redistribute it and/or modify.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file weight_quant_batch_matmul_v2_adaptive_split_tiling.h
+ * \brief
+ * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (29) USING BLANK LINES.
+ * 
+ * 
+ * 
+ * 
+ */
+
+#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_ADAPTIVE_SPLIT_TILING_H
+#define WEIGHT_QUANT_BATCH_MATMUL_V2_ADAPTIVE_SPLIT_TILING_H
+
+#include "../weight_quant_batch_matmul_v2_tiling.h"
+#include "error_util.h"
+
+namespace optiling {
+namespace weight_quant_batch_matmul_v2 {
+BEGIN_TILING_DATA_DEF(WeightQuantBatchMatmulV2ASTilingData)
+TILING_DATA_FIELD_DEF(uint32_t, cubeBlockDimM);
+TILING_DATA_FIELD_DEF(uint32_t, cubeBlockDimN);
+TILING_DATA_FIELD_DEF(uint32_t, hasBias);
+TILING_DATA_FIELD_DEF(uint32_t, firstTailBlockCount);
+TILING_DATA_FIELD_DEF(uint32_t, secondTailBlockCount);
+TILING_DATA_FIELD_DEF(uint32_t, weightL2Cacheable);
+TILING_DATA_FIELD_DEF(uint32_t, mainBlockL1Size);
+TILING_DATA_FIELD_DEF(uint32_t, firstTailBlockL1Size);
+TILING_DATA_FIELD_DEF(uint32_t, secondTailBlockL1Size);
+TILING_DATA_FIELD_DEF(uint32_t, aPreloadSize);
+TILING_DATA_FIELD_DEF(uint64_t, groupSize);
+TILING_DATA_FIELD_DEF(uint64_t, mainBlockCount);
+TILING_DATA_FIELD_DEF(uint64_t, mSize);
+TILING_DATA_FIELD_DEF(uint64_t, kSize);
+TILING_DATA_FIELD_DEF(uint64_t, nSize);
+TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
+END_TILING_DATA_DEF;
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020000000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020000000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020000000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020000000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000004101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000004141, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000004101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000004141, WeightQuantBatchMatmulV2ASTilingData)
+
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000012260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000032260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000011260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030004000031260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000002260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000022260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021200, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021220, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021240, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000001260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000021260, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000002101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000002121, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000002141, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020003000002161, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000014100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000014140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000004100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000030003000004140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000003101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000003121, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000003141, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020002000003161, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000003101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000003121, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000003141, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020001000003161, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020006000003101, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020006000003121, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020006000003141, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_2000020006000003161, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030000000012100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030000000012120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030000000012140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030000000012160, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030005000002100, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030005000002120, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030005000002140, WeightQuantBatchMatmulV2ASTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_5000030005000002160, WeightQuantBatchMatmulV2ASTilingData)
+
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2ASTilingDataOp, WeightQuantBatchMatmulV2ASTilingData)
+
+// 对应6-9位TilingKey v100上nFirst模板自定义组合方式
+enum class Mte2Configuration
+{
+    MTE2_INNER_SIZE_512_BUF_NUM_2 = 0,
+    MTE2_INNER_SIZE_512_BUF_NUM_4 = 1,
+    MTE2_INNER_SIZE_1024_BUF_NUM_2 = 2,
+    MTE2_INNER_SIZE_256_BUF_NUM_4 = 3,
+    MTE2_INNER_SIZE_512_BUF_NUM_DEFAULT = 4, // w8 w4在非性能场景下复用一组设置
+    MTE2_INNER_SIZE_256_BUF_NUM_2 = 5,
+    MTE2_INNER_SIZE_1024_BUF_NUM_4 = 6,
+};
+
+class WeightQuantBatchMatmulV2TilingAS : public WeightQuantBatchMatmulV2Tiling
+{
+public:
+    explicit WeightQuantBatchMatmulV2TilingAS(gert::TilingContext* context) : WeightQuantBatchMatmulV2Tiling(context)
+    {
+        if (context->GetCompileInfo() == nullptr) {
+            InitCompileInfo();
+        }
+    };
+    ~WeightQuantBatchMatmulV2TilingAS() override = default;
+
+protected:
+    std::unique_ptr<WeightQuantBatchMatmulV2ASTilingData> tilingData_;
+
+    ge::graphStatus PostTiling() override;
+
+    bool IsCapable() override;
+
+    ge::graphStatus InstantiateTilingData();
+
+    ge::graphStatus DoOpTiling() override;
+
+    // 4、计算高阶API的TilingData
+    ge::graphStatus DoLibApiTiling() override
+    {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    // 5、计算TilingKey
+    uint64_t GetTilingKey() const override;
+
+    // 6、计算Workspace 大小
+    ge::graphStatus GetWorkspaceSize() override;
+
+private:
+    OptimizationAlgorithmSubCategory algorithmSubCategory_ = OptimizationAlgorithmSubCategory::N_FIRST_TAIL_RESPLIT;
+    Mte2Configuration mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_2;
+    uint64_t l1NMaxSize_ = 0;
+    bool weightMxFp4Flag_ = false;
+    bool weightInt4Flag_ = false;
+    bool nzSceneFlag_ = false;
+
+    bool CheckHighPerfScene() const;
+    bool CheckWeightMicroscalingFp4Scene() const;
+    void ComputeCubeTiling(bool highPerfFlag);
+    void ComputeCubeSplit(bool highPerfFlag);
+    void SetAttrs();
+    void ComputeHighPerfSceneCubeSplit();
+    void ComputeBasicTiling();
+    void ComputeTailResplitTiling();
+    void OptimizeMatmulTiling();
+    void OptimizeMatmulTilingInA16W4Nz();
+    bool CheckL1SizeAfterExtending(uint64_t extendedBaseN) const;
+    bool CheckUbSizeAfterExtending(uint64_t extendedWeightMte2N) const;
+    bool CheckL0CSizeAfterExtending(uint64_t extendedBaseN) const;
+    void RecalculateBaseBlockSize();
+    void ResplitTail();
+    void SetInnerSize();
+    void SetDefaultMatmulTiling();
+    void SetPreLoad();
+    void EnlargeBaseK(uint64_t l0aMaxBaseK);
+    void EnlargeBaseKInFullloadA(
+        uint64_t maxBaseK, uint64_t minKL1, uint64_t maxL1, const std::vector<uint64_t>& l0BaseKList,
+        const std::vector<uint64_t>& l1KList);
+    void EnlargeBaseKNotFullloadA(
+        uint64_t maxBaseK, uint64_t maxKL1, const std::vector<uint64_t>& l0BaseKList,
+        const std::vector<uint64_t>& l1KList);
+    bool IsWeight4Nz() const;
+    void ReSetTilingAfterExtendedBaseN(
+        uint64_t extendedBaseN, uint64_t firstTailBlockL1Size, uint64_t firstTailBlockCount,
+        uint64_t secondTailBlockL1Size, uint64_t secondTailBlockCount) const;
+};
+} // namespace weight_quant_batch_matmul_v2
+} // namespace optiling
+
+#endif

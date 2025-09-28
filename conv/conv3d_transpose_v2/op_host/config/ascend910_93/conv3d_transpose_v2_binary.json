@@ -1,0 +1,317 @@
+{
+  "op_type": "Conv3DTransposeV2",
+  "op_list": [
+    {
+      "bin_filename": "Conv3DTransposeV2_NDC1HWC0_FZ3D_BF16_BF16_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "input_size",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "filter",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "FRACTAL_Z_3D",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "offset_w",
+          "index": 4,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "output_padding",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DTransposeV2_NDC1HWC0_FZ3D_FP32_FP32_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "input_size",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "filter",
+          "index": 2,
+          "dtype": "float32",
+          "format": "FRACTAL_Z_3D",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "offset_w",
+          "index": 4,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "output_padding",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv3DTransposeV2_NDC1HWC0_FZ3D_FP16_FP16_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "input_size",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "filter",
+          "index": 2,
+          "dtype": "float16",
+          "format": "FRACTAL_Z_3D",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "offset_w",
+          "index": 4,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "output_padding",
+          "dtype": "list_int",
+          "value": []
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

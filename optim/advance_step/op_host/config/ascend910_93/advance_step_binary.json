@@ -1,0 +1,116 @@
+{
+  "op_type": "AdvanceStep",
+  "op_list": [
+    {
+      "bin_filename": "AdvanceStep_b66329fcd4da47a2ea4563aedd1f6bfa",
+      "inputs": [
+        {
+          "name": "input_tokens",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "sampled_token_ids",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "input_positions",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "seq_lens",
+          "index": 3,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "slot_mapping",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "block_tables",
+          "index": 5,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "spec_token",
+          "index": 6,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "accepted_num",
+          "index": 7,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "num_seqs",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "num_queries",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "block_size",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

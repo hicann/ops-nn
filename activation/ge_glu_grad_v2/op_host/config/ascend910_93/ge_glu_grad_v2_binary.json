@@ -1,0 +1,209 @@
+{
+    "op_type": "GeGluGradV2",
+    "op_list": [
+        {
+            "bin_filename": "GeGluGradV2_d79efd13753b7c230934cdb7ad287611",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gelu",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "approximate",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "activate_left",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GeGluGradV2_35961191424797fc0ea97407827ac15e",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gelu",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "approximate",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "activate_left",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "GeGluGradV2_32e03ba6d162fb5038fcd81c9e0f6e30",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gelu",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "approximate",
+                    "dtype": "int",
+                    "value": null
+                },
+                {
+                    "name": "activate_left",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

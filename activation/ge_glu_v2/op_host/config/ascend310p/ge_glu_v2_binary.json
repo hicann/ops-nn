@@ -1,0 +1,119 @@
+{
+    "op_type": "GeGluV2",
+    "op_list": [
+      {
+        "bin_filename": "GeGluV2_c629c03f5922badb3407bf2e66751951",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "gelu",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+            {
+              "name": "dim",
+              "dtype": "int",
+              "value": -1
+            },
+            {
+              "name": "approximate",
+              "dtype": "int",
+              "value": 1
+            },
+            {
+              "name": "activate_left",
+              "dtype": "bool",
+              "value": null
+            }
+          ]
+      },
+      {
+        "bin_filename": "GeGluV2_b629c03f5922badb3407bf2e66751951",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "gelu",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+            {
+              "name": "dim",
+              "dtype": "int",
+              "value": -1
+            },
+            {
+              "name": "approximate",
+              "dtype": "int",
+              "value": 1
+            },
+            {
+              "name": "activate_left",
+              "dtype": "bool",
+              "value": null
+            }
+          ]
+      }
+    ]
+  }

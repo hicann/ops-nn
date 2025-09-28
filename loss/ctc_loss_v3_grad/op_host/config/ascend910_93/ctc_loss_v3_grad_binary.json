@@ -1,0 +1,1253 @@
+{
+    "op_type": "CTCLossV3Grad",
+    "op_list": [
+      {
+        "bin_filename": "CTCLossV3Grad_29c31f1cf4ff36cc24e50afde0c7082d",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_41677bc912b290c53075bc95e8a5ecae",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_613989f5f0c9d37e1262b045c1a1da8c",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_935020ba82dd3d9f44cf937991b043cf",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_ce44fffbb16d73a4d37126102b2576b4",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_d954288f5f4b2838da6ec62fb7071fc2",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_29c31f1cf4ff36cc24e50afde0c7082d1",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_41677bc912b290c53075bc95e8a5ecae1",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_613989f5f0c9d37e1262b045c1a1da8c1",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_935020ba82dd3d9f44cf937991b043cf1",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_ce44fffbb16d73a4d37126102b2576b41",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "CTCLossV3Grad_d954288f5f4b2838da6ec62fb7071fc21",
+        "inputs": [
+          {
+            "name": "grad_out",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_probs",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "targets",
+            "index": 2,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "input_lengths",
+            "index": 3,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "target_lengths",
+            "index": 4,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "neg_log_likelihood",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "log_alpha",
+            "index": 6,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "blank",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "reduction",
+            "dtype": "string",
+            "value": "mean"
+          },
+          {
+            "name": "zero_infinity",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      }
+    ]
+  }

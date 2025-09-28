@@ -1,0 +1,1173 @@
+{
+  "op_type": "ScatterList",
+  "op_list": [
+    {
+      "bin_filename": "ScatterList_6c39a01270e5cc309f704228d56100aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_a69c950763acb46236b38d30f1a100bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_bc333e1910a01784d66f7e60fd0200aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_11cde143124b1daa816e7f71d79200bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_d8871276c0ad0d1d945bf6deb8e400aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_24e460f5ce31ef9fb521fa6af2e400bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_434076a5c87ade6634a19a59510200cc",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_17d4d504c5545b8629788518993400cc",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_6c39a01270e5cc309f704228d56111aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_a69c950763acb46236b38d30f1a111bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint8",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_bc333e1910a01784d66f7e60fd0211aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_11cde143124b1daa816e7f71d79211bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_d8871276c0ad0d1d945bf6deb8e411aa",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_24e460f5ce31ef9fb521fa6af2e411bb",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "uint32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "uint32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_434076a5c87ade6634a19a59510211cc",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "ScatterList_17d4d504c5545b8629788518993411cc",
+      "inputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ],
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mask",
+          "index": 3,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+                -2
+            ]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

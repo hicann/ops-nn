@@ -1,0 +1,39 @@
+/**
+ * This program is free software, you can redistribute it and/or modify.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#ifndef APPLY_TOP_K_TOP_P_WITH_SORTED_TILING_H_TEST_KERNEL
+#define APPLY_TOP_K_TOP_P_WITH_SORTED_TILING_H_TEST_KERNEL
+
+#include "kernel_tiling/kernel_tiling.h"
+
+struct ApplyTopKTopPWithSortedTilingData {
+    uint32_t batchSize = 0;
+    uint32_t vocabSize = 0;
+    uint32_t batchPerCore = 0;
+    uint32_t tailBatch = 0;
+    uint32_t blockNum = 0;
+    uint32_t dataNumInit = 0;
+    uint32_t dataNumInitAligned = 0;
+    uint32_t ubFactorElement = 0;
+    uint32_t ubFactorElementAligned = 0;
+    uint32_t tailUbFactorElement = 0;
+    uint32_t tailUbFactorElementAligned = 0;
+    uint32_t calUbSize = 0;
+};
+
+inline void InitApplyTopKTopPWithSortedTilingData(uint8_t* tiling, ApplyTopKTopPWithSortedTilingData* data)
+{
+    memcpy(data, tiling, sizeof(ApplyTopKTopPWithSortedTilingData));
+}
+
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    ApplyTopKTopPWithSortedTilingData tiling_data;      \
+    InitApplyTopKTopPWithSortedTilingData(tiling_arg, &tiling_data)
+#endif // APPLY_TOP_K_TOP_P_WITH_SORTED_TILING_H_TEST_KERNEL

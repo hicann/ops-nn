@@ -1,0 +1,212 @@
+{
+  "op_type": "MaxPool3DWithArgmaxV2",
+  "op_list": [
+    {
+      "bin_filename": "MaxPool3DWithArgmaxV2_7fs1d6j3os14nhkg4n8cg12h3p1k7bn1",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaxPool3DWithArgmaxV2_7fs1d6j3os14nhkg4n8cg12h3p1k7bn2",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaxPool3DWithArgmaxV2_7fs1d6j3os14nhkg4n8cg12h3p1k7bn3",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "argmax",
+          "index": 1,
+          "dtype": "int32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "ksize",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilation",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "ceil_mode",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": "NCDHW"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+    "op_type": "QuantMatmulReduceSum",
+    "op_list": [
+        {
+            "bin_filename": "QuantMatmulReduceSum_ND_NZ_int8_int8_bf16_fp32_bf16",
+            "inputs": [
+                {
+                    "name": "x1",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x2",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "FRACTAL_NZ",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "dims",
+                    "index": 2,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "bias",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x1_scale",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x2_scale",
+                    "index": 5,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "y_scale",
+                    "index": 6,
+                    "dtype": "uint64",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x1_offset",
+                    "index": 7,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x2_offset",
+                    "index": 8,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "y_offset",
+                    "index": 9,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x2_table",
+                    "index": 10,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "compute_type",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "transpose_x1",
+                    "dtype": "bool",
+                    "value": false
+                },
+                {
+                    "name": "transpose_x2",
+                    "dtype": "bool",
+                    "value": false
+                },
+                {
+                    "name": "group_size",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "keep_dims",
+                    "dtype": "bool",
+                    "value": false
+                }
+            ]
+        }
+    ]
+}
