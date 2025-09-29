@@ -328,9 +328,20 @@ public:
             // step #5: y1 = (-imagLocalFp32, realLocalFp32) * sinLocalFp32
             Muls<float>(imagLocalFp32, imagLocalFp32, -1.0f, rows * (headSize >> 1));
             PipeBarrier<PIPE_V>();
+            // Mul每次迭代读取256B（8 block个数据），mask值约束实际读取、计算、写入有效值范围
             Mul(y1, imagLocalFp32, sinLocalFp32, /*mask*/ (headSize >> 1), /*repeat*/ rows,
+                /*
+                dstBlkStride, src0BlkStride, stc1BlkStride = 1, 单次迭代内数据连续读取和写入
+                dstRepStride, src0RepStride, src1RepStride = 8, 4, 8,
+                dst、src0、src1相邻迭代间数据连续读取和写入（起始地址间隔）
+                读取时：每次计算芯片固定会读取8个block（32B为一个block）（8 * 32 =
+                256B），但是因为imagLocalFp32中不同迭代间（不同row)的有效数据的起始地址间隔为4个block，所以
+                src0RepStride=4， 以保证每次执行正确的和sinLocalFp32 rows对应有效数据
+                相当于每次迭代计算-imagLocalFp32 * sinLocalFp32 时 前4个block算的是对的
+                */
                 {1, 1, 1, NUM_EIGHT, NUM_FOUR, NUM_EIGHT});
             Mul(y1[(headSize >> 1)], realLocalFp32, sinLocalFp32[(headSize >> 1)], /*mask*/ (headSize >> 1),
+                /* 根据上面注释可知：每次迭代计算(每个row)realLocalFp32 * sinLocalFp32 时, 后4个block算的是对的，正好可以拼成一个完整正确的y1*/
                 /*repeat*/ rows, {1, 1, 1, NUM_EIGHT, NUM_FOUR, NUM_EIGHT});
             PipeBarrier<PIPE_V>();
 
@@ -367,9 +378,10 @@ public:
     __aicore__ inline void RoundFloat2Int8(
         const LocalTensor<int8_t>& dstTensor, const LocalTensor<float>& srcTensor, int32_t size)
     {
+        // float - > int32 -> half -> int8 （不直接从float->half 可能是因为精度损失？）
         Cast(srcTensor.ReinterpretCast<int32_t>(), srcTensor, RoundMode::CAST_RINT, size);
         PipeBarrier<PIPE_V>();
-        SetDeqScale((half)1.000000e+00f);
+        SetDeqScale((half)1.000000e+00f); // Cast int32->half时需要
         PipeBarrier<PIPE_V>();
         Cast(srcTensor.ReinterpretCast<half>(), srcTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, size);
         PipeBarrier<PIPE_V>();
@@ -383,7 +395,8 @@ public:
     {
         DataCopyExtParams copyParamsNz{
             static_cast<uint16_t>(D1),              // 2
-            static_cast<uint32_t>(D0 * sizeof(T1)), // 32
+            static_cast<uint32_t>(D0 * sizeof(T1)), // eg：32 * 1 = 32 ->D0 * sizeof(T1)需要保证是32B，以便后续Nd转Nz
+            // D1 * D0 = RMS_LEN or ROPE_LEN = head_size
             0,
             static_cast<uint32_t>(tilingData_->blockSize * D0 * sizeof(T1)) -
                 static_cast<uint32_t>(D0 * sizeof(T1)), // 256*32*1-32*1
@@ -392,16 +405,27 @@ public:
         for (int64_t i = 0; i < rows; i++) {
             int64_t tokenId = startIdx + i;
             int64_t batchId = tokenId / tilingData_->seqLength;
-            int64_t tokenIdInCurrentBatch = tokenId % tilingData_->seqLength;
+            int64_t tokenIdInCurrentBatch = tokenId % tilingData_->seqLength; 
             int64_t indexPageId = tokenIdInCurrentBatch / tilingData_->blockSize;
-            int64_t indexOffset = batchId * indexPageLength + indexPageId;
+            int64_t indexOffset = batchId * indexPageLength + indexPageId; // 针对当前token映射到的哪个block（page)的行定位与列定位
             int64_t pageOffset = indexGmNz(indexOffset);
-            SToMTE3Sync();
+            /*
+            indexGmNz.shape = [Bkv * ceil_div(Skv, blockSize)]，
+            pageOffset表示每个block的起始偏移,具体value应该是[0, blocksize, blocksize*2,...,blocksize*(blocknum-1)]
+            */
+            SToMTE3Sync(); // 放DataCopyPad前？
             int64_t tokenOffsetInCurrentPage = tokenIdInCurrentBatch % tilingData_->blockSize;
             int64_t pageId = pageOffset / tilingData_->blockSize;
             int64_t ubOffset = headSize * i;
             if (pageOffset >= 0) {
                 int64_t gmOffsetNz = pageId * D1 * tilingData_->blockSize * D0 + tokenOffsetInCurrentPage * D0;
+                /*
+                Nd->Nz,Nz引入数据块，32B为一个数据块（D0*1），每个token要把最后一维（RMS_LNE or
+                ROPE_LEN)分成多个32B大小的段， Nd中token的最后一维连续，然后才是token间连续 Nz中先token之间是连续的（32B
+                and 32B 排列），每个token的最后一维不连续 gmOffsetNz = 行定位 + 列定位 =
+                已搬运了多少个token（token数量=已搬运的blocknum * blocksize）* D0*D1（head_size） +
+                当前token在当前block中的起始偏移 * 32
+                */
                 DataCopyPad(dst[gmOffsetNz], quantOutLocal[ubOffset], copyParamsNz);
             }
             if (tilingData_->isOutputKv) {
@@ -448,7 +472,7 @@ public:
         WholeReduceSum(xSumLocal, xSquareLocal, NUM_SIXTY_FOUR, rows, 1, 1, NUM_EIGHT);
         PipeBarrier<PIPE_V>();
         // Calc: xSum = xSum * reciprocal
-        Muls<float>(xSumLocal, xSumLocal, tilingData_->reciprocal, rows);
+        Muls<float>(xSumLocal, xSumLocal, tilingData_->reciprocal, rows); // reciprocal = 1 / 512
         PipeBarrier<PIPE_V>();
         // Calc: xSum = xSum + epsilon
         Adds<float>(xSumLocal, xSumLocal, tilingData_->epsilon, rows);
@@ -460,12 +484,18 @@ public:
         // Brcb
         int64_t block_count = (rows + NUM_EIGHT - 1) / NUM_EIGHT;
         Brcb(xSquareLocal, xSumLocal, block_count, {1, NUM_EIGHT});
+        /*Brcb每次只能取8个数去填充，每个数复制成8个相同值（8个相同值是因为一个数复制到一个block里，一个block针对float32是8个数），
+        所以迭代次数为rows/8，以遍历所有xSumLocal数
+        {1, NUM_EIGHT}是固定写法，1表示单次迭代内，目的操作数不同block间是连续的，8表示不同迭代间间隔8个block*/
         PipeBarrier<PIPE_V>();
 
         // Calc: xLocalFp32 = xLocalFp32 / xSquareLocal
         for (int64_t rowId = 0; rowId < rows; rowId++) {
             Div(xLocalFp32[rowId * headSize], xLocalFp32[rowId * headSize], xSquareLocal[rowId * NUM_EIGHT],
                 NUM_SIXTY_FOUR, (headSize / NUM_SIXTY_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+            /*xSquareLocal.shape = [rows * 8] src1DataBlkStride =
+            0的原因是同一个计算迭代内，只会计算计算8个block（8*32B/4 = 64个元素)， 在这其中，每个block没有间隔，
+            单次迭代计算所用到的64个元素是复用xSquareLocal中存储的8个元素*/
         }
         PipeBarrier<PIPE_V>();
 
