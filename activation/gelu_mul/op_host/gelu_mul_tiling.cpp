@@ -167,7 +167,7 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GeluMulTiling::FillTilingKey(){
+ge::graphStatus GeluMulTiling::FillTilingKey() {
     // 获取数据类型
     auto temp = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, temp);
@@ -189,7 +189,7 @@ ge::graphStatus GeluMulTiling::FillTilingKey(){
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4GeluMulTiling(gert::TilingParseContext* context) {
+static ge::graphStatus TilingPrepare4GeluMulTiling([[maybe_unused]] gert::TilingParseContext* context) {
     return ge::GRAPH_SUCCESS;
 }
 

@@ -94,7 +94,7 @@ static inline aclIntArray *GetTensorShape(const aclTensor *x, aclOpExecutor *exe
 static const aclTensor *ReshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, int originalDimSize,
                                           aclIntArray *valuePerm = nullptr) {
   int64_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
+  if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
     return x;
   }
 
@@ -122,7 +122,6 @@ aclnnStatus ExecSeluBackwardGetWorkspaceSize(const aclTensor *gradOutput, const 
   auto resultContiguous = l0op::Contiguous(result, uniqueExecutor.get());
   CHECK_RET(resultContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto shapeOri = gradOutput->GetViewShape();
   size_t dimSize = gradOutput->GetViewShape().GetDimNum();
   auto shapeOriDetail = GetTensorShape(gradOutputContiguous, uniqueExecutor.get());
 
