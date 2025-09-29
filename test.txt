@@ -1,0 +1,1 @@
+ops=("erfinv" "fatrelu_mul" "ge_gelu_grad_v2" "gelu" "relu")
