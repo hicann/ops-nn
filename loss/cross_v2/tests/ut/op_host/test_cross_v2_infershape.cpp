@@ -10,7 +10,9 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include "common/utils/ut_op_common.h"
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "../../../op_graph/cross_v2_proto.h"
 
 class CrossV2 : public testing::Test
 {
@@ -26,6 +28,15 @@ protected:
     }
 };
 
+std::vector<int64_t> CrossV2ToVector(const gert::Shape& shape) {
+    size_t shape_size = shape.GetDimNum();
+    std::vector<int64_t> shape_vec(shape_size, 0);
+    for (size_t i = 0; i < shape_size; i++) {
+        shape_vec[i] = shape.GetDim(i);
+    }
+    return shape_vec;
+}
+
 TEST_F(CrossV2, cross_v2_infershape_bf16_mean_case)
 {
     gert::StorageShape Shape = {{4096, 3}, {4096, 3}};
@@ -39,7 +50,7 @@ TEST_F(CrossV2, cross_v2_infershape_bf16_mean_case)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -49,5 +60,5 @@ TEST_F(CrossV2, cross_v2_infershape_bf16_mean_case)
 
     std::vector<int64_t> expectedYShape = {4096, 3};
     auto yShape = context->GetOutputShape(0);
-    EXPECT_EQ(ops::ToVector(*yShape), expectedYShape);
+    EXPECT_EQ(CrossV2ToVector(*yShape), expectedYShape);
 }

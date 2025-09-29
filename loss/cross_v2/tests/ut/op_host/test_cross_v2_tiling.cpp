@@ -11,35 +11,28 @@
  * \file test_cross_v2_tiling.cpp
  * \brief
  */
-#include <gtest/gtest.h>
 
 #include <iostream>
-#include <map>
+#include <fstream>
 #include <sstream>
 #include <string>
+#include <map>
 #include <vector>
-
-#include "op_log.h"
-
-#include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
+#include <gtest/gtest.h>
+#include "../../../op_host/cross_v2_tiling.h"
+#include "log/log.h"
+#include "ut_op_common.h"
+#include "register/op_impl_registry.h"
+#include "platform/platform_info.h"
+#include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
-#include "op_tiling/op_tiling_util.h"
-#include "test_cube_util.h"
-#include "loss/cross_v2/op_host/cross_v2_tiling.h"
-#include "runtime2_util.h"
-#include "platform/platform_info.h"
-#include "register/op_def_registry.h"
-#include "tiling/tiling_api.h"
+#include "array_ops.h"
 
 using namespace std;
-
 using namespace ge;
-using namespace ut_util;
+
 class CrossV2Tiling : public testing::Test
 {
 protected:
@@ -120,7 +113,7 @@ TEST_F(CrossV2Tiling, cross_v2_fp32_001)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(dim)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dim)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -197,7 +190,7 @@ TEST_F(CrossV2Tiling, cross_v2_fp32_002)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(dim)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dim)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

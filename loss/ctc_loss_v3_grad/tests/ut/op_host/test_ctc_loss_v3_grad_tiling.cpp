@@ -17,23 +17,18 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "pad_ops.h"
-#include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common_unittest.h"
-#include "runtime/diag_util.h"
-#include "kernel_run_context_facker.h"
+#include "../../../op_host/ctc_loss_v3_grad_tiling.h"
+#include "log/log.h"
+#include "ut_op_common.h"
+#include "register/op_impl_registry.h"
+#include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
-#include "experiment_ops.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "loss/ctc_loss_v3_grad/op_host/ctc_loss_v3_grad_tiling.h"
+#include "kernel_run_context_facker.h"
+#include "array_ops.h"
+#include "ut_op_util.h"
 
-using namespace ut_util;
 using namespace std;
 using namespace ge;
 
@@ -55,10 +50,9 @@ void TestCTCLossV3GradTiling(
     gert::StorageShape& gradOutShape, gert::StorageShape& logProbsShape, gert::StorageShape& targetsShape,
     gert::StorageShape& inputLengthsShape, gert::StorageShape& targetLengthsShape, gert::StorageShape& lossShape,
     gert::StorageShape& logAlphaShape, gert::StorageShape& gradShape,
-    std::vector<std::pair<std::string, ge::AnyValue>>& AttrList, ge::DataType gradDataType,
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType gradDataType,
     ge::DataType indicesDataType, uint64_t expectTilingKey)
 {
-    dlog_setlevel(0, 0, 0);
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -123,9 +117,9 @@ void TestCTCLossV3GradTiling(
                       .NodeInputTd(6, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"blank", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"reduction", ge::AnyValue::CreateFrom<string>("mean")},
-                           {"zero_infinity", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
+                           {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -142,7 +136,6 @@ void TestCTCLossV3GradTiling(
 
     auto realTilingKey = tilingContext->GetTilingKey();
     ASSERT_EQ(realTilingKey, expectTilingKey);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(CTCLossV3GradTiling, ctc_loss_v3_grad_tilingkey_0)
@@ -156,10 +149,7 @@ TEST_F(CTCLossV3GradTiling, ctc_loss_v3_grad_tilingkey_0)
     gert::StorageShape lossShape = {{1}, {1}};
     gert::StorageShape logAlphaShape = {{1, 32, 65}, {1, 32, 65}};
     gert::StorageShape gradShape = {{32, 1, 1024}, {32, 1, 1024}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {};
-    // {{"blank", ge::AnyValue::CreateFrom<int32_t>(0)},
-    // {"reduction", ge::AnyValue::CreateFrom<string>("mean")},
-    // {"zero_infinity", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {};
     TestCTCLossV3GradTiling(
         gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
         gradShape, attrList, ge::DT_FLOAT, ge::DT_INT64, 0);
