@@ -116,7 +116,7 @@
      return ge::GRAPH_SUCCESS;
  }
 
- static ge::graphStatus TilingPrepare4SquaredReluTiling(gert::TilingParseContext* context) {
+ static ge::graphStatus TilingPrepare4SquaredReluTiling([[maybe_unused]] gert::TilingParseContext* context) {
      return ge::GRAPH_SUCCESS;
  }
 

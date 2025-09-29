@@ -121,7 +121,6 @@ static bool CheckShape(
     const aclTensor* y, const aclTensor* outScaleOptional, bool isDynQuant)
 {
     auto selfShape = self->GetViewShape();
-    auto yShape = y->GetViewShape();
     if (isDynQuant) {
         auto outScaleShape = outScaleOptional->GetViewShape();
         size_t selfDimNums = selfShape.GetDimNum();

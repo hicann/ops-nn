@@ -30,7 +30,7 @@ OP_TYPE_REGISTER(Heaviside);
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor* input)
+[[maybe_unused]] static bool IsAiCoreSupport(const aclTensor* input)
 {
     return CheckType(input->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }

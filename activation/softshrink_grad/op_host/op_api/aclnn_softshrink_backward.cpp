@@ -55,7 +55,8 @@ static inline bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *se
   return true;
 }
 
-static inline bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, const aclScalar *lambd,
+static inline bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self,
+                                   [[maybe_unused]] const aclScalar *lambd,
                                    const aclTensor *gradInput) {
   auto supportList = GetDtypeSupportList();
 

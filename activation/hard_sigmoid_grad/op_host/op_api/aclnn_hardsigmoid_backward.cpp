@@ -65,9 +65,6 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, con
 
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
-    auto gradOutputDimNum = gradOutput->GetViewShape().GetDimNum();
-    auto selfDimNum = self->GetViewShape().GetDimNum();
-    auto outDimNum = out->GetViewShape().GetDimNum();
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(out, MAX_SUPPORT_DIMS_NUMS, return false);
