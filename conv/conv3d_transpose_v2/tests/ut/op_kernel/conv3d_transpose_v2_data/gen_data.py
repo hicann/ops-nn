@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# coding=utf-8
 # ----------------------------------------------------------------------------
 # This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
@@ -7,6 +9,23 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(conv3d_backprop_filter_v2 "ascend910B1" "-DDTYPE_X=bfloat16_t -DFORMAT_X=FORMAT_NDC1HWC0 -DDTYPE_OUT_BACKPROP=bfloat16_t -DFORMAT_OUT_BACKPROP=FORMAT_NDC1HWC0 -DDTYPE_Y=float -DFORMAT_Y=FORMAT_FRACTAL_Z_3D")
-endif()
+import sys
+import numpy as np
+
+
+def conv3d_transpose_v2(n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk):
+    input_size = np.array([n, cin, di, hi, wi]).astype(np.int32)
+    x_shape = [n, cout, dout, ho, wo]
+    filter_shape = [cout, cin, dk, hk, wk]
+    filter_ = np.random.uniform(-5, 5, filter_shape).astype(np.float16)
+    x = np.random.uniform(-5, 5, x_shape).astype(np.float16)
+
+    input_size.tofile("input_size.bin")
+    filter_.tofile("filter.bin")
+    x.tofile("x.bin")
+
+
+if __name__ == '__main__':
+    n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk = [int(p) for p in sys.argv[1:13]]
+
+    conv3d_transpose_v2(n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk)

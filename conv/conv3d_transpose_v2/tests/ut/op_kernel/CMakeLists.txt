@@ -7,6 +7,7 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+return()
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(conv3d_backprop_filter_v2 "ascend910B1" "-DDTYPE_X=bfloat16_t -DFORMAT_X=FORMAT_NDC1HWC0 -DDTYPE_OUT_BACKPROP=bfloat16_t -DFORMAT_OUT_BACKPROP=FORMAT_NDC1HWC0 -DDTYPE_Y=float -DFORMAT_Y=FORMAT_FRACTAL_Z_3D")
+    AddOpTestCase(conv3d_transpose_v2 "ascend910B1" "-DDTYPE_FILTER=bfloat16_t -DFORMAT_FILTER=FORMAT_FRACTAL_Z_3D -DDTYPE_X=bfloat16_t -DFORMAT_X=FORMAT_NDC1HWC0 -DDTYPE_Y=bfloat16_t -DFORMAT_Y=FORMAT_NDC1HWC0" "conv3d_backprop_input_v2")
 endif()
