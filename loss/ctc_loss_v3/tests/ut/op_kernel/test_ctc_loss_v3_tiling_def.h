@@ -19,7 +19,7 @@
 
 #pragma pack(1)
 
-struct CTCLossV3TilingData {
+struct CTCLossV3TilingDataTest {
     int64_t sliceLength;
     int64_t sliceLengthTail;
     int64_t probSliceNum;
@@ -45,8 +45,8 @@ struct CTCLossV3TilingData {
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                           \
-    CTCLossV3TilingData tilingData;                                          \
-    INIT_TILING_DATA(CTCLossV3TilingData, tilingDataPointer, tilingPointer); \
+    CTCLossV3TilingDataTest tilingData;                                          \
+    INIT_TILING_DATA(CTCLossV3TilingDataTest, tilingDataPointer, tilingPointer); \
     (tilingData).sliceLength = tilingDataPointer->sliceLength;               \
     (tilingData).sliceLengthTail = tilingDataPointer->sliceLengthTail;       \
     (tilingData).probSliceNum = tilingDataPointer->probSliceNum;             \
