@@ -109,7 +109,6 @@ const aclTensor* MaxPool3DGradWithArgmax(
     aclIntArray* padding3 = executor->AllocIntArray(paddingSizeData.data(), DHW_DIMS);
     aclIntArray* dilation3 = executor->AllocIntArray(dilationSizeData.data(), DHW_DIMS);
 
-    op::DataType outType = self->GetDataType();
     auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_NCDHW);
 
     if (IsAiCoreSupport(gradOutput)) {

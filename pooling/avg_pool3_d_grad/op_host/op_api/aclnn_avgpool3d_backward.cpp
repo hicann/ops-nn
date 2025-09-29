@@ -34,9 +34,6 @@ static int64_t NCDHW_SHAPE = 5;
 static int64_t CDHW_SHAPE = 4;
 static size_t MIN_ARRAY_DIM_SIZE = 1;
 static size_t MAX_ARRAY_DIM_SIZE = 3;
-static int64_t DEPTH_IDX = 2;
-static int64_t HEIGHT_IDX = 3;
-static int64_t WEIGHT_IDX = 4;
 static int64_t NC_HIGH = 256;
 static int64_t NC_LOW = 12;
 static const int64_t DIM1 = 1;
@@ -60,7 +57,8 @@ static bool CheckEnableBlock(const aclTensor* const gradOutput)
 {
     const auto gradShape = gradOutput->GetViewShape();
     const auto gradDimNum = gradShape.GetDimNum();
-    const int64_t mergeNC = gradDimNum == CDHW_SHAPE ? gradShape.GetDim(0) : gradShape.GetDim(0) * gradShape.GetDim(1);
+    const int64_t mergeNC = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) :
+        gradShape.GetDim(0) * gradShape.GetDim(1);
     if (mergeNC >= NC_LOW && mergeNC < NC_HIGH) {
         return true;
     }
@@ -109,6 +107,7 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
 }
 } // namespace op
 
+namespace {
 static bool CheckNotNull(
     const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
     const aclIntArray* padding, const aclTensor* out)
@@ -207,7 +206,7 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* out)
 }
 
 // 计算经过avgpool3d后的shape的d和h和w（n,c与input一致，不用计算）
-static inline const int64_t PoolingOutShape(
+static inline int64_t PoolingOutShape(
     const int64_t inputSize, const int64_t kernelSize, const int64_t padL, const int64_t stride, const bool ceilMode)
 {
     int64_t outputSize;
@@ -284,24 +283,6 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray* GetPerm(const aclTensor* gradOutput, const int startIdx, aclOpExecutor* executor)
-{
-    auto gradShape = gradOutput->GetViewShape();
-    auto dimSize = gradShape.GetDimNum();
-    std::vector<int64_t> valuePerm(dimSize);
-    // NCDHW -> DHWNC
-    for (size_t i = startIdx; i < dimSize; i++) {
-        valuePerm[i - startIdx] = i;
-    }
-
-    auto idx = dimSize - startIdx + 1;
-    for (uint64_t i = 0; static_cast<int>(i) < startIdx; i++) {
-        valuePerm[idx + i] = i;
-    }
-    auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
-    return perm;
-}
-
 static tuple<const aclIntArray*, const aclIntArray*, const aclIntArray*> FillIntArray(
     const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding, aclOpExecutor* executor)
 {
@@ -327,7 +308,8 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
     auto gradShape = gradOutput->GetViewShape();
     auto gradDimNum = gradShape.GetDimNum();
     int64_t num = 1;
-    int64_t mergeNC = gradDimNum == CDHW_SHAPE ? gradShape.GetDim(0) : gradShape.GetDim(0) * gradShape.GetDim(1);
+    int64_t mergeNC = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) :
+        gradShape.GetDim(0) * gradShape.GetDim(1);
     int64_t depth = gradShape.GetDim(gradDimNum - 3);
     int64_t height = gradShape.GetDim(gradDimNum - 2);
     int64_t weight = gradShape.GetDim(gradDimNum - 1);
@@ -345,14 +327,14 @@ const aclTensor* TransOut2OrigShape(const aclTensor* result, const aclTensor* gr
     auto gradDimNum = gradShape.GetDimNum();
     auto resDimNum = resShape.GetDimNum();
 
-    int64_t num = gradDimNum == CDHW_SHAPE ? 1 : gradShape.GetDim(0);
-    int64_t channel = gradDimNum == CDHW_SHAPE ? gradShape.GetDim(0) : gradShape.GetDim(1);
+    int64_t num = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? 1 : gradShape.GetDim(0);
+    int64_t channel = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) : gradShape.GetDim(1);
     int64_t depth = resShape.GetDim(resDimNum - 3);
     int64_t height = resShape.GetDim(resDimNum - 2);
     int64_t weight = resShape.GetDim(resDimNum - 1);
     FVector<int64_t> cdhwVec = {channel, depth, height, weight};
     FVector<int64_t> ncdhwVec = {num, channel, depth, height, weight};
-    FVector<int64_t> reshapeVec = gradDimNum == CDHW_SHAPE ? cdhwVec : ncdhwVec;
+    FVector<int64_t> reshapeVec = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? cdhwVec : ncdhwVec;
     aclIntArray* reshapeArray = executor->AllocIntArray(reshapeVec.data(), reshapeVec.size());
     CHECK_RET(reshapeArray != nullptr, nullptr);
     auto res = l0op::Reshape(result, reshapeArray, executor);
@@ -362,12 +344,13 @@ const aclTensor* TransOut2OrigShape(const aclTensor* result, const aclTensor* gr
 const aclTensor* CopyShape2OneDim(const aclTensor* self, aclOpExecutor* executor)
 {
     FVector<int> shapeVec;
-    for (int i = 0; i < self->GetViewShape().GetDimNum(); i++) {
+    for (uint64_t i = 0; i < self->GetViewShape().GetDimNum(); i++) {
         shapeVec.push_back(self->GetViewShape().GetDim(i));
     }
     auto shapeCopy = executor->ConvertToTensor(shapeVec.data(), shapeVec.size(), DataType::DT_INT32);
     return shapeCopy;
 }
+} //namespace
 
 aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
     const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,

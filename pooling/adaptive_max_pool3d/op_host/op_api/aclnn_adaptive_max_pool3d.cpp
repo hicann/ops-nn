@@ -135,21 +135,21 @@ static bool CheckOutShape(
     size_t offset = outputDimNum == static_cast<size_t>(CDHW_SHAPE_SIZE) ? 1UL : 2UL;
     // 检查输入self shape与output shape的前2维是否一致
     for (size_t i = 0; i < offset; ++i) {
-        if (selfShape[i] != outputShape[i]) {
+        if (selfShape.GetDim(i) != outputShape.GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The [%lu] dim of outShape value should match the selfShape's.", i);
             return false;
         }
     }
     // 检查输出的output size与output tensor shape是否一致
     for (size_t i = 0; i < size; ++i) {
-        if ((*outputSize)[i] != outputShape[i + offset]) {
+        if ((*outputSize)[i] != outputShape.GetDim(i + offset)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outShape value should match the outputSize value.");
             return false;
         }
     }
     // 检查output shape 与indices shape是否一致
     for (size_t i = 0; i < size; ++i) {
-        if (indicesShape[i] != outputShape[i]) {
+        if (indicesShape.GetDim(i) != outputShape.GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The [%lu] dim of outShape value should match the indicesShape value.", i);
             return false;
         }

@@ -50,7 +50,6 @@ const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Input dim num is not supported.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
     }
-    auto input_format = self->GetViewFormat();
     outShape.SetDim(DIM_D, (*outputSize)[DIM_ZERO]);
     outShape.SetDim(DIM_H, (*outputSize)[DIM_ONE]);
     outShape.SetDim(DIM_W, (*outputSize)[DIM_TWO]);

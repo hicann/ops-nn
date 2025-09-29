@@ -86,7 +86,7 @@ static inline const aclTensor* AvgPool3DAiCore(
     return output;
 }
 
-static inline const int64_t AvgPool3DOutputShape(
+static inline int64_t AvgPool3DOutputShape(
     const int64_t inputSize, const int64_t kernelSize, const int64_t padL, const int64_t stride, const bool ceilMode) {
     int64_t outputSize = (stride == 0) ? -1 :
                          (inputSize + padL * 2 - kernelSize + (ceilMode ? stride - 1 : 0)) /stride + 1;

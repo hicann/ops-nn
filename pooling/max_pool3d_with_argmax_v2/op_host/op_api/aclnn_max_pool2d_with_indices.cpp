@@ -65,6 +65,7 @@ static const int64_t BLOCKSIZE = 16;
 static const int KERNEL_SIZE_32 = 32;
 static const int KERNEL_SIZE_64 = 64;
 
+namespace {
 static bool CheckNotNullPtr(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
@@ -199,7 +200,7 @@ static inline int64_t div_rtn(int64_t x, int64_t y)
 }
 
 // 计算经过MaxPool后的shape的h和w（n,c与input一致，不用计算）
-static inline const int64_t PoolingOutShape(
+static inline int64_t PoolingOutShape(
     int64_t inputSize, int64_t kernelSize, int64_t pad_l, int64_t pad_r, int64_t stride, int64_t dilation,
     bool ceil_mode)
 {
@@ -214,7 +215,7 @@ static inline const int64_t PoolingOutShape(
     return outputSize;
 }
 
-static const bool CheckOutAndIndicesShape(
+static bool CheckOutAndIndicesShape(
     const aclTensor* self, int64_t kH, int64_t kW, int64_t padH, int64_t padW, int64_t dH, int64_t dW,
     int64_t dilationH, int64_t dilationW, bool ceilMode, bool isMask, bool isMask2ND, const aclTensor* out,
     const aclTensor* indices)
@@ -494,7 +495,7 @@ static inline const aclTensor* View5Das3D(const aclTensor* input, const op::Form
     return reformatInput;
 }
 
-static const op::DataType GetCastDtypeForMask(const aclTensor* self, bool isMask2ND)
+static op::DataType GetCastDtypeForMask(const aclTensor* self, bool isMask2ND)
 {
     /*
     fp32转fp16场景：910soc aclnn自定义mask语义接口通过转fp16方式兼容float32
@@ -701,7 +702,6 @@ static aclnnStatus ExecMaxPool2dWithIndicesReshape3DGetWorkspaceSize(
     auto outResultSqueezed = isSelf3D ? View5Das3D(outResult, outFormat, uniqueExecutor.get()) :
                                         View5Das4D(outResult, outFormat, uniqueExecutor.get());
     CHECK_RET(outResultSqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const op::Format& indicesFormat = indices->GetStorageFormat();
     const aclTensor* indicesResultSqueezed = isSelf3D ? View5Das3D(indicesResult, outFormat, uniqueExecutor.get()) :
                                                         View5Das4D(indicesResult, outFormat, uniqueExecutor.get());
     CHECK_RET(indicesResultSqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -873,6 +873,7 @@ static aclnnStatus ExecMaxPool2dWithIndicesGetWorkspaceSizeV3(
     uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
     return ACLNN_SUCCESS;
 }
+} // namespace
 
 aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
@@ -895,10 +896,6 @@ aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
-    const bool is3d = self->GetViewShape().GetDimNum() == DIMENTION_3;
-    const int64_t height = is3d ? out->GetViewShape().GetDim(DIM_INX_1) : out->GetViewShape().GetDim(DIM_INX_2);
-    const int64_t width = is3d ? out->GetViewShape().GetDim(DIM_INX_2) : out->GetViewShape().GetDim(DIM_INX_3);
-
     if (!(kH == 1 && kW == 1) && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                   GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) {
         L2_DFX_PHASE_1(

@@ -288,7 +288,7 @@ static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(
 
         auto resReshapeSize = out->GetViewShape().GetDimNum();
         std::vector<int64_t> resShapeValue(resReshapeSize);
-        for (int64_t i = 0; i < resReshapeSize; i++) {
+        for (int64_t i = 0; i < static_cast<int64_t>(resReshapeSize); i++) {
             resShapeValue[i] = out->GetViewShape().GetDim(i);
         }
         auto resShape = executor->AllocIntArray(resShapeValue.data(), resReshapeSize);

@@ -669,7 +669,7 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
-    ge::graphStatus LargeKernelCalcParts(array<uint64_t, DHW_DIMS>& inParts, uint64_t inPartsSize, UBBufferSize& ubBufSizes, uint64_t dim);
+    ge::graphStatus LargeKernelCalcParts(array<uint64_t, DHW_DIMS>& inParts, UBBufferSize& ubBufSizes, uint64_t dim);
     uint64_t CalcBufferSizes(const array<uint64_t, DHW_DIMS> part, UBBufferSize& ubBufSizes);
 
     MaxPool3DWithArgmaxV2HugeKernelTilingData tiling;

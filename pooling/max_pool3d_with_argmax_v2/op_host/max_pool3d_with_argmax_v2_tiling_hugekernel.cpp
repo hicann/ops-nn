@@ -29,7 +29,7 @@ bool MaxPool3DWithArgmaxV2HugeKernelTiling::IsCapable()
 {
     array<uint64_t, DHW_DIMS> parts{
         inputData.kernelSize[D_DIM], inputData.kernelSize[H_DIM], inputData.kernelSize[W_DIM]};
-    LargeKernelCalcParts(parts, parts.size(), bufSizes, D_DIM);
+    LargeKernelCalcParts(parts, bufSizes, D_DIM);
 
     if (parts[D_DIM] != 0) {
         splitData.partD = inputData.dilation[D_DIM] * (parts[D_DIM] - 1) + 1;
@@ -39,7 +39,7 @@ bool MaxPool3DWithArgmaxV2HugeKernelTiling::IsCapable()
     }
 
     parts[D_DIM] = 1;
-    LargeKernelCalcParts(parts, parts.size(), bufSizes, H_DIM);
+    LargeKernelCalcParts(parts, bufSizes, H_DIM);
 
     if (parts[H_DIM] != 0) {
         splitData.partD = 1UL;
@@ -49,7 +49,7 @@ bool MaxPool3DWithArgmaxV2HugeKernelTiling::IsCapable()
     }
 
     parts[H_DIM] = 1;
-    LargeKernelCalcParts(parts, parts.size(), bufSizes, W_DIM);
+    LargeKernelCalcParts(parts, bufSizes, W_DIM);
 
     if (parts[W_DIM] != 0) {
         splitData.partD = 1UL;
@@ -125,7 +125,7 @@ uint64_t MaxPool3DWithArgmaxV2HugeKernelTiling::CalcBufferSizes(
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2HugeKernelTiling::LargeKernelCalcParts(
-    array<uint64_t, DHW_DIMS>& inParts, uint64_t inPartsSize, UBBufferSize& ubBufSizes, uint64_t dim)
+    array<uint64_t, DHW_DIMS>& inParts, UBBufferSize& ubBufSizes, uint64_t dim)
 {
     if (dim != D_DIM && dim != H_DIM && dim != W_DIM) {
         return ge::GRAPH_FAILED;

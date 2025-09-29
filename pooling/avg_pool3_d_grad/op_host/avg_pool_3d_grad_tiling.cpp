@@ -509,7 +509,7 @@ void AvgPool3dGradTiling::BasicBlockUb(const uint64_t ubSizePlatform, const ge::
     /*  normal */
 
     // calc basewo
-    for (uint64_t i = singleCoreWo; i >= 0UL; i--) {
+    for (uint64_t i = singleCoreWo; i > 0UL; i--) {
         if (BasicBlockComputerUbSize(
                 baseDo_, baseHo_, i, baseDi_, baseHi_,
                 std::min(static_cast<uint64_t>((i - 1) * dDHW_.w + kDHW_.w), static_cast<uint64_t>(inDHW_.w)),

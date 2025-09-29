@@ -224,12 +224,13 @@ aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(
 
         // reshape NCHW/NCL -> NCDHW
         op::Shape inputContiguousShape = inputContiguous->GetViewShape();
-        auto inputDimNum = inputContiguousShape.GetDimNum();
+        int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape.GetDimNum());
         std::vector<int64_t> valueShape(NCDHW_DIM_NUM);
-        valueShape[0] = inputDimNum == NCHW_DIM_NUM ? inputContiguousShape.GetDim(0) : 1;
-        valueShape[1] = inputDimNum == NCHW_DIM_NUM ? inputContiguousShape.GetDim(1) : inputContiguousShape.GetDim(0);
+        valueShape[0] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(0) : 1;
+        valueShape[1] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(1) :
+                        inputContiguousShape.GetDim(0);
         valueShape[DIM_D] = 1;
-        for (int64_t i = inputDimNum - OUTPUT_SIZE_NUM; i < inputDimNum; i++) {
+        for (int64_t i = inputDimNum - static_cast<int64_t>(OUTPUT_SIZE_NUM); i < inputDimNum; i++) {
             valueShape[NCDHW_DIM_NUM - inputDimNum + i] = inputContiguousShape.GetDim(i);
         }
         auto reshapeShape = uniqueExecutor.get()->AllocIntArray(valueShape.data(), NCDHW_DIM_NUM);
