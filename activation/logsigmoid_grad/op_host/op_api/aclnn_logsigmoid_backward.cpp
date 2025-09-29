@@ -71,7 +71,7 @@ static inline const std::initializer_list<op::DataType>& GetOutputDtypeSupportLi
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
-                                const aclTensor* buffer, aclTensor* gradInput)
+                            [[maybe_unused]] const aclTensor* buffer, aclTensor* gradInput)
 {
     auto inputSupportList = GetInputDtypeSupportList();
     auto outputSupportList = GetOutputDtypeSupportList();
@@ -89,7 +89,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
 }
 
 static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self,
-                                const aclTensor* buffer, aclTensor* gradInput)
+                            [[maybe_unused]] const aclTensor* buffer, aclTensor* gradInput)
 {
     // 检查gradOutput, self, buffer和gradInput的shape是否一致
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(gradOutput, gradInput->GetViewShape(), return false);

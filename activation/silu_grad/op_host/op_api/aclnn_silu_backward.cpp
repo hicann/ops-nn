@@ -67,7 +67,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     // 检查gradInput的数据类型是否在SiluGrad算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, DTYPE_SUPPORT_LIST, return false);
 
-    if (IsSupportMixPrecision && (gradOutput->GetDataType() != self->GetDataType())) {
+    if (IsSupportMixPrecision() && (gradOutput->GetDataType() != self->GetDataType())) {
         // 检查混合精度的输出是否为float
         OP_CHECK_DTYPE_NOT_MATCH(gradInput, op::DataType::DT_FLOAT, return false);
     } else {
@@ -119,7 +119,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) {
+[[maybe_unused]] static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) {
     auto shape = x->GetViewShape();
     int64_t dimSize = x->GetViewShape().GetDimNum();
 
@@ -132,8 +132,9 @@ static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) 
     return perm;
 }
 
-static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, size_t originalDimSize,
-                                          aclIntArray* valuePerm = nullptr) {
+[[maybe_unused]] static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor,
+                                            size_t originalDimSize,
+                                            aclIntArray* valuePerm = nullptr) {
   size_t dimSize = x->GetViewShape().GetDimNum();
   if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
     return x;

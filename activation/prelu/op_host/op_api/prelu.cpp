@@ -50,7 +50,7 @@ static const aclTensor *PReluAiCore(const aclTensor *self, const aclTensor *weig
 }
 
 // AICPU算子kernel
-static const aclTensor *PReluAiCpu(const aclTensor *self, const aclTensor *weight,
+[[maybe_unused]] static const aclTensor *PReluAiCpu(const aclTensor *self, const aclTensor *weight,
                                   const aclTensor *preluOut, aclOpExecutor *executor) {
     // 使用框架宏ADD_AICPU_TO_KERNEL_OBJ_LIST，将PRelu算子加入任务队列
     L0_DFX(PReluAiCpu, self, weight, preluOut);

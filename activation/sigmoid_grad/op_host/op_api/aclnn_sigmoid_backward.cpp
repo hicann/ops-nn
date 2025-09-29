@@ -65,7 +65,8 @@ inline static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor 
     return true;
 }
 
-inline static bool CheckShape(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *gradInput)
+inline static bool CheckShape(const aclTensor *gradOutput, const aclTensor *output,
+                                [[maybe_unused]] const aclTensor *gradInput)
 {
     // gradOutput 维度必须小于9
     OP_CHECK_MAX_DIM(gradOutput, 8, return false);

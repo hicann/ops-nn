@@ -100,7 +100,7 @@ ge::graphStatus GluBaseTiling4RegBase::GetPlatformInfo()
     blockDim_ = platformInfo.GetCoreNumAiv();
 
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize_);
-    if (blockDim_ < 0 || ubSize_ <= UB_RESERVED_BUFF) {
+    if (ubSize_ <= (uint64_t)UB_RESERVED_BUFF) {
         OP_LOGI(opName_, "Compile Info is invalid, coreNum: %u, ubSize: %lu", blockDim_, ubSize_);
         return ge::GRAPH_PARAM_INVALID;
     }
