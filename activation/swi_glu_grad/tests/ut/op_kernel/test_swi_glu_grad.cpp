@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_swi_glu_grad.h"
+#include "swi_glu_grad_tiling_def.h"
 
 #include <cstdint>
 

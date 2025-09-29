@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_swi_glu.h"
+#include "swi_glu_tiling_def.h"
 
 #include <cstdint>
 
