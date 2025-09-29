@@ -43,7 +43,7 @@ static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormAICore(
 }
 
 const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t HxW, int64_t numGroups,
+    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t numGroups,
     float eps, bool isTraining, aclOpExecutor* executor)
 {
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
