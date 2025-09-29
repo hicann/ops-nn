@@ -236,6 +236,9 @@ private:
     constexpr static uint16_t U_INT16_T_MAX_VALUE = 65535;
     constexpr static uint32_t TWO = 2;
     constexpr static uint32_t FOUR = 4;
+    constexpr static uint32_t NUM_8 = 8;
+    constexpr static uint32_t NUM_16 = 16;
+
 };
 
 template <typename T>
@@ -317,7 +320,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::InitGM(GM_ADDR val
 
     pipe.InitBuffer(locationQue_, locationLen * B32_BYTE_SIZE);                                 // 4KB
     pipe.InitBuffer(attentionWeightsQue_, (attentionWeightsLen / embedDims_) * B32_BYTE_SIZE);  // 2KB
-    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);
+    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);  // 4K
 }
 
 template <typename T>
@@ -948,13 +951,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::OutTranspose(int32
                                                                            LocalTensor<float> xLocal,
                                                                            LocalTensor<float> outValueUb)
 {
-    if (channelAlign == 8) {
-        v4dtrans(((__ubuf__ uint32_t*)outValueUb.GetPhyAddr()), ((__ubuf__ uint32_t*)xLocal.GetPhyAddr()),
-                 TRANSE_REP_STRIDE, channelAlign * 4, 1);
-    } else if (channelAlign <= 64) {
-        v4dtrans(((__ubuf__ uint32_t*)outValueUb.GetPhyAddr()), ((__ubuf__ uint32_t*)xLocal.GetPhyAddr()),
-                 TRANSE_REP_STRIDE, channelAlign * 4, 1);
-    }
+    TransposeParamsExt transposeParams {1, (uint16_t)(channelAlign * 4), 1, (uint16_t)TRANSE_REP_STRIDE, TransposeType::TRANSPOSE_NHWC2NCHW};
+    Transpose<float>(outValueUb, xLocal, xLocal.ReinterpretCast<uint8_t>(), transposeParams);
 }
 
 template <typename T>
@@ -1220,9 +1218,13 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCal(
     int32_t sumOutputLen, int32_t outRepeatLen, int32_t tailNum, int32_t copyNum, bool tailByteAlign)
 {
     if (loopElems == 128) {
-        // sumOutputLen * numPoints_ 转置成 numPoints_ * sumOutputLen
-        v4dtrans(((__ubuf__ uint32_t*)outTransTensor.GetPhyAddr()), ((__ubuf__ uint32_t*)tmpOut.GetPhyAddr()),
-                 sumOutputLen, numPoints_, 1);
+        TransposeParamsExt transposeParams;
+        transposeParams.nSize = 1;
+        transposeParams.cSize = (uint16_t)numPoints_;
+        transposeParams.hSize = 1;
+        transposeParams.wSize = (uint16_t)sumOutputLen;
+        transposeParams.transposeType = TransposeType::TRANSPOSE_NHWC2NCHW;
+        Transpose<float>(outTransTensor, tmpOut, tmpOut.ReinterpretCast<uint8_t>(), transposeParams);
         PipeBarrier<PIPE_V>();;
         for (int32_t i = 1; i < numPoints_; i++) {
             Add(outTransTensor, outTransTensor, outTransTensor[sumOutputLen * i], sumOutputLen);
