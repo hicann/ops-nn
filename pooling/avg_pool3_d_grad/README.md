@@ -116,4 +116,6 @@ $$
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_avgpool3d_backward.cpp](examples/test_aclnn_avgpool3d_backward.cpp) | 通过[aclnnAvgPool3dBackward](docs/aclnnAvgPool3dBackward.md)接口方式调用AvgPool3dGrad算子。 |
-| 图模式 | [test_geir_avg_pool3_d_grad.cpp](examples/test_geir_avg_pool3_d_grad.cpp)  | 通过[算子IR](op_graph/avg_pool3_d_grad_proto.h)构图方式调用AvgPool3dGrad算子。         |
+| 图模式 | - | 通过[算子IR](op_graph/avg_pool3_d_grad_proto.h)构图方式调用AvgPool3dGrad算子。         |
+
+<!-- [test_geir_avg_pool3_d_grad.cpp](examples/test_geir_avg_pool3_d_grad.cpp) -->

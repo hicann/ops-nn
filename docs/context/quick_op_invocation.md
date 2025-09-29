@@ -17,21 +17,20 @@
    - Gawk
    - googletest（仅执行UT时依赖，建议版本 [release-1.11.0](https://github.com/google/googletest/releases/tag/release-1.11.0)）
 
-   上述依赖包可通过项目根目录下install\_deps.sh安装，命令如下：
+   上述依赖包可通过项目根目录下install\_deps.sh安装，命令如下，若遇到不支持系统，请参考该文件自行适配：
    ```bash
    bash install_deps.sh
    ```
 
-2. **安装驱动与固件（可选）**
+2. **安装驱动与固件（运行态依赖）**
 
-   如需本地运行项目算子，请参见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》，按要求完成NPU驱动和固件软件包安装；否则可跳过本操作。
-
+   运行算子时必须安装驱动与固件，若仅编译算子，可跳过本操作，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 ## 环境准备
 
 1. **安装社区版CANN toolkit包**
 
     根据实际环境，下载对应`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`包，下载链接为[toolkit x86_64包](https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/CANN/ops-nn/Ascend-cann-toolkit_8.3.RC1_linux-x86_64.run)、[toolkit aarch64包](https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/CANN/ops-nn/Ascend-cann-toolkit_8.3.RC1_linux-aarch64.run)。
-    
+
     ```bash
     # 确保安装包具有可执行权限
     chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
@@ -42,9 +41,9 @@
     - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
     - \$\{install\_path\}：表示指定安装路径，默认安装在`/usr/local/Ascend`目录。
 
-2. **安装社区版CANN legacy包（可选）**
+2. **安装社区版CANN legacy包（运行态依赖）**
 
-    如需本地运行项目算子，需额外安装此包，否则跳过本操作。
+    运行算子时必须安装本包，若仅编译算子，可跳过本操作。
 
     根据产品型号和环境架构，下载对应`cann-${soc_name}-opp_legacy-${cann_version}-linux-${arch}.run`包，下载链接如下：
 
@@ -59,7 +58,7 @@
     ```
     - \$\{soc\_name\}：表示NPU型号名称。
     - \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
-  
+
 3. **安装社区版CANN ops-math包（可选）**
 
     如需本地运行项目算子，需额外安装此包，否则跳过本操作。
@@ -112,7 +111,7 @@
 1. **编译自定义算子包**
 
     进入项目根目录，执行如下编译命令：
-    
+
     ```bash
     bash build.sh --pkg --soc=${soc_version} [--vendor_name=${vendor_name}] [--ops=${op_list}]
     # 以TransposeBatchMatMul算子编译为例
@@ -121,7 +120,7 @@
     - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件使用"ascend910b"（默认），Atlas A3 训练系列产品/Atlas A3 推理系列产品使用"ascend910_93"。
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
     - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子（参见[算子列表](./op_list.md)）。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
-    
+
     说明：若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是built-in包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。
 
     若提示如下信息，说明编译成功。
@@ -173,30 +172,30 @@
 目前算子支持API方式（aclnn接口）和图模式调用，**推荐aclnn调用**，项目可调用算子参见[算子列表](./op_list.md)，算子对应的aclnn接口参见[aclnn接口列表](./op_api_list.md)。
 
 - **执行算子样例**
-  
+
     - 完成ops-nn包安装后，执行命令如下：
         ```bash
         bash build.sh --run_example ${op} ${mode}
         # 以TransposeBatchMatMul算子example执行为例
         # bash build.sh --run_example transpose_batch_mat_mul eager
         ```
-        
-        - \$\{op\}：表示待执行算子（参见[算子列表](./op_list.md)），算子名为小写下划线形式，如transpose_batch_mat_mul。       
+
+        - \$\{op\}：表示待执行算子（参见[算子列表](./op_list.md)），算子名为小写下划线形式，如transpose_batch_mat_mul。
         - \$\{mode\}：表示算子执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
-    
+
     - 完成自定义算子包安装后，执行命令如下：
         ```bash
         bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}]
         # 以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
         # bash build.sh --run_example transpose_batch_mat_mul eager cust --example_name=transpose_batch_mat_mul --vendor_name=transpose_batch_mat_mul
         ```
-    
+
         - \$\{op\}：表示待执行算子，算子名为小写下划线形式，如transpose_batch_mat_mul。
         - \$\{mode\}：表示执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
-        - \$\{pkg_mode\}：表示包模式，目前仅支持cust，即自定义算子包。         
+        - \$\{pkg_mode\}：表示包模式，目前仅支持cust，即自定义算子包。
         - \$\{example_name\}（可选）：表示待执行样例名，名称为各个算子examples文件夹下的文件名称，去掉`test_aclnn_`前缀和`.cpp`后缀。
-        - \$\{vendor\_name\}（可选）：与构建的自定义算子包设置一致，默认名为custom。        
-        
+        - \$\{vendor\_name\}（可选）：与构建的自定义算子包设置一致，默认名为custom。
+
         说明：\$\{mode\}为graph时，不指定\$\{pkg_mode\}和\$\{vendor\_name\}
 
     执行算子样例后会打印执行结果，以TransposeBatchMatMul算子为例，结果如下：
