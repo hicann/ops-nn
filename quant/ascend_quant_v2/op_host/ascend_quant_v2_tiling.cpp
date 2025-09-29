@@ -80,7 +80,7 @@ ge::graphStatus AscendQuantV2::GetCompileInfo()
     OP_CHECK_IF(
         (coreNum_ <= 0 || ubSize_ <= 0),
         OP_LOGE(
-            context_->GetNodeName(), "AscendQuantV2 GetCompileInfo Failed, coreNum:%d, ubSize:%ld.", coreNum_, ubSize_),
+            context_->GetNodeName(), "AscendQuantV2 GetCompileInfo Failed, coreNum:%u, ubSize:%lu.", coreNum_, ubSize_),
         return ge::GRAPH_FAILED);
 
     if (compileInfo->isAscend910B) {
@@ -106,7 +106,7 @@ ge::graphStatus AscendQuantV2::CheckInputValid(const gert::Shape& input1, const 
     if (input1Dim != input2Dim && input2Dim != 1) {
         OP_LOGE(
             context_->GetNodeName(),
-            "scale/offset dim(%ld)'s value(%ld) is invalid, should be same as x dim(%ld)'s value(%ld) or 1", input2Axis,
+            "scale/offset dim(%zu)'s value(%ld) is invalid, should be same as x dim(%zu)'s value(%ld) or 1", input2Axis,
             input2Dim, input1Axis, input1Dim);
         return ge::GRAPH_FAILED;
     }
@@ -735,7 +735,7 @@ static ge::graphStatus TilingPrepare4AscendQuantV2(gert::TilingParseContext* con
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
         OP_LOGE(
-            context->GetNodeName(), "AscendQuantV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%ld.",
+            context->GetNodeName(), "AscendQuantV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
             compileInfo->vectorCoreNum, compileInfo->ubSize),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);

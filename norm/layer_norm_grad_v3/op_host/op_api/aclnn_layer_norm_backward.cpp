@@ -303,6 +303,15 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         gradWeightOut, gradBiasOut, M, N);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
+    // outputMask全为False时直接结束
+    if (!(*outputMask)[GRAD_INPUT_INDEX] &&
+        !(*outputMask)[GRAD_WEIGHT_INDEX] &&
+        !(*outputMask)[GRAD_BIAS_INDEX]) {
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
     // 空tensor场景处理
     if (M <= 0 || N <= 0) {
         if ((*outputMask)[GRAD_WEIGHT_INDEX] && M <= 0) {
@@ -396,7 +405,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         CHECK_RET(betaGammaBackpropV2Res[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 调用SqueezeNd将reduce的输出shape前面的1轴删除
         FVector<int64_t> dim(beginAxis);
-        for (size_t index = 0; index < beginAxis; index++) {
+        for (int64_t index = 0; index < beginAxis; index++) {
             dim[index] = index;
         }
         aclIntArray* resArray = uniqueExecutor.get()->AllocIntArray(dim.data(), dim.size());

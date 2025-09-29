@@ -302,6 +302,7 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuantV2(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepare4AddRmsNormDynamicQuantV2(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4AddRmsNormDynamicQuantV2");
     return ge::GRAPH_SUCCESS;
 }
 
