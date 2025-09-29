@@ -17,7 +17,7 @@
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   scalars = [{scalars_0}, {scalars_1}, ... {scalars_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
-  $$ 
+  $$
 
   $$
   y_i = x_i - scalars_i (i=0,1,...n-1)
@@ -72,7 +72,8 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_sub_scalar_list](examples/test_aclnn_foreach_sub_scalar_list.cpp) | 通过[aclnnForeachSubScalarList](docs/aclnnForeachSubScalarList.md)接口方式调用ForeachSubScalarList算子。 |
+| aclnn接口  | - | 通过[aclnnForeachSubScalarList](docs/aclnnForeachSubScalarList.md)接口方式调用ForeachSubScalarList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sub_scalar_list_proto.h)构图方式调用ForeachSubScalarList算子。         |
 
 <!--[test_geir_foreach_sub_scalar_list](examples/test_geir_foreach_sub_scalar_list.cpp)-->
+<!-- [test_aclnn_foreach_sub_scalar_list](examples/test_aclnn_foreach_sub_scalar_list.cpp) -->
