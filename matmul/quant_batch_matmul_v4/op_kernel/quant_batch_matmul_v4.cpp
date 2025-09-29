@@ -17,13 +17,15 @@
 #include "kernel_operator.h"
 #include "kernel_operator_intf.h"
 #include "lib/matmul_intf.h"
+#include "quant_batch_matmul_v4_tiling_key.h"
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     #include "quant_batch_matmul_v4_msd.h"
     #include "quant_batch_matmul_v4_perblock.h"
     #include "quant_batch_matmul_v4_pergroup.h"
 #endif
 
-extern "C" __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
+template <int TRANS, int QUANT_TYPE, int OPTION_ATTRS, int WEIGHTNZ, int KERNEL_TEMPLATE_TYPE>
+__global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
                                                             GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
                                                             GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table,
                                                             GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
@@ -40,8 +42,8 @@ extern "C" __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR 
 
     AscendC::TPipe tPipe;
     #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
-        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
-        if (TILING_KEY_IS(100400UL)){
+        if (TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
+            WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_MSD_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV4MsdTilingData, tilingDataIn, tiling);
             if ASCEND_IS_AIV {
                 QuantBatchMatmulV4MsdPre opPre;
@@ -55,13 +57,17 @@ extern "C" __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR 
             QuantBatchMatmulV4Msd<AscendC::int4b_t, AscendC::int4b_t, float, DTYPE_Y> op;
             op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn, &tPipe);                                                                                             \
             op.Process();
-        } else if (TILING_KEY_IS(200410UL)) {
+        } else if (
+            TRANS == QUANT_BATCH_MATMUL_V4_B_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
+            WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_PERBLOCK_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV4PerblockTilingData, tilingDataIn, tiling);
             AscendC::QuantBatchMatmulV4Perblock<int8_t, int8_t, float, float, float, bfloat16_t> op;
             op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn, &tPipe);                                                                                             \
             op.Process();
             tPipe.Destroy();
-        } else if (TILING_KEY_IS(33UL)) {
+        } else if (
+            TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
+            WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_PERGROUP_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV3TilingData, tilingDataIn, tiling);
             AscendC::QuantBatchMatmulV4Pergroup<AscendC::int4b_t, AscendC::int4b_t, float, float, DTYPE_Y> op;
             op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn, &tPipe);                                                                                             \
