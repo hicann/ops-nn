@@ -62,6 +62,7 @@ struct QuantBatchMatmulMsdInfo {
     bool transB;
     bool weightNz;
     bool hasAntiQuantOffset;
+    bool hasBias;
     uint32_t libApiWorkSpaceSize;
     uint64_t groupSize;
     uint64_t mSize;
@@ -91,7 +92,7 @@ TILING_DATA_FIELD_DEF(uint32_t, groupSize);
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_100400, QuantBatchMatmulV4MsdTilingData)
+REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_16, QuantBatchMatmulV4MsdTilingData)
 
 class QuantBatchMatmulV4MsdTiling : public TilingBaseClass {
 public:
