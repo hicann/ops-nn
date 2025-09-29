@@ -357,7 +357,16 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 DEPENDS ${tilingFile}
                 )
 
-        set(kernelFile ${ASCEND_KERNEL_SRC_DST}/${opName}/${opName}.cpp)
+        set(special_ops_list "embedding_bag")
+        if(opName IN_LIST special_ops_list)
+            # 如果在列表中，使用带_apt后缀的文件
+            set(cpp_file "${ASCEND_KERNEL_SRC_DST}/${opName}/${opName}_apt.cpp")
+        else()
+            # 如果不在列表中，使用普通文件
+            set(cpp_file "${ASCEND_KERNEL_SRC_DST}/${opName}/${opName}.cpp")
+        endif()
+
+        set(kernelFile ${cpp_file})
         set_source_files_properties(${kernelFile} PROPERTIES GENERATED TRUE)
 
         ## add object: ${opName}_${socVersion}_cases_obj
