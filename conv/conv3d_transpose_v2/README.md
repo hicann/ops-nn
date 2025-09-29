@@ -77,7 +77,7 @@
 * dilations
     - N与C的维度必须为1。
     - W、H和D维度的取值范围必须在 [1,255] 之间。
-* output_padding 
+* output_padding
     -  N和C维度必须为0，仅允许在深度、高度、宽度方向添加。
 
 
@@ -85,4 +85,4 @@
 
 | 调用方式  | 样例代码  | 说明                 |
 | -----------  | ------------------- | ---------- |
-| aclnn接口   | [test_aclnn_conv3d_transpose_v2](examples/test_aclnn_conv3d_transpose_v2.cpp)  | 通过[aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv3DTransposeV2算子 |
+| aclnn接口   | - | 通过[aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv3DTransposeV2算子 |

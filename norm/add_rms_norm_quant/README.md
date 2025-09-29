@@ -168,8 +168,10 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp) | 通过[aclnnAddRmsNormQuant](docs/aclnnAddRmsNormQuant.md)接口方式调用AddRmsNormQuant算子。 |
-| aclnn接口  | [test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp) | 通过[aclnnAddRmsNormQuantV2](docs/aclnnAddRmsNormQuantV2.md)接口方式调用AddRmsNormQuant算子。 |
+| aclnn接口  | - | 通过[aclnnAddRmsNormQuant](docs/aclnnAddRmsNormQuant.md)接口方式调用AddRmsNormQuant算子。 |
+| aclnn接口  | - | 通过[aclnnAddRmsNormQuantV2](docs/aclnnAddRmsNormQuantV2.md)接口方式调用AddRmsNormQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/add_rms_norm_quant_proto.h)构图方式调用AddRmsNormQuant算子。         |
 
 <!--[test_geir_add_rms_norm_quant](examples/test_geir_add_rms_norm_quant.cpp)-->
+<!-- [test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp) -->
+<!-- [test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp) -->
