@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/python3
+# coding=utf-8
 # ----------------------------------------------------------------------------
 # This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
@@ -9,28 +9,23 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-
-import numpy as np
 import sys
+import numpy as np
 
-tiling_params = [
-1, 0, 1, 12, 2, 1, 1, 524288, 1, 4, 1152, 1, 144, 1, 16, 16, 1, 32, 32, 1, 2, 2, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 8, 2,
-2, 2, 1, 1, 96, 64, 64, 16, 8, 16, 1, 1, 2, 2, 1, 8192, 0, 1, 1, 96, 8, 1, 0, 8, 0]
 
-params_info = {
-    "conv_stdit_01_fp32": tiling_params,
-}
+def conv3d_transpose_v2(n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk):
+    input_size = np.array([n, cin, di, hi, wi]).astype(np.int32)
+    x_shape = [n, cout, dout, ho, wo]
+    filter_shape = [cout, cin, dk, hk, wk]
+    filter_ = np.random.uniform(-5, 5, filter_shape).astype(np.float16)
+    x = np.random.uniform(-5, 5, x_shape).astype(np.float16)
 
-def main():
-    params_list = params_info[sys.argv[1]]   # python gen_tiling.py case0  sys.argv[1]="case0"
-
-    base_params = np.array(params_list[:], dtype=np.int32)
-
-    tiling_file = open("tiling.bin", "wb")
-    base_params.tofile(tiling_file)
-    # attention_score_core_params.tofile(tiling_file)
-    # transposeTilingDataTailCore.tofile(tiling_file)
+    input_size.tofile("input_size.bin")
+    filter_.tofile("filter.bin")
+    x.tofile("x.bin")
 
 
 if __name__ == '__main__':
-    main()
+    n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk = [int(p) for p in sys.argv[1:13]]
+
+    conv3d_transpose_v2(n, cin, cout, dout, ho, wo, di, hi, wi, dk, hk, wk)
