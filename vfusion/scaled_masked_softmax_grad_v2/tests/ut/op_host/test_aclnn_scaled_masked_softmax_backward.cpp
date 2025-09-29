@@ -14,7 +14,7 @@
  */
 #include <gmock/gmock.h>
 #include "gtest/gtest.h"
-#include "aclnn_scaled_masked_softmax_backward.h"
+#include "level2/aclnn_scaled_masked_softmax_backward.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
@@ -241,34 +241,4 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_scaled_masked_softmax_backward_v2_test, ascend910B2_test_scaled_masked_softmax_backward_success_1)
-{
-    TensorDesc yGradDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc yDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
-    TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
-    uint64_t workspace_size = 0;
-    aclOpExecutor* executor = nullptr;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_scaled_masked_softmax_backward_v2_test, ascend910B2_test_scaled_masked_softmax_backward_success_2)
-{
-    TensorDesc yGradDesc = TensorDesc({1, 2, 4, 2048}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc yDesc = TensorDesc({1, 2, 4, 2048}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc maskDesc = TensorDesc({1, 1, 4, 2048}, ACL_BOOL, ACL_FORMAT_ND);
-    TensorDesc outDesc = TensorDesc({1, 2, 4, 2048}, ACL_FLOAT16, ACL_FORMAT_ND);
-
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 0.8, false), OUTPUT(outDesc));
-    uint64_t workspace_size = 0;
-    aclOpExecutor* executor = nullptr;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }

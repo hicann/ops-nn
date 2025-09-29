@@ -14,7 +14,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 #define __CCE_UT_TEST__
-#define __CCE_AICORE__ 220
 
 #pragma pack(1)
 

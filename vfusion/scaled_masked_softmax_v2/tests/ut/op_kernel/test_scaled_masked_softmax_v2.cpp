@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "./scaled_masked_softmax_v2_tiling.h"
+#include "scaled_masked_softmax_v2_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>
@@ -62,6 +62,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
     system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
     system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 128 1 32 half");
@@ -152,6 +153,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
     system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
     system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 128 1 1 half");
@@ -242,6 +244,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
     system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
     system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 32 1 32 128 1 1 half");
@@ -332,6 +335,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
     system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
     system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 4 4 32 128 1 1 half");
@@ -422,6 +426,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
     system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
     system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 512 1 32 float32");

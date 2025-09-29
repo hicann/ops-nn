@@ -13,7 +13,7 @@
 import sys
 import numpy as np
 import torch
-
+import tensorflow as tf 
 
 def write_file(inputs):
     for input_name in inputs:
@@ -31,10 +31,14 @@ if __name__ == "__main__":
     W = int(sys.argv[4])
     maskN = int(sys.argv[5])
     maskC = int(sys.argv[6])
-    np_dtype = sys.argv[7]
+    dtype = sys.argv[7]
 
     if dtype == "bfloat16":
-        dtype = tf.bfloat16.as_numpy_dtype
+        np_dtype = tf.bfloat16.as_numpy_dtype
+    elif dtype == "half":
+        np_dtype = np.float16
+    else:
+        np_dtype = np.float32
     setup_seed(20)
     x = (np.random.randn(N, C, H, W)).astype(np_dtype)
     mask = (np.random.randn(maskN, maskC, H, W)).astype(np.bool_)
