@@ -79,7 +79,7 @@ $$
   | 参数名         | 输入/输出    | 描述                                                                          |
   |---------------|------------- |------------------------------------------------------------------------------|
   | workspace     | 输入         | 在Device侧申请的workspace内存地址。                                             |
-  | workspaceSize | 输入         | 在Device侧申请的workspace大小，由第一段接口aclnnIsFiniteGetWorkspaceSize获取。   |
+  | workspaceSize | 输入         | 在Device侧申请的workspace大小，由第一段接口aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize获取。   |
   | executor      | 输入         | op执行器，包含了算子计算流程。                                                  |
   | stream        | 输入         | 指定执行任务的Stream。                                                         |
 
