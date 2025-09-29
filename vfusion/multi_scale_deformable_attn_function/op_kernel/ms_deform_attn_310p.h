@@ -236,6 +236,8 @@ private:
     constexpr static uint16_t U_INT16_T_MAX_VALUE = 65535;
     constexpr static uint32_t TWO = 2;
     constexpr static uint32_t FOUR = 4;
+    constexpr static uint32_t NUM_8 = 8;
+    constexpr static uint32_t NUM_16 = 16;
 };
 
 template <typename T>
@@ -317,7 +319,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::InitGM(GM_ADDR val
 
     pipe.InitBuffer(locationQue_, locationLen * B32_BYTE_SIZE);                                 // 4KB
     pipe.InitBuffer(attentionWeightsQue_, (attentionWeightsLen / embedDims_) * B32_BYTE_SIZE);  // 2KB
-    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);
+    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);  // 4K
 }
 
 template <typename T>
@@ -948,12 +950,35 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::OutTranspose(int32
                                                                            LocalTensor<float> xLocal,
                                                                            LocalTensor<float> outValueUb)
 {
-    if (channelAlign == 8) {
-        v4dtrans(((__ubuf__ uint32_t*)outValueUb.GetPhyAddr()), ((__ubuf__ uint32_t*)xLocal.GetPhyAddr()),
-                 TRANSE_REP_STRIDE, channelAlign * 4, 1);
-    } else if (channelAlign <= 64) {
-        v4dtrans(((__ubuf__ uint32_t*)outValueUb.GetPhyAddr()), ((__ubuf__ uint32_t*)xLocal.GetPhyAddr()),
-                 TRANSE_REP_STRIDE, channelAlign * 4, 1);
+    uint64_t dstList[16];
+    uint64_t srcList[16];
+
+    event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+
+    TransDataTo5HDParams transDataParams;
+    transDataParams.srcHighHalf = false;
+    transDataParams.dstHighHalf = false;
+    transDataParams.repeatTimes = channelAlign * FOUR / BLOCK_NUM;
+    transDataParams.srcRepStride = 1;
+    transDataParams.dstRepStride = TRANSE_REP_STRIDE;
+    for (int32_t j = 0; j < NUM_8; j++) {
+        for (int32_t i = 0; i < NUM_8; i++) {
+            dstList[i * TWO] = (uint64_t)(outValueUb[i * TRANSE_REP_STRIDE + j * NUM_16].GetPhyAddr());
+            dstList[i * TWO + 1] =
+                (uint64_t)(outValueUb[i * TRANSE_REP_STRIDE + NUM_8 + j * NUM_16].GetPhyAddr());
+        }
+
+        for (int32_t i = 0; i < NUM_16; i++) {
+            srcList[i] =
+                (uint64_t)(xLocal[i * channelAlign * FOUR + j * NUM_16 * channelAlign * FOUR].GetPhyAddr());
+        }
+
+        SetFlag<HardEvent::S_V>(eventSV);
+        WaitFlag<HardEvent::S_V>(eventSV);
+        TransDataTo5HD<float>(dstList, srcList, transDataParams);
+        SetFlag<HardEvent::V_S>(eventVS);
+        WaitFlag<HardEvent::V_S>(eventVS);
     }
 }
 
