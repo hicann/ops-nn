@@ -161,4 +161,4 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_embedding_bag](./examples/test_aclnn_embedding_bag.cpp) | 通过[aclnnEmbeddingBag](./docs/aclnnEmbeddingBag.md)接口方式调用EmbeddingBag算子。 |
-| 图模式调用 | [test_geir_embedding_bag](./examples/test_geir_embedding_bag.cpp)   | 通过[算子IR](./op_graph/embedding_bag_proto.h)构图方式调用EmbeddingBag算子。 |
+| 图模式调用 | -  | 通过[算子IR](./op_graph/embedding_bag_proto.h)构图方式调用EmbeddingBag算子。 |
