@@ -4,13 +4,8 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>昇腾910_95 AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品 </term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 - 算子功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。
@@ -220,28 +215,20 @@ aclnnStatus aclnnDequantSwigluQuant(
 
     - weightScaleOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，shape支持1维，shape表示为[H]，且取值H和x最后一维保持一致。可选参数，支持传空指针。
-      - <term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT，shape支持1维或2维，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。
     - activationScaleOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，shape为[N..., 1]，最后一维为1，其余和x保持一致。可选参数，支持传空指针。
-      - <term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT，shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。可选参数，支持传空指针。
     - quantScaleOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT、FLOAT16，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-      - <term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。
     - quantOffsetOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-      - <term>昇腾910_95 AI处理器</term>：暂时不支持此参数。
     - groupIndexOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持INT32、INT64，shape支持1维Tensor。可选参数，支持传空指针。
-      - <term>昇腾910_95 AI处理器</term>：数据类型支持INT64，shape支持1维Tensor，shape为[groupNum]，groupNum大于等于1。可选参数，支持传空指针。
     - quantModeOptional参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：支持“dynamic”和“static"。
-      - <term>昇腾910_95 AI处理器</term>：仅支持“dynamic”，支持传入空指针，传入空指针时，则默认使用“static”。
     - yOut参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持INT8。
-      - <term>昇腾910_95 AI处理器</term>：shape为[N...,H/2]，数据类型支持INT8。yOut的尾轴需要小于5120。
     - scaleOut参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT。
-      - <term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT，shape不超过7维，不小于1维，shape为[N,...]，shape与yOut去除尾轴后的shape一致。
 
 - **返回值：**
 
@@ -331,12 +318,6 @@ aclnnStatus aclnnDequantSwigluQuant(
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除2。
-- <term>昇腾910_95 AI处理器</term>：
-  - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
-  - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
-  - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
-  - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
-  - 输出yOut的尾轴不超过5120.
 
 ## 调用示例
 
