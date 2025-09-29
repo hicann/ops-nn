@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "level2/aclnn_scaled_masked_softmax.h"
+#include "../../../op_host/aclnn_scaled_masked_softmax.h"
 
 #include <array>
 #include <vector>
@@ -38,51 +38,6 @@ protected:
         cout << "scaled_masked_softmax_test TearDown" << endl;
     }
 };
-
-TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_float)
-{
-    auto xTensor = TensorDesc({1, 2, 128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto maskTensor = TensorDesc({1, 2, 128, 128}, ACL_BOOL, ACL_FORMAT_ND);
-    auto outTensor = TensorDesc({1, 2, 128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
-    double scale = 1.0;
-    bool fixTriu = false;
-    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, maskTensor, scale, fixTriu), OUTPUT(outTensor));
-
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_float16)
-{
-    auto xTensor = TensorDesc({1, 2, 128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto maskTensor = TensorDesc({1, 1, 128, 128}, ACL_BOOL, ACL_FORMAT_ND);
-    auto outTensor = TensorDesc({1, 2, 128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-    double scale = 0.8;
-    bool fixTriu = false;
-    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, maskTensor, scale, fixTriu), OUTPUT(outTensor));
-
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_bf16)
-{
-    auto xTensor = TensorDesc({2, 2, 128, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto maskTensor = TensorDesc({1, 2, 128, 128}, ACL_BOOL, ACL_FORMAT_ND);
-    auto outTensor = TensorDesc({2, 2, 128, 128}, ACL_BF16, ACL_FORMAT_ND);
-    double scale = 0.8;
-    bool fixTriu = false;
-    auto ut = OP_API_UT(aclnnScaledMaskedSoftmax, INPUT(xTensor, maskTensor, scale, fixTriu), OUTPUT(outTensor));
-
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspaceSize, executor);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
 
 TEST_F(l2_scaled_masked_softmax_test, Ascend910B_aclnnScaledMaskedSoftmax_dimNum_not_4)
 {

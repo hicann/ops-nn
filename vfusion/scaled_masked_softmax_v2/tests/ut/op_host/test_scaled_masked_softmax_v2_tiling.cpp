@@ -16,14 +16,9 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "runtime2_util.h"
-#include "op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "vfusion/scaled_masked_softmax_v2/graph_plugin/scaled_masked_softmax_v2_proto.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common_unittest.h"
+#include "log/log.h"
+#include "register/op_impl_registry.h"
+#include "platform/platform_infos_def.h"
 #include "kernel_run_context_facker.h"
 #include "vfusion/scaled_masked_softmax_v2/op_host/scaled_masked_softmax_v2_tiling.h"
 #include "test_cube_util.h"
@@ -59,7 +54,6 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-using namespace ut_util;
 TEST_F(ScaledMaskedSoftmaxV2Tiling, test_scaled_masked_softmax_v2_tiling_aligned)
 {
     std::string op_type("ScaledMaskedSoftmaxV2");

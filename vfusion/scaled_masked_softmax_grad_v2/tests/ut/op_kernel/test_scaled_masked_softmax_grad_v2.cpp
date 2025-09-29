@@ -14,7 +14,7 @@
 
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "scaled_masked_softmax_grad_v2_tiling.h"
+#include "scaled_masked_softmax_grad_v2_tiling_def.h"
 #include "data_utils.h"
 
 using namespace std;
@@ -44,8 +44,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2000_and_maskmode0)
 {
     uint64_t B = 8;
     uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 2048;
+    uint64_t S = 64;
+    uint64_t D = 1536;
     uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(DT_BF16);
@@ -58,13 +58,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2000_and_maskmode0)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(2000);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 2048 8 16 bfloat16");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 64 1536 8 16 bfloat16");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_2000_and_maskmode0");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -73,7 +77,9 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2000_and_maskmode0)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -86,11 +92,11 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2000_and_maskmode0)
 
 TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2001_and_maskmode1)
 {
-    uint64_t B = 8;
-    uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 2048;
-    uint64_t coreNum = 48;
+    uint64_t B = 4;
+    uint64_t N = 8;
+    uint64_t S = 32;
+    uint64_t D = 1536;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(half);
     size_t inputMaskSize = N * S * D * sizeof(bool);
@@ -102,13 +108,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2001_and_maskmode1)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(2001);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 2048 1 16 half");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 4 8 32 1536 1 16 half");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_2001_and_maskmode1");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -117,7 +127,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2001_and_maskmode1)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -132,9 +143,9 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_maskmode2)
 {
     uint64_t B = 8;
     uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 2048;
-    uint64_t coreNum = 48;
+    uint64_t S = 64;
+    uint64_t D = 1536;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(float);
     size_t inputMaskSize = B * S * D * sizeof(bool);
@@ -146,13 +157,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_maskmode2)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(2002);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 2048 8 1 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 64 1536 8 1 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_2002_and_maskmode2");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -161,7 +176,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_maskmode2)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -174,11 +190,11 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_maskmode2)
 
 TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_not_align)
 {
-    uint64_t B = 8;
-    uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 2047;
-    uint64_t coreNum = 48;
+    uint64_t B = 4;
+    uint64_t N = 8;
+    uint64_t S = 32;
+    uint64_t D = 1025;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(float);
     size_t inputMaskSize = totalLine * D * sizeof(bool);
@@ -190,13 +206,16 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_not_align)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
-
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
     ICPU_SET_TILING_KEY(2002);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 2048 8 16 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 4 8 32 1025 8 16 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_2002_and_not_align");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -205,7 +224,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_2002_and_not_align)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -220,9 +240,9 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1000_and_maskmode3)
 {
     uint64_t B = 8;
     uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 512;
-    uint64_t coreNum = 48;
+    uint64_t S = 64;
+    uint64_t D = 256;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(DT_BF16);
     size_t inputMaskSize = S * D * sizeof(bool);
@@ -234,13 +254,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1000_and_maskmode3)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(1000);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 512 1 1 bfloat16");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 64 256 1 1 bfloat16");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_1000_and_maskmode3");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -249,7 +273,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1000_and_maskmode3)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -262,11 +287,11 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1000_and_maskmode3)
 
 TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1001_and_maskmode0)
 {
-    uint64_t B = 8;
-    uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 512;
-    uint64_t coreNum = 48;
+    uint64_t B = 4;
+    uint64_t N = 8;
+    uint64_t S = 32;
+    uint64_t D = 256;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(half);
     size_t inputMaskSize = totalLine * D * sizeof(bool);
@@ -278,13 +303,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1001_and_maskmode0)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(1001);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 512 8 16 half");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 4 8 32 256 4 8 half");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_1001_and_maskmode0");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -293,7 +322,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1001_and_maskmode0)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -308,9 +338,9 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_maskmode1)
 {
     uint64_t B = 8;
     uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 512;
-    uint64_t coreNum = 48;
+    uint64_t S = 64;
+    uint64_t D = 256;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(float);
     size_t inputMaskSize = N * S * D * sizeof(bool);
@@ -322,13 +352,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_maskmode1)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(1002);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 512 1 16 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 64 256 1 16 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_1002_and_maskmode1");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -337,7 +371,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_maskmode1)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);
@@ -350,11 +385,11 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_maskmode1)
 
 TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_not_align)
 {
-    uint64_t B = 8;
-    uint64_t N = 16;
-    uint64_t S = 512;
-    uint64_t D = 512;
-    uint64_t coreNum = 48;
+    uint64_t B = 4;
+    uint64_t N = 8;
+    uint64_t S = 32;
+    uint64_t D = 257;
+    uint64_t coreNum = 40;
     uint64_t totalLine = B * N * S;
     size_t inputAndOutputSize = totalLine * D * sizeof(float);
     size_t inputMaskSize = totalLine * D * sizeof(bool);
@@ -366,13 +401,17 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_not_align)
     uint8_t* xGrad = (uint8_t*)AscendC::GmAlloc(inputAndOutputSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    ScaledMaskedSoftmaxGradV2TilingData* tilingDatafromBin =
+        reinterpret_cast<ScaledMaskedSoftmaxGradV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(1002);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
+    system("cp -rf ../../../../vfusion/scaled_masked_softmax_grad_v2/tests/ut/op_kernel/scaled_masked_softmax_grad_v2_data/ ./");
     system("chmod -R 755 ./scaled_masked_softmax_grad_v2_data/");
     system("cd ./scaled_masked_softmax_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 8 16 512 512 8 16 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_data.py 4 8 32 257 4 8 float");
+    system("cd ./scaled_masked_softmax_grad_v2_data/ && python3 gen_tiling.py test_tiling_key_1002_and_not_align");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -381,7 +420,8 @@ TEST_F(scaled_masked_softmax_grad_v2_test, test_tiling_key_1002_and_not_align)
         path + "/scaled_masked_softmax_grad_v2_data/input_y_grad.bin", inputAndOutputSize, yGrad, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_y.bin", inputAndOutputSize, y, inputAndOutputSize);
     ReadFile(path + "/scaled_masked_softmax_grad_v2_data/input_mask.bin", inputMaskSize, mask, inputMaskSize);
-    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, tiling);
+    ReadFile(path + "/scaled_masked_softmax_grad_v2_data/tiling.bin", tilingDataSize, tilingDatafromBin, tilingDataSize);
+    ICPU_RUN_KF(scaled_masked_softmax_grad_v2, coreNum, yGrad, y, mask, xGrad, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree(yGrad);
     AscendC::GmFree(y);

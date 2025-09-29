@@ -14,9 +14,9 @@
  */
 
 #include <gtest/gtest.h>
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "register/op_impl_registry.h"
+#include <iostream>
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
