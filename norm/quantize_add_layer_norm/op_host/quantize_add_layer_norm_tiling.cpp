@@ -170,6 +170,7 @@ static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4QuantizeAddLayerNorm(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4QuantizeAddLayerNorm ");
     return ge::GRAPH_SUCCESS;
 }
 

@@ -175,6 +175,7 @@ static ge::graphStatus Tiling4DuaQuantizeAddLayerNorm(gert::TilingContext* conte
 
 static ge::graphStatus TilingPrepare4DuaQuantizeAddLayerNorm(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4DuaQuantizeAddLayerNorm");
     return ge::GRAPH_SUCCESS;
 }
 

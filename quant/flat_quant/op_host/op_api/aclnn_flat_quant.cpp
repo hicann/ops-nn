@@ -29,7 +29,7 @@ using namespace op;
 
 namespace
 {
-static constexpr uint64_t INT4_NUMS_IN_INT32_SPACE = 8;
+static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int32_t DIM_NUM = 3;
 static constexpr int32_t P_DIM_NUM = 2;
 static constexpr int32_t SCALE_DIM_NUM = 1;
