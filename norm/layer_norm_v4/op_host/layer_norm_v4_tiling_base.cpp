@@ -335,7 +335,7 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
             static_cast<uint32_t>(xShape.GetDimNum()), static_cast<uint32_t>(normalizedShapeLen)),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        normalizedShapeLen < 0,
+        static_cast<int64_t>(normalizedShapeLen) < 0,
         OP_LOGE(
             context_->GetNodeName(), "normalizedShapeLen must be greater than 0, normalizedShapeLen: %u",
             static_cast<uint32_t>(normalizedShapeLen)),

@@ -505,14 +505,6 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor, 
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* GetTensorContiguous(const aclTensor* inTensor, aclOpExecutor* executor)
-{
-    if (nullptr == inTensor) {
-        return nullptr;
-    }
-    return l0op::Contiguous(inTensor, executor);
-}
-
 static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
@@ -601,7 +593,6 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor, 
     int64_t mode = 0;   // 0为postRmsNormQuant，1为preRmsNormQuant
     SelfPreDealData(inputTensor, outputTensor, mode, executor);
     aclTensor* y1ComputeOut = nullptr;
-    aclTensor* y2ComputeOut = nullptr;
     aclTensor* resComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
 
@@ -609,7 +600,6 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor, 
                                                     inputTensor.zeroPoints1Optional, inputTensor.zeroPoints2Optional, outputTensor.xOut, outputTensor.resOut,
                                                     mode, paramStruct.epsilon, paramStruct.divMode, executor);
     y1ComputeOut = std::get<IDX_0>(AddRmsNormQuantV2Outs);
-    y2ComputeOut = std::get<IDX_1>(AddRmsNormQuantV2Outs);
     xComputeOut = std::get<IDX_2>(AddRmsNormQuantV2Outs);
     resComputeOut = std::get<IDX_3>(AddRmsNormQuantV2Outs);
 

@@ -216,14 +216,14 @@ inline ge::graphStatus CheckOpInputShape(const gert::TilingContext *context, Swi
         // 针对moe场景下的校验
         if (CheckMoeInputShpae(smoothScalesShape, groupLen) != ge::GRAPH_SUCCESS) {
             OP_LOGE(context->GetNodeName(),
-                    "moe expert and smooth_scales first dim is not equal! expert nums is :%d", groupLen);
+                    "moe expert and smooth_scales first dim is not equal! expert nums is :%u", groupLen);
             return ge::GRAPH_FAILED;
         }
     }
     if (offsetsShape != nullptr) {
         if (CheckMoeInputShpae(offsetsShape, groupLen) != ge::GRAPH_SUCCESS) {
             OP_LOGE(context->GetNodeName(),
-                    "moe expert and offsets first dim is not equal! expert nums is :%d", groupLen);
+                    "moe expert and offsets first dim is not equal! expert nums is :%u", groupLen);
             return ge::GRAPH_FAILED;
         }
     }
@@ -347,7 +347,7 @@ inline bool CalculateMaxUbSizePerRow(const gert::TilingContext *context, SwiGluQ
     uint32_t colLen = tilingData.get_colLen();
     uint32_t alignedColLen = AlignUp<uint32_t>(colLen, compileInfo.block_num);
     if (alignedColLen == 0) {
-        OP_LOGE(context->GetNodeName(), "CalculateMaxUbSizePerRow Unsupported alignedColLen %d == 0 ", alignedColLen);
+        OP_LOGE(context->GetNodeName(), "CalculateMaxUbSizePerRow Unsupported alignedColLen %u == 0 ", alignedColLen);
         return false;
     }
     uint32_t ubAvail = compileInfo.dataNumSingleUb / alignedColLen;

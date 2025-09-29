@@ -346,12 +346,6 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-
-    bool isFullyFp16 = false;
-    if (input->GetDataType() == mean->GetDataType() && input->GetDataType() == op::DataType::DT_FLOAT16) {
-        isFullyFp16 = true;
-    }
-
     const aclTensor* runningMeanMid =
         CalculateRunningTensor(runningMean, input->GetViewShape()[1], uniqueExecutor.get());
     CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);

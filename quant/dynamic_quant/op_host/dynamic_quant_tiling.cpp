@@ -221,7 +221,7 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
             int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
             if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
                 OP_LOGE(context,
-                    "moe expert and smooth_scales first dim is not equal! expert nums is :%d, smooth_scales is:%ld",
+                    "moe expert and smooth_scales first dim is not equal! expert nums is :%u, smooth_scales is:%ld",
                     groupNum, smoothDimFirst);
                 return ge::GRAPH_FAILED;
             }
@@ -467,7 +467,7 @@ ge::graphStatus DynamicQuantTiling::GetCompileInfo(gert::TilingContext* context)
     ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
         (vectorCoreNum <= 0 || ubSize <= 0),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%d, ubSize:%ld.",
+        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.",
             vectorCoreNum, ubSize),
         return ge::GRAPH_FAILED);
 
@@ -577,7 +577,7 @@ static ge::graphStatus TilingPrepareForDynamicQuant(gert::TilingParseContext* co
 
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE(context, "DynamicQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%ld.",
+        OP_LOGE(context, "DynamicQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
             compileInfo->vectorCoreNum, compileInfo->ubSize),
         return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);

@@ -100,7 +100,6 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* out)
 static bool CheckOtherDtypeValid(
     const aclTensor* weight, const aclTensor* bias, const aclTensor* mean, const aclTensor* var)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (weight != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(weight, op::DataType::DT_FLOAT, return false);
     }
@@ -120,7 +119,6 @@ static bool CheckScalarDtypeValid(
     const aclScalar* inputScale, const aclScalar* inputZeroPoint, const aclScalar* outputScale,
     const aclScalar* outputZeroPoint)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (inputScale != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(inputScale, op::DataType::DT_FLOAT, return false);
     }
@@ -211,7 +209,6 @@ aclnnStatus QuantizedBatchNormProc2(
     const aclScalar* inputZeroPoint, const aclScalar* outputScale, const aclScalar* outputZeroPoint, aclTensor* weight,
     aclTensor* bias, float epsilon, aclTensor** output, aclOpExecutor* executor)
 {
-    op::DataType weightBiasPromoteType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
     op::DataType weightBiasDstType = DataType::DT_FLOAT;
 
     auto weightContiguous = l0op::Contiguous(weight, executor);
