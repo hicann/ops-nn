@@ -252,4 +252,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_dynamic_rnn](examples/test_geir_dynamic_rnn.cpp)  | 通过[算子IR](op_graph/dynamic_rnn_proto.h)构图方式调用DynamicRnn算子。         |
+| 图模式 |  - | 通过[算子IR](op_graph/dynamic_rnn_proto.h)构图方式调用DynamicRnn算子。         |
+
+<!-- [test_geir_dynamic_rnn](examples/test_geir_dynamic_rnn.cpp) -->

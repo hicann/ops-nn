@@ -76,7 +76,8 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_mul_scalar](examples/test_aclnn_foreach_mul_scalar.cpp) | 通过[aclnnForeachMulScalar](docs/aclnnForeachMulScalar.md)接口方式调用ForeachMulScalar算子。 |
-| aclnn接口  | [test_aclnn_foreach_mul_scalar_v2](examples/test_aclnn_foreach_mul_scalar_v2.cpp) | 通过[aclnnForeachMulScalarV2](docs/aclnnForeachMulScalarV2.md)接口方式调用ForeachMulScalar算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_mul_scalar_proto.h)构图方式调用ForeachMulScalar算子。         |
+| aclnn接口  | - | 通过[aclnnForeachMulScalarV2](docs/aclnnForeachMulScalarV2.md)接口方式调用ForeachMulScalar算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/foreach_mul_scalar_proto.h)构图方式调用ForeachMulScalar算子。         |
 
 <!--[test_geir_foreach_mul_scalar](examples/test_geir_foreach_mul_scalar.cpp)-->
+ <!-- [test_aclnn_foreach_mul_scalar_v2](examples/test_aclnn_foreach_mul_scalar_v2.cpp) -->
