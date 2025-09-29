@@ -15,71 +15,71 @@
   $$
   x = x1 + x2 + bias
   $$
-  
+
   $$
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
-  
+
   - 当quantMode输入为"static"时，输出outScales1和outScales2无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或是AscendQuantV2：
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
-  
+
       $$
       y1 = round(y / scales1 + zeroPoints1)
       $$
-  
+
       $$
       y2 = round(y / scales2 + zeroPoints2), \quad \text{当且仅当scales2存在}
       $$
-  
+
     - 当divMode输入为false时，融合的量化算子为AscendQuantV2，计算公式如下所示：
-  
+
       $$
       y1 = round(y * scales1 + zeroPoints1)
       $$
-  
+
       $$
       y2 = round(y * scales2 + zeroPoints2), \quad \text{当且仅当scales2存在}
       $$
-  
+
   - 当quantMode输入为"dynamic"时，输入zeroPoints1和zeroPoints2无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
     - 若scales1和scales2均无输入，则y2和scale2输出无实际意义。计算公式如下所示：
-  
+
       $$
       outScales1 = row\_max(abs(y))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1)
       $$
-  
+
     - 若仅输入scales1，则y2和scale2输出无实际意义。计算公式如下所示：
-  
+
       $$
       tmp1 = y * scales1
       $$
-  
+
       $$
       outScales1 = row\_max(abs(tmp1))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1)
       $$
-  
+
     - 若scales1和scales2均存在，则y2和scale2输出有效。计算公式如下所示：
-  
+
       $$
       tmp1 = y * scales1, \quad tmp2 = y * scales2
       $$
-  
+
       $$
       outScales1 = row\_max(abs(tmp1))/127, \quad outScales2 = row\_max(abs(tmp2))/127
       $$
-  
+
       $$
       y1 = round(y / outScales1),\quad y2 = round(y / outScales2)
       $$
-  
+
     其中row\_max代表对每行求最大值。
 
 ## 参数说明
@@ -236,7 +236,8 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_add_layer_norm_quant](examples/test_aclnn_add_layer_norm_quant.cpp) | 通过[aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant.md)接口方式调用AddLayerNormQuant算子。 |
+| aclnn接口  | - | 通过[aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant.md)接口方式调用AddLayerNormQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/add_layer_norm_quant_proto.h)构图方式调用AddLayerNormQuant算子。         |
 
 <!--[test_geir_add_layer_norm_quant](examples/test_geir_add_layer_norm_quant.cpp)-->
+<!-- [test_aclnn_add_layer_norm_quant](examples/test_aclnn_add_layer_norm_quant.cpp) -->
