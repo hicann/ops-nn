@@ -13,29 +13,13 @@
  * \brief
  */
 #include "./arch32/conv3d_backprop_input_v2_tiling_data.h"
-#if __CCE_AICORE__ == 310
-#if defined(__DAV_C310__)
-#include "conv3d_backprop_input_v2_arch35.h"
-#endif
-#else
 #include "./arch32/conv3d_dx_v2_basic_block.h"
 #include "./arch32/conv3d_backprop_input_v2_init_output.h"
 #include "./arch32/conv3d_backprop_input_v2.h"
 #include "conv3d_backprop_input_v2_tiling_key.h"
-#endif
 
 using namespace AscendC;
 
-#if __CCE_AICORE__ == 310
-extern "C" __global__ __aicore__ void conv3d_backprop_input_v2(
-    GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
-{
-#if defined(__DAV_C310__)
-    conv3d_backprop_input_v2_arch35(input_size, filter, out_backprop, y, workSpace, tiling);
-    return;
-#endif
-}
-#else
 template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock>
 __global__ __aicore__ void conv3d_backprop_input_v2(
     GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
@@ -72,4 +56,3 @@ __global__ __aicore__ void conv3d_backprop_input_v2(
         }
     }
 }
-#endif
