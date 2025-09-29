@@ -219,6 +219,13 @@ TilingContextFaker& TilingContextFaker::DeterministicInfo(int32_t deterministicI
 TilingContextFaker& TilingContextFaker::ConstInput(
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors)
 {
+    for (auto& constPair: constTensors) {
+        while (inputTensors_.size() <= constPair.first) {
+            inputTensors_.emplace_back(Tensor());
+        }
+        Tensor* tensor = (Tensor*)constPair.second.get();
+        inputTensors_[constPair.first].SetData(TensorData(tensor->GetAddr()));
+    }
     return *this;
 }
 
