@@ -33,7 +33,7 @@ __global__ __aicore__ void conv3d_transpose_v2(
         return;
     }
     REGISTER_TILING_DEFAULT(Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA(tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(Conv3DBackpropInputV2TilingData, tilingData, tiling);
 
 #if __CCE_AICORE__ == 220
     if constexpr (FORMAT_Y == FORMAT_NCDHW) {
