@@ -22,8 +22,6 @@
 #include "platform/platform_infos_def.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
 
 class ScaledMaskedSoftmaxGradV2TilingData : public testing::Test
 {

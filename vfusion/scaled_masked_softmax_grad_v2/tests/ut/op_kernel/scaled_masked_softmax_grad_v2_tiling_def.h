@@ -15,7 +15,6 @@
 
 #define DT_BF16 bfloat16_t
 #define __CCE_UT_TEST__
-#define __CCE_AICORE__ 220
 
 #pragma pack(1)
 
@@ -44,16 +43,13 @@ struct ScaledMaskedSoftmaxGradV2TilingData {
 #pragma pack()
 
 #define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)               \
-    do {                                                                                  \
         __ubuf__ tilingStruct* tilingDataPointer =                                        \
-            reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer)); \
-    } while (0)
+            reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                                               \
-    do {                                                                                         \
         ScaledMaskedSoftmaxGradV2TilingData tilingData;                                          \
         INIT_TILING_DATA(ScaledMaskedSoftmaxGradV2TilingData, tilingDataPointer, tilingPointer); \
         (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                               \
@@ -73,6 +69,5 @@ struct ScaledMaskedSoftmaxGradV2TilingData {
         (tilingData).selectSize = tilingDataPointer->selectSize;                                 \
         (tilingData).scale = tilingDataPointer->scale;                                           \
         (tilingData).fixedTriuMask = tilingDataPointer->fixedTriuMask;                           \
-        (tilingData).softmaxGradTilingData = tilingDataPointer->softmaxGradTilingData;           \
-    } while (0)
+        (tilingData).softmaxGradTilingData = tilingDataPointer->softmaxGradTilingData;
 #endif
