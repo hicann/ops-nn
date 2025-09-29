@@ -41,7 +41,7 @@ class conv3d_backprop_filter_v2_test : public testing::Test {
 };
 
 
-TEST_F(conv3d_backprop_filter_v2_test, opensora_stdit_01_bf16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16) {
     size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(int16_t);
@@ -61,7 +61,7 @@ TEST_F(conv3d_backprop_filter_v2_test, opensora_stdit_01_bf16) {
     system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
     system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 1 4 1152 1 16 16 1 32 32 1 2 2");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py opensora_stdit_01_bf16");
+    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_stdit_01_bf16");
 
     char * path_ = get_current_dir_name();
     string path(path_);
@@ -123,7 +123,7 @@ TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
     free(path_);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, vqvae_magvit2_net_ID_03_b16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
     size_t shape_x = 4 * 4 * 16 * 64 * 64 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 4 * 4 * 86 * 64 * 64 * 16 * sizeof(int16_t);
@@ -143,7 +143,7 @@ TEST_F(conv3d_backprop_filter_v2_test, vqvae_magvit2_net_ID_03_b16) {
     system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
     system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 4 256 1364 4 64 64 4 64 64 1 1 1");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py vqvae_magvit2_net_ID_03_b16");
+    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_net_ID_03_b16");
 
     char * path_ = get_current_dir_name();
     string path(path_);
@@ -164,7 +164,7 @@ TEST_F(conv3d_backprop_filter_v2_test, vqvae_magvit2_net_ID_03_b16) {
     free(path_);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, x1_vqvae_03_b16) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
     size_t shape_x = 1 * 17 * 16 * 256 * 256 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 17 * 8 * 256 * 256 * 16 * sizeof(int16_t);
@@ -184,7 +184,7 @@ TEST_F(conv3d_backprop_filter_v2_test, x1_vqvae_03_b16) {
     system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
     system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 1 256 128 17 128 128 17 128 128 1 1 1");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py x1_vqvae_03_b16");
+    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_03_b16");
 
     char * path_ = get_current_dir_name();
     string path(path_);
@@ -205,7 +205,7 @@ TEST_F(conv3d_backprop_filter_v2_test, x1_vqvae_03_b16) {
     free(path_);
 }
 
-TEST_F(conv3d_backprop_filter_v2_test, opensora_stdit_01_fp32) {
+TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
     size_t shape_x = 1 * 1 * 1 * 32 * 32 * 16 * sizeof(int16_t);
     size_t shape_filter_size = 5 * sizeof(int32_t);
     size_t shape_dedy = 1 * 1 * 72 * 16 * 16 * 16 * sizeof(int16_t);
@@ -225,7 +225,7 @@ TEST_F(conv3d_backprop_filter_v2_test, opensora_stdit_01_fp32) {
     system("chmod -R 755 ./conv3d_backprop_filter_v2_fp32_data/");
     system("cd ./conv3d_backprop_filter_v2_fp32_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_filter_v2_fp32_data/ && python3 gen_data.py 1 4 1152 1 16 16 1 32 32 1 2 2");
-    system("cd ./conv3d_backprop_filter_v2_fp32_data/ && python3 gen_tiling.py opensora_stdit_01_fp32");
+    system("cd ./conv3d_backprop_filter_v2_fp32_data/ && python3 gen_tiling.py conv_stdit_01_fp32");
 
     char * path_ = get_current_dir_name();
     string path(path_);

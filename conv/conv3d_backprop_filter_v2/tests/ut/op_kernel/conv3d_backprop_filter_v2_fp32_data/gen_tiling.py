@@ -18,7 +18,7 @@ tiling_params = [
 2, 2, 1, 1, 96, 64, 64, 16, 8, 16, 1, 1, 2, 2, 1, 8192, 0, 1, 1, 96, 8, 1, 0, 8, 0]
 
 params_info = {
-    "opensora_stdit_01_fp32": tiling_params,
+    "conv_stdit_01_fp32": tiling_params,
 }
 
 def main():
