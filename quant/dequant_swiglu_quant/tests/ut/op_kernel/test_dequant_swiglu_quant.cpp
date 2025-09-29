@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_dequant_swiglu_quant.h"
+#include "dequant_swiglu_quant_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>
@@ -72,7 +72,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_1)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_1");
@@ -141,7 +141,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_2)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_2");
@@ -212,7 +212,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_3)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_3");
@@ -283,7 +283,7 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_4)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_4");
@@ -354,7 +354,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_dynamic)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_5");
@@ -421,7 +421,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_6");
@@ -488,7 +488,7 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static_quantIsOne)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_7");
@@ -1757,7 +1757,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_8");
@@ -1824,7 +1824,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_9");
@@ -1891,7 +1891,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_10");
@@ -1958,7 +1958,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_11");
@@ -2025,7 +2025,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_12");
@@ -2092,7 +2092,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_13");
@@ -2159,7 +2159,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_14");
@@ -2226,7 +2226,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_15");
@@ -2293,7 +2293,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_16");
@@ -2360,7 +2360,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_17");
@@ -2427,7 +2427,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_18");
@@ -2494,7 +2494,7 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ./ops/built-in/tests/ut/fast_op_test/dequant_swiglu_quant/dequant_swiglu_quant_data ./");
+    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
     system("chmod -R 755 ./dequant_swiglu_quant_data/");
     system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
     system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_19");

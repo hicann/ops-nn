@@ -293,6 +293,7 @@ static ge::graphStatus Tiling4DeepNorm(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4DeepNorm(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4DeepNorm");
     return ge::GRAPH_SUCCESS;
 }
 

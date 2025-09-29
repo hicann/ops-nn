@@ -75,7 +75,7 @@ ge::graphStatus AscendQuantV2Regbase::GetCompileInfo()
     OP_CHECK_IF(
         (coreNum_ <= 0 || ubSize_ <= 0),
         OP_LOGE(
-            context_->GetNodeName(), "AscendQuantV2 GetCompileInfo Failed, coreNum:%ld, ubSize:%ld.", coreNum_,
+            context_->GetNodeName(), "AscendQuantV2 GetCompileInfo Failed, coreNum:%ld, ubSize:%lu.", coreNum_,
             ubSize_),
         return ge::GRAPH_FAILED);
     cacheLine_ = CACHE_SIZE_910D;
@@ -127,7 +127,7 @@ ge::graphStatus AscendQuantV2Regbase::CheckInputValid(
     if (static_cast<int32_t>(input1DimNum) != static_cast<int32_t>(input2DimNum) &&
         static_cast<int32_t>(input2DimNum) != 1) {
         OP_LOGE(
-            context_->GetNodeName(), "the dimension(%ld) of %s is invalid, should be same as x(%ld) or 1", input2DimNum,
+            context_->GetNodeName(), "the dimension(%zu) of %s is invalid, should be same as x(%zu) or 1", input2DimNum,
             param.c_str(), input1DimNum);
         return ge::GRAPH_FAILED;
     }
@@ -139,7 +139,7 @@ ge::graphStatus AscendQuantV2Regbase::CheckInputValid(
     if (input1Dim != input2Dim && input2Dim != 1) {
         OP_LOGE(
             context_->GetNodeName(),
-            "%s dim(%ld)'s value(%ld) is invalid, should be same as x dim(%ld)'s value(%ld) or 1", param.c_str(),
+            "%s dim(%zu)'s value(%ld) is invalid, should be same as x dim(%zu)'s value(%ld) or 1", param.c_str(),
             input2Axis, input2Dim, input1Axis, input1Dim);
         return ge::GRAPH_FAILED;
     }

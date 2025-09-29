@@ -14,7 +14,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "dynamic_quant_v2_tiling.h"
+#include "dynamic_quant_v2_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>

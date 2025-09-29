@@ -139,7 +139,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext
             int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
             if (groupNum != static_cast<size_t>(smoothDimFirst)) {
                 OP_LOGE(context,
-                    "moe expert and smooth_scales first dim is not equal! expert nums is :%d, smooth_scales is:%ld.",
+                    "moe expert and smooth_scales first dim is not equal! expert nums is :%u, smooth_scales is:%ld.",
                     groupNum, smoothDimFirst);
                 return ge::GRAPH_FAILED;
             }
@@ -499,7 +499,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::GetCompileInfo(gert::TilingContext* c
     ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
         (vectorCoreNum <= 0 || ubSize <= 0),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%d, ubSize:%ld.",
+        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.",
             vectorCoreNum, ubSize),
         return ge::GRAPH_FAILED);
 

@@ -23,7 +23,7 @@
 using namespace op;
 
 static constexpr size_t MAX_DIM_LEN = 8;
-static constexpr uint64_t INT4_NUMS_IN_INT32_SPACE = 8;
+static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr uint64_t INT4_NUMS_IN_INT8_SPACE = 2;
 static constexpr int32_t X_DIM_NUM = 2;
 
@@ -88,7 +88,7 @@ static bool CheckSpecialIOShape(const aclTensor *x, const aclTensor *y, const op
   auto dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
   OP_CHECK(dimNum != 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x not support scalar."), return false);
 
-  OP_CHECK(y->GetViewShape().GetDimNum() == dimNum,
+  OP_CHECK(static_cast<int64_t>(y->GetViewShape().GetDimNum()) == dimNum,
            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be same with output y dim num."), return false);
 
   // other dims should be same
@@ -127,7 +127,7 @@ static bool CheckSpecialIOShape(const aclTensor *x, const aclTensor *y, const op
 }
 
 static bool CheckDim(const aclTensor *x, const aclTensor *scale, const aclTensor *groupIndex,
-                     const aclTensor *offsetOptional, const aclTensor *y) {
+                     const aclTensor *offsetOptional) {
   // shape:
   //  x(S, H)
   //  scale(E，H)
@@ -164,7 +164,7 @@ static bool CheckDim(const aclTensor *x, const aclTensor *scale, const aclTensor
 static bool CheckShape(const aclTensor *x, const aclTensor *scale, const aclTensor *groupIndex,
                        const aclTensor *offsetOptional, const aclTensor *y) {
   // 维度限制校验
-  OP_CHECK(CheckDim(x, scale, groupIndex, offsetOptional, y),
+  OP_CHECK(CheckDim(x, scale, groupIndex, offsetOptional),
            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output shape failed."), return false);
 
   auto outputDtype = y->GetDataType();
