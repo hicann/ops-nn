@@ -30,7 +30,9 @@
 |  依赖  | 不涉及  | cmake/third_party/nlohmann_json.cmake | https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip | 从gitcode下载json源码，作用编译依赖 |
 |  依赖  | 不涉及  | cmake/third_party/gtest.cmake | https://gitcode.com/cann-src-third-party/googletest/releases/download/v1.14.0/googletest-1.14.0.tar.gz | 从gitcode下载googletest源码，作用编译依赖 |
 |  依赖  | 不涉及  | cmake/third_party/eigen.cmake | https://gitcode.com/cann-src-third-party/eigen/releases/download/3.4.0/eigen-3.4.0.tar.gz | 从gitcode下载eigen源码，作用编译依赖 |
----
+|  依赖| 不涉及| ops-nn-dev/install_deps.sh|https://apt.kitware.com/keys/kitware-archive-latest.asc|从gitcode下载install_deps源码，作用编译依赖|
+|依赖|不涉及|ops-nn-dev/install_deps.sh|https://apt.kitware.com/ubuntu/|从gitcode下载install_deps源码，作用编译依赖|
+|依赖|不涉及|cmake/third_party/nlohmann_json.cmake|https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip|从gitcode下载nlohmann_json源码，作用编译依赖|
 
 ## 漏洞机制说明
 [漏洞管理](https://gitcode.com/cann/community/blob/master/security/security.md)
