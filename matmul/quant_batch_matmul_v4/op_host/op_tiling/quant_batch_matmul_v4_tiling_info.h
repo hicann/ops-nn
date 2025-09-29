@@ -47,9 +47,9 @@ enum class QuantBatchMatmulV4QuantType : std::uint8_t {
 
 // kernel template type
 enum class KernelTemplateType : std::uint8_t {
-    MSD_BASIS = 1,
-    PERBLOCK_BASIS = 2,
-    PERGROUP_BASIS = 3
+    MSD_BASIS = 0,
+    PERBLOCK_BASIS = 1,
+    PERGROUP_BASIS = 2
 };
 } // namespace optiling
 #endif  // QUANT_BATCH_MATMUL_V4_TILING_INFO_H
