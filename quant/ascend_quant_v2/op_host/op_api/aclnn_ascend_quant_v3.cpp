@@ -22,7 +22,7 @@
 using namespace op;
 
 static constexpr size_t MAX_DIM_LEN = 8;
-static constexpr uint64_t INT4_NUMS_IN_INT32_SPACE = 8;
+static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr uint64_t INT4_NUMS_IN_INT8_SPACE = 2;
 static constexpr int32_t MAX_AXIS_VALUE = 2;
 

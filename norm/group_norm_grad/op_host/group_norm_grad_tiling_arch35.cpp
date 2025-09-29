@@ -371,7 +371,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::Mode2UbTiling()
         this->binaryAddQuotient_ % this->mode2OneLoopSize_ != 0,
         OP_LOGE(
             context_->GetNodeName(),
-            "Error:[UbTiling] the main block can't have tail. binaryAddQuotient = %ld, mode2OneLoopSize = %d.",
+            "Error:[UbTiling] the main block can't have tail. binaryAddQuotient = %ld, mode2OneLoopSize = %u.",
             this->binaryAddQuotient_, this->mode2OneLoopSize_),
         return ge::GRAPH_FAILED);
     mode2FoldTail_ = (this->HxW_ - this->binaryAddQuotient_) % this->mode2OneLoopSize_ == 0 ?

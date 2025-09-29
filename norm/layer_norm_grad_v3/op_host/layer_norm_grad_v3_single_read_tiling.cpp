@@ -72,7 +72,7 @@ ge::graphStatus LayerNormGradV3SingleReadTiling::DoOpTiling()
         LNG_B32_DTYPE_SIZE / LNG_MAX_BUFFER_NUM;
     if (maxBufferSize < colAlignM) {
         OP_LOGE(context_->GetNodeName(),
-            "LayerNormGradV3SingleReadTiling: ubSize (=%ld) and maxBufferSize (=%ld) is less than colAlignM(=%ld) "
+            "LayerNormGradV3SingleReadTiling: ubSize (=%lu) and maxBufferSize (=%ld) is less than colAlignM(=%ld) "
             "please check.",
             commonParams.ubSizePlatForm, maxBufferSize, colAlignM);
         return ge::GRAPH_FAILED;

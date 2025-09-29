@@ -564,6 +564,7 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4DeepNormGrad(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4DeepNormGrad");
     return ge::GRAPH_SUCCESS;
 }
 struct DeepNormGradCompileInfo {

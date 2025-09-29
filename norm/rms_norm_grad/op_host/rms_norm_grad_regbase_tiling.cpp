@@ -74,7 +74,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, 
     OP_CHECK_IF(
         shape0.GetDimNum() != shape1.GetDimNum(),
         OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %ld vs %ld", shape0.GetDimNum(),
+            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
             shape1.GetDimNum()),
         return ge::GRAPH_FAILED);
 
@@ -303,7 +303,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CalcTilingDataDgamma()
         maxRowsNumDG_ = ubSize_ / BUFFER_NUM / ((vlFp32_ * 4 + TWO) * FLOATBYTESIZE);
         rowsPerUBDG_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNumDG_));
         OP_CHECK_IF(
-            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %ld.", maxRowsNumDG_),
+            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
             return ge::GRAPH_FAILED);
         totalBlockCountDG_ = (rows_ + rowsPerUBDG_ - 1) / rowsPerUBDG_;
         mainBlockCountDG_ = totalBlockCountDG_;
