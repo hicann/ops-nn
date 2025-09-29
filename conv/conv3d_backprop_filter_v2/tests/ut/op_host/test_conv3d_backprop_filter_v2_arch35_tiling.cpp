@@ -191,25 +191,25 @@ const string COMPILE_INFO_STR_910_95 = R"({"_pattern": "Conv3d_backprop_filter_v
                           })";
 
 Conv3DBpFilterV2TilingTestParam cases_params_910_95[] = {
-    {"opensora_stdit_01_fp16", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"conv_stdit_01_fp16", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
      {33, 4, 1, 32, 32}, {33, 4, 1, 32, 32}, {1152, 4, 1, 2, 2}, {1152, 4, 1, 2, 2}, {33, 1152, 1, 16, 16}, {33, 1152, 1, 16, 16},
      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_FLOAT16,
      {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 0,
      true, true, 32, 1, "1 0 1 1 1 1 1 524288 33 4 1152 4 1152 1 16 16 1 32 32 1 2 2 1 1 1 2 2 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 144 112 64 16 16 16 1 1 3 3 1 21504 48384 0 1 1 144 16 16 0 1 0 16 0 0 0 9 0 1 32 144 64 256 0 "},
 
-    {"opensora_stdit_01_hifp8", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"conv_stdit_01_hifp8", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
      {16, 4, 1, 32, 32}, {16, 4, 1, 32, 32}, {1152, 4, 1, 2, 2}, {1152, 4, 1, 2, 2}, {16, 1152, 1, 16, 16}, {16, 1152, 1, 16, 16},
      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_HIFLOAT8,
      {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 0,
      true, false, 32, 0, ""},
 
-    {"opensora_stdit_01_depthwise", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"conv_stdit_01_depthwise", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
      {1, 512, 1, 32, 32}, {1, 512, 1, 32, 32}, {512, 1, 1, 2, 2}, {512, 1, 1, 2, 2}, {1, 512, 1, 16, 16}, {1, 512, 1, 16, 16},
      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
      {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 512, "NCDHW", "VALID", 0,
      true, true, 32, 2, "1 0 32 1 1 1 1 524288 1 512 512 16 16 1 16 16 1 32 32 1 2 2 512 32 1 2 2 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 256 64 16 16 16 1 1 1 1 0 16384 4096 0 1 1 16 16 16 0 1 0 16 0 0 0 1 0 0 32 16 64 256 0 "},
 
-    {"opensora_stdit_01_group", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"conv_stdit_01_group", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
      {1, 4, 1, 32, 32}, {1, 4, 1, 32, 32}, {1152, 1, 1, 2, 2}, {1152, 1, 1, 2, 2}, {1, 1152, 1, 16, 16}, {1, 1152, 1, 16, 16},
      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
      {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 4, "NCDHW", "VALID", 0,
@@ -221,25 +221,25 @@ Conv3DBpFilterV2TilingTestParam cases_params_910_95[] = {
      {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
      true, true, 32, 2, "1 0 1 1 1 1 1 524288 16 256 256 256 256 20 32 32 22 34 34 3 3 3 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 1 2 2 256 64 144 16 16 16 1 1 7 7 0 8704 114688 0 1 1 256 32 32 0 1 0 16 0 0 0 160 0 1 32 256 144 1024 0 "},
 
-    {"X1_NCDHW_vqvae_net_ID_1_modified_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"conv_NCDHW_vqvae_net_ID_1_modified_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
     {1, 128, 17, 129, 129}, {1, 128, 17, 129, 129}, {128, 128, 1, 3, 3}, {128, 128, 1, 3, 3}, {1, 128, 17, 64, 64}, {1, 128, 17, 64, 64},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 128 128 128 128 17 64 64 17 129 129 1 3 3 1 1 1 2 2 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 128 64 144 16 16 16 1 1 8 8 0 35088 65536 0 1 1 128 64 64 0 1 0 16 0 0 0 5 0 1 32 128 144 4096 0 "},
 
-    {"aclnnConvolutionBackward_bf16_NCDHW_OpenSoraPlan1_000001_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"aclnnConvolutionBackward_bf16_NCDHW_convPlan1_000001_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
     {1, 256, 8, 128, 128}, {1, 256, 8, 128, 128}, {256, 256, 4, 4, 4}, {256, 256, 4, 4, 4}, {1, 256, 6, 66, 66}, {1, 256, 6, 66, 66},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 2, 2, 2}, {3, 3, 3, 3, 3, 3}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, true, 32, 2, "1 0 1 1 1 1 1 524288 1 256 256 256 256 6 66 66 8 128 128 4 4 4 1 1 2 2 2 3 3 3 3 3 3 1 1 1 16 2 2 1 2 2 256 64 256 16 16 16 1 1 6 6 0 32768 98304 0 1 1 256 66 66 0 1 0 16 0 0 0 6 0 0 32 256 256 4356 0 "},
 
-    {"aclnnConvolutionBackward_bf16_NCDHW_OpenSoraPlan1_000002_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"aclnnConvolutionBackward_bf16_NCDHW_convPlan1_000002_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
     {1, 128, 4, 64, 64}, {1, 128, 4, 64, 64}, {256, 128, 1, 1, 1}, {256, 128, 1, 1, 1}, {1, 256, 4, 64, 64}, {1, 256, 4, 64, 64},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
     true, true, 32, 1, "1 0 1 1 1 1 1 524288 1 128 256 128 256 4 64 64 4 64 64 1 1 1 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 256 64 128 16 16 16 1 1 2 2 1 16384 32768 0 1 1 256 2 64 0 1 0 128 0 0 0 4 0 2 32 256 128 128 0 "},
 
-    {"aclnnConvolutionBackward_3DDW_OpenSora_bfloat16_NCDHW_net_ID4403_0002_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
+    {"aclnnConvolutionBackward_3DDW_conv_bfloat16_NCDHW_net_ID4403_0002_deterministic", "Ascend910_95", "Ascend910_95", COMPILE_INFO_STR_910_95,
     {2, 4, 16, 34, 46}, {2, 4, 16, 34, 46}, {1152, 4, 1, 2, 2}, {1152, 4, 1, 2, 2}, {2, 1152, 16, 17, 23}, {2, 1152, 16, 17, 23},
     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_BF16,
     {1, 1, 1, 2, 2}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", "VALID", 1,
