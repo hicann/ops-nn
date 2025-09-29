@@ -944,7 +944,9 @@ build_example() {
   failed_example=$(IFS=,; echo "${failed_example[*]}")
   success_example=$(IFS=,; echo "${success_example[*]}")
 
-  if [[ ${failed_example} != "" || ${success_example} == "" ]]; then
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "The op (${OP_NAME}) not have example."
+  elif [[ ${failed_example} != "" || ${success_example} == "" ]]; then
     echo "Run example failed, op_name: ${OP_NAME}, exist examples: ${examples}, success examples: ${success_example},\
  failed_example: ${failed_example[@]}, mode: ${EXAMPLE_MODE}."
     exit 1
