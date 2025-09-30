@@ -10,11 +10,11 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "test_multi_scale_deformable_attention_grad_tiling.h"
+#include "multi_scale_deformable_attention_grad_tiling_def.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
-#include "../data_utils.h"
+#include "data_utils.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -73,12 +73,12 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     uint8_t* grad_attn_weight = (uint8_t*)AscendC::GmAlloc(grad_attn_weight_size);
 
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size + 16);
     uint32_t blockDim = 48;
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/multi_scale_deformable_attention_grad/multi_scale_deformable_attention_grad_data ./");
+    system("cp -rf ../../../../vfusion/multi_scale_deformable_attention_grad/tests/ut/op_kernel/multi_scale_deformable_attention_grad_data/ ./");
     system("chmod -R 755 ./multi_scale_deformable_attention_grad_data/");
     system("cd ./multi_scale_deformable_attention_grad_data/ && rm -rf ./*bin");
     system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_data.py 1 8 2 1 2 100");
@@ -95,8 +95,9 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_value.bin", grad_value_size, grad_value, grad_value_size);
     ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_sample_loc.bin", grad_sample_loc_size, grad_sample_loc, grad_sample_loc_size);
     ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_attn_weight.bin", grad_attn_weight_size, grad_attn_weight, grad_attn_weight_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
+    ReadFile(path + "/multi_scale_deformable_attention_grad_data/tiling.bin", tiling_data_size, tiling, tiling_data_size + 16);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(multi_scale_deformable_attention_grad, blockDim, value, value_spatial_shape, level_start_index,
         sample_loc, attention_weight, grad_output, grad_value, grad_sample_loc, grad_attn_weight, workspace, tiling);

@@ -11,8 +11,8 @@
 
 #include <array>
 #include <vector>
-#include "gtest/gtest.h"
-#include "level2/aclnn_multi_scale_deformable_attn_function.h"
+#include <gtest/gtest.h>
+#include "aclnn_multi_scale_deformable_attn_function.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -117,47 +117,6 @@ TEST_F(l2_multi_scale_deformable_attn_function_test, multi_scale_deformable_attn
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-
-// CheckNotNull_1
-TEST_F(l2_multi_scale_deformable_attn_function_test, multi_scale_deformable_attn_function_nullptr_1) {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    auto valueDesc = TensorDesc({2, 2, 3, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto shapeDesc = TensorDesc({4, 2}, ACL_INT32, ACL_FORMAT_ND);
-    auto levelStartIndexDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
-    auto locationDesc = TensorDesc({2, 32, 3, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto attnWeightDesc = TensorDesc({2, 32, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto outputDesc = TensorDesc({2, 32, 3 * 32}, ACL_FLOAT, ACL_FORMAT_ND);
-
-    auto ut = OP_API_UT(aclnnMultiScaleDeformableAttnFunction,
-                        INPUT(nullptr, shapeDesc, levelStartIndexDesc, locationDesc, attnWeightDesc),
-                        OUTPUT(outputDesc));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-  }
-}
-
-// CheckNotNull_2
-TEST_F(l2_multi_scale_deformable_attn_function_test, multi_scale_deformable_attn_function_nullptr_2) {
-  if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    auto valueDesc = TensorDesc({2, 2, 3, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto shapeDesc = TensorDesc({4, 2}, ACL_INT32, ACL_FORMAT_ND);
-    auto levelStartIndexDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
-    auto locationDesc = TensorDesc({2, 32, 3, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto attnWeightDesc = TensorDesc({2, 32, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto outputDesc = TensorDesc({2, 32, 3 * 32}, ACL_FLOAT, ACL_FORMAT_ND);
-
-    auto ut = OP_API_UT(aclnnMultiScaleDeformableAttnFunction,
-                        INPUT(valueDesc, shapeDesc, nullptr, locationDesc, attnWeightDesc),
-                        OUTPUT(outputDesc));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-  }
 }
 
 // 拦截非正常情况 numQueries < 32

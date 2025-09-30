@@ -178,7 +178,7 @@ function(add_modules_ut_sources)
 
     cmake_parse_arguments(MODULE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(supportedCategory "matmul" "conv" "control" "index")
+    set(supportedCategory "matmul" "conv" "control" "index" "vfusion")
     string(REPLACE "${OPS_NN_DIR}/" "" opCategoryDir ${CMAKE_CURRENT_SOURCE_DIR})
     string(FIND "${opCategoryDir}" "/" firstSlashPos)
     string(SUBSTRING "${opCategoryDir}" 0 ${firstSlashPos} opCategory)

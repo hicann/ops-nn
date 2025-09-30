@@ -8,6 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(multi_scale_deformable_attn_function "ascend910B1" "")
-endif()
+add_graph_plugin_sources()
