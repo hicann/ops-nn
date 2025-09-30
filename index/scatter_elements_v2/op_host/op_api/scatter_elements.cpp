@@ -80,7 +80,7 @@ bool CanCombineAxis(const aclTensor* data, const aclTensor* indices, int64_t axi
     auto size_data = data->GetViewShape().GetDimNum();
     auto size_indices = indices->GetViewShape().GetDimNum();
     auto size = size_data > size_indices ? size_indices : size_data;
-    for (size_t i = 0; i < size; i++) {
+    for (int64_t i = 0; i < static_cast<int64_t>(size); i++) {
         if ((data->GetViewShape())[i] != (indices->GetViewShape())[i]) {
             if (i != axis) {
                 return false;
@@ -99,7 +99,7 @@ bool CanCombineAxisV2(
     auto size_updates = updates->GetViewShape().GetDimNum();
     size_indices = size_indices > size_updates ? size_updates : size_indices;
     auto size = size_indices > size_data ? size_data : size_indices;
-    for (size_t i = 0; i < size; i++) {
+    for (int64_t i = 0; i < static_cast<int64_t>(size); i++) {
         if (dataShape[i] != (indices->GetViewShape())[i] || dataShape[i] != (updates->GetViewShape())[i]) {
             if (i != axis && i != 0 && i != dataDimSize - 1) {
                 return false;

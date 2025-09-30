@@ -178,7 +178,7 @@ static bool CheckDimValue(const aclTensor *self, const int64_t dim)
   return true;
 }
 
-static bool CheckShapeDim(const aclTensor *self, int64_t dim, bool keepDim, const aclTensor *valuesOut,
+static bool CheckShapeDim(const aclTensor *self, bool keepDim, const aclTensor *valuesOut,
                           const aclTensor *indicesOut) {
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
   OP_CHECK_MAX_DIM(valuesOut, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -207,7 +207,7 @@ static aclnnStatus CheckParamsDim(const aclTensor *self, int64_t dim, bool keepD
   CHECK_RET(CheckDimValue(self, dim), ACLNN_ERR_PARAM_INVALID);
 
   // 4. 检查shape是否超出MAX_DIM
-  CHECK_RET(CheckShapeDim(self, dim, keepDim, valuesOut, indicesOut), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShapeDim(self, keepDim, valuesOut, indicesOut), ACLNN_ERR_PARAM_INVALID);
 
   // 5. 当self的数据类型为BFLOAT16时，self.shape[dim]不能等于1
   auto dimSize = self->GetViewShape().GetDimNum();
@@ -354,7 +354,6 @@ static const aclTensor *GetFirstNanIndices(const aclTensor *sortValues, const ac
 
 static std::tuple<const aclTensor*, const aclTensor*> GetMedianSortResult(const aclTensor *self,
                                                                           int64_t dim,
-                                                                          aclIntArray *selfReduceShape,
                                                                           aclOpExecutor *executor) {
   // 调用Sort算子
   auto sortResult = SortProcess(self, dim, executor);
@@ -560,7 +559,7 @@ aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor *self, int64_t dim, b
     }
   } else {
     // 获取排序结果
-    auto result = GetMedianSortResult(selfReshape, realDim, selfReduceShape, uniqueExecutor.get());
+    auto result = GetMedianSortResult(selfReshape, realDim, uniqueExecutor.get());
     lastValueResult = std::get<0>(result);
     CHECK_RET(lastValueResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     lastIndicesResult = std::get<1>(result);
@@ -621,7 +620,6 @@ static int64_t GetTensorSize(const aclTensor *self) {
     return size;
   }
   int64_t dimNum = self->GetViewShape().GetDimNum();
-  int64_t dim_post_expr = self->GetViewShape().GetDimNum();
   for (int64_t dim = 0; dim < dimNum; dim++) {
     size *= self->GetViewShape().GetDim(dim);
   }
@@ -711,7 +709,6 @@ aclnnStatus aclnnNanMedianGetWorkspaceSize(const aclTensor *self, aclTensor *out
   auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
   CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  int64_t selfShapeSize = 0;
   auto selfShapeDim = GetTensorDim(self);
   auto selfReshape = selfContiguous;
 

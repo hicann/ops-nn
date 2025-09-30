@@ -40,7 +40,7 @@ static const int OUT_SHAPE = 2;
 static const int SMALL_DIM_THRESH = 512;
 static const int BLOCK_SIZE = 32;
 static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048;
-static const int64_t MULTIPLES = 5;
+static const uint64_t MULTIPLES = 5;
 static const int64_t GRAD_ROW_LIMIT = 1024;
 
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910 = {
@@ -198,10 +198,10 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights)
     }
     auto embeddingDim = gradShape.GetDim(gradShape.GetDimNum() - 1);
     if (is910BSocVersion) {
-        return (gradRow <= INT32_MAX_LIMIT) && (numWeights <= INT32_MAX_LIMIT);
+        return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) && (numWeights <= INT32_MAX_LIMIT);
     }
 
-    return (gradRow <= INT32_MAX_LIMIT) &&
+    return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) &&
            ((gradRow > embeddingDim && gradRow > GRAD_ROW_LIMIT) ||
             (numWeights > embeddingDim * MULTIPLES && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
 }
@@ -245,7 +245,7 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
 
     bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
     // 修改读取的数据类型
-    if (!is910D && gradRow < INT32_INF) {
+    if (!is910D && gradRow < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
         OP_LOGD("aclnnEmbeddingDenseGradV2: indice sort by aicore");
     }
