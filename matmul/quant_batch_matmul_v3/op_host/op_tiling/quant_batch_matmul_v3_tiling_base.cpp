@@ -708,10 +708,10 @@ bool QuantBatchMatmulV3TilingBase::GetUbDequantExtreSpace()
     return false;
 }
 
-bool QuantBatchMatmulV3TilingBase::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                          const gert::StorageShape *biasShape,
-                                          const gert::StorageShape *pertokenShape,
-                                          const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV3TilingBase::CheckShape(const std::vector<gert::Shape *> &/*mandtoryShape*/,
+                                          const gert::StorageShape */*biasShape*/,
+                                          const gert::StorageShape */*pertokenShape*/,
+                                          const std::vector<int64_t> &/*dimValueOfMKN*/) const
 {
     return false;
 }

@@ -173,10 +173,10 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeInputs()
     auto x2kSize = inputParams_.transB ? x2Outer : x2Inner;
     auto x2nSize = inputParams_.transB ? x2Inner : x2Outer;
     OP_TILING_CHECK(x1Outer != x2kSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%lu] is not equal to the size of k dimension in x2[%lu].",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%ld] is not equal to the size of k dimension in x2[%ld].",
                                                 x1Outer, x2Inner), return false);
     OP_TILING_CHECK(x2nSize % basicTiling_.baseN != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of N [%lu] does not align with baseN [%lu].",
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of N [%ld] does not align with baseN [%lu].",
                                                 x2Outer, basicTiling_.baseN), return false);
     inputParams_.mSize = x1Inner;
     inputParams_.kSize = x1Outer;
@@ -209,14 +209,14 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeX1ScaleInput()
     OP_TILING_CHECK(
         static_cast<uint64_t>(x1ScaleShapeInner) != inputParams_.mSize,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "x1Scale inner dim should be mSize %zu, but x1Scale inner dim is %zu",
+            inputParams_.opName, "x1Scale inner dim should be mSize %zu, but x1Scale inner dim is %ld",
             inputParams_.mSize, x1ScaleShapeInner),
         return false);
     OP_TILING_CHECK(
         static_cast<uint64_t>(x1ScaleShapeOuter) != ops::CeilDiv(inputParams_.kSize, inputParams_.groupSizeK),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams_.opName,
-            "x1Scale outer dim should be CeilDiv(kSize %zu / groupSizeK %zu), but x1Scale outer dim is %zu",
+            "x1Scale outer dim should be CeilDiv(kSize %zu / groupSizeK %zu), but x1Scale outer dim is %ld",
             inputParams_.kSize, inputParams_.groupSizeK, x1ScaleShapeOuter),
         return false);
     return true;
@@ -241,14 +241,14 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeX2ScaleInput()
         static_cast<uint64_t>(x2ScaleKSize) != ops::CeilDiv(inputParams_.kSize, inputParams_.groupSizeK),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams_.opName,
-            "x2Scale inner dim should be CeilDiv(kSize %zu / groupSizeK %zu), but x2Scale inner dim is %zu",
+            "x2Scale inner dim should be CeilDiv(kSize %zu / groupSizeK %zu), but x2Scale inner dim is %ld",
             inputParams_.kSize, inputParams_.groupSizeK, x2ScaleKSize),
         return false);
     OP_TILING_CHECK(
         static_cast<uint64_t>(x2ScaleNSize) != ops::CeilDiv(inputParams_.nSize, inputParams_.groupSizeN),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams_.opName,
-            "x2Scale outer dim should be CeilDiv(nSize %zu / groupSizeN %zu), but x2Scale outer dim is %zu",
+            "x2Scale outer dim should be CeilDiv(nSize %zu / groupSizeN %zu), but x2Scale outer dim is %ld",
             inputParams_.nSize, inputParams_.groupSizeN, x2ScaleNSize),
         return false);
     return true;
@@ -264,7 +264,7 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeBiasInputs()
                     return false);
     auto biasShapeInner = biasShape.GetDim(0);
     OP_TILING_CHECK(static_cast<uint64_t>(biasShapeInner) != inputParams_.nSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input bias size should equal to nSize %zu, but bias size is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input bias size should equal to nSize %zu, but bias size is %ld",
                                                     inputParams_.nSize, biasShapeInner),
                     return false);
     return true;

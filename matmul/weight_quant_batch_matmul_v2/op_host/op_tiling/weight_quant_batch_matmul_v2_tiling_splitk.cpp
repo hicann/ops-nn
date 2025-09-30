@@ -161,7 +161,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingSplitK::DoOpTiling()
     OP_TILING_CHECK(
         !GetMatMulTiling(),
         VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "Failed to get mm tiling for mnk[%ld, %ld, %ld]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
+            opName_, "Failed to get mm tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
             matmulInfoPtr_->kSize),
         return ge::GRAPH_FAILED);
 

@@ -156,7 +156,7 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeInputs()
     auto x2Inner = x2Shape.GetDim(0);
     auto x2Outer = x2Shape.GetDim(1);
     OP_TILING_CHECK(x1Outer != x2Inner,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%lu] is not equal to the size of k dimension in x2[%lu].",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%ld] is not equal to the size of k dimension in x2[%ld].",
                                                    x1Outer, x2Inner), return false);
     inputParams_.mSize = x1Inner;
     inputParams_.kSize = x1Outer;
@@ -180,11 +180,11 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
     auto x1ScaleShapeInner = x1ScaleShape.GetDim(0);
     auto x1ScaleShapeOuter = x1ScaleShape.GetDim(1);
     OP_TILING_CHECK(static_cast<uint64_t>(x1ScaleShapeInner) != inputParams_.mSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale inner dim should equal to mSize %zu, but x1Scale inner dim is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale inner dim should equal to mSize %zu, but x1Scale inner dim is %ld",
                                                    inputParams_.mSize, x1ScaleShapeInner),
                     return false);
     OP_TILING_CHECK(x1ScaleShapeOuter != 1,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale outer dim should equal to 1, but x1Scale outer dim is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x1Scale outer dim should equal to 1, but x1Scale outer dim is %ld",
                                                     x1ScaleShapeOuter),
                     return false);
     auto x2ScaleShapeLen = x2ScaleShape.GetDimNum();
@@ -194,11 +194,11 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeScaleInputs()
     auto x2ScaleShapeInner = x2ScaleShape.GetDim(0);
     auto x2ScaleShapeOuter = x2ScaleShape.GetDim(1);
     OP_TILING_CHECK(static_cast<uint64_t>(x2ScaleShapeInner) * inputParams_.groupSize != inputParams_.kSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale inner dim should equal to nSize %zu / groupSizeK %zu, but x2Scale inner dim is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale inner dim should equal to nSize %zu / groupSizeK %zu, but x2Scale inner dim is %ld",
                                                    inputParams_.nSize, inputParams_.groupSize, x2ScaleShapeInner),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(x2ScaleShapeOuter) != inputParams_.nSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale outer dim should equal to nSize %zu, but x2Scale outer dim is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x2Scale outer dim should equal to nSize %zu, but x2Scale outer dim is %ld",
                                                    inputParams_.nSize, x2ScaleShapeOuter),
                     return false);
     return true;
@@ -214,7 +214,7 @@ bool QuantBatchMatmulV4MsdTiling::AnalyzeYOffsetInputs()
                     return false);
     auto yOffsetShapeInner = yOffsetShape.GetDim(0);
     OP_TILING_CHECK(static_cast<uint64_t>(yOffsetShapeInner) != inputParams_.nSize,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input yOffset size should equal to nSize %zu, but yOffset size is %zu",
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input yOffset size should equal to nSize %zu, but yOffset size is %ld",
                                                     inputParams_.nSize, yOffsetShapeInner),
                     return false);
     return true;

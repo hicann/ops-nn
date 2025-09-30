@@ -299,7 +299,7 @@ bool QuantBatchMatmulV4PergroupTiling::CheckInputsShape(
     OP_TILING_CHECK(
         x1ScaleInner != 1 || x1ScaleOuter != m,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Input x1Scale's shape should be [%zu, 1], but actual shape is [%zu, %zu]", m,
+            inputParams_.opName, "Input x1Scale's shape should be [%ld, 1], but actual shape is [%ld, %ld]", m,
             x1ScaleOuter, x1ScaleInner),
         return false);
 
@@ -308,7 +308,7 @@ bool QuantBatchMatmulV4PergroupTiling::CheckInputsShape(
     OP_TILING_CHECK(
         x2ScaleInner != n || x2ScaleOuter != nkgroup,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Input x1Scale's shape should be [%zu, %zu], but actual shape is [%zu, %zu]", nkgroup,
+            inputParams_.opName, "Input x1Scale's shape should be [%ld, %ld], but actual shape is [%ld, %ld]", nkgroup,
             n, x2ScaleOuter, x2ScaleInner),
         return false);
 
@@ -317,7 +317,7 @@ bool QuantBatchMatmulV4PergroupTiling::CheckInputsShape(
     OP_TILING_CHECK(
         x2OffsetInner != n || x2OffsetOuter != nkgroup,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Input x1Scale's shape should be [%zu, %zu], but actual shape is [%zu, %zu]", nkgroup,
+            inputParams_.opName, "Input x1Scale's shape should be [%ld, %ld], but actual shape is [%ld, %ld]", nkgroup,
             n, x2OffsetOuter, x2OffsetInner),
         return false);
 
