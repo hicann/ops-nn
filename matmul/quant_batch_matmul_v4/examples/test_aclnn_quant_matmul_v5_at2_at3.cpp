@@ -207,5 +207,5 @@ int main()
     auto ret = aclnnQuantMatmulV5Test(deviceId, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5Test failed. ERROR: %d\n", ret); return ret);
     Finalize(deviceId, stream);
-    _exit(0);
+    return 0;
 }

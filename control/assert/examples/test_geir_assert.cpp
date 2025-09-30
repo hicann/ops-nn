@@ -296,5 +296,5 @@ int main(int argc, char *argv[])
         _exit(-1);
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
-    _exit(0);
+    return 0;
 }

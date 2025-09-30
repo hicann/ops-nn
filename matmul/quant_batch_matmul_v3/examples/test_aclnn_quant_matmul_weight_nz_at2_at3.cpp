@@ -283,5 +283,5 @@ int main()
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
-    _exit(0);
+    return 0;
 }

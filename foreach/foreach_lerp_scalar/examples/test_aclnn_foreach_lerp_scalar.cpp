@@ -190,5 +190,5 @@ int main() {
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  _exit(0);
+  return 0;
 }

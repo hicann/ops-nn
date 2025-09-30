@@ -144,5 +144,5 @@ int main()
     aclDestroyScalar(p);
     aclDestroyScalar(maxNorm);
     aclDestroyTensor(out);
-    _exit(0);
+    return 0;
 }

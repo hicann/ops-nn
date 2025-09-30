@@ -292,5 +292,5 @@ int main()
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV4Test failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
-    _exit(0);
+    return 0;
 }
