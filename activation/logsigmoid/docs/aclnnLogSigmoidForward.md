@@ -41,14 +41,14 @@ aclnnStatus aclnnLogSigmoidForward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 101px">
-  <col style="width: 115px">
-  <col style="width: 220px">
-  <col style="width: 280px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+  <table style="undefined;table-layout: fixed; width: 1504px"><colgroup>
+  <col style="width: 154px">
+  <col style="width: 120px">
+  <col style="width: 322px">
+  <col style="width: 308px">
+  <col style="width: 212px">
+  <col style="width: 107px">
+  <col style="width: 136px">
   <col style="width: 145px">
   </colgroup>
   <thead>

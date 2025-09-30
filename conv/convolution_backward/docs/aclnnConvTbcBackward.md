@@ -43,25 +43,25 @@
 
 ```cpp
 aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(
-    const        aclTensor*     self, 
-    const        aclTensor*     input, 
-    const        aclTensor*     weight, 
-    const        aclTensor*     bias, 
-    int64_t                     pad, 
-    int8_t                      cubeMathType, 
-    aclTensor*                  gradInput, 
-    aclTensor*                  gradWeight, 
-    aclTensor*                  gradBias, 
-    uint64_t*                   workspaceSize, 
-    aclOpExecutor**             executor)
+    const aclTensor*     self, 
+    const aclTensor*     input, 
+    const aclTensor*     weight, 
+    const aclTensor*     bias, 
+    int64_t              pad, 
+    int8_t               cubeMathType, 
+    aclTensor*           gradInput, 
+    aclTensor*           gradWeight, 
+    aclTensor*           gradBias, 
+    uint64_t*            workspaceSize, 
+    aclOpExecutor**      executor)
 ```
 
 ```cpp
 aclnnStatus aclnnConvTbcBackward(
-    void*                       workspace, 
-    uint64_t                    workspaceSize, 
-    aclOpExecutor*              executor, 
-    const        aclrtStream    stream)
+    void*                workspace, 
+    uint64_t             workspaceSize, 
+    aclOpExecutor*       executor, 
+    const aclrtStream    stream)
 ```
 
 ## aclnnConvTbcBackwardGetWorkspaceSize

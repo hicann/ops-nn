@@ -51,14 +51,14 @@ aclnnStatus aclnnHardswishBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 101px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 250px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+  <table style="undefined;table-layout: fixed; width: 1481px"><colgroup>
+  <col style="width: 154px">
+  <col style="width: 120px">
+  <col style="width: 272px">
+  <col style="width: 261px">
+  <col style="width: 286px">
+  <col style="width: 107px">
+  <col style="width: 136px">
   <col style="width: 145px">
   </colgroup>
   <thead>

@@ -54,30 +54,30 @@
 
 ```cpp
 aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
-    const         aclTensor     *gradOutput,
-    const         aclTensor     *input,
-    const         aclTensor     *weight,
-    const         aclIntArray   *biasSizes,
-    const         aclIntArray   *padding,
-    const         aclIntArray   *dilation,
-    bool                         transposed,
-    const         aclIntArray   *outputPadding,
-    int                          groups,
-    const         aclBoolArray  *outputMask,
-    int8_t                       cubeMathType,
-    aclTensor                   *gradInput,
-    aclTensor                   *gradWeight,
-    aclTensor                   *gradBias,
-    uint64_t                    *workspaceSize,
-    aclOpExecutor              **executor)
+    const aclTensor     *gradOutput,
+    const aclTensor     *input,
+    const aclTensor     *weight,
+    const aclIntArray   *biasSizes,
+    const aclIntArray   *padding,
+    const aclIntArray   *dilation,
+    bool                 transposed,
+    const aclIntArray   *outputPadding,
+    int                  groups,
+    const aclBoolArray  *outputMask,
+    int8_t               cubeMathType,
+    aclTensor           *gradInput,
+    aclTensor           *gradWeight,
+    aclTensor           *gradBias,
+    uint64_t            *workspaceSize,
+    aclOpExecutor      **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnConvolutionBackward(
-    void                        *workspace,
-    uint64_t                     workspaceSize,
-    aclOpExecutor               *executor,
-    const         aclrtStream    stream)
+    void                *workspace,
+    uint64_t             workspaceSize,
+    aclOpExecutor       *executor,
+    const aclrtStream    stream)
 ```
 ## aclnnConvolutionBackwardGetWorkspaceSize
 
