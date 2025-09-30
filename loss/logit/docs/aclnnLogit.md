@@ -56,14 +56,14 @@ aclnnStatus aclnnLogit(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 101px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 250px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+  <table style="undefined;table-layout: fixed; width: 1464px"><colgroup>
+  <col style="width: 159px">
+  <col style="width: 120px">
+  <col style="width: 292px">
+  <col style="width: 275px">
+  <col style="width: 230px">
+  <col style="width: 107px">
+  <col style="width: 136px">
   <col style="width: 145px">
   </colgroup>
   <thead>
