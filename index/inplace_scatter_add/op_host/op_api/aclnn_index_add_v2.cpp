@@ -63,7 +63,7 @@ static bool IsAICoreSupport(const aclTensor *self, const int64_t dim, const aclT
   if(selfDimNum != MODE_0_SUPPORT_DIM || indexDimNum != 1) {
     return false;
   }
-  if(!(dim == 0 || dim == 0 - MODE_0_SUPPORT_DIM)) {
+  if(!(dim == 0 || dim == 0 - static_cast<int64_t>(MODE_0_SUPPORT_DIM))) {
     return false;
   }
 

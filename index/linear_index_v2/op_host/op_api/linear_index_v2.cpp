@@ -50,7 +50,7 @@ const aclTensor* LinearIndexV2(
     auto outShape = (*indicesList)[0]->GetViewShape();
     int64_t outputSize = 1;
     int64_t validIdx = 0;
-    for (int i = 0; i < indicesList->Size(); i++) {
+    for (int i = 0; i < static_cast<int>(indicesList->Size()); i++) {
         int64_t size = 1;
         for (size_t j = 0; j < (*indicesList)[i]->GetViewShape().GetDimNum(); j++) {
             size *= (*indicesList)[i]->GetViewShape().GetDim(j);

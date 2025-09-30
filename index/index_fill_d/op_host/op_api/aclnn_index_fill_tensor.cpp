@@ -55,7 +55,7 @@ static bool CheckNotNull(const aclTensor *self, const aclIntArray *index,
   return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclIntArray *index, const aclScalar *value,
+static bool CheckShape(const aclTensor *self, const aclIntArray *index,
                        int64_t dim, const aclTensor *out) {
   if (self->IsEmpty()) {
     return true;
@@ -118,7 +118,7 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclIntA
   // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
   CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
   // 3. 检查输入的shape是否满足要求
-  CHECK_RET(CheckShape(self, index, value, dim, out), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShape(self, index, dim, out), ACLNN_ERR_PARAM_INVALID);
   // 4. 检查value的类型
   CHECK_RET(CheckPromoteType(value), ACLNN_ERR_PARAM_INVALID);
 
@@ -175,7 +175,7 @@ static const aclTensor *GenerateAssistMatrix(const aclTensor *self, const aclInt
     uint64_t start = 0, end = 0;
     uint64_t idx = (*index)[i];
     uint64_t k = idx, count = 0;
-    while (k < blocknum) {
+    while (static_cast<int64_t>(k) < blocknum) {
       start = blocksize * k;
       end = start + blocksize;
       for (uint64_t j = start; j < end; j++) {

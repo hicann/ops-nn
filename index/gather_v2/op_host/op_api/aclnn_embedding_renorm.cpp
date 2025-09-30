@@ -121,11 +121,6 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *indices) {
   return true;
 }
 
-// CheckPromoteType 检查是否能做数据类型推导 - 对于embedding_renorm应该不涉及，直接返回TRUE
-static bool CheckPromoteType(const aclTensor *self, const aclTensor *indices) {
-  return true;
-}
-
 // CheckMaxNormNotNegative 检查maxNorm是否在[0, +∞]范围内
 static bool CheckMaxNormNotNegative(const double maxNorm) {
   if (maxNorm < 0.0f) {
@@ -136,8 +131,7 @@ static bool CheckMaxNormNotNegative(const double maxNorm) {
   return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, const double maxNorm,
-                               const double normType) {
+static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, const double maxNorm) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_INNER_NULLPTR);
 
@@ -147,13 +141,10 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, 
   // 3. 检查输入的数据类型是否为2维
   CHECK_RET(CheckSelfDim(self), ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查self和indices是否需要做数据类型推导以及输出的类型能否转换为输出数据类型
-  CHECK_RET(CheckPromoteType(self, indices), ACLNN_ERR_PARAM_INVALID);
-
-  // 5. 检查indices的维度是否超过8
+  // 4. 检查indices的维度是否超过8
   CHECK_RET(CheckIndicesDimension(indices), ACLNN_ERR_PARAM_INVALID);
 
-  // 6. 检查maxNorm取值是否合法
+  // 5. 检查maxNorm取值是否合法
   CHECK_RET(CheckMaxNormNotNegative(maxNorm), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
@@ -170,7 +161,7 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
   L2_DFX_PHASE_1(aclnnEmbeddingRenorm, DFX_IN(selfRef, indices, maxNorm, normType), DFX_OUT(selfRef));
 
   // 固定写法 参数检查
-  auto ret = CheckParams(selfRef, indices, maxNorm, normType);
+  auto ret = CheckParams(selfRef, indices, maxNorm);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 固定写法，创建OpExecutor

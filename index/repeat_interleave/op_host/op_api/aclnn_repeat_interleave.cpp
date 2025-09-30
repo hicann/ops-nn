@@ -173,7 +173,6 @@ static bool CheckRepeatsSize(const aclTensor *self, const aclTensor *repeats)
     }
 
     // 维度数为1时，repeats的size必须为1 / self的元素个数
-    int64_t selfDimNum = GetTensorDimNum(self);
     int64_t selfElementsNum = GetTensorElementsNum(self);
     int64_t repeatSize = (repeats->GetViewShape())[0];
     if (repeatSize != selfElementsNum && repeatSize != 1) {

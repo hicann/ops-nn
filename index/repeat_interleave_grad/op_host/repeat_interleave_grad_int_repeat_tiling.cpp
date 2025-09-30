@@ -38,10 +38,10 @@ static constexpr size_t MERGED_AXES_NUM = 3;
 
 using namespace Ops::Base;
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert::Shape& oneShape)
 {
     if (inShape.IsScalar()) {
-        return gert::Shape{1};
+        return oneShape;
     }
     return inShape;
 }
@@ -118,7 +118,8 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
 {
     auto repeatStorage = context->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShapeRepeat = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShapeRepeat);
     int64_t repeatDimNum = repeatShape.GetDimNum();
 
     OP_CHECK_IF(
@@ -134,7 +135,8 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
     // use input and output shape to get repeat
     auto xStorage = context->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xStorage);
-    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape());
+    auto oneShapeX = gert::Shape{1};
+    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape(), oneShapeX);
     int64_t xDimNum = xShape.GetDimNum();
     OP_CHECK_IF(
         xDimNum > MAX_YGRAD_DIM,
@@ -190,7 +192,8 @@ static ge::graphStatus GetRIGinputParam(gert::TilingContext* context, ReduceOpIn
     // get x_grad output
     auto ytStorage = context->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ytStorage);
-    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape());
+    auto oneShape = gert::Shape{1};
+    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape(), oneShape);
     int64_t yDimNum = yShape.GetDimNum();
 
     OP_LOGI(context, "The output x_grad is: %s", ToString(yShape).c_str());
@@ -256,7 +259,8 @@ bool IsIntRepeat(const gert::TilingContext* context)
 {
     auto repeatStorage = context->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShape = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShape);
 
     int64_t repeatDimNum = repeatShape.GetDimNum();
     int64_t lenRepeat = repeatShape.GetDim(0);

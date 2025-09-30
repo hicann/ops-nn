@@ -61,7 +61,7 @@ static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* rep
     auto xDimSize = x->GetViewShape().GetDimNum();
     axis = axis >= 0 ? axis : axis + xDimSize; // axis保证为非负数
     int64_t rows = 1;
-    for (size_t i = 0; i < axis; i++) {
+    for (int64_t i = 0; i < axis; i++) {
         rows *= (x->GetViewShape())[i];
     }
 
