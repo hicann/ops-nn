@@ -477,8 +477,16 @@ static aclnnStatus Conv2dV2InferShapeAndAddLauncher(const aclTensor *input, cons
         output = nullptr;
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
-    ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
-        OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32));
+    if (hf32 && input->GetDataType() == op::DataType::DT_FLOAT) {
+        OP_LOGD("conv2d launch hf32");
+        ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
+           OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32),
+           OP_MODE(static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32)));
+    } else {
+        ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
+           OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32));
+    }
+
     return ACLNN_SUCCESS;
 }
 
