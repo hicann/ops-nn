@@ -741,7 +741,7 @@ static bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose, bool 
         return transpose;
     }
     // check if tensor is contiguous layout
-    if (tensor->GetViewStrides()[dim2] == 1 && (tensor->GetViewStrides()[dim1] == tensor->GetViewShape()).GetDim(dim2)) {
+    if (tensor->GetViewStrides()[dim2] == 1 && (tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2))) {
         OP_LOGD("QuantMatmul GetTransposeAttrValue, find tensor is not contiguous.");
         const_cast<aclTensor *>(tensor)->SetViewShape(SwapLastTwoDimValue(tensor->GetViewShape()));
         // 如果不需要校验特殊case，则直接返回
