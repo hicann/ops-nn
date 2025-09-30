@@ -429,10 +429,6 @@ ge::graphStatus TilingPrepareForGatherElementsV2(gert::TilingParseContext* conte
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
     OP_LOGD(context->GetNodeName(), "total ub size is %lu", totalUbSize);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_CHECK_IF(
-        (compileInfo->sysWorkspaceSize < 0),
-        OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
-        return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "Tiling prepare for gather elements v2 end");
     return ge::GRAPH_SUCCESS;
 }

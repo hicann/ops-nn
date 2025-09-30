@@ -151,28 +151,28 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensorList* indic
 
 static aclIntArray* GetPerm(int64_t masksNum, int64_t indicesNum, int64_t selfDimNum, aclOpExecutor* executor) {
   FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> transposeArray;
-  for (size_t i = masksNum - indicesNum; i < masksNum; i++){
+  for (int64_t i = masksNum - indicesNum; i < masksNum; i++){
     transposeArray.emplace_back(i);
   }
-  for (size_t i = 0; i < masksNum - indicesNum; i++){
+  for (int64_t i = 0; i < masksNum - indicesNum; i++){
     transposeArray.emplace_back(i);
   }
-  for (size_t i = masksNum; i < selfDimNum; i++){
+  for (int64_t i = masksNum; i < selfDimNum; i++){
     transposeArray.emplace_back(i);
   }
   auto perm = executor->AllocIntArray(transposeArray.data(), selfDimNum);
   return perm;
 }
 
-static aclIntArray* GetPermBack(int64_t maskZerosNum, int64_t indicesDimNum, int64_t outDimNum, int64_t selfDimNum, aclOpExecutor* executor) {
+static aclIntArray* GetPermBack(int64_t maskZerosNum, int64_t indicesDimNum, int64_t outDimNum, aclOpExecutor* executor) {
   FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> transposeArray;
-  for (size_t i = indicesDimNum; i < indicesDimNum + maskZerosNum; i++){
+  for (int64_t i = indicesDimNum; i < indicesDimNum + maskZerosNum; i++){
     transposeArray.emplace_back(i);
   }
-  for (size_t i = 0; i < indicesDimNum; i++){
+  for (int64_t i = 0; i < indicesDimNum; i++){
     transposeArray.emplace_back(i);
   }
-  for (size_t i = indicesDimNum + maskZerosNum; i < outDimNum; i++){
+  for (int64_t i = indicesDimNum + maskZerosNum; i < outDimNum; i++){
     transposeArray.emplace_back(i);
   }
   auto perm = executor->AllocIntArray(transposeArray.data(), outDimNum);
@@ -256,7 +256,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
   int64_t permMasksNum = 0;
   int64_t indicesSize = static_cast<int64_t>(indices->Size());
   // 封装输入输出Tensor
-  for (size_t i = 0; i < indicesSize; i++) {
+  for (int64_t i = 0; i < indicesSize; i++) {
     if ((*indices)[i]->GetViewShape().GetShapeSize() != 0) {
         auto indexContiguous = l0op::Contiguous((*indices)[i], uniqueExecutor.get());
         allDefinedIndices.emplace_back(indexContiguous);
@@ -278,7 +278,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
   if (isAicore && masksNum > indicesNum && tailSize < TAIL_SIZE_LIMIT) {
     needTranspose = 1;
     masks.clear();
-    for (size_t i = 0; i < indicesNum; i++) {
+    for (int64_t i = 0; i < indicesNum; i++) {
       masks.emplace_back(1);
     }
   }
@@ -288,8 +288,8 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
   for (size_t i = 0; i < allDefinedIndices[0]->GetViewShape().GetDimNum(); i++) {
     transposedOutputShape.emplace_back(allDefinedIndices[0]->GetViewShape().GetDim(i));
   }
-  for (size_t i = 0; i < masksNum - indicesNum; i++) {
-    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+  for (int64_t i = 0; i < masksNum - indicesNum; i++) {
+    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(static_cast<size_t>(i)));
   }
   for (size_t i = masksNum; i < self->GetViewShape().GetDimNum(); i++) {
     transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
@@ -324,7 +324,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
       selfContiguous = l0op::Transpose(selfContiguous, perm, uniqueExecutor.get());
       opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList,
                                 uniqueExecutor.get());
-      auto permBack = GetPermBack(masksNum - indicesNum, indicesDimNum, outDimNum, selfDimNum, uniqueExecutor.get());
+      auto permBack = GetPermBack(masksNum - indicesNum, indicesDimNum, outDimNum, uniqueExecutor.get());
       opOut = l0op::Transpose(opOut, permBack, uniqueExecutor.get());
     } else {
       opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList,

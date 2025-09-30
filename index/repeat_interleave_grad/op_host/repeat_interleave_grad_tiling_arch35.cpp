@@ -45,10 +45,10 @@ constexpr int32_t INT32_SIZE = 4;
 
 using namespace Ops::Base;
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert::Shape& oneShape)
 {
     if (inShape.IsScalar()) {
-        return gert::Shape{1};
+        return oneShape;
     }
     return inShape;
 }
@@ -135,15 +135,18 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     // 获取y_grad
     auto xStorage = context_->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xStorage);
-    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape());
+    auto oneShapeX = gert::Shape{1};
+    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape(), oneShapeX);
 
     auto repeatStorage = context_->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShapeRepeat = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShapeRepeat);
 
     auto ytStorage = context_->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ytStorage);
-    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape());
+    auto oneShapeY = gert::Shape{1};
+    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape(), oneShapeY);
 
     auto repeatShapeSize = repeatShape.GetShapeSize();
 

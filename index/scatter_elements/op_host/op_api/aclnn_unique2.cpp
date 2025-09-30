@@ -52,7 +52,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(const aclTensor* self, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut) {
+static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut, aclTensor* countsOut) {
   if (SocVersion::ASCEND910_95 == GetCurrentPlatformInfo().GetSocVersion()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);
   } else {
@@ -93,7 +93,7 @@ static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, bool r
   CHECK_RET(CheckNotNull4Tensor(self, valueOut, inverseOut, countsOut), ACLNN_ERR_PARAM_NULLPTR);
 
   // 2. 检查数据类型
-  CHECK_RET(CheckDtypeValid(self, valueOut, inverseOut, countsOut), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(self, inverseOut, countsOut), ACLNN_ERR_PARAM_INVALID);
 
   // 3. 检查数据Shape
   CHECK_RET(CheckShapeValid(self, returnInverse, returnCounts, valueOut, inverseOut, countsOut),
@@ -164,9 +164,11 @@ aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool return
         const aclTensor* viewCopyInverseIdx = nullptr;
         if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
             viewCopyInverseIdx = l0op::ViewCopy(inverseIdx, inverseOut, executor);
+            CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
             auto inverseIdxInt64 = l0op::Cast(inverseIdx, DataType::DT_INT64, executor);
             viewCopyInverseIdx = l0op::ViewCopy(inverseIdxInt64, inverseOut, executor);
+            CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
     return ACLNN_SUCCESS;
