@@ -228,7 +228,6 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(const aclTenso
 
     auto valueShape = value->GetViewShape();
     auto locationShape = location->GetViewShape();
-    uint64_t numQueries =  locationShape.GetDim(1);
     uint64_t numHeads =  locationShape.GetDim(2);
     uint64_t numLevels =  locationShape.GetDim(3);
     uint64_t numPoints =  locationShape.GetDim(4);

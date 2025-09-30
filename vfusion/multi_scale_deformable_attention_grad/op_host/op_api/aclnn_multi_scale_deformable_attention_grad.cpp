@@ -118,16 +118,6 @@ static aclnnStatus CheckParams(const aclTensor *value, const aclTensor *spatialS
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray *GetDimTransposeArray(int64_t dimNum, int64_t lastDim, int64_t positiveDim,
-                                         aclOpExecutor *executor) {
-    std::vector<int64_t> perm(dimNum, 0);
-    for (int64_t i = 0; i < dimNum; i++) {
-      perm[i] = i;
-    }
-    std::swap(perm[positiveDim], perm[lastDim]);
-    return executor->AllocIntArray(perm.data(), dimNum);
-}
-
 aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(const aclTensor *value,
                                                                    const aclTensor *spatialShape, const aclTensor *levelStartIndex,
                                                                    const aclTensor *location, const aclTensor *attnWeight,
