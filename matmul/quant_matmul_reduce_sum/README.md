@@ -79,8 +79,3 @@
 - 不支持空tensor。
 - 左右矩阵不支持非连续tensor。
 
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [参考示例算子调用](examples/test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp) | 通过<br>[aclnnQuantMatmulReduceSumWeightNz](docs/aclnnQuantMatmulReduceSumWeightNz.md)</br>等方式调用算子。 |
