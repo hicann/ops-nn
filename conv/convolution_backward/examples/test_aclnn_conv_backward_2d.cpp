@@ -267,5 +267,5 @@ int main()
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackwardTest failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
-    _return 0(0);
+    return 0;
 }
