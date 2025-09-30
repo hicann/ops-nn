@@ -464,13 +464,18 @@ const aclTensor* TransBmm2Mm(
     return l0op::Reshape(mmOut, outShapeIntArray, executor);
 }
 
-bool CheckSocIfBatchMatMulToMulDefault(const aclTensor* /*self*/, const aclTensor* /*mat2*/, bool /*adjX1*/, bool /*adjX2*/)
+bool CheckSocIfBatchMatMulToMulDefault(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
+    (void) self;
+    (void) mat2;
+    (void) adjX1;
+    (void) adjX2;
     return false;
 }
 
-bool CheckSocIfBatchMatMulToMul910B(const aclTensor* self, const aclTensor* mat2, bool /*adjX1*/, bool adjX2)
+bool CheckSocIfBatchMatMulToMul910B(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
+    (void) adjX1;
     if (self->GetDataType() == DataType::DT_BF16 || mat2->GetDataType() == DataType::DT_BF16) {
         return checkBF16SizeValid(mat2, adjX2);
     }
