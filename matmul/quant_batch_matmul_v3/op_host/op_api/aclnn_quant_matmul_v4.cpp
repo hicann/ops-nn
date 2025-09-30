@@ -222,7 +222,6 @@ static inline bool CheckDtypeValidOnOnlyL0c2outForUnclassified(TupleTensor manda
 {
     auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
-    auto pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     if (bias != nullptr && bias->GetDataType() == op::DataType::DT_BF16 &&
         out->GetDataType() != op::DataType::DT_BF16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When bias dtype is BF16, out dtype should be BF16, actual dtype is %s.",
@@ -290,7 +289,6 @@ static inline bool CheckDtypeValid(TupleTensor mandatoryTensors, TupleTensor opt
     auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto offset = std::get<INDEX_OFFSET_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
-    auto pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, IN_TYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, IN_TYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, SCALE_TYPE_SUPPORT_LIST, return false);
@@ -668,7 +666,6 @@ static aclnnStatus CheckParams910_95(TupleTensor mandatoryTensors, TupleTensor o
     const TupleInput inputTensors = std::tie(std::get<0>(mandatoryTensors), std::get<1>(mandatoryTensors));
     const aclTensor *yScale = nullptr;
     const aclTensor *x1Offset = nullptr;
-    const aclTensor *yOffset = nullptr;
     const int64_t groupSize = 0;
     // 4 represents the aclnnQuantMatmulV4 interface
     const int64_t interfaceType = 4;
@@ -728,7 +725,7 @@ static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleTensor optiona
 }
 
 static bool CheckSpecialCase(const aclTensor *tensor, int64_t firstLastDim, int64_t secondLastDim) {
-    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim) == 1) {
+    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim)) {
         OP_LOGD("QuantMatmul special case, no need to set transpose attr value.");
         return true;
     }
@@ -739,12 +736,12 @@ static bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose, bool 
     int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
     int64_t dim2 = tensor->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
     // 对于torch的场景，NZ情况两维某一维度为1的场景无法正确判断是否转置，资料呈现不支持非连续，代码默认连续
-    if (static_cast<ge::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ &&
-        (tensor->GetViewShape().GetDim(dim2) == 1) || (tensor->GetViewShape().GetDim(dim1) == 1)) {
+    if ((static_cast<ge::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ &&
+        (tensor->GetViewShape().GetDim(dim2) == 1)) || (tensor->GetViewShape().GetDim(dim1) == 1)) {
         return transpose;
     }
     // check if tensor is contiguous layout
-    if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
+    if (tensor->GetViewStrides()[dim2] == 1 && (tensor->GetViewStrides()[dim1] == tensor->GetViewShape()).GetDim(dim2)) {
         OP_LOGD("QuantMatmul GetTransposeAttrValue, find tensor is not contiguous.");
         const_cast<aclTensor *>(tensor)->SetViewShape(SwapLastTwoDimValue(tensor->GetViewShape()));
         // 如果不需要校验特殊case，则直接返回
