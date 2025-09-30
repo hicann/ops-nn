@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <unistd.h>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -226,5 +225,5 @@ int main() {
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  _exit(0);
+  return 0;
 }
