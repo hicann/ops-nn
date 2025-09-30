@@ -713,7 +713,7 @@ bool QuantBatchMatmulV3TilingBase::CheckShape(const std::vector<gert::Shape *> &
                                           const gert::StorageShape *pertokenShape,
                                           const std::vector<int64_t> &dimValueOfMKN) const
 {
-    (void) mandtoryShape;。
+    (void) mandtoryShape;
     (void) biasShape;
     (void) pertokenShape;
     (void) dimValueOfMKN;
