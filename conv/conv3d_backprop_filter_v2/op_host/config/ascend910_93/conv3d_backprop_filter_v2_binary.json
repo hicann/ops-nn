@@ -2,7 +2,7 @@
   "op_type": "Conv3DBackpropFilterV2",
   "op_list": [
     {
-      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FRACTALZ_3D_BF16_FP32_NCDHW",
+      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FZ3D_BF16_FP32_NCDHW",
       "inputs": [
         {
           "name": "x",
@@ -76,7 +76,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FRACTALZ_3D_FP32_FP32_NCDHW",
+      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FZ3D_FP32_FP32_NCDHW",
       "inputs": [
         {
           "name": "x",
@@ -150,7 +150,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FRACTALZ_3D_FP16_FP32_NCDHW",
+      "bin_filename": "Conv3DBackpropFilterV2_NDC1HWC0_FZ3D_FP16_FP32_NCDHW",
       "inputs": [
         {
           "name": "x",
@@ -224,7 +224,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DBackpropFilterV2_NCDHW_NDC1HWC0_FRACTALZ_3D_BF16_FP32_NCDHW",
+      "bin_filename": "Conv3DBackpropFilterV2_NCDHW_NDC1HWC0_FZ3D_BF16_FP32_NCDHW",
       "inputs": [
         {
           "name": "x",
@@ -298,7 +298,7 @@
       ]
     },
     {
-      "bin_filename": "Conv3DBackpropFilterV2_NCDHW_NDC1HWC0_FRACTALZ_3D_FP16_FP32_NCDHW",
+      "bin_filename": "Conv3DBackpropFilterV2_NCDHW_NDC1HWC0_FZ3D_FP16_FP32_NCDHW",
       "inputs": [
         {
           "name": "x",
