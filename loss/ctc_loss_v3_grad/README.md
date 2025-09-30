@@ -124,8 +124,3 @@
 * blank的值域为[0, C - 1]。
 * reduction的取值范围为{'none', 'mean', 'sum'}。
 
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_ctc_loss_v3_grad](examples/test_aclnn_ctc_loss_v3_grad.cpp) | 通过[aclnnCtcLossBackward](docs/aclnnCtcLossBackward.md)接口方式调用CtclossV3Grad算子。 |
