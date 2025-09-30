@@ -143,7 +143,6 @@ inputScaleOptional的数据类型与self的类型一致，或者在类型不一�
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | - | 通过[aclnnGeluQuant](./docs/aclnnGeluQuant.md)接口方式调用GeluQuant算子。    |
 | 图模式调用 | - | 通过[算子IR](./op_graph/gelu_quant_proto.h)构图方式调用GeluQuant算子。 |
 
 <!-- [test_aclnn_gelu_quant](./examples/test_aclnn_gelu_quant.cpp)  -->
