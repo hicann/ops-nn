@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
     Status ret = ge::GEInitialize(global_options);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
-        _exit(1);
+        return FAILED;
     }
     printf("%s - INFO - [XIR]: Initialize ge using ge global options success\n", GetTime().c_str());
 
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
-        _exit(1);
+        return FAILED;
     }
 
     if (!inputs.empty() && !outputs.empty()) {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
-        _exit(1);
+        return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to add compute graph to ir session\n", GetTime().c_str());
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
         printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
         delete session;
         GEFinalize();
-        _exit(1);
+        return FAILED;
     }
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
@@ -337,8 +337,8 @@ int main(int argc, char *argv[])
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
-        _exit(1);
+        return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
-    _exit(0);
+    return 0;
 }
