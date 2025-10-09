@@ -66,6 +66,41 @@ bool KvRmsNormRopeCacheTilingDs::CheckScaleValid(const gert::TilingContext* cont
     return isValid;
 }
 
+
+bool KvRmsNormRopeCacheTilingDs::CheckOffsetValid(const gert::TilingContext* context)
+{
+    auto offset1Shape = context->GetOptionalInputShape(K_ROPE_OFFSET_IDX);
+    auto offset2Shape = context->GetOptionalInputShape(C_KV_OFFSET_IDX);
+
+    bool isValid = true;
+    isValid = isValid && ((offset1Shape != nullptr) || (offset2Shape != nullptr));
+    if ((offset1Shape != nullptr) && (offset2Shape != nullptr)) {
+        isValid = isValid && (offset1Shape->GetStorageShape().GetDimNum() == offset2Shape->GetStorageShape().GetDimNum());
+    }
+    isValid = isValid && (((offset1Shape != nullptr) && (offset1Shape->GetStorageShape().GetDimNum() <= DIM_TWO)) ||
+                          ((offset2Shape != nullptr) && (offset2Shape->GetStorageShape().GetDimNum() <= DIM_TWO)));
+    if (!isValid) {
+        return false;
+    }
+    if (offset1Shape != nullptr && offset1Shape->GetStorageShape().GetDimNum() == DIM_ONE) {
+        isValid = isValid && (offset1Shape->GetStorageShape().GetDim(0) == ROPE_LENGTH);
+    } else if (offset1Shape != nullptr && offset1Shape->GetStorageShape().GetDimNum() == DIM_TWO) {
+        isValid = isValid && (scale1Shape->GetStorageShape().GetDim(0) == DIM_ONE);
+        isValid = isValid && (scale1Shape->GetStorageShape().GetDim(1) == ROPE_LENGTH); 
+        //(1,64)
+    }
+
+    if (offset2Shape != nullptr && offset2Shape->GetStorageShape().GetDimNum() == DIM_ONE) {
+        isValid = isValid && (offset2Shape->GetStorageShape().GetDim(0) == RMS_NORM_LENGTH);
+    } else if (offset2Shape != nullptr && offset2Shape->GetStorageShape().GetDimNum() == DIM_TWO) {
+        isValid = isValid && (offset2Shape->GetStorageShape().GetDim(0) == DIM_ONE);
+        isValid = isValid && (offset2Shape->GetStorageShape().GetDim(1) == RMS_NORM_LENGTH);
+        //TODO 增量开发需要改
+    }
+
+    return isValid;
+}
+
 bool KvRmsNormRopeCacheTilingDs::IsCapable()
 {
     return !isRegbase_;
@@ -106,12 +141,18 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
     }
 
     OP_CHECK_IF(
-        (!isRegbase_) && (quantMode_ != NON_QUANT_MODE && quantMode_ != SYMMETRIC_QUANT_MODE),
-        OP_LOGE(context_->GetNodeName(), "Only Support SYMMETRIC_QUANT or NON_QUANT."), return ge::GRAPH_FAILED);
+        (!isRegbase_) && (quantMode_ != NON_QUANT_MODE && quantMode_ != SYMMETRIC_QUANT_MODE && quantMode_ != ASYMMETRIC_QUANT_MODE),
+        OP_LOGE(context_->GetNodeName(), "Only Support SYMMETRIC_QUANT, ASYMMETRIC_QUANT_MODE or NON_QUANT."), return ge::GRAPH_FAILED);
 
     if ((!isRegbase_) && (quantMode_ > 0)) {
         OP_CHECK_IF(
             !CheckScaleValid(context_), OP_LOGE(context_->GetNodeName(), "quant scale shape check failed."),
+            return ge::GRAPH_FAILED);
+    }
+
+    if (((!isRegbase_) && (quantMode_ > 1))) {
+        OP_CHECK_IF(
+            !CheckOffsetValid(context_), OP_LOGE(context_->GetNodeName(), "quant offset shape check failed."),
             return ge::GRAPH_FAILED);
     }
 
@@ -121,9 +162,9 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
     OP_CHECK_IF(
         (!isRegbase_) && (dv_ != RMS_NORM_LENGTH),
         OP_LOGE(context_->GetNodeName(), "rms_norm last dim only support 512."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (!isRegbase_) && (currentCacheMode_ == CacheMode::Norm) && (quantMode_ == SYMMETRIC_QUANT_MODE),
-        OP_LOGE(context_->GetNodeName(), "CacheMode::Norm do not support quant!"), return ge::GRAPH_FAILED);
+    // OP_CHECK_IF(
+    //     (!isRegbase_) && (currentCacheMode_ == CacheMode::Norm) && (quantMode_ == SYMMETRIC_QUANT_MODE),
+    //     OP_LOGE(context_->GetNodeName(), "CacheMode::Norm do not support quant!"), return ge::GRAPH_FAILED);
 
     auto scale1Shape = context_->GetOptionalInputShape(K_ROPE_SCALE_IDX);
     auto scale2Shape = context_->GetOptionalInputShape(C_KV_SCALE_IDX);
@@ -138,7 +179,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
         tilingData_.set_isVQuant(0);
     }
 
-    if (currentCacheMode_ == CacheMode::PA && quantMode_ == SYMMETRIC_QUANT_MODE) {
+    if (currentCacheMode_ == CacheMode::PA && quantMode_ != NON_QUANT_MODE) {
         DoOpTilingPaBlkNz();
         tilingKey_ = TLING_KEY_5011;
         return ge::GRAPH_SUCCESS;
@@ -146,7 +187,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_BLK_BNSD) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ != NON_QUANT_MODE) {
             tilingKey_ = TLING_KEY_5010;
         } else {
             tilingKey_ = TLING_KEY_5000;
@@ -156,7 +197,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_NZ) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ != NON_QUANT_MODE) {
             tilingKey_ = TLING_KEY_4011;
         } else {
             tilingKey_ = TLING_KEY_4001;
@@ -166,7 +207,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_BLK_NZ) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ != NON_QUANT_MODE) {
             tilingKey_ = TLING_KEY_4010;
         } else {
             tilingKey_ = TLING_KEY_4000;

@@ -56,6 +56,7 @@ public:
             kCacheGmNd.SetGlobalBuffer((__gm__ KV_DTYPE*)optional_k_rope);
             vCacheGmNd.SetGlobalBuffer((__gm__ KV_DTYPE*)optional_c_kv);
         }
+        
 
         kpeScaleGm.SetGlobalBuffer((__gm__ float*)kpe_scale);
         ckvScaleGm.SetGlobalBuffer((__gm__ float*)ckv_scale);
@@ -518,6 +519,7 @@ public:
                 Mul(xLocalFp32[rowId * headSize], xLocalFp32[rowId * headSize], scaleLocal, headSize);
             }
             PipeBarrier<PIPE_V>();
+            // 
             RoundFloat2Int8(quantOutLocal, xLocalFp32, rows * headSize);
         }
     }
