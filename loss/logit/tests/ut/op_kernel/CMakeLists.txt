@@ -8,6 +8,3 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-#     AddOpTestCase(logit "ascend910B1" "-DDTYPE_X1=float")
-# endif()
