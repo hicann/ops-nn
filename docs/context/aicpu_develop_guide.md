@@ -239,7 +239,7 @@ uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
     case DT_INT64:
       return AddCompute<int64>(...);
       ....
-    default : return PARAM_INVAILD;
+    default : return PARAM_INVALID;
   }
 }
 
