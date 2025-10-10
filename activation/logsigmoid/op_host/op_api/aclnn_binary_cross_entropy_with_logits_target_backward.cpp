@@ -164,8 +164,9 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
   return true;
 }
 
-static bool CheckFormat(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
-    const aclTensor *weightOptional, const aclTensor *posWeightOptional, const aclTensor* gradTarget) {
+static bool CheckFormat([[maybe_unused]] const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
+    [[maybe_unused]] const aclTensor *weightOptional, [[maybe_unused]] const aclTensor *posWeightOptional,
+    const aclTensor* gradTarget) {
   // self、target的数据格式必须相同
   if (self->GetStorageFormat() != target->GetStorageFormat()) {
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and target can't be different, self [%s], target [%s].",
@@ -252,7 +253,7 @@ static aclnnStatus BinaryCrossEntropyWithLogitsTargetBackwardStub(
     const aclTensor *posWeightOptional,
     int64_t reduction,
     aclTensor *gradTarget,
-    uint64_t *workspaceSize,
+    [[maybe_unused]] uint64_t *workspaceSize,
     aclOpExecutor *executor) {
   // 检查self能否做dtype指定的数据类型推导以及推导的数据类型能否转换为输出数据类型
   op::DataType promoteType;
