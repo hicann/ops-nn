@@ -18,11 +18,11 @@
 #include <string>
 #include <cstdint>
 #include "gtest/gtest.h"
-#include "test_cross_v2.h"
+#include "test_cross_v2_tiling_def.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
-#include "../data_utils.h"
+#include "data_utils.h"
 #endif
 
 using namespace std;
@@ -59,7 +59,7 @@ static bool CompareData()
 static void InitEnv(std::string caseName, std::string dtype)
 {
     std::string gen = "cd ./cross_v2_data/ && python3 gen_data.py " + caseName + " " + dtype;
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/cross_v2/cross_v2_data ./");
+    system("cp -r ../../../../loss/cross_v2/tests/ut/op_kernel/cross_v2_data ./");
     system("chmod -R 755 ./cross_v2_data/");
     system("cd ./cross_v2_data/ && rm -rf ./*bin");
     system(gen.c_str());

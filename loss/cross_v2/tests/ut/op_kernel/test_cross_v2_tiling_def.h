@@ -27,7 +27,7 @@
 
 #define __aicore__
 
-struct CrossV2TilingData {
+struct CrossV2TilingTest {
     uint64_t stepSize;
     uint64_t tileNum;
     uint64_t tileNumPerBatch;
@@ -35,12 +35,12 @@ struct CrossV2TilingData {
     uint64_t tailDataNum;
 };
 
-inline void InitCrossV2TilingData(uint8_t* tiling, CrossV2TilingData* const_data)
+inline void InitCrossV2TilingData(uint8_t* tiling, CrossV2TilingTest* const_data)
 {
-    memcpy(const_data, tiling, sizeof(CrossV2TilingData));
+    memcpy(const_data, tiling, sizeof(CrossV2TilingTest));
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    CrossV2TilingData tilingData;                  \
+    CrossV2TilingTest tilingData;                  \
     InitCrossV2TilingData(tilingPointer, &tilingData)
 #endif

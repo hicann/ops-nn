@@ -15,10 +15,8 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "ctc_loss_v3_grad_tiling.h"
-#include "../data_utils.h"
-
-#include <cstdint>
+#include "test_ctc_loss_v3_grad_tiling_def.h"
+#include "data_utils.h"
 
 using namespace std;
 
@@ -60,7 +58,7 @@ void TestCTCLossV3GradKernel(
     size_t lossByteSize = N * sizeof(T);
     size_t logAlphaByteSize = N * S * sizeof(T);
     size_t gradByteSize = N * sizeof(T);
-    size_t tilingDataSize = sizeof(CTCLossV3GradTilingData);
+    size_t tilingDataSize = sizeof(CTCLossV3GradTilingDataTest);
 
     uint8_t* grad_out = (uint8_t*)AscendC::GmAlloc(gradOutByteSize);
     uint8_t* log_probs = (uint8_t*)AscendC::GmAlloc(logProbsByteSize);
@@ -85,7 +83,7 @@ void TestCTCLossV3GradKernel(
 
     char* path_ = get_current_dir_name();
     string path(path_);
-    CTCLossV3GradTilingData* tilingDatafromBin = reinterpret_cast<CTCLossV3GradTilingData*>(tiling);
+    CTCLossV3GradTilingDataTest* tilingDatafromBin = reinterpret_cast<CTCLossV3GradTilingDataTest*>(tiling);
 
     tilingDatafromBin->sliceLength = 1024;
     tilingDatafromBin->sliceLengthTail = 1024;
