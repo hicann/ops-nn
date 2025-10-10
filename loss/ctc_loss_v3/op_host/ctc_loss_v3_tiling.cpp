@@ -69,7 +69,7 @@ public:
     bool CheckDtypeInfo();
     void PrintTilingData() const;
     void TilingDataPrint();
-    void GetMaxTargetLengths();
+    bool GetMaxTargetLengths();
 
 private:
     CTCLossV3TilingData tilingData;
@@ -204,7 +204,9 @@ bool CTCLossV3Tiling::CheckShapeInfoForCT()
         OP_LOGE(nodeName, "Check targets shape failed, the dims of targets not equal 1 or 2."),
         return false);
     targetsN = targetsNum = targetsShapeVal.GetDim(BATCH_DIM);
-    GetMaxTargetLengths();
+    auto ret = GetMaxTargetLengths();
+    OP_CHECK_IF(!ret, OP_LOGE(nodeName, "GetMaxTargetLengths failed."),
+        return false);
     if (targetsDimNum > LOSS_DIM_NUM) {
         targetsNum = targetsNum * targetsShapeVal.GetDim(1);
         targetsDimLength = targetsShapeVal.GetDim(1);
@@ -225,23 +227,28 @@ bool CTCLossV3Tiling::CheckShapeInfoForCT()
     return true;
 }
 
-void CTCLossV3Tiling::GetMaxTargetLengths()
+bool CTCLossV3Tiling::GetMaxTargetLengths()
 {
     const gert::Tensor* targetLengthsTensor = context->GetInputTensor(INPUT_TARGET_LENGTHS_IDX);
     auto targetLengthsDtype = context->GetInputDesc(INPUT_TARGET_LENGTHS_IDX)->GetDataType();
     if (targetLengthsDtype == ge::DataType::DT_INT64) {
         const int64_t* targetLengthsValue = targetLengthsTensor->GetData<int64_t>();
+        OP_CHECK_IF(targetLengthsValue == nullptr, OP_LOGE(context->GetNodeName(), "Get const input failed."),
+            return false);
         for (int64_t i = 0; i < batchSize; i++) {
             maxTargetLength = std::max(maxTargetLength, static_cast<int64_t>(targetLengthsValue[i]));
         }
     } else if (targetLengthsDtype == ge::DataType::DT_INT32) {
         int32_t maxTargetLengthTmp = 1;
         const int32_t* targetLengthsValue = targetLengthsTensor->GetData<int32_t>();
+        OP_CHECK_IF(targetLengthsValue == nullptr, OP_LOGE(context->GetNodeName(), "Get const input failed."),
+            return false);
         for (int64_t i = 0; i < batchSize; i++) {
             maxTargetLengthTmp = std::max(maxTargetLengthTmp, static_cast<int32_t>(targetLengthsValue[i]));
         }
         maxTargetLength = maxTargetLengthTmp;
     }
+    return true;
 }
 
 bool CTCLossV3Tiling::CheckShapeInfo()

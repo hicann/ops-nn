@@ -15,8 +15,8 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "ctc_loss_v3_tiling.h"
-#include "../data_utils.h"
+#include "test_ctc_loss_v3_tiling_def.h"
+#include "data_utils.h"
 
 #include <cstdint>
 
@@ -57,7 +57,7 @@ void TestCTCLossV3Kernel(
     size_t targetLengthsByteSize = N * sizeof(int64_t);
     size_t lossByteSize = N * sizeof(T);
     size_t logAlphaByteSize = N * S * sizeof(T);
-    size_t tilingDataSize = sizeof(CTCLossV3TilingData);
+    size_t tilingDataSize = sizeof(CTCLossV3TilingDataTest);
 
     uint8_t* log_probs = (uint8_t*)AscendC::GmAlloc(logProbsByteSize);
     uint8_t* targets = (uint8_t*)AscendC::GmAlloc(targetsByteSize);
@@ -80,7 +80,7 @@ void TestCTCLossV3Kernel(
 
     char* path_ = get_current_dir_name();
     string path(path_);
-    CTCLossV3TilingData* tilingDatafromBin = reinterpret_cast<CTCLossV3TilingData*>(tiling);
+    CTCLossV3TilingDataTest* tilingDatafromBin = reinterpret_cast<CTCLossV3TilingDataTest*>(tiling);
 
     tilingDatafromBin->sliceLength = 1024;
     tilingDatafromBin->sliceLengthTail = 1024;
