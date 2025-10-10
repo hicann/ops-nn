@@ -20,6 +20,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
+#include "data_utils.h"
 #include "add_layer_norm_regbase_tiling.h"
 
 using namespace std;
@@ -42,6 +43,11 @@ protected:
 
 TEST_F(add_layer_norm_test, test_case_fp32_full_load)
 {
+    system(
+        "cp -rf "
+        "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
+    system("chmod -R 755 ./add_layer_norm_data/");
+    system("cd ./add_layer_norm_data/ && python3 gen_data.py '(37, 13)' '(13)' 'float32'");
     int N = 37;
     int D = 13;
     size_t inputByteSize = N * D * sizeof(int32_t);
@@ -67,6 +73,13 @@ TEST_F(add_layer_norm_test, test_case_fp32_full_load)
 
     char* path_ = get_current_dir_name();
     string path(path_);
+
+    std::string fileName = "./add_layer_norm_data/float32_input_";
+    ReadFile(fileName + "x1.bin", inputByteSize, x1, inputByteSize);
+    ReadFile(fileName + "x2.bin", inputByteSize, x2, inputByteSize);
+    ReadFile(fileName + "gamma.bin", gammaByteSize, gamma, gammaByteSize);
+    ReadFile(fileName + "beta.bin", betaByteSize, beta, betaByteSize);
+    ReadFile(fileName + "bias.bin", inputByteSize, bias, inputByteSize);
 
     AddLayerNormRegbaseTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormRegbaseTilingData*>(tiling);
 
@@ -102,7 +115,12 @@ TEST_F(add_layer_norm_test, test_case_fp32_full_load)
     ICPU_RUN_KF(
         add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
         (uint8_t*)(tilingDatafromBin));
-
+    
+    std::string outFilePath = "./add_layer_norm_data/float32_output_";
+    WriteFile(outFilePath + "y.bin", y, outputByteSize);
+    WriteFile(outFilePath + "mean.bin", mean, meanByteSize);
+    WriteFile(outFilePath + "rstd.bin", rstd, rstdByteSize);
+    WriteFile(outFilePath + "x.bin", x, outputByteSize);
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
     AscendC::GmFree(gamma);
@@ -114,11 +132,17 @@ TEST_F(add_layer_norm_test, test_case_fp32_full_load)
     AscendC::GmFree(x);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
+    system("cd ./add_layer_norm_data/ && python3 compare_data.py 'float32'");
     free(path_);
 }
 
 TEST_F(add_layer_norm_test, test_case_fp32_welford)
 {
+    system(
+    "cp -rf "
+    "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
+    system("chmod -R 755 ./add_layer_norm_data/");
+    system("cd ./add_layer_norm_data/ && python3 gen_data.py '(37, 13000)' '(13000)' 'float32'");
     int N = 37;
     int D = 13000;
     size_t inputByteSize = N * D * sizeof(int32_t);
@@ -144,6 +168,13 @@ TEST_F(add_layer_norm_test, test_case_fp32_welford)
 
     char* path_ = get_current_dir_name();
     string path(path_);
+
+    std::string fileName = "./add_layer_norm_data/float32_input_";
+    ReadFile(fileName + "x1.bin", inputByteSize, x1, inputByteSize);
+    ReadFile(fileName + "x2.bin", inputByteSize, x2, inputByteSize);
+    ReadFile(fileName + "gamma.bin", gammaByteSize, gamma, gammaByteSize);
+    ReadFile(fileName + "beta.bin", betaByteSize, beta, betaByteSize);
+    ReadFile(fileName + "bias.bin", inputByteSize, bias, inputByteSize);
 
     AddLayerNormRegbaseTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormRegbaseTilingData*>(tiling);
 
@@ -179,6 +210,12 @@ TEST_F(add_layer_norm_test, test_case_fp32_welford)
     ICPU_RUN_KF(
         add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
         (uint8_t*)(tilingDatafromBin));
+    
+    std::string outFilePath = "./add_layer_norm_data/float32_output_";
+    WriteFile(outFilePath + "y.bin", y, outputByteSize);
+    WriteFile(outFilePath + "mean.bin", mean, meanByteSize);
+    WriteFile(outFilePath + "rstd.bin", rstd, rstdByteSize);
+    WriteFile(outFilePath + "x.bin", x, outputByteSize);
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -191,5 +228,6 @@ TEST_F(add_layer_norm_test, test_case_fp32_welford)
     AscendC::GmFree(x);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
+    system("cd ./add_layer_norm_data/ && python3 compare_data.py 'float32'");
     free(path_);
 }
