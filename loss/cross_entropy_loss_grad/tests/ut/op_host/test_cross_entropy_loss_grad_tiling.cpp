@@ -13,15 +13,17 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "kernel_run_context_facker.h"
-#include "ut_op_util.h"
-#include "loss/cross_entropy_loss_grad/op_host/cross_entropy_loss_grad_tiling.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
 
 using namespace ut_util;
 using namespace std;
@@ -39,7 +41,6 @@ protected:
 };
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{}, {}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -105,10 +106,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11) {
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -126,11 +127,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11) {
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 11);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_bf16_10) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{}, {}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -194,10 +193,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_bf16_10) {
                     .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -215,11 +214,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_bf16_10) {
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 10);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_float_30) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{}, {}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -283,10 +280,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_float_30) {
                     .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -304,11 +301,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_float_30) {
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 30);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_bf16_10) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{30,}, {30,}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -372,10 +367,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_bf16_1
                     .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("none")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -393,11 +388,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_bf16_1
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 10);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_float_30) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{30,}, {30,}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -461,10 +454,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_float_
                     .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("none")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -482,11 +475,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_none_weight_none_float_
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 30);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_bf16) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{30,}, {30,}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -550,10 +541,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_bf16) {
                     .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("sum")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("sum")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -571,11 +562,9 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_bf16) {
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 10);
-  dlog_setlevel(0,3,0);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_float) {
-  dlog_setlevel(0,0,0);
   gert::StorageShape grad_loss_shape = {{}, {}};
   gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
   gert::StorageShape target_shape = {{30,}, {30,}};
@@ -639,10 +628,10 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_float) 
                     .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<std::string>("sum")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("sum")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -660,5 +649,4 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_reduction_sum_weight_none_float) 
 
   auto tiling_key = tiling_context->GetTilingKey();
   ASSERT_EQ(tiling_key, 30);
-  dlog_setlevel(0,3,0);
 }

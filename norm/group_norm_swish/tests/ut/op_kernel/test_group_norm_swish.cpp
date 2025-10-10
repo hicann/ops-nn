@@ -1,29 +1,32 @@
-#include <array>
-#include <vector>
+/**
+ * This program is free software, you can redistribute it and/or modify.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
+ */
+
 #include <iostream>
-#include <string>
-#include <cstdint>
 #include "gtest/gtest.h"
+#include "data_utils.h"
 #include "tikicpulib.h"
 #include "group_norm_swish_tiling.h"
-#include "data_utils.h"
 
-#include <cstdint>
-
-using namespace std;
-
-extern "C" __global__ __aicore__ void group_norm_swish(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y,
-                                                      GM_ADDR mean, GM_ADDR rstd,
-                                                      GM_ADDR workspace, GM_ADDR tiling);
-
+extern "C" __global__ __aicore__ void group_norm_swish(
+    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling);
 class group_norm_swish_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "group_norm_swish_test SetUp\n" << endl;
-  }
-  static void TearDownTestCase() {
-    cout << "group_norm_swish_test TearDown\n" << endl;
-  }
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "group_norm_swish_test SetUp\n" << std::endl;
+    }
+    static void TearDownTestCase()
+    {
+        std::cout << "group_norm_swish_test TearDown\n" << std::endl;
+    }
 };
 
 inline static int64_t CeilDiv(int64_t value, int64_t factor) {
@@ -65,7 +68,7 @@ TEST_F(group_norm_swish_test, test_case_111) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 1024 32 1 1 float16 float16");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -128,7 +131,7 @@ TEST_F(group_norm_swish_test, test_case_121) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 1024 32 1 1 float16 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -191,7 +194,7 @@ TEST_F(group_norm_swish_test, test_case_211) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 1024 32 1 1 float32 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -254,7 +257,7 @@ TEST_F(group_norm_swish_test, test_case_112) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 64 1024 1 float16 float16");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -317,7 +320,7 @@ TEST_F(group_norm_swish_test, test_case_122) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 64 1024 1 float16 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -380,7 +383,7 @@ TEST_F(group_norm_swish_test, test_case_212) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 64 1024 1 float32 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -443,7 +446,7 @@ TEST_F(group_norm_swish_test, test_case_113) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 128 8192 1 float16 float16");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -506,7 +509,7 @@ TEST_F(group_norm_swish_test, test_case_123) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 128 8192 1 float16 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -569,7 +572,7 @@ TEST_F(group_norm_swish_test, test_case_213) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 128 8192 1 float32 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -632,7 +635,7 @@ TEST_F(group_norm_swish_test, test_case_114) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 8200 32 1 float16 float16");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -695,7 +698,7 @@ TEST_F(group_norm_swish_test, test_case_124) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 8200 32 1 float16 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 
@@ -758,7 +761,7 @@ TEST_F(group_norm_swish_test, test_case_214) {
   system("cd ./group_norm_swish_data/ && python3 gen_data.py 32 8200 32 1 float32 float32");
 
   char* path_ = get_current_dir_name();
-  string path(path_);
+  std::string path(path_);
 
   GroupNormSwishTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSwishTilingData*>(tiling);
 

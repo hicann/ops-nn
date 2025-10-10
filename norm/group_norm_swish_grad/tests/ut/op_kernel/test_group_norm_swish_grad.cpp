@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_group_norm_swish_grad.h"
+#include "group_norm_swish_grad_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>
@@ -77,7 +77,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_align)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 576 8 float");
@@ -174,7 +174,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_not_align)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 566 8 float");
@@ -271,7 +271,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float");
@@ -367,7 +367,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 16384 8 float");
@@ -464,7 +464,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_bf16)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 576 8 float16");
@@ -561,7 +561,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1_bf16)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float16");
@@ -658,7 +658,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3_bf16)
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_swish_grad/group_norm_swish_grad_data ./");
+        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float16");

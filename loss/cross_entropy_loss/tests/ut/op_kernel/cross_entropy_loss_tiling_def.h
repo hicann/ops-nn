@@ -12,8 +12,8 @@
  * \brief
  */
 
-#ifndef _TEST_CROSS_ENTROPY_LOSS_H_
-#define _TEST_CROSS_ENTROPY_LOSS_H_
+#ifndef _CROSS_ENTROPY_LOSS_TILING_DEF_H_
+#define _CROSS_ENTROPY_LOSS_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 

@@ -16,8 +16,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "register/op_impl_registry_base.h"
-#include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
@@ -140,8 +138,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_01)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -245,8 +243,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_02)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -350,8 +348,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_03)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -455,8 +453,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_04)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -560,8 +558,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_05)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -665,8 +663,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_06)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -770,8 +768,8 @@ TEST_F(DynamicQuantUpdateScatterTiling, dynamic_quant_update_scatter_tiling_07)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<string>(reduction)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(axis)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

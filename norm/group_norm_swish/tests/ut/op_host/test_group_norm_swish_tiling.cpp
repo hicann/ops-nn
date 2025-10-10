@@ -7,39 +7,24 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <gtest/gtest.h>
-#include "op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "pad_ops.h"
-#include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common_unittest.h"
-#include "runtime/diag_util.h"
-#include "norm/group_norm_swish/op_host/group_norm_swish_tiling.h"
-#include "kernel_run_context_facker.h"
-#include "test_cube_util.h"
-#include "nn_norm.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
 
-using namespace ut_util;
-using namespace std;
-using namespace ge;
+#include <gtest/gtest.h>
+#include "test_cube_util.h"
+#include "kernel_run_context_facker.h"
+#include "platform/platform_infos_def.h"
+#include "../../../op_host/group_norm_swish_tiling.h"
 
 class GroupNormSwishTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "GroupNormSwishTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "GroupNormSwishTiling SetUp" << std::endl;
+    }
 
-  static void TearDownTestCase() {
-    std::cout << "GroupNormSwishTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase()
+    {
+        std::cout << "GroupNormSwishTiling TearDown" << std::endl;
+    }
 };
 
 TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_111) {
@@ -112,11 +97,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_111) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -206,11 +191,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_112) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -302,11 +287,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_112_310P) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -397,11 +382,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_113) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -491,11 +476,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_114) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -585,11 +570,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_121) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -679,11 +664,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_122) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -773,11 +758,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_123) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -867,11 +852,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_124) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -961,11 +946,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_211) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1055,11 +1040,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_212) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1149,11 +1134,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_213) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1243,11 +1228,11 @@ TEST_F(GroupNormSwishTiling, group_norm_swish_tiling_214) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_swish", ge::AnyValue::CreateFrom<bool>(false)},
-                      {"swish_scale", ge::AnyValue::CreateFrom<float>(1.0)},
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_swish", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                      {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)

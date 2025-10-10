@@ -46,9 +46,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_bf16_mean_case)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -83,9 +83,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_fp32_mean_case)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -120,9 +120,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_fp16_mean_case)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();

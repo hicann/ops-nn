@@ -4,33 +4,27 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
- *
- * @file test_group_norm_swish_infershape.cpp
- *
- * @brief
- *
- * @version 1.0
- *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h>  // NOLINT
-#include <iostream>
-#include "op_proto_test_util.h"  // NOLINT
-#include "nn_norm.h"             // NOLINT
-#include "graph/utils/op_desc_utils.h"
-#include "common/utils/ut_op_common.h"
+#include <gtest/gtest.h>
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "../../../norm/group_norm_swish_grad/tests/ut/op_host/nn_norm.h"
 
 class GroupNormSwishProto : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "GroupNormSwish Proto Test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "GroupNormSwish Proto Test SetUp" << std::endl;
+    }
 
-  static void TearDownTestCase() {
-    std::cout << "GroupNormSwish Proto Test TearDown" << std::endl;
-  }
+    static void TearDownTestCase()
+    {
+        std::cout << "GroupNormSwish Proto Test TearDown" << std::endl;
+    }
 };
 
 TEST_F(GroupNormSwishProto, group_norm_swish_infershape_test){

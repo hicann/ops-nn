@@ -24,6 +24,16 @@ protected:
     }
 };
 
+static std::vector<int64_t> ToVector(const gert::Shape& shape) {
+  size_t shapeSize = shape.GetDimNum();
+  std::vector<int64_t> shapeVec(shapeSize, 0);
+
+  for (size_t i = 0; i < shapeSize; i++) {
+      shapeVec[i] = shape.GetDim(i);
+  }
+  return shapeVec;
+}
+
 TEST_F(CrossEntropyLossGrad, CrossEntropyLossGrad_infershape_case_0) {
   gert::StorageShape y_grad_shape = {{}, {}};
   gert::StorageShape log_prob_shape = {{48, 112595}, {48, 112595}};
@@ -43,10 +53,10 @@ TEST_F(CrossEntropyLossGrad, CrossEntropyLossGrad_infershape_case_0) {
                     .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"reduction", ge::AnyValue::CreateFrom<string>("mean")},
-                                {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                                {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0)},
-                                {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
+                                {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
                     .Build();
 
   gert::InferShapeContext *context = holder.GetContext<gert::InferShapeContext>();

@@ -12,7 +12,6 @@
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_cross_entropy_loss_grad.h"
-#include <unistd.h>
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

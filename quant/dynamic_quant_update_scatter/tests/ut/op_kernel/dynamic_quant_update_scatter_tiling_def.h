@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef _Dynamic_Quant_TILING_H_
-#define _Dynamic_Quant_TILING_H_
+#ifndef _Dynamic_Quant_TILING_DEF_H_
+#define _Dynamic_Quant_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 
