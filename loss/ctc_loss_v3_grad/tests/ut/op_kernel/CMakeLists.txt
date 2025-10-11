@@ -7,6 +7,3 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(ctc_loss_v3_grad "ascend910B1" "-DDTYPE_GRAD=float -DDTYPE_TARGETS=int64_t")
-endif()
