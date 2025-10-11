@@ -34,7 +34,7 @@
 
 #include "experiment_ops.h"
 #include "nn_other.h"
-#include "../op_graph/kv_rms_norm_rope_cache_proto.h"
+// #include "../op_graph/kv_rms_norm_rope_cache_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -43,6 +43,16 @@ using namespace ge;
 using std::map;
 using std::string;
 using std::vector;
+
+const int BATCH = 181;
+const int N = 1;
+const int SEQ_LENGTH = 1;
+const int GAMMA_LENGTH = 512;
+const int RMS_LENGTH = 512;
+const int ROPE_LENGTH = 64;
+const int RMS_ROPE_LENGTH = 576;
+
+
 #define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                          \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                           \
     auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0); \
@@ -51,10 +61,10 @@ using std::vector;
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                        \
     placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                    \
     Tensor tensor_placeholder##intputIndex;                                                  \
-    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape,                               \
+    ret = GenOnesData(placeholder##intputIndex##_shape,                               \
         tensor_placeholder##intputIndex,                                                     \
         placeholder##intputIndex##_desc,                                                     \
-        2);                                                                                  \
+        intputDtype, 2);                                                                                  \
     if (ret != SUCCESS) {                                                                    \
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());       \
         return FAILED;                                                                       \
@@ -63,7 +73,7 @@ using std::vector;
     placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);          \
     input.push_back(tensor_placeholder##intputIndex);                                        \
     graph.AddOp(placeholder##intputIndex);                                                   \
-    add1.set_input_##intputName(placeholder##intputIndex);                                   \
+    kv_rms_norm_rope_cache_op.set_input_##intputName(placeholder##intputIndex);                                   \
     inputs.push_back(placeholder##intputIndex);
 
 #define ADD_CONST_INPUT(intputIndex, intputName, intputDtype, inputShape)                    \
@@ -86,9 +96,16 @@ using std::vector;
     placeholder##intputIndex.SetAttr("value", tensor_placeholder##intputIndex);              \
     placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);          \
     graph.AddOp(placeholder##intputIndex);                                                   \
-    add1.set_input_##intputName(placeholder##intputIndex);                                   \
-    add1.update_input_desc_##intputName(placeholder##intputIndex##_desc);                    \
+    kv_rms_norm_rope_cache_op.set_input_##intputName(placeholder##intputIndex);                                   \
+    kv_rms_norm_rope_cache_op.update_input_desc_##intputName(placeholder##intputIndex##_desc);                    \
     inputs.push_back(placeholder##intputIndex);
+
+#define ADD_INPUT_ATTR(attrName, attrValue) kv_rms_norm_rope_cache_op.set_attr_##attrName(attrValue)
+
+#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
+    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_FRACTAL_NZ, outputDtype); \
+    kv_rms_norm_rope_cache_op.update_output_desc_##outputName(outputName##outputIndex##_desc);
+
 
 #define LOG_PRINT(message, ...)     \
   do {                              \
@@ -148,7 +165,7 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor &input_tensor, TensorD
     float *pData = new (std::nothrow) float[size];
 
     for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+        *(pData + i) = 0;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t *)pData, data_len);
     return SUCCESS;
@@ -165,7 +182,7 @@ int32_t GenOnesData(
     uint32_t data_len = size * GetDataTypeSize(data_type);
     int32_t *pData = new (std::nothrow) int32_t[data_len];
     for (uint32_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+        *(pData + i) = 0;
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t *>(pData), data_len);
     return SUCCESS;
@@ -185,10 +202,42 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor> &input, std::vect
 {
     Status ret = SUCCESS;
     // 自定义代码：添加单算子定义到图中
-    outputs.push_back(add1);
+    auto kv_rms_norm_rope_cache_op = op::KvRmsNormRopeCache("test_geir_kv_rms_norm_rope_cache");
+
+    // shape定义
+    std::vector<int64_t> kv_shape = {BATCH, N, SEQ_LENGTH, RMS_ROPE_LENGTH};
+    std::vector<int64_t> gamma_shape = {GAMMA_LENGTH};
+    std::vector<int64_t> cos_shape = {BATCH, N, SEQ_LENGTH, ROPE_LENGTH};
+    std::vector<int64_t> sin_shape = {BATCH, N, SEQ_LENGTH, ROPE_LENGTH};
+    std::vector<int64_t> index_shape = {BATCH};
+    std::vector<int64_t> kpeCache_shape = {BATCH, N, SEQ_LENGTH, ROPE_LENGTH};
+    std::vector<int64_t> ckvCache_shape = {BATCH, N, SEQ_LENGTH, RMS_LENGTH};
+    std::vector<int64_t> kRope_shape = {BATCH, N, SEQ_LENGTH, ROPE_LENGTH};
+    std::vector<int64_t> cKv_shape = {BATCH, N, SEQ_LENGTH, RMS_LENGTH};
+
+    // 添加输入（顺序严格匹配 proto.h）
+    ADD_INPUT(1, kv, inDtype, kv_shape);
+    ADD_INPUT(2, gamma, inDtype, gamma_shape);
+    ADD_INPUT(3, cos, inDtype, cos_shape);
+    ADD_INPUT(4, sin, inDtype, sin_shape);
+    ADD_INPUT(5, index, DT_INT64, index_shape);
+    ADD_INPUT(6, k_cache, inDtype, kpeCache_shape);
+    ADD_INPUT(7, ckv_cache, inDtype, ckvCache_shape);
+
+    // 添加输出（顺序严格匹配 proto.h）
+    ADD_OUTPUT(1, k_cache, DT_FLOAT16, kRope_shape);
+    ADD_OUTPUT(2, ckv_cache, DT_FLOAT16, cKv_shape);
+
+    // 添加属性（顺序严格匹配 proto.h）
+    ADD_INPUT_ATTR(epsilon, 1e-5);
+    ADD_INPUT_ATTR(cache_mode, "Norm");
+    ADD_INPUT_ATTR(is_output_kv, false);
+
+    outputs.push_back(kv_rms_norm_rope_cache_op);
     // 添加完毕
     return SUCCESS;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -211,7 +260,7 @@ int main(int argc, char *argv[])
     std::cout << argv[1] << std::endl;
     char *endptr;
 
-    DataType inDtype = DT_FLOAT;
+    DataType inDtype = DT_FLOAT16;
 
     std::cout << inDtype << std::endl;
 
@@ -279,9 +328,9 @@ int main(int argc, char *argv[])
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
         WriteDataToFile((const char *)output_file.c_str(), data_size, output_data_i);
-        float *resultData = (float*)output_data_i;
+        int8_t *resultData = (int8_t*)output_data_i;
         for (int64_t j = 0; j < output_shape; j++) {
-            LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
+            LOG_PRINT("result[%ld] is: %d\n", j, resultData[j]);
         }
     }
 
