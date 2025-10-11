@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "data_utils.h"
+#include "../data_utils.h"
 
 template <typename T1, typename T2>
 inline T1 CeilA2B(T1 a, T2 b)
@@ -54,7 +54,7 @@ uint8_t* CreateTensorListForeachMinimumScalarList(const std::vector<std::vector<
         uint64_t dataSize = shapeSizeList[i] * sizeof(T);
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         std::stringstream fileName;
-        fileName << "./minimum_scalar_list_data/" << d_type << "_input_t_foreach_minimum" << i << ".bin";
+        fileName << "./minimum_scalar_data/" << d_type << "_input_t_foreach_minimum" << i << ".bin";
         ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
@@ -74,7 +74,7 @@ void FreeTensorListForeachMinimumScalarList(
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
         std::stringstream fileName;
-        fileName << "./minimum_scalar_list_data/" << d_type << "_output_t_foreach_minimum" << i << ".bin";
+        fileName << "./minimum_scalar_data/" << d_type << "_output_t_foreach_minimum" << i << ".bin";
         WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
         AscendC::GmFree((void*)(tensorAddr));
     }
