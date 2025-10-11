@@ -50,7 +50,8 @@ bool LayerNormV4RegBaseTwoPassPerfTiling::CanFitInBuffer(int64_t curA)
     int64_t ubCanUseSize = GetUBCanUseSize();
     int64_t rowWeight = GetRowWeight();
 
-    return curA * commonParams.rowAlign * rowWeight <= ubCanUseSize - LN_NUM_TWO * LN_DOUBLE_BUFFER * curAAlign;
+    return curA * static_cast<int64_t>(commonParams.rowAlign) * rowWeight <=
+           ubCanUseSize - LN_NUM_TWO * LN_DOUBLE_BUFFER * curAAlign;
 }
 
 bool LayerNormV4RegBaseTwoPassPerfTiling::IsCapable()
@@ -59,7 +60,7 @@ bool LayerNormV4RegBaseTwoPassPerfTiling::IsCapable()
         return false;
     }
 
-    if (commonParams.rowAlign > LN_NUM_TWO * commonParams.vlFp32 * commonParams.vlFp32 * LN_NUM_TWO) {
+    if (static_cast<int64_t>(commonParams.rowAlign) > LN_NUM_TWO * commonParams.vlFp32 * commonParams.vlFp32 * LN_NUM_TWO) {
         return false;
     }
 

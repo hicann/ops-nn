@@ -18,7 +18,7 @@
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/transpose.h"
 #include "level0/unsqueeze.h"
-#include "level0/batch_norm_backward.h"
+#include "../../../batch_norm_grad_v3/op_host/op_api/batch_norm_backward.h"
 #include "group_norm_grad.h"
 #include "aclnn_kernels/cast.h"
 #include "level0/expand.h"
@@ -180,16 +180,6 @@ static int64_t GetTensorNumel(const aclTensor* x)
     size_t xShapeDim = x->GetViewShape().GetDimNum();
     int64_t xShapeSize = 1;
     for (size_t i = 0; i < xShapeDim; i++) {
-        xShapeSize *= x->GetViewShape().GetDim(i);
-    }
-    return xShapeSize;
-}
-
-static int64_t GetTensorHxW(const aclTensor* x)
-{
-    size_t xShapeDim = x->GetViewShape().GetDimNum();
-    int64_t xShapeSize = 1;
-    for (size_t i = 2; i < xShapeDim; i++) {
         xShapeSize *= x->GetViewShape().GetDim(i);
     }
     return xShapeSize;
@@ -413,7 +403,6 @@ static const aclTensor* getBatchNormBackwardGradInput(
     const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, double eps,
     aclOpExecutor* executor)
 {
-    auto inputShape = input->GetViewShape();
     aclTensor* bnGradInput = nullptr;
     aclTensor* bnGradWeight = nullptr;
     aclTensor* bnGradBias = nullptr;
@@ -471,18 +460,6 @@ static inline int64_t GetTensorDim(const aclTensor* self)
     return static_cast<int64_t>(self->GetViewShape().GetDimNum());
 }
 
-static aclIntArray* GetShape(const aclTensor* self, aclOpExecutor* executor)
-{
-    int64_t dimSize = GetTensorDim(self);
-    int64_t selfShapeValue[dimSize];
-    for (int64_t i = 0; i < dimSize; i++) {
-        selfShapeValue[i] = self->GetViewShape().GetDim(i);
-    }
-    aclIntArray* selfShape = executor->AllocIntArray(selfShapeValue, dimSize);
-    CHECK_RET(selfShape != nullptr, nullptr);
-    return selfShape;
-}
-
 static const aclTensor* GetvarianceBatchNorm(
     const aclTensor* rstdContiguous, int64_t N, int64_t group, double eps, aclOpExecutor* executor)
 {
@@ -505,14 +482,13 @@ static const aclTensor* GetvarianceBatchNorm(
 static aclnnStatus GradInputProcess(
     const aclTensor* gradOutReshape, const aclTensor* meanContiguous, const aclTensor* rstdContiguous,
     const aclTensor* gammaContiguous, const aclTensor* inputReshape, int64_t N, int64_t C, int64_t group,
-    const aclBoolArray* outputMask, aclTensor* gradInput, aclOpExecutor* executor)
+    aclTensor* gradInput, aclOpExecutor* executor)
 {
     auto gradOutMulGamma = gradOutReshape;
-    if (gamma != nullptr) {
-        auto gammaReshape = Reshape3DProcess(gammaContiguous, 1, C, 1, executor);
-        CHECK_RET(gammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        gradOutMulGamma = l0op::Mul(gradOutReshape, gammaReshape, executor);
-    }
+    auto gammaReshape = Reshape3DProcess(gammaContiguous, 1, C, 1, executor);
+    CHECK_RET(gammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    gradOutMulGamma = l0op::Mul(gradOutReshape, gammaReshape, executor);
+
     CHECK_RET(gradOutMulGamma != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto inputBatchNorm = Reshape3DProcess(inputReshape, 1, N * group, N ? -1 : 1, executor);
@@ -755,7 +731,7 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
         // 计算并将结果拷贝到输出gradInput
         if ((*outputMask)[AXIS_ZERO]) {
             ret = GradInputProcess(
-                gradOutReshape, meanContiguous, rstdContiguous, gammaContiguous, inputReshape, N, C, group, outputMask,
+                gradOutReshape, meanContiguous, rstdContiguous, gammaContiguous, inputReshape, N, C, group,
                 gradInput, uniqueExecutor.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
         }

@@ -37,7 +37,7 @@ constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
 
-static uint32_t CalcSmallDBufferSize(uint32_t colValAlign, uint64_t dtypeKey)
+static uint32_t CalcSmallDBufferSize(uint32_t colValAlign)
 {
     /*
     +----------------+----------+-------------+---------------+------------+-------------+
@@ -366,7 +366,7 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
     if (col_val <= buffer_size) {
         tiling_key = ub_key;
         if (col_val_align <= SMALLD_THRESHOLD) {
-            buffer_size = CalcSmallDBufferSize(col_val_align, dtype_key);
+            buffer_size = CalcSmallDBufferSize(col_val_align);
         }
         LargeNSmallD(context, tiling, buffer_size, row_val, col_val_align, core_num);
     } else {
@@ -381,6 +381,7 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4RmsNormGrad(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepare4RmsNormGrad");
     return ge::GRAPH_SUCCESS;
 }
 

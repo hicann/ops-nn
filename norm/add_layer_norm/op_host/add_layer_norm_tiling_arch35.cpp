@@ -103,7 +103,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckShapesEqual(gert::Shape& shape0,
     OP_CHECK_IF(
         shape0.GetDimNum() != shape1.GetDimNum(),
         OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %ld vs %ld", shape0.GetDimNum(),
+            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
             shape1.GetDimNum()),
         return ge::GRAPH_FAILED);
 
@@ -716,7 +716,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
             colsPerLoop_ = colsPerLoop_ / (blockSize_ / TWO) * (blockSize_ / TWO);
         } else {
             OP_LOGE(
-                context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%d) is zero", dataTypeSize, blockSize_);
+                context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%u) is zero", dataTypeSize, blockSize_);
             return ge::GRAPH_FAILED;
         }
         rowsPerLoop_ = 1;

@@ -293,11 +293,11 @@ static void LogTilingResults(
     gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t mode_key, uint32_t dtype_key,
     uint32_t use_core_num, float epsilon)
 {
-    OP_LOGI("Tiling4AddRmsNorm", "Tiling Key: %u", dtype_key * TEN + mode_key);
-    OP_LOGI("Tiling4AddRmsNorm", "Block Dim: %u", use_core_num);
-    OP_LOGI("Tiling4AddRmsNorm", "usr Workspace: 256");
+    OP_LOGI(context, "Tiling Key: %u", dtype_key * TEN + mode_key);
+    OP_LOGI(context, "Block Dim: %u", use_core_num);
+    OP_LOGI(context, "usr Workspace: 256");
     OP_LOGI(
-        "Tiling4AddRmsNorm",
+        context,
         "num_row: %d, num_col: %d, block_factor: %d, row_factor: %d, ub_factor: %d, epsilon: %f, avg_factor: %f",
         tiling->get_num_row(), tiling->get_num_col(), tiling->get_block_factor(), tiling->get_row_factor(),
         tiling->get_ub_factor(), epsilon, tiling->get_avg_factor());

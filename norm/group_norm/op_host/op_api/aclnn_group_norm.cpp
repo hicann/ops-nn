@@ -375,7 +375,7 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
 
         const bool isTraining = true;
         auto resultGN = l0op::GroupNorm(
-            xCast, gammaCast, betaCast, N, HxW, group, static_cast<float>(eps), isTraining, uniqueExecutor.get());
+            xCast, gammaCast, betaCast, N, group, static_cast<float>(eps), isTraining, uniqueExecutor.get());
         auto yResult = std::get<Y_INDEX>(resultGN);
         auto meanResult = std::get<MEAN_INDEX>(resultGN);
         auto varianceResult = std::get<RSTD_INDEX>(resultGN);
