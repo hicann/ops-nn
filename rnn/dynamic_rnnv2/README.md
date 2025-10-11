@@ -247,9 +247,3 @@
 ## 约束说明
 
 无
-
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_dynamic_rnnv2](examples/test_geir_dynamic_rnnv2.cpp)  | 通过[算子IR](op_graph/dynamic_rnnv2_proto.h)构图方式调用DynamicRnn算子。         |
