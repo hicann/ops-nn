@@ -17,7 +17,7 @@
 constexpr uint16_t MAX_TENSOR_CONT = 256;
 constexpr uint16_t MAX_CORE_CONT = 64;
 
-struct ForeachNonFiniteCheckAndUnscaleTilingData {
+struct ForeachNonFiniteCheckAndUnscaleTilingDataUT {
     uint32_t scaledGradsUbSize = 0;
     uint32_t reduceTempValUbSize = 0;
     int64_t tensorDataCountList[MAX_TENSOR_CONT] = {0};
@@ -40,8 +40,8 @@ struct ForeachNonFiniteCheckAndUnscaleTilingData {
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                                                        \
-    ForeachNonFiniteCheckAndUnscaleTilingData tilingData;                                                 \
-    INIT_TILING_DATA(ForeachNonFiniteCheckAndUnscaleTilingData, tilingDataPointer, tilingPointer);        \
+    ForeachNonFiniteCheckAndUnscaleTilingDataUT tilingData;                                                 \
+    INIT_TILING_DATA(ForeachNonFiniteCheckAndUnscaleTilingDataUT, tilingDataPointer, tilingPointer);        \
     (tilingData).scaledGradsUbSize = tilingDataPointer->scaledGradsUbSize;                                \
     (tilingData).reduceTempValUbSize = tilingDataPointer->reduceTempValUbSize;                            \
     COPY_ARR((tilingData).tensorDataCountList, tilingDataPointer->tensorDataCountList, MAX_TENSOR_CONT)   \
