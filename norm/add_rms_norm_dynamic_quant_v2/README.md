@@ -181,11 +181,3 @@
 ## 约束说明
 
 无
-
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | -  | 通过[算子IR](op_graph/add_rms_norm_dynamic_quant_v2_proto.h)构图方式调用AddRmsNormDynamicQuantV2算子。         |
-
-<!--[test_geir_add_rms_norm_dynamic_quant_v2](examples/test_geir_add_rms_norm_dynamic_quant_v2.cpp)-->
