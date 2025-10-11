@@ -14,6 +14,7 @@
  */
 #ifndef _KV_RMS_NORM_ROPE_CACHE_B16_MTP_H_
 #define _KV_RMS_NORM_ROPE_CACHE_B16_MTP_H_
+#include "platform.h"
 
 namespace KvRmsNormRopeCache {
 using namespace AscendC;

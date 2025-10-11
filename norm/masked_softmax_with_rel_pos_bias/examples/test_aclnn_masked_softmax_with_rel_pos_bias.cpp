@@ -14,7 +14,6 @@
  */
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_masked_softmax_with_rel_pos_bias.h"
 
