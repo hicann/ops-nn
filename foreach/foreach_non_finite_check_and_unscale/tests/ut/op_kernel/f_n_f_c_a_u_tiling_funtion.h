@@ -32,6 +32,7 @@ public:
     ForeachNonFiniteCheckAndUnscaleTiling() = default;
     void Init(const std::vector<std::vector<uint64_t>>& shapeInfos, const int32_t dTypeSize = 4);
     uint32_t RunBigKernelTiling(uint32_t coreNumPlatform = 48, uint64_t ubSizePlatForm = 196608);
+    void FillTilingData(ForeachNonFiniteCheckAndUnscaleTilingDataUT* tilingDataPtr);
 
 private:
     template <typename T1, typename T2>
@@ -46,10 +47,9 @@ private:
     void AssignDataToEachCore(int64_t needCoreNum);
     bool DivideUbMemory(uint64_t ubSizePlatForm);
     uint32_t GetReduceRetValSize(uint32_t srcDataSize);
-    void FillTilingData(ForeachNonFiniteCheckAndUnscaleTilingData* tilingDataPtr);
 
 private:
-    ForeachNonFiniteCheckAndUnscaleTilingData tilingData;
+    ForeachNonFiniteCheckAndUnscaleTilingDataUT tilingData;
 
     uint32_t scaledGradsUbSize = 0;
     uint32_t reduceTempValUbSize = 0;
@@ -193,11 +193,11 @@ uint32_t ForeachNonFiniteCheckAndUnscaleTiling::GetReduceRetValSize(uint32_t src
     return iter1AlignEnd * DTYPE_SIZE_FLOAT;
 }
 
-void ForeachNonFiniteCheckAndUnscaleTiling::FillTilingData(ForeachNonFiniteCheckAndUnscaleTilingData* tilingDataPtr)
+void ForeachNonFiniteCheckAndUnscaleTiling::FillTilingData(ForeachNonFiniteCheckAndUnscaleTilingDataUT* tilingDataPtr)
 {
     tilingData.scaledGradsUbSize = scaledGradsUbSize;
     tilingData.reduceTempValUbSize = reduceTempValUbSize;
-    memcpy(tilingDataPtr, &tilingData, sizeof(ForeachNonFiniteCheckAndUnscaleTilingData));
+    memcpy(tilingDataPtr, &tilingData, sizeof(ForeachNonFiniteCheckAndUnscaleTilingDataUT));
 }
 
 } // namespace ForeachNonFiniteCheckAndUnscaleTest

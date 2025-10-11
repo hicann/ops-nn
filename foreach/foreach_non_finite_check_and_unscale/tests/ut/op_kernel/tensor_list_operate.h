@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "../data_utils.h"
+#include "data_utils.h"
 
 namespace ForeachNonFiniteCheckAndUnscaleTest {
 

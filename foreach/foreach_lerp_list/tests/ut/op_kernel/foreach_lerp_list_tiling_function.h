@@ -653,6 +653,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
             inputsTensorUbSize = (dataType == 4 || dataType == 2) ?
                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            inputsTensorUbSize = inputsTensorUbSize / BYTE_REPEAT * BYTE_REPEAT;
         } else if ((opCode == FOREACH_POW_SCALAR_OP_CODE) || (opCode == FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE)) {
             // foreach_pow_scalar/pow_scalar_list/pow_scalar_and_tensor
             uint32_t reserveUbSize = BYTE_BASIC_BLOCK * GetTilingN() * dataTypeSize;

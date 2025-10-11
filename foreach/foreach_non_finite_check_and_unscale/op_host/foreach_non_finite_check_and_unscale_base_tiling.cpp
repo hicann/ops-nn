@@ -43,7 +43,7 @@ ge::graphStatus Tiling4ForeachNonFiniteCheckAndUnscale(gert::TilingContext* cont
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-ge::graphStatus TilingPrepare4ForeachNonFiniteCheckAndUnscale(gert::TilingParseContext* context)
+ge::graphStatus TilingPrepare4ForeachNonFiniteCheckAndUnscale([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
