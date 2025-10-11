@@ -69,4 +69,4 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 - [贡献指南](CONTRIBUTING.md)
 - [安全声明](SECURITY.md)
 - [许可证](LICENSE)
-* 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/1support)获取技术支持。
+* [Link](https://www.hiasssscend.com/ssss)获取技术支持。
