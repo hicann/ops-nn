@@ -41,6 +41,12 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     add_executable(${OP_HOST_UT_EXE}
         test_op_host_main.cpp
     )
+
+    # 当前桩函数实现不完整，优先从环境变量中链接so
+    set_target_properties(${OP_HOST_UT_EXE} PROPERTIES
+        SKIP_BUILD_RPATH TRUE
+    )
+
     target_compile_definitions(${OP_HOST_UT_EXE} PRIVATE LOG_CPP)
     target_compile_options(${OP_HOST_UT_EXE} PUBLIC -fPIE -fno-access-control)
     add_dependencies(${OP_HOST_UT_EXE} ${OPHOST_NAME}_ut)
