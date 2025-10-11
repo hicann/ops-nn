@@ -11,7 +11,7 @@
 #include <vector>
 #include <unistd.h>
 #include "acl/acl.h"
-#include "aclnnop/level2/aclnn_geglu_backward.h"
+#include "aclnnop/clnn_geglu_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
