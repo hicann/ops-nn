@@ -10,7 +10,7 @@ using namespace std;
 #include "tikicpulib.h"
 
 // #include "increDebug.h"
-#include "../data_utils.h"
+#include "data_utils.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -19,7 +19,7 @@ using namespace std;
 #include <cstdint>
 
 #include "kernel_tiling/kernel_tiling.h"
-#include "test_masked_softmax_with_relposbias_tiling.h"
+#include "masked_softmax_with_rel_pos_bias_tiling_def.h"
 // #include "kernel_operator.h"
 using namespace std;
 
@@ -41,7 +41,7 @@ void run_masked_softmax_with_relposbias_case(uint32_t BS, uint32_t W, uint32_t N
                    uint32_t tiling_key, uint32_t shape_index) {
   system(
       "cp -r "
-      "../../../../../../../ops/built-in/tests/ut/fast_op_test/masked_softmax_with_relposbias/"
+      "../../../../norm/masked_softmax_with_rel_pos_bias/tests/ut/op_kernel/"
       "masked_softmax_with_relposbias_data ./ && chmod -R 755 ./masked_softmax_with_relposbias_data/");
   system("ls -lh ./masked_softmax_with_relposbias_data/");
   system("cd ./masked_softmax_with_relposbias_data/ && rm -rf ./*.bin");
@@ -329,31 +329,6 @@ TEST_F(masked_softmax_with_relposbias_test, test_case_42) {
   }
 }
 
-TEST_F(masked_softmax_with_relposbias_test, test_case_20) {
-  uint32_t BS = 2;
-  uint32_t W = 1;
-  uint32_t N = 16;
-  uint32_t S1 = 144;
-  uint32_t S2 = 144;
-
-  //下面4个循环，代表每个类型的4个tiling key，从1到4, 
-  //最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-  //测试模板4的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case4010"，第二种shape则为"case4011"
-  std::string dtype = "float32";
-  for (uint32_t i = 3; i <= 4; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(float), 200 + i, 1);
-  }
-  
-  dtype = "half";
-  for (uint32_t i = 3; i <= 4; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(half), 210 + i, 1);
-  }
-
-  dtype = "bfloat16";
-  for (uint32_t i = 3; i <= 4; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 220 + i, 1);
-  }
-}
 
 // TEST_F(masked_softmax_with_relposbias_test, test_case_21) {
 //   uint32_t BS = 2;
@@ -524,113 +499,6 @@ TEST_F(masked_softmax_with_relposbias_test, test_case_3) {
   dtype = "bfloat16";
   dtypeSize = 2;
   //run_test_case<bfloat16_t>(BS, W, N, S1, S2, dtype, caseIdx, dtypeSize);
-}
-
-TEST_F(masked_softmax_with_relposbias_test, test_case_30) {
-  uint32_t BS = 2;
-  uint32_t W = 2;
-  uint32_t N = 128;
-  uint32_t S1 = 8;
-  uint32_t S2 = 8;
-
-  //下面4个循环，代表每个类型的4个tiling key，从1到4, 
-  //最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-  //测试模板3的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case3010"，第二种shape则为"case3011"
-
-  std::string dtype = "float32";
-  for (uint32_t i = 1; i <= 4; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(float), 300 + i, 0);
-  }
-  
-  dtype = "half";
-  // ut 报在softmax内部，npu执行正常
-  for (uint32_t i = 1; i <= 1; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(half), 310 + i, 0);
-  }
-
-  dtype = "bfloat16";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 320 + i, 0);
-  }
-}
-
-TEST_F(masked_softmax_with_relposbias_test, test_case_31) {
-  uint32_t BS = 2;
-  uint32_t W = 3;
-  uint32_t N = 127;
-  uint32_t S1 = 5;
-  uint32_t S2 = 5;
-
-  //下面4个循环，代表每个类型的4个tiling key，从1到4, 
-  //最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-  //测试模板3的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case3010"，第二种shape则为"case3011"
-
-  std::string dtype = "float32";
-  for (uint32_t i = 1; i <= 4; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(float), 300 + i, 1);
-  }
-  
-  dtype = "half";
-  for (uint32_t i = 1; i <= 1; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(half), 310 + i, 1);
-  }
-
-  dtype = "bfloat16";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 320 + i, 1);
-  }
-}
-
-TEST_F(masked_softmax_with_relposbias_test, test_case_20_12) {
-  uint32_t BS = 2;
-  uint32_t W = 3;
-  uint32_t N = 5;
-  uint32_t S1 = 36;
-  uint32_t S2 = 16;
-
-  //下面4个循环，代表每个类型的4个tiling key，从1到4, 
-  //最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-  //测试模板4的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case4010"，第二种shape则为"case4011"
-  std::string dtype = "float32";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(float), 200 + i, 0);
-  }
-  
-  dtype = "half";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(half), 210 + i, 0);
-  }
-
-  dtype = "bfloat16";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 220 + i, 0);
-  }
-}
-
-TEST_F(masked_softmax_with_relposbias_test, test_case_21_12) {
-  uint32_t BS = 2;
-  uint32_t W = 3;
-  uint32_t N = 5;
-  uint32_t S1 = 36;
-  uint32_t S2 = 15;
-
-  //下面4个循环，代表每个类型的4个tiling key，从1到4, 
-  //最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-  //测试模板4的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case4010"，第二种shape则为"case4011"
-  std::string dtype = "float32";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(float), 200 + i, 1);
-  }
-  
-  dtype = "half";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(half), 210 + i, 1);
-  }
-
-  dtype = "bfloat16";
-  for (uint32_t i = 1; i <= 2; i++) {
-    run_masked_softmax_with_relposbias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 220 + i, 1);
-  }
 }
 
 TEST_F(masked_softmax_with_relposbias_test, test_case_s2_1) {

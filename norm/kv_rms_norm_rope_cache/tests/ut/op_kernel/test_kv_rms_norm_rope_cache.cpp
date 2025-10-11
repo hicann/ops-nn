@@ -20,8 +20,8 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_kv_rms_norm_rope_cache.h"
-#include "../data_utils.h"
+#include "kv_rms_norm_rope_cache_tiling_def.h"
+#include "data_utils.h"
 
 #include <cstdint>
 

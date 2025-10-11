@@ -1,194 +1,194 @@
 {
-    "op_type": "MaskedSoftmaxWithRelPosBias",
-    "op_list": [
-      {
-        "bin_filename": "MaskedSoftmaxWithRelPosBias_c9fbd26689af11eea49793c1b7f9a48b",
-        "inputs": [
-          {
-            "name": "x",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "atten_mask",
-            "index": 1,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "optional",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "relative_pos_bias",
-            "index": 2,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "y",
-            "index": 0,
-            "dtype": "float32",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "attrs": [
-          {
-            "name": "scale_value",
-            "dtype": "float",
-            "value": 1.0
-          },
-          {
-            "name": "inner_precision_mode",
-            "dtype": "int",
-            "value": 0
-          }
-        ]
-      },
-      {
-        "bin_filename": "MaskedSoftmaxWithRelPosBias_f989cef289af11ee911a0bbb115d498a",
-        "inputs": [
-          {
-            "name": "x",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "atten_mask",
-            "index": 1,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "optional",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "relative_pos_bias",
-            "index": 2,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "y",
-            "index": 0,
-            "dtype": "float16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "attrs": [
-          {
-            "name": "scale_value",
-            "dtype": "float",
-            "value": 1.0
-          },
-          {
-            "name": "inner_precision_mode",
-            "dtype": "int",
-            "value": 0
-          }
-        ]
-      },
-      {
-        "bin_filename": "MaskedSoftmaxWithRelPosBias_0898e19489b011ee98551b74df6de4e8",
-        "inputs": [
-          {
-            "name": "x",
-            "index": 0,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "atten_mask",
-            "index": 1,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "optional",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          },
-          {
-            "name": "relative_pos_bias",
-            "index": 2,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "y",
-            "index": 0,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "required",
-            "shape": [
-              -2
-            ],
-            "format_match_mode":"FormatAgnostic"
-          }
-        ],
-        "attrs": [
-          {
-            "name": "scale_value",
-            "dtype": "float",
-            "value": 1.0
-          },
-          {
-            "name": "inner_precision_mode",
-            "dtype": "int",
-            "value": 0
-          }
-        ]
-      }
-    ]
+  "op_type": "MaskedSoftmaxWithRelPosBias",
+  "op_list": [
+    {
+      "bin_filename": "MaskedSoftmaxWithRelPosBias_c9fbd26689af11eea49793c1b7f9a48b",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "atten_mask",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "relative_pos_bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "scale_value",
+          "dtype": "float",
+          "value": 1.0
+        },
+        {
+          "name": "inner_precision_mode",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaskedSoftmaxWithRelPosBias_f989cef289af11ee911a0bbb115d498a",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "atten_mask",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "relative_pos_bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "scale_value",
+          "dtype": "float",
+          "value": 1.0
+        },
+        {
+          "name": "inner_precision_mode",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "bin_filename": "MaskedSoftmaxWithRelPosBias_0898e19489b011ee98551b74df6de4e8",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "atten_mask",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        },
+        {
+          "name": "relative_pos_bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode":"FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "scale_value",
+          "dtype": "float",
+          "value": 1.0
+        },
+        {
+          "name": "inner_precision_mode",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    }
+  ]
 }

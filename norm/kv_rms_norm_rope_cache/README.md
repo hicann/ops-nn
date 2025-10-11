@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾910_95 AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     ×    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -189,13 +194,13 @@
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
-
+    
   </tbody></table>
 
 ## 约束说明
 
   * 输入shape限制：
-      * kv为四维张量，shape为[Bkv,N,Skv,D]，Bkv为输入kv的batch size，Skv为输入kv的sequence length，大小由用户输入场景决定，无明确限制。
+      * kv为四维张量，shape为[Bkv,N,Skv,D]，Bkv为输入kv的batch size，Skv为输入kv的sequence length，大小由用户输入场景决定，无明确限制。 
       * N为输入kv的head number。此算子与DeepSeekV3网络结构强相关，仅支持N=1的场景，不存在N非1的场景。
       * D为输入kv的head dim。rms_norm计算所需数据Dv和rope计算所需数据Dk由输入kv的D切分而来。故Dk、Dv大小需满足Dk+Dv=D。同时，Dk需满足rope规则。根据rope规则，Dk为偶数。
       * 若cacheModeOptional为PA场景（cacheModeOptional为PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ），其shape[BlockNum,BlockSize,N,Dk]中BlockSize需32B对齐。
@@ -209,6 +214,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_kv_rms_norm_rope_cache](examples/test_aclnn_kv_rms_norm_rope_cache.cpp) | 通过[aclnnKvRmsNormRopeCache](docs/aclnnKvRmsNormRopeCache.md)接口方式调用KvRmsNormRopeCache算子。 |
-| 图模式 | - | 通过[算子IR](op_graph/kv_rms_norm_rope_cache_proto.h)构图方式调用KvRmsNormRopeCache算子。         |
-
-<!-- [test_geir_kv_rms_norm_rope_cache](examples/test_geir_kv_rms_norm_rope_cache.cpp) -->
+| 图模式 | [test_geir_kv_rms_norm_rope_cache](examples/test_geir_kv_rms_norm_rope_cache.cpp)  | 通过[算子IR](op_graph/kv_rms_norm_rope_cache_proto.h)构图方式调用KvRmsNormRopeCache算子。         |
