@@ -88,8 +88,4 @@
 
 无
 
-## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                             |
-|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_scaled_masked_softmax_backward](./examples/test_aclnn_scaled_masked_softmax_backward.cpp) | 通过[aclnnScaledMaskedSoftmaxBackward](./docs/aclnnScaledMaskedSoftmaxBackward.md)接口方式调用aclnnScaledMaskedSoftmaxBackward算子。    |

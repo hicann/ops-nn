@@ -104,8 +104,3 @@ Shape描述：
   - indicesOut.shape = (N, C, Din, Hout, Wout)
 
 
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_adaptive_max_pool3d.cpp](examples/test_aclnn_adaptive_max_pool3d.cpp) | 通过[aclnnAdaptiveMaxPool3d](docs/aclnnAdaptiveMaxPool3d.md)接口方式调用AdaptiveMaxPool3d算子。 |

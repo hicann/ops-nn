@@ -74,12 +74,7 @@
 
 无
 
-## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                             |
-|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_swi_glu_grad](./examples/test_aclnn_swi_glu_grad.cpp) | 通过[aclnnSwigluGrad](./docs/aclnnSwiGluGrad.md)接口方式调用SwiGluGrad算子。    |
-| 图模式调用 | -   | 通过[算子IR](./op_graph/swi_glu_grad_proto.h)构图方式调用SwiGluGrad算子。 |
 
 
 

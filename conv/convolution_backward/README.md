@@ -79,5 +79,3 @@
 | 调用方式  | 样例代码  | 说明                 |
 | -----------  | ------------------- | ---------- |
 | aclnn接口   | [test_aclnn_conv_backward_1d](examples/test_aclnn_conv_backward_1d.cpp)  | 通过[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口方式调用Conv3DBackpropFilterV2、Conv3DBackpropInputV2算子 |
-| aclnn接口   | [test_aclnn_conv_backward_2d](examples/test_aclnn_conv_backward_2d.cpp)  | 通过[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口方式调用Conv3DBackpropFilterV2、Conv3DBackpropInputV2算子 |
-| aclnn接口   | [test_aclnn_conv_backward_3d](examples/test_aclnn_conv_backward_3d.cpp)  | 通过[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口方式调用Conv3DBackpropFilterV2、Conv3DBackpropInputV2算子 |

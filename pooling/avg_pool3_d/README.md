@@ -116,5 +116,5 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_avgpool3d.cpp](examples/test_aclnn_avgpool3d.cpp) | 通过[aclnnAvgPool3d](docs/aclnnAvgPool3d.md)接口方式调用AvgPool3d算子。 |
+| aclnn接口  | [test_aclnn_avgpool2d.cpp](examples/test_aclnn_avgpool2d.cpp) | 通过[aclnnAvgPool2d](docs/aclnnAvgPool2d.md)接口方式调用AvgPool2d算子。 |
 <!--| 图模式 | [test_geir_avg_pool3_d.cpp](examples/test_geir_avg_pool3_d.cpp)  | 通过[算子IR](op_graph/avg_pool3_d_proto.h)构图方式调用AvgPool3d算子。         |-->

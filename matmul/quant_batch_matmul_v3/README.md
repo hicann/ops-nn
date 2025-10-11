@@ -131,8 +131,3 @@
 - 不支持空tensor。
 - 不支持非连续tensor。
 
-## 调用说明
-
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_quant_matmul_v3](examples/test_aclnn_quant_matmul_v3_at.cpp) | 通过<br>[aclnnQuantMatmulV3](docs/aclnnQuantMatmulV3.md)<br>[aclnnQuantMatmulV4](docs/aclnnQuantMatmulV4.md)<br>[aclnnQuantMatmulWeightNz](docs/aclnnQuantMatmulWeightNz.md)<br>等方式调用QuantBatchMatmulV3算子。 |

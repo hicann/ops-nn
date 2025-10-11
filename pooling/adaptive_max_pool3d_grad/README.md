@@ -66,8 +66,4 @@
 
 无
 
-## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_adaptive_max_pool3d_backward.cpp](examples/test_aclnn_adaptive_max_pool3d_backward.cpp) | 通过[aclnnAdaptiveMaxPool3dBackward](docs/aclnnAdaptiveMaxPool3dBackward.md)接口方式调用AdaptiveMaxPool3dGrad算子。 |
