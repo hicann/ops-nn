@@ -53,8 +53,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dDynFmapC)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dDynWeightC)
@@ -88,8 +107,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dDynWeightC)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dDynGroups)
@@ -123,8 +161,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dDynGroups)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(-3)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownShape)
@@ -158,8 +215,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownShape)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRank)
@@ -193,8 +269,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRank)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownShape)
@@ -228,8 +323,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownShape)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRank)
@@ -263,8 +377,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRank)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dAllUnknownShape)
@@ -298,8 +431,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dAllUnknownShape)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dAllUnknownRank)
@@ -333,8 +485,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dAllUnknownRank)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUnknownShapeC)
@@ -368,8 +539,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUnknownShapeN)
@@ -403,8 +593,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUnknownShapeD)
@@ -438,8 +647,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUnknownShapeHW)
@@ -473,8 +701,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUnknownShape)
@@ -508,8 +755,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFmapUnknownRankWeightUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUnknownShapeN)
@@ -543,8 +809,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUnknownShapeC)
@@ -578,8 +863,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUnknownShapeD)
@@ -613,8 +917,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUnknownShapeHW)
@@ -648,8 +971,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUnknownShape)
@@ -683,8 +1025,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dFilterUnknownRankFmapUn
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadNegative)
@@ -718,8 +1079,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadNegative)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSame)
@@ -753,8 +1133,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSame)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameUpper)
@@ -788,8 +1187,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameUpper)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_UPPER")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameLower)
@@ -823,8 +1241,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameLower)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_LOWER")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameValid)
@@ -858,8 +1295,27 @@ TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dPadModeSameValid)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
+    auto InferDataTypeHolder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_INT8, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({
+                          {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({-1, -1, 1, 1, 1, 1})},
+                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                      })
+                      .Build();
+
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantConv3D")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtypeFunc(InferDataTypeHolder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(Conv3DV2RuntimeDynInferShape, SupportedQuantConv3dInferShapeRange0ToN)
