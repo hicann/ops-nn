@@ -7,8 +7,8 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef __GE_GLU_GRAD_V2_TILING_H__
-#define __GE_GLU_GRAD_V2_TILING_H__
+#ifndef __GE_GLU_GRAD_V2_TILING_DEF_H__
+#define __GE_GLU_GRAD_V2_TILING_DEF_H__
 
 #include <cstdint>
 #include <cstring>

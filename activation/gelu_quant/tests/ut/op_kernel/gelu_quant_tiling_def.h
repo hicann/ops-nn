@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef _GELU_QUANT_TILING_H_
-#define _GELU_QUANT_TILING_H_
+#ifndef _GELU_QUANT_TILING_DEF_H_
+#define _GELU_QUANT_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 #define __CCE_UT_TEST__
