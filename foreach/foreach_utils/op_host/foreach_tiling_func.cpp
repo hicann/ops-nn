@@ -1637,7 +1637,7 @@ static ge::graphStatus Tiling4ForeachZeroInplaceTiling(gert::TilingContext* cont
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus TilingPrepare4ForeachTiling([[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingPrepare4ForeachTiling(gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

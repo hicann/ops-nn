@@ -38,8 +38,13 @@ def compare_data(golden_file_lists, output_file_lists, d_type):
         tmp_gold = np.fromfile(gold, np_dtype)
         diff_res = np.isclose(tmp_out, tmp_gold, precision, 0, True)
         diff_idx = np.where(diff_res != True)[0]
-        print("PASSED!")
-
+        if len(diff_idx) == 0:
+            print("PASSED!")
+        else:
+            print("FAILED!")
+            for idx in diff_idx[:5]:
+                print(f"index: {idx}, output: {tmp_out[idx]}, golden: {tmp_gold[idx]}")
+            data_same = False
     return data_same
 
 def get_file_lists(dtype):
