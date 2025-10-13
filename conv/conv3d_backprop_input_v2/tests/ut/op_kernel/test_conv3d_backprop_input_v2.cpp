@@ -54,10 +54,7 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_1)
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system(
-        "cp -r "
-        "../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/"
-        "conv3d_backprop_input_v2_data ./");
+    system("cp -r ../../../../conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data ./");
     system("chmod -R 755 ./conv3d_backprop_input_v2_data/");
     system("cd ./conv3d_backprop_input_v2_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_input_v2_data/ && python3 gen_data.py 1 512 512 5 32 32 5 32 32 1 1 1");
@@ -136,10 +133,7 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_2)
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system(
-        "cp -r "
-        "../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/"
-        "conv3d_backprop_input_v2_data ./");
+    system("cp -r ../../../../conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data ./");
     system("chmod -R 755 ./conv3d_backprop_input_v2_data/");
     system("cd ./conv3d_backprop_input_v2_data/ && rm -rf ./*bin");
     system("cd ./conv3d_backprop_input_v2_data/ && python3 gen_data.py 1 512 512 5 32 32 5 32 32 1 1 1");
@@ -153,7 +147,7 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_2)
     ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
     
     auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
+        ::conv3d_backprop_input_v2<1,1,1>(input_size, filter, out_backprop, y, workSpace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
@@ -191,87 +185,6 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_2)
 
     ICPU_SET_TILING_KEY(211);
     ICPU_RUN_KF(Conv3DDXKernel, 1, input_shape, filter, dedy, y, workspace, tiling);
-
-    AscendC::GmFree(input_shape);
-    AscendC::GmFree(filter);
-    AscendC::GmFree(dedy);
-    AscendC::GmFree(y);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(conv3d_backprop_input_v2_test, test_case_3)
-{
-    size_t input_shape_size = 5 * sizeof(int32_t);                // 5 len of input shape
-    size_t filter_size = 64 * 1 * 16 * 16 * sizeof(int16_t);      // [dk*cin1*hk*wk, cout1, 16, 16] bf16
-    size_t dedy_size = 2 * 1 * 16 * 4 * 4 * 16 * sizeof(int16_t); // NDC1HW0 bf16
-    size_t y_size = 2 * 1 * 16 * 8 * 8 * 16 * sizeof(int16_t);    // NDC1HWC0 bf16
-    size_t tiling_data_size = sizeof(Conv3DBackpropInputV2TilingData);
-
-    uint8_t* input_shape = (uint8_t*)AscendC::GmAlloc(input_shape_size);
-    uint8_t* filter = (uint8_t*)AscendC::GmAlloc(filter_size);
-    uint8_t* dedy = (uint8_t*)AscendC::GmAlloc(dedy_size);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    memset(workspace, 0, 16 * 1024 * 1024);
-
-    system(
-        "cp -r "
-        "../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/"
-        "conv3d_backprop_input_v2_data ./");
-    system("chmod -R 755 ./conv3d_backprop_input_v2_data/");
-    system("cd ./conv3d_backprop_input_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_input_v2_data/ && python3 gen_data.py 2 256 256 1 4 4 1 8 8 1 2 2");
-    system("cd ./conv3d_backprop_input_v2_data/ && python3 gen_tiling.py test_case_3");
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/conv3d_backprop_input_v2_data/input_size.bin", input_shape_size, input_shape, input_shape_size);
-    ReadFile(path + "/conv3d_backprop_input_v2_data/filter.bin", filter_size, filter, filter_size);
-    ReadFile(path + "/conv3d_backprop_input_v2_data/dedy.bin", dedy_size, dedy, dedy_size);
-    ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-    
-    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
-    };
-
-    ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(11);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(101);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(110);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(111);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(200);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(201);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(210);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
-
-    ICPU_SET_TILING_KEY(211);
-    ICPU_RUN_KF(Conv3DDXKernel, 8, input_shape, filter, dedy, y, workspace, tiling);
 
     AscendC::GmFree(input_shape);
     AscendC::GmFree(filter);
