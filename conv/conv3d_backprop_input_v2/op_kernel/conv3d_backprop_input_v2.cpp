@@ -33,7 +33,7 @@ __global__ __aicore__ void conv3d_backprop_input_v2(
         return;
     }
     REGISTER_TILING_DEFAULT(Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA(tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(Conv3DBackpropInputV2TilingData, tilingData, tiling);
 #if __CCE_AICORE__ == 220
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
