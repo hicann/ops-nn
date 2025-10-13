@@ -56,5 +56,5 @@ REG_OP(ScatterElementsV2)
     .ATTR(axis, Int, 0)
     .ATTR(reduction, String, "none")
     .OP_END_FACTORY_REG(ScatterElementsV2) // namespace ge
-
+}
 #endif // OPS_OP_PROTO_INC_SCATTER_ELEMENTS_V2_H_
