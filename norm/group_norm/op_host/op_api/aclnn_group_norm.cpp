@@ -14,6 +14,7 @@
  */
 
 #include "norm/group_norm_silu/op_host/op_api/group_norm_silu.h"
+#include "norm/group_norm_swish/op_host/op_api/aclnn_group_norm_swish.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/ones_like.h"
 #include "level0/zero_op.h"
@@ -54,6 +55,7 @@ static const int64_t Y_INDEX = 0;
 static const int64_t MEAN_INDEX = 1;
 static const int64_t RSTD_INDEX = 2;
 static const int64_t TWO_DIM = 2;
+static const int64_t SILU_BOUND = 1024;
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
@@ -321,6 +323,17 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
     aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGroupNorm, DFX_IN(self, gamma, beta, N, C, HxW, group, eps), DFX_OUT(out, meanOut, rstdOut));
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    bool isNormSocLists =
+        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+         socVersion == SocVersion::ASCEND310P || socVersion == SocVersion::ASCEND910_95);
+    if (isNormSocLists) {
+        if (C / group * HxW <= SILU_BOUND) {
+        char *dataFormatOptional = "NCHW";
+        return aclnnGroupNormSwishGetWorkspaceSize(self, gamma, beta, group, dataFormatOptional,
+            eps, false, 1.0, out, meanOut, rstdOut, workspaceSize, executor);
+        }
+    }
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -352,10 +365,6 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
 
     // 根据芯片确定调用GroupNorm，还是GroupNormSilu
     std::tuple<aclTensor*, aclTensor*, aclTensor*> result;
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isNormSocLists =
-        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND310P || socVersion == SocVersion::ASCEND910_95);
     if (isNormSocLists) {
         result = l0op::GroupNormSilu(
             selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), false,
