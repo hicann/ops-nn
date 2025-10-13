@@ -1058,6 +1058,12 @@ main() {
   fi
   assemble_cmake_args
   echo "CMAKE_ARGS: ${CMAKE_ARGS}"
+
+  if [[ "$ENABLE_RUN_EXAMPLE" == "TRUE" ]]; then
+    build_example
+    exit $?
+  fi
+
   mkdir -p "${BUILD_PATH}"
   cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake ..
 
@@ -1074,10 +1080,6 @@ main() {
     exit $?
   fi
 
-  if [[ "$ENABLE_RUN_EXAMPLE" == "TRUE" ]]; then
-    build_example
-    exit $?
-  fi
   if [ "$ENABLE_CREATE_LIB" == "TRUE" ]; then
     build_lib
   fi
