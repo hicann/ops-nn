@@ -65,7 +65,7 @@ class OpGraphUt(UtMathcer):
         return changed_file.find('op_graph') != -1
 
 
-UT_MATCHERS = {'op_api_ut': OpApiUt(), 'op_host_ut': OpHostUt()}
+UT_MATCHERS = {'op_api_ut': OpApiUt(), 'op_host_ut': OpHostUt(), 'op_kernel_ut': OpKernelUt()}
 
 
 if __name__ == '__main__':
