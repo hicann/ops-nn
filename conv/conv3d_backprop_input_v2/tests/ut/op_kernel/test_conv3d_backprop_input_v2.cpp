@@ -68,7 +68,7 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_1)
     ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
     
     auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
+        ::conv3d_backprop_input_v2<1,1,1>(input_size, filter, out_backprop, y, workSpace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
