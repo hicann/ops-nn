@@ -11,7 +11,6 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "nn_norm.h"
-#include "graph/utils/op_desc_utils.h"
 #include "ut_op_common.h"
 #include "log/log.h"
 

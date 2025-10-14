@@ -19,7 +19,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "cross_entropy_loss_tiling.h"
+#include "cross_entropy_loss_tiling_def.h"
 #include "data_utils.h"
 
 #include <cstdint>

@@ -49,7 +49,7 @@ TEST_F(group_norm_silu_test, test_case_101) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 32;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 192 64 64 float16 float16");
@@ -107,7 +107,7 @@ TEST_F(group_norm_silu_test, test_case_101_2) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 64 64 float16 float16");
@@ -165,7 +165,7 @@ TEST_F(group_norm_silu_test, test_case_101_3) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 32;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 192 64 64 float16 float32");
@@ -223,7 +223,7 @@ TEST_F(group_norm_silu_test, test_case_101_4) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 64 64 float16 float32");
@@ -281,7 +281,7 @@ TEST_F(group_norm_silu_test, test_case_102) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 64 64 float32 float32");
@@ -339,7 +339,7 @@ TEST_F(group_norm_silu_test, test_case_102_2) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 32;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 192 64 64 float32 float32");
@@ -397,7 +397,7 @@ TEST_F(group_norm_silu_test, test_case_103) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 128 128 float16 float16");
@@ -455,7 +455,7 @@ TEST_F(group_norm_silu_test, test_case_103_1) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 8 8 float16 float16");
@@ -513,7 +513,7 @@ TEST_F(group_norm_silu_test, test_case_103_2) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 128 128 float16 float32");
@@ -571,7 +571,7 @@ TEST_F(group_norm_silu_test, test_case_103_3) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 8 8 float16 float32");
@@ -629,7 +629,7 @@ TEST_F(group_norm_silu_test, test_case_104) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 128 128 float32 float32");
@@ -687,7 +687,7 @@ TEST_F(group_norm_silu_test, test_case_104_1) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 3 64 8 8 float32 float32");
@@ -745,7 +745,7 @@ TEST_F(group_norm_silu_test, test_case_1051) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 8 8 float16 float16");
@@ -803,7 +803,7 @@ TEST_F(group_norm_silu_test, test_case_1052) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 1 1 float16 float32");
@@ -861,7 +861,7 @@ TEST_F(group_norm_silu_test, test_case_1061) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 8 8 float32 float32");
@@ -919,7 +919,7 @@ TEST_F(group_norm_silu_test, test_case_1062) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 8 8 float32 float32");
@@ -977,7 +977,7 @@ TEST_F(group_norm_silu_test, test_case_1071) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 752 1 1 float16 float16");
@@ -1035,7 +1035,7 @@ TEST_F(group_norm_silu_test, test_case_1072) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 1 1 float16 float32");
@@ -1093,7 +1093,7 @@ TEST_F(group_norm_silu_test, test_case_1073) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 13 1 1 float16 float32");
@@ -1151,7 +1151,7 @@ TEST_F(group_norm_silu_test, test_case_1081) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 752 1 1 float32 float32");
@@ -1209,7 +1209,7 @@ TEST_F(group_norm_silu_test, test_case_1082) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 48;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 3008 1 1 float32 float32");
@@ -1267,7 +1267,7 @@ TEST_F(group_norm_silu_test, test_case_109) {
   uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
   uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
   uint32_t blockDim = 15;
-  system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/group_norm_silu/group_norm_silu_data ./");
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
   system("chmod -R 755 ./group_norm_silu_data/");
   system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
   system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 1152 64 64 float16 float16");

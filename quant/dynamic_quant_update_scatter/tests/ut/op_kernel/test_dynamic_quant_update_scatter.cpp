@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "dynamic_quant_update_scatter_tiling.h"
+#include "dynamic_quant_update_scatter_tiling_def.h"
 #include <cstdint>
 
 using namespace std;

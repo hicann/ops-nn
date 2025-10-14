@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef _GE_GROUP_NORM_SWISH_GRAD_TILING_H_
-#define _GE_GROUP_NORM_SWISH_GRAD_TILING_H_
+#ifndef _GROUP_NORM_SWISH_GRAD_TILING_DEF_H_
+#define _GROUP_NORM_SWISH_GRAD_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 

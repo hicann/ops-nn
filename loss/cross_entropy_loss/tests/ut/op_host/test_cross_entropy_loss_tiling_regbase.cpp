@@ -12,24 +12,20 @@
  * \brief
  */
 
-#include <iostream>
-#include <vector>
+ #include <iostream>
+ #include <fstream>
+ #include <vector>
+ #include <gtest/gtest.h>
+ #include "log/log.h"
+ #include "kernel_run_context_facker.h"
+ #include "exe_graph/runtime/storage_format.h"
+ #include "exe_graph/runtime/storage_shape.h"
+ #include "test_cube_util.h"
+ #include "ut_op_util.h"
+ #include "ut_op_common.h"
+ #include "platform/platform_infos_def.h"
 
-#include <gtest/gtest.h>
-#include "log/log.h"
-
-// #include "runtime2_util.h"
-#include "kernel_run_context_facker.h"
-// #include "experiment_ops.h"
-// #include "array_ops.h"
-// #include "nn_other.h"
-// #include "op_tiling/op_tiling_util.h"
-#include "ut_op_util.h"
-// #include "common_unittest.h"
-#include "../../../op_host/cross_entropy_loss_tiling.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "test_cube_util.h"
+ #include "../../../op_host/cross_entropy_loss_tiling.h"
 
 using namespace ut_util;
 using namespace std;
@@ -143,11 +139,11 @@ static void DoCrossEntropyLossTilingCase(
                       .NodeOutputTd(2, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>(reduction)},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(ignore_index)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(label_smoothing)},
-                           {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(ignore_index)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(label_smoothing)},
+                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

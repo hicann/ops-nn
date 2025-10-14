@@ -7,20 +7,7 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-return()
-file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
-message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
-foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt")
-        add_subdirectory(${SUB_DIR})
-    endif()
-endforeach()
 
-set(add_cross_entropy_loss_grad_tiling_files
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/cross_entropy_loss_grad_tiling.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/cross_entropy_loss_grad_tiling_arch35.cpp
-    )
-
-if (UT_TEST_ALL OR FAST_OP_UT)
-    AddOpTestCase(cross_entropy_loss_grad "ascend910B1" "-DDTYPE_INPUT=float -DDTYPE_TARGET=int64_t" "${add_cross_entropy_loss_grad_tiling_files}")
+if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
+    AddOpTestCase(cross_entropy_loss_grad "ascend910B1" "-DDTYPE_INPUT=float -DDTYPE_TARGET=int64_t")
 endif()

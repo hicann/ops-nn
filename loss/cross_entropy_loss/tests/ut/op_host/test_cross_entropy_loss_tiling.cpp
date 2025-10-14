@@ -13,36 +13,21 @@
  */
 
 #include <iostream>
-#include <vector>
 #include <fstream>
+#include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
-
-// #include "runtime2_util.h"
 #include "kernel_run_context_facker.h"
-// #include "experiment_ops.h"
-// #include "array_ops.h"
-// #include "nn_other.h"
-// #include "op_tiling/op_tiling_util.h"
-#include "ut_op_util.h"
-#include "ut_op_common.h"
-// #include "common_unittest.h"
-#include "../../../op_host/cross_entropy_loss_tiling.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-
-#include "register/op_impl_registry.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
-
-
-
-
 
 using namespace ut_util;
 using namespace std;
 using namespace ge;
-
 class CrossEntropyLossTiling : public testing::Test
 {
 protected:
@@ -130,11 +115,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -228,11 +213,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_none)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -326,11 +311,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_mean)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -424,11 +409,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_sum)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"reduction", ge::AnyValue::CreateFrom<std::string>("sum")},
-                           {"ignore_index", ge::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", ge::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("sum")},
+                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

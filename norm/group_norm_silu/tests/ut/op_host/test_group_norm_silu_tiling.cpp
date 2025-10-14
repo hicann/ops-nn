@@ -11,19 +11,19 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "pad_ops.h"
+#include "log/log.h"
+// #include "test_common.h"
+// #include "pad_ops.h"
 #include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common_unittest.h"
-#include "runtime/diag_util.h"
+#include "tests/ut/common/ut_op_util.h"
+#include "tests/ut/common/any_value.h"
+// #include "op_tiling/op_tiling_util.h"
+// #include "common_unittest.h"
+// #include "runtime/diag_util.h"
 #include "norm/group_norm_silu/op_host/group_norm_silu_tiling.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "nn_norm.h"
+#include "../../../op_graph/group_norm_silu_proto.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 
@@ -107,9 +107,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_001) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -194,9 +194,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_002) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -281,9 +281,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_003) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -368,9 +368,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_004) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -455,9 +455,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_005) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -542,9 +542,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_006) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -629,9 +629,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_007) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -716,9 +716,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_008) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -803,9 +803,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_009) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -890,9 +890,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_010) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -977,9 +977,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_011) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1064,9 +1064,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_012) {
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(31)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(31)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1152,9 +1152,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_013) {
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                      {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                      {"activate_silu", ge::AnyValue::CreateFrom<bool>(true)}
+                      {"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                      {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                      {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(true)}
                       })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -1245,9 +1245,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_014) {
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1337,9 +1337,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_015) {
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1429,9 +1429,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_016) {
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1519,9 +1519,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_017) {
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1609,9 +1609,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_018) {
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1701,9 +1701,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_empty) {
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -1793,9 +1793,9 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_mix_type) {
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                                {"eps", ge::AnyValue::CreateFrom<float>(0.00001)},
-                                {"activate_silu", ge::AnyValue::CreateFrom<bool>(false)}})
+                    .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001)},
+                                {"activate_silu", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();

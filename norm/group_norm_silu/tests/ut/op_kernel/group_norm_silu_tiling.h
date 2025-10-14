@@ -11,24 +11,24 @@
 
 #pragma pack(1)
 
-struct GroupNormSiluTilingData {
-  int64_t numGroups;
-  int64_t hwNum;
-  int64_t elemNum;
-  int64_t shapeC;
-  int64_t shapeD;
-  int64_t realCoreNum;
-  int64_t numPerCore;
-  int64_t numLastCore;
-  int64_t processSize;
-  int64_t loopNum;
-  int64_t loopTail;
-  int64_t innerLoopNum;
-  int64_t innerLoopTail;
-  int64_t tilingKey;
-  float epsilon;
-  int64_t activateSilu;
-};
+// struct GroupNormSiluTilingData {
+//   int64_t numGroups;
+//   int64_t hwNum;
+//   int64_t elemNum;
+//   int64_t shapeC;
+//   int64_t shapeD;
+//   int64_t realCoreNum;
+//   int64_t numPerCore;
+//   int64_t numLastCore;
+//   int64_t processSize;
+//   int64_t loopNum;
+//   int64_t loopTail;
+//   int64_t innerLoopNum;
+//   int64_t innerLoopTail;
+//   int64_t tilingKey;
+//   float epsilon;
+//   int64_t activateSilu;
+// };
 
 #pragma pack()
 

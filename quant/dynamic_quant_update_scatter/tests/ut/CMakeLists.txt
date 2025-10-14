@@ -9,10 +9,10 @@
 # ----------------------------------------------------------------------------
 
 # 每个目录下需要生成的可执行文件，具体参考：ops/built-in/test/CMakeLists.txt： 50~124
-file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
-message(STATUS "=== Debug: CURRENT_DIRS =${CURRENT_DIRS} ")
-foreach(SUB_DIR ${CURRENT_DIRS})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt")
+file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
+message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
+foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})
+    if(EXISTS "${SUB_DIR}/CMakeLists.txt")
         add_subdirectory(${SUB_DIR})
     endif()
 endforeach()
