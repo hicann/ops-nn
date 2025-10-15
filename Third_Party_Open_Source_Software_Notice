@@ -1826,11 +1826,35 @@ Official Repository: https://github.com/Ascend/samples
 
 Usage: "
 /scripts/custom/upgrade.sh
-/examples/add_example_aicpu/op_kernel_aicpu/add_example_aicpu.cpp
-/examples/add_example_aicpu/op_kernel_aicpu/add_example_aicpu.h
 /tests/ut/op_kernel/data_utils.cpp
-/scripts/custom/install.sh
 /scripts/kernel/binary_script/parser_ini.py"
+
+Copyright Notice: 
+Copyright 2019-2020 Huawei Technologies Co., Ltd
+
+License: Apache License V2.0
+Please see above
+
+Software:samples 0.6.0
+
+Official Repository: https://github.com/Ascend/samples
+
+Usage: "
+/examples/add_example_aicpu/op_kernel_aicpu/add_example_aicpu.cpp
+/examples/add_example_aicpu/op_kernel_aicpu/add_example_aicpu.h"
+
+Copyright Notice: 
+Copyright 2019-2020 Huawei Technologies Co., Ltd
+
+License: Apache License V2.0
+Please see above
+
+Software:samples 0.5.0
+
+Official Repository: https://github.com/Ascend/samples
+
+Usage: "
+/scripts/custom/install.sh"
 
 Copyright Notice: 
 Copyright 2019-2020 Huawei Technologies Co., Ltd
