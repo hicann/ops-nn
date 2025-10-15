@@ -901,7 +901,7 @@ build_single_example() {
   elif [[ "${EXAMPLE_MODE}" == "graph" ]]; then
     g++ ${file} -I ${GRAPH_INCLUDE_PATH} -I ${GE_INCLUDE_PATH} -I ${LINUX_INCLUDE_PATH} -I ${INC_INCLUDE_PATH} -L ${GRAPH_LIBRARY_STUB_PATH} -L ${GRAPH_LIBRARY_PATH} -lgraph -lge_runner -lgraph_base -o test_geir_${example}
   fi
-  ${BUILD_PATH}/"${pattern}${example}" && success_example+=(${example})
+  ${BUILD_PATH}/"${pattern}${example}" && success_example+=(${example}) && echo -e "\n$dotted_line\nRun ${pattern}${example} success.\n$dotted_line\n"
 }
 
 build_example() {
@@ -934,7 +934,7 @@ build_example() {
     examples+=($example)
     if [[ $EXAMPLE_NAME == "" || $EXAMPLE_NAME == $example ]]; then
       build_single_example || {
-        echo "run ${pattern}${example} failed."
+        echo -e "\n$dotted_line\nRun ${pattern}${example} failed. \n$dotted_line\n"
         failed_example+=(${example})
       }
     fi
@@ -944,7 +944,9 @@ build_example() {
   failed_example=$(IFS=,; echo "${failed_example[*]}")
   success_example=$(IFS=,; echo "${success_example[*]}")
 
-  if [[ ${failed_example} != "" || ${success_example} == "" ]]; then
+  if [[ ${#files[@]} -eq 0 ]]; then
+    echo "In ${EXAMPLE_MODE} mode, the operator ${OP_NAME} does not include example use case."
+  elif [[ ${failed_example} != "" || ${success_example} == "" ]]; then
     echo "Run example failed, op_name: ${OP_NAME}, exist examples: ${examples}, success examples: ${success_example},\
  failed_example: ${failed_example[@]}, mode: ${EXAMPLE_MODE}."
     exit 1
