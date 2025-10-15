@@ -72,7 +72,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   }
 
   // 调用aclCreateTensor接口创建aclTensor
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCHW,
+  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCDHW,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
@@ -91,9 +91,9 @@ int aclnnConvolutionTest(int32_t deviceId, aclrtStream& stream)
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> shapeInput = {1, 16, 2, 2};
-  std::vector<int64_t> shapeWeight = {16, 16, 2, 2};
-  std::vector<int64_t> shapeResult = {1, 16, 3, 3};
+  std::vector<int64_t> shapeInput = {1, 16, 2, 2, 2};
+  std::vector<int64_t> shapeWeight = {16, 16, 2, 2, 2};
+  std::vector<int64_t> shapeResult = {1, 16, 3, 3, 3};
   std::vector<int64_t> convStrides;
   std::vector<int64_t> convPads;
   std::vector<int64_t> convOutPads;
@@ -109,10 +109,10 @@ int aclnnConvolutionTest(int32_t deviceId, aclrtStream& stream)
   std::vector<float> inputData(GetShapeSize(shapeInput), 1);
   std::vector<float> weightData(GetShapeSize(shapeWeight), 1);
   std::vector<float> outputData(GetShapeSize(shapeResult), 1);
-  convStrides = {1, 1};
-  convPads = {0, 0};
-  convOutPads = {0, 0};
-  convDilations = {1, 1};
+  convStrides = {1, 1, 1};
+  convPads = {0, 0, 0};
+  convOutPads = {0, 0, 0};
+  convDilations = {1, 1, 1};
 
   // 创建input aclTensor
   ret = CreateAclTensor(inputData, shapeInput, &deviceDataA, aclDataType::ACL_FLOAT, &input);
@@ -132,16 +132,16 @@ int aclnnConvolutionTest(int32_t deviceId, aclrtStream& stream)
   std::unique_ptr<void, aclError (*)(void *)> deviceDataResultPtr(deviceDataResult, aclrtFree);
   CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
-  aclIntArray *strides = aclCreateIntArray(convStrides.data(), 2);
+  aclIntArray *strides = aclCreateIntArray(convStrides.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> stridesPtr(strides, aclDestroyIntArray);
   CHECK_FREE_RET(strides != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-  aclIntArray *pads = aclCreateIntArray(convPads.data(), 2);
+  aclIntArray *pads = aclCreateIntArray(convPads.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
   CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-  aclIntArray *outPads = aclCreateIntArray(convOutPads.data(), 2);
+  aclIntArray *outPads = aclCreateIntArray(convOutPads.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outPadsPtr(outPads, aclDestroyIntArray);
   CHECK_FREE_RET(outPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-  aclIntArray *dilations = aclCreateIntArray(convDilations.data(), 2);
+  aclIntArray *dilations = aclCreateIntArray(convDilations.data(), 3);
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
   CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 

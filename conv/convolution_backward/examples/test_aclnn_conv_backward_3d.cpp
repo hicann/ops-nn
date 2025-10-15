@@ -108,7 +108,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     bool transposed = false;
     std::vector<int64_t> outputPadding = {0, 0, 0};
     int groups = 1;
-    bool outputMask[3] = {true, false, false};
+    bool outputMask[3] = {true, true, true};
     int8_t cubeMathType = 1;
 
     std::vector<int64_t> gradInputShape = {2, 2, 7, 7, 7};

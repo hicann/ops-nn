@@ -74,8 +74,8 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    if (shape.size() == 5) {
-        *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCDHW,
+    if (shape.size() == 4) {
+        *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCHW,
                                   shape.data(), shape.size(), *DeviceAddr);
     } else {
         *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
@@ -98,22 +98,22 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     auto ret = Init(deviceId, &stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> gradOutputShape = {2, 2, 7, 7, 7};
-    std::vector<int64_t> inputShape = {2, 2, 7, 7, 7};
-    std::vector<int64_t> weightShape = {2, 2, 1, 1, 1};
-    std::vector<int64_t> biasSize = {2};
-    std::vector<int64_t> stride = {1, 1, 1};
-    std::vector<int64_t> padding = {0, 0, 0};
-    std::vector<int64_t> dilation = {1, 1, 1};
+    std::vector<int64_t> gradOutputShape = {4, 320, 80, 80};
+    std::vector<int64_t> inputShape = {4, 320, 80, 80};
+    std::vector<int64_t> weightShape = {320, 320, 3, 3};
+    std::vector<int64_t> biasSize = {320};
+    std::vector<int64_t> stride = {1, 1};
+    std::vector<int64_t> padding = {1,1};
+    std::vector<int64_t> dilation = {1, 1};
     bool transposed = false;
-    std::vector<int64_t> outputPadding = {0, 0, 0};
+    std::vector<int64_t> outputPadding = {0, 0};
     int groups = 1;
-    bool outputMask[3] = {true, false, false};
+    bool outputMask[3] = {true, true, true};
     int8_t cubeMathType = 1;
 
-    std::vector<int64_t> gradInputShape = {2, 2, 7, 7, 7};
-    std::vector<int64_t> gradWeightShape = {2, 2, 1, 1, 1};
-    std::vector<int64_t> gradBiasShape = {2};
+    std::vector<int64_t> gradInputShape = {4, 320, 80, 80};
+    std::vector<int64_t> gradWeightShape = {320, 320, 3, 3};
+    std::vector<int64_t> gradBiasShape = {320};
 
     // 创建gradOutput aclTensor
     std::vector<float> gradOutputData(GetShapeSize(gradOutputShape), 1);
@@ -175,22 +175,22 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     CHECK_FREE_RET(biasSizes != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建strides aclIntArray
-    aclIntArray *strides = aclCreateIntArray(stride.data(), 3);
+    aclIntArray *strides = aclCreateIntArray(stride.data(), 2);
     std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> stridesPtr(strides, aclDestroyIntArray);
     CHECK_FREE_RET(strides != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建pads aclIntArray
-    aclIntArray *pads = aclCreateIntArray(padding.data(), 3);
+    aclIntArray *pads = aclCreateIntArray(padding.data(), 2);
     std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
     CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建dilations aclIntArray
-    aclIntArray *dilations = aclCreateIntArray(dilation.data(), 3);
+    aclIntArray *dilations = aclCreateIntArray(dilation.data(), 2);
     std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
     CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
     // 创建outputPads aclIntArray
-    aclIntArray *outputPads = aclCreateIntArray(outputPadding.data(), 3);
+    aclIntArray *outputPads = aclCreateIntArray(outputPadding.data(), 2);
     std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outputPadsPtr(outputPads, aclDestroyIntArray);
     CHECK_FREE_RET(outputPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
@@ -229,7 +229,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradInputResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < size; i++) {
+    for (int64_t i = 0; i < 10; i++) {
         LOG_PRINT("gradInputResult[%ld] is: %f\n", i, gradInputResult[i]);
     }
 
@@ -239,7 +239,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradWeightResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < size; i++) {
+    for (int64_t i = 0; i < 10; i++) {
         LOG_PRINT("gradWeightResult[%ld] is: %f\n", i, gradWeightResult[i]);
     }
 
@@ -249,7 +249,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradBiasResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < size; i++) {
+    for (int64_t i = 0; i < 10; i++) {
         LOG_PRINT("gradBiasResult[%ld] is: %f\n", i, gradBiasResult[i]);
     }
     return ACL_SUCCESS;

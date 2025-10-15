@@ -11,7 +11,6 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_convolution.h"
 
