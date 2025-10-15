@@ -19,10 +19,10 @@ set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
 set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
 
 if(NOT CANN_3RD_LIB_PATH)
-  set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/third_party)
+  set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/build/third_party)
 endif()
 if(NOT CANN_3RD_PKG_PATH)
-  set(CANN_3RD_PKG_PATH ${PROJECT_SOURCE_DIR}/third_party/pkg)
+  set(CANN_3RD_PKG_PATH ${PROJECT_SOURCE_DIR}/build/third_party/pkg)
 endif()
 
 # interface, 用于收集aclnn/aclnn_inner/aclnn_exclude的def文件
