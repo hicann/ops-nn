@@ -178,7 +178,7 @@ function(add_modules_ut_sources)
 
     cmake_parse_arguments(MODULE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(supportedCategory "matmul" "conv" "control" "index")
+    set(supportedCategory "matmul" "conv" "control" "index" "rnn")
     string(REPLACE "${OPS_NN_DIR}/" "" opCategoryDir ${CMAKE_CURRENT_SOURCE_DIR})
     string(FIND "${opCategoryDir}" "/" firstSlashPos)
     string(SUBSTRING "${opCategoryDir}" 0 ${firstSlashPos} opCategory)
@@ -493,9 +493,16 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
                 ${PROJECT_SOURCE_DIR}/common/inc
                 ${JSON_INCLUDE}
                 )
-        target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
-            $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
-        )
+        if(${opName} STREQUAL "dynamic_rnnv2")
+            target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
+                $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+                ${OPS_NN_DIR}/rnn/dynamic_rnn/op_host/dynamic_lstm_tiling.cpp
+            )
+        else()
+            target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
+                $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+            )
+        endif()
 
         target_compile_definitions(${opName}_${socVersion}_tiling_tmp PRIVATE
                 LOG_CPP

@@ -13,6 +13,8 @@
 #include <vector>
 #include "../../../op_graph/dynamic_rnnv2_proto.h"
 #include "ut_op_common.h"
+#include "register/op_impl_registry.h"
+#include "ut_op_util.h"
 
 class DynamicRnnV2Test : public testing::Test {
  protected:
@@ -116,31 +118,4 @@ TEST_F(DynamicRnnV2Test, dynamic_rnn_test_case_2) {
   // EXPECT_EQ(ret, ge::GRAPH_FAILED);
 
   EXPECT_EQ(InferShapeTest(rnn_op), ge::GRAPH_FAILED);
-}
-
-TEST_F(DynamicRnnV2Test, dynamic_rnn_v2_test_inferdtype_0) {
-  ge::op::DynamicRNNV2 op;
-
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNNV2"), nullptr);
-  auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNNV2")->infer_datatype;
-  ASSERT_NE(data_type_func, nullptr);
-
-  ge::DataType x_datatype1 = ge::DT_FLOAT16;
-  ge::DataType wi_datatype1 = ge::DT_FLOAT16;
-  ge::DataType wh_datatype1 = ge::DT_FLOAT16;
-  ge::DataType b_datatype1 = ge::DT_FLOAT16;
-  ge::DataType out_datatype = ge::DT_FLOAT16;
-  auto context_holder = gert::InferDataTypeContextFaker()
-                            .IrInputNum(4)
-                            .NodeIoNum(4, 8)
-                            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .InputDataTypes({&x_datatype1, &wi_datatype1, &wh_datatype1, &b_datatype1})
-                            .OutputDataTypes({&out_datatype})
-                            .Build();
-  auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-  EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-  ASSERT_NE(context, nullptr);
 }

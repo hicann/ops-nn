@@ -18,18 +18,15 @@
 #include <nlohmann/json.hpp>
 #include <gtest/gtest.h>
 #include "array_ops.h"
-#include "graph/compute_graph.h"
 #include "graph/graph.h"
-#include "graph/utils/graph_utils.h"
-#include "graph/utils/op_desc_utils.h"
 #include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "register/op_check_register.h"
-#include "register/op_impl_registry_base.h"
+#include "platform/platform_infos_def.h"
+#include "op_common/op_host/util/platform_util.h"
 
 using namespace std;
 using namespace ge;
@@ -138,37 +135,6 @@ static std::unique_ptr<uint8_t[]> InitListIntAttr(const std::vector<int32_t> &li
   return attr_ptr;
 }
 
-static void contruct_tensor(ge::OpDescPtr& op_desc, const std::vector<int64_t>& shape, const ge::DataType dtype,
-                            bool is_input=true, ge::Format format=ge::FORMAT_ND) {
-  ge::GeTensorDesc tensor;
-  tensor.SetShape(ge::GeShape(shape));
-  tensor.SetFormat(format);
-  tensor.SetDataType(dtype);
-  if (is_input) {
-    op_desc->AddInputDesc(tensor);
-  } else {
-    op_desc->AddOutputDesc(tensor);
-  }
-}
-
-TEST_F(DynamicRNNTilingRunTime2, TilingTest1) {
-  auto cppFunc = optiling::OpCheckFuncRegistry::GetOpCapability(FUNC_OP_SELECT_FORMAT, "DynamicRNN");
-
-  std::vector<std::vector<int64_t>> inputs {{1,32,64}, {32,64},{32,64}};
-  std::vector<std::vector<int64_t>> outputs {{64,}};
-  ge::DataType dtype = ge::DT_FLOAT16;
-  ge::OpDescPtr op_desc = std::make_shared<ge::OpDesc>();
-  for (std::size_t i = 0; i < inputs.size(); i++) {
-    contruct_tensor(op_desc, inputs[i], dtype);
-  }
-  for (std::size_t i = 0; i < outputs.size(); i++) {
-    contruct_tensor(op_desc, outputs[i], dtype, false);
-  }
-  ge::Operator op_paras = ge::OpDescUtils::CreateOperatorFromOpDesc(op_desc);
-  ge::AscendString result;
-//   auto ret = cppFunc(op_paras, result);
-}
-
 void RNNTest(DynamicRNNTilingTestParam param) {
   std::cout << "run case " << param.case_name << std::endl;
 
@@ -234,18 +200,18 @@ void RNNTest(DynamicRNNTilingTestParam param) {
       .IrInstanceNum({1,1,1,1,1,1})
       .InputShapes({&x_shape, &w_shape, &b_shape, &seq_shape, &h0_shape, &c0_shape})
       .OutputShapes(output_shapes_ref)
-      .NodeAttrs({{"cell_type", ge::AnyValue::CreateFrom<std::string>(param.cell_type)},
-                  {"direction", ge::AnyValue::CreateFrom<std::string>(param.direction)},
-                  {"cell_depth", ge::AnyValue::CreateFrom<int64_t>(param.cell_depth)},
-                  {"use_peephole", ge::AnyValue::CreateFrom<bool>(param.use_peephole)},
-                  {"keep_prob", ge::AnyValue::CreateFrom<float>(param.keep_prob)},
-                  {"cell_clip", ge::AnyValue::CreateFrom<float>(param.cell_clip)},
-                  {"num_proj", ge::AnyValue::CreateFrom<int64_t>(param.num_proj)},
-                  {"time_major", ge::AnyValue::CreateFrom<bool>(param.time_major)},
-                  {"activation", ge::AnyValue::CreateFrom<std::string>(param.activation)},
-                  {"forget_bias", ge::AnyValue::CreateFrom<float>(param.forget_bias)},
-                  {"gate_order", ge::AnyValue::CreateFrom<std::string>(param.gate_order)},
-                  {"is_training", ge::AnyValue::CreateFrom<bool>(param.is_training)},})
+      .NodeAttrs({{"cell_type", Ops::NN::AnyValue::CreateFrom<std::string>(param.cell_type)},
+                  {"direction", Ops::NN::AnyValue::CreateFrom<std::string>(param.direction)},
+                  {"cell_depth", Ops::NN::AnyValue::CreateFrom<int64_t>(param.cell_depth)},
+                  {"use_peephole", Ops::NN::AnyValue::CreateFrom<bool>(param.use_peephole)},
+                  {"keep_prob", Ops::NN::AnyValue::CreateFrom<float>(param.keep_prob)},
+                  {"cell_clip", Ops::NN::AnyValue::CreateFrom<float>(param.cell_clip)},
+                  {"num_proj", Ops::NN::AnyValue::CreateFrom<int64_t>(param.num_proj)},
+                  {"time_major", Ops::NN::AnyValue::CreateFrom<bool>(param.time_major)},
+                  {"activation", Ops::NN::AnyValue::CreateFrom<std::string>(param.activation)},
+                  {"forget_bias", Ops::NN::AnyValue::CreateFrom<float>(param.forget_bias)},
+                  {"gate_order", Ops::NN::AnyValue::CreateFrom<std::string>(param.gate_order)},
+                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(param.is_training)},})
       .NodeInputTd(0, ge::DT_FLOAT, param.x_format, param.x_format)
       .NodeInputTd(1, ge::DT_FLOAT, param.w_format, param.w_format)
       .NodeInputTd(2, ge::DT_FLOAT, param.b_format, param.b_format)
