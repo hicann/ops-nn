@@ -10,7 +10,6 @@
 # Usage:
 #   Using clang-format to reformat a file:
 #     clang-format -i -style=Google <file>
-#   Options: https://clang.llvm.org/docs/ClangFormat.html
 
 BasedOnStyle: Google
 ColumnLimit: 120
