@@ -1480,8 +1480,9 @@ private:
                 if (inputShapeValueAfterPad < 0) {
                     OP_LOGE(
                         ACLNN_ERR_PARAM_INVALID,
-                        "after pad and dilation, expect input shape[%zu] >= 0, actual get: %ld", i,
-                        inputShapeValueAfterPad);
+                        "after pad and dilation, expect input shape[%zu] should be greater than kernerl shape[%zu], "
+                        "(input + pad - dilation * (weight - 1) - 1) should >= 0, actual get: %ld", 
+                        i, i, inputShapeValueAfterPad);
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             }
