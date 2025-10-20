@@ -18,7 +18,7 @@
 |	activation	|	[squared_relu](../../activation/squared_relu/README.md)	|		AI Core	|	基于标准Relu函数的变体，其主要特点是对Relu函数的输出进行平方，常作为模型的激活函数。	|
 |	activation	|	[swi_glu](../../activation/swi_glu/README.md)	|		AI Core	|	Swish门控线性单元激活函数，实现x的SwiGlu计算。 	|
 |	activation	|	[swi_glu_grad](../../activation/swi_glu_grad/README.md)	|		AI Core	|	swi_glu的反向传播，完成x的SwiGlu反向梯度计算。	|
-|	control	|	[assert](../../control/assert/README.md)	|		AI Core	|	断言给定条件为 true，如果输入张量 input_condition 判定为 false，则打印 input_data 中的张量列表。	|
+|	control	|	[assert](../../control/assert/README.md)	|		AI CPU	|	断言给定条件为 true，如果输入张量 input_condition 判定为 false，则打印 input_data 中的张量列表。	|
 |	conv	|	[conv3d_backprop_filter_v2](../../conv/conv3d_backprop_filter_v2/README.md)	|		AI Core	|	计算三维卷积核权重张量$w$的梯度 $\frac{\partial L}{\partial w}$。	|
 |	conv	|	[conv3d_backprop_input_v2](../../conv/conv3d_backprop_input_v2/README.md)	|		AI Core	|	计算三维卷积正向的输入张量$x$对损失函数$L$的梯度 $\frac{\partial L}{\partial x}$。	|
 |	conv	|	[conv3d_transpose_v2](../../conv/conv3d_transpose_v2/README.md)	|		AI Core	|	计算三维卷积的转置（反卷积）相对于输入的梯度	|
