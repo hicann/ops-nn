@@ -14,7 +14,7 @@
  #include <gtest/gtest.h>
  #include "log/log.h"
  #include "ut_op_common.h"
- #include "register/op_impl_registry_base.h"
+ #include "register/op_impl_registry.h"
  #include "platform/platform_infos_def.h"
  #include "ut_op_util.h"
  #include "kernel_run_context_facker.h"
@@ -110,10 +110,10 @@
                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                     .NodeAttrs({{"activate_left", ge::AnyValue::CreateFrom<bool>(false)},
-                                 {"quant_mode", ge::AnyValue::CreateFrom<std::string>("dynamic")},
-                                 {"group_list_type", ge::AnyValue::CreateFrom<int64_t>(0)},
-                                 {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                     .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("dynamic")},
+                                 {"group_list_type", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                      .TilingData(param.get())
                      .Workspace(ws_size)
                      .Build();

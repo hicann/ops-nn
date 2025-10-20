@@ -19,7 +19,7 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
-#include "register/op_impl_registry_base.h"
+#include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 
 using namespace ut_util;
@@ -108,7 +108,7 @@ TEST_F(GeluMulTiling, GeluMulTiling_01) {
                     .OutputShapes({&y_shape})
                     .CompileInfo(&compile_info)
                     .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                    .NodeAttrs({{"approximate", ge::AnyValue::CreateFrom<string>("none")}})
+                    .NodeAttrs({{"approximate", Ops::NN::AnyValue::CreateFrom<string>("none")}})
                     .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .TilingData(param.get())

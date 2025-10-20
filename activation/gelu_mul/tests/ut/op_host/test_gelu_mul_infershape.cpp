@@ -10,7 +10,6 @@
 
 #include <gtest/gtest.h>  // NOLINT
 #include <iostream>
-#include "graph/utils/op_desc_utils.h"
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
 #include "../../../op_graph/gelu_mul_proto.h"

@@ -11,9 +11,9 @@
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
 #include "infershape_test_util.h"
-#include "graph/utils/op_desc_utils.h"
 #include "ut_op_common.h"
 #include "log/log.h"
+#include "../../../op_graph/fatrelu_mul_proto.h"
 
 class FatreluMul : public testing::Test {
 protected:

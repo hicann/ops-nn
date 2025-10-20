@@ -11,7 +11,6 @@
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
 #include "infershape_test_util.h" // NOLINT
-#include "graph/utils/op_desc_utils.h"
 #include "ut_op_common.h"
 #include "../../../op_graph/heaviside_proto.h"
 

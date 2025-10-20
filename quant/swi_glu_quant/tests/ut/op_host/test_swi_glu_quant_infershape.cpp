@@ -69,10 +69,10 @@ TEST_F(SwiGluQuantTest, SwiGluQuant_infer_dtype_test) {
             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .InputDataTypes({&input_ref, &output_ref, &output_ref, &input_ref0})
             .OutputDataTypes({&output_ref0, &output_ref})
-            .NodeAttrs({{"activate_left", ge::AnyValue::CreateFrom<bool>(false)},
-                        {"quant_mode", ge::AnyValue::CreateFrom<std::string>("dynamic")},
-                        {"group_list_type", ge::AnyValue::CreateFrom<int64_t>(0)},
-                        {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+            .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                        {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("dynamic")},
+                        {"group_list_type", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                        {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
             .Build();
     auto context = context_holder.GetContext<gert::InferDataTypeContext>();
     EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);

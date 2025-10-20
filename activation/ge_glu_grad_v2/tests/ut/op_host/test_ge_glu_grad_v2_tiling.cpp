@@ -121,9 +121,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_001)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -166,9 +166,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_002)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -211,9 +211,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_003)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -255,9 +255,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_004)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -299,9 +299,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_001)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -343,9 +343,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_002)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -387,9 +387,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_003)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -431,9 +431,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_004)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -475,9 +475,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_001)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -519,9 +519,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_002)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -563,9 +563,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_003)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -607,9 +607,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_004)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -651,9 +651,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_005)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -695,9 +695,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_310p_erf)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -738,9 +738,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_310p)
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                             .NodeAttrs(
-                                {{"dim", ge::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", ge::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", ge::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)

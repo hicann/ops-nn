@@ -11,7 +11,6 @@
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
 #include "infershape_test_util.h" // NOLINT      // NOLINT
-#include "graph/utils/op_desc_utils.h"
 #include "ut_op_common.h"
 #include "../../../op_graph/gelu_quant_proto.h"
 
@@ -70,10 +69,10 @@ TEST_F(GeluQuant, GeluQuant_InferDtype_case_0)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeAttrs(
-                                      {{"approximate", ge::AnyValue::CreateFrom<string>("none")},
-                                       {"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                                       {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                                       {"round_mode", ge::AnyValue::CreateFrom<string>("rint")}})
+                                      {{"approximate", Ops::NN::AnyValue::CreateFrom<string>("none")},
+                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
                                   .InputDataTypes({&input_x_ref, &input_scale_ref, &input_offset_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();
@@ -109,10 +108,10 @@ TEST_F(GeluQuant, GeluQuant_InferDtype_case_1)
                                   .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeAttrs(
-                                      {{"approximate", ge::AnyValue::CreateFrom<string>("none")},
-                                       {"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                                       {"dst_type", ge::AnyValue::CreateFrom<int64_t>(34)},
-                                       {"round_mode", ge::AnyValue::CreateFrom<string>("rint")}})
+                                      {{"approximate", Ops::NN::AnyValue::CreateFrom<string>("none")},
+                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)},
+                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
                                   .InputDataTypes({&input_x_ref, &input_scale_ref, &input_offset_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();

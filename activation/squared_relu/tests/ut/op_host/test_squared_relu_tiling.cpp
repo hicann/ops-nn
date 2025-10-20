@@ -17,7 +17,7 @@
  #include "kernel_run_context_facker.h"
  #include "test_cube_util.h"
  #include "platform/platform_infos_def.h"
- #include "register/op_impl_registry_base.h"
+ #include "register/op_impl_registry.h"
  #include "exe_graph/runtime/storage_format.h"
  #include "exe_graph/runtime/storage_shape.h"
  #include "ut_op_util.h"

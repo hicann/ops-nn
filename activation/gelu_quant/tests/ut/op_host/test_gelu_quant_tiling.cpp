@@ -159,10 +159,10 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
             .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"approximate", ge::AnyValue::CreateFrom<string>(test_params.approximate)},
-                 {"quant_mode", ge::AnyValue::CreateFrom<string>(test_params.quant_mode)},
-                 {"dst_type", ge::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
-                 {"round_mode", ge::AnyValue::CreateFrom<string>(test_params.round_mode)}})
+                {{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
+                 {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
+                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
+                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -258,10 +258,10 @@ TEST_P(TilingGeluQuant, gelu_quant_tiling)
             .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"approximate", ge::AnyValue::CreateFrom<string>(test_params.approximate)},
-                 {"quant_mode", ge::AnyValue::CreateFrom<string>(test_params.quant_mode)},
-                 {"dst_type", ge::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
-                 {"round_mode", ge::AnyValue::CreateFrom<string>(test_params.round_mode)}})
+                {{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
+                 {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
+                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
+                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();

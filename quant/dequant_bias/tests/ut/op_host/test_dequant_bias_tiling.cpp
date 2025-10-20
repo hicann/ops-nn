@@ -115,7 +115,7 @@ TEST_F(DequantBiasTiling, DequantBiasTiling_01) {
                     .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"output_dtype", ge::AnyValue::CreateFrom<int64_t>(1)},
+                      {"output_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
                     })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -207,7 +207,7 @@ TEST_F(DequantBiasTiling, DequantBiasTiling_02) {
                     .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"output_dtype", ge::AnyValue::CreateFrom<int64_t>(1)},
+                      {"output_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
                     })
                     .TilingData(param.get())
                     .Workspace(ws_size)
@@ -298,7 +298,7 @@ TEST_F(DequantBiasTiling, DequantBiasTiling_03) {
                     .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({
-                      {"output_dtype", ge::AnyValue::CreateFrom<int64_t>(1)},
+                      {"output_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
                     })
                     .TilingData(param.get())
                     .Workspace(ws_size)
