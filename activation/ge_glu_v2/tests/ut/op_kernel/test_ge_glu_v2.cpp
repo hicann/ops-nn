@@ -45,7 +45,7 @@ TEST_F(ge_glu_v2_test, test_case_101)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* gelu = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6*1024*1024+40*32*4);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
     system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
@@ -60,9 +60,9 @@ TEST_F(ge_glu_v2_test, test_case_101)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
@@ -70,9 +70,11 @@ TEST_F(ge_glu_v2_test, test_case_101)
     tilingDatafromBin->tilingKey = 101;
     tilingDatafromBin->blockSize = 16;
     tilingDatafromBin->activateLeft = 0;
+    tilingDatafromBin->ny = 1280;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(101);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -107,9 +109,9 @@ TEST_F(ge_glu_v2_test, test_case_201)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
@@ -120,6 +122,7 @@ TEST_F(ge_glu_v2_test, test_case_201)
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(201);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -154,20 +157,21 @@ TEST_F(ge_glu_v2_test, test_case_301)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 2;
     tilingDatafromBin->tilingKey = 301;
-    tilingDatafromBin->blockSize = 16;
+    tilingDatafromBin->blockSize = 8;
     tilingDatafromBin->activateLeft = 0;
-    tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->ny = 1280;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(301);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -181,7 +185,7 @@ TEST_F(ge_glu_v2_test, test_case_301)
 TEST_F(ge_glu_v2_test, test_case_103)
 {
     size_t inputByteSize = 2 * 2 * 12352 * sizeof(int16_t);
-    size_t outputByteSize = 2 * 2 * 12352 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 2 * 6176 * sizeof(int16_t);
     size_t tiling_data_size = sizeof(GeGluV2TilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
@@ -189,7 +193,7 @@ TEST_F(ge_glu_v2_test, test_case_103)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 48;
+    uint32_t blockDim = 40;
     system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
@@ -202,20 +206,22 @@ TEST_F(ge_glu_v2_test, test_case_103)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 2;
-    tilingDatafromBin->loopNum = 12;
+    tilingDatafromBin->loopNum = 6;
     tilingDatafromBin->tailLoopNum = 64;
     tilingDatafromBin->nLastTailGroup = 0;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 6144;
-    tilingDatafromBin->realCoreNum = 48;
+    tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 0;
     tilingDatafromBin->tilingKey = 103;
     tilingDatafromBin->blockSize = 16;
     tilingDatafromBin->activateLeft = 0;
     tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->approximate = 1;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(103);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -264,6 +270,7 @@ TEST_F(ge_glu_v2_test, test_case_203)
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(203);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -277,7 +284,7 @@ TEST_F(ge_glu_v2_test, test_case_203)
 TEST_F(ge_glu_v2_test, test_case_303)
 {
     size_t inputByteSize = 2 * 2 * 12352 * sizeof(float);
-    size_t outputByteSize = 2 * 2 * 12352 * sizeof(float);
+    size_t outputByteSize = 2 * 2 * 6176 * sizeof(float);
     size_t tiling_data_size = sizeof(GeGluV2TilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
@@ -285,7 +292,7 @@ TEST_F(ge_glu_v2_test, test_case_303)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 48;
+    uint32_t blockDim = 40;
     system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
@@ -297,21 +304,22 @@ TEST_F(ge_glu_v2_test, test_case_303)
 
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
-    tilingDatafromBin->group = 2;
-    tilingDatafromBin->loopNum = 12;
-    tilingDatafromBin->tailLoopNum = 64;
+    tilingDatafromBin->group = 1;
+    tilingDatafromBin->loopNum = 8;
+    tilingDatafromBin->tailLoopNum = 32;
     tilingDatafromBin->nLastTailGroup = 0;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 6144;
-    tilingDatafromBin->realCoreNum = 48;
+    tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 0;
     tilingDatafromBin->tilingKey = 303;
-    tilingDatafromBin->blockSize = 16;
+    tilingDatafromBin->blockSize = 8;
     tilingDatafromBin->activateLeft = 0;
-    tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->ny = 6176;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(303);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -346,9 +354,9 @@ TEST_F(ge_glu_v2_test, test_case_111)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
@@ -356,9 +364,11 @@ TEST_F(ge_glu_v2_test, test_case_111)
     tilingDatafromBin->tilingKey = 111;
     tilingDatafromBin->blockSize = 16;
     tilingDatafromBin->activateLeft = 0;
+    tilingDatafromBin->approximate = 0;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(111);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -393,9 +403,9 @@ TEST_F(ge_glu_v2_test, test_case_211)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
@@ -403,9 +413,11 @@ TEST_F(ge_glu_v2_test, test_case_211)
     tilingDatafromBin->tilingKey = 211;
     tilingDatafromBin->blockSize = 16;
     tilingDatafromBin->activateLeft = 0;
+    tilingDatafromBin->approximate = 0;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(211);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -440,20 +452,21 @@ TEST_F(ge_glu_v2_test, test_case_311)
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
     tilingDatafromBin->group = 4;
-    tilingDatafromBin->loopNum = 2;
+    tilingDatafromBin->loopNum = 0;
     tilingDatafromBin->tailLoopNum = 0;
-    tilingDatafromBin->nLastTailGroup = 0;
+    tilingDatafromBin->nLastTailGroup = 2;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 1280;
     tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 2;
     tilingDatafromBin->tilingKey = 311;
-    tilingDatafromBin->blockSize = 16;
+    tilingDatafromBin->blockSize = 8;
     tilingDatafromBin->activateLeft = 0;
-    tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->ny = 1280;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(311);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -475,7 +488,7 @@ TEST_F(ge_glu_v2_test, test_case_113)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 48;
+    uint32_t blockDim = 40;
     system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
@@ -487,21 +500,23 @@ TEST_F(ge_glu_v2_test, test_case_113)
 
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
-    tilingDatafromBin->group = 2;
-    tilingDatafromBin->loopNum = 12;
-    tilingDatafromBin->tailLoopNum = 64;
+    tilingDatafromBin->group = 1;
+    tilingDatafromBin->loopNum = 8;
+    tilingDatafromBin->tailLoopNum = 32;
     tilingDatafromBin->nLastTailGroup = 0;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 6144;
-    tilingDatafromBin->realCoreNum = 48;
+    tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 0;
     tilingDatafromBin->tilingKey = 113;
     tilingDatafromBin->blockSize = 16;
     tilingDatafromBin->activateLeft = 0;
-    tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->ny = 6176;
+    tilingDatafromBin->approximate = 0;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(113);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -550,6 +565,7 @@ TEST_F(ge_glu_v2_test, test_case_213)
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(213);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
@@ -563,7 +579,7 @@ TEST_F(ge_glu_v2_test, test_case_213)
 TEST_F(ge_glu_v2_test, test_case_313)
 {
     size_t inputByteSize = 2 * 2 * 12352 * sizeof(float);
-    size_t outputByteSize = 2 * 2 * 12352 * sizeof(float);
+    size_t outputByteSize = 2 * 2 * 6176 * sizeof(float);
     size_t tiling_data_size = sizeof(GeGluV2TilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
@@ -571,7 +587,7 @@ TEST_F(ge_glu_v2_test, test_case_313)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 48;
+    uint32_t blockDim = 40;
     system("cp -r ../../../../activation/ge_glu_v2/tests/ut/op_kernel/ge_glu_v2_data ./");
     system("chmod -R 755 ./ge_glu_v2_data/");
     system("cd ./ge_glu_v2_data/ && rm -rf ./*bin");
@@ -583,21 +599,23 @@ TEST_F(ge_glu_v2_test, test_case_313)
 
     GeGluV2TilingData* tilingDatafromBin = reinterpret_cast<GeGluV2TilingData*>(tiling);
 
-    tilingDatafromBin->group = 2;
-    tilingDatafromBin->loopNum = 12;
-    tilingDatafromBin->tailLoopNum = 64;
+    tilingDatafromBin->group = 1;
+    tilingDatafromBin->loopNum = 8;
+    tilingDatafromBin->tailLoopNum = 32;
     tilingDatafromBin->nLastTailGroup = 0;
     tilingDatafromBin->lastTailGroup = 0;
     tilingDatafromBin->splitSize = 6144;
-    tilingDatafromBin->realCoreNum = 48;
+    tilingDatafromBin->realCoreNum = 40;
     tilingDatafromBin->numPerCore = 0;
     tilingDatafromBin->tilingKey = 313;
-    tilingDatafromBin->blockSize = 16;
+    tilingDatafromBin->blockSize = 8;
     tilingDatafromBin->activateLeft = 0;
-    tilingDatafromBin->ny = 12352;
+    tilingDatafromBin->ny = 6176;
+    tilingDatafromBin->approximate = 0;
 
     ReadFile(path + "/ge_glu_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(313);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(ge_glu_v2, blockDim, x, y, gelu, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);

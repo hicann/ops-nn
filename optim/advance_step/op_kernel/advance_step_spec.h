@@ -178,13 +178,13 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::Compute(int64_t loop, int64_t s
             bufferLocal[i * elementNum / seqsNum], bufferLocal[i * elementNum / seqsNum], acceptedNumI, tokenEachReqs_);
     }
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     // inputPositions += 1
     Adds(bufferLocal, bufferLocal, 1, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     // seqLens = inputPositions + 1
     Adds(seqLensLocal, bufferLocal, 1, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     Cast(inputPositionsLocalInt64, bufferLocal, RoundMode::CAST_NONE, elementNum);
     Cast(seqLensLocalInt64, seqLensLocal, RoundMode::CAST_NONE, elementNum);
     SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
@@ -228,18 +228,18 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     }
     LocalTensor<int32_t> slotMappingLocal = outputInt32Buf_.Get<int32_t>();
     Cast(slotMappingLocal, slotMappingLocalInt64, RoundMode::CAST_NONE, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
 
     // 生成blockTables行偏移，存放在slotMappingLocal
     ArithProgression<int32_t>(bufferLocal, static_cast<int32_t>(0), blockTablesStride_, seqsNum);
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
 
     for (uint64_t i = 0; i < seqsNum; i++) {
         int32_t bufferLocalI = static_cast<int32_t>(bufferLocal.GetValue(i));
         Duplicate(slotMappingLocal[i * elementNum / seqsNum], bufferLocalI, tokenEachReqs_);
     }
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     // 计算inputPositions/blockSize，存放在bufferLocal，保证blockSize_不为0
     for (uint32_t i = 0; i < elementNum; i++) {
         bufferLocal.SetValue(i, inputPositionsLocal.GetValue(i) / static_cast<int32_t>(blockSize_));
@@ -249,7 +249,7 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     // 计算需要取出的blockTable的下标偏移，即上两项相加，inputPositions/blockSize + blockTablesStride*index
     Add(bufferLocal, slotMappingLocal, bufferLocal, elementNum);
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     // gather获取偏移中的值
     int64_t blockTablesOffset = loop * perLoopSeqs_ * blockTablesStride_;
     for (int i = 0; i < seqsNum; ++i) {
@@ -263,7 +263,7 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
     // 计算blockTable[...] * blockSize
     Muls(slotMappingLocal, slotMappingLocal, static_cast<int32_t>(blockSize_), elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
     // 计算inputPositions % blockSize
     for (uint32_t i = 0; i < elementNum; i++) {
@@ -272,7 +272,7 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeSlotMapping(int64_t loop
     SetWaitFlag<HardEvent::S_V>(HardEvent::S_V);
     // 计算slotMapping最终值
     Add(slotMappingLocal, bufferLocal, slotMappingLocal, elementNum);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
     Cast(slotMappingLocalInt64, slotMappingLocal, RoundMode::CAST_NONE, elementNum);
     SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
 
@@ -347,7 +347,7 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeInputTokens(int64_t loop
         // bufferLocal存放的是lastTokens
         int64_t lastToken = sampledTokenIdsLocalInt64.GetValue(i * stride + minIndex - 1);
         lastTokensInt64.SetValue(Align(1, sizeof(T)) * i, lastToken);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
     }
     buffer3.EnQue(lastTokensInt64);
     buffer1.FreeTensor(sampledTokenIdsLocalInt64);
