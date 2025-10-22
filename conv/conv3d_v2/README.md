@@ -294,4 +294,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | - | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md) 接口方式调用 Conv3DV2 算子。    |
+| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md) 接口方式调用 Conv3DV2 算子。    |
