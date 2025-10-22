@@ -27,7 +27,7 @@
 
   如果您有全新的算子想基于NPU进行设计实现，欢迎您在Issue中提出新的想法和设计。
 
-  您可以按照[提交Issue/处理Issue任务](https://gitcode.com/cann/community#提交Issue处理Issue任务)指引新建 `Requirement|需求建议` 类Issue提供新增算子说明和设计方案，项目成员会与您进行沟通确认，并为您的算子提供一个合适的`contrib`目录分类，您可以将新增算子贡献到对应目录下。
+  您可以按照[提交Issue/处理Issue任务](https://gitcode.com/cann/community#提交Issue处理Issue任务)指引新建 `Requirement|需求建议` 类Issue提供新增算子说明和设计方案，项目成员会与您进行沟通确认，并在`experimental`目录下为您的算子提供一个合适的`contrib`目录分类，您可以将新增算子贡献到对应目录下。
 
   同时，您需要在提交的Issue中评论“/assign”或“/assign @yourself”，认领该Issue并在后续完成新算子上库。
 

@@ -17,7 +17,7 @@
   tileNum_ = tilingData->tileNum;
   tileLength_ = blockLength_ / tileNum_ / BUFFER_NUM;
   // 打印当前核计算Block长度
-  AscendC::PRINTF("Tiling blockLength\n", blockLength_);
+  AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
   ```
 * **DumpTensor**
 

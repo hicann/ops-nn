@@ -1,7 +1,7 @@
 # 算子列表
 
 > 说明：
-> - **算子目录**：目录名为算子名小写下划线形式，每个目录承载该算子所有交付件，包括代码实现、examples、文档等，目录介绍参见[目录结构](../../README.md#目录结构)。
+> - **算子目录**：目录名为算子名小写下划线形式，每个目录承载该算子所有交付件，包括代码实现、examples、文档等，目录介绍参见[项目目录](dir_structure.md)。
 > - **算子执行位置**：大部分算子运行在AI Core上，少部分算子运行在AI CPU上。默认情况下，项目中提到的算子一般指AI Core算子。
 > - 关于AI Core和AI CPU详细介绍请参见[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)中“概念原理和术语 > 硬件架构与数据处理原理”。
 
@@ -166,100 +166,100 @@
 |	vfusion	|	[multi_scale_deformable_attention_grad](../../vfusion/multi_scale_deformable_attention_grad/README.md)	|		AI Core	|	multi_scale_deformable_attn_function的反向传播。	|
 |	vfusion	|	[scaled_masked_softmax_grad_v2](../../vfusion/scaled_masked_softmax_grad_v2/README.md)	|		AI Core	|	scaled_masked_softmax_v2的反向传播，并对结果进行缩放以及掩码。	|
 |	vfusion	|	[scaled_masked_softmax_v2](../../vfusion/scaled_masked_softmax_v2/README.md)	|		AI Core	|	将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。	|
-|	activation	|	[celu_v2](../../activation/celu_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[elu](../../activation/elu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[elu_grad_v2](../../activation/elu_grad_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[erfinv](../../activation/erfinv/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[fast_gelu](../../activation/fast_gelu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[fast_gelu_grad](../../activation/fast_gelu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[gelu](../../activation/gelu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[gelu_grad](../../activation/gelu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[gelu_grad_v2](../../activation/gelu_grad_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[gelu_v2](../../activation/gelu_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hardtanh_grad](../../activation/hardtanh_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_shrink](../../activation/hard_shrink/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_shrink_grad](../../activation/hard_shrink_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_sigmoid](../../activation/hard_sigmoid/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_sigmoid_grad](../../activation/hard_sigmoid_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_swish](../../activation/hard_swish/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[hard_swish_grad](../../activation/hard_swish_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[leaky_relu](../../activation/leaky_relu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[leaky_relu_grad](../../activation/leaky_relu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[logsigmoid](../../activation/logsigmoid/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[logsigmoid_grad](../../activation/logsigmoid_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[logsoftmax_grad](../../activation/logsoftmax_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[logsoftmax_v2](../../activation/logsoftmax_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[mish](../../activation/mish/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[mish_grad](../../activation/mish_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[prelu](../../activation/prelu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[prelu_grad_reduce](../../activation/prelu_grad_reduce/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[prelu_grad_update](../../activation/prelu_grad_update/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[relu](../../activation/relu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[relu_grad](../../activation/relu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[selu](../../activation/selu/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[selu_grad](../../activation/selu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[shrink](../../activation/shrink/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[sigmoid](../../activation/sigmoid/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[sigmoid_grad](../../activation/sigmoid_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[silu_grad](../../activation/silu_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softmax_grad](../../activation/softmax_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softmax_v2](../../activation/softmax_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softplus_v2](../../activation/softplus_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softplus_v2_grad](../../activation/softplus_v2_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softshrink](../../activation/softshrink/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[softshrink_grad](../../activation/softshrink_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[swish](../../activation/swish/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[swish_grad](../../activation/swish_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[threshold](../../activation/threshold/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	activation	|	[threshold_grad_v2_d](../../activation/threshold_grad_v2_d/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	control	|	[identity](../../control/identity/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	control	|	[identity_n](../../control/identity_n/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	control	|	[rank](../../control/rank/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	control	|	[shape](../../control/shape/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	control	|	[shape_n](../../control/shape_n/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[gather_elements](../../index/gather_elements/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[gather_nd](../../index/gather_nd/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[gather_v2](../../index/gather_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[index](../../index/index/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[index_fill_d](../../index/index_fill_d/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[index_put_v2](../../index/index_put_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[matrix_inverse](../../index/matrix_inverse/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[non_zero](../../index/non_zero/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[repeat_interleave](../../index/repeat_interleave/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[reverse_v2](../../index/reverse_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[scatter_elements](../../index/scatter_elements/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[scatter_nd_update](../../index/scatter_nd_update/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[scatter_update](../../index/scatter_update/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[unique_consecutive](../../index/unique_consecutive/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	index	|	[unique_with_counts_ext2](../../index/unique_with_counts_ext2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[binary_cross_entropy](../../loss/binary_cross_entropy/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[binary_cross_entropy_grad](../../loss/binary_cross_entropy_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[ctc_loss_v2](../../loss/ctc_loss_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[ctc_loss_v2_grad](../../loss/ctc_loss_v2_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[kl_div_loss_grad](../../loss/kl_div_loss_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[l1_loss_grad](../../loss/l1_loss_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[lp_loss](../../loss/lp_loss/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[mse_loss](../../loss/mse_loss/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[multilabel_margin_loss](../../loss/multilabel_margin_loss/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[nll_loss](../../loss/nll_loss/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[nll_loss_grad](../../loss/nll_loss_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[sigmoid_cross_entropy_with_logits_grad_v2](../../loss/sigmoid_cross_entropy_with_logits_grad_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[sigmoid_cross_entropy_with_logits_v2](../../loss/sigmoid_cross_entropy_with_logits_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[smooth_l1_loss_grad_v2](../../loss/smooth_l1_loss_grad_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[smooth_l1_loss_v2](../../loss/smooth_l1_loss_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[soft_margin_loss](../../loss/soft_margin_loss/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	loss	|	[soft_margin_loss_grad](../../loss/soft_margin_loss_grad/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	matmul	|	[addmv](../../matmul/addmv/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	matmul	|	[gemm](../../matmul/gemm/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	matmul	|	[mv](../../matmul/mv/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[batch_norm_elemt](../../norm/batch_norm_elemt/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[batch_norm_grad_v3](../../norm/batch_norm_grad_v3/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[group_norm](../../norm/group_norm/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[instance_norm_v3](../../norm/instance_norm_v3/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[lp_norm_v2](../../norm/lp_norm_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[renorm](../../norm/renorm/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[sync_batch_norm_backward_elemt](../../norm/sync_batch_norm_backward_elemt/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[sync_batch_norm_backward_reduce](../../norm/sync_batch_norm_backward_reduce/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	norm	|	[sync_batch_norm_gather_stats_with_counts](../../norm/sync_batch_norm_gather_stats_with_counts/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	quant	|	[ascend_anti_quant_v2](../../quant/ascend_anti_quant_v2/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
-|	quant	|	[quantize](../../quant/quantize/README.md)	|		AI Core	|	该算子暂无AscendC代码实现，欢迎各位开发者补充贡献，贡献方式可以参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[celu_v2](../../activation/celu_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[elu](../../activation/elu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[elu_grad_v2](../../activation/elu_grad_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[erfinv](../../activation/erfinv/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[fast_gelu](../../activation/fast_gelu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[fast_gelu_grad](../../activation/fast_gelu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[gelu](../../activation/gelu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[gelu_grad](../../activation/gelu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[gelu_grad_v2](../../activation/gelu_grad_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[gelu_v2](../../activation/gelu_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hardtanh_grad](../../activation/hardtanh_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_shrink](../../activation/hard_shrink/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_shrink_grad](../../activation/hard_shrink_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_sigmoid](../../activation/hard_sigmoid/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_sigmoid_grad](../../activation/hard_sigmoid_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_swish](../../activation/hard_swish/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[hard_swish_grad](../../activation/hard_swish_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[leaky_relu](../../activation/leaky_relu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[leaky_relu_grad](../../activation/leaky_relu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[logsigmoid](../../activation/logsigmoid/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[logsigmoid_grad](../../activation/logsigmoid_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[logsoftmax_grad](../../activation/logsoftmax_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[logsoftmax_v2](../../activation/logsoftmax_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[mish](../../activation/mish/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[mish_grad](../../activation/mish_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[prelu](../../activation/prelu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[prelu_grad_reduce](../../activation/prelu_grad_reduce/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[prelu_grad_update](../../activation/prelu_grad_update/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[relu](../../activation/relu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[relu_grad](../../activation/relu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[selu](../../activation/selu/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[selu_grad](../../activation/selu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[shrink](../../activation/shrink/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[sigmoid](../../activation/sigmoid/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[sigmoid_grad](../../activation/sigmoid_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[silu_grad](../../activation/silu_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softmax_grad](../../activation/softmax_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softmax_v2](../../activation/softmax_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softplus_v2](../../activation/softplus_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softplus_v2_grad](../../activation/softplus_v2_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softshrink](../../activation/softshrink/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[softshrink_grad](../../activation/softshrink_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[swish](../../activation/swish/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[swish_grad](../../activation/swish_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[threshold](../../activation/threshold/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	activation	|	[threshold_grad_v2_d](../../activation/threshold_grad_v2_d/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	control	|	[identity](../../control/identity/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	control	|	[identity_n](../../control/identity_n/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	control	|	[rank](../../control/rank/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	control	|	[shape](../../control/shape/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	control	|	[shape_n](../../control/shape_n/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[gather_elements](../../index/gather_elements/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[gather_nd](../../index/gather_nd/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[gather_v2](../../index/gather_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[index](../../index/index/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[index_fill_d](../../index/index_fill_d/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[index_put_v2](../../index/index_put_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[matrix_inverse](../../index/matrix_inverse/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[non_zero](../../index/non_zero/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[repeat_interleave](../../index/repeat_interleave/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[reverse_v2](../../index/reverse_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[scatter_elements](../../index/scatter_elements/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[scatter_nd_update](../../index/scatter_nd_update/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[scatter_update](../../index/scatter_update/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[unique_consecutive](../../index/unique_consecutive/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	index	|	[unique_with_counts_ext2](../../index/unique_with_counts_ext2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[binary_cross_entropy](../../loss/binary_cross_entropy/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[binary_cross_entropy_grad](../../loss/binary_cross_entropy_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[ctc_loss_v2](../../loss/ctc_loss_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[ctc_loss_v2_grad](../../loss/ctc_loss_v2_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[kl_div_loss_grad](../../loss/kl_div_loss_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[l1_loss_grad](../../loss/l1_loss_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[lp_loss](../../loss/lp_loss/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[mse_loss](../../loss/mse_loss/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[multilabel_margin_loss](../../loss/multilabel_margin_loss/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[nll_loss](../../loss/nll_loss/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[nll_loss_grad](../../loss/nll_loss_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[sigmoid_cross_entropy_with_logits_grad_v2](../../loss/sigmoid_cross_entropy_with_logits_grad_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[sigmoid_cross_entropy_with_logits_v2](../../loss/sigmoid_cross_entropy_with_logits_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[smooth_l1_loss_grad_v2](../../loss/smooth_l1_loss_grad_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[smooth_l1_loss_v2](../../loss/smooth_l1_loss_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[soft_margin_loss](../../loss/soft_margin_loss/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	loss	|	[soft_margin_loss_grad](../../loss/soft_margin_loss_grad/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	matmul	|	[addmv](../../matmul/addmv/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	matmul	|	[gemm](../../matmul/gemm/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	matmul	|	[mv](../../matmul/mv/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[batch_norm_elemt](../../norm/batch_norm_elemt/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[batch_norm_grad_v3](../../norm/batch_norm_grad_v3/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[group_norm](../../norm/group_norm/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[instance_norm_v3](../../norm/instance_norm_v3/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[lp_norm_v2](../../norm/lp_norm_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[renorm](../../norm/renorm/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[sync_batch_norm_backward_elemt](../../norm/sync_batch_norm_backward_elemt/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[sync_batch_norm_backward_reduce](../../norm/sync_batch_norm_backward_reduce/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	norm	|	[sync_batch_norm_gather_stats_with_counts](../../norm/sync_batch_norm_gather_stats_with_counts/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	quant	|	[ascend_anti_quant_v2](../../quant/ascend_anti_quant_v2/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
+|	quant	|	[quantize](../../quant/quantize/README.md)	|		AI Core	|	该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考[贡献指南](../../CONTRIBUTING.md)。	|
