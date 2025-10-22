@@ -24,3 +24,7 @@ target_compile_definitions(optiling PRIVATE
 target_include_directories(optiling PRIVATE
     ${OP_TILING_INCLUDE}
 )
+
+target_link_libraries(optiling PRIVATE
+    $<BUILD_INTERFACE:dlog_headers>
+)

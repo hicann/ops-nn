@@ -34,6 +34,7 @@ function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
     )
     target_link_libraries(${OP_TILING_MODULE_NAME}_cases_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        $<BUILD_INTERFACE:dlog_headers>
         gtest
     )
 
@@ -76,6 +77,7 @@ function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     )
     target_link_libraries(${OP_INFERSHAPE_MODULE_NAME}_cases_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        $<BUILD_INTERFACE:dlog_headers>
         metadef
         graph
         gtest
@@ -116,6 +118,7 @@ function(add_opapi_ut_modules OP_API_MODULE_NAME)
     set_source_files_properties(${ASCEND_DIR}/include/aclnn/opdev/make_op_executor.h PROPERTIES HEAD_FILE_ONLY TRUE)
     target_link_libraries(${OP_API_MODULE_NAME}_cases_obj PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+            $<BUILD_INTERFACE:dlog_headers>
             gtest
             )
 endfunction()
@@ -315,6 +318,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 -Wl,--no-as-needed
                     $<$<TARGET_EXISTS:opsbase>:opsbase>
                 -Wl,--as-needed
+                $<BUILD_INTERFACE:dlog_headers>
                 -Wl,--whole-archive
                     tiling_api
                 -Wl,--no-whole-archive
@@ -451,13 +455,13 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
     file(GLOB jsonFiles "${PROJECT_SOURCE_DIR}/*/${opName}/op_host/config/*/${opName}_binary.json")
     list(LENGTH jsonFiles numFiles)
     if(numFiles EQUAL 0)
-        string(REPLACE "_" ";" opTypeTemp "${opName}")	
-        foreach(word IN LISTS opTypeTemp)	
-            string(SUBSTRING "${word}" 0 1 firstLetter)	
-            string(SUBSTRING "${word}" 1 -1 restOfWord)	
-            string(TOUPPER "${firstLetter}" firstLetter)	
-            string(TOLOWER "${restOfWord}" restOfWord)	
-            set(opType "${opType}${firstLetter}${restOfWord}")	
+        string(REPLACE "_" ";" opTypeTemp "${opName}")
+        foreach(word IN LISTS opTypeTemp)
+            string(SUBSTRING "${word}" 0 1 firstLetter)
+            string(SUBSTRING "${word}" 1 -1 restOfWord)
+            string(TOUPPER "${firstLetter}" firstLetter)
+            string(TOLOWER "${restOfWord}" restOfWord)
+            set(opType "${opType}${firstLetter}${restOfWord}")
         endforeach()
     endif()
     if(NOT numFiles EQUAL 0)

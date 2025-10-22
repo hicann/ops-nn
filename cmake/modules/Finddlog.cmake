@@ -45,12 +45,13 @@ unset(_cmake_targets_not_defined)
 unset(_cmake_expected_targets)
 
 set(DLOG_HEAD_SEARCH_PATHS
-  ${ASCEND_DIR}/${SYSTEM_PREFIX}/include
-  ${TOP_DIR}/abl/slog/inc            # compile with ci
+  ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/toolchain
+  ${ASCEND_DIR}/pkg_inc/base         # new slog directory structure
+  ${TOP_DIR}/abl/slog/inc/toolchain  # compile with ci
 )
 
-find_path(_INCLUDE_DIR
-  NAMES toolchain/dlog_pub.h
+find_path(_NN_INCLUDE_DIR
+  NAMES dlog_pub.h
   NO_CMAKE_SYSTEM_PATH
   NO_CMAKE_FIND_ROOT_PATH
   PATHS ${DLOG_HEAD_SEARCH_PATHS})
@@ -66,11 +67,11 @@ find_package_handle_standard_args(dlog
   FOUND_VAR
     dlog_FOUND
   REQUIRED_VARS
-    _INCLUDE_DIR
+    _NN_INCLUDE_DIR
 )
 
 if(dlog_FOUND)
-  set(dlog_INCLUDE_DIR "${_INCLUDE_DIR}")
+  set(dlog_INCLUDE_DIR "${_NN_INCLUDE_DIR}")
   include(CMakePrintHelpers)
   message(STATUS "Variables in dlog module:")
   cmake_print_variables(dlog_INCLUDE_DIR)
@@ -87,7 +88,7 @@ if(dlog_FOUND)
 
   add_library(dlog_headers INTERFACE IMPORTED)
   set_target_properties(dlog_headers PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${dlog_INCLUDE_DIR};${dlog_INCLUDE_DIR}/toolchain"
+    INTERFACE_INCLUDE_DIRECTORIES "${dlog_INCLUDE_DIR};${dlog_INCLUDE_DIR}/../"
   )
 
   include(CMakePrintHelpers)
@@ -100,4 +101,4 @@ if(dlog_FOUND)
 endif()
 
 # Cleanup temporary variables.
-set(_INCLUDE_DIR)
+set(_NN_INCLUDE_DIR)
