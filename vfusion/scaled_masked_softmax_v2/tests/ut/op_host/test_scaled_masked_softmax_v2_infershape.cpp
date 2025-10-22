@@ -14,9 +14,10 @@
  */
 #include <gtest/gtest.h>
 #include <iostream>
-#include "op_proto_test_util.h"
-#include "../../../graph_plugin/scaled_masked_softmax_v2_proto.h"
-#include "common/utils/ut_op_common.h"
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "kernel_run_context_facker.h"
+#include "log/log.h"
 
 class ScaledMaskedSoftmaxV2Proto : public testing::Test
 {
@@ -53,7 +54,7 @@ TEST_F(ScaledMaskedSoftmaxV2Proto, inferShape)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(ge::Shape2String(*output), "[1, 32, 32, 128]");
+    ASSERT_EQ(Ops::Base::ToString(*output), "[1, 32, 32, 128]");
 }
 
 TEST_F(ScaledMaskedSoftmaxV2Proto, inferDataType)
