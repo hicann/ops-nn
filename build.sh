@@ -20,7 +20,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "debug" "noexec" "opkernel" "jit" "pkg"
   "disable_asan" "make_clean_all" "make_clean"
-  "ophost" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu="
+  "ophost" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental"
 )
 
 in_array() {
@@ -140,10 +140,12 @@ usage() {
         echo "    -j[n]                  Compile thread nums, default is 8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3]"
         echo "    --debug                Build with debug mode"
+        echo "    --experimental         Build experimental version"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --pkg --soc=ascend910b --vendor_name=customize -j16 -O3"
         echo "    bash build.sh --pkg --ops=add,sub --debug"
+        echo "    bash build.sh --pkg --experimental --soc=ascend910b"
         return
         ;;
       opkernel)
@@ -273,6 +275,7 @@ usage() {
   echo "    --opkernel build binary kernel"
   echo "    --pkg build run pkg"
   echo "    --jit build run pkg without kernel bin"
+  echo "    --experimental Build experimental version"
   echo "    --run_example Compile and execute the example. use --run_example --help for more detail"
   echo "    --genop Create the initial directory for op, like: --genop=op_class/op_name"
   echo "    --genop_aicpu Create the initial directory for AI CPU op, like: --genop_aicpu=op_class/op_name"
@@ -460,6 +463,7 @@ checkopts() {
   ENABLE_PACKAGE=FALSE
   ENABLE_JIT=FALSE
   ENABLE_TEST=FALSE
+  ENABLE_EXPERIMENTAL=FALSE
   AICPU_ONLY=FALSE
   OP_API_UT=FALSE
   OP_HOST_UT=FALSE
@@ -602,6 +606,7 @@ checkopts() {
           set_example_opt $2 $3 $4
           shift $step
           ;;
+        experimental) ENABLE_EXPERIMENTAL=TRUE ;;
         make_clean_all) make_clean_all
                         exit 0 ;;
         make_clean) make_clean
@@ -691,6 +696,7 @@ assemble_cmake_args() {
   fi
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_BINARY=${ENABLE_BINARY}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_PACKAGE=${ENABLE_PACKAGE}"
+  CMAKE_ARGS="$CMAKE_ARGS -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL}"
   CMAKE_ARGS="$CMAKE_ARGS -DBUILD_MODE=${BUILD_MODE}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_HOST_UT=${OP_HOST_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_API_UT=${OP_API_UT}"

@@ -36,6 +36,7 @@ option(ENABLE_UT_EXEC "Enable exec ut" OFF)
 option(ENABLE_BINARY "Enable build binary" OFF)
 option(ENABLE_CUSTOM "Enable build custom" OFF)
 option(ENABLE_PACKAGE "Enable build package" OFF)
+option(ENABLE_EXPERIMENTAL "Enable experimental module" OFF)
 
 option(OP_HOST_UT "Enable ophost ut" OFF)
 option(OP_API_UT "Enable opapi ut" OFF)
@@ -118,7 +119,12 @@ if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   add_subdirectory(common)
 endif()
 
-add_category_subdirectory()
+if(ENABLE_EXPERIMENTAL)
+  message(STATUS "Build experimental module")
+  add_category_subdirectory_experimental()
+else()
+  add_category_subdirectory()
+endif()
 
 message(STATUS "Ops for this compilation contains: ${COMPILED_OPS}")
 

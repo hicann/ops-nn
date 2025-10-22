@@ -20,6 +20,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 ├── conv                               # conv类算子
 ├── docs                               # 项目文档介绍
 ├── examples                           # 端到端算子开发和调用示例
+├── experimental                       # 用户自定义算子存放目录
 ├── foreach                            # foreach类算子
 ├── index                              # index类算子
 ├── loss                               # loss类算子

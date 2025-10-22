@@ -231,6 +231,36 @@ macro(add_category_subdirectory)
   endforeach()
 endmacro()
 
+# useage: add_category_subdirectory_experimental 根据ASCEND_OP_NAME和ASCEND_COMPILE_OPS添加指定算子工程
+# ASCEND_OP_NAME 指定的算子 ASCEND_COMPILE_OPS  编译需要的算子
+macro(add_category_subdirectory_experimental)
+  foreach(op_category ${OP_CATEGORY_LIST})
+    set(op_category_dir ${CMAKE_CURRENT_SOURCE_DIR}/experimental/${op_category})
+    if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/experimental/${op_category})
+      file(GLOB CURRENT_DIRS RELATIVE ${op_category_dir} ${op_category_dir}/*)
+      foreach(SUB_DIR ${CURRENT_DIRS})
+        set(OP_DIR ${op_category_dir}/${SUB_DIR})
+        set(OP_NAME "${SUB_DIR}")
+        if(${OP_NAME} STREQUAL "common")
+          set(OP_NAME "${op_category}.common")
+        endif()
+        list(FIND ASCEND_COMPILE_OPS ${OP_NAME} INDEX)
+        if(NOT "${ASCEND_OP_NAME}" STREQUAL "" AND INDEX EQUAL -1)
+          # ASCEND_OP_NAME 为空表示全部编译
+          continue()
+        endif()
+        if(EXISTS "${OP_DIR}/CMakeLists.txt")
+            add_op_subdirectory()
+        else()
+            if (EXISTS "${OP_DIR}/op_host/CMakeLists.txt")
+                add_subdirectory(${OP_DIR}/op_host)
+            endif()
+        endif()
+      endforeach()
+    endif()
+  endforeach()
+endmacro()
+
 # useage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
 # 需一一对应
