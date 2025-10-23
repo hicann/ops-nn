@@ -33,7 +33,7 @@ class DequantSwiGluTiling : public testing::Test {
  protected:
   static void SetUpTestCase() {
     std::cout << "DequantSwiGluTiling SetUp" << std::endl;
-    setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "1", true);
+    // setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "1", true);
   }
 
   static void TearDownTestCase() {

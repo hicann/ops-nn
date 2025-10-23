@@ -17,7 +17,6 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
-#include "graph/utils/op_desc_utils.h"
 #include "test_cube_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "ut_op_util.h"

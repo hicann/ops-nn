@@ -17,11 +17,9 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
-#include "register/op_impl_registry_base.h"
 #include "platform/platform_infos_def.h"
 #include "../../../op_graph/dequant_swiglu_quant_proto.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "graph/utils/op_desc_utils.h"
 #include "tiling/platform/platform_ascendc.h"
 class DequantSwigluQuantTest : public testing::Test {
  protected:

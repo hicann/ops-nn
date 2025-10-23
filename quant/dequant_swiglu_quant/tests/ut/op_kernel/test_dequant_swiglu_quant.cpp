@@ -72,20 +72,20 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_1)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_1");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_1");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_1");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_1");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
@@ -141,28 +141,28 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_2)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_2");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_2");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_2");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_2");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
 
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
@@ -212,28 +212,28 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_3)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_3");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_3");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_3");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_3");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
 
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
@@ -283,28 +283,28 @@ TEST_F(dequant_swiglu_quant_test, test_dequant_swiglu_quant_4)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_4");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_4");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_4");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_4");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", xweightScaleize, weightScale, xweightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
 
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
@@ -354,27 +354,27 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_dynamic)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_5");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_5");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_5");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_5");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -421,27 +421,27 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_6");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_6");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_6");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_6");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -488,27 +488,27 @@ TEST_F(dequant_swiglu_quant_test, test_activationScale_None_static_quantIsOne)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_7");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_7");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_7");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_7");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -1757,28 +1757,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_8");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_8");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100003000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    // //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    // //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -1824,28 +1824,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_9");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_9");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100003100);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -1891,28 +1891,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_int32_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_10");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_10");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100003200);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -1958,28 +1958,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_11");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_11");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100002000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2025,28 +2025,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_12");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_12");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100002100);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2092,28 +2092,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f32_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_13");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_13");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100002200);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2159,28 +2159,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_14");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_14");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100001000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2226,28 +2226,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_15");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_15");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100001100);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2293,28 +2293,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_f16_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_16");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_16");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100001200);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2360,28 +2360,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f32)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_17");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_17");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000000);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2427,28 +2427,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_f16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_18");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_18");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000100);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
@@ -2494,28 +2494,28 @@ TEST_F(dequant_swiglu_quant_test, test_x_int32_bias_bf16_qs_bf16)
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
-    system("chmod -R 755 ./dequant_swiglu_quant_data/");
-    system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_19");
-    system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
+    // system("cp -r ../../../../quant/dequant_swiglu_quant/tests/ut/op_kernel/dequant_swiglu_quant_data ./");
+    // system("chmod -R 755 ./dequant_swiglu_quant_data/");
+    // system("cd ./dequant_swiglu_quant_data/ && rm -rf ./*bin");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_data.py test_dequant_swiglu_quant_19");
+    // system("cd ./dequant_swiglu_quant_data/ && python3 gen_tiling.py test_dequant_swiglu_quant_bias_and_swiglugate");
 
     char * path_ = get_current_dir_name();
     string path(path_);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
-    ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_x.bin", xSize, x, xSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_weight.bin", weightScaleize, weightScale, weightScaleize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_act_scale.bin", activationScaleSize, activationScale, activationScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_bias.bin", biasSize, bias, biasSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_quant_scale.bin", quantScaleSize, quantScale, quantScaleSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/input_group_index.bin", groupIndexSize, groupIndex, groupIndexSize);
+    // ReadFile(path + "/dequant_swiglu_quant_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
     ICPU_SET_TILING_KEY(100000200);
     ICPU_RUN_KF(dequant_swiglu_quant, blockDim,
                 x, weightScale, activationScale, bias, quantScale, nullptr, groupIndex,
                 y, scale,
                 workspace, tiling);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
-    WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_y.bin", y, ySize);
+    //WriteFile(path + "/dequant_swiglu_quant_data/output_scale.bin", scale, scaleSize);
     AscendC::GmFree((void *)x);
     AscendC::GmFree((void *)weightScale);
     AscendC::GmFree((void *)activationScale);
