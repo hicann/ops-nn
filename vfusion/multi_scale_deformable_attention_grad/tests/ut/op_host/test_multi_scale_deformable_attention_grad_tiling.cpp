@@ -12,20 +12,13 @@
 #include "log/log.h"
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
-#include "register/op_tiling_registry.h"
-#include "common/utils/ut_profiling_reg.h"
-#include "nn_norm.h"
 #include "array_ops.h"
-#include "test_common.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
 #include "vfusion/multi_scale_deformable_attention_grad/op_host/multi_scale_deformable_attention_grad_tiling.h"
 #include "test_cube_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "runtime2_util.h"
 #include "kernel_run_context_facker.h"
+#include "ut_op_util.h"
+#include "platform/platform_infos_def.h"
+
 using namespace std;
 using namespace ge;
 using namespace ut_util;

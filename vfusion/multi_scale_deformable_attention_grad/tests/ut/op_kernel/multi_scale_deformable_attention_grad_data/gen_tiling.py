@@ -22,6 +22,13 @@ def gen_tiling(batch, num_heads, channels, num_levels, num_points, num_queries):
     task_per_core = (batch * num_queries - 1) // core_num + 1
     core_used = (batch * num_queries - 1) // task_per_core + 1
     task_tail_core = batch * num_queries - (core_used - 1) * task_per_core
+    data_align = 8
+    NUM_EMEBDDIM_BUFFER = 8
+    NUM_QUERIE_BUFFER = 15
+    NUM_CHANNEL_BUFFER = 13
+    num_levels_align = (num_levels + data_align - 1) // data_align * data_align
+    max_ub_num = (ub_size // 4 - 3 * num_levels_align - NUM_EMEBDDIM_BUFFER * channels) // (NUM_QUERIE_BUFFER + NUM_CHANNEL_BUFFER * channels)
+    max_ub_num = max_ub_num // data_align * data_align
     variables_dict = {
         "batch_size": batch,
         "spatial_size": spatial_size,
@@ -30,10 +37,7 @@ def gen_tiling(batch, num_heads, channels, num_levels, num_points, num_queries):
         "num_levels": num_levels,
         "num_query": num_queries,
         "num_point": num_points,
-        "task_per_core": task_per_core,
-        "task_tail_core": task_tail_core,
-        "core_used": core_used,
-        "ub_size": ub_size
+        "max_ub_num": max_ub_num
     }
 
     variables_array = [variables_dict[key] for key in variables_dict]

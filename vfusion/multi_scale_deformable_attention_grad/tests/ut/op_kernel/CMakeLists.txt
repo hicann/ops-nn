@@ -8,28 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
-message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
-foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt")
-        add_subdirectory(${SUB_DIR})
-    endif()
-endforeach()
-
-# 需要将Tiling依赖的文件添加到CMakeLists.txt中
-set(cube_common_tiling_files
-    ${CANN_ROOT}/ops/built-in/op_tiling/cube_tiling_runtime.cc
-    )
-# 算子自己的tiling文件路径
-set(moe_init_routing_v2_grad_tiling_files
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/multi_scale_deformable_attention_grad_tiling.cpp
-    ${cube_common_tiling_files}
-    )
-# 使用AddOpTestCase
-# param1：算子名称，以kernel方式命名
-# param2：soc版本，多个以分号分隔，例如："ascend910_9599;AscendB1"
-# param3：自定义编译选项，一般填写测试的一种典型数据类型组合，不需要则传入空字符串，例如："-DDTYPE_X=float"，多个使用空格分隔，例如："-DDTYPE_X=float -DDTYPE_Y=float"
-# param4：该算子依赖的所有tiling源码文件
-if (UT_TEST_ALL OR FAST_OP_UT)
-    # AddOpTestCase(multi_scale_deformable_attention_grad "ascend910B1" "-DDTYPE_X=float" "${multi_scale_deformable_attention_grad_tiling_files}")
+if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
+    AddOpTestCase(multi_scale_deformable_attention_grad "ascend910B1" "")
 endif()

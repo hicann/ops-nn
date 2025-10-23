@@ -156,7 +156,7 @@ if __name__ == "__main__":
     output1, output2, output3 = ms_scale_deform_att_grad(cpu_value_numpy, cpu_shapes_numpy, cpu_offset_nunmpy, cpu_sampling_locations_numpy,
         cpu_attention_weights_numpy, grad_output, grad_value, grad_sample_loc, grad_atten_weight)
 
-    inputs_npu = {"value":cpu_value_numpy ,"value_spatial_shapes": cpu_shapes_numpy, "level_start_index":cpu_offset_nunmpy, "sample_loc": cpu_sampling_locations_numpy,
+    inputs_npu = {"value":cpu_value_numpy ,"value_spatial_shape": cpu_shapes_numpy, "level_start_index":cpu_offset_nunmpy, "sample_loc": cpu_sampling_locations_numpy,
                   "attention_weight":cpu_attention_weights_numpy, "grad_output": grad_output}
     outputs_npu = {"grad_value":output1, "grad_sample_loc":output2, "grad_attn_weight":output3}
     write_file(inputs_npu, outputs_npu)

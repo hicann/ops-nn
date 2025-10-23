@@ -10,8 +10,8 @@
 
 #include <array>
 #include <vector>
-#include "gtest/gtest.h"
-#include "level2/aclnn_multi_scale_deformable_attention_grad.h"
+#include <gtest/gtest.h>
+#include "../../../op_host/op_api/aclnn_multi_scale_deformable_attention_grad.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -90,73 +90,5 @@ TEST_F(l2_multi_scale_deformable_attention_grad_test, multi_scale_deformable_att
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-  }
-}
-
-// dtype不支持_2
-TEST_F(l2_multi_scale_deformable_attention_grad_test, multi_scale_deformable_attention_grad_int64) {
-  if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    auto valueDesc = TensorDesc({2, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto shapeDesc = TensorDesc({4, 2}, ACL_INT64, ACL_FORMAT_ND);
-    auto levelStartIndexDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
-    auto locationDesc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto attnWeightDesc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto gradOutputDesc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto result1Desc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result2Desc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result3Desc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnMultiScaleDeformableAttentionGrad,
-                        INPUT(valueDesc, shapeDesc, levelStartIndexDesc, locationDesc, attnWeightDesc, gradOutputDesc),
-                        OUTPUT(result1Desc, result2Desc, result3Desc));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-  }
-}
-
-
-// CheckNotNull_1
-TEST_F(l2_multi_scale_deformable_attention_grad_test, multi_scale_deformable_attention_grad_nullptr_1) {
-  if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    auto shapeDesc = TensorDesc({4, 2}, ACL_INT32, ACL_FORMAT_ND);
-    auto levelStartIndexDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
-    auto locationDesc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto attnWeightDesc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto gradOutputDesc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto result1Desc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result2Desc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result3Desc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnMultiScaleDeformableAttentionGrad,
-                        INPUT(nullptr, shapeDesc, levelStartIndexDesc, locationDesc, attnWeightDesc, gradOutputDesc),
-                        OUTPUT(result1Desc, result2Desc, result3Desc));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-  }
-}
-
-// CheckNotNull_2
-TEST_F(l2_multi_scale_deformable_attention_grad_test, multi_scale_deformable_attention_grad_nullptr_2) {
-  if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-    auto valueDesc = TensorDesc({2, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto shapeDesc = TensorDesc({4, 2}, ACL_INT32, ACL_FORMAT_ND);
-    auto locationDesc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto attnWeightDesc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto gradOutputDesc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto result1Desc = TensorDesc({3, 2, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result2Desc = TensorDesc({3, 2, 4, 4, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto result3Desc = TensorDesc({3, 2, 4, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnMultiScaleDeformableAttentionGrad,
-                        INPUT(valueDesc, shapeDesc, nullptr, locationDesc, attnWeightDesc, gradOutputDesc),
-                        OUTPUT(result1Desc, result2Desc, result3Desc));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
   }
 }

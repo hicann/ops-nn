@@ -14,10 +14,12 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include "experiment_ops.h"
-#include "op_proto_test_util.h"
-#include "common/utils/ut_op_common.h"
+#include "ut_op_common.h"
+#include "ut_op_util.h"
+#include "infershape_test_util.h"
+#include "util/math_util.h"
 #include "register/op_impl_registry.h"
+#include "../../../op_graph/multi_scale_deformable_attn_function_proto.h"
 
 class MultiScaleDeformableAttnFunProto : public testing::Test {
 protected:
