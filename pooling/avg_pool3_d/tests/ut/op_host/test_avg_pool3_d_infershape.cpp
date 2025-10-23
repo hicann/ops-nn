@@ -12,7 +12,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "register/op_impl_registry.h"
-#include "register/op_impl_registry_base.h"
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
@@ -57,14 +56,14 @@ TEST_P(AvgPool3DRuntimeProtoTest, general_cases) {
                       .IrInstanceNum({1, 1})
                       .NodeInputTd(0, ge::DT_FLOAT16, param.x_ori_format, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, param.y_ori_format, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>(param.ksize)},
-                                  {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
-                                  {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
-                                  {"ceil_mode", ge::AnyValue::CreateFrom<bool>(param.ceil_mode)},
-                                  {"count_include_pad", ge::AnyValue::CreateFrom<bool>(true)},
-                                  {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                                  {"data_format", ge::AnyValue::CreateFrom<std::string>(param.data_format)},
-                                  {"padding", ge::AnyValue::CreateFrom<std::string>(param.padding)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(param.ceil_mode)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
                       .InputShapes({&x_shape})
                       .OutputShapes({&y_shape})
                       .Build();

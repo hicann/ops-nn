@@ -18,7 +18,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -55,7 +54,7 @@ protected:
 
 void TestMaxPool3dGradWithArgmaxTiling(
     gert::StorageShape& xShape, gert::StorageShape& gradShape, gert::StorageShape& argmaxShape,
-    gert::StorageShape& dxShape, std::vector<std::pair<std::string, ge::AnyValue>>& AttrList, ge::DataType dataType,
+    gert::StorageShape& dxShape, std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType dataType,
     uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
@@ -143,12 +142,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0)
     gert::StorageShape gradShape = {{1, 40, 16, 45, 80}, {1, 40, 16, 45, 80}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 45, 80}, {1, 40, 16, 45, 80}};
     gert::StorageShape dxShape = {{1, 40, 16, 90, 160}, {1, 40, 16, 90, 160}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -159,12 +158,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{1, 40, 16, 4, 4}, {1, 40, 16, 4, 4}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 4, 4}, {1, 40, 16, 4, 4}};
     gert::StorageShape dxShape = {{1, 40, 16, 9, 9}, {1, 40, 16, 9, 9}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 3, 3})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 3, 3})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 100);
 }
 
@@ -175,12 +174,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{1, 40, 16, 8, 8}, {1, 40, 16, 8, 8}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 8, 8}, {1, 40, 16, 8, 8}};
     gert::StorageShape dxShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -191,12 +190,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
     gert::StorageShape argmaxShape = {{1, 40, 16, 16, 16}, {1, 40, 16, 16, 16}};
     gert::StorageShape dxShape = {{1, 40, 16, 32, 32}, {1, 40, 16, 32, 32}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -207,12 +206,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{64, 40, 1, 2, 2}, {64, 40, 1, 2, 2}};
     gert::StorageShape argmaxShape = {{64, 40, 1, 2, 2}, {64, 40, 1, 2, 2}};
     gert::StorageShape dxShape = {{64, 40, 1, 4, 4}, {64, 40, 1, 4, 4}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -223,12 +222,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
     gert::StorageShape argmaxShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
     gert::StorageShape dxShape = {{64, 40, 1, 15, 15}, {64, 40, 1, 15, 15}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 9, 9})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 4, 4})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 9, 9})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 4, 4})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -239,12 +238,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0_ca
     gert::StorageShape gradShape = {{64, 1, 1, 2, 200}, {64, 1, 1, 2, 200}};
     gert::StorageShape argmaxShape = {{64, 1, 1, 2, 200}, {64, 1, 1, 2, 200}};
     gert::StorageShape dxShape = {{64, 1, 1, 4, 400}, {64, 1, 1, 4, 400}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -256,12 +255,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_n
     gert::StorageShape gradShape = {{64, 48, 1, 6, 8}, {64, 48, 1, 6, 8}};
     gert::StorageShape argmaxShape = {{64, 48, 1, 6, 8}, {64, 48, 1, 6, 8}};
     gert::StorageShape dxShape = {{64, 48, 10, 78, 146}, {64, 48, 10, 78, 146}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({5, 1, 6})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({8, 13, 18})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 1})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({5, 1, 6})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({8, 13, 18})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 1})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 31);
 }
 
@@ -273,12 +272,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_31_n
     gert::StorageShape gradShape = {{64, 1, 1, 6, 8}, {64, 1, 1, 6, 8}};
     gert::StorageShape argmaxShape = {{64, 1, 1, 6, 8}, {64, 1, 1, 6, 8}};
     gert::StorageShape dxShape = {{64, 1, 10, 78, 146}, {64, 1, 10, 78, 146}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({5, 1, 6})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({8, 13, 18})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 1})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({5, 1, 6})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({8, 13, 18})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 1})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 31);
 }
 
@@ -289,12 +288,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
     gert::StorageShape gradShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape dxShape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 0);
 }
 
@@ -305,12 +304,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
     gert::StorageShape gradShape = {{1, 16, 3, 3, 3}, {1, 16, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 16, 3, 3, 3}, {1, 16, 3, 3, 3}};
     gert::StorageShape dxShape = {{1, 16, 6, 6, 6}, {1, 16, 6, 6, 6}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT16, 0);
 }
 
@@ -321,12 +320,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1000
     gert::StorageShape gradShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape argmaxShape = {{1, 8, 3, 3, 3}, {1, 8, 3, 3, 3}};
     gert::StorageShape dxShape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_BF16, 0);
 }
 
@@ -337,12 +336,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1100
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape dxShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -353,12 +352,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2100
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape dxShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT16, 2);
 }
 
@@ -369,12 +368,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1100
     gert::StorageShape gradShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape argmaxShape = {{1, 8, 5, 5, 4}, {1, 8, 5, 5, 4}};
     gert::StorageShape dxShape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({3, 3, 3})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_BF16, 2);
 }
 
@@ -385,12 +384,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1110
     gert::StorageShape gradShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape dxShape = {{1, 8, 64, 64, 64}, {1, 8, 64, 64, 64}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -401,12 +400,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2110
     gert::StorageShape gradShape = {{1, 16, 32, 32, 31}, {1, 16, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 16, 32, 32, 31}, {1, 16, 32, 32, 31}};
     gert::StorageShape dxShape = {{1, 16, 64, 64, 64}, {1, 16, 64, 64, 64}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT16, 2);
 }
 
@@ -417,12 +416,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1110
     gert::StorageShape gradShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape argmaxShape = {{1, 8, 32, 32, 31}, {1, 8, 32, 32, 31}};
     gert::StorageShape dxShape = {{1, 8, 64, 64, 64}, {1, 8, 64, 64, 64}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_BF16, 2);
 }
 
@@ -433,12 +432,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1111
     gert::StorageShape gradShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape dxShape = {{1, 8, 16, 16, 1024}, {1, 8, 16, 16, 1024}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -449,12 +448,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2111
     gert::StorageShape gradShape = {{1, 16, 8, 8, 511}, {1, 16, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 16, 8, 8, 511}, {1, 16, 8, 8, 511}};
     gert::StorageShape dxShape = {{1, 16, 16, 16, 1024}, {1, 16, 16, 16, 1024}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT16, 2);
 }
 
@@ -465,12 +464,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_1111
     gert::StorageShape gradShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape argmaxShape = {{1, 8, 8, 8, 511}, {1, 8, 8, 8, 511}};
     gert::StorageShape dxShape = {{1, 8, 16, 16, 1024}, {1, 8, 16, 16, 1024}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_BF16, 2);
 }
 
@@ -481,12 +480,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     gert::StorageShape gradShape = {{4, 1, 8, 6, 24}, {4, 1, 8, 6, 24}};
     gert::StorageShape argmaxShape = {{4, 1, 8, 6, 24}, {4, 1, 8, 6, 24}};
     gert::StorageShape dxShape = {{4, 1, 190, 126, 96}, {4, 1, 190, 126, 96}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -497,12 +496,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     gert::StorageShape gradShape = {{256, 4, 8, 6, 24}, {256, 4, 8, 6, 24}};
     gert::StorageShape argmaxShape = {{256, 4, 8, 6, 24}, {256, 4, 8, 6, 24}};
     gert::StorageShape dxShape = {{256, 4, 190, 126, 96}, {256, 4, 190, 126, 96}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({22, 19, 4})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -513,12 +512,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     gert::StorageShape gradShape = {{1, 1, 160, 6, 24}, {1, 1, 160, 6, 24}};
     gert::StorageShape argmaxShape = {{1, 1, 160, 6, 24}, {1, 1, 160, 6, 24}};
     gert::StorageShape dxShape = {{1, 1, 3200, 126, 96}, {1, 1, 3200, 126, 96}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({20, 19, 4})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({20, 19, 4})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({20, 19, 4})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({20, 19, 4})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -529,12 +528,12 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     gert::StorageShape gradShape = {{1, 1, 1, 1300, 20}, {1, 1, 1, 1300, 20}};
     gert::StorageShape argmaxShape = {{1, 1, 1, 1300, 20}, {1, 1, 1, 1300, 20}};
     gert::StorageShape dxShape = {{1, 1, 1, 26000, 960}, {1, 1, 1, 26000, 960}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 20, 48})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 20, 48})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 20, 48})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 20, 48})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -545,11 +544,11 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_2_ca
     gert::StorageShape gradShape = {{1, 1, 1, 1, 60000}, {1, 1, 1, 1, 60000}};
     gert::StorageShape argmaxShape = {{1, 1, 1, 1, 60000}, {1, 1, 1, 1, 60000}};
     gert::StorageShape dxShape = {{1, 1, 1, 40, 2400000}, {1, 1, 1, 40, 2400000}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {
-        {"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 40, 40})},
-        {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 40, 40})},
-        {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-        {"dilation", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-        {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)}};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {
+        {"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 40, 40})},
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 40, 40})},
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+        {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+        {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}};
     TestMaxPool3dGradWithArgmaxTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }

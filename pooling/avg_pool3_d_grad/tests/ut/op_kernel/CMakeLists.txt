@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(avg_pool3_d_grad "ascend910B1" "")
 endif()

@@ -22,7 +22,6 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
 #include "log/log.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
@@ -114,9 +113,9 @@ TEST_F(FakeQuantAffineCachemaskTiling, test_fake_quant_affine_cachemask_float32)
                       .OutputShapes({&y_shape, &mask_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"quant_min", ge::AnyValue::CreateFrom<int64_t>(-200)},
-                           {"quant_max", ge::AnyValue::CreateFrom<int64_t>(200)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"quant_min", Ops::NN::AnyValue::CreateFrom<int64_t>(-200)},
+                           {"quant_max", Ops::NN::AnyValue::CreateFrom<int64_t>(200)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -204,9 +203,9 @@ TEST_F(FakeQuantAffineCachemaskTiling, test_fake_quant_affine_cachemask_float16)
                       .OutputShapes({&y_shape, &mask_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"quant_min", ge::AnyValue::CreateFrom<int64_t>(-200)},
-                           {"quant_max", ge::AnyValue::CreateFrom<int64_t>(200)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"quant_min", Ops::NN::AnyValue::CreateFrom<int64_t>(-200)},
+                           {"quant_max", Ops::NN::AnyValue::CreateFrom<int64_t>(200)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

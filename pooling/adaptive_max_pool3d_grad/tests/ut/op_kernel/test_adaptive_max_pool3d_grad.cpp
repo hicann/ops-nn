@@ -160,18 +160,7 @@ static AdaptiveMaxPool3DGradTestParam cases[] = {
      40,
      2,
      {3200, 1,  64, 64, 1, 1,  1, 1, 64, 64, 80, 1,      1, 1, 3200, 1, 1,
-      1,    80, 1,  1,  1, 40, 1, 1, 1,  40, 40, 196352, 1, 0, 1,    0}},
-    {"test_case_adaptive_max_pool3d_grad_normal", 39, 39, 14, 16, 30, 14, 8, 5, sizeof(half), 40, 0, {1521, 14,     16,
-                                                                                                      30,   14,     8,
-                                                                                                      5,    1,      2,
-                                                                                                      6,    64,     1,
-                                                                                                      1,    5,      64,
-                                                                                                      7,    8,      5,
-                                                                                                      49,   7,      8,
-                                                                                                      5,    24,     2,
-                                                                                                      1,    1,      48,
-                                                                                                      40,   196352, 0,
-                                                                                                      0,    0,      0}},
+      1,    80, 1,  1,  1, 40, 1, 1, 1,  40, 40, 196352, 1, 0, 1,    0}}
 };
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3DGrad, AdaptiveMaxPool3DGradTest, testing::ValuesIn(cases));

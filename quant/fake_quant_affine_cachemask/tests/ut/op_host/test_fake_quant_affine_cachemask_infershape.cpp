@@ -15,12 +15,9 @@
 
 #include <gtest/gtest.h>
 #include <vector>
-#include "graph/utils/graph_utils.h"
 
 #include "infershape_test_util.h"
-#include "graph/operator_factory_impl.h"
 #include "ut_op_common.h"
-#include "graph/utils/op_desc_utils.h"
 #include "../../../op_graph/fake_quant_affine_cachemask_proto.h"
 
 class FakeQuantAffineCachemaskTest : public testing::Test

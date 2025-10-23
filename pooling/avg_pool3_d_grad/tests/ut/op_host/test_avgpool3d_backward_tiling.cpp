@@ -21,7 +21,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
@@ -134,13 +133,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_0)
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", ge::AnyValue::CreateFrom<string>("NDHWC")}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -220,13 +219,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_1)
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", ge::AnyValue::CreateFrom<string>("NDHWC")}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -308,13 +307,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_3)
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", ge::AnyValue::CreateFrom<string>("NDHWC")}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -395,13 +394,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_4)
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", ge::AnyValue::CreateFrom<string>("NCDHW")}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -482,13 +481,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_5)
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", ge::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", ge::AnyValue::CreateFrom<string>("NCDHW")}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)

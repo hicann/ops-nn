@@ -12,9 +12,7 @@
 #include <iostream>
 #include "../../../op_graph/adaptive_avg_pool3d_proto.h"
 #include "infershape_test_util.h"
-#include "graph/operator_factory_impl.h"
 #include "ut_op_common.h"
-#include "graph/utils/op_desc_utils.h"
 
 using namespace ge;
 

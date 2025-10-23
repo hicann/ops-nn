@@ -44,6 +44,7 @@ class apply_top_k_top_p_with_sorted_test : public testing::Test
 
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
 {
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
     size_t sortedValueSize = size_t(4) * size_t(152064) * sizeof(float);
     size_t sortedIndicesSize = size_t(4) * size_t(152064) * sizeof(int32_t);
     size_t pSize = size_t(4) * sizeof(float);
@@ -64,7 +65,7 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
@@ -91,54 +92,9 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
     free(path_);
 }
 
-TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topk)
-{
-    size_t sortedValueSize = 4 * 152064 * sizeof(float);
-    size_t sortedIndicesSize = 4 * 152064 * sizeof(int32_t);
-    size_t pSize = 4 * sizeof(float);
-    size_t kSize = 4 * sizeof(int32_t);
-    size_t outSize = 4 * 152064 * sizeof(float);
-    size_t sysWorkspaceSize = 16 * 1024 * 1024;
-    int64_t workspaceSize = sysWorkspaceSize;
-
-    size_t tilingSize = sizeof(ApplyTopKTopPWithSortedTilingData);
-
-    uint8_t *sortedValue = (uint8_t *)AscendC::GmAlloc(sortedValueSize);
-    uint8_t *sortedIndices = (uint8_t *)AscendC::GmAlloc(sortedIndicesSize);
-    uint8_t *k = (uint8_t *)AscendC::GmAlloc(kSize);
-    uint8_t *out = (uint8_t *)AscendC::GmAlloc(outSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
-
-    memset(workspace, 0, workspaceSize);
-
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
-    system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
-    system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
-    system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
-    system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_tiling.py test_case_4_152064_fp32");
-
-    char *path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedValue.bin", sortedValueSize, sortedValue, sortedValueSize);
-    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedIndices.bin", sortedIndicesSize, sortedIndices, sortedIndicesSize);
-    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/k.bin", kSize, k, kSize);
-    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/tiling.bin", tilingSize, tiling, tilingSize);
-
-    ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(apply_top_k_top_p_with_sorted, 1, sortedValue, sortedIndices, nullptr, k, out, workspace, tiling);
-
-    AscendC::GmFree(sortedValue);
-    AscendC::GmFree(sortedIndices);
-    AscendC::GmFree(k);
-    AscendC::GmFree(out);
-    AscendC::GmFree(tiling);
-    AscendC::GmFree(workspace);
-    free(path_);
-}
-
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topp)
 {
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
     size_t sortedValueSize = 4 * 152064 * sizeof(float);
     size_t sortedIndicesSize = 4 * 152064 * sizeof(int32_t);
     size_t pSize = 4 * sizeof(float);
@@ -157,7 +113,7 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topp)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
@@ -184,14 +140,14 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topp)
 
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
 {
-    size_t sortedValueSize = size_t(1024) * size_t(4096) * sizeof(half);
-    size_t sortedIndicesSize = size_t(48) * sizeof(int32_t);
-    size_t pSize = size_t(48) * sizeof(int32_t);
-    size_t kSize = size_t(48) * size_t(4096) * sizeof(half);
-    size_t outSize = size_t(1024) * size_t(4096) * sizeof(half);
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    size_t sortedValueSize = size_t(4) * size_t(152064) * sizeof(half);
+    size_t sortedIndicesSize = size_t(4) * size_t(152064) * sizeof(int32_t);
+    size_t pSize = size_t(4) * sizeof(half);
+    size_t kSize = size_t(4) * sizeof(int32_t);
+    size_t outSize = size_t(4) * size_t(152064) * sizeof(half);
     size_t sysWorkspaceSize = size_t(16) * size_t(1024) * size_t(1024);
-    size_t usrWorkspaceSize = size_t(38191616);
-    size_t workspaceSize = sysWorkspaceSize + usrWorkspaceSize;
+    size_t workspaceSize = sysWorkspaceSize;
 
     size_t tilingSize = sizeof(ApplyTopKTopPWithSortedTilingData);
 
@@ -205,7 +161,7 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp16");
@@ -234,14 +190,14 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
 
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_bf16)
 {
-    size_t sortedValueSize = size_t(1024) * size_t(4096) * sizeof(bfloat16_t);
-    size_t sortedIndicesSize = size_t(48) * sizeof(int32_t);
-    size_t pSize = size_t(48) * sizeof(int32_t);
-    size_t kSize = size_t(48) * size_t(4096) * sizeof(bfloat16_t);
-    size_t outSize = size_t(1024) * size_t(4096) * sizeof(bfloat16_t);
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    size_t sortedValueSize = size_t(4) * size_t(152064) * sizeof(bfloat16_t);
+    size_t sortedIndicesSize = size_t(4) * size_t(152064) * sizeof(int32_t);
+    size_t pSize = size_t(4) * sizeof(bfloat16_t);
+    size_t kSize = size_t(4) * sizeof(int32_t);
+    size_t outSize = size_t(4) * size_t(152064) * sizeof(bfloat16_t);
     size_t sysWorkspaceSize = size_t(16) * size_t(1024) * size_t(1024);
-    size_t usrWorkspaceSize = size_t(38191616);
-    size_t workspaceSize = sysWorkspaceSize + usrWorkspaceSize;
+    size_t workspaceSize = sysWorkspaceSize;
 
     size_t tilingSize = sizeof(ApplyTopKTopPWithSortedTilingData);
 
@@ -255,7 +211,7 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_bf16)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 bf16");

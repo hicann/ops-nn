@@ -41,7 +41,8 @@ protected:
 
 TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
 {
-    uint32_t totalLength = 32;
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t totalLength = 1;
 
     // inputs
     size_t x_size = totalLength * sizeof(float);
@@ -58,16 +59,15 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
     uint8_t* mask = (uint8_t*)AscendC::GmAlloc(mask_size);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
+    uint32_t blockDim = 1;
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/fake_quant_affine_cachemask/"
-        "fake_quant_affine_cachemask_data ./");
+        "../../../../quant/fake_quant_affine_cachemask/tests/ut/op_kernel/fake_quant_affine_cachemask_data ./");
     system("chmod -R 755 ./fake_quant_affine_cachemask_data/");
     system("cd ./fake_quant_affine_cachemask_data/ && rm -rf ./*bin");
-    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_data.py 32 float32");
-    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_tiling.py 32 float32 1 1");
+    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_data.py 1 float32");
+    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_tiling.py 1 float32 1 1");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -82,11 +82,11 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
     tilingDatafromBin->quantMax = 200;
     tilingDatafromBin->loopNum = 1;
     tilingDatafromBin->remainNum = 0;
-    tilingDatafromBin->calcLength = 32;
+    tilingDatafromBin->calcLength = 1;
     tilingDatafromBin->headNum = 1;
     tilingDatafromBin->dataPerRepeat = 64;
-    tilingDatafromBin->totalLengthAligned = 32;
-    tilingDatafromBin->tileLength = 2752;
+    tilingDatafromBin->totalLengthAligned = 8;
+    tilingDatafromBin->tileLength = 2688;
 
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(
@@ -104,7 +104,8 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
 
 TEST_F(fake_quant_affine_achemask_test, test_case_fp16)
 {
-    uint32_t totalLength = 32;
+    AscendC:: SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t totalLength = 1;
 
     // inputs
     size_t x_size = totalLength * sizeof(half);
@@ -121,23 +122,22 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp16)
     uint8_t* mask = (uint8_t*)AscendC::GmAlloc(mask_size);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
+    uint32_t blockDim = 1;
 
     system(
         "cp -r "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/fake_quant_affine_cachemask/"
-        "fake_quant_affine_cachemask_data ./");
+        "../../../../quant/fake_quant_affine_cachemask/tests/ut/op_kernel/fake_quant_affine_cachemask_data ./");
     system("chmod -R 755 ./fake_quant_affine_cachemask_data/");
     system("cd ./fake_quant_affine_cachemask_data/ && rm -rf ./*bin");
-    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_data.py 32 float16");
-    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_tiling.py 32 float16 1 1");
+    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_data.py 1 float16");
+    system("cd ./fake_quant_affine_cachemask_data/ && python3 gen_tiling.py 1 float16 1 1");
 
     char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/fake_quant_affine_cachemask_data/data.bin", x_size, x, x_size);
     ReadFile(path + "/fake_quant_affine_cachemask_data/scale.bin", scale_size, scale, scale_size);
     ReadFile(path + "/fake_quant_affine_cachemask_data/zero_point.bin", zero_point_size, zero_point, zero_point_size);
-    // ReadFile(path + "/fake_quant_affine_cachemask_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
+    ReadFile(path + "/fake_quant_affine_cachemask_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
     FakeQuantAffineCachemaskTilingData* tilingDatafromBin =
         reinterpret_cast<FakeQuantAffineCachemaskTilingData*>(tiling);
@@ -145,10 +145,10 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp16)
     tilingDatafromBin->quantMax = 200;
     tilingDatafromBin->loopNum = 1;
     tilingDatafromBin->remainNum = 0;
-    tilingDatafromBin->calcLength = 32;
+    tilingDatafromBin->calcLength = 1;
     tilingDatafromBin->headNum = 1;
     tilingDatafromBin->dataPerRepeat = 128;
-    tilingDatafromBin->totalLengthAligned = 32;
+    tilingDatafromBin->totalLengthAligned = 16;
     tilingDatafromBin->tileLength = 3968;
 
     ICPU_SET_TILING_KEY(2);

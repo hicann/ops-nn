@@ -18,7 +18,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -48,7 +47,7 @@ protected:
 
 void TestAdaptiveMaxPool3DGradTiling(
     gert::StorageShape& xShape, gert::StorageShape& gradShape, gert::StorageShape& argmaxShape,
-    gert::StorageShape& dxShape, std::vector<std::pair<std::string, ge::AnyValue>>& AttrList, ge::DataType dataType,
+    gert::StorageShape& dxShape, std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType dataType,
     uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
@@ -137,7 +136,7 @@ TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_2_network
     gert::StorageShape gradShape = {{5, 640, 1, 1, 1}, {5, 640, 1, 1, 1}};
     gert::StorageShape argmaxShape = {{5, 640, 1, 1, 1}, {5, 640, 1, 1, 1}};
     gert::StorageShape dxShape = {{5, 640, 1, 64, 64}, {5, 640, 1, 64, 64}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {};
     TestAdaptiveMaxPool3DGradTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT, 2);
 }
 
@@ -149,6 +148,6 @@ TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_0_network
     gert::StorageShape gradShape = {{39, 39, 14, 8, 5}, {39, 39, 14, 8, 5}};
     gert::StorageShape argmaxShape = {{39, 39, 14, 8, 5}, {39, 39, 14, 8, 5}};
     gert::StorageShape dxShape = {{39, 39, 14, 16, 30}, {39, 39, 14, 16, 30}};
-    std::vector<std::pair<std::string, ge::AnyValue>> attrList = {};
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {};
     TestAdaptiveMaxPool3DGradTiling(xShape, gradShape, argmaxShape, dxShape, attrList, ge::DT_FLOAT16, 0);
 }

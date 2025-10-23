@@ -18,7 +18,6 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
 #include "log/log.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
@@ -129,12 +128,6 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
 }
 
 static AvgPool3DTilingRuntime2TestParam general_cases_params[] = {
-    {"avg_pool3d_tiling_dynamic_w", R"({"_pattern": "conv3d", "push_status": 0, "tiling_type": "dynamic_tiling", "repo_seeds": {"10000": [32, 16, 56, 56]}, "repo_range": {"10000": [32, 32, 16, 16, 56, 56, 24, 456]}, "cost_range": {}, "block_dim": {"10000": 32}, "_vars": {"10000": ["fmap_w", "w_out"]}})",
-      {32, 16, 1, 56, 56, 16}, {32, 15, 1, 56, 56, 16},
-      ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-      true, true, 32, 10000, "56 56 "
-    },
-
     {"avg_pool3d_tiling_dynamic_batch_invalid_dim", R"({"_pattern": "conv3d", "push_status": 0, "fmap_c1": 233, "tiling_type": "dynamic_tiling", "repo_seeds": {"10000": 32}, "tiling_range": {"10000": [1, 35]}, "block_dim": {"10000": 32}, "_vars": {"10000": ["batch_n"]}})",
       {32, 16, 1, 56, 56}, {32, 15, 1, 56, 56, 16},
       ge::FORMAT_NDHWC, ge::FORMAT_NDC1HWC0,

@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(max_pool3d_grad_with_argmax  "ascend910B1" "-DDTYPE_X=float -DDTYPE_GRAD=float -DDTYPE_ARGMAX=int32_t -DDTYPE_Y=float")
 endif()

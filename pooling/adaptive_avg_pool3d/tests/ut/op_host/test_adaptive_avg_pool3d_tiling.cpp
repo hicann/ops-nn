@@ -16,7 +16,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
@@ -134,7 +133,7 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, param.data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"output_size", ge::AnyValue::CreateFrom<vector<int64_t>>(output_size)}})
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(output_size)}})
                       .TilingData(tiling_data.get())
                       .Workspace(ws_size)
                       .Build();

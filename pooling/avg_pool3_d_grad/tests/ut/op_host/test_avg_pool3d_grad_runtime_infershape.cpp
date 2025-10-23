@@ -13,7 +13,6 @@
 #include "gtest/gtest.h"
 #include "kernel_run_context_facker.h"
 // #include "matrix_calculation_ops.h"
-#include "register/op_impl_registry_base.h"
 #include "register/op_impl_registry.h"
 // #include "error_util.h"
 #include "../../../op_graph/avg_pool3_d_grad_proto.h"
@@ -77,10 +76,10 @@ TEST_F(AvgPool3DGradRuntimeProtoTest, basic)
                       .InputShapes({tensor, &grads_shape})
                       .OutputShapes({&output_shape})
                       .NodeAttrs(
-                          {{"ksize", ge::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>(data_format)}})
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
