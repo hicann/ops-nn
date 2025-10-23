@@ -223,6 +223,9 @@ private:
         selectShapeInfo.firstAxis = linePerIter;
         selectShapeInfo.srcLastAxis = tilingData.padLineNum;
         selectShapeInfo.maskLastAxis = tilingData.alignedMaskWidth;
+        scaledMaskedX.SetSize(selectShapeInfo.firstAxis * selectShapeInfo.srcLastAxis);
+        xTensor.SetSize(selectShapeInfo.firstAxis * selectShapeInfo.srcLastAxis);
+        maskTensor.SetSize(selectShapeInfo.firstAxis * selectShapeInfo.maskLastAxis);
         if constexpr (std::is_same<T, bfloat16_t>::value) {
             Cast(scaledMaskedX, xTensor, RoundMode::CAST_NONE, this->elePerIter);
             Muls(scaledMaskedX, scaledMaskedX, static_cast<float>(scale), this->elePerIter);
@@ -241,6 +244,7 @@ private:
         }
 
         LocalTensor<T> yTensor = outQueueY.AllocTensor<T>();
+        yTensor.SetSize(selectShapeInfo.firstAxis * selectShapeInfo.srcLastAxis);
         if constexpr (!std::is_same<T, float>::value) {
             SoftmaxX(scaledMaskedX, scaledMaskedX, sharedBuffer, linePerIter);
             Cast(yTensor, scaledMaskedX, RoundMode::CAST_RINT, this->elePerIter);

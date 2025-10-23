@@ -70,6 +70,7 @@ struct ScaledMaskedSoftmaxV2TilingData {
     (tilingData).batch = tilingDataPointer->batch;                                       \
     (tilingData).channel = tilingDataPointer->channel;                                   \
     (tilingData).height = tilingDataPointer->height;                                     \
+    (tilingData).width = tilingDataPointer->width;                                       \
     (tilingData).maskBatch = tilingDataPointer->maskBatch;                               \
     (tilingData).maskChannel = tilingDataPointer->maskChannel;                           \
     (tilingData).maskHeight = tilingDataPointer->maskHeight;                             \
