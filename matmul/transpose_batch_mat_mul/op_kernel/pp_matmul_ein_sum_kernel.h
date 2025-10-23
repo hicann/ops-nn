@@ -27,7 +27,6 @@ using __bf16 = bfloat16_t;
 #include "utils/common.h"
 #include "utils/hardware.h"
 #include "utils/iterator.h"
-#include "utils/mma.h"
 #include "utils/utils.h"
 #include "pp_matmul_common.h"
 
@@ -41,7 +40,6 @@ class PpMatmulEinSum {
     using CopyGmToCbuf = gm_to_l1<ArchType::ASCEND_V220, InDtype, srcFormat, dstFormat>;
     using LoadCbufToCa = l1_to_l0_a<ArchType::ASCEND_V220, InDtype, TA, DataFormat::ZN, DataFormat::ZZ>;
     using LoadCbufToCb = l1_to_l0_b<ArchType::ASCEND_V220, InDtype, TB, DataFormat::ZN, DataFormat::NZ>;
-    using Mad = mmad<ArchType::ASCEND_V220, InDtype, InDtype, float, TA>;
     using CopyCcToGm = l0c_to_gm<ArchType::ASCEND_V220, DataFormat::ND, OutDtype, float>;
 public:
     __aicore__ explicit PpMatmulEinSum(){};
@@ -579,21 +577,25 @@ public:
                     }
 
                     if (m != 1 && m_actual == 1 && TA) {
-                        Mad(l0c_buf,   // c
-                            l0a_buf,   // a
-                            l0b_buf,   // b
-                            CONST_16,  // mTileActual
-                            n_actual,  // nTileActual
-                            k0_actual, // kTileActual
-                            init_c);   // initC
+                        AscendC::Mmad(l0c_buf,                       // C
+                                      l0a_buf,                       // A
+                                      l0b_buf,                       // B
+                                      AscendC::MmadParams(CONST_16,  // m
+                                                          n_actual,  // n
+                                                          k0_actual, // k
+                                                          0,         // unitFlag
+                                                          false,     // cmatrixSource
+                                                          init_c));  // cmatrixInitVal
                     } else {
-                        Mad(l0c_buf,   // c
-                            l0a_buf,   // a
-                            l0b_buf,   // b
-                            m_actual,  // mTileActual
-                            n_actual,  // nTileActual
-                            k0_actual, // kTileActual
-                            init_c);   // initC
+                        AscendC::Mmad(l0c_buf,                       // C
+                                      l0a_buf,                       // A
+                                      l0b_buf,                       // B
+                                      AscendC::MmadParams(m_actual,  // m
+                                                          n_actual,  // n
+                                                          k0_actual, // k
+                                                          0,         // unitFlag
+                                                          false,     // cmatrixSource
+                                                          init_c));  // cmatrixInitVal
                     }
 
                     PIPE_BARRIER(M);
