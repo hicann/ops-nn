@@ -15,7 +15,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "test_scatter_elements_v2_tiling_def.h"
+#include "../../../op_host/scatter_elements_v2_tiling.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
@@ -52,7 +52,7 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     size_t indices_size = data_size * sizeof(long);
     size_t src_size = data_size * sizeof(float);
     size_t output_size = data_size * sizeof(float);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
+    size_t tiling_data_size = sizeof(ScatterElementsV2TilingData);
 
     uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
     uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
@@ -63,7 +63,7 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     uint32_t blockDim = 32;
 
     system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
+        "cp -r ../../../../index/scatter_elements_v2/tests/ut/op_kernel/scatter_elements_v2_data "
         "./");
     system("chmod -R 755 ./scatter_elements_v2_data/");
     system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
@@ -77,298 +77,22 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
     ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
+    ScatterElementsV2TilingData* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(111);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(112);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(121);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(122);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(src);
-    AscendC::GmFree(output);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(scatter_elements_v2_test, test_case_fp16)
-{
-    // inputs
-    size_t data_size = 128 * 59;
-    size_t var_size = data_size * sizeof(half);
-    size_t indices_size = data_size * sizeof(long);
-    size_t src_size = data_size * sizeof(half);
-    size_t output_size = data_size * sizeof(half);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
-    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
-
-    system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py float16");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
-    ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
-    ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
-    ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
-
-    ICPU_SET_TILING_KEY(211);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(212);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(221);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(222);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(src);
-    AscendC::GmFree(output);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(scatter_elements_v2_test, test_case_int32)
-{
-    // inputs
-    size_t data_size = 128 * 59;
-    size_t var_size = data_size * sizeof(int);
-    size_t indices_size = data_size * sizeof(long);
-    size_t src_size = data_size * sizeof(int);
-    size_t output_size = data_size * sizeof(int);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
-    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
-
-    system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py int32");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
-    ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
-    ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
-    ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
-
-    ICPU_SET_TILING_KEY(311);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(312);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(321);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(322);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(src);
-    AscendC::GmFree(output);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(scatter_elements_v2_test, test_case_uint8)
-{
-    // inputs
-    size_t data_size = 128 * 59;
-    size_t var_size = data_size * sizeof(uint8_t);
-    size_t indices_size = data_size * sizeof(long);
-    size_t src_size = data_size * sizeof(uint8_t);
-    size_t output_size = data_size * sizeof(uint8_t);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
-    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
-
-    system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py uint8");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
-    ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
-    ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
-    ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
-
-    ICPU_SET_TILING_KEY(411);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(412);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(421);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(422);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(src);
-    AscendC::GmFree(output);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(scatter_elements_v2_test, test_case_int8)
-{
-    // inputs
-    size_t data_size = 128 * 59;
-    size_t var_size = data_size * sizeof(int8_t);
-    size_t indices_size = data_size * sizeof(long);
-    size_t src_size = data_size * sizeof(int8_t);
-    size_t output_size = data_size * sizeof(int8_t);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
-    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
-
-    system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py int8");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
-    ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
-    ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
-    ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
-
-    ICPU_SET_TILING_KEY(511);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(512);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(521);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(522);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(src);
-    AscendC::GmFree(output);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(scatter_elements_v2_test, test_case_bf16)
-{
-    // inputs
-    size_t data_size = 128 * 59;
-    size_t var_size = data_size * sizeof(half);
-    size_t indices_size = data_size * sizeof(long);
-    size_t src_size = data_size * sizeof(half);
-    size_t output_size = data_size * sizeof(half);
-    size_t tiling_data_size = sizeof(ScatterElementsV2TilingDataDef);
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(indices_size);
-    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 32;
-
-    system(
-        "cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_elements_v2/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py bfloat16");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
-    ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
-    ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
-    ReadFile(path + "/scatter_elements_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-
-    ScatterElementsV2TilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterElementsV2TilingDataDef*>(tiling);
-
-    ICPU_SET_TILING_KEY(611);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(612);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(621);
-    ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    ICPU_SET_TILING_KEY(622);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(scatter_elements_v2, blockDim, var, indices, src, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);

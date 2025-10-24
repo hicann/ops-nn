@@ -15,22 +15,41 @@ import sys
 
 def gen_tiling():
     variables_dict = {\
-        "usedCoreNum": 48,
-        "eachNum": 128,
+        "usedCoreNum": 43,
+        "eachNum": 1,
         "extraTaskCore": 0,
         "eachPiece": 1,
-        "inputCount": 111771648,
-        "indicesCount": 19611648,
-        "updatesCount": 19611648,
-        "inputOneTime": 18192,
-        "indicesOneTime": 3192,
-        "updatesOneTime":3192,
-        "inputEach": 13464,
-        "indicesEach": 3192,
-        "inputLast": 4728,
-        "indicesLast": 3192,
-        "inputLoop": 2,
-        "indicesLoop": 1
+        "inputOnePiece": 0,
+        "inputCount": 7552,
+        "indicesCount": 7552,
+        "updatesCount": 7552,
+        "inputOneTime": 59,
+        "indicesOneTime": 59,
+        "updatesOneTime": 59,
+        "inputEach": 0,
+        "indicesEach": 3,
+        "inputLast": 0,
+        "indicesLast": 3,
+        "inputLoop": 0,
+        "indicesLoop": 1,
+        "inputAlign": 8,
+        "indicesAlign": 8,
+        "updatesAlign": 8,
+        "lastIndicesLoop": 1,
+        "lastIndicesEach": 2,
+        "lastIndicesLast": 2,
+        "oneTime": 3,
+        "lastOneTime": 2,
+        "modeFlag": 1,
+        "M": 1,
+        "varN": 1,
+        "indicesN": 1,
+        "updatesN": 1,
+        "frontCoreNum": 1,
+        "frontCoreData": 1,
+        "tailCoreData": 1,
+        "computeMode": 1,
+        "MLeft": 1
     }
 
     variables_array = [variables_dict[key] for key in variables_dict]
@@ -40,7 +59,7 @@ def gen_tiling():
 
 def main():
     params_list = gen_tiling()  # python gen_tiling.py argv1 argv2
-    base_params = np.array(params_list, dtype=np.uint32)
+    base_params = np.array(params_list, dtype=np.uint64)
 
     tiling_file = open("tiling.bin", "wb")
     base_params.tofile(tiling_file)

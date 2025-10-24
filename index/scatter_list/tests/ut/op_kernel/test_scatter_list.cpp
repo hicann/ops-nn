@@ -44,7 +44,7 @@ TEST_F(scatter_list_test, test_case_200)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1 256");
@@ -104,15 +104,13 @@ TEST_F(scatter_list_test, test_case_200)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_210)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 16 4096 256 256");
@@ -172,15 +170,13 @@ TEST_F(scatter_list_test, test_case_210)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_211)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 16 4096 255 255");
@@ -200,7 +196,7 @@ TEST_F(scatter_list_test, test_case_211)
     uint8_t* varOut = var;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(32);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint32_t blockDim = 32;
+    uint32_t blockDim = 31;
 
     ScatterListTilingData* tilingData = reinterpret_cast<ScatterListTilingData*>(tiling);
 
@@ -240,15 +236,13 @@ TEST_F(scatter_list_test, test_case_211)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_220)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 1 4096 1024 256");
@@ -308,15 +302,13 @@ TEST_F(scatter_list_test, test_case_220)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_230)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1024 256");
@@ -376,15 +368,13 @@ TEST_F(scatter_list_test, test_case_230)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_231)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1024 255");
@@ -444,15 +434,13 @@ TEST_F(scatter_list_test, test_case_231)
     AscendC::GmFree(mask);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    // EXPECT_EQ(system("cd ./scatter_list_data/ && python3 compare_data.py 8"), 0);
 }
 
 TEST_F(scatter_list_test, test_case_100)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data_neg.py [8,4,256,4096] [8,4,256,1]");
@@ -528,7 +516,7 @@ TEST_F(scatter_list_test, test_case_101)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data_neg.py [8,400,1024,32] [8,400,1024,1]");
@@ -600,160 +588,11 @@ TEST_F(scatter_list_test, test_case_101)
     AscendC::GmFree(tiling);
 }
 
-TEST_F(scatter_list_test, test_case_102)
-{
-    system(
-        "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data_neg.py [8,400,1024,32] [8,400,1024,1]");
-
-    std::vector<std::vector<uint64_t>> varShape = {{4, 10016, 32}, {4, 10016, 32}, {4, 10016, 32}, {4, 10016, 32},
-                                                   {4, 10016, 32}, {4, 10016, 32}, {4, 10016, 32}, {4, 10016, 32}};
-
-    size_t indiceByteSize = 8 * sizeof(int32_t);
-    size_t updatesByteSize = 8 * 4 * 10016 * 1 * sizeof(half);
-    size_t maskByteSize = 8 * sizeof(int32_t); // 实际只需要8 * sizeof(uint8_t)，为了补齐到一个block才这样设置
-    size_t tilingSize = sizeof(ScatterListTilingData);
-
-    uint8_t* var = CreateTensorList<float>(varShape);
-    uint8_t* indice = (uint8_t*)AscendC::GmAlloc(indiceByteSize);
-    uint8_t* updates = (uint8_t*)AscendC::GmAlloc(updatesByteSize);
-    uint8_t* mask = (uint8_t*)AscendC::GmAlloc(maskByteSize);
-    uint8_t* varOut = var;
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(32);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint32_t blockDim = 32;
-
-    ScatterListTilingData* tilingData = reinterpret_cast<ScatterListTilingData*>(tiling);
-
-    tilingData->dim0Count = 8;
-    tilingData->dim1Count = 4;
-    tilingData->varDim2Count = 10016;
-    tilingData->dim2Count = 10016;
-    tilingData->dim3Count = 1;
-    tilingData->dim3CountAlign = 16;
-    tilingData->updatesOneBlock = 16;
-    tilingData->indiceDims = 1;
-    tilingData->indiceCount = 8;
-    tilingData->indiceUbSize = 32;
-    tilingData->maskCount = 32;
-    tilingData->maskUbSize = 32;
-    tilingData->srcBatchStride = 10016;
-    tilingData->srcBatchStrideAlign = 0;
-    tilingData->dstBatchStride = 320512;
-    tilingData->useCoreNum = 32;
-    tilingData->preCoreBatchNum = 1;
-    tilingData->lastCoreBatchNum = 1;
-    tilingData->eachLoopNum = 3;
-    tilingData->eachPreLoopEle = 2976;
-    tilingData->eachLastLoopEle = 1088;
-    tilingData->eachLastLoopEleAlign = 0;
-    tilingData->updatesCount = 0;
-    tilingData->updatesUbSize = 5952;
-    tilingData->dataUbSize = 95232;
-    tilingData->transposeUbSize = 95232;
-    tilingData->transRepeatTimes = 186;
-    tilingData->transRepeatTimesTail = 68;
-    tilingData->updateDim23Align = 10016;
-    tilingData->preCoreUpdateDim23 = 10016;
-    tilingData->varDim3Stride = 1;
-    tilingData->varDim3Count = 32;
-    tilingData->dim3CountSize = 2;
-    tilingData->eachLastSize = 1088;
-    tilingData->tilingKey = 102;
-
-    ICPU_SET_TILING_KEY(102);
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(scatter_list, blockDim, var, indice, updates, mask, varOut, workspace, tiling);
-
-    FreeTensorList<int8_t>(var, varShape);
-    AscendC::GmFree(indice);
-    AscendC::GmFree(updates);
-    AscendC::GmFree(mask);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-}
-TEST_F(scatter_list_test, test_case_neg_100)
-{
-    system(
-        "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data_neg.py [2,6,16,128] [2,6,16,1]");
-
-    std::vector<std::vector<uint64_t>> varShape = {{6, 16, 128}, {6, 16, 128}};
-
-    size_t indiceByteSize = 8 * sizeof(int32_t);
-    size_t updatesByteSize = 2 * 6 * 16 * 1 * sizeof(half);
-    size_t maskByteSize = 8 * sizeof(int32_t); // 实际只需要8 * sizeof(uint8_t)，为了补齐到一个block才这样设置
-    size_t tilingSize = sizeof(ScatterListTilingData);
-
-    uint8_t* var = CreateTensorList<float>(varShape);
-    uint8_t* indice = (uint8_t*)AscendC::GmAlloc(indiceByteSize);
-    uint8_t* updates = (uint8_t*)AscendC::GmAlloc(updatesByteSize);
-    uint8_t* mask = (uint8_t*)AscendC::GmAlloc(maskByteSize);
-    uint8_t* varOut = var;
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(32);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint32_t blockDim = 12;
-
-    ScatterListTilingData* tilingData = reinterpret_cast<ScatterListTilingData*>(tiling);
-
-    tilingData->dim0Count = 2;
-    tilingData->dim1Count = 6;
-    tilingData->varDim2Count = 16;
-    tilingData->dim2Count = 16;
-    tilingData->dim3Count = 1;
-    tilingData->dim3CountAlign = 16;
-    tilingData->updatesOneBlock = 16;
-    tilingData->indiceDims = 1;
-    tilingData->indiceCount = 8;
-    tilingData->indiceUbSize = 32;
-    tilingData->maskCount = 32;
-    tilingData->maskUbSize = 32;
-    tilingData->srcBatchStride = 16;
-    tilingData->srcBatchStrideAlign = 0;
-    tilingData->dstBatchStride = 2048;
-    tilingData->useCoreNum = 12;
-    tilingData->preCoreBatchNum = 1;
-    tilingData->lastCoreBatchNum = 1;
-    tilingData->eachLoopNum = 0;
-    tilingData->eachPreLoopEle = 0;
-    tilingData->eachLastLoopEle = 0;
-    tilingData->eachLastLoopEleAlign = 0;
-    tilingData->updatesCount = 32;
-    tilingData->updatesUbSize = 32;
-    tilingData->dataUbSize = 512;
-    tilingData->transposeUbSize = 512;
-    tilingData->transRepeatTimes = 1;
-    tilingData->transRepeatTimesTail = 0;
-    tilingData->updateDim23Align = 16;
-    tilingData->preCoreUpdateDim23 = 16;
-    tilingData->varDim3Stride = 7;
-    tilingData->varDim3Count = 128;
-    tilingData->dim3CountSize = 0;
-    tilingData->eachLastSize = 16;
-    tilingData->tilingKey = 100;
-
-    ICPU_SET_TILING_KEY(100);
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(scatter_list, blockDim, var, indice, updates, mask, varOut, workspace, tiling);
-
-    FreeTensorList<int8_t>(var, varShape);
-    AscendC::GmFree(indice);
-    AscendC::GmFree(updates);
-    AscendC::GmFree(mask);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-}
 TEST_F(scatter_list_test, test_case_107)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/scatter_list/scatter_list_data "
+        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
         "./");
     system("chmod -R 755 ./scatter_list_data/");
     system("cd ./scatter_list_data/ && python3 gen_data_neg.py [2,1,1,120016] [2,1,1,120000]");

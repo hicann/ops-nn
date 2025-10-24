@@ -14,21 +14,26 @@ import sys
 
 def gen_tiling():
     variables_dict = {\
-        "usedCoreNum": 48,
-        "eachCount": 1330,
-        "lastCount": 1296,
-        "inputCount": 268431360,
-        "indicesCount": 63806,
-        "updatesCount": 261349376,
+        "usedCoreNum": 32,
+        "extraTaskCore": 0,
+        "eachCount": 2,
+        "lastCount": 1,
+        "inputCount": 266240,
+        "indicesCount": 63,
+        "updatesCount": 258048,
         "inputOneTime": 4096,
         "updatesOneTime":4096,
-        "maxSize": 16896,
-        "eachNum": 1330,
+        "updatesAlign":4096,
+        "maxSize": 3328,
+        "eachNum": 2,
         "eachLoop": 1,
-        "eachTail": 1330,
-        "lastNum": 1296,
+        "eachTail": 2,
+        "lastNum": 1,
         "lastLoop": 1,
-        "lastTail": 1296
+        "lastTail": 1,
+        "updatesLoop": 1,
+        "updatesEach": 4096,
+        "updatesLast": 4096
     }
 
     variables_array = [variables_dict[key] for key in variables_dict]
@@ -38,7 +43,7 @@ def gen_tiling():
 
 def main():
     params_list = gen_tiling()  # python gen_tiling.py argv1 argv2
-    base_params = np.array(params_list, dtype=np.uint32)
+    base_params = np.array(params_list, dtype=np.uint64)
 
     tiling_file = open("tiling.bin", "wb")
     base_params.tofile(tiling_file)

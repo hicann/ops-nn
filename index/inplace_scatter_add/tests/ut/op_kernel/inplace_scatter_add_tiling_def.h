@@ -7,7 +7,7 @@
 #include <kernel_tiling/kernel_tiling.h>
 
 #pragma pack(1)
-struct InplaceScatterAddTilingDataDef {
+struct InplaceScatterAddTilingData {
     uint32_t M = 0;
     uint32_t N = 0;
     uint32_t K = 0;
@@ -20,13 +20,13 @@ struct InplaceScatterAddTilingDataDef {
 };
 #pragma pack()
 
-inline void InitInplaceScatterAddTilingDataDef(uint8_t* tiling, InplaceScatterAddTilingDataDef* const_data)
+inline void InitInplaceScatterAddTilingData(uint8_t* tiling, InplaceScatterAddTilingData* const_data)
 {
-    memcpy(const_data, tiling, sizeof(InplaceScatterAddTilingDataDef));
+    memcpy(const_data, tiling, sizeof(InplaceScatterAddTilingData));
 }
 
 #define GET_TILING_DATA(tiling_data, tiling_arg)                                       \
-    InplaceScatterAddTilingDataDef tiling_data;                                           \
-    InitInplaceScatterAddTilingDataDef(tiling_arg, &tiling_data)
+    InplaceScatterAddTilingData tiling_data;                                           \
+    InitInplaceScatterAddTilingData(tiling_arg, &tiling_data)
 
 #endif

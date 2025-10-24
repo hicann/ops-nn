@@ -12,7 +12,7 @@
 #include <string>
 
 #include "data_utils.h"
-#include "test_inplace_scatter_add_tiling_def.h"
+#include "inplace_scatter_add_tiling_def.h"
 #include "string.h"
 #endif
 
@@ -42,7 +42,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -53,7 +53,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -65,6 +65,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b000);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -82,7 +83,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -93,7 +94,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -105,6 +106,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b100);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -122,7 +124,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -133,7 +135,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -145,6 +147,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b010);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -162,7 +165,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -173,7 +176,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -185,6 +188,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b001);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -202,7 +206,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -213,7 +217,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -225,6 +229,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b110);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -242,7 +247,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -253,7 +258,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -265,6 +270,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b101);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -282,7 +288,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -293,7 +299,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -305,6 +311,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b011);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
@@ -322,7 +329,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111) {
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
-    size_t tilingSize = sizeof(InplaceScatterAddTilingDataDef);
+    size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
@@ -333,7 +340,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111) {
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingDataDef *tilingData = reinterpret_cast<InplaceScatterAddTilingDataDef*>(tiling);
+    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -345,6 +352,7 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111) {
     tilingData->ubSize = 49000;
 
     ICPU_SET_TILING_KEY(0b111);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(inplace_scatter_add, 2, varGM, indicesGM, updatesGM, varGM, workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);

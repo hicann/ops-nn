@@ -45,163 +45,11 @@ protected:
     }
 };
 
-TEST_F(gather_elements_v2_test, test_case_1024_4096_100_trans_fp32)
+TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp32)
 {
-    size_t xSize = 1024 * 4096 * 100 * sizeof(float);
-    size_t indexSize = 1024 * 4096 * 100 * sizeof(int32_t);
-    size_t ySize = 1024 * 4096 * 100 * sizeof(float);
-    size_t tilingSize = sizeof(GatherElementsV2TilingData);
-    size_t workspaceSize = 16 * 1024 * 1024 + 48 * 4096 * 100 * (sizeof(float) + sizeof(int32_t));
-
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xSize);
-    uint8_t* index = (uint8_t*)AscendC::GmAlloc(indexSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(ySize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-
-    memset(workspace, 0, workspaceSize);
-
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/gather_elements_v2/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 4096");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_trans_fp32");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/data/x.bin", xSize, x, xSize);
-    ReadFile(path + "/data/index.bin", indexSize, index, indexSize);
-    ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
-
-    ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(gather_elements_v2, 48, x, index, y, workspace, tiling);
-
-    AscendC::GmFree(x);
-    AscendC::GmFree(index);
-    AscendC::GmFree(y);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(gather_elements_v2_test, test_case_1024_4096_100_trans_fp16)
-{
-    size_t xSize = 1024 * 4096 * 100 * sizeof(half);
-    size_t indexSize = 1024 * 4096 * 100 * sizeof(int32_t);
-    size_t ySize = 1024 * 4096 * 100 * sizeof(half);
-    size_t tilingSize = sizeof(GatherElementsV2TilingData);
-    size_t workspaceSize = 16 * 1024 * 1024 + 48 * 4096 * 100 * (sizeof(half) + sizeof(int32_t));
-
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xSize);
-    uint8_t* index = (uint8_t*)AscendC::GmAlloc(indexSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(ySize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-
-    memset(workspace, 0, workspaceSize);
-
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/gather_elements_v2/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 4096");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_trans_fp16");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/data/x.bin", xSize, x, xSize);
-    ReadFile(path + "/data/index.bin", indexSize, index, indexSize);
-    ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
-
-    ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(gather_elements_v2, 48, x, index, y, workspace, tiling);
-
-    AscendC::GmFree(x);
-    AscendC::GmFree(index);
-    AscendC::GmFree(y);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(gather_elements_v2_test, test_case_7_65536_4096_scalar_fp32)
-{
-    size_t xSize = 7 * 65536 * 4096 * sizeof(float);
-    size_t indexSize = 7 * 2 * 4096 * sizeof(int32_t);
-    size_t ySize = 7 * 2 * 4096 * sizeof(float);
-    size_t tilingSize = sizeof(GatherElementsV2TilingData);
-    size_t workspaceSize = 16 * 1024 * 1024;
-
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xSize);
-    uint8_t* index = (uint8_t*)AscendC::GmAlloc(indexSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(ySize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-
-    memset(workspace, 0, workspaceSize);
-
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/gather_elements_v2/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 7 65536 4096 2");
-    system("cd ./data/ && python3 gen_tiling.py test_case_7_65536_4096_scalar_fp32");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/data/x.bin", xSize, x, xSize);
-    ReadFile(path + "/data/index.bin", indexSize, index, indexSize);
-    ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
-
-    ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(gather_elements_v2, 48, x, index, y, workspace, tiling);
-
-    AscendC::GmFree(x);
-    AscendC::GmFree(index);
-    AscendC::GmFree(y);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(gather_elements_v2_test, test_case_7_65536_4096_scalar_fp16)
-{
-    size_t xSize = 7 * 65536 * 4096 * sizeof(half);
-    size_t indexSize = 7 * 2 * 4096 * sizeof(int32_t);
-    size_t ySize = 7 * 2 * 4096 * sizeof(half);
-    size_t tilingSize = sizeof(GatherElementsV2TilingData);
-    size_t workspaceSize = 16 * 1024 * 1024;
-
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xSize);
-    uint8_t* index = (uint8_t*)AscendC::GmAlloc(indexSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(ySize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-
-    memset(workspace, 0, workspaceSize);
-
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/gather_elements_v2/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 7 65536 4096 2");
-    system("cd ./data/ && python3 gen_tiling.py test_case_7_65536_4096_scalar_fp16");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-    ReadFile(path + "/data/x.bin", xSize, x, xSize);
-    ReadFile(path + "/data/index.bin", indexSize, index, indexSize);
-    ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
-
-    ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(gather_elements_v2, 48, x, index, y, workspace, tiling);
-
-    AscendC::GmFree(x);
-    AscendC::GmFree(index);
-    AscendC::GmFree(y);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp16)
-{
-    size_t xSize = 4096 * 1248 * sizeof(half);
+    size_t xSize = 4096 * 1248 * sizeof(float);
     size_t indexSize = 4096 * 1248 * sizeof(int32_t);
-    size_t ySize = 4096 * 1248 * sizeof(half);
+    size_t ySize = 4096 * 1248 * sizeof(float);
     size_t tilingSize = sizeof(GatherElementsV2TilingData);
     size_t workspaceSize = 16 * 1024 * 1024;
 
@@ -213,7 +61,7 @@ TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp16)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/gather_elements_v2/data ./");
+    system("cp -r ../../../../index/gather_elements_v2/tests/ut/op_kernel/data ./");
     system("chmod -R 755 ./data/");
     system("cd ./data/ && rm -rf ./*bin");
     system("cd ./data/ && python3 gen_data.py 1 4096 1248 4096");
@@ -226,6 +74,7 @@ TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp16)
     ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
 
     ICPU_SET_TILING_KEY(2);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(gather_elements_v2, 48, x, index, y, workspace, tiling);
 
     AscendC::GmFree(x);

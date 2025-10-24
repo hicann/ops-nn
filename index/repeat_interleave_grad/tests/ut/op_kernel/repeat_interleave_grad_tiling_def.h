@@ -24,7 +24,7 @@
 
 #pragma pack(1)
 
-struct RepeatInterleaveGradTilingDataDef {
+struct RepeatInterleaveGradTilingData {
     int64_t batch_dim_num;
     int64_t repeats_i_grad_dim_num;
     int64_t repeats_o_grad_dim_num;
@@ -50,8 +50,8 @@ struct RepeatInterleaveGradTilingDataDef {
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                                      \
-    RepeatInterleaveGradTilingDataDef tilingData;                                          \
-    INIT_TILING_DATA(RepeatInterleaveGradTilingDataDef, tilingDataPointer, tilingPointer); \
+    RepeatInterleaveGradTilingData tilingData;                                          \
+    INIT_TILING_DATA(RepeatInterleaveGradTilingData, tilingDataPointer, tilingPointer); \
     (tilingData).batch_dim_num = tilingDataPointer->batch_dim_num;                      \
     (tilingData).repeats_i_grad_dim_num = tilingDataPointer->repeats_i_grad_dim_num;    \
     (tilingData).repeats_o_grad_dim_num = tilingDataPointer->repeats_o_grad_dim_num;    \

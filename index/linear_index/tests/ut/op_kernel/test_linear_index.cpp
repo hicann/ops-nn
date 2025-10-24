@@ -59,7 +59,7 @@ TEST_F(linear_index_test, test_case_int32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/linear_index/linear_index_data ./");
+    system("cp -r ../../../../index/linear_index/tests/ut/op_kernel/linear_index_data ./");
     system("chmod -R 755 ./linear_index_data/");
     system("cd ./linear_index_data/ && rm -rf ./*bin");
     system("cd ./linear_index_data/ && python3 gen_data.py int32");
@@ -74,10 +74,13 @@ TEST_F(linear_index_test, test_case_int32)
     LinearIndexTilingDataDef* tilingDatafromBin = reinterpret_cast<LinearIndexTilingDataDef*>(tiling);
 
     ICPU_SET_TILING_KEY(1);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(11);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(21);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(ind);
@@ -103,7 +106,7 @@ TEST_F(linear_index_test, test_case_int64)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/linear_index/linear_index_data ./");
+    system("cp -r ../../../../index/linear_index/tests/ut/op_kernel/linear_index_data ./");
     system("chmod -R 755 ./linear_index_data/");
     system("cd ./linear_index_data/ && rm -rf ./*bin");
     system("cd ./linear_index_data/ && python3 gen_data.py int64");
@@ -118,10 +121,13 @@ TEST_F(linear_index_test, test_case_int64)
     LinearIndexTilingDataDef* tilingDatafromBin = reinterpret_cast<LinearIndexTilingDataDef*>(tiling);
 
     ICPU_SET_TILING_KEY(2);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(21);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(22);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(linear_index, blockDim, ind, var, output, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(ind);

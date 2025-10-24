@@ -104,13 +104,14 @@ protected:
 
         system(
             "cp -r "
-            "../../../../../../../ops/built-in/tests/ut/fast_op_test/inplace_index_add_with_sorted/"
+            "../../../../index/inplace_index_add_with_sorted/tests/ut/op_kernel/"
             "inplace_index_add_with_sorted_data ./");
         system(
             "chmod -R 755 ./inplace_index_add_with_sorted_data/ && rm -rf ./inplace_index_add_with_sorted_data/*bin");
         std::string genCMD = "cd ./inplace_index_add_with_sorted_data/ && python3 gen_data.py '" +
                              GetShapesString(shapeInfos) + "' '" + GetShapesString(attrInfos) + "' " +
                              std::to_string(tilingKey);
+        system(genCMD.c_str());
         size_t usrWorkspaceSize = 4096;
         uint8_t* usrWorkSpace = (uint8_t*)AscendC::GmAlloc(usrWorkspaceSize);
         size_t tilingSize = sizeof(InplaceIndexAddWithSortedTilingData);
