@@ -15,7 +15,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "test_swi_glu_grad.h"
+#include "swi_glu_grad_tiling_def.h"
 
 #include <cstdint>
 
@@ -35,7 +35,7 @@ protected:
 };
 
 TEST_F(swi_glu_grad_test, test_case_fp16) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int16_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int16_t);
@@ -79,7 +79,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int32_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int32_t);
@@ -123,7 +123,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int16_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int16_t);
@@ -167,7 +167,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_noalign) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(int16_t);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(int16_t);
@@ -211,7 +211,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_noalign) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(float);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(float);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(float);
@@ -255,7 +255,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_noalign) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(int16_t);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(int16_t);
@@ -299,7 +299,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16_noalign) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int16_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int16_t);
@@ -343,7 +343,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_no_buffer) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int32_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int32_t);
@@ -387,7 +387,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_no_buffer) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 320 * sizeof(int16_t);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * 2 * sizeof(int16_t);
@@ -431,7 +431,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16_no_buffer) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_noalign_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(int16_t);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(int16_t);
@@ -475,7 +475,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign_no_buffer) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_noalign_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(float);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(float);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(float);
@@ -519,7 +519,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign_no_buffer) {
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_noalign_no_buffer) {
-
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t gradoutByteSize = 256 * 300 * sizeof(int16_t);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * 2 * sizeof(int16_t);

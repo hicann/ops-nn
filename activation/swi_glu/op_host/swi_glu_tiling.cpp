@@ -470,7 +470,7 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     }
     uint64_t ubSize = 0;
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_TILING_CHECK((totalCore < 0 || ubSize <= UB_RESERVED_BUFF),
+    OP_TILING_CHECK((static_cast<int>(totalCore) < 0 || ubSize <= UB_RESERVED_BUFF),
         OP_LOGE(context->GetNodeName(), "Compile Info is invalid, coreNum:%u, ubSize:%lu", totalCore, ubSize),
         return ge::GRAPH_PARAM_INVALID);
     ubSize -= UB_RESERVED_BUFF;

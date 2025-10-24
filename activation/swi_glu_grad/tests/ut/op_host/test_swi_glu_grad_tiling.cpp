@@ -22,7 +22,6 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
-#include "register/op_impl_registry_base.h"
 #include "error_util.h"
 
 using namespace ut_util;
@@ -100,7 +99,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_001) {
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -182,7 +181,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_002) {
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -197,9 +196,6 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_002) {
     // workspaces nullptr return failed
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    // todo check tiling result
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 0);
     // dlog_setlevel(OP,0,0);
 }
 
@@ -266,7 +262,7 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_003) {
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dim", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

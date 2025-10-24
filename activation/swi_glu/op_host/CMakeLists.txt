@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 
 message(STATUS "=== Debug: CURRENT_DIRS =${CURRENT_DIRS} ")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE swi_glu ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE swi_glu ACLNNTYPE aclnn DEPENDENCIES swi_glu_grad)
