@@ -22,7 +22,7 @@ $$
   l_n = \left( x_n - y_n \right)^2,
 $$
 
-  其中$x$是self，$y$是target，$N$是batch的大小。如果`reduction`不是`none`, 那么：
+  其中$x$是`self`，$y$是`target`，$N$是`batch`的大小。如果`reduction`不是`none`, 那么：
 
 $$
   \ell(x, y) =
@@ -34,12 +34,12 @@ $$
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 170px">
-  <col style="width: 310px">
-  <col style="width: 212px">
-  <col style="width: 100px">
+<table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
+  <col style="width: 40px">
+  <col style="width: 60px">
+  <col style="width: 266px">
+  <col style="width: 60px">
+  <col style="width: 40px">
   </colgroup>
   <thead>
     <tr>
@@ -53,7 +53,7 @@ $$
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>公式中的输入x 
+      <td>公式中的输入x </td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -74,7 +74,7 @@ $$
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>公式中的输出$\ell(x, y)$，当reduction的值为0时，out与self、target做broadcast后的tensor的shape一致；当reduction的值为1或2时，out是0维tensor。</td>
+      <td>公式中的输出<em>l</em>(x,y)，当reduction的值为0时，out与self、target做broadcast后的tensor的shape一致；当reduction的值为1或2时，out是0维tensor。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
