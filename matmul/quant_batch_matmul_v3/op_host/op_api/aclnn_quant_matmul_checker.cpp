@@ -356,9 +356,7 @@ actual they are %ld and %ld.",
 
 bool QuantMatmulChecker::CheckShapeForWeightNz() const
 {
-    const op::Shape x1Shape = x1_->GetViewShape();
     const op::Shape x2Shape = x2_->GetStorageShape();
-    auto x1DimNum = x1_->GetViewShape().GetDimNum();
     auto x2DimNum = x2_->GetStorageShape().GetDimNum();
     int64_t x2K1Dim = transposeX2_ ? x2Shape[x2DimNum - NZ_K1_INDEX_TRANS] : x2Shape[x2DimNum - NZ_K1_INDEX];
     int64_t aligneValue = transposeX2_ ? NZ_K0_VALUE_INT8_TRANS : NZ_K0_VALUE_INT8;
@@ -448,7 +446,7 @@ bool QuantMatmulChecker::CheckGroupSizeShape(uint64_t groupSizeM) const
     auto nDimNum = x2DimNum - (transposeX2_ ? PENULTIMATE_DIM : 1);
     auto x2KDimNum = x2DimNum - (transposeX2_ ? 1 : PENULTIMATE_DIM);
     // m dim
-    if (CeilDiv(static_cast<uint64_t>(x1Shape.GetDim(mDimNum)), groupSizeM) != x1ScaShape.GetDim(mDimNum)) {
+    if (CeilDiv(x1Shape.GetDim(mDimNum), static_cast<int64_t>(groupSizeM)) != x1ScaShape.GetDim(mDimNum)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When quantification mode is G-B or B-B quantification, \
 matrix multiplication is (batchx1, m, k) @ (batchX2, k, n) = (batch, m, n), the m-dimension of x1Scale(pertoken_scale) \
 and x1 need to satisfy the relationship: ceil(m_x1, groupSizeM) == m_x1Scale, actual m_x1 is %ld, m_x1Scale is %ld, \
@@ -456,7 +454,7 @@ groupSizeM is %lu.", x1Shape.GetDim(mDimNum), x1ScaShape.GetDim(mDimNum), groupS
         return false;
     }
 
-    if (CeilDiv(static_cast<uint64_t>(x1Shape.GetDim(x1KDimNum)), PERBLOCK_BLOCK_SIZE) !=
+    if (CeilDiv(x1Shape.GetDim(x1KDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) !=
         x1ScaShape.GetDim(x1KDimNum)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When quantification mode is G-B or B-B quantification, \
 matrix multiplication is (batchx1, m, k) @ (batchX2, k, n) = (batch, m, n), the k-dimension of x1Scale(pertoken_scale) \
@@ -464,7 +462,7 @@ and x1 need to satisfy the relationship: ceil(k_x1, 128) == k_x1Scale, actual k_
                 x1Shape.GetDim(x1KDimNum), x1ScaShape.GetDim(x1KDimNum));
         return false;
     }
-    if (CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(nDimNum)), PERBLOCK_BLOCK_SIZE) != x2ScaShape.GetDim(nDimNum)) {
+    if (CeilDiv(x2Shape.GetDim(nDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) != x2ScaShape.GetDim(nDimNum)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When quantification mode is G-B or B-B quantification, \
 matrix multiplication is (batchx1, m, k) @ (batchX2, k, n) = (batch, m, n), the n-dimension of x2Scale(scale) and \
 x2 need to satisfy the relationship: ceil(n_x2, 128) == n_x2Scale, actual n_x2 is %ld, n_x2Scale is %ld.",
@@ -472,7 +470,7 @@ x2 need to satisfy the relationship: ceil(n_x2, 128) == n_x2Scale, actual n_x2 i
         return false;
     }
 
-    if (CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2KDimNum)), PERBLOCK_BLOCK_SIZE) !=
+    if (CeilDiv(x2Shape.GetDim(x2KDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) !=
         x2ScaShape.GetDim(x2KDimNum)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When quantification mode is G-B or B-B quantification, \
 matrix multiplication is (batchx1, m, k) @ (batchX2, k, n) = (batch, m, n), the k-dimension of x2Scale(scale) and \

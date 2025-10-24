@@ -295,7 +295,7 @@ bool CheckInputShape(
     OP_TILING_CHECK(
         inputParams->kSize != kBSize,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams->opName, "K dim of x and weight must equal, but they are [%lu] and [%ld]", inputParams->kSize,
+            inputParams->opName, "K dim of x and weight must equal, but they are [%lu] and [%lu]", inputParams->kSize,
             kBSize),
         return false);
     if (inputParams->bDtype == ge::DT_INT4 || inputParams->bDtype == ge::DT_INT32 ||

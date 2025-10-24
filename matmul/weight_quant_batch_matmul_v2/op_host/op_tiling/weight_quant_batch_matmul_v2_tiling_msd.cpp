@@ -185,7 +185,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Msd::DoOpTiling()
         OP_TILING_CHECK(
             !GetMatMulTiling(),
             VECTOR_INNER_ERR_REPORT_TILIING(
-                opName_, "failed to get mm tiling for mnk[%ld, %ld, %ld]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
+                opName_, "failed to get mm tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
                 matmulInfoPtr_->kSize),
             return ge::GRAPH_FAILED);
         uint32_t preloadTimes = 3;
@@ -268,7 +268,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Msd::DoMSDGeneralOpTiling()
         OP_TILING_CHECK(
             !GetMatMulTiling(),
             VECTOR_INNER_ERR_REPORT_TILIING(
-                opName_, "failed to get mm tiling for mnk[%ld, %ld, %ld]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
+                opName_, "failed to get mm tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
                 matmulInfoPtr_->kSize),
             return ge::GRAPH_FAILED);
         blkDim_ = std::max(
@@ -331,7 +331,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Msd::DoMSDGroupSplitKOpTiling()
     OP_TILING_CHECK(
         !GetMatMulTiling(),
         VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "failed to get mm tiling for mnk[%ld, %ld, %ld]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
+            opName_, "failed to get mm tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
             matmulInfoPtr_->kSize),
         return ge::GRAPH_FAILED);
     // cube开db，需要乘以2

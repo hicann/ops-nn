@@ -575,7 +575,7 @@ bool InferRangeBias(
         for (size_t i = 0; i < num_dim_out - 2; ++i) {
             OP_CHECK_IF(
                 !GetBatchIntersection(op_name, new_shape_range_out[i], new_shape_range_bias[i], new_shape_range_out[i]),
-                CUBE_INNER_ERR_REPORT(op_name, "[InferShapeRange] Infer bias batch range incorrect at dim[%ld].", i),
+                CUBE_INNER_ERR_REPORT(op_name, "[InferShapeRange] Infer bias batch range incorrect at dim[%zu].", i),
                 return false);
         }
         if (!GetKNIntersection(op_name, new_shape_range_bias[num_dim_out - 1], new_shape_range_x2[idx_n],
@@ -706,7 +706,7 @@ bool InferShapeRangeBatchMatMul::InferShapeRange()
     for (size_t i = 0; i < num_dim_out - 2; ++i) {
         OP_CHECK_IF(
             !GetBatchIntersection(op_name, new_shape_range_x1[i], new_shape_range_x2[i], new_shape_range_out[i]),
-            CUBE_INNER_ERR_REPORT(op_name, "[InferShapeRange] Infer batch range incorrect at dim[%ld].", i),
+            CUBE_INNER_ERR_REPORT(op_name, "[InferShapeRange] Infer batch range incorrect at dim[%zu].", i),
             return false);
     }
     // 推理m，输出的倒数第2维度

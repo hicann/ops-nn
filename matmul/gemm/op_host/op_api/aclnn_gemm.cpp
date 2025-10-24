@@ -117,8 +117,6 @@ static inline bool CheckOutShape(
     auto mDim = transA ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
     auto nDim = transB ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
 
-    int64_t n = A->GetViewShape().GetDim(0);
-    int64_t p = B->GetViewShape().GetDim(1);
     int64_t out_m = out->GetViewShape().GetDim(0);
     int64_t out_n = out->GetViewShape().GetDim(1);
 

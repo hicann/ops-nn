@@ -130,7 +130,7 @@ static bool CheckDtypeValid(
 }
 
 static bool CheckDtypeValidWeightNz(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     bool bf16flag = CheckSocVersionIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
@@ -273,7 +273,7 @@ static aclnnStatus CheckParamsWeightNz(const aclTensor* self, const aclTensor* m
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValidWeightNz(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查self和mat2的shape是否符合要求
     CHECK_RET(CheckShape(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
@@ -466,11 +466,16 @@ const aclTensor* TransBmm2Mm(
 
 bool CheckSocIfBatchMatMulToMulDefault(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
+    (void) self;
+    (void) mat2;
+    (void) adjX1;
+    (void) adjX2;
     return false;
 }
 
 bool CheckSocIfBatchMatMulToMul910B(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2)
 {
+    (void) adjX1;
     if (self->GetDataType() == DataType::DT_BF16 || mat2->GetDataType() == DataType::DT_BF16) {
         return checkBF16SizeValid(mat2, adjX2);
     }
@@ -647,7 +652,7 @@ static aclnnStatus CheckBmmOp(
 {
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-        CHECK_RET(CheckDtypeValidWeightNz(self, mat2, bias, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
     } else {
         CHECK_RET(CheckDtypeValid(self, mat2, bias, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     }

@@ -471,7 +471,7 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeBiasShape(const gert::StorageShape
                 biasShapeSize != inputParams_.nSize && biasShapeSize != 0,
                 VECTOR_INNER_ERR_REPORT_TILIING(
                     inputParams_.opName,
-                    "when bias without batch, bias shape size[%lu] is not equal nSize[%lu] or zero",
+                    "when bias without batch, bias shape size[%ld] is not equal nSize[%lu] or zero",
                     biasShape->GetStorageShape().GetShapeSize(), inputParams_.nSize),
                 return false);
             OP_TILING_CHECK(

@@ -530,7 +530,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     }
 
     OP_TILING_CHECK(!(support_k_n && support_batch_m), CUBE_INNER_ERR_REPORT(args_.opName,
-                    "only support shape inner axis < 65536, input shape b, m, n, k = %ld, %ld, %ld, %ld.",
+                    "only support shape inner axis < 65536, input shape b, m, n, k = %lu, %lu, %lu, %lu.",
                     input_batch, args_.mValue, input_n, input_k ), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

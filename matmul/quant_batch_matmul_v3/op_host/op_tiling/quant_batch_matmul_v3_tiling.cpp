@@ -419,7 +419,7 @@ bool QuantBatchMatmulV3Tiling::BiasShapeCheck(const gert::Shape &biasShape) cons
     if (biasDimNum == 1) {
         OP_TILING_CHECK(static_cast<uint64_t>(biasShape.GetDim(0)) != inputParams_.nSize,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias dimension should equal n, but it is %zu while n is %lu.",
+                                              "The bias dimension should equal n, but it is %ld while n is %lu.",
                                               biasShape.GetDim(0), inputParams_.nSize),
                                               return false);
     }
@@ -471,7 +471,7 @@ bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, con
         auto pertoken = pertokenShape->GetStorageShape();
         OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(0)) != inputParams_.mSize,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The pertoken shape should be equal to m[%lu] but atcual is [%zu]",
+                                              "The pertoken shape should be equal to m[%lu] but atcual is [%ld]",
                                               inputParams_.mSize, pertoken.GetDim(0)), return false);
     }
     if (inputParams_.aDtype == ge::DT_INT4) {
@@ -479,7 +479,7 @@ bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, con
         OP_TILING_CHECK(x1Inner < 0 || x1Inner % 2 != 0 || x2Inner < 0 || x2Inner % 2 != 0,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "if input dtype is int4, \
                                               last axis of input x1 and x2 has to be a positive even number, \
-                                              but atcually last axis of x1 is [%lu], last axis of x2 is [%lu].",
+                                              but atcually last axis of x1 is [%lu], last axis of x2 is [%ld].",
                                               x1Inner, x2Inner), return false);
     }
     return true;
