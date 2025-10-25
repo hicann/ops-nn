@@ -38,10 +38,10 @@ public:
        : PpMatMulDefault(context) {}
     ~TransposeBatchMatMulEinsumTiling() override = default;
 
-    void DoTiling() override;
-    bool GetMatMulInfo() override;
-    bool GetTilingKey() override;
-    ge::graphStatus PostTiling() override;
+    void DoTiling();
+    bool GetMatMulInfo();
+    bool GetTilingKey();
+    ge::graphStatus PostTiling();
 
 private:
     const gert::ContinuousVector *aPermList_ = nullptr;

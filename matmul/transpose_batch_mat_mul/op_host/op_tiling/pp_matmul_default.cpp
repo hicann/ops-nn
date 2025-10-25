@@ -44,45 +44,6 @@ constexpr uint32_t FORMAT_BIT_COUNT = 1;
 constexpr uint32_t COMPUTE_TYPE_BIT_COUNT = 3;
 constexpr uint32_t MAX_ATTRS_NUM = 4;
 constexpr uint32_t EN_SHUFFFLE_IDX_ATB = 7;
-
-/**
- * 获取矩阵A中的m值
- */
-uint64_t GetATensorM(gert::Shape inputAStorageShape, bool transA) {
-    size_t inputADimNums = inputAStorageShape.GetDimNum();
-    if (inputADimNums == DIM_2) {
-        return transA ? inputAStorageShape[1] : inputAStorageShape[0];
-    } else if (inputADimNums == DIM_3) {
-        return transA ? inputAStorageShape[DIM_2] : inputAStorageShape[1];
-    }
-    return 0;
-}
-
-/**
- * 获取矩阵A中的k值
- */
-uint64_t GetATensorK(gert::Shape inputAStorageShape, bool transA) {
-    size_t inputADimNums = inputAStorageShape.GetDimNum();
-    if (inputADimNums == DIM_2) {
-        return transA ? inputAStorageShape[0] : inputAStorageShape[1];
-    } else if (inputADimNums == DIM_3) {
-        return transA ? inputAStorageShape[1] : inputAStorageShape[DIM_2];
-    }
-    return 0;
-}
-
-/**
- * 获取矩阵C中的n值
- */
-uint64_t GetCTensorN(gert::Shape outputCStorageShape) {
-    size_t outputCDimNums = outputCStorageShape.GetDimNum();
-    if (outputCDimNums == DIM_2) {
-        return outputCStorageShape[1];
-    } else if (outputCDimNums == DIM_3) {
-        return outputCStorageShape[DIM_2];
-    }
-    return 0;
-}
 }
 
 namespace optiling {
@@ -101,7 +62,7 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     mLoop = CeilDiv(opShape.m, opShape.m0);
     nLoop = CeilDiv(opShape.n, opShape.n0);
     coreLoop = opShape.batchSize * mLoop * nLoop;
-    if (!isAscend310P && mLoop == 1UL && mmInfo.transB && static_cast<uint64_t>(coreLoop % coreNum) <
+    if (!isAscend310P && mLoop == 1UL && mmInfo.permB && static_cast<uint64_t>(coreLoop % coreNum) <
         static_cast<uint64_t>(coreNum / CONST_4) * CONST_3) {
         mBase = RoundUp(opShape.m, CONST_16);
         opShape.m0 = mBase;
@@ -139,78 +100,6 @@ void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P)
         kLoop = CeilDiv(opShape.k, opShape.k0);
 }
 
-bool PpMatMulDefault::GetMatMulInfo()
-{
-    size_t indexA = 0;
-    size_t indexB = indexA + static_cast<size_t>(1);
-    size_t indexBias = indexB + static_cast<size_t>(1);
-    size_t idxC = 0;
-
-    auto inputDType = context_->GetInputDesc(indexA)->GetDataType();
-    //都得校验是否为null
-    auto inputAStorageShape = context_->GetInputShape(indexA)->GetStorageShape();
-    auto outputCStorageShape = context_->GetOutputShape(idxC)->GetStorageShape();
-    size_t inputADimNums = inputAStorageShape.GetDimNum();
-    matMulInfo_.formatA = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(indexA)->GetStorageFormat()));
-    matMulInfo_.formatB = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(indexB)->GetStorageFormat()));
-    matMulInfo_.formatC = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(indexA)->GetStorageFormat()));
-    matMulInfo_.transA = *context_->GetAttrs()->GetAttrPointer<bool>(indexA);
-    matMulInfo_.transB = *context_->GetAttrs()->GetAttrPointer<bool>(indexB);
-
-    matMulInfo_.isInt8 = (inputDType == ge::DT_INT8);
-    matMulInfo_.dtypeA = context_->GetInputDesc(indexA)->GetDataType();
-    matMulInfo_.dtypeB = context_->GetInputDesc(indexB)->GetDataType();
-    matMulInfo_.dtypeC = context_->GetOutputDesc(idxC)->GetDataType();
-    matMulInfo_.biasFlag = context_->GetOptionalInputDesc(indexBias) != nullptr;
-    auto attrs = context_->GetAttrs();
-    size_t numAttrs = attrs->GetAttrNum();
-    auto computeTypeValue = 0;
-    if (numAttrs <= MAX_ATTRS_NUM) {
-        computeTypeValue = *context_->GetAttrs()->GetAttrPointer<int>(COMPUTE_TYPE_IDX_CANN);
-    } else {
-        computeTypeValue = *context_->GetAttrs()->GetAttrPointer<int>(COMPUTE_TYPE_IDX_ATB);
-    }
-
-    if (hardwareInfo_.socVersion == platform_ascendc::SocVersion::ASCEND310P) {
-        if (inputADimNums == DIM_3) {
-            matMulInfo_.batchSize = 1;
-        } else if (inputADimNums == DIM_4)
-        {
-            matMulInfo_.batchSize = static_cast<uint32_t>(inputAStorageShape[0]);
-        }
-    } else {
-        if (computeTypeValue == EINSUM_MODE) {
-            matMulInfo_.batchSize = static_cast<uint32_t>(inputAStorageShape[1]);
-        } else {
-            if (inputADimNums == DIM_2) { // 2: [M, K]
-                matMulInfo_.batchSize = 1;
-            } else if (inputADimNums == DIM_3) { // 3: [B, M, K]
-                matMulInfo_.batchSize = static_cast<uint32_t>(inputAStorageShape[0]);
-            }
-        }
-    }
-    size_t index0 = 0;
-    size_t index1 = 1;
-    size_t index2 = 2;
-    if (numAttrs <= MAX_ATTRS_NUM) {
-        auto inputAOriginShape = context_->GetInputShape(indexA)->GetOriginShape();
-        auto outputCOriginShape = context_->GetOutputShape(idxC)->GetOriginShape();
-        matMulInfo_.m = GetATensorM(inputAOriginShape, matMulInfo_.transA);
-        matMulInfo_.k = GetATensorK(inputAOriginShape, matMulInfo_.transA);
-        matMulInfo_.n = GetCTensorN(outputCOriginShape);
-    } else if (matMulInfo_.formatC == ge::Format::FORMAT_ND && computeTypeValue != EINSUM_MODE) {
-        matMulInfo_.m = GetATensorM(inputAStorageShape, matMulInfo_.transA);
-        matMulInfo_.k = GetATensorK(inputAStorageShape, matMulInfo_.transA);
-        matMulInfo_.n = GetCTensorN(outputCStorageShape);
-    } else {
-        auto oriShape = static_cast<const int64_t*>(attrs->GetAttrPointer<gert::ContinuousVector>(2)->GetData());
-        matMulInfo_.m = oriShape[index0];
-        matMulInfo_.k = oriShape[index1];
-        matMulInfo_.n = oriShape[index2];
-    }
-    return true;
-}
-
 void PpMatMulDefault::GetHardwareInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
@@ -233,49 +122,6 @@ void PpMatMulDefault::GetHardwareInfo()
     hardwareInfo_ = hardwareInfo;
 }
 
-bool PpMatMulDefault::GetTilingKey() {
-    std::unordered_map<platform_ascendc::SocVersion, uint32_t> archTypeMap = {
-        {platform_ascendc::SocVersion::ASCEND310P, 0},
-        {platform_ascendc::SocVersion::ASCEND910, 0},
-        {platform_ascendc::SocVersion::ASCEND310B, 0},
-        {platform_ascendc::SocVersion::ASCEND910B, 1}};
-
-    std::unordered_map<ge::Format, uint32_t> formatMap = {
-        {ge::Format::FORMAT_ND, 0},
-        {ge::Format::FORMAT_FRACTAL_NZ, 1}};
-    std::unordered_map<ge::DataType, uint32_t> dtypeMap = {{ge::DT_INT8, 0}, {ge::DT_FLOAT16, 1},
-                                                           {ge::DT_BF16, 2}, {ge::DT_FLOAT, 3}};
-
-    OP_TILING_CHECK(formatMap.find(matMulInfo_.formatB) == formatMap.end(),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unsupported format of matrix B."),
-                    return false);
-    OP_TILING_CHECK(formatMap.find(matMulInfo_.formatA) == formatMap.end(),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unsupported format of matrix A."),
-                    return false);
-    OP_TILING_CHECK(archTypeMap.find(hardwareInfo_.socVersion) == archTypeMap.end(),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unsupported platform."),
-                    return false);
-    size_t attrsNum = context_->GetAttrs()->GetAttrNum();
-    auto computeTypeValue = 0;
-    if (attrsNum <= MAX_ATTRS_NUM) {
-        computeTypeValue = *context_->GetAttrs()->GetAttrPointer<int>(COMPUTE_TYPE_IDX_CANN);
-    } else {
-        computeTypeValue = *context_->GetAttrs()->GetAttrPointer<int>(COMPUTE_TYPE_IDX_ATB);
-    }
-    uint32_t tilingKey = archTypeMap[hardwareInfo_.socVersion];
-    tilingKey = (tilingKey << DTYPE_BIT_COUNT) + dtypeMap[matMulInfo_.dtypeA];
-    tilingKey = (tilingKey << DTYPE_BIT_COUNT) + dtypeMap[matMulInfo_.dtypeB];
-    tilingKey = (tilingKey << DTYPE_BIT_COUNT) + dtypeMap[matMulInfo_.dtypeC];
-    tilingKey = (tilingKey << FORMAT_BIT_COUNT) + formatMap[matMulInfo_.formatA];
-    tilingKey = (tilingKey << FORMAT_BIT_COUNT) + formatMap[matMulInfo_.formatB];
-    tilingKey = (tilingKey << FORMAT_BIT_COUNT) + formatMap[matMulInfo_.formatC];
-    tilingKey = (tilingKey << 1) + static_cast<uint32_t>(matMulInfo_.transA);
-    tilingKey = (tilingKey << 1) + static_cast<uint32_t>(matMulInfo_.transB);
-    tilingKey = (tilingKey << COMPUTE_TYPE_BIT_COUNT) + static_cast<uint32_t>(computeTypeValue);
-    ppMatmulDefaultTilingData_.tilingKey = tilingKey;
-    OP_LOGD(context_->GetNodeName(), "tilingKey: %d.", tilingKey);
-    return true;
-}
 
 bool PpMatMulDefault::GetMatMulTilingData()
 {
@@ -289,26 +135,6 @@ bool PpMatMulDefault::GetMatMulTilingData()
     Swizzl<PpMatmulDefaultTilingData>(ppMatmulDefaultTilingData_);
     ppMatmulDefaultTilingData_.End(matMulInfo_, hardwareInfo_.socVersion == platform_ascendc::SocVersion::ASCEND310P);
     return true;
-}
-
-void PpMatMulDefault::DoTiling() {
-    std::map<ge::DataType, float> dTypeMap = {{ge::DT_INT8, 1.0},
-                                              {ge::DT_FLOAT16, 2.0},
-                                              {ge::DT_BF16, 2.0},
-                                              {ge::DT_FLOAT, 4.0}};
-    auto inputDType = context_->GetInputDesc(0)->GetDataType();
-    matMulInfo_.inDtype = dTypeMap[inputDType];
-    GetHardwareInfo();
-    (void)GetMatMulInfo();
-    (void)GetTilingKey();
-    (void)GetMatMulTilingData();
-    auto attrs = context_->GetAttrs();
-    size_t enShuffleKIdx = DIM_2;
-    if (attrs->GetAttrNum() > MAX_ATTRS_NUM) {
-        enShuffleKIdx = EN_SHUFFFLE_IDX_ATB;
-    }
-    ppMatmulDefaultTilingData_.enShuffleK = *attrs->GetAttrPointer<bool>(enShuffleKIdx);
-    PrintTiling();
 }
 
 void PpMatMulDefault::PrintTiling() {
@@ -329,35 +155,6 @@ void PpMatMulDefault::PrintTiling() {
     OP_LOGD(context_->GetNodeName(), "PpMatMul swizzlDirect: %ld.", ppMatmulDefaultTilingData_.swizzlDirect);
     OP_LOGD(context_->GetNodeName(), "PpMatMul splitk: %ld.", ppMatmulDefaultTilingData_.splitk);
     OP_LOGD(context_->GetNodeName(), "PpMatMul enShuffleK: %ld.", ppMatmulDefaultTilingData_.enShuffleK);
-}
-
-ge::graphStatus PpMatMulDefault::PostTiling() {
-    context_->SetTilingKey(ppMatmulDefaultTilingData_.tilingKey);
-    context_->SetBlockDim(ppMatmulDefaultTilingData_.blockDim);
-
-    PpMatmulTilingData tilingData;
-    tilingData.set_batch(ppMatmulDefaultTilingData_.opShape.batchSize);
-    tilingData.set_m(ppMatmulDefaultTilingData_.opShape.m);
-    tilingData.set_k(ppMatmulDefaultTilingData_.opShape.k);
-    tilingData.set_n(ppMatmulDefaultTilingData_.opShape.n);
-    tilingData.set_m0(ppMatmulDefaultTilingData_.opShape.m0);
-    tilingData.set_k0(ppMatmulDefaultTilingData_.opShape.k0);
-    tilingData.set_n0(ppMatmulDefaultTilingData_.opShape.n0);
-    tilingData.set_mLoop(ppMatmulDefaultTilingData_.mLoop);
-    tilingData.set_kLoop(ppMatmulDefaultTilingData_.kLoop);
-    tilingData.set_nLoop(ppMatmulDefaultTilingData_.nLoop);
-    tilingData.set_coreLoop(ppMatmulDefaultTilingData_.coreLoop);
-    tilingData.set_swizzlCount(ppMatmulDefaultTilingData_.swizzlCount);
-    tilingData.set_tilingKey(ppMatmulDefaultTilingData_.tilingKey);
-    tilingData.set_blockDim(ppMatmulDefaultTilingData_.blockDim);
-    tilingData.set_swizzlDirect(ppMatmulDefaultTilingData_.swizzlDirect);
-    tilingData.set_splitk(ppMatmulDefaultTilingData_.splitk);
-    tilingData.set_enShuffleK(ppMatmulDefaultTilingData_.enShuffleK);
-
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(),
-                            context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
-    return ge::GRAPH_SUCCESS;
 }
 
 } // namespace pp_matmul

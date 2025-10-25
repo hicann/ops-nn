@@ -193,7 +193,7 @@ static TilingTestParam ascend910B_cases_params[] = {
       "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {2, 64, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 10000000000000000000UL,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {2, 64, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 0,
     "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 4 2 0 0 123 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
     {0, 1, 2}, {0, 1, 2}, {0, 1, 2}, 1
     },
@@ -204,7 +204,7 @@ static TilingTestParam ascend910B_cases_params[] = {
        "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
        "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
        "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {64, 2, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 10000000000000000001UL,
+     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {64, 2, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 32,
      "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 4 2 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
      {1, 0, 2}, {0, 1, 2}, {0, 1, 2}, 1
     },
@@ -215,7 +215,7 @@ static TilingTestParam ascend910B_cases_params[] = {
        "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
        "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
        "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {48, 128, 128}, {128, 128, 512}, {48, 128, 512}, false, 0, 0, 24, 10000000000000000001UL,
+     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {48, 128, 128}, {128, 128, 512}, {48, 128, 512}, false, 0, 0, 24, 32,
      "24 48 512 128 128 48 512 128 48 512 32 80 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 40 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 3 4 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 128 128 128 1 1 1 1 1 1 1 1 1 128 128 128 0 0 48 128 0 0 1 0 ",
      {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
     }

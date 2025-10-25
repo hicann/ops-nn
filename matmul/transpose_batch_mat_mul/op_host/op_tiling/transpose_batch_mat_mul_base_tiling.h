@@ -87,8 +87,8 @@ protected:
 private:
     const gert::ContinuousVector *aPermList_ = nullptr;
     const gert::ContinuousVector *bPermList_ = nullptr;
-    uint64_t transA_;
-    uint64_t transB_;
+    uint64_t permA_;
+    uint64_t permB_;
     int32_t batchSplitFactor_ = 1;
     TBMMTilingData tbmmTilingDataSelf_;
     uint64_t aBatchDimAll_{1};

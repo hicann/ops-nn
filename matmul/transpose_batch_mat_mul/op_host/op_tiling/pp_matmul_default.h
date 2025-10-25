@@ -26,13 +26,9 @@ public:
     explicit PpMatMulDefault(gert::TilingContext* context) : context_(context) {}
     virtual ~PpMatMulDefault() = default;
 
-    virtual bool GetMatMulInfo();
     void GetHardwareInfo();
-    virtual bool GetTilingKey();
     bool GetMatMulTilingData();
-    virtual void DoTiling();
     void PrintTiling();
-    virtual ge::graphStatus PostTiling();
     gert::TilingContext *context_ = nullptr;
     MatMulInfo matMulInfo_;
     PpMatmulDefaultTilingData ppMatmulDefaultTilingData_;

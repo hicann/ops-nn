@@ -34,8 +34,8 @@ struct MatMulInfo {
     ge::Format formatA = ge::FORMAT_ND;
     ge::Format formatB = ge::FORMAT_ND;
     ge::Format formatC = ge::FORMAT_ND;
-    bool transA{0}; // false: 0, true: 1
-    bool transB{0}; // false: 0, true: 1
+    uint64_t permA{0};
+    uint64_t permB{0};
     bool biasFlag{0}; // false: 0, true: 1
     bool isInt8{0}; // 是否shi int8融合
     float inDtype{0};

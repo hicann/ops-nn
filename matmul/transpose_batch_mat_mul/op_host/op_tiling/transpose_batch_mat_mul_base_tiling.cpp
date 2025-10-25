@@ -24,6 +24,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
+#include "../../op_kernel/transpose_batch_mat_mul_tiling_key.h"
 
 using namespace optiling::transpose_batch_mat_mul;
 
@@ -113,8 +114,8 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::DoLibApiTiling()
     tbmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(1);
     tbmmTilingData_.matmulTiling.tileL2cacheTiling.set_nTileCntL2(1);
 
-    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transA(transA_);
-    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transB(transB_);
+    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transA(permA_);
+    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transB(permB_);
     tbmmTilingData_.set_batchSplitFactor(batchSplitFactor_);
     return ret;
 }
@@ -231,7 +232,6 @@ static void TuneBaseMKN(matmul_v3::MatmulV3RunInfo &runInfo,
 void TransposeBatchMatMulBaseTiling::DoCommonTiling()
 {
     TuneBaseMKN(runInfo_, args_, cBatchDimAll_, compileInfo_.aicNum);
-
     uint64_t baseM = runInfo_.baseM;
     uint64_t baseN = runInfo_.baseN;
     uint64_t baseK = runInfo_.baseK;
@@ -242,11 +242,10 @@ void TransposeBatchMatMulBaseTiling::DoCommonTiling()
         totalL1Size -= cBatchDimAll_ * args_.nValue * sizeof(uint64_t);
         OP_LOGI("tbmm", "Quant function is activated.");
     }
-
     if (args_.hasBias) {
         totalL1Size -= reserveSize * 4; // 1024: 256 * 4, biasTable 空间
-        baseN = std::min(reserveSize, baseN); // 带bias， baseN最大值为256
-    }
+        baseN = std::min(reserveSize, baseN);
+    } // 带bias， baseN最大值为256
     // DB后FP32下，L1可以存65536个数值
     uint64_t depthA1 = (totalL1Size / NUM_TWO / aDtypeSize_ / (baseM * baseK) / uint64_t(4)) * uint64_t(4);
     // DB后FP32下，L1可以存65536个数值
@@ -255,7 +254,6 @@ void TransposeBatchMatMulBaseTiling::DoCommonTiling()
     depthB1 = std::max(NUM_TWO, depthB1);
     uint64_t stepKa = depthA1 / NUM_TWO;
     uint64_t stepKb = depthB1 / NUM_TWO;
-
     if (stepKa > stepKb) {
         stepKa = stepKa / stepKb * stepKb;
         depthA1 = stepKa * NUM_TWO;
@@ -275,12 +273,13 @@ void TransposeBatchMatMulBaseTiling::DoCommonTiling()
     tbmmTilingData_.matmulTiling.matmulTiling.set_baseM(baseM);
     tbmmTilingData_.matmulTiling.matmulTiling.set_baseN(baseN);
     tbmmTilingData_.matmulTiling.matmulTiling.set_baseK(baseK);
-    // last bit: pre transpose is fused; second to last bit: both post transposes are fused
-    if (transA_ == 213UL) { //213 指的是 {1,0,2} 转置
-        tilingKey_ = batchSplitFactor_ > 1 ? 10000000000000000011UL : 10000000000000000001UL;
-    } else if(transA_ == 123UL) { //123 指的是 {0,1,2} 转置
-        tilingKey_ = batchSplitFactor_ > 1 ? 10000000000000000010UL : 10000000000000000000UL;
-    }
+    uint64_t batchSplitMode = batchSplitFactor_ > 1 ? 1 : 0;
+    uint64_t ppMatmulMode = 0;
+    uint64_t permX1 = 0;
+    uint64_t permX2 = 0;
+    if (permA_ == 213UL) {permX1 = 2;} // 2 是 permList 的字典序, 2 -> [1,0,2]
+    else if(permA_ == 123UL) {permX1 = 0;}
+    tilingKey_ = GET_TPL_TILING_KEY(batchSplitMode, ppMatmulMode, permX1, permX2,);
 }
 
 bool TransposeBatchMatMulBaseTiling::CheckBMMTilingDataIsVaild() const {
@@ -375,8 +374,8 @@ static ge::graphStatus OpSpecificCheck(const optiling::matmul_v3::MatmulV3Args &
 {
     // format check
     OP_TILING_CHECK(
-        (args.aFormat != ge::FORMAT_ND) || (args.bFormat != ge::FORMAT_ND) || (args.outFormat != ge::FORMAT_ND),
-        CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output dim num"), return ge::GRAPH_FAILED);
+        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.bFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
+        CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output format"), return ge::GRAPH_FAILED);
 
     // dtype check
     std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
@@ -499,18 +498,18 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     OP_TILING_CHECK(GetShapeBias() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(args_.opName,
                     "get bias failed"), return ge::GRAPH_FAILED);
 
-    // 通过transA 传递perm， 将 perm 转成整数， 为避免零出现perm每位加一， 例 {1,0,2}  加一-> {2,1,3} -> 213
+    // 通过permA 传递perm， 将 perm 转成整数， 为避免零出现perm每位加一， 例 {1,0,2}  加一-> {2,1,3} -> 213
     const int64_t* perm_x1 = reinterpret_cast<const int64_t*>(aPermList_->GetData());
-    transA_ = 0UL;
+    permA_ = 0UL;
     for (uint32_t i = 0; i < aPermList_->GetSize(); i++) {
-        transA_ = transA_ * 10 + perm_x1[i] + 1;   // 乘10 移位
+        permA_ = permA_ * 10 + perm_x1[i] + 1;   // 乘10 移位
     }
     const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(bPermList_->GetData());
-    transB_ = 0UL;
+    permB_ = 0UL;
     for (uint32_t i = 0; i < bPermList_->GetSize(); i++) {
-        transB_ = transB_ * 10 + perm_x2[i] + 1; // 乘10 移位
+        permB_ = permB_ * 10 + perm_x2[i] + 1; // 乘10 移位
     }
-    OP_LOGI(args_.opName, "transA: %lu, transB: %lu", transA_, transB_);
+    OP_LOGI(args_.opName, "permA_: %lu, permB_: %lu", permA_, permB_);
 
     uint64_t dtypeSize = GetSizeByDataType(args_.aType);
     uint64_t input_batch = batchInfo_.batchC;
@@ -520,9 +519,9 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     bool support_k_n = (input_k % alignLen == 0UL) && (input_n % alignLen == 0UL);
     bool support_batch_m = true;
 
-    if (transA_ == 213UL) { //213 指的是 {1,0,2} 转置
+    if (permA_ == 213UL) { //213 指的是 {1,0,2} 转置
         support_batch_m = (input_batch * input_k < 65536UL); // 65536 随路ND2NZ转换上限
-    } else if (transA_ == 123UL) { //123 指的是 {0,1,2} 转置
+    } else if (permA_ == 123UL) { //123 指的是 {0,1,2} 转置
         support_batch_m = (input_k < 65536UL); // 65536 随路ND2NZ转换上限
     } else {
         OP_LOGE(args_.opName, "perm is not supported");

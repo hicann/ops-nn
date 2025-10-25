@@ -16,19 +16,19 @@
 #include "transpose_batch_mat_mul_tiling.h"
 #include "util/math_util.h"
 #include "log/log.h"
-#include "tiling_base/tiling_key.h"
 #include "error_util.h"
-#include "op_cache_tiling.h"
+#include "tiling_base/tiling_key.h"
 #include "runtime_kb_api.h"
+#include "op_cache_tiling.h"
+#include "platform/platform_infos_def.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_tuning.h"
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "platform/platform_infos_def.h"
+#include "../../op_kernel/transpose_batch_mat_mul_tiling_key.h"
 
 #include <tiling/platform/platform_ascendc.h>
 
 using namespace optiling::transpose_batch_mat_mul;
-using Ops::NN::Optiling::RecursiveSum;
 
 namespace optiling {
 namespace transpose_batch_mat_mul {
@@ -75,17 +75,22 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
     bPermList_ = attrs->GetAttrPointer<gert::ContinuousVector>(1);
 
     const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(bPermList_->GetData());
-    matMulInfo_.transA = false;
-    matMulInfo_.transB = PermDecode(perm_x2, bPermList_->GetSize()) == 123L ? false : true;
+    // 2 是 permList 的字典序, 2 -> [1,0,2]
+    matMulInfo_.permA = 2;
+    matMulInfo_.permB = PermDecode(perm_x2, bPermList_->GetSize()) == 123L ? 0 : 1;
     return true;
 }
 
 bool TransposeBatchMatMulEinsumTiling::GetTilingKey()
 {
-    std::unordered_map<platform_ascendc::SocVersion, uint32_t> archTypeMap = {
-        {platform_ascendc::SocVersion::ASCEND910B, 1}};
-    auto tilingKey = RecursiveSum(
-            matMulInfo_.transB, matMulInfo_.transA, archTypeMap[hardwareInfo_.socVersion]);
+    uint64_t batchSplitMode = 0;
+    uint64_t ppMatmulMode = 1;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(
+        batchSplitMode,
+        ppMatmulMode,
+        matMulInfo_.permA, 
+        matMulInfo_.permB
+    );
     ppMatmulDefaultTilingData_.tilingKey = tilingKey;
     OP_LOGI(context_->GetNodeName(), "tilingKey: %ld.", tilingKey);
     return true;

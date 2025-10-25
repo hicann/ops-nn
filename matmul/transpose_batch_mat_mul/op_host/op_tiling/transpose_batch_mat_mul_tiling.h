@@ -21,8 +21,8 @@
 #include "pp_matmul_tiling.h"
 
 namespace optiling {
-REGISTER_TILING_DATA_CLASS(TransposeBatchMatMul_100, PpMatmulTilingData)
-REGISTER_TILING_DATA_CLASS(TransposeBatchMatMul_101, PpMatmulTilingData)
+REGISTER_TILING_DATA_CLASS(TransposeBatchMatMul_36, PpMatmulTilingData)
+REGISTER_TILING_DATA_CLASS(TransposeBatchMatMul_292, PpMatmulTilingData)
 
 BEGIN_TILING_DATA_DEF(TBMMTilingData)
   TILING_DATA_FIELD_DEF_STRUCT(MatmulTilingData, matmulTiling);

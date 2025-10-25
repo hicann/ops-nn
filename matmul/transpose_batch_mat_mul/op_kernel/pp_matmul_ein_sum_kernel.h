@@ -44,7 +44,7 @@ class PpMatmulEinSum {
 public:
     __aicore__ explicit PpMatmulEinSum(){};
 
-    __aicore__ FORCE_INLINE void Init(GM_ADDR a, GM_ADDR b, GM_ADDR c, const PpMatmulTilingData* tilingData, AscendC::TPipe* tPipe)
+    __aicore__ FORCE_INLINE void Init(GM_ADDR a, GM_ADDR b, GM_ADDR c, const PpMatmulTilingData* tilingData)
     {
         gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype *>(a));
         gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype *>(b));
@@ -63,7 +63,7 @@ public:
         swizzle_cnt = tilingData->swizzlCount;
         en_shuffle_k = tilingData->enShuffleK;
 
-        AsdopsBuffer<ArchType::ASCEND_V220> buf(tPipe);
+        OnChipBuffer<ArchType::ASCEND_V220> buf;
         l1_base_a = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(0);
         l1_base_b = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(RoundUp<CONST_256>(m0 * k0 * sizeof(InDtype)));
         l0a_base = buf.template GetBuffer<BufferType::ASCEND_L0A, InDtype>(0);
