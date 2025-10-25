@@ -1279,7 +1279,7 @@ bool QuantBatchMatmulV3BasicTiling::DoBasicTiling()
 
     // add to cache
     hashValue.SetTiling(basicTiling_);
-    tilingHashCache.Add(tilingKey, hashValue.input(), hashValue);
+    tilingHashCache.Add(tilingKey, hashValue);
     PrintBasicTiling();
     return true;
 }

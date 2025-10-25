@@ -25,7 +25,7 @@ constexpr uint32_t kMaxTilingCacheEntryNum = 500;
 template <typename HashInput, typename HashItem>
 class TilingCache {
  public:
-  void Add(uint32_t key, const HashInput &hash_input, const HashItem &value) {
+  void Add(uint32_t key, const HashItem &value) {
     rwlock_.wrlock();
     if (size_ >= kMaxTilingCacheEntryNum) {
       rwlock_.unlock();

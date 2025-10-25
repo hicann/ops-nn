@@ -132,7 +132,6 @@ static bool CheckDtypeValid(
 static bool CheckDtypeValidWeightNz(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
-    bool bf16flag = CheckSocVersionIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!(socVersion == SocVersion::ASCEND910B || socVersion ==SocVersion::ASCEND910_93)) {
         OP_LOGE(
@@ -388,8 +387,7 @@ inline static uint64_t GetBatchDimAll(const aclTensor* x)
 };
 
 static bool CheckAscendCScenario(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo, const bool adjX1,
-    const bool adjX2)
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo)
 {
     if (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
         mmOpInfo.support_info.mat2_format != ge::FORMAT_ND) {
@@ -537,7 +535,7 @@ const aclTensor* GetBatchMatmulOp(
     bool adjX1, bool adjX2, const bool offsetX, aclOpExecutor* executor)
 {
     auto bmmOpOut = selfTransdata;
-    if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
+    if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo)) {
         if (GetCurrentPlatformInfo().GetSocVersion() ==
                 SocVersion::ASCEND910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
