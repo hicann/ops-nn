@@ -107,7 +107,7 @@ private:
     {
         valueSizeGm_.SetGlobalBuffer((__gm__ int*)valueSize);
         strideGm_.SetGlobalBuffer((__gm__ int*)stride);
-        outputGm_.SetGlobalBuffer((__gm__ int*)output + idxAddrOffset_);
+        outputGm_.SetGlobalBuffer((__gm__ int*)output + idxAddrOffset_, dataNum_);
         InitGlobalMemory(outputGm_, dataNum_, 0);
         SyncAll();
     }

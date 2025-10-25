@@ -13,7 +13,7 @@ import torch
 import sys
 
 params_continuous_int32 = [
-    3, 2, 0, 1, 1, 1, 0, 1, 3, 1, 1, 1, 0, 1,
+    3, 2, 0, 1, 1, 1, 0, 1, 3, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0
 ]
 
 params_info = {
@@ -24,7 +24,7 @@ params_info = {
 def main():
     params_list = params_info[sys.argv[1]]   # python gen_tiling.py case0  sys.argv[1]="case0"
 
-    base_params = np.array(params_list[:], dtype=np.int32)
+    base_params = np.array(params_list[:], dtype=np.uint64)
 
     tiling_file = open("tiling.bin", "wb")
     base_params.tofile(tiling_file)

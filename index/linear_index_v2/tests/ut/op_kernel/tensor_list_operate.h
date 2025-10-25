@@ -56,7 +56,7 @@ uint8_t* CreateTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos)
         uint64_t dataSize = shapeSizeList[i] * sizeof(T);
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         std::stringstream fileName;
-        fileName << "./scatter_list_data/var_" << i << ".bin";
+        fileName << "./linear_index_v2_data/indices_list" << ".bin";
         ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
@@ -75,7 +75,7 @@ void FreeTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& sha
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
         std::stringstream fileName;
-        fileName << "./scatter_list_data/output_" << i << ".bin";
+        fileName << "./linear_index_v2_data/indices_list" << ".bin";
         WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
         AscendC::GmFree((void*)(tensorAddr));
     }

@@ -18,7 +18,7 @@
 
 #define __aicore__
 
-struct LinearIndexV2TilingParamDef {
+struct LinearIndexV2TilingParam {
     uint64_t usedCoreNum = 0;
     uint64_t tensorId = 0;
     uint64_t formerCoreNum = 0;
@@ -34,18 +34,19 @@ struct LinearIndexV2TilingParamDef {
     uint64_t tailCoreTailDataNum = 0;
     uint64_t tailCoreFormerTime = 0;
     uint64_t tailCoreTailTime = 0;
+    uint64_t indicesMask[8];
 };
 
-struct LinearIndexV2TilingDataDef {
-    LinearIndexV2TilingParamDef params;
+struct LinearIndexV2TilingData {
+    LinearIndexV2TilingParam params;
 };
 
-inline void InitLinearIndexV2TilingDataDef(uint8_t* tiling, LinearIndexV2TilingDataDef* data)
+inline void InitLinearIndexV2TilingData(uint8_t* tiling, LinearIndexV2TilingData* data)
 {
-    memcpy(data, tiling, sizeof(LinearIndexV2TilingDataDef));
+    memcpy(data, tiling, sizeof(LinearIndexV2TilingData));
 }
 
 #define GET_TILING_DATA(tiling_data, tiling_arg) \
-    LinearIndexV2TilingDataDef tiling_data;         \
-    InitLinearIndexV2TilingDataDef(tiling_arg, &tiling_data)
+    LinearIndexV2TilingData tiling_data;         \
+    InitLinearIndexV2TilingData(tiling_arg, &tiling_data)
 #endif // _FAST_OP_TEST_LINEAR_INDEX_V2_TILING_H_

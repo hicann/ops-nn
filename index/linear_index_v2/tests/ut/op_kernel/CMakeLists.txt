@@ -8,5 +8,5 @@
 # ============================================================================
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(linear_index_v2 "ascend910B1" "")
 endif()

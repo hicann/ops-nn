@@ -14,9 +14,11 @@ import torch
 import tensorflow as tf
 
 def gen_golden_data_simple():
-    stride = np.array([10, 1])
-    value = np.array([10, 10])
+    indices_list = np.array([0, 1, 2], dtype=np.int32)
+    stride = np.array([10, 1], dtype=np.int32)
+    value = np.array([10, 10], dtype=np.int32)
 
+    indices_list.tofile("./indices_list.bin")
     stride.tofile("./stride.bin")
     value.tofile("./value.bin")
 
