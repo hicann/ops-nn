@@ -21,6 +21,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "op_cache_tiling.h"
 #include "tiling_base/tiling_key.h"
+#include "../../op_kernel/quant_batch_matmul_v4_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 namespace optiling {
@@ -345,8 +346,10 @@ void QuantBatchMatmulV4MsdTiling::InitPlatformInfo(const QuantBatchMatmulV4Compi
 
 uint64_t QuantBatchMatmulV4MsdTiling::GetTilingKey() const
 {
-    return RecursiveSum(inputParams_.transA, inputParams_.transB, inputParams_.antiQuantType,
-                        inputParams_.hasAntiQuantOffset, inputParams_.weightNz, KernelTemplateType::MSD_BASIS);
+    uint64_t trans =
+        (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(inputParams_.antiQuantType), static_cast<uint64_t>(inputParams_.hasAntiQuantOffset),
+                              static_cast<uint64_t>(inputParams_.weightNz), static_cast<uint64_t>(KernelTemplateType::MSD_BASIS));
 }
 
 const gert::Shape QuantBatchMatmulV4MsdTiling::GetShape(const size_t index) const

@@ -26,6 +26,7 @@
 #include "arch35/adaptive_sliding_window_tiling.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
+#include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"
 
 using AscendC::BLOCK_CUBE;    // uint32_t 16
 using AscendC::ONE_BLK_SIZE;  // uint32_t 32
@@ -883,14 +884,14 @@ ge::graphStatus QuantBatchMatmulV3Tiling::DoLibApiTiling()
  */
 uint64_t QuantBatchMatmulV3Tiling::GetTilingKey(bool isBasicTiling) const
 {
-    // 新增特性应往后添加,相同特性应在同bit位
-    if (inputParams_.cDtype == ge::DT_BF16) {
-        return RecursiveSum(inputParams_.transB, inputParams_.transA, isBasicTiling,
-                            isBf16Opt_, inputParams_.isPertoken, false);
-    } else {
-        return RecursiveSum(inputParams_.transB, inputParams_.transA, isBasicTiling,
-                            isBf16Opt_, inputParams_.isPertoken, NeedAtomiClean());
+    uint64_t trans =
+        (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    uint64_t kernelTemplateType = (static_cast<uint64_t>(isBf16Opt_) << 1) | static_cast<uint64_t>(isBasicTiling);
+    uint64_t optionAttrs = 0;
+    if (inputParams_.cDtype != ge::DT_BF16) {
+        optionAttrs = NeedAtomiClean();
     }
+    return GET_TPL_TILING_KEY(trans, kernelTemplateType, static_cast<uint64_t>(inputParams_.isPertoken), optionAttrs);
 }
 
 uint64_t QuantBatchMatmulV3Tiling::GetTilingKey() const

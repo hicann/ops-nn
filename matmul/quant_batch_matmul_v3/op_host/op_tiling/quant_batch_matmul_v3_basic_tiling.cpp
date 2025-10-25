@@ -27,6 +27,7 @@
 #include "tiling_base/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "error_util.h"
+#include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"
 
 using AscendC::BLOCK_CUBE;    // uint32_t 16
 using AscendC::ONE_BLK_SIZE;  // uint32_t 32
@@ -1359,9 +1360,12 @@ ge::graphStatus QuantBatchMatmulV3BasicTiling::DoLibApiTiling()
 uint64_t QuantBatchMatmulV3BasicTiling::GetTilingKey() const
 {
     if (inputParams_.cDtype == ge::DT_BF16 && IsPertokenBasicSwitchCondition()) {
-        return RecursiveSum(
-            inputParams_.transB, inputParams_.transA, true, isBf16Opt_,
-            inputParams_.isPertoken, false, isAicAiv1_2);
+        uint64_t trans =
+            (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+        bool isBasicTiling = true;
+        uint64_t kernelTemplateType = (static_cast<uint64_t>(isBf16Opt_) << 1) | static_cast<uint64_t>(isBasicTiling);
+        uint64_t optionAttrs = static_cast<uint64_t>(isAicAiv1_2) << 1;
+        return GET_TPL_TILING_KEY(trans, kernelTemplateType, static_cast<uint64_t>(inputParams_.isPertoken), optionAttrs);
     }
     return QuantBatchMatmulV3Tiling::GetTilingKey(true);
 }

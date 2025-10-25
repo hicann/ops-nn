@@ -21,6 +21,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "op_cache_tiling.h"
 #include "tiling_base/tiling_key.h"
+#include "../../op_kernel/quant_batch_matmul_v4_tiling_key.h"
 
 namespace optiling {
 
@@ -129,7 +130,9 @@ ge::graphStatus QuantBatchMatmulV4PergroupTiling::DoOpTiling()
 
 uint64_t QuantBatchMatmulV4PergroupTiling::GetTilingKey() const
 {
-    return RecursiveSum(inputParamsPergroup_.antiQuantType, KernelTemplateType::PERGROUP_BASIS);
+    return GET_TPL_TILING_KEY(/*not trans*/0, static_cast<uint64_t>(QuantBatchMatmulV4QuantType::MX),
+                              /*hasAntiQuantOffset*/0, /*weightNz*/0,
+                              static_cast<uint64_t>(KernelTemplateType::PERGROUP_BASIS));
 }
 
 ge::graphStatus QuantBatchMatmulV4PergroupTiling::CheckContext()

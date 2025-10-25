@@ -32,7 +32,7 @@ struct QuantBatchMatmulPergroupInfo : public QuantBatchMatmulInfo {
     ge::DataType x2OffsetDtype;
 };
 
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_33, QuantBatchMatmulV3TilingData)
+REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_1040, QuantBatchMatmulV3TilingData)
 
 class QuantBatchMatmulV4PergroupTiling : public QuantBatchMatmulV3BasicTiling {
 public:

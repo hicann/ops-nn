@@ -58,7 +58,7 @@ TILING_DATA_FIELD_DEF(bool, transA);
 TILING_DATA_FIELD_DEF(bool, transB);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_200410, QuantBatchMatmulV4PerblockTilingData)
+REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_529, QuantBatchMatmulV4PerblockTilingData)
 
 class QuantBatchMatmulV4PerblockTiling : public QuantBatchMatmulV3BasicTiling
 {

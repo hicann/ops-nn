@@ -18,6 +18,7 @@
 #include "vector"
 #include "error_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
+#include "../../op_kernel/quant_batch_matmul_v4_tiling_key.h"
 
 namespace optiling {
 
@@ -384,8 +385,10 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::InstantiateTilingData()
 
 uint64_t QuantBatchMatmulV4PerblockTiling::GetTilingKey() const
 {
-    return RecursiveSum(inputParams_.transA, inputParams_.transB, QuantBatchMatmulV4QuantType::MX,
-                        /*hasAntiQuantOffset*/0, /*weightNz*/0, KernelTemplateType::PERBLOCK_BASIS);
+    uint64_t trans =
+        (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(QuantBatchMatmulV4QuantType::MX),
+                              /*hasAntiQuantOffset*/0, /*weightNz*/0, static_cast<uint64_t>(KernelTemplateType::PERBLOCK_BASIS));
 }
 
 const gert::Shape QuantBatchMatmulV4PerblockTiling::GetShape(const size_t index)

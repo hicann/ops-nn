@@ -279,8 +279,8 @@ TEST_P(TestQuantBatchMatmulV4TilingMsd, generalTest)
 //         aicNum aivNum platform weightFormat
 static QuantBatchMatmulV4TilingMsdTestParam casesParams[] = {
     // A int8 W int4
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_BF16_20_40", 20, ge::GRAPH_SUCCESS, 100400UL},
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 100400UL},
+    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_BF16_20_40", 20, ge::GRAPH_SUCCESS, 16UL},
+    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 16UL},
  };
 
 INSTANTIATE_TEST_CASE_P(MMA8W4MSD, TestQuantBatchMatmulV4TilingMsd, testing::ValuesIn(casesParams));
