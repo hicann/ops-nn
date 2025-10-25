@@ -18,6 +18,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "tiling_base/tiling_key.h"
+#include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -766,9 +767,30 @@ uint64_t WeightQuantBatchMatmulV2WeightNz::GetTilingKey() const
         inputParams_.batchY0 == 1) {
         batch = 0;
     }
-    return RecursiveSum(
-        inputParams_.transA, inputParams_.antiQuantType, inputParams_.hasAntiQuantOffset, L1FullloadMode_,
-        KernelTemplateType::WEIGHT_NZ, batch);
+    uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
+    uint64_t subSocVersionType = 0UL;
+    uint64_t antiquantScenario = 0UL;
+    uint64_t algorithm = 3UL; // 3 means CUSTOM tilingkey algorithm
+    uint64_t subAlgorithm = 0UL;
+    uint64_t subAlgorithmCustom = static_cast<uint64_t>(KernelTemplateType::WEIGHT_NZ);
+    uint64_t innerPrecise = 0UL;
+    uint64_t templateCustom = 0UL;
+    uint64_t apiConstexpr = 0UL;
+    bool transA = inputParams_.transA;
+    bool transB = false;
+    uint64_t antiquantType = static_cast<uint64_t>(inputParams_.antiQuantType);
+    uint64_t quantType = static_cast<uint64_t>(QuantType::NONE);
+    bool hasAntiquantOffset = inputParams_.hasAntiQuantOffset;
+    bool hasBias = false;
+    bool isBiasFp32 = false;
+    bool isWeightNz = false;
+    uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+    uint64_t fullLoadMode = static_cast<uint64_t>(L1FullloadMode_);
+    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+        innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+        hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+    return tilingKey_;
 }
 
 void WeightQuantBatchMatmulV2WeightNz::Reset()

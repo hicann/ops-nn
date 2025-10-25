@@ -70,13 +70,13 @@ TILING_DATA_FIELD_DEF(uint64_t, kSizeAlign); // 输入k的对齐后大小
 
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(
-    WeightQuantBatchMatmulV2_1000010001000012021, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
+    WeightQuantBatchMatmulV2_367514450137089, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
 REGISTER_TILING_DATA_CLASS(
-    WeightQuantBatchMatmulV2_1000010001000012001, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
+    WeightQuantBatchMatmulV2_367239572230145, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
 REGISTER_TILING_DATA_CLASS(
-    WeightQuantBatchMatmulV2_1000010000000012021, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
+    WeightQuantBatchMatmulV2_367514445942785, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
 REGISTER_TILING_DATA_CLASS(
-    WeightQuantBatchMatmulV2_1000010000000012001, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
+    WeightQuantBatchMatmulV2_367239568035841, WeightQuantBatchMatmulV2CustomNzSplitKTilingData)
 
 class WeightQuantBatchMatmulV2CustomNzSplitK : public WeightQuantBatchMatmulV2Tiling
 {

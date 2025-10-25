@@ -22,6 +22,7 @@
 #include "weight_quant_batch_matmul_v2_tiling.h"
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
 #include "tiling_base/tiling_key.h"
+#include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -45,17 +46,17 @@ TILING_DATA_FIELD_DEF(uint64_t, nSize);
 TILING_DATA_FIELD_DEF(uint64_t, groupSize);
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
 END_TILING_DATA_DEF;
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_711300, WeightQuantBatchMatmulV2MsdGroupTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_710300, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_365333139882753, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_365058261975809, WeightQuantBatchMatmulV2MsdGroupTilingData)
 
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000100000000003021, WeightQuantBatchMatmulV2MsdGroupTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000100000000003001, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_367514982809857, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_367240104902913, WeightQuantBatchMatmulV2MsdGroupTilingData)
 
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000101000000003020, WeightQuantBatchMatmulV2MsdGroupTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000101000000003000, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_365315960602881, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_365041082695937, WeightQuantBatchMatmulV2MsdGroupTilingData)
 
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000101000000003021, WeightQuantBatchMatmulV2MsdGroupTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1000101000000003001, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_367514983858433, WeightQuantBatchMatmulV2MsdGroupTilingData)
+REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_367240105951489, WeightQuantBatchMatmulV2MsdGroupTilingData)
 
 class WeightQuantBatchMatmulV2TilingMsdGroup : public WeightQuantBatchMatmulV2Tiling
 {
@@ -101,15 +102,58 @@ protected:
             // 在A16W4 pergroup 高性能/高精度 tilingkey
             TilingKeyConfigure tilingKeyConfigure;
             SetCommonTilingKeyElement(tilingKeyConfigure);
-            tilingKeyConfigure.algorithm =
-                static_cast<uint8_t>(OptimizationAlgorithmCategory::MULTI_SCALE_DEQUANT) * 10 +
-                static_cast<uint8_t>(OptimizationAlgorithmSubCategory::VDEFAULT);
-            tilingKeyConfigure.templateCustom = static_cast<uint8_t>(matmulInfoPtr_->innerPrecise) * 1000; // 1000:第6位
-            return tilingKeyConfigure.GenTilingKey();
+
+            uint64_t socVersionType = tilingKeyConfigure.socVersionType / 10UL;
+            uint64_t subSocVersionType = 0UL;
+            uint64_t antiquantScenario = tilingKeyConfigure.quantizationScenario;
+            uint64_t algorithm = static_cast<uint64_t>(OptimizationAlgorithmCategory::MULTI_SCALE_DEQUANT);
+            uint64_t subAlgorithm = static_cast<uint64_t>(OptimizationAlgorithmSubCategory::VDEFAULT);
+            uint64_t subAlgorithmCustom = 0UL;
+            uint64_t innerPrecise = matmulInfoPtr_->innerPrecise;
+            uint64_t templateCustom = 0UL;
+            uint64_t apiConstexpr = 0UL;
+            bool transA = ((tilingKeyConfigure.transposeSituation >> 1) & 1) != 0;
+            bool transB = (tilingKeyConfigure.transposeSituation & 1) != 0;
+            uint64_t antiquantType = tilingKeyConfigure.antiquantType;
+            uint64_t quantType = tilingKeyConfigure.quantType;
+            bool hasAntiquantOffset = ((tilingKeyConfigure.optionInputSituation >> 1) & 1) != 0;
+            bool hasBias = false;
+            bool isBiasFp32 = false;
+            bool isWeightNz = (tilingKeyConfigure.weightFormat == 1UL) ? true : false;
+            uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+            uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+            uint64_t batch = 0UL;
+            uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         } else {
-            return RecursiveSum(
-                matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_GROUP);
+            uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
+            uint64_t subSocVersionType = 0UL;
+            uint64_t antiquantScenario = 0UL;
+            uint64_t algorithm = 3UL; // 3 means CUSTOM tilingkey algorithm
+            uint64_t subAlgorithm = 0UL;
+            uint64_t subAlgorithmCustom = static_cast<uint64_t>(KernelTemplateType::MSD_GROUP);
+            uint64_t innerPrecise = 0UL;
+            uint64_t templateCustom = 0UL;
+            uint64_t apiConstexpr = 0UL;
+            bool transA = matmulInfoPtr_->transA;
+            bool transB = matmulInfoPtr_->transB;
+            uint64_t antiquantType = static_cast<uint64_t>(matmulInfoPtr_->antiQuantType);
+            uint64_t quantType = static_cast<uint64_t>(matmulInfoPtr_->quantType);
+            bool hasAntiquantOffset = matmulInfoPtr_->hasAntiQuantOffset;
+            bool hasBias = false;
+            bool isBiasFp32 = false;
+            bool isWeightNz = false;
+            uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+            uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+            uint64_t batch = 0UL;
+            uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         }
     }
 

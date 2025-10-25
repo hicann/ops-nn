@@ -280,7 +280,7 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingSplitk, generalTest)
 // Note: group value
 //       -1: per channel, 1: per tensor, > 1: per group
 static WeightQuantBatchMatmulV2TilingSplitkTestParam casesParams2448[] = {
-    {"jyxc_24_12288_7808_1_0_0_0_0_0_64_BF16_INT8_UINT64_BF16", 24, 911300UL},
+    {"jyxc_24_12288_7808_1_0_0_0_0_0_64_BF16_INT8_UINT64_BF16", 24, 365333140013825},
 };
 
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatchMatmulV2TilingSplitk, testing::ValuesIn(casesParams2448));

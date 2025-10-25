@@ -308,7 +308,7 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingFixpipe, generalTest)
 */
 static WeightQuantBatchMatmulV2TilingFixpipeTestParam casesParams2448[] = {
     {"fixpNetworkCase1_96_4096_32064_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48_supportL0C2Out_0_UINT64_INT32_0",
-     24, 1000200000000012020UL},
+     24, 365315422683649},
 };
 
 static WeightQuantBatchMatmulV2TilingFixpipeTestParam errorCaseParam[] = {

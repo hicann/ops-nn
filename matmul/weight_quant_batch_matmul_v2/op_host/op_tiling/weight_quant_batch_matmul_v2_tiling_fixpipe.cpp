@@ -17,6 +17,7 @@
 
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
 #include "matmul/common/op_host/math_util.h"
+#include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"
 
 namespace optiling {
 
@@ -205,26 +206,32 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingFixpipe::DoOpTiling()
 
 // 5、计算TilingKey
 uint64_t WeightQuantBatchMatmulV2TilingFixpipe::GetTilingKey() const
-{
-    TilingKeyConfigure tilingKeyConfigure;
-    // 平台类型占2位(平台大类， 平台小类)，平台大类在高位，需要乘10
-    tilingKeyConfigure.socVersionType = static_cast<uint8_t>(SocVersionType::SUPPORT_L0C_TO_OUT) * 10;
-    tilingKeyConfigure.quantizationScenario = static_cast<uint8_t>(QuantizationScenario::DEFAULT);
-    // 算法类型占2位(算法大类，算法小类)，算法大类在高位，需要乘10
-    tilingKeyConfigure.algorithm = static_cast<uint8_t>(OptimizationAlgorithmCategory::FIXPIPE_ANTIQUANT) * 10;
-    tilingKeyConfigure.transposeSituation =
-        (static_cast<uint16_t>(matmulInfoPtr_->transA) << 1) | static_cast<uint16_t>(matmulInfoPtr_->transB);
-    tilingKeyConfigure.antiquantType = static_cast<uint8_t>(matmulInfoPtr_->antiQuantType);
-    tilingKeyConfigure.quantType = static_cast<uint8_t>(QuantType::NONE);
-    tilingKeyConfigure.optionInputSituation =
-        ((static_cast<uint16_t>(matmulInfoPtr_->hasAntiQuantOffset) << 1) |
-         static_cast<uint16_t>(matmulInfoPtr_->hasBias));
-    tilingKeyConfigure.weightFormat = static_cast<uint8_t>(WeightFormat::ND);
-
-    tilingKeyConfigure.templateCustom = static_cast<uint8_t>(
-        aFullLoad_ ? FixpipeConfiguration::A_SINGLE_M_SINGLE_K_FULL_LOAD : FixpipeConfiguration::A_NORMAL_LOAD);
-    tilingKeyConfigure.apiConstexpr = 0;
-    return tilingKeyConfigure.GenTilingKey();
+{   
+    uint64_t socVersionType = static_cast<uint64_t>(SocVersionType::SUPPORT_L0C_TO_OUT);
+    uint64_t subSocVersionType = 0UL;
+    uint64_t antiquantScenario = static_cast<uint64_t>(QuantizationScenario::DEFAULT);
+    uint64_t algorithm = static_cast<uint64_t>(OptimizationAlgorithmCategory::FIXPIPE_ANTIQUANT);
+    uint64_t subAlgorithm = 0UL;
+    uint64_t subAlgorithmCustom = 0UL;
+    uint64_t innerPrecise = 0UL;
+    uint64_t templateCustom = aFullLoad_ ? static_cast<uint64_t>(FixpipeConfiguration::A_SINGLE_M_SINGLE_K_FULL_LOAD) : static_cast<uint64_t>(FixpipeConfiguration::A_NORMAL_LOAD);
+    uint64_t apiConstexpr = 0UL;
+    bool transA = matmulInfoPtr_->transA;
+    bool transB = matmulInfoPtr_->transB;
+    uint64_t antiquantType = static_cast<uint64_t>(matmulInfoPtr_->antiQuantType);
+    uint64_t quantType = static_cast<uint64_t>(QuantType::NONE);
+    bool hasAntiquantOffset = matmulInfoPtr_->hasAntiQuantOffset;
+    bool hasBias = matmulInfoPtr_->hasBias;
+    bool isBiasFp32 = false;
+    bool isWeightNz = false; // WeightFormat::ND
+    uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+    uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+    uint64_t batch = 0UL;
+    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+        innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+        hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+    return tilingKey_;
 }
 
 // 6、计算Workspace 大小

@@ -19,6 +19,7 @@
 #include "weight_quant_batch_matmul_v2_white_list.h"
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
 #include "tiling_base/tiling_key.h"
+#include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -349,12 +350,32 @@ uint64_t WeightQuantBatchMatmulV2Msd::GetInnerPreciseTilingKey() const
 {
     TilingKeyConfigure tilingKeyConfigure;
     SetCommonTilingKeyElement(tilingKeyConfigure);
-    // 10:乘10表示在第4位
-    tilingKeyConfigure.algorithm = (static_cast<uint8_t>(OptimizationAlgorithmCategory::MULTI_SCALE_DEQUANT) * 10) +
-                                   static_cast<uint8_t>(OptimizationAlgorithmSubCategory::SPLIT_K);
-    tilingKeyConfigure.apiConstexpr = 0;
-    tilingKeyConfigure.templateCustom = static_cast<uint8_t>(matmulInfoPtr_->innerPrecise) * 1000; // 1000:第6位
-    return tilingKeyConfigure.GenTilingKey();
+
+    uint64_t socVersionType = tilingKeyConfigure.socVersionType / 10UL;
+    uint64_t subSocVersionType = 0UL;
+    uint64_t antiquantScenario = tilingKeyConfigure.quantizationScenario;
+    uint64_t algorithm = static_cast<uint64_t>(OptimizationAlgorithmCategory::MULTI_SCALE_DEQUANT); // 3 means CUSTOM tilingkey algorithm
+    uint64_t subAlgorithm = static_cast<uint64_t>(OptimizationAlgorithmSubCategory::SPLIT_K);
+    uint64_t subAlgorithmCustom = 0UL;
+    uint64_t innerPrecise = matmulInfoPtr_->innerPrecise;
+    uint64_t templateCustom = 0UL;
+    uint64_t apiConstexpr = 0UL;
+    bool transA = ((tilingKeyConfigure.transposeSituation >> 1) & 1) != 0;
+    bool transB = (tilingKeyConfigure.transposeSituation & 1) != 0;
+    uint64_t antiquantType = tilingKeyConfigure.antiquantType;
+    uint64_t quantType = tilingKeyConfigure.quantType;
+    bool hasAntiquantOffset = ((tilingKeyConfigure.optionInputSituation >> 1) & 1) != 0;
+    bool hasBias = false;
+    bool isBiasFp32 = false;
+    bool isWeightNz = (tilingKeyConfigure.weightFormat == 1UL) ? true : false; // WeightFormat::ND
+    uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+    uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+    uint64_t batch = 0UL;
+    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+        innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+        hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+    return tilingKey_;
 }
 
 // 4、计算高阶API的TilingData
@@ -371,42 +392,82 @@ uint64_t WeightQuantBatchMatmulV2Msd::GetTilingKey() const
         (matmulInfoPtr_->innerPrecise != 0 || matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ)) {
         return GetInnerPreciseTilingKey();
     }
+    uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
+    uint64_t subSocVersionType = 0UL;
+    uint64_t antiquantScenario = 0UL;
+    uint64_t algorithm = 3UL; // 3 means CUSTOM tilingkey algorithm
+    uint64_t subAlgorithm = 0UL;
+    uint64_t subAlgorithmCustom = static_cast<uint64_t>(KernelTemplateType::MSD_MULTI_CORE);
+    uint64_t innerPrecise = 0UL;
+    uint64_t templateCustom = 0UL;
+    uint64_t apiConstexpr = 0UL;
+    bool transA = matmulInfoPtr_->transA;
+    bool transB = matmulInfoPtr_->transB;
+    uint64_t antiquantType = static_cast<uint64_t>(matmulInfoPtr_->antiQuantType);
+    uint64_t quantType = static_cast<uint64_t>(matmulInfoPtr_->quantType);
+    bool hasAntiquantOffset = matmulInfoPtr_->hasAntiQuantOffset;
+    bool hasBias = false;
+    bool isBiasFp32 = false;
+    bool isWeightNz;
+    uint64_t templateExtra;
+    uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+    uint64_t batch = 0UL;
+    uint64_t tilingKey_;
 
     if (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) {
         if (highPrecision_) {
-            return RecursiveSum(
-                matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE,
-                KernelTemplateType::WEIGHT_NZ, KernelTemplateTypeExtra::HIGH_PRECISION);
+            isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
+            templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::HIGH_PRECISION);
+            tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         } else {
             if (splitKFlag_) {
-                return RecursiveSum(
-                    matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                    matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE,
-                    KernelTemplateType::WEIGHT_NZ, KernelTemplateTypeExtra::MSD_GENERAL);
+                isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
+                templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::MSD_GENERAL);
+                tilingKey_ = GET_TPL_TILING_KEY(
+                    socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                    innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                    hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+                return tilingKey_;
             }
-            return RecursiveSum(
-                matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE,
-                KernelTemplateType::WEIGHT_NZ);
+            isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
+            templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+            tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         }
     }
 
     if (splitKFlag_) {
-        return RecursiveSum(
-            matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-            matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE,
-            WeightFormat::ND, KernelTemplateTypeExtra::MSD_GENERAL);
+        isWeightNz = false; // WeightFormat::ND
+        templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::MSD_GENERAL);
+        tilingKey_ = GET_TPL_TILING_KEY(
+            socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+            innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+            hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+        return tilingKey_;
     } else {
         if (highPrecision_) {
-            return RecursiveSum(
-                matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE,
-                WeightFormat::ND, KernelTemplateTypeExtra::HIGH_PRECISION);
+            isWeightNz = false; // WeightFormat::ND
+            templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::HIGH_PRECISION);
+            tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         } else {
-            return RecursiveSum(
-                matmulInfoPtr_->transA, matmulInfoPtr_->transB, matmulInfoPtr_->antiQuantType,
-                matmulInfoPtr_->hasAntiQuantOffset, matmulInfoPtr_->quantType, KernelTemplateType::MSD_MULTI_CORE);
+            isWeightNz = false;
+            templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
+            tilingKey_ = GET_TPL_TILING_KEY(
+                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
+                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
+                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return tilingKey_;
         }
     }
 }
