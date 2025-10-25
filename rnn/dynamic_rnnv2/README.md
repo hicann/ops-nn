@@ -34,14 +34,14 @@
 - $W_*$ 是可学习的权重矩阵
 - $b_*$ 是可学习的偏置项
 
-## 算子规格
+## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 170px">
-  <col style="width: 310px">
-  <col style="width: 212px">
-  <col style="width: 100px">
+  <col style="width: 20px">
+  <col style="width: 30px">
+  <col style="width: 150px">
+  <col style="width: 50px">
+  <col style="width: 50px">
   </colgroup>
   <thead>
     <tr>
@@ -55,189 +55,189 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>输入数据（T， Batch, input_size）</td>
+      <td>输入数据（T， Batch, input_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>w</td>
       <td>输入</td>
-      <td>输入权重 （input_size + hidden_size, 4 * hidden_size）</td>
+      <td>输入权重 （input_size + hidden_size, 4 * hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>b</td>
       <td>输入</td>
-      <td>输入偏置 （4 * hidden_size）</td>
+      <td>输入偏置 （4 * hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>seq_length</td>
       <td>输入</td>
-      <td>每个batch真实的长度，维度为batch_size的向量</td>
+      <td>每个batch真实的长度，维度为batch_size的向量。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>init_h</td>
       <td>输入</td>
-      <td>初始时刻的hidden state, 维度为(1, batch_size, hidden_size)</td>
+      <td>初始时刻的hidden state, 维度为(1, batch_size, hidden_size)。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>init_c</td>
       <td>输入</td>
-      <td>初始时刻的cell state, 维度为(1, batch_size, hidden_size)</td>
+      <td>初始时刻的cell state, 维度为(1, batch_size, hidden_size)。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mask</td>
       <td>输入</td>
-      <td>输入的掩码矩阵</td>
+      <td>输入的掩码矩阵。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>output_h</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>output_c</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>i</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>j</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>f</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>o</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>tanhc</td>
       <td>输出</td>
-      <td>输出结果，维度为（T， batch_size, hidden_size）</td>
+      <td>输出结果，维度为（T， batch_size, hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>cell_type</td>
       <td>属性</td>
-      <td>默认为"LSTM", 当前实现"LSTM"、"GRU"</td>
+      <td>默认为"LSTM", 当前实现"LSTM"、"GRU"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>direction</td>
       <td>属性</td>
-      <td>默认为"UNIDIRECTIONAL"</td>
+      <td>默认为"UNIDIRECTIONAL"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>cell_depth</td>
       <td>属性</td>
-      <td>multi_rnn的级数，默认为且当前只支持1</td>
+      <td>multi_rnn的级数，默认为且当前只支持1。</td>
       <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>use_peephole</td>
       <td>属性</td>
-      <td>是否使用peephole, 默认false</td>
+      <td>是否使用peephole, 默认false。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>keep_prob</td>
       <td>属性</td>
-      <td>默认1.0</td>
+      <td>默认1.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>cell_clip</td>
       <td>属性</td>
-      <td>默认值为"-1"(没有剪切)</td>
+      <td>默认值为"-1"(没有剪切)。</td>
       <td>LIST</td>
       <td>-</td>
     </tr>
     <tr>
       <td>num_proj</td>
       <td>属性</td>
-      <td>用projection的降维后的维度，默认为0表示不降维</td>
+      <td>用projection的降维后的维度，默认为0表示不降维。</td>
       <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>time_major</td>
       <td>属性</td>
-      <td>输入数据的排列方式，默认time_major</td>
+      <td>输入数据的排列方式，默认time_major。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>activation</td>
       <td>属性</td>
-      <td>激活函数"tanh"</td>
+      <td>激活函数"tanh"。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>forget_bias</td>
       <td>属性</td>
-      <td>默认1.0</td>
+      <td>默认1.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>gate_order</td>
       <td>属性</td>
-      <td>默认"ijfo"</td>
+      <td>默认"ijfo"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>is_training</td>
       <td>属性</td>
-      <td>默认true</td>
+      <td>默认true。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
