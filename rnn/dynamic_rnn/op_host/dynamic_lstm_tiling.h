@@ -149,27 +149,27 @@ class LstmBaseTiling {
     void GetAICoreIntrinsicDtype(fe::PlatFormInfos& platform_info, const std::string& intrinsic_name, bool& value);
     ge::graphStatus TilingWithAscendC(gert::TilingContext* context);
  protected:
-    virtual bool CheckParamsShape(gert::TilingContext* context) {
+    virtual bool CheckParamsShape([[maybe_unused]] gert::TilingContext* context) {
         return true;
     };
-    virtual bool CheckInitParamsShape(gert::TilingContext* context) {
+    virtual bool CheckInitParamsShape([[maybe_unused]] gert::TilingContext* context) {
         return true;
     };
 
     bool CheckParamsDtype(const gert::TilingContext* context);
 
     bool CheckAttr(gert::TilingContext* context);
-    virtual bool CheckAttrOps(gert::TilingContext* context) {
+    virtual bool CheckAttrOps([[maybe_unused]] gert::TilingContext* context) {
         return true;
     };
-    virtual bool CheckAttrTiling(gert::TilingContext* context) {
+    virtual bool CheckAttrTiling([[maybe_unused]] gert::TilingContext* context) {
         return true;
     };
 
-    virtual ge::graphStatus GetOpInfo(const gert::TilingContext* context, DynamicRnnTiling& dynamicRnnParams) {
+    virtual ge::graphStatus GetOpInfo([[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] DynamicRnnTiling& dynamicRnnParams) {
         return ge::GRAPH_SUCCESS;
     };
-    virtual ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicRnnTiling& dynamicRnnParams) {
+    virtual ge::graphStatus GetAttr([[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] DynamicRnnTiling& dynamicRnnParams) {
         return ge::GRAPH_SUCCESS;
     };
 
