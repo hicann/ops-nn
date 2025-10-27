@@ -12,24 +12,21 @@
  * \file test_quant_matmul_reduce_sum_tiling.cpp
  * \brief
  */
-#include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
+#include <thread>
 #include <nlohmann/json.hpp>
-#define private public
-#define protected public
-#include "register/op_tiling_registry.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "test_common.h"
-#include "comp_ops.h"
-#include "../../../../../built-in/tests/ut/op_tiling_test/test_cube_util.h"
+#include <gtest/gtest.h>
+#include "exe_graph/runtime/storage_format.h"
+#include "exe_graph/runtime/storage_shape.h"
+#include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
-#include "quant_matmul_reduce_sum_tiling.h"
+#include "platform/platform_infos_def.h"
+#include "test_cube_util.h"
+#include "../../../op_host/op_tiling/quant_matmul_reduce_sum_tiling.h"
 
 using namespace std;
 using namespace ge;
-using namespace optiling;
 
 
 class QuantMatmulReduceSumTilingTest : public testing::Test {
@@ -101,7 +98,7 @@ static void TestInputFunc(struct QuantMatmulReduceSumTilingTestData testCase, ui
     auto holder =
         gert::TilingContextFaker()
             .NodeIoNum(6, 1)
-            .IrInputNum(6)
+            .IrInstanceNum({1, 1, 1, 1, 1, 1})
             .InputShapes({&(testCase.x1Shape), &(testCase.x2Shape), &dimsShape, &biasShape,
                           &(testCase.x1ScaleShape), &(testCase.x2ScaleShape)})
             .OutputShapes({&(testCase.outShape)})

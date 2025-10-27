@@ -12,13 +12,16 @@
  * \file test_quant_matmul_reduce_sum_infershape.cpp
  * \brief
  */
-#include "gtest/gtest.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "register/op_impl_registry.h"
+#include <gtest/gtest.h>
+#include <iostream>
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "test_cube_util.h"
+#include "runtime/infer_shape_range_context.h"
 #include "kernel_run_context_facker.h"
-#include "error_util.h"
+#include "log/log.h"
 
+namespace ge {
 
 class QuantMatmulReduceSumInferShapeTest : public testing::Test
 {
@@ -45,10 +48,11 @@ TEST_F(QuantMatmulReduceSumInferShapeTest, basic) {
   gert::StorageShape x2ScaleShape = {{7168}, {7168}};
   gert::StorageShape outputShape = {{}, {}};
   int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
+  gert::Shape expect_output_shape = {2048, 7168};
 
   auto holder = gert::InferShapeContextFaker()
                     .NodeIoNum(6, 1)
-                    .IrInputNum(6)
+                    .IrInstanceNum({1, 1, 1, 1, 1, 1})
                     .InputShapes({&x1Shape, &x2Shape, &dimsShape, &biasShape, &x1ScaleShape, &x2ScaleShape})
                     .OutputShapes({&outputShape})
                     .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
@@ -58,5 +62,6 @@ TEST_F(QuantMatmulReduceSumInferShapeTest, basic) {
 
   ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
   auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(ge::Shape2String(*output), "[2048, 7168]");
+  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+}
 }
