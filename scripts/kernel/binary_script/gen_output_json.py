@@ -87,6 +87,13 @@ def generate_operator_json_content(input_json, kernel_output, json_content):
             print(f"[ERROR]the kernel {opc_json_file_name} not generate output json")
             print(f"[ERROR]the kernel {opc_json_file_name} is {item}")
             print(f"ERROR REASON: opc_json_file_name:{kernel_output}{opc_json_file_name}.json generation failed")
+            message = (
+            "For more detail: please set env:\n"
+            "export ASCEND_GLOBAL_LOG_LEVEL = 0\n"
+            "export ASCEND_SLOG_PRINT_TO_STDOUT=1\n"
+            "and run again, then check kernel log in build/binary/${soc_version}/bin/build_logs\n"
+            )
+            print(message)
 
             failed_json_file_name = opc_json_file_name + "_failed"
             failed_json_file = kernel_output + failed_json_file_name + ".json"

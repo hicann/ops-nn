@@ -206,9 +206,15 @@ main() {
 
   # step 4: get simplified_key_mode from binary_simplified_key_mode.ini
   local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_file_name_prefix} ${soc_version_lower})
-  dos2unix $simplified_key_file
   local key_mode_default=0
   if [ -f ${simplified_key_file} ]; then
+    if file "$simplified_key_file" | grep -q "CRLF"; then
+      if ! command -vv dos2unix &> /dev/null; then
+        echo "[ERROR] dos2unix is not installed. Cannot convert simplified_key_file to unix line endings !"
+        exit 1
+      fi
+      dos2unix $simplified_key_file
+    fi
     # if no file binary_simplified_key_mode.ini use mode=0
     key_mode_default=$(awk -F "=" '/\['${op_type}'\]/{flag=1;next}/\[/{flag=0} flag && /default/{print $2}' $simplified_key_file)
   fi
