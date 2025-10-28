@@ -131,7 +131,7 @@
 ## 约束说明
 
 - 不支持空tansor。
-- 不支持非连续tensor。
+- 支持连续tensor，[非连续tensor](../../docs/context/非连续的Tensor.md)只支持转置场景。
 
 ## 调用说明
 
