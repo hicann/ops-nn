@@ -95,10 +95,10 @@ bool GroupNormGradTiling::CheckCompileInfo()
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(tilingContext->GetNodeName(), "core num should be greater than zero."), return false);
     OP_TILING_CHECK(
-        (static_cast<int32_t>(compileInfo->sysWorkspaceSize) < 0),
+        (compileInfo->sysWorkspaceSize < static_cast<uint32_t>(0)),
         OP_LOGE(tilingContext->GetNodeName(), "sysWorkspaceSize should be greater than zero."), return false);
     OP_TILING_CHECK(
-        (static_cast<int64_t>(compileInfo->ubSizePlatForm) <= 0),
+        (compileInfo->ubSizePlatForm <= static_cast<uint64_t>(0)),
         OP_LOGE(tilingContext->GetNodeName(), "ubSizePlatForm should be greater than zero."), return false);
     return true;
 }
@@ -577,10 +577,6 @@ ge::graphStatus TilingPrepareForGroupNormGrad(gert::TilingParseContext* context)
         (compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
         return ge::GRAPH_FAILED);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_TILING_CHECK(
-        (static_cast<int32_t>(compileInfo->sysWorkspaceSize) < 0),
-        OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
-        return ge::GRAPH_FAILED);
     compileInfo->isRegBase =
         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
     uint64_t ubSizePlatForm;

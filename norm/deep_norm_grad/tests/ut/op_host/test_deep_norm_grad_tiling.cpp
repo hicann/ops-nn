@@ -113,7 +113,7 @@ inline void runTest(
             .NodeOutputTd(1, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"alpha", ge::AnyValue::CreateFrom<float>(0.3)}})
+            .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();

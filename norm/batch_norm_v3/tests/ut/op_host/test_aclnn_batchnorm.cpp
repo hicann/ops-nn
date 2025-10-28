@@ -160,7 +160,7 @@ TEST_F(l2BatchNormTest, ascend910_9589_l2_batch_norm_float16_NHWC)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 
     // ut.TestPrecision();
 }

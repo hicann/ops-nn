@@ -303,8 +303,8 @@ private:
     {
         LocalTensor<float> inputRstd = rstdQue.DeQue<float>();
         LocalTensor<float> inputMean = meanQue.DeQue<float>();
-        meanQue.FreeTensor(inputRstd);
-        rstdQue.FreeTensor(inputMean);
+        meanQue.FreeTensor(inputMean);
+        rstdQue.FreeTensor(inputRstd);
     }
 
     __aicore__ inline void CopyInGamma(const uint32_t cutDIndex, const uint32_t processElem)

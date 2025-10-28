@@ -123,8 +123,8 @@ TEST_F(DeepNormTiling, Deep_norm_tiling_001)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"alpha", ge::AnyValue::CreateFrom<float>(0.3)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.000001)}})
+                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

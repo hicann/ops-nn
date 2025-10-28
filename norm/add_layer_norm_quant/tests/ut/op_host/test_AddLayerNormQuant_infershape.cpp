@@ -58,9 +58,9 @@ TEST_F(AddLayerNormQuant, AddLayerNormQuant_infershape_case_dynamic)
                     {&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                 .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
                 .NodeAttrs(
-                    {{"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                     {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                     {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                    {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                     {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                     {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                 .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                 .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

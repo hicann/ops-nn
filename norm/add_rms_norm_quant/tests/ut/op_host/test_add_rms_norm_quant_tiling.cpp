@@ -126,9 +126,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -229,9 +229,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -332,9 +332,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -440,9 +440,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_no_cut)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -552,9 +552,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -664,9 +664,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -787,9 +787,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

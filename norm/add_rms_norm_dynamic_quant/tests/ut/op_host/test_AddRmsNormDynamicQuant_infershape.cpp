@@ -52,7 +52,7 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_dynamic)
                           .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                           .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
                           .NodeAttrs({
-                              {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
+                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
                           })
                           .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

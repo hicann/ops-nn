@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_add_rms_norm_dynamic_quant.h"
 

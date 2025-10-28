@@ -119,10 +119,10 @@ TEST_F(DuaQuantizeAddLayerNormTiling, dua_quantize_add_layer_norm_tiling_001)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dtype", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -224,10 +224,10 @@ TEST_F(DuaQuantizeAddLayerNormTiling, dua_quantize_add_layer_norm_tiling_002)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dtype", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-65535)},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-65535)},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

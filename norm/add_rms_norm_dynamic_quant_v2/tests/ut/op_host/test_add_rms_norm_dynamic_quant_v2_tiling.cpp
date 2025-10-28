@@ -119,7 +119,7 @@ TEST_F(AddRmsNormDynamicQuantV2Tiling, add_rms_norm_dynamic_quant_v2_tiling_001)
             .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs({
-                {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
+                {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
             })
             .TilingData(param.get())
             .Workspace(ws_size)
@@ -222,7 +222,7 @@ TEST_F(AddRmsNormDynamicQuantV2Tiling, add_rms_norm_dynamic_quant_v2_tiling_002)
             .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs({
-                {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
+                {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
             })
             .TilingData(param.get())
             .Workspace(ws_size)

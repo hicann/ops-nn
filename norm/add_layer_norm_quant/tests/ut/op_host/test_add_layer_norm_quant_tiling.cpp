@@ -126,9 +126,9 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_001)
             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -238,9 +238,9 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_002)
             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -346,10 +346,10 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_fullload_001
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"quant_mode", ge::AnyValue::CreateFrom<string>("static")},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01f)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01f)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -461,10 +461,10 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_welford_001)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"quant_mode", ge::AnyValue::CreateFrom<string>("static")},
-                           {"epsilon", ge::AnyValue::CreateFrom<float>(0.01f)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")},
+                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01f)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -571,10 +571,10 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_quant_tiling_regbase_dyn_fullload
             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(0.01f)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)},
-                 {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01f)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                 {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -684,10 +684,10 @@ TEST_F(AddLayerNormQuantTiling, add_layer_norm_qaunt_tiling_regbase_dyn_welford_
             .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"quant_mode", ge::AnyValue::CreateFrom<string>("dynamic")},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(0.01f)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)},
-                 {"div_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01f)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                 {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();

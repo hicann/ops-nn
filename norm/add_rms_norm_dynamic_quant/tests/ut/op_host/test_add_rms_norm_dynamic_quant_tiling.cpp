@@ -113,7 +113,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_001)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -208,7 +208,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_002)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -313,7 +313,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -418,7 +418,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -523,7 +523,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -628,7 +628,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -733,7 +733,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

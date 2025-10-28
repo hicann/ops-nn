@@ -119,8 +119,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_001)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -223,8 +223,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_200)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -327,8 +327,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_303)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -431,8 +431,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_302)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -536,8 +536,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias_bc)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -641,8 +641,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bias)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -746,8 +746,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_slice)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -851,8 +851,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_bign)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -956,8 +956,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_sliceext)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1072,8 +1072,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_normal)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1177,8 +1177,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_normal310)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1281,8 +1281,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x1)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1385,8 +1385,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_x2)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1489,8 +1489,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_gamma)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1580,8 +1580,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_mix_input_gamma)
 //                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
 //                     .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
 //                     .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-//                     .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.000001)},
-//                                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+//                     .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)},
+//                                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
 //                     .TilingData(param.get())
 //                     .Workspace(ws_size)
 //                     .Build();
@@ -1685,8 +1685,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_1172)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1790,8 +1790,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_82)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1894,8 +1894,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_170)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1998,8 +1998,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_special_reduce_80)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2102,8 +2102,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_001)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2203,8 +2203,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2311,8 +2311,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_003)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2415,8 +2415,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_001)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2520,8 +2520,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_002)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2620,8 +2620,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_fullload_003)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01f)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01f)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2727,8 +2727,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_001)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2829,8 +2829,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_002)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2928,8 +2928,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_welford_003)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3027,8 +3027,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_001)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3121,8 +3121,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_002)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3215,8 +3215,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_003)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3309,8 +3309,8 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_regbase_failed_004)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"additional_output", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

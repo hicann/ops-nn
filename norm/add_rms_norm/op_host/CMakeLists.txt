@@ -7,4 +7,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE add_rms_norm ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE add_rms_norm ACLNNTYPE aclnn DEPENDENCIES rms_norm)

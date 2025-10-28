@@ -32,7 +32,7 @@ using namespace op;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+namespace {
 constexpr size_t VAR_INDEX = 2;
 constexpr size_t MEAN_INDEX = 1;
 constexpr size_t MIN_BN_DIMS = 2;
@@ -48,12 +48,16 @@ constexpr int64_t PATTERN_R_MIN = 8192;
 static const std::initializer_list<op::DataType>& GetSupportDtypeList(SocVersion socVersion)
 {
     static const std::initializer_list<op::DataType> emptyDtypes = {};
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910BCD_LIST = {
+        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {
+        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
     static const std::map<SocVersion, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
-        {SocVersion::ASCEND310P, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-        {SocVersion::ASCEND910, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-        {SocVersion::ASCEND910B, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-        {SocVersion::ASCEND910_93, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-        {SocVersion::ASCEND910_95, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}}};
+        {SocVersion::ASCEND310P, DTYPE_SUPPORT_310P_910_LIST},
+        {SocVersion::ASCEND910, DTYPE_SUPPORT_310P_910_LIST},
+        {SocVersion::ASCEND910B, DTYPE_SUPPORT_910BCD_LIST},
+        {SocVersion::ASCEND910_93, DTYPE_SUPPORT_910BCD_LIST},
+        {SocVersion::ASCEND910_95, DTYPE_SUPPORT_910BCD_LIST}};
 
     auto found = dataTypeSupportedMap.find(socVersion);
     if (found == dataTypeSupportedMap.end()) {
@@ -270,6 +274,7 @@ static bool isEvalAndNotSupportNcdhw(bool training, size_t dimNum)
 
     return (!training && dimNum == MAX_BN_DIMS && !isBatchNormSupportNcdhw());
 }
+}; // namespace
 
 aclnnStatus aclnnBatchNormGetWorkspaceSize(
     const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,

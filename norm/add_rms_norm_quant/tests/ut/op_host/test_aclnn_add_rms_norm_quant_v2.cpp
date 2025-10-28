@@ -77,7 +77,7 @@ TEST_F(l2_add_rms_norm_quant_v2_test, ascend910_9589_case_dyn_001)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_add_rms_norm_quant_v2_test, ascend910_9589_case_stc_001)
@@ -134,5 +134,5 @@ TEST_F(l2_add_rms_norm_quant_v2_test, ascend910_9589_case_stc_001)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_batch_norm.h"
 

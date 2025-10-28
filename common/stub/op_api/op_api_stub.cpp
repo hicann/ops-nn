@@ -55,6 +55,9 @@
 #include "level0/rsqrt.h"
 #include "level0/matmul_v2tov3.h"
 #include "level0/batch_matmul_v2tov3.h"
+#include "level0/ones_like.h"
+#include "level0/div.h"
+#include "level0/realdiv.h"
 namespace l0op {
 const aclTensor* TensorMove(const aclTensor* x, const aclTensor* /*y*/, aclOpExecutor* /*executor*/)
 {
@@ -443,6 +446,21 @@ __attribute__((weak)) bool BmmCheckHitV3Shape(const aclTensor* /*x1*/, const acl
                                               op::Format /*self_format*/, op::Format /*mat2_format*/)
 {
     return false;
+}
+
+const aclTensor* OnesLike(const aclTensor* self, aclOpExecutor* /*executor*/)
+{
+    return self;
+}
+
+const aclTensor* Div(const aclTensor* self, const aclTensor* /*other*/, aclOpExecutor* /*executor*/)
+{
+    return self;
+}
+
+const aclTensor* RealDiv(const aclTensor* self, const aclTensor* /*other*/, aclOpExecutor* /*executor*/)
+{
+    return self;
 }
 
 } // namespace l0op

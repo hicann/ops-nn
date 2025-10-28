@@ -133,11 +133,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_0)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -241,11 +241,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_1)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -350,11 +350,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_2)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -459,11 +459,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_3)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(71)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(71)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -568,11 +568,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_4)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(64)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(64)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -678,11 +678,11 @@ TEST_F(GroupNormGradTiling, GroupNormGrad_tiling_5)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(64)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(64)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -791,11 +791,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_0)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -903,11 +903,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_2)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1015,11 +1015,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_3)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(71)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(71)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1127,11 +1127,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_4)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1239,11 +1239,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_5)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1351,11 +1351,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_6)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(71)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(71)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1463,11 +1463,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_7)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(4)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1575,11 +1575,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_8)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(4)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1687,11 +1687,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_9)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(4)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1799,11 +1799,11 @@ TEST_F(GroupNormGradTiling, GroupNormGradRegbase_tiling_10)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"num_groups", ge::AnyValue::CreateFrom<int64_t>(3)},
-                           {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"dx_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dgamma_is_require", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                           {"dx_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

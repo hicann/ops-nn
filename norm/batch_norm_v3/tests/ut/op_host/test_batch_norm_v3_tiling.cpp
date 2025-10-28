@@ -140,9 +140,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1000)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -252,9 +252,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1001)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -358,9 +358,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1002)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -470,9 +470,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1003)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -582,9 +582,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1012)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -694,9 +694,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1013)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -806,9 +806,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_1002_full_reduce_not_support)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -918,9 +918,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_2000)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1030,9 +1030,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_2001)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1144,9 +1144,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1257,9 +1257,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_NCDHW_FORMAT)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1479,9 +1479,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_error)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1582,9 +1582,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_tiling_welford_0001)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1689,9 +1689,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_tiling_welford_0002)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1797,9 +1797,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1910,9 +1910,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_fp16)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2023,9 +2023,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_large_A)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2136,9 +2136,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_large_A_fp16)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2249,9 +2249,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_to_welford)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2362,9 +2362,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_to_welford_fp16)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2475,9 +2475,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_ra_pattern)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2588,9 +2588,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_ra_pattern_fp16)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2701,9 +2701,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_block_split_r_fp16)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2815,9 +2815,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_block_split_r_reuse_case)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2928,9 +2928,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_last_channel_pattern_fp32_nhwc)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3040,9 +3040,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_last_channel_pattern_fp16_nhwc)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3152,9 +3152,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_last_channel_pattern_fp32_ndhwc)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3264,9 +3264,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_last_channel_pattern_fp16_ndhwc)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3376,9 +3376,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_last_channel_pattern_fp16_ndhwc_sm
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3488,9 +3488,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_bab_fp32_ncdhw)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3600,9 +3600,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_bab_fp32_ncdhw_to_ab)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -3709,9 +3709,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_infer_bab_fp32_nchw_to_ab)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"momentum", ge::AnyValue::CreateFrom<float>(0.1)},
-                           {"is_training", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

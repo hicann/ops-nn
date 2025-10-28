@@ -11,16 +11,9 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "../../../op_graph/batch_norm_v3_proto.h"
-#include "graph/debug/ge_attr_define.h"
-#include "graph/common_error_codes.h"
-#include "graph/utils/type_utils.h"
-#include "graph/utils/node_utils.h"
-#include "graph/utils/op_desc_utils_ex.h"
 #include "log/log.h"
-#include "op_desc.h"
 #include "ut_op_common.h"
 #include "ut_op_util.h"
-#include "array_ops.h"
 
 class BatchNormV3Test : public testing::Test
 {

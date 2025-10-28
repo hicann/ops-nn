@@ -101,7 +101,7 @@ TEST_F(GemmaRmsNormTiling, gemma_rms_norm_tiling_0001) {
                     .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                    .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -184,7 +184,7 @@ TEST_F(GemmaRmsNormTiling, gemma_rms_norm_tiling_0002) {
                     .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                    .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
