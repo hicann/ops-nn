@@ -91,14 +91,6 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
         OP_LOGE(context->GetNodeType(), "inputDims can't be smaller than 2."),
         return ge::GRAPH_FAILED);
     uint64_t channel = xShape.GetDim(DIM_1);
-    OP_CHECK_IF(
-        (channel < 0),
-        OP_LOGE(
-            context->GetNodeType(),
-            "The input channel must"
-            " be greater than 0, currently is %lu.",
-            channel),
-        return ge::GRAPH_FAILED);
     // check gamma and beta
     auto gammaShapePtr = context->GetInputShape(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShapePtr);
@@ -133,7 +125,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto betaDtype = betaDtypePtr->GetDataType();
     uint64_t betaDtypeSize = ge::GetSizeByDataType(betaDtype);
     OP_CHECK_IF(
-        (gammaDtypeSize < 0 || gammaDtypeSize != betaDtypeSize),
+        (gammaDtypeSize != betaDtypeSize),
         OP_LOGE(
             context->GetNodeType(),
             "The dtype of gamma and beta must"

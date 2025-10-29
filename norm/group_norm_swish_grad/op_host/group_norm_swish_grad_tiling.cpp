@@ -472,7 +472,7 @@ ge::graphStatus GroupNormSwishGradTiling::Init()
     OP_CHECK_IF(
         (channelPerGroupOnceProcess > UPPER_CARRYING_LIMIT),
         VECTOR_INNER_ERR_REPORT_TILIING(
-            tilingContext->GetNodeName(), "channelPerGroup is %ld over the operator's current carrying capacity %ld.",
+            tilingContext->GetNodeName(), "channelPerGroup is %lu over the operator's current carrying capacity %ld.",
             tilingParams->channelPerGroup, UPPER_CARRYING_LIMIT),
         return ge::GRAPH_FAILED);
     uint64_t reserveSpace = RESERVE_SAPCE + channelPerGroupOnceProcess * this->dtypeBytes * UB_COPIES_1;

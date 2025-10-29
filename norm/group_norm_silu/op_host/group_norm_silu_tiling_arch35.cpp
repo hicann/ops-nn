@@ -119,7 +119,7 @@ static ge::graphStatus CheckGammaAndBetaParams(
         auto betaDtype = betaDtypePtr->GetDataType();
         uint64_t betaDtypeSize = ge::GetSizeByDataType(betaDtype);
         OP_CHECK_IF(
-            (gammaDtypeSize < 0 || gammaDtypeSize != betaDtypeSize),
+            (gammaDtypeSize != betaDtypeSize),
             OP_LOGE(
                 context->GetNodeType(),
                 "The dtype of gamma and beta must be consistent, currently gamma is %d, beta is %d.", gammaDtype,
