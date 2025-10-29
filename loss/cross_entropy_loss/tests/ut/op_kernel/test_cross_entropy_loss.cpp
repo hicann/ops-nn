@@ -47,7 +47,7 @@ TEST_F(cross_entropy_loss_test, test_case_bf16_mean)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/loss/cross_entropy_loss/tests/ut/op_kernel/cross_entropy_loss_data ./");
+        "../../../../loss/cross_entropy_loss/tests/ut/op_kernel/cross_entropy_loss_data ./");
     system("chmod -R 755 ./cross_entropy_loss_data/");
     system("cd ./cross_entropy_loss_data/ && python3 gen_data.py 'bf16' '48' '4096' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -85,6 +85,9 @@ TEST_F(cross_entropy_loss_test, test_case_bf16_mean)
     tilingData->vecTailNum = 4096;
     tilingData->tailVecLoopNum = 0;
     tilingData->tailVecTailNum = 4096;
+    tilingData->reduction = 1;
+    tilingData->ignoreIndex = -100;
+    tilingData->labelSmoothing = 0.0;
     tilingData->defaultWeight = 0;
 
     ReadFile("./cross_entropy_loss_data/input.bin", inputSize, input, inputSize);
@@ -109,7 +112,7 @@ TEST_F(cross_entropy_loss_test, test_case_fp32_mean)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/cross_entropy_loss/cross_entropy_loss_data ./");
+        "../../../../loss/cross_entropy_loss/tests/ut/op_kernel/cross_entropy_loss_data ./");
     system("chmod -R 755 ./cross_entropy_loss_data/");
     system("cd ./cross_entropy_loss_data/ && python3 gen_data.py 'fp32' '48' '4096' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -137,16 +140,19 @@ TEST_F(cross_entropy_loss_test, test_case_fp32_mean)
     tilingData->tailCoreNum = 0;
     tilingData->tailBatchNum = 0;
     tilingData->inputUbSize = 4096;
-    tilingData->castTmpBufByte = 0;
+    tilingData->castTmpBufByte = 32;
     tilingData->lnTmpBufSize = 8;
     tilingData->weightTmpBufSize = 8;
-    tilingData->totalTmpBufByte = 4224;
+    tilingData->totalTmpBufByte = 4224+32;
     tilingData->ubLoopNum = 0;
     tilingData->ubTailNum = 4096;
     tilingData->vecLoopNum = 0;
     tilingData->vecTailNum = 4096;
     tilingData->tailVecLoopNum = 0;
     tilingData->tailVecTailNum = 4096;
+    tilingData->reduction = 1;
+    tilingData->ignoreIndex = -100;
+    tilingData->labelSmoothing = 0.0;
     tilingData->defaultWeight = 0;
 
     ReadFile("./cross_entropy_loss_data/input.bin", inputSize, input, inputSize);
@@ -156,7 +162,7 @@ TEST_F(cross_entropy_loss_test, test_case_fp32_mean)
     ICPU_SET_TILING_KEY(3);
     ICPU_RUN_KF(
         cross_entropy_loss, blockDim, input, target, weight, loss, log_prob, loss, loss, workspace,
-        tiling); // zloss和lseForZloss暂不支持_f用l_zss占位
+        tiling); // zloss和lseForZloss暂不支持
 
     AscendC::GmFree(input);
     AscendC::GmFree(target);
@@ -171,7 +177,7 @@ TEST_F(cross_entropy_loss_test, test_case_fp16_mean)
 {
     system(
         "cp -rf "
-        "../../../../../../../ops/built-in/tests/ut/fast_op_test/cross_entropy_loss/cross_entropy_loss_data ./");
+        "../../../../loss/cross_entropy_loss/tests/ut/op_kernel/cross_entropy_loss_data ./");
     system("chmod -R 755 ./cross_entropy_loss_data/");
     system("cd ./cross_entropy_loss_data/ && python3 gen_data.py 'fp16' '48' '4096' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -209,6 +215,10 @@ TEST_F(cross_entropy_loss_test, test_case_fp16_mean)
     tilingData->vecTailNum = 4096;
     tilingData->tailVecLoopNum = 0;
     tilingData->tailVecTailNum = 4096;
+    tilingData->reduction = 1;
+    tilingData->ignoreIndex = -100;
+    tilingData->labelSmoothing = 0.0;
+    tilingData->defaultWeight = 0;
     tilingData->defaultWeight = 0;
 
     ReadFile("./cross_entropy_loss_data/input.bin", inputSize, input, inputSize);

@@ -47,6 +47,7 @@ TEST_F(cross_entropy_loss_grad_test, test_case_weight_not_none_fp16) {
   // output
   size_t xGradByteSize = 30 * 1024 * sizeof(half);
   size_t tilingDataSize = sizeof(CrossEntropyLossGradTilingData);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
   uint8_t* grad_loss = (uint8_t*)AscendC::GmAlloc(gradLossByteSize + 32);
   uint8_t* log_prob = (uint8_t*)AscendC::GmAlloc(logProbByteSize + 32);
@@ -106,6 +107,7 @@ TEST_F(cross_entropy_loss_grad_test, test_case_weight_none_bf16) {
   // output
   size_t xGradByteSize = 30 * 1024 * sizeof(bfloat16_t);
   size_t tilingDataSize = sizeof(CrossEntropyLossGradTilingData);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
   uint8_t* grad_loss = (uint8_t*)AscendC::GmAlloc(gradLossByteSize + 32);
   uint8_t* log_prob = (uint8_t*)AscendC::GmAlloc(logProbByteSize + 32);
@@ -165,6 +167,7 @@ TEST_F(cross_entropy_loss_grad_test, test_case_weight_none_fp32) {
   // output
   size_t xGradByteSize = 30 * 1024 * sizeof(float);
   size_t tilingDataSize = sizeof(CrossEntropyLossGradTilingData);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
   uint8_t* grad_loss = (uint8_t*)AscendC::GmAlloc(gradLossByteSize + 32);
   uint8_t* log_prob = (uint8_t*)AscendC::GmAlloc(logProbByteSize + 32);
