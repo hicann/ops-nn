@@ -89,8 +89,8 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
   return self;
 }
 
-static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
-                                      int64_t reduction, const aclTensor* out) {
+static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, 
+                                      const aclTensor* target, const aclTensor* out) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -114,7 +114,7 @@ aclnnStatus aclnnSoftMarginLossBackwardGetWorkspaceSize(const aclTensor* gradOut
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
   // 固定写法，参数检查
-  auto ret = CheckParams(gradOutput, self, target, reduction, out);
+  auto ret = CheckParams(gradOutput, self, target, out);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   if (self->IsEmpty()) {

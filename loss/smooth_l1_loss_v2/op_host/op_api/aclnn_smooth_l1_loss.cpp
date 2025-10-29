@@ -107,8 +107,8 @@ static bool CheckShape(const aclTensor* self,const aclTensor* target, int64_t re
   return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target, int64_t reduction, float beta,
-                               aclTensor *result) {
+static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target, 
+                               int64_t reduction, aclTensor *result) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNullTensor(self, target, result), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -217,7 +217,7 @@ aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor *self, const aclTe
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
   // 固定写法，参数检查
-  auto ret = CheckParams(self, target, reduction, beta, result);
+  auto ret = CheckParams(self, target, reduction, result);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // SmoothL1Loss算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充

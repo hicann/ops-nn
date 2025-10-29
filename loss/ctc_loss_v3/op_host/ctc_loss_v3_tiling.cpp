@@ -409,7 +409,7 @@ ge::graphStatus TilingPrepare4CTCLossV3(gert::TilingParseContext* context)
         return ge::GRAPH_FAILED);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     OP_CHECK_IF(
-        (compileInfo->sysWorkspaceSize < 0),
+        (static_cast<uint64_t>(compileInfo->sysWorkspaceSize) < 0),
         OP_LOGE(nodeName, "sysWorkspaceSize should be greater than or equal to zero"),
         return ge::GRAPH_FAILED);
     uint64_t ubSizePlatForm;

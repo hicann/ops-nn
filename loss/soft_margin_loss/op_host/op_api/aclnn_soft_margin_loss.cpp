@@ -46,7 +46,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16
 };
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, const aclTensor* out, int64_t reduction) {
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, const aclTensor* out) {
   const std::initializer_list<op::DataType> currentDtypeSupportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
   OP_CHECK_DTYPE_NOT_SUPPORT(self, currentDtypeSupportList, return false);
   OP_CHECK_DTYPE_NOT_SUPPORT(target, currentDtypeSupportList, return false);
@@ -85,7 +85,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
   CHECK_RET(CheckNotNull3Tensor(self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
   // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-  CHECK_RET(CheckDtypeValid(self, target, out, reduction), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(self, target, out), ACLNN_ERR_PARAM_INVALID);
 
   // 3. 检查输出shape
   CHECK_RET(CheckShape(self, target, out, reduction), ACLNN_ERR_PARAM_INVALID);

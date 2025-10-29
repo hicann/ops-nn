@@ -162,7 +162,7 @@ static bool CheckShape(
  * param类型检查
  */
 static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction, int64_t ignoreIndex,
+    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction,
     const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 1. 检查参数是否为空指针
@@ -234,7 +234,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(self, target, weight, reduction, ignoreIndex, out, totalWeightOut);
+    auto ret = CheckParams(self, target, weight, reduction, out, totalWeightOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // normal_ API的空tensor在kernel中支持，对标竞品根据算子实际情况补充

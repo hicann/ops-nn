@@ -167,7 +167,7 @@ static bool CheckShape(
 
 static aclnnStatus CheckParams(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    int64_t reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out)
+    int64_t reduction, const aclTensor* totalWeight, aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, target, weight, totalWeight, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -208,7 +208,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight, out);
+    auto ret = CheckParams(gradOutput, self, target, weight, reduction, totalWeight, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // NLLLossGrad算子的空tensor,对标竞品根据算子实际情况补充

@@ -119,7 +119,7 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self,
   return true;
 }
 
-static bool CheckFormat(const aclTensor *gradOutput, const aclTensor *self,
+static bool CheckFormat(const aclTensor *self,
     const aclTensor *target, const aclTensor *weightOptional) {
   // self、target的数据格式必须相同
   if (self->GetStorageFormat() != target->GetStorageFormat()) {
@@ -182,7 +182,7 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *sel
   CHECK_RET(CheckDtypeValid(gradOutput, self, target, weightOptional, out), ACLNN_ERR_PARAM_INVALID);
 
   // 4. 检查数据格式是否支持
-  CHECK_RET(CheckFormat(gradOutput, self, target, weightOptional), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckFormat(self, target, weightOptional), ACLNN_ERR_PARAM_INVALID);
 
   // 5. 检查shape是否满足约束
   CHECK_RET(CheckShape(gradOutput, self, target, weightOptional, out), ACLNN_ERR_PARAM_INVALID);

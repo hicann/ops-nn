@@ -99,7 +99,7 @@ static bool CheckReduction(int64_t reduction, const aclTensor* out) {
 }
 
 static bool CheckShape(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-                       const aclTensor* posWeight, const aclTensor* out) {
+                       const aclTensor* posWeight) {
   // 所有算子的维度都不能超过8
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
   OP_CHECK_MAX_DIM(target, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -143,7 +143,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, c
   CHECK_RET(CheckReduction(reduction, out), ACLNN_ERR_PARAM_INVALID);
 
   // 4. 检查tensor的shape是否合理
-  CHECK_RET(CheckShape(self, target, weight, posWeight, out), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShape(self, target, weight, posWeight), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
 }
@@ -214,7 +214,7 @@ static aclnnStatus HandleMeanAndSumReductionOut(int64_t reduction, const aclTens
 
 static aclnnStatus BinaryCrossEntropyWithLogitsStub(const aclTensor* self, const aclTensor* target,
                                                     const aclTensor* weight, const aclTensor* posWeight,
-                                                    int64_t reduction, aclTensor* out, uint64_t* workspaceSize,
+                                                    int64_t reduction, aclTensor* out,
                                                     aclOpExecutor* executor) {
   // 连续性转换
   auto selfContiguous = l0op::Contiguous(self, executor);
@@ -300,7 +300,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* s
 
   // 开始bce with logits计算
   auto bceWithLogitsRet = BinaryCrossEntropyWithLogitsStub(self, target, weightOptioanl, posWeightOptioanl,
-                                                           reduction, out, workspaceSize, uniqueExecutor.get());
+                                                           reduction, out, uniqueExecutor.get());
   CHECK_RET(bceWithLogitsRet == ACLNN_SUCCESS, bceWithLogitsRet);
 
   // 固定写法，获取计算过程中需要使用的workspace大小

@@ -25,7 +25,7 @@ extern "C" {
 namespace op
 {
 // 针对reduction!='none'且self为空tensor场景，对out按照给定值进行填充
-inline static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpExecutor* executor)
+[[maybe_unused]] inline static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpExecutor* executor)
 {
     FVector<int64_t> tmp = {1};
     auto dims = executor->ConvertToTensor(tmp.data(), tmp.size(), op::DataType::DT_INT64);
@@ -41,7 +41,7 @@ inline static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpEx
     return ACLNN_SUCCESS;
 }
 
-inline static aclIntArray* GetBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
+[[maybe_unused]] inline static aclIntArray* GetBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
 {
     int64_t tensorSize = static_cast<int64_t>(broadcastShape.GetDimNum());
     std::vector<int64_t> tensorShape(tensorSize);

@@ -170,7 +170,7 @@ static bool CheckShape(
 }
 
 static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction, int64_t ignoreIndex,
+    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction,
     const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 1. 检查参数是否为空指针
@@ -242,7 +242,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     // 固定写法，参数检查
-    auto ret = CheckParams(self, target, weight, reduction, ignoreIndex, out, totalWeightOut);
+    auto ret = CheckParams(self, target, weight, reduction, out, totalWeightOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (self->IsEmpty()) {

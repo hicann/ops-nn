@@ -82,19 +82,19 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, const acl
                    op::ToString(self->GetViewShape()).GetString()),
            return false);
   if (selfDimNum <= 1) {
-    size_t dim = selfDimNum == 0 ? 1 : self->GetViewShape().GetDim(0);
+    int64_t selfDim = selfDimNum == 0 ? 1 : self->GetViewShape().GetDim(0);
     OP_CHECK(
-      target->GetViewShape().GetDimNum() <= 1 && target->GetViewShape().GetShapeSize() == dim,
+      target->GetViewShape().GetDimNum() <= 1 && target->GetViewShape().GetShapeSize() == selfDim,
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inconsistent target size: %s for self of size: %s",
               op::ToString(target->GetViewShape()).GetString(),
               op::ToString(self->GetViewShape()).GetString()),
               return false);
   } else if (selfDimNum == MAX_SELF_DIM_NUM) {
-    size_t nFrame = self->GetViewShape().GetDim(0);
-    size_t dim = self->GetViewShape().GetDim(1);
+    int64_t nFrame = self->GetViewShape().GetDim(0);
+    int64_t selfDim = self->GetViewShape().GetDim(1);
     OP_CHECK(
       target->GetViewShape().GetDimNum() == 2 && target->GetViewShape().GetDim(0) == nFrame &&
-      target->GetViewShape().GetDim(1) == dim,
+      target->GetViewShape().GetDim(1) == selfDim,
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inconsistent target size: %s for self of size: %s",
               op::ToString(target->GetViewShape()).GetString(),
               op::ToString(self->GetViewShape()).GetString()),

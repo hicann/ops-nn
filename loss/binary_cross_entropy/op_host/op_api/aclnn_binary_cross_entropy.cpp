@@ -79,8 +79,7 @@ static bool CheckDtypeValid(const aclTensor *self,
   return true;
 }
 
-static bool CheckShapeValid(const aclTensor *self, const aclTensor *target,
-    const aclTensor *weight, const aclTensor *out) {
+static bool CheckShapeValid(const aclTensor *self, const aclTensor *target) {
   OP_CHECK_SHAPE_NOT_EQUAL(self, target, return false);
   return true;
 }
@@ -94,7 +93,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target,
   CHECK_RET(CheckDtypeValid(self, target, weight, out), ACLNN_ERR_PARAM_INVALID);
 
   // 3. 检查tensor的shape是否合理
-  CHECK_RET(CheckShapeValid(self, target, weight, out), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShapeValid(self, target), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
 }

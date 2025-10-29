@@ -156,8 +156,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
   return true;
 }
 
-static bool CheckFormat(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
-    const aclTensor *weightOptional, const aclTensor *posWeightOptional, const aclTensor* out) {
+static bool CheckFormat(const aclTensor *self, const aclTensor *target, const aclTensor* out) {
   // self、target的数据格式必须相同
   if (self->GetStorageFormat() != target->GetStorageFormat()) {
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and target can't be different, self [%s], target [%s].",
@@ -225,7 +224,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
   CHECK_RET(CheckDtypeValid(gradOutput, self, target, weightOptional, posWeightOptional, out), ACLNN_ERR_PARAM_INVALID);
 
   // 4. 检查数据格式是否支持
-  CHECK_RET(CheckFormat(gradOutput, self, target, weightOptional, posWeightOptional, out), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckFormat(self, target, out), ACLNN_ERR_PARAM_INVALID);
 
   // 5. 检查shape是否满足约束
   CHECK_RET(CheckShape(gradOutput, self, target, weightOptional, posWeightOptional, out), ACLNN_ERR_PARAM_INVALID);
@@ -244,7 +243,6 @@ static aclnnStatus BinaryCrossEntropyWithLogitsBackwardStub(
     const aclTensor *posWeightOptional,
     int64_t reduction,
     aclTensor *out,
-    uint64_t *workspaceSize,
     aclOpExecutor *executor) {
   // 检查self能否做dtype指定的数据类型推导以及推导的数据类型能否转换为输出数据类型
   op::DataType promoteType;
@@ -337,7 +335,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(
 
   // 开始计算
   ret = BinaryCrossEntropyWithLogitsBackwardStub(gradOutput, self, target, weightOptional, posWeightOptional,
-                                                      reduction, out, workspaceSize, uniqueExecutor.get());
+                                                      reduction, out, uniqueExecutor.get());
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 固定写法，获取计算过程中需要使用的workspace大小
