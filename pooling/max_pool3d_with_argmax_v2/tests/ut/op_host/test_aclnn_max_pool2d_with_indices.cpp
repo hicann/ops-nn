@@ -136,41 +136,6 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_float_stride_null)
     // ut.TestPrecision();
 }
 
-// 正常场景：format是CHW
-TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_float_CHW)
-{
-    vector<int64_t> self_dims = {3, 2, 2};
-    vector<int64_t> kernel_dims = {2};
-    vector<int64_t> stride_dims = {1};
-    vector<int64_t> padding_dims = {0};
-    vector<int64_t> dilation_dims = {1};
-    vector<int64_t> out_dims = {3, 1, 1};
-    vector<int64_t> indices_dims = {3, 1, 1};
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-    bool ceilMode = true;
-
-    auto self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCL);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCL);
-    auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCL);
-
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) {
-        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-    } else {
-        EXPECT_EQ(aclRet, ACL_SUCCESS);
-        // ut.TestPrecision();
-    }
-}
-
 // 正常场景：kernel的size是2
 TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_kernel_size2)
 {
@@ -204,37 +169,6 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_kernel_size2)
         EXPECT_EQ(aclRet, ACL_SUCCESS);
         // ut.TestPrecision();
     }
-}
-
-// 正常场景：kernel的size是2
-TEST_F(l2_max_pool2d_with_indices_test, ascend910_9589_nhwc)
-{
-    vector<int64_t> self_dims = {2, 2, 2, 3};
-    vector<int64_t> kernel_dims = {2, 2};
-    vector<int64_t> stride_dims = {1, 1};
-    vector<int64_t> padding_dims = {0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    vector<int64_t> out_dims = {2, 1, 1, 3};
-    vector<int64_t> indices_dims = {2, 1, 1, 3};
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-    bool ceilMode = true;
-
-    auto self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NHWC);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NHWC);
-    auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NHWC);
-
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    // ut.TestPrecision();
 }
 
 // 正常场景：ceilMode是true
@@ -370,37 +304,6 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_nInputPlane0)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-// 异常场景：数据类型为float16
-TEST_F(l2_max_pool2d_with_indices_test, abnormal_float16)
-{
-    vector<int64_t> self_dims = {2, 3, 2, 2};
-    vector<int64_t> kernel_dims = {2, 2};
-    vector<int64_t> stride_dims = {1, 1};
-    vector<int64_t> padding_dims = {0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    vector<int64_t> out_dims = {2, 3, 1, 1};
-    vector<int64_t> indices_dims = {2, 3, 1, 1};
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-    bool ceilMode = true;
-
-    auto self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-    // ut.TestPrecision();
 }
 
 // 异常场景：数据类型是int

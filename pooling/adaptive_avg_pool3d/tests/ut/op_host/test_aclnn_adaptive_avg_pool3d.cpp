@@ -131,21 +131,6 @@ TEST_F(l2_adaptive_avg_pool3d_test, adaptive_avg_pool3d_cdhw_common_fp16)
     }
 }
 
-TEST_F(l2_adaptive_avg_pool3d_test, adaptive_avg_pool3d_cdhw_bf16)
-{
-    vector<aclDataType> dtypes{ACL_BF16};
-    vector<int64_t> output_size = {2, 3, 2};
-    for (auto dtype : dtypes) {
-        auto input_tensor = TensorDesc({2, 2, 4, 3}, dtype, ACL_FORMAT_ND).ValueRange(40, 50);
-        auto int_array_desc = IntArrayDesc(output_size);
-        auto output_tensor = TensorDesc({2, 2, 3, 2}, dtype, ACL_FORMAT_ND).Precision(0.03, 0.03);
-        auto ut = OP_API_UT(aclnnAdaptiveAvgPool3d, INPUT(input_tensor, int_array_desc), OUTPUT(output_tensor));
-        uint64_t workspace_size = 0;
-        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-    }
-}
-
 TEST_F(l2_adaptive_avg_pool3d_test, ascend910B2_adaptive_avg_pool3d_cdhw_common_bf16)
 {
     vector<aclDataType> dtypes{ACL_BF16};

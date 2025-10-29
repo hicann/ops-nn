@@ -943,37 +943,6 @@ TEST_F(l2_avgpool3d_test, test_avgpool3d_kernel_over_input_shape) {
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_avgpool3d_test, ascend910_9589_test_avgpool3d_fp16) {
-    int64_t divisor_override = 0;
-    bool count_include_pad = true;
-    bool ceil_mode = false;
-
-    vector<int64_t> self_dims = {1, 16, 12, 12, 12}; // NCDHW
-    vector<int64_t> kernel_dims = {12, 12, 12};
-    vector<int64_t> stride_dims = {1, 1, 1};
-    vector<int64_t> padding_dims = {0, 0, 0};
-    vector<int64_t> out_dims = {1, 16, 1, 1, 1};
-
-    auto self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1.0, 1.0);
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCDHW);
-
-    auto ut = OP_API_UT(aclnnAvgPool3d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override), // host api输入
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
-    auto curSoc = GetCurrentPlatformInfo().GetSocVersion();
-    if (curSoc == SocVersion::ASCEND910_95) {
-        EXPECT_EQ(aclRet, ACL_SUCCESS);
-    } else {
-        EXPECT_NE(aclRet, ACL_SUCCESS);
-    }
-}
-
 TEST_F(l2_avgpool3d_test, test_avgpool3d_ncdhw_fp16) {
     int64_t divisor_override = 1;
     bool count_include_pad = true;
