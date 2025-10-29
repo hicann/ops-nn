@@ -62,7 +62,11 @@
 
 ## 调用说明
 
-| 调用方式  | 样例代码  | 说明                 |
-| -----------  | ------------------- | ---------- |
-| aclnn接口   | [test_aclnn_conv_forward_1d_transpose](examples/test_aclnn_conv_forward_1d_transpose.cpp)  | 通过[aclnnConvolution](docs/aclnnConvolution.md)接口方式调用 Conv3DTransposeV2 算子 |
-| aclnn接口   | [test_aclnn_conv_forward_2d_transpose](examples/test_aclnn_conv_forward_2d_transpose.cpp)  | 通过[aclnnConvolution](docs/aclnnConvolution.md)接口方式调用 Conv3DTransposeV2 算子 |
+| 调用方式 | 样例代码 | 说明 |
+| -------- | -------- | ---- |
+| aclnn接口 | [test_aclnn_convolution_1d_transpose](examples/test_aclnn_convolution_1d_transpose.cpp) | 通过[aclnnConvolution](docs/aclnnConvolution.md)接口演示 1D 转置卷积场景，调用 Conv2DTranspose 算子 |
+| aclnn接口 | [test_aclnn_convolution_2d_transpose](examples/test_aclnn_convolution_2d_transpose.cpp) | 通过[aclnnConvolution](docs/aclnnConvolution.md)接口演示 2D 转置卷积场景，调用 Conv2DTranspose 算子 |
+| aclnn接口 | [test_aclnn_convolution_3d_transpose](examples/test_aclnn_convolution_3d_transpose.cpp) | 通过[aclnnConvolution](docs/aclnnConvolution.md)接口演示 3D 转置卷积场景，调用 Conv3DTransposeV2 算子 |
+| aclnn接口 | [test_aclnn_conv_depthwise_2d](examples/test_aclnn_conv_depthwise_2d.cpp) | 使用[aclnnConvDepthwise2d](docs/aclnnConvDepthwise2d.md)接口演示 2D 深度可分离卷积，调用 Conv2D 算子 |
+| aclnn接口 | [test_aclnn_conv_tbc](examples/test_aclnn_conv_tbc.cpp) | 使用[aclnnConvTbc](docs/aclnnConvTbc.md)接口演示 time-batch-channel 卷积，调用 Conv2D 算子 |
+| aclnn接口 | [test_aclnn_quant_convolution](examples/test_aclnn_quant_convolution.cpp) | 使用[aclnnQuantConvolution](docs/aclnnQuantConvolution.md)接口演示 3D 量化卷积，调用 Conv3DV2 算子 |

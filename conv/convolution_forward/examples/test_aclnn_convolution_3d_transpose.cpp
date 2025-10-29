@@ -174,7 +174,8 @@ int aclnnConvolutionTest(int32_t deviceId, aclrtStream& stream)
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), deviceDataResult,
                     size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
+  int64_t printSize = size > 10 ? 10 : size;
+  for (int64_t i = 0; i < printSize; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
