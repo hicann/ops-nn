@@ -27,7 +27,7 @@ public:
         }
 
         string opKernelTilingSoPath = buildPath + string("/tests/ut/op_kernel/libnn_op_kernel_ut_tiling.so");
-        gert::OppSoDesc oppSoDesc(ge::AscendString(opKernelTilingSoPath.c_str()), "nn_op_kernel_ut_so");
+        gert::OppSoDesc oppSoDesc({ge::AscendString(opKernelTilingSoPath.c_str())}, "nn_op_kernel_ut_so");
         shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
         if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
             cout << "add so to registry failed." << endl;

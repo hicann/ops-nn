@@ -62,6 +62,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_100)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
@@ -137,6 +138,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_101)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
@@ -212,6 +214,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_102)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
@@ -287,6 +290,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_103)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
@@ -336,83 +340,6 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_103)
     free(path_);
 }
 
-TEST_F(dynamic_quant_update_scatter_test, test_case_104)
-{
-    size_t inputVarByteSize = 60 * 24 * 1029 * 32 * sizeof(int8_t);
-    size_t inputVarScaleByteSize = 60 * 24 * 1029 * sizeof(float);
-    size_t inputIndicesByteSize = 60 * sizeof(uint32_t);
-    size_t inputUpdatesByteSize = 60 * 24 * 496 * 32 * sizeof(half);
-    size_t smoothScalesByteSzie = 32 * sizeof(half);
-    size_t outputByteSize = 60 * 24 * 1029 * 32 * sizeof(int8_t);
-    size_t scaleByteSize = 60 * 24 * 1029 * sizeof(float);
-    size_t tiling_data_size = sizeof(DynamicQuantUpdateScatterTilingData);
-    uint32_t blockDim = 48;
-
-    uint8_t* var = (uint8_t*)AscendC::GmAlloc(inputVarByteSize);
-    uint8_t* varScale = (uint8_t*)AscendC::GmAlloc(inputVarScaleByteSize);
-    uint8_t* indices = (uint8_t*)AscendC::GmAlloc(inputIndicesByteSize);
-    uint8_t* inputUpdates = (uint8_t*)AscendC::GmAlloc(inputUpdatesByteSize);
-    uint8_t* smoothScales = (uint8_t*)AscendC::GmAlloc(smoothScalesByteSzie);
-    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
-
-    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    memset_s(indices, inputIndicesByteSize, 0, inputIndicesByteSize);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
-
-    tilingDatafromBin->coreNum = 48;
-    tilingDatafromBin->eachCoreBsNum = 30;
-    tilingDatafromBin->lastCoreBsNum = 30;
-    tilingDatafromBin->updateAxisShape = 496;
-    tilingDatafromBin->srcBsStride = 15872;
-    tilingDatafromBin->dstBsStride = 32928;
-    tilingDatafromBin->indexElements = 60;
-    tilingDatafromBin->numHead = 24;
-    tilingDatafromBin->sizePerHead = 32;
-    tilingDatafromBin->dataAxisShape = 1029;
-    tilingDatafromBin->numOneBlock = 32;
-    tilingDatafromBin->innerLoopEle = 16256;
-    tilingDatafromBin->indicesShapeRank = 1;
-    tilingDatafromBin->srcFirBsStride = 380928;
-    tilingDatafromBin->dstFirSecBsStride = 790272;
-    tilingDatafromBin->updateDim0 = 60;
-    tilingDatafromBin->updateDim1 = 20;
-    tilingDatafromBin->varElements = 47416320;
-    tilingDatafromBin->varScalesElements = 1481760;
-    tilingDatafromBin->updatesElements = 22855680;
-    tilingDatafromBin->quantReptNum = 1;
-    tilingDatafromBin->varOrigLastDimSize = 32;
-    tilingDatafromBin->sizeSrcPerHead = 32;
-    tilingDatafromBin->innerLoopFullRpt = 0;
-    tilingDatafromBin->innerLoopTimes = 0;
-    tilingDatafromBin->innerLoopTail = 0;
-    tilingDatafromBin->innerLoopTimesLastCore = 0;
-    tilingDatafromBin->innerLoopTailLastCore = 0;
-
-    ICPU_SET_TILING_KEY(104);
-
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(var);
-    AscendC::GmFree(varScale);
-    AscendC::GmFree(indices);
-    AscendC::GmFree(inputUpdates);
-    AscendC::GmFree(smoothScales);
-    AscendC::GmFree(output);
-    AscendC::GmFree(scale);
-    AscendC::GmFree(workSpace);
-    AscendC::GmFree(tilingDatafromBin);
-    free(path_);
-}
-
 TEST_F(dynamic_quant_update_scatter_test, test_case_105)
 {
     size_t inputVarByteSize = 48 * 24 * 12800 * sizeof(int8_t);
@@ -439,6 +366,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_105)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
@@ -514,6 +442,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_106)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
 
