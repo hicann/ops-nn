@@ -9,10 +9,11 @@
 */
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
-#include "op_proto_test_util.h" // NOLINT
-#include "nn_quantize.h"        // NOLINT
-#include "graph/utils/op_desc_utils.h"
-#include "common/utils/ut_op_common.h"
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "log/log.h"
+#include "error_util.h"
+#include "../../../op_graph/dynamic_quant_v2_proto.h"
 
 class DynamicQuantV2 : public testing::Test
 {
@@ -99,7 +100,7 @@ TEST_F(DynamicQuantV2, DynamicQuantV2_InferDtype_case_1)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                                  .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                                   .InputDataTypes({&input_x_ref, &input_smooth_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref, &output_offset_ref})
                                   .Build();
@@ -137,9 +138,9 @@ TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_pertensor)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeAttrs(
-                                      {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                                       {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(false)},
-                                       {"quant_mode", ge::AnyValue::CreateFrom<std::string>("pertensor")}})
+                                      {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                       {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("pertensor")}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferShapeContext>();

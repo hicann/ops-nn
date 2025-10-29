@@ -139,10 +139,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling1)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -229,10 +229,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling2)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -319,10 +319,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling3)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(1)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -403,10 +403,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling4)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -494,10 +494,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling5)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-2)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -585,10 +585,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling6)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-2)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -676,10 +676,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling7)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-2)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -766,10 +766,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_error_shape1)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(29)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(29)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -850,10 +850,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_1)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
-                          {"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                          {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                          {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                          {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
                       })
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -936,10 +936,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_910_95_2)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
-                          {"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                          {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                          {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                          {"axis", ge::AnyValue::CreateFrom<int64_t>(-2)},
+                          {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
                       })
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -1022,10 +1022,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_910_95_3)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
-                          {"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                          {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                          {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                          {"axis", ge::AnyValue::CreateFrom<int64_t>(-2)},
+                          {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
                       })
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -1107,10 +1107,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_shape)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT4, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(29)},
-                           {"axis", ge::AnyValue::CreateFrom<int64_t>(-1)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(29)},
+                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1191,10 +1191,10 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_axis)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
-                          {"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                          {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                          {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                          {"axis", ge::AnyValue::CreateFrom<int64_t>(4)},
+                          {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                          {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
                       })
                       .TilingData(param.get())
                       .Workspace(ws_size)

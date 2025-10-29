@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_quantized_batch_norm.h"
 
@@ -198,7 +197,7 @@ int main()
 
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
-    printf("size is %d", size);
+    printf("size is %ld", size);
     std::vector<int32_t> resultData(size, 0);
     ret = aclrtMemcpy(
         resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),

@@ -9,20 +9,13 @@
 */
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <gtest/gtest.h>
-#include "opdev/op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "pad_ops.h"
-#include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
-#include "runtime/diag_util.h"
-#include "quant/dynamic_quant/op_host/dynamic_quant_tiling.h"
+#include <vector>
+#include "log/log.h"
+#include "platform/platform_infos_def.h"
+#include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "experiment_ops.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 
@@ -56,6 +49,11 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
+struct DynamicQuantCompileInfo {
+    int32_t vectorCoreNum = 0;
+    uint64_t ubSize = 0;
+};
+
 TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_sym)
 {
     gert::StorageShape x_shape = {{1, 128, 128}, {1, 128, 128}};
@@ -81,7 +79,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_sym)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -125,9 +123,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_sym)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertoken")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertoken")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -174,7 +172,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_MOE_noSym)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -219,9 +217,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_MOE_noSym)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertoken")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertoken")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -268,7 +266,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -312,9 +310,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertensor")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertensor")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -361,7 +359,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -405,9 +403,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertensor")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertensor")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -454,7 +452,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -498,9 +496,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertensor")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertensor")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -547,7 +545,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuantV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -591,9 +589,9 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)},
-                           {"is_symmetrical", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"quant_mode", ge::AnyValue::CreateFrom<string>("pertensor")}})
+                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                           {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("pertensor")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -638,7 +636,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
 //   fe::PlatFormInfos platform_info;
 //   platform_info.Init();
 //   // compile info
-//   optiling::DynamicQuantCompileInfo compile_info;
+//   DynamicQuantCompileInfo compile_info;
 
 //   std::string op_type("DynamicQuantV2");
 //   ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);

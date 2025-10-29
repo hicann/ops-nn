@@ -37,9 +37,9 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape)
                       .InputShapes({&xShape, &gammaShape, &betaShape, &scaleAndOffsetShape, &scaleAndOffsetShape})
                       .OutputShapes({&resultShape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"high_precision_mode", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -66,9 +66,9 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape_failed_in_shape)
                       .InputShapes({&xShape, &gammaShape, &betaShape, &scaleAndOffsetShape, &scaleAndOffsetShape})
                       .OutputShapes({&resultShape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"high_precision_mode", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -93,9 +93,9 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape_failed_in_dim)
                       .InputShapes({&xShape, &gammaShape, &betaShape, &scaleAndOffsetShape, &scaleAndOffsetShape})
                       .OutputShapes({&resultShape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                           {"high_precision_mode", ge::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                           {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -118,9 +118,9 @@ TEST_F(RmsNormAtb, RmsNormQuant_inferdtype)
                               .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(4, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeAttrs(
-                                  {{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)},
-                                   {"gemma_mode", ge::AnyValue::CreateFrom<bool>(true)},
-                                   {"high_precision_mode", ge::AnyValue::CreateFrom<bool>(true)}})
+                                  {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                   {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                   {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .InputDataTypes({&dbf16, &dbf16, &dbf16, &dbf16, &dint8}) // &dbf16, &dint8
                               .OutputDataTypes({&dint8})

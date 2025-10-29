@@ -11,7 +11,6 @@
 #include <memory>
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_trans_quant_param_v3.h"
 

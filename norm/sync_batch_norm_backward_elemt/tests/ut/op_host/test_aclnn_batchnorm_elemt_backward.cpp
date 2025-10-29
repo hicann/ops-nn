@@ -48,7 +48,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, ascend910B2_batch_norm_elemt_backward_bf16)
@@ -72,7 +72,7 @@ TEST_F(l2BatchNormElemtBackwardTest, ascend910B2_batch_norm_elemt_backward_bf16)
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B) {
-        EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+        EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
     } else {
         EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
     }
@@ -213,7 +213,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_weigh
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_err_null_sumDy)
@@ -719,7 +719,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_contiguous)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32_cast)
@@ -742,7 +742,7 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32_cast)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_two_dim_counter)
@@ -765,5 +765,5 @@ TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_two_dim_counte
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
 }

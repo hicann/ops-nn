@@ -116,10 +116,10 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
             .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"dtype", ge::AnyValue::CreateFrom<int64_t>(2)},
-                 {"axis", ge::AnyValue::CreateFrom<int64_t>(65535)},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(1e-5)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                 {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(65535)},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -218,10 +218,10 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
             .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs(
-                {{"dtype", ge::AnyValue::CreateFrom<int64_t>(2)},
-                 {"axis", ge::AnyValue::CreateFrom<int64_t>(-65535)},
-                 {"epsilon", ge::AnyValue::CreateFrom<float>(1e-5)},
-                 {"additional_output", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                 {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-65535)},
+                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
+                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();

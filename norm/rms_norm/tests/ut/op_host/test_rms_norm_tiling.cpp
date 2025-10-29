@@ -90,8 +90,6 @@ TEST_F(RmsNormTiling, rms_norm_mixtype_tiling_001)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -111,7 +109,7 @@ TEST_F(RmsNormTiling, rms_norm_mixtype_tiling_001)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -127,7 +125,7 @@ TEST_F(RmsNormTiling, rms_norm_mixtype_tiling_001)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 2001);
+    ASSERT_EQ(tiling_key, 1);
     //dlog_setlevel(0, 3, 0);
 }
 
@@ -196,13 +194,13 @@ TEST_F(RmsNormTiling, rms_norm_tiling_001)
                       .IrInstanceNum({1, 1})
                       .InputShapes({&input_shape, &gamma_shape})
                       .OutputShapes({&out_shape, &rstd_shape})
-                      .CompileInfo(nullptr)
+                      .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -292,7 +290,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_002)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -387,7 +385,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_003)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -483,7 +481,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_004)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -573,7 +571,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_005)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -668,7 +666,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_006)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -764,7 +762,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_mix_dtype_1)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -860,7 +858,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_mix_dtype_3)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -951,7 +949,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_err_shape_001)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1043,7 +1041,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_err_shape_002)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1134,7 +1132,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_err_shape_003)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1225,7 +1223,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_err_shape_004)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1316,7 +1314,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_err_shape_005)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", ge::AnyValue::CreateFrom<float>(0.01)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

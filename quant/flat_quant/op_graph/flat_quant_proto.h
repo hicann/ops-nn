@@ -18,43 +18,34 @@
 
 namespace ge {
 /**
- * @brief Quantize feature map by group.
+ * @brief Flatness matters for LLM quantization. \n
+ *
  * @par Inputs:
- * @li x: A Tensor. 2-D with shape [S, H]. Must be one of the following types:
- * float32, float16, bfloat16. The format support ND.
- * @li scale: A Tensor. Specifying the quantitation scale of x. 2-D with shape
- * [E, H], the second dim of scale shape is same as the second dim of x shape.
- * Must be one of the following types: float32, float16, bfloat16.
+ * @li x: A tensor. The original data input. 3-D with shape [K, M, N]. Must be one of the following types:
+ * float16, bfloat16. The format support ND.
+ * @li kronecker_p1: A tensor. Input calculation matrix 1. 2-D with shape [M, M]. The value of M is same as input "x".
+ * Must be one of the following types: float16, bfloat16. Has the same type as input "x".
  * The format support ND.
- * @li group_index: A Tensor. Specifying the index of group. 1-D with shape
- * [E, ], the first dim of scale shape is same as the first dim of scale shape.
- * Must be one of the following types: int32, int64. The format support ND.
- * @li offset: A Tensor. Optional. Specifying the quantitation offset of x. 1-D
- * with shape [1, ] or 0-D with shape []. Must be one of the following types:
- * float32, float16, bfloat16. The dtype of offset should be same as scale.
- * The format support ND.
+ * @li kronecker_p2: A tensor. Input calculation matrix 2. 2-D with shape [N, N]. The value of N is same as input "x".
+ * Must be one of the following types: float16, bfloat16. Has the same type as input "x".
+ * The format support ND. \n
+ *
  * @par Outputs:
- * y: A 2-D Tensor. Shape is same as input x. The format support ND.
- * Must be one of the following types: int4, int8.
- * @par Attributes:
- * dst_type: An optional attribute of type int. Declare the output dtype.
- * Support DT_INT4, DT_INT8. Defaults to DT_INT8.
- * @attention Constraints:
- * @li If output y data type is INT4, the last dim of y shape should be
- * an even number.
- * @li Input group_index value should be in the range of [0, S] and be an
- * non-decreasing sequence. The last value of input group_index must be the
- * same as the first dim of x shape.
- */
-REG_OP(GroupQuant)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(scale, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(group_index, TensorType({DT_INT32, DT_INT64}))
-    .OPTIONAL_INPUT(offset, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_INT4, DT_INT8}))
-    .ATTR(dst_type, Int, DT_INT8)
-    .OP_END_FACTORY_REG(GroupQuant)
+ * @li out: A 3-D tensor of type int4. Output result data. Shape is same as input "x". The format support ND.
+ * @li quant_scale: A tensor of type float32. Output quantization factor. 1-D with shape [K].
+ * The value of K is same as input "x". The format support ND. \n
 
+ * @par Attributes:
+ * clip_ratio: An optional float. Used to control the quantization cropping ratio. Defaults to 1. \n
+ */
+REG_OP(FlatQuant)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
+    .INPUT(kronecker_p1, TensorType({DT_FLOAT16, DT_BF16}))
+    .INPUT(kronecker_p2, TensorType({DT_FLOAT16, DT_BF16}))
+    .OUTPUT(out, TensorType({DT_INT4}))
+    .OUTPUT(quant_scale, TensorType({DT_FLOAT}))
+    .ATTR(clip_ratio, Float, 1)
+    .OP_END_FACTORY_REG(FlatQuant)
 }  // namespace ge
 
 #endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_QUANTIZE_H_

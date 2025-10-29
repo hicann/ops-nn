@@ -46,9 +46,9 @@ TEST_F(AscendQuantV2Proto, AscendQuantV2_proto_0)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeAttrs(
-                          {{"sqrt_mode", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"round_mode", ge::AnyValue::CreateFrom<string>("round")},
-                           {"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                          {{"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("round")},
+                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .InputShapes({&xShape, &sShape, &sShape})
                       .OutputShapes({&yShape})
                       .Build();

@@ -287,11 +287,12 @@ static bool CheckRoundMode(const char* roundMode, int32_t dstType)
                 "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
             return false;
         }
-    } else if (dstType == op::DataType::DT_FLOAT8_E4M3FN || dstType == op::DataType::DT_FLOAT8_E4M3FN) {
+    } else if (dstType == op::DataType::DT_FLOAT8_E4M3FN || dstType == op::DataType::DT_FLOAT8_E5M2) {
         if (mode != "round" && mode != "hybrid") {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round'] for float8_e5m2/float8_e4m3fn.", mode.c_str());
+                "check roundMode failed, roundMode[%s] not in ['round', 'hybrid'] for float8_e5m2/float8_e4m3fn.",
+                mode.c_str());
             return false;
         }
     } else {

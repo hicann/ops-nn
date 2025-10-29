@@ -9,7 +9,6 @@
  */
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_batch_norm_gather_stats_with_counts.h"
 

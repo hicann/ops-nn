@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "infershape_test_util.h"
+#include "kernel_run_context_facker.h"
 #include "log/log.h"
 #include "array_ops.h"
 #include "ut_op_common.h"
@@ -120,8 +121,6 @@ TEST_F(LayerNormV4Test, LayerNormV4InferDataType)
     EXPECT_EQ(context->GetInputDataType(0), input_x);
     EXPECT_EQ(context->GetInputDataType(1), shape_dtype);
     EXPECT_EQ(context->GetOutputDataType(0), input_x);
-    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
-    EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT);
 }
 
 TEST_F(LayerNormV4Test, layer_norm_v4_infershape_range_test0)

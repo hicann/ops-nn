@@ -323,6 +323,7 @@ aclnnStatus aclnnAscendAntiQuantGetWorkspaceSize(
 
     // int32 fix to int4
     const aclTensor* tensorX = TensorPreProcess(xContiguous, uniqueExecutor.get());
+    CHECK_RET(tensorX != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (offset != nullptr) {
         auto offsetContiguous = l0op::Contiguous(offset, uniqueExecutor.get());

@@ -44,39 +44,44 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
     static const std::map<int64_t, std::initializer_list<op::DataType>> emptyDtypesMap = {
         {INDEX_FOR_X, {}}, {INDEX_FOR_SCALES, {}}, {INDEX_FOR_ZERO_POINTS, {}}, {INDEX_FOR_OUT, {}}};
 
-    static const std::map<SocVersion, std::map<int64_t, std::initializer_list<op::DataType>>> socSupportMap = {
-        {SocVersion::ASCEND310P,
-         {{INDEX_FOR_X, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-          {INDEX_FOR_SCALES, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-          {INDEX_FOR_ZERO_POINTS, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}},
-          {INDEX_FOR_OUT, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}}}},
-        {SocVersion::ASCEND910,
-         {{INDEX_FOR_X, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-          {INDEX_FOR_SCALES, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16}},
-          {INDEX_FOR_ZERO_POINTS, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}},
-          {INDEX_FOR_OUT, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}}}},
-        {SocVersion::ASCEND910B,
-         {{INDEX_FOR_X, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_SCALES, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_ZERO_POINTS,
-           {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_BF16}},
-          {INDEX_FOR_OUT, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}}}},
-        {SocVersion::ASCEND910_93,
-         {{INDEX_FOR_X, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_SCALES, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_ZERO_POINTS,
-           {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_BF16}},
-          {INDEX_FOR_OUT, {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32}}}},
-        {SocVersion::ASCEND910_95,
-         {{INDEX_FOR_X, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_SCALES, {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16}},
-          {INDEX_FOR_ZERO_POINTS,
-           {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_FLOAT,
-            op::DataType::DT_BF16}},
-          {INDEX_FOR_OUT,
-           {op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_HIFLOAT8,
-            op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2}}}},
-    };
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_FLOAT_16_LIST = {
+        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_INT_LIST = {
+        op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32};
+
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_ALLF_LIST = {
+        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_INT_BF16_LIST = {
+        op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_BF16};
+
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_INT_FLOAT_BF16_LIST = {
+        op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32, op::DataType::DT_FLOAT,
+        op::DataType::DT_BF16};
+
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_A5_FOR_OUT_LIST = {
+        op::DataType::DT_INT8,     op::DataType::DT_UINT8,         op::DataType::DT_INT32,
+        op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2};
+
+    static const std::map<SocVersion, std::map<int64_t, std::initializer_list<op::DataType>>>
+        socSupportMap = {
+            {SocVersion::ASCEND310P,
+             {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
+              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+            {SocVersion::ASCEND910,
+             {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
+              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+            {SocVersion::ASCEND910B,
+             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+            {SocVersion::ASCEND910_93,
+             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+            {SocVersion::ASCEND910_95,
+             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST}, 
+              {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
+        };
 
     auto found = socSupportMap.find(socVersion);
     if (found == socSupportMap.end()) {

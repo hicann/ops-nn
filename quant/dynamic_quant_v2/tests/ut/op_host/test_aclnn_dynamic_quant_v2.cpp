@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "quant/dynamic_quant_v2/op_host/op_api/aclnn_dynamic_quant_v2.h"
+#include "../../../op_host/op_api/aclnn_dynamic_quant_v2.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -49,6 +49,7 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16)
         aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int4)
@@ -65,6 +66,7 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int4)
         aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32)
@@ -81,6 +83,7 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32)
         aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32_1)
@@ -97,6 +100,7 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32_1)
         aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_dynamic_quant_v2_test, ascend910_9589_dynamic_quant_v2_bf16_int32_01_fail_groupindex)

@@ -37,6 +37,7 @@ static ge::graphStatus InferDataTypeForAscendQuantV2(gert::InferDataTypeContext*
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForAscendQuantV2");
     const int32_t* dstDtype = context->GetAttrs()->GetAttrPointer<int32_t>(g_AttrDstType);
+    OP_CHECK_NULL_WITH_CONTEXT(context, dstDtype);
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     context->SetOutputDataType(0, outDtype);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForAscendQuantV2");

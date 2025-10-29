@@ -11,18 +11,11 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <vector>
-#include "opdev/op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "pad_ops.h"
-#include "array_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
-#include "runtime/diag_util.h"
-#include "quant/dynamic_quant/op_host/dynamic_quant_tiling.h"
+#include "log/log.h"
+#include "platform/platform_infos_def.h"
+#include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "experiment_ops.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 
@@ -56,6 +49,11 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
+struct DynamicQuantCompileInfo {
+    int32_t vectorCoreNum = 0;
+    uint64_t ubSize = 0;
+};
+
 TEST_F(DynamicQuantTiling, dynamic_quant_tiling_01)
 {
     gert::StorageShape x_shape = {{1, 128, 1024}, {1, 128, 1024}};
@@ -80,7 +78,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_01)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -120,7 +118,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_01)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -167,7 +165,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_02)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -208,7 +206,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_02)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -253,7 +251,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_03)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -293,7 +291,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_03)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -340,7 +338,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_04)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -381,7 +379,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_04)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -420,7 +418,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_05)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -498,7 +496,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_06)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -576,7 +574,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_07)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -654,7 +652,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_08)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -733,7 +731,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_09)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -774,7 +772,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_09)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -821,7 +819,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_10)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -862,7 +860,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_10)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -909,7 +907,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_11)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -950,7 +948,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_11)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(3)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -990,7 +988,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_01)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1033,7 +1031,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_01)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1079,7 +1077,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_02)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1121,7 +1119,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_02)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1167,7 +1165,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_03)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1209,7 +1207,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_03)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1255,7 +1253,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_04)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1297,7 +1295,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_04)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1337,7 +1335,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_05)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1418,7 +1416,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_06)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1499,7 +1497,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_07)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1580,7 +1578,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_08)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1661,7 +1659,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_largeShape_db_01)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1703,7 +1701,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_largeShape_db_01)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1748,7 +1746,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_empty_tensor)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1789,7 +1787,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_empty_tensor)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1836,7 +1834,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_has_group_index_failed)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1919,7 +1917,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_01)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -1959,7 +1957,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_01)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2007,7 +2005,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_02)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -2047,7 +2045,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_02)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2095,7 +2093,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_03)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -2135,7 +2133,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_310_03)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2183,7 +2181,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_910_01)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::DynamicQuantCompileInfo compile_info;
+    DynamicQuantCompileInfo compile_info;
 
     std::string op_type("DynamicQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -2223,7 +2221,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tilin_910_01)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

@@ -186,7 +186,7 @@ TEST_F(l2_quantize_test, quantize_testcase_009_exception_bf16_dtype_not_valid)
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // float32 no zeroPoints

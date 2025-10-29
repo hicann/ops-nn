@@ -9,7 +9,6 @@
  */
 
 #include <iostream>
-#include <unistd.h>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_ascend_quant_v3.h"

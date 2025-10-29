@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_rms_norm_grad.h"
 #define CHECK_RET(cond, return_expr) \

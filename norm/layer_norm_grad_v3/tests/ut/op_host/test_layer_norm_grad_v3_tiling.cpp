@@ -1233,7 +1233,7 @@ TEST_F(LayerNormGradV3Tiling, layer_norm_grad_v3_tiling_012)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"output_mask", ge::AnyValue::CreateFrom<std::vector<bool>>(output_mask)}})
+                      .NodeAttrs({{"output_mask", Ops::NN::AnyValue::CreateFrom<std::vector<bool>>(output_mask)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

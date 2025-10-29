@@ -105,6 +105,7 @@ void TilingTest(
     gert::StorageShape x = {xShape, xShape};
     gert::StorageShape gamma = {gammaShape, gammaShape};
     gert::StorageShape beta = {betaShape, betaShape};
+    gert::StorageShape scale_and_offset_shape = {{1}, {1}};
 
     gert::StorageShape result = {resultShape, resultShape};
 
@@ -123,54 +124,41 @@ void TilingTest(
     std::vector<uint32_t> irInstanceNum(inputNum, 1);
 
     ge::DataType resdatatype = datatype;
-    std::vector<void*> inputsVec = {&x, &gamma, &beta};
-    std::vector<void*> outputsVec = {&result};
-    if (EN_PRE_POST) {
-        inputsVec.push_back(&x); // x shape eq res_in shape
-        outputsVec.push_back(&x);
-    }
     if (EN_QUANT) {
-        gert::StorageShape scale_and_offset_shape = {{1}, {1}};
-        inputsVec.push_back(&scale_and_offset_shape);
-        inputsVec.push_back(&scale_and_offset_shape);
         resdatatype = ge::DT_INT8;
     }
 
     auto holderBuilder = gert::TilingContextFaker()
                              .NodeIoNum(inputNum, outputNum)
                              .IrInstanceNum(irInstanceNum)
-                             .InputShapes(inputsVec)
-                             .OutputShapes(outputsVec)
+                             .InputShapes({&x, &gamma, &beta, &scale_and_offset_shape, &scale_and_offset_shape})
+                             .OutputShapes({&result})
                              .CompileInfo(&compile_info)
-                             .PlatformInfo(reinterpret_cast<char*>(&platform_info));
-    for (size_t i = 0; i < inputsVec.size(); i++) {
-        if (EN_QUANT && i == inputsVec.size() - 1) {
-            holderBuilder = holderBuilder.NodeInputTd(i, ge::DT_INT8, format, format);
-        } else {
-            holderBuilder = holderBuilder.NodeInputTd(i, datatype, format, format);
-        }
-    }
-    holderBuilder = holderBuilder.NodeOutputTd(0, resdatatype, format, format);
-    if (outputsVec.size() > 1) {
-        holderBuilder = holderBuilder.NodeOutputTd(1, datatype, format, format);
-    }
-    auto holder = holderBuilder.TilingData(param.get())
-                      .NodeAttrs({
-                          {"epsilon", ge::AnyValue::CreateFrom<float>(epsilon)},
-                          {"high_precision_mode", ge::AnyValue::CreateFrom<bool>(high_precision_mode)},
-                          {"gemma_mode", ge::AnyValue::CreateFrom<bool>(gemma_mode)},
-                          // {"scale", ge::AnyValue::CreateFrom<float>(1.0)},
-                          // {"offset", ge::AnyValue::CreateFrom<int64_t>(0)},
-                      })
-                      .Workspace(ws_size)
-                      .Build();
+                             .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                             .NodeInputTd(0, datatype, format, format)
+                             .NodeInputTd(1, datatype, format, format)
+                             .NodeInputTd(2, datatype, format, format)
+                             .NodeInputTd(3, datatype, format, format)
+                             .NodeInputTd(4, ge::DT_INT8, format, format)
+                             .NodeOutputTd(0, resdatatype, format, format)
+                             .TilingData(param.get())
+                             .NodeAttrs({
+                                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)},
+                                 {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(high_precision_mode)},
+                                 {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(gemma_mode)},
+                                 // {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                 // {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                             })
+                             .Workspace(ws_size)
+                             .Build();
 
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holderBuilder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), status);

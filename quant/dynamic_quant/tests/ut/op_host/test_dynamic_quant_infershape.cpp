@@ -9,10 +9,10 @@
 */
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
-#include "op_proto_test_util.h" // NOLINT
-#include "nn_quantize.h"        // NOLINT
-#include "graph/utils/op_desc_utils.h"
-#include "common/utils/ut_op_common.h"
+#include "ut_op_common.h"
+#include "infershape_test_util.h"
+#include "log/log.h"
+#include "../../../op_graph/dynamic_quant_proto.h"
 
 class DynamicQuant : public testing::Test
 {
@@ -89,7 +89,7 @@ TEST_F(DynamicQuant, DynamicQuant_InferDtype_case_1)
                                   .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs({{"dst_type", ge::AnyValue::CreateFrom<int64_t>(2)}})
+                                  .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                                   .InputDataTypes({&input_x_ref, &input_smooth_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();

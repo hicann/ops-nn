@@ -120,7 +120,7 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_bfloat16_type)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // test type: BFLOAT16

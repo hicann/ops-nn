@@ -74,7 +74,11 @@ __aicore__ inline constexpr uint32_t GetUbBlockSize()
 
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
+#if __CCE_AICORE__ == 310
+    return AscendC::VECTOR_REG_WIDTH;
+#else
     return 256U;
+#endif
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>

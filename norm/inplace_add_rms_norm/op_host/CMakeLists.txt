@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.inplace_add_rms_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_add_rms_norm ACLNNTYPE aclnn DEPENDENCIES add_rms_norm)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_add_rms_norm ACLNNTYPE aclnn DEPENDENCIES add_rms_norm rms_norm)

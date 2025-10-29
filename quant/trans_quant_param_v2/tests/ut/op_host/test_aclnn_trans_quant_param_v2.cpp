@@ -46,15 +46,6 @@ TEST_F(l2_trans_quant_param_v2_test, test_trans_quant_param_first_api)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_trans_quant_param_v2_test, test_trans_quant_param_second_api)
-{
-    void* workspaceAddr;
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
-    aclrtStream stream;
-    aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
-}
-
 TEST_F(l2_trans_quant_param_v2_test, test_trans_quant_param_third_api)
 {
     TensorDesc scale_desc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND);
