@@ -216,8 +216,9 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
                            (runInfo_.kernel_d > 1 && runInfo_.dedx_d > 1);
     // 正常数据类型，baseM>=512时MMAD基本能掩盖MTE2
     bool isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_512;
-    if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16) && runInfo_.kernel_h <= NUM_THREE &&
-        runInfo_.kernel_w <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
+    if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16) &&
+        static_cast<uint32_t>(runInfo_.kernel_h) <= NUM_THREE &&
+        static_cast<uint32_t>(runInfo_.kernel_w) <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
         // 16bit的loadToB1不需要transpose，MTE2带宽压力相对较小，实测baseM>=384时MMAD基本能掩盖MTE2
         isMmadCoverMte2 = l0Params.baseM >= (BASIC_BLOCK_SIZE_256 + BASIC_BLOCK_SIZE_128);
     }

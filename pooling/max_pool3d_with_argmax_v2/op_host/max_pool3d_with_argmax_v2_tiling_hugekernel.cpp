@@ -125,7 +125,7 @@ uint64_t MaxPool3DWithArgmaxV2HugeKernelTiling::CalcBufferSizes(
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2HugeKernelTiling::LargeKernelCalcParts(
-    array<uint64_t, DHW_DIMS>& inParts, uint64_t inPartsSize, UBBufferSize& ubBufSizes, uint64_t dim)
+    array<uint64_t, DHW_DIMS>& inParts, [[maybe_unused]] uint64_t inPartsSize, UBBufferSize& ubBufSizes, uint64_t dim)
 {
     if (dim != D_DIM && dim != H_DIM && dim != W_DIM) {
         return ge::GRAPH_FAILED;

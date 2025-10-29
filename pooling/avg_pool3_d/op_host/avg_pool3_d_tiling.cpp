@@ -422,8 +422,7 @@ static void SetTiling(const TilingParams& params, AvgPool3DTilingData& tiling) {
     tiling.set_usedCoreNum(params.usedCoreNum);
 }
 
-static void PrintTiling(const gert::TilingContext* context, AvgPool3DTilingData& tiling,
-                        uint32_t tilingKey, int32_t usedCoreNum) {
+static void PrintTiling(const gert::TilingContext* context, AvgPool3DTilingData& tiling, uint32_t tilingKey) {
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "tilingKey:          %d.", tilingKey);
     OP_LOGD(nodeName, "usedCoreNum:        %ld.", tiling.get_usedCoreNum());
@@ -511,7 +510,7 @@ static ge::graphStatus KernelTiling(gert::TilingContext* context, TilingParams& 
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(usedCoreNum);
 
-    PrintTiling(context, tiling, tilingKey, usedCoreNum);
+    PrintTiling(context, tiling, tilingKey);
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
