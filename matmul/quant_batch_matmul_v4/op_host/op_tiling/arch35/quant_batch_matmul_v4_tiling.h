@@ -233,7 +233,7 @@ protected:
                               const gert::StorageShape *antiQuantOffsetShape) = 0;
     virtual bool CalcUBSize(uint64_t vecSingleN, uint64_t vecSingleK) const = 0;
     void PrintTilingData(bool debugLevel);
-    virtual void PrintMatMulTiling(int32_t logLevel) const;
+    virtual void PrintMatMulTiling() const;
     virtual bool GetTilingFromCache();
 
     uint32_t CalcAntiQuantTmpSize(uint64_t vecSingleN, uint64_t vecSingleK) const;
@@ -286,11 +286,15 @@ protected:
     void SetMatmulTiling();
     bool CalcUBSize(uint64_t vecSingleN, uint64_t vecSingleK) const override
     {
+        (void) vecSingleN;
+        (void) vecSingleK;
         return true;
     }
 
     bool SetQuantType(const gert::StorageShape *quantScaleShape, const gert::StorageShape *quantOffsetShape) override
     {
+        (void) quantScaleShape;
+        (void) quantOffsetShape;
         return true;
     }
     void UpdateL1Tiling(uint64_t minKL1AL1Size, uint64_t minKL1BL1Size,

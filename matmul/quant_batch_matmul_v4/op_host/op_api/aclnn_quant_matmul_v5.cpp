@@ -351,8 +351,6 @@ static bool CheckDtypeA8W4Int(const TupleInput &inputTensors, const TupleQuant &
     auto yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto yOffset = std::get<INDEX_Y_OFFSET_IN_QUANT_TUPLE>(quantTensors);
 
-    bool isA8W4INT = isA8W4IntAfterPre(x1, x2);
-
     if (x1Scale == nullptr || x1Scale->IsEmpty()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4_Int mode, x1Scale does not support empty tensor or nullptr.");
         return false;
@@ -438,7 +436,6 @@ static inline bool CheckScaleX1Shape(const TupleQuant& quantTensors, int64_t x1M
 
 static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2NDim, int64_t groupDim, bool transposeX2,
                                      bool isA8W4INT = false) {
-    auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
     int64_t x2ScaleNDim = transposeX2 ? x2Scale->GetViewShape().GetDim(0) : x2Scale->GetViewShape().GetDim(1);
@@ -611,7 +608,7 @@ static aclnnStatus CheckParams(const QuantMatmulChecker& qmmV3Checker, bool isA8
 }
 
 static bool CheckSpecialCase(const aclTensor *tensor, int64_t firstLastDim, int64_t secondLastDim) {
-    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim) == 1) {
+    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim)) {
         OP_LOGD("QuantMatmul special case, no need to set transpose attr value.");
         return true;
     }

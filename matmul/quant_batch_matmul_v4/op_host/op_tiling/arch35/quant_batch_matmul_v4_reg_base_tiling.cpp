@@ -355,12 +355,11 @@ void QuantBatchMatmulV4RegBase::PrintCVTilingData(const bool debugLevel) const
        << " mAL1Size: " << tilingData_->get_mAL1Size() << " kAL1Size: " << tilingData_->get_kAL1Size()
        << " nBL1Size: " << tilingData_->get_nBL1Size() << " kBL1Size: " << tilingData_->get_kBL1Size()
        << " AL1Pingpong: " << tilingData_->get_AL1Pingpong() << " BL1Pingpong: " << tilingData_->get_BL1Pingpong();
-    int32_t logLevel = debugLevel ? DLOG_DEBUG : DLOG_ERROR;
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }else {
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
-    PrintMatMulTiling(logLevel);
+    PrintMatMulTiling();
 }
 }  // namespace optiling

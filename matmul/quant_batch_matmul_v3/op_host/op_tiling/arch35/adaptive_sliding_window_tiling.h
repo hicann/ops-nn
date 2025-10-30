@@ -116,8 +116,7 @@ protected:
     uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit);
     uint64_t GetDepthB1AfullLoad(uint64_t leftSize);
     uint64_t GetScaleFactorBAfullLoad(uint64_t leftSize);
-    void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize,
-                         uint64_t leftL1Size);
+    void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
     void CalStepKs();
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;

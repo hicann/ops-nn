@@ -480,7 +480,7 @@ bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, con
         OP_TILING_CHECK(x1Inner < 0 || x1Inner % 2 != 0 || x2Inner < 0 || x2Inner % 2 != 0,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "if input dtype is int4, \
                                               last axis of input x1 and x2 has to be a positive even number, \
-                                              but atcually last axis of x1 is [%lu], last axis of x2 is [%ld].",
+                                              but atcually last axis of x1 is [%ld], last axis of x2 is [%ld].",
                                               x1Inner, x2Inner), return false);
     }
     return true;

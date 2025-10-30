@@ -425,8 +425,8 @@ scaleShape[-1] is %ld, x2Shape[-1] is %ld, scaleShape[-2] is %ld, x2Shape[-2] is
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "In G-B or B-B quantification, the m dimension size of x1 ceildivided by groupSizeM should be equal to \
-the m dimension size of pertokenScale, but now, groupSizeM is %ld, \
-m dimension size of pertokenScale is %ld, m dimension size of x1Shape is %ld.",
+the m dimension size of pertokenScale, but now, groupSizeM is %lu, \
+m dimension size of pertokenScale is %lu, m dimension size of x1Shape is %lu.",
             inputParams_.groupSizeM, scaleX1M, x1M),
         return false);
     OP_TILING_CHECK(
@@ -434,8 +434,8 @@ m dimension size of pertokenScale is %ld, m dimension size of x1Shape is %ld.",
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "In G-B or B-B quantification, the k dimension size of x1 ceildivided by groupSizeK should be equal to \
-the k dimension size of pertokenScale, but now, groupSizeK is %ld, \
-k dimension size of pertokenScale is %ld, k dimension size of x1Shape is %ld.",
+the k dimension size of pertokenScale, but now, groupSizeK is %lu, \
+k dimension size of pertokenScale is %lu, k dimension size of x1Shape is %lu.",
             inputParams_.groupSizeK, scaleX1K, x1K),
         return false);
     return true;
@@ -504,7 +504,7 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
         static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "In mx quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
-should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%zu].",
+should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%ld].",
                               inputParams_.transA ? "true" : "false", kDimIdx, inputParams_.kSize,
                               pertoken.GetDim(kDimIdx)),
         return false);
@@ -512,13 +512,13 @@ should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%zu].",
                     CUBE_INNER_ERR_REPORT(
                         inputParams_.opName,
                         "In mx quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
-should be equal to x1 m dimension size[%lu], but actual is [%zu].",
+should be equal to x1 m dimension size[%lu], but actual is [%ld].",
                         inputParams_.transA ? "true" : "false", mDimIdx, inputParams_.mSize, pertoken.GetDim(mDimIdx)),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "In mx quantification, pertokenScale's last dimension \
-should be equal to 2, but actual is [%zu].",
+should be equal to 2, but actual is [%ld].",
                                           pertoken.GetDim(pertokenShapeLen - 1)),
                     return false);
     return true;
@@ -538,21 +538,21 @@ bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape &scaleShape)
         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "In mx quantification, when x2's transposition is %s, scale's dimension %d shape should \
-be equal to x2 k dimension size[%lu] ceil div 64, but actual is [%zu].",
+be equal to x2 k dimension size[%lu] ceil div 64, but actual is [%ld].",
                               inputParams_.transB ? "true" : "false", kDimIdx, inputParams_.kSize,
                               scaleShape.GetDim(kDimIdx)),
         return false);
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "In mx quantification, when x2's transposition is %s, scale's dimension %d \
-shape should be equal to x2 n dimension size[%lu], but actual is [%zu].",
+shape should be equal to x2 n dimension size[%lu], but actual is [%ld].",
                                           inputParams_.transB ? "true" : "false", nDimIdx, inputParams_.nSize,
                                           scaleShape.GetDim(nDimIdx)),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "In mx quantification, scale's dimension 2 shape should be equal to 2, but \
-actual is [%zu].",
+actual is [%ld].",
                                           scaleShape.GetDim(scaleShapeLen - 1)),
                     return false);
     return true;
@@ -701,7 +701,7 @@ but it is %zu while n is %lu.",
     if (biasDimNum == 1) {
         OP_TILING_CHECK(static_cast<uint64_t>(biasShape.GetDim(0)) != inputParams_.nSize,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input bias dimension shape should equal n, but it is %zu while n is %lu.",
+                                              "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
                                               biasShape.GetDim(0), inputParams_.nSize),
                                               return false);
     }
@@ -749,7 +749,7 @@ bool QuantBatchMatmulV3Checker::PerTokenDimValueCheck(const gert::Shape &scaleSh
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "When the quantization mode is not mx, when scale's dimension 0 size equal to 1, pertokenScale \
-dimension 0 size must be equal to m[%lu] or 1, actual is [%zu].",
+dimension 0 size must be equal to m[%lu] or 1, actual is [%ld].",
             inputParams_.mSize, pertoken.GetDim(0)), return false);
     OP_TILING_CHECK(
         isFp8HiF8 && !inputParams_.isMxPerGroup && inputParams_.mSize != 1 && perTokenDim0 == 1 &&
@@ -757,7 +757,7 @@ dimension 0 size must be equal to m[%lu] or 1, actual is [%zu].",
             (scaleShape.GetDim(0) != 1 && static_cast<uint64_t>(scaleShape.GetDim(0)) != inputParams_.nSize),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "When the quantization mode is not mx, perTokenScale dimension 0 size equal to \
-1, m not equal to 1, scale dimension 0 size must be equal to 1 or n[%lu], actual is [%zu].",
+1, m not equal to 1, scale dimension 0 size must be equal to 1 or n[%lu], actual is [%ld].",
                               inputParams_.nSize, scaleShape.GetDim(0)),
         return false);
     OP_TILING_CHECK(
@@ -767,12 +767,12 @@ dimension 0 size must be equal to m[%lu] or 1, actual is [%zu].",
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "PerTokenScale dimension 0 size equal to m[%lu], scale dimension 0 size must be equal to 1 or n[%lu], \
-actual is [%zu].",
+actual is [%ld].",
             inputParams_.mSize, inputParams_.nSize, scaleShape.GetDim(0)), return false);
     OP_TILING_CHECK(perTokenDim0 != inputParams_.mSize && inputParams_.aDtype == ge::DT_INT8,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                             "PertokenScale dimension 0 shape should be equal to m[%lu] \
-but actual is [%zu].",
+but actual is [%ld].",
                                             inputParams_.mSize, pertoken.GetDim(0)), return false);
     return true;
 }
@@ -797,7 +797,7 @@ the size of k dimension of x2[%lu]",
         OP_TILING_CHECK(inputParams_.cDtype == ge::DT_INT8 && !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
                          static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], \
-but it is %zu.",
+but it is %ld.",
                                                                    inputParams_.nSize,
                                                                    offsetShape->GetStorageShape().GetDim(0)),
                         return false);

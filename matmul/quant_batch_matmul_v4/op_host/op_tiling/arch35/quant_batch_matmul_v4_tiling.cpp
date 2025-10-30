@@ -486,15 +486,15 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeShapeSize(const gert::StorageShape* x1
     }
     OP_TILING_CHECK(inputParams_.mSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported value [%ld] for m, m shouldn't be less than %ld.",
+            "Unsupported value [%lu] for m, m shouldn't be less than %ld.",
             inputParams_.mSize, MIN_SHAPE_SIZE), return false);
     OP_TILING_CHECK(inputParams_.nSize > MAX_SHAPE_SIZE || inputParams_.nSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported value [%ld] for n. Only [%ld, %ld] is supported.",
+            "Unsupported value [%lu] for n. Only [%ld, %ld] is supported.",
             inputParams_.nSize, MIN_SHAPE_SIZE, MAX_SHAPE_SIZE), return false);
     OP_TILING_CHECK(inputParams_.kSize > MAX_SHAPE_SIZE || inputParams_.kSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported value [%ld] for k. Only [%ld, %ld] is supported.",
+            "Unsupported value [%lu] for k. Only [%ld, %ld] is supported.",
             inputParams_.kSize, MIN_SHAPE_SIZE, MAX_SHAPE_SIZE), return false);
     return true;
 }
@@ -542,7 +542,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX1ScaleShape(const gert::StorageShape*
         OP_TILING_CHECK(x1ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.mSize) ||
                             x1ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize / GROUP_ALIGN_SIZE),
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Expected shape of X1 scale to be [%ld, %ld], but actual shape is %s.",
+                "Expected shape of X1 scale to be [%lu, %lu], but actual shape is %s.",
                 inputParams_.mSize, inputParams_.kSize / GROUP_ALIGN_SIZE,
                 Ops::Base::ToString(x1ScaleStorageShape).c_str()), return false);
     }
@@ -591,7 +591,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScaleShape(const gert::StorageShape*
         OP_TILING_CHECK(x2ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.nSize) ||
                             x2ScaleStorageShape.GetDim(1) != static_cast<int64_t>(inputParams_.kSize) / GROUP_ALIGN_SIZE,
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Expected shape of X2 scale to be [%ld, %ld], but actual shape is %s.",
+                "Expected shape of X2 scale to be [%lu, %lu], but actual shape is %s.",
                 inputParams_.nSize, inputParams_.kSize / GROUP_ALIGN_SIZE,
                 Ops::Base::ToString(x2ScaleStorageShape).c_str()), return false);
     } else if (inputParams_.groupSize > 0) {
@@ -746,16 +746,15 @@ void QuantBatchMatmulV4TilingBase::PrintTilingData(bool debugLevel)
        << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimN())
        << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimM());
 
-    int32_t logLevel = debugLevel ? DLOG_DEBUG : DLOG_ERROR;
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }else {
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
-    PrintMatMulTiling(logLevel);
+    PrintMatMulTiling();
 }
 
-void QuantBatchMatmulV4TilingBase::PrintMatMulTiling(int32_t logLevel) const
+void QuantBatchMatmulV4TilingBase::PrintMatMulTiling() const
 {
     std::stringstream ss;
     auto &matmulTiling = tilingData_->matmulTiling;
