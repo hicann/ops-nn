@@ -598,7 +598,7 @@ ge::graphStatus TilingPrepareForGeluQuant(gert::TilingParseContext* context)
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
         OP_LOGE(
-            context->GetNodeName(), "GeluQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%ld.",
+            context->GetNodeName(), "GeluQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
             compileInfo->vectorCoreNum, compileInfo->ubSize),
         return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);

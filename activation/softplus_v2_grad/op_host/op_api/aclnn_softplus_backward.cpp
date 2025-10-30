@@ -82,7 +82,6 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, 
     // 输入若不在 Kernel 支持的范围内（Float, Float16）, 则判断是否能 cast 为 Float
     auto gradOutputDtype = gradOutput->GetDataType();
     auto selfDtype = self->GetDataType();
-    auto gradInputDtype = gradInput->GetDataType();
     if (!CheckType(gradOutputDtype, KERNEL_SUPPORT_LIST) || !CheckType(selfDtype, KERNEL_SUPPORT_LIST)) {
         OP_CHECK_RESULT_DTYPE_CAST_FAILED(gradOutputDtype, op::DataType::DT_FLOAT, return false);
         OP_CHECK_RESULT_DTYPE_CAST_FAILED(selfDtype, op::DataType::DT_FLOAT, return false);

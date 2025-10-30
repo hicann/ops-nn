@@ -331,7 +331,7 @@ static size_t GetAttrSplitDim(const gert::TilingContext* context)
     OP_CHECK_IF(
         (splitDimU >= inputShapeSize),
         OP_LOGE(
-            context, "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].", inputShapeSize,
+            context, "The value of attr [dim] must be in the range [-%zu, %zu], but got [%zu].", inputShapeSize,
             inputShapeSize, splitDimU),
         return SPLIT_ERROR_STATUS);
 
