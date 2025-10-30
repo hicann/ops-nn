@@ -92,6 +92,7 @@ TEST_F(dynamic_quant_v2_test, test_case_fp16_bf16)
     tilingDatafromBin->numTailTimes = 0;
     tilingDatafromBin->numLastTailRow = 0;
     tilingDatafromBin->alignType = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     // bf16
     ICPU_SET_TILING_KEY(0);

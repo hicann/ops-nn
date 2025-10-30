@@ -14,7 +14,6 @@ import os
 import numpy as np
 import re
 import torch
-import torch_npu
 import tensorflow as tf
 
 bfp16 = tf.bfloat16.as_numpy_dtype
@@ -51,14 +50,13 @@ def gen_data_and_golden(x_shape_str, kronecker_p1_shape_str, kronecker_p2_shape_
     tem_kronecker_p1 = np.random.random(np.prod(kronecker_p1_shape)).reshape(kronecker_p1_shape).astype(np_type)
     tem_kronecker_p2 = np.random.random(np.prod(kronecker_p2_shape)).reshape(kronecker_p2_shape).astype(np_type)
 
-    x_tensor = torch.tensor(tem_x, dtype=torch_type).npu()
-    kronecker_p1_tensor = torch.tensor(tem_kronecker_p1, dtype=torch_type).npu()
-    kronecker_p2_tensor = torch.tensor(tem_kronecker_p2, dtype=torch_type).npu()
+    x_tensor = torch.tensor(tem_x, dtype=torch_type)
+    kronecker_p1_tensor = torch.tensor(tem_kronecker_p1, dtype=torch_type)
+    kronecker_p2_tensor = torch.tensor(tem_kronecker_p2, dtype=torch_type)
 
-    quant_scale = do_golden(x_tensor, kronecker_p1_tensor, kronecker_p2_tensor)
+    quant_scale = do_golden(x_tensor.to(torch.float), kronecker_p1_tensor.to(torch.float), kronecker_p2_tensor.to(torch.float))
 
     tmp_quant_scale_golden = np.array(quant_scale.cpu()).astype(np.float32)
-
     tem_x.astype(np_type).tofile(f"{d_type}_input_x_flat_quant.bin")
     tem_kronecker_p1.tofile(f"{d_type}_input_kronecker_p1_flat_quant.bin")
     tem_kronecker_p2.tofile(f"{d_type}_input_kronecker_p2_flat_quant.bin")

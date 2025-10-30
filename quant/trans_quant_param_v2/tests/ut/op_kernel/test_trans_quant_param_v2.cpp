@@ -23,7 +23,6 @@
 #include "trans_quant_param_v2_tiling_def.h"
 
 using namespace std;
-// using namespace AscendC;
 
 extern "C" __global__ __aicore__ void trans_quant_param_v2(
     GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
@@ -46,14 +45,12 @@ TEST_F(trans_quant_param_v2_test, test_case_2_1)
     size_t shape_scale = 2 * sizeof(float);
     size_t shape_offset = 2 * sizeof(float);
     size_t shape_y = 2 * sizeof(uint64_t);
-    size_t tiling_data_size = 2 * sizeof(uint32_t);
+    size_t tiling_data_size = 3 * sizeof(uint32_t);
     uint8_t* scale = (uint8_t*)AscendC::GmAlloc(shape_scale);
     uint8_t* offset = (uint8_t*)AscendC::GmAlloc(shape_offset);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    memset(workspace, 0, 16 * 1024 * 1024);
 
     system(
         "cp -r ../../../../quant/trans_quant_param_v2/tests/ut/op_kernel/trans_quant_param_data "
@@ -61,15 +58,18 @@ TEST_F(trans_quant_param_v2_test, test_case_2_1)
     system("chmod -R 755 ./trans_quant_param_data/");
     system("cd ./trans_quant_param_data/ && rm -rf ./*bin");
     system("cd ./trans_quant_param_data/ && python3 gen_data.py 2 1");
-    system("cd ./trans_quant_param_data/ && python3 gen_tiling.py test_case_2_1");
 
     char* path_ = get_current_dir_name();
     string path(path_);
+    TransQuantParamV2TilingData* tilingDatafromBin = reinterpret_cast<TransQuantParamV2TilingData*>(tiling);
+    tilingDatafromBin->scaleLength = 2;
+    tilingDatafromBin->offsetLength = 2;
+    tilingDatafromBin->roundMode = 0;
+
     ReadFile(path + "/trans_quant_param_data/scale.bin", shape_scale, scale, shape_scale);
     ReadFile(path + "/trans_quant_param_data/offset.bin", shape_offset, offset, shape_offset);
-    ReadFile(path + "/trans_quant_param_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    ICPU_RUN_KF(trans_quant_param_v2, 24, scale, offset, y, workspace, tiling);
+    ICPU_RUN_KF(trans_quant_param_v2, 1, scale, offset, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(scale);
     AscendC::GmFree(offset);
