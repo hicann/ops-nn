@@ -42,15 +42,14 @@ protected:
 
 TEST_F(chamfer_distance_grad_test, test_case_fp32)
 {
-    uint32_t batch_size = 32;
-    uint32_t num = 10000;
-
+    uint32_t batch_size = 2;
+    uint32_t num = 2;
     // inputs
-    size_t xyz_size = batch_size * num * 2 * sizeof(float);
-    size_t grad_size = batch_size * num * sizeof(float);
-    size_t idx_size = batch_size * num * sizeof(int32_t);
-    size_t grad_xyz_size = batch_size * num * sizeof(float) * 2;
-    size_t tiling_data_size = sizeof(ChamferDistanceGradTilingDataTest);
+    size_t xyz_size = batch_size * num * 2 * sizeof(float) * 2;
+    size_t grad_size = batch_size * num * sizeof(float) * 2;
+    size_t idx_size = batch_size * num * sizeof(int32_t) * 2;
+    size_t grad_xyz_size = batch_size * num * sizeof(float) * 2 * 2;
+    size_t tiling_data_size = sizeof(ChamferDistanceGradTilingDataTest) + 1024;
 
     uint8_t* xyz1 = (uint8_t*)AscendC::GmAlloc(xyz_size);
     uint8_t* xyz2 = (uint8_t*)AscendC::GmAlloc(xyz_size);
@@ -63,30 +62,18 @@ TEST_F(chamfer_distance_grad_test, test_case_fp32)
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 48;
+    uint32_t blockDim = 1;
+    ChamferDistanceGradTilingDataTest* tilingDatafromBin = reinterpret_cast<ChamferDistanceGradTilingDataTest*>(tiling);
 
-    system(
-        "cp -r "
-        "../../../../loss/chamfer_distance_grad/tests/ut/op_kernel/chamfer_distance_grad_data ./");
-    system("chmod -R 755 ./chamfer_distance_grad_data/");
-    system("cd ./chamfer_distance_grad_data/ && rm -rf ./*bin");
-    system("cd ./chamfer_distance_grad_data/ && python3 gen_data.py 32 10000 float");
-    system("cd ./chamfer_distance_grad_data/ && python3 gen_tiling.py 32 10000");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    ReadFile(path + "/build/input/xyz1.bin", xyz_size, xyz1, xyz_size);
-    ReadFile(path + "/build/input/xyz2.bin", xyz_size, xyz2, xyz_size);
-    ReadFile(path + "/build/input/idx1.bin", idx_size, idx1, idx_size);
-    ReadFile(path + "/build/input/idx2.bin", idx_size, idx2, idx_size);
-    ReadFile(path + "/build/input/grad_dist1.bin", grad_size, grad_dist1, grad_size);
-    ReadFile(path + "/build/input/grad_dist2.bin", grad_size, grad_dist2, grad_size);
-    ReadFile(path + "/build/output/grad_xyz1.bin", grad_xyz_size, grad_xyz1, grad_xyz_size);
-    ReadFile(path + "/build/output/grad_xyz2.bin", grad_xyz_size, grad_xyz2, grad_xyz_size);
-    ReadFile(path + "/build/input/tiling.bin", tiling_data_size, tiling, tiling_data_size);
+    tilingDatafromBin->batch_size = 2;
+    tilingDatafromBin->num = 2;
+    tilingDatafromBin->ub_size = 195538;
+    tilingDatafromBin->task_per_core = 1;
+    tilingDatafromBin->core_used = 4;
+    tilingDatafromBin->task_tail_core = 1;
 
     ICPU_SET_TILING_KEY(1);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(
         chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
         workspace, tiling);
@@ -100,8 +87,6 @@ TEST_F(chamfer_distance_grad_test, test_case_fp32)
     AscendC::GmFree(grad_xyz2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
 
 TEST_F(chamfer_distance_grad_test, test_case_fp16)
@@ -128,27 +113,14 @@ TEST_F(chamfer_distance_grad_test, test_case_fp16)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
+    ChamferDistanceGradTilingDataTest* tilingDatafromBin = reinterpret_cast<ChamferDistanceGradTilingDataTest*>(tiling);
 
-    system(
-        "cp -r "
-        "../../../../loss/chamfer_distance_grad/tests/ut/op_kernel/chamfer_distance_grad_data ./");
-    system("chmod -R 755 ./chamfer_distance_grad_data/");
-    system("cd ./chamfer_distance_grad_data/ && rm -rf ./*bin");
-    system("cd ./chamfer_distance_grad_data/ && python3 gen_data.py 32 10000 float16");
-    system("cd ./chamfer_distance_grad_data/ && python3 gen_tiling.py 32 10000");
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    ReadFile(path + "/build/input/xyz1.bin", xyz_size, xyz1, xyz_size);
-    ReadFile(path + "/build/input/xyz2.bin", xyz_size, xyz2, xyz_size);
-    ReadFile(path + "/build/input/idx1.bin", idx_size, idx1, idx_size);
-    ReadFile(path + "/build/input/idx2.bin", idx_size, idx2, idx_size);
-    ReadFile(path + "/build/input/grad_dist1.bin", grad_size, grad_dist1, grad_size);
-    ReadFile(path + "/build/input/grad_dist2.bin", grad_size, grad_dist2, grad_size);
-    ReadFile(path + "/build/output/grad_xyz1.bin", grad_xyz_size, grad_xyz1, grad_xyz_size);
-    ReadFile(path + "/build/output/grad_xyz2.bin", grad_xyz_size, grad_xyz2, grad_xyz_size);
-    ReadFile(path + "/build/input/tiling.bin", tiling_data_size, tiling, tiling_data_size);
+    tilingDatafromBin->batch_size = 2;
+    tilingDatafromBin->num = 2;
+    tilingDatafromBin->ub_size = 195538;
+    tilingDatafromBin->task_per_core = 1;
+    tilingDatafromBin->core_used = 4;
+    tilingDatafromBin->task_tail_core = 1;
 
     ICPU_SET_TILING_KEY(2);
     ICPU_RUN_KF(
@@ -164,6 +136,4 @@ TEST_F(chamfer_distance_grad_test, test_case_fp16)
     AscendC::GmFree(grad_xyz2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }

@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(chamfer_distance_grad "ascend910B1" "-DDTYPE_X1=float")
 endif()

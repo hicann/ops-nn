@@ -17,24 +17,26 @@ import tensorflow as tf
 bf16 = tf.bfloat16.as_numpy_dtype
 np.random.seed(5)
 
-def gen_input_data(dtype, shape, shape_step, input_range):
+def gen_input_data(dtype):
     d_type_dict = {
         "f32": np.float32,
         "f16": np.float16,
         "bf16": bf16
     }
+    shape = (32, 64280)
+    shape_step = (1,8)
     dtype = d_type_dict.get(dtype)
-    grad = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
-    var = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
-    m = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
-    v = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
-    s = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
+    grad = np.random.uniform(-5, 5, shape).astype(dtype)
+    var = np.random.uniform(-5, 5, shape).astype(dtype)
+    m = np.random.uniform(-5, 5, shape).astype(dtype)
+    v = np.random.uniform(-5, 5, shape).astype(dtype)
+    s = np.random.uniform(-5, 5, shape).astype(dtype)
     step = (np.ones(shape_step)*random.randint(1,1000)).astype(np.int64)
     return grad, var, m, v, s, step
 
 
-def gen_golden_data_simple(dtype, shape, shape_step, input_range):
-    grad, var, m, v, s, step = gen_input_data(dtype, shape, shape_step, input_range)
+def gen_golden_data_simple(dtype):
+    grad, var, m, v, s, step = gen_input_data(dtype)
     grad.tofile(f"grad.bin")
     var.tofile(f"var.bin")
     m.tofile(f"m.bin")
@@ -44,5 +46,5 @@ def gen_golden_data_simple(dtype, shape, shape_step, input_range):
 
 if __name__ == "__main__":
     os.system("rm -rf *.bin")
-    gen_golden_data_simple(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    gen_golden_data_simple(sys.argv[1])
 
