@@ -164,7 +164,7 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessCoreMultiUbMultiAlign(uint32_t ridx, uint32_t &smoothIndex, uint16_t offsetRow)
+    __aicore__ inline void ProcessCoreMultiUbMultiAlign(uint32_t ridx, uint32_t &smoothIndex, uint32_t offsetRow)
     {
         DataCopyParams splitCopyinParams;
         DataCopyParams splitCopyoutParams;
