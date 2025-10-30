@@ -82,6 +82,7 @@ TEST_F(layer_norm_v4_test, test_case_0001_100)
     tilingDatafromBin->blockLength = 16384;
     tilingDatafromBin->nullptrGamma = 0;
     tilingDatafromBin->nullptrBeta = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(100);
     ICPU_RUN_KF(
@@ -139,6 +140,7 @@ TEST_F(layer_norm_v4_test, test_case_0002)
     tilingDatafromBin->coefficient = 0.5;
     tilingDatafromBin->nullptrGamma = 0;
     tilingDatafromBin->nullptrBeta = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(200);
     ICPU_RUN_KF(

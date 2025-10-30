@@ -94,12 +94,6 @@ bool GroupNormGradTiling::CheckCompileInfo()
     OP_TILING_CHECK(
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(tilingContext->GetNodeName(), "core num should be greater than zero."), return false);
-    OP_TILING_CHECK(
-        (compileInfo->sysWorkspaceSize < static_cast<uint32_t>(0)),
-        OP_LOGE(tilingContext->GetNodeName(), "sysWorkspaceSize should be greater than zero."), return false);
-    OP_TILING_CHECK(
-        (compileInfo->ubSizePlatForm <= static_cast<uint64_t>(0)),
-        OP_LOGE(tilingContext->GetNodeName(), "ubSizePlatForm should be greater than zero."), return false);
     return true;
 }
 

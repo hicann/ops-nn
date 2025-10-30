@@ -80,6 +80,7 @@ TEST_F(rms_norm_grad_test, test_case_221)
     tilingDatafromBin->ub_calc_tail_tail = 0;
     tilingDatafromBin->ub_calc_tail_loop = 1;
     tilingDatafromBin->fixed_output = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(rms_norm_grad, blockDim, dy, x, rstd, gamma, dx, dgamma, workspace, (uint8_t*)(tilingDatafromBin));
@@ -138,6 +139,7 @@ TEST_F(rms_norm_grad_test, test_case_221_normal)
     tilingDatafromBin->ub_calc_tail_tail = 0;
     tilingDatafromBin->ub_calc_tail_loop = 1;
     tilingDatafromBin->fixed_output = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(rms_norm_grad, blockDim, dy, x, rstd, gamma, dx, dgamma, workspace, (uint8_t*)(tilingDatafromBin));
@@ -196,6 +198,7 @@ TEST_F(rms_norm_grad_test, test_case_222)
     tilingDatafromBin->ub_calc_tail_tail = 0;
     tilingDatafromBin->ub_calc_tail_loop = 2;
     tilingDatafromBin->fixed_output = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2);
     ICPU_RUN_KF(rms_norm_grad, blockDim, dy, x, rstd, gamma, dx, dgamma, workspace, (uint8_t*)(tilingDatafromBin));

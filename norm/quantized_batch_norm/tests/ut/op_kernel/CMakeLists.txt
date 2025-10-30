@@ -8,5 +8,5 @@
 #/
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(quantized_batch_norm "ascend910B1" "" )
 endif()

@@ -18,447 +18,465 @@
 #include "gemma_rms_norm_tiling_def.h"
 #include "data_utils.h"
 
-
 #include <cstdint>
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void gemma_rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
-                                                GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void gemma_rms_norm(
+    GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling);
 
 class gemma_rms_norm_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "gemma_rms_norm_test SetUp\n" << endl;
-  }
-  static void TearDownTestCase() {
-    cout << "gemma_rms_norm_test TearDown\n" << endl;
-  }
+protected:
+    static void SetUpTestCase()
+    {
+        cout << "gemma_rms_norm_test SetUp\n" << endl;
+    }
+    static void TearDownTestCase()
+    {
+        cout << "gemma_rms_norm_test TearDown\n" << endl;
+    }
 };
 
-TEST_F(gemma_rms_norm_test, test_case_0) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_0)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 64;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    ICPU_SET_TILING_KEY(0);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  ICPU_SET_TILING_KEY(0);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
-
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 64;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    ICPU_SET_TILING_KEY(1);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  ICPU_SET_TILING_KEY(1);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
-
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_2) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_2)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->num_col_align = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 1600;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->num_col_align = 256;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 64;
-  tilingDatafromBin->ub_factor = 1600;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    ICPU_SET_TILING_KEY(2);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  ICPU_SET_TILING_KEY(2);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
-
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_mixdtype_3) {
-  int numRow = 1;
-  int numCol = 12288;
-  size_t inputByteSize = numRow * numCol * sizeof(int16_t);
-  size_t gammaByteSize = numCol * sizeof(float);
-  size_t outputByteSize = numRow * numCol * sizeof(int16_t);
-  size_t rstdByteSize = numRow * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_mixdtype_3)
+{
+    int numRow = 1;
+    int numCol = 12288;
+    size_t inputByteSize = numRow * numCol * sizeof(int16_t);
+    size_t gammaByteSize = numCol * sizeof(float);
+    size_t outputByteSize = numRow * numCol * sizeof(int16_t);
+    size_t rstdByteSize = numRow * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 1;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 1;
-  tilingDatafromBin->num_col = 12288;
-  tilingDatafromBin->num_col_align = 12288;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->num_row = 1;
+    tilingDatafromBin->num_col = 12288;
+    tilingDatafromBin->num_col_align = 12288;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(3);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(3);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1110) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1110)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1110);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1110);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1120) {
-  size_t inputByteSize = 2 * 256 * sizeof(float);
-  size_t gammaByteSize = 256 * sizeof(float);
-  size_t outputByteSize = 2 * 256 * sizeof(float);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1120)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(float);
+    size_t gammaByteSize = 256 * sizeof(float);
+    size_t outputByteSize = 2 * 256 * sizeof(float);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->num_col_align = 256;
-  tilingDatafromBin->reduce_mask = 4;
-  tilingDatafromBin->left_num = 0;
-  tilingDatafromBin->rstd_size = 512;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->num_col_align = 256;
+    tilingDatafromBin->reduce_mask = 4;
+    tilingDatafromBin->left_num = 0;
+    tilingDatafromBin->rstd_size = 512;
 
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1120);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1120);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1130) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1130)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 256;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->row_factor = 64;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1130);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1130);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1030) {
-  size_t inputByteSize = 2 * 257 * sizeof(int16_t);
-  size_t gammaByteSize = 257 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 257 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1030)
+{
+    size_t inputByteSize = 2 * 257 * sizeof(int16_t);
+    size_t gammaByteSize = 257 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 257 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 257;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->num_col_align = 272;
-  tilingDatafromBin->reduce_mask = 4;
-  tilingDatafromBin->left_num = 1;
-  tilingDatafromBin->rstd_size = 512;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 257;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->num_col_align = 272;
+    tilingDatafromBin->reduce_mask = 4;
+    tilingDatafromBin->left_num = 1;
+    tilingDatafromBin->rstd_size = 512;
 
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1030);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1030);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1020) {
-  size_t inputByteSize = 2 * 257 * sizeof(float);
-  size_t gammaByteSize = 257 * sizeof(float);
-  size_t outputByteSize = 2 * 257 * sizeof(float);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1020)
+{
+    size_t inputByteSize = 2 * 257 * sizeof(float);
+    size_t gammaByteSize = 257 * sizeof(float);
+    size_t outputByteSize = 2 * 257 * sizeof(float);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 257;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->num_col_align = 264;
-  tilingDatafromBin->reduce_mask = 4;
-  tilingDatafromBin->left_num = 1;
-  tilingDatafromBin->rstd_size = 512;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 257;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->num_col_align = 264;
+    tilingDatafromBin->reduce_mask = 4;
+    tilingDatafromBin->left_num = 1;
+    tilingDatafromBin->rstd_size = 512;
 
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1020);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1020);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }
 
-TEST_F(gemma_rms_norm_test, test_case_1010) {
-  size_t inputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t gammaByteSize = 256 * sizeof(int16_t);
-  size_t outputByteSize = 2 * 256 * sizeof(int16_t);
-  size_t rstdByteSize = 2 * sizeof(float);
-  size_t tiling_data_size = sizeof(RMSNormTilingData);
+TEST_F(gemma_rms_norm_test, test_case_1010)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(RMSNormTilingData);
 
-  uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-  uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 2;
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
 
-  char* path_ = get_current_dir_name();
-  string path(path_);
+    char* path_ = get_current_dir_name();
+    string path(path_);
 
-  RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
+    RMSNormTilingData* tilingDatafromBin = reinterpret_cast<RMSNormTilingData*>(tiling);
 
-  tilingDatafromBin->num_row = 2;
-  tilingDatafromBin->num_col = 257;
-  tilingDatafromBin->block_factor = 1;
-  tilingDatafromBin->num_col_align = 264;
-  tilingDatafromBin->reduce_mask = 4;
-  tilingDatafromBin->left_num = 1;
-  tilingDatafromBin->rstd_size = 512;
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 257;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->num_col_align = 264;
+    tilingDatafromBin->reduce_mask = 4;
+    tilingDatafromBin->left_num = 1;
+    tilingDatafromBin->rstd_size = 512;
 
-  tilingDatafromBin->row_factor = 1;
-  tilingDatafromBin->ub_factor = 12288;
-  tilingDatafromBin->epsilon = 0.01;
-  tilingDatafromBin->avg_factor = 0.01;
+    tilingDatafromBin->row_factor = 1;
+    tilingDatafromBin->ub_factor = 12288;
+    tilingDatafromBin->epsilon = 0.01;
+    tilingDatafromBin->avg_factor = 0.01;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-  ICPU_SET_TILING_KEY(1010);
-  ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_SET_TILING_KEY(1010);
+    ICPU_RUN_KF(gemma_rms_norm, blockDim, x, gamma, y, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
-  AscendC::GmFree(x);
-  AscendC::GmFree(gamma);
-  AscendC::GmFree(y);
-  AscendC::GmFree(rstd);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-  free(path_);
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
 }

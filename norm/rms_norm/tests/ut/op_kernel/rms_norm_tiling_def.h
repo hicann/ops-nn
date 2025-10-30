@@ -30,6 +30,10 @@ struct RMSNormTilingData {
     uint32_t last_reduce_mask;
     uint32_t last_left_num;
     uint32_t rstd_size;
+    uint32_t ub_loop;
+    uint32_t col_buffer_length;
+    uint32_t multi_n_num;
+    uint32_t is_nddma;
     float epsilon;
     float avg_factor;
     uint8_t is_gemma;
@@ -57,6 +61,10 @@ struct RMSNormTilingData {
     (tilingData).last_reduce_mask = tilingDataPointer->last_reduce_mask;   \
     (tilingData).last_left_num = tilingDataPointer->last_left_num;         \
     (tilingData).rstd_size = tilingDataPointer->rstd_size;                 \
+    (tilingData).ub_loop = tilingDataPointer->ub_loop;                     \
+    (tilingData).col_buffer_length = tilingDataPointer->col_buffer_length; \
+    (tilingData).multi_n_num = tilingDataPointer->multi_n_num;             \
+    (tilingData).is_nddma = tilingDataPointer->is_nddma;                   \
     (tilingData).epsilon = tilingDataPointer->epsilon;                     \
     (tilingData).avg_factor = tilingDataPointer->avg_factor;               \
     (tilingData).is_gemma = tilingDataPointer->is_gemma;

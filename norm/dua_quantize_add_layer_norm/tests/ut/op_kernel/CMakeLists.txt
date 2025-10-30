@@ -7,5 +7,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(dua_quantize_add_layer_norm "ascend910B1" "" quantize_add_layer_norm)
 endif()

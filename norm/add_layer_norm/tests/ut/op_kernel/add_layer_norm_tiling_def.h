@@ -29,7 +29,6 @@ struct AddLayerNormTilingData {
     uint32_t lastDimPerTime = 0;
     float eps = 0;
     float aveFactor = 0;
-    uint32_t data_type = 0;
     uint32_t colMoveCnt = 0;
     uint32_t colTail = 0;
     uint32_t workspaceSize = 0;

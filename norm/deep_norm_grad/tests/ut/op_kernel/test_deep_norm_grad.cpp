@@ -84,6 +84,7 @@ TEST_F(deep_norm_grad_test, test_case_0)
     tilingDatafromBin->cutDLastTime = 1024;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(
@@ -133,7 +134,7 @@ TEST_F(deep_norm_grad_test, test_case_1)
     uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
     uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
 
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(50 * 32 + 1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(36 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 2;
 
@@ -149,10 +150,11 @@ TEST_F(deep_norm_grad_test, test_case_1)
     tilingDatafromBin->nDealLastCore = 1;
     tilingDatafromBin->mergeNCount = 1;
     tilingDatafromBin->cutDTime = 2;
-    tilingDatafromBin->cutDPerTime = 6984;
-    tilingDatafromBin->cutDLastTime = 1208;
-    tilingDatafromBin->alpha = 0.3;
+    tilingDatafromBin->cutDPerTime = 6112;
+    tilingDatafromBin->cutDLastTime = 2080;
+    tilingDatafromBin->alpha = 0;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(
@@ -222,6 +224,7 @@ TEST_F(deep_norm_grad_test, test_case_10)
     tilingDatafromBin->cutDLastTime = 1024;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(10);
     ICPU_RUN_KF(
@@ -245,7 +248,7 @@ TEST_F(deep_norm_grad_test, test_case_10)
 
 TEST_F(deep_norm_grad_test, test_case_11)
 { // tiling key 11
-    size_t N = 2;
+    size_t N = 40;
     size_t D = 8192;
     size_t dyByteSize = N * D * sizeof(int16_t);
     size_t xByteSize = N * D * sizeof(int16_t);
@@ -271,26 +274,27 @@ TEST_F(deep_norm_grad_test, test_case_11)
     uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
     uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
 
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(50 * 32 + 1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(36 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 2;
+    uint32_t blockDim = 40;
 
     char* path_ = get_current_dir_name();
     string path(path_);
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 2;
+    tilingDatafromBin->useCoreNum = 40;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
     tilingDatafromBin->nDealPerCore = 1;
     tilingDatafromBin->nDealLastCore = 1;
-    tilingDatafromBin->mergeNCount = 15;
-    tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 4880;
-    tilingDatafromBin->cutDLastTime = 3312;
-    tilingDatafromBin->alpha = 0.3;
+    tilingDatafromBin->mergeNCount = 1;
+    tilingDatafromBin->cutDTime = 2;
+    tilingDatafromBin->cutDPerTime = 4432;
+    tilingDatafromBin->cutDLastTime = 3760;
+    tilingDatafromBin->alpha = 0;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(11);
     ICPU_RUN_KF(
@@ -313,9 +317,9 @@ TEST_F(deep_norm_grad_test, test_case_11)
 }
 
 TEST_F(deep_norm_grad_test, test_case_22)
-{ // tiling key 2
-    size_t N = 10;
-    size_t D = 19;
+{ // tiling key 22
+    size_t N = 40;
+    size_t D = 133;
     size_t dyByteSize = N * D * sizeof(int16_t);
     size_t xByteSize = N * D * sizeof(int16_t);
     size_t gxByteSize = N * D * sizeof(int16_t);
@@ -340,28 +344,29 @@ TEST_F(deep_norm_grad_test, test_case_22)
     uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
     uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
 
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(50 * 32 + 1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(36 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 2;
+    uint32_t blockDim = 40;
 
     char* path_ = get_current_dir_name();
     string path(path_);
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 5;
+    tilingDatafromBin->useCoreNum = 40;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
-    tilingDatafromBin->nDealPerCore = 2;
-    tilingDatafromBin->nDealLastCore = 2;
-    tilingDatafromBin->mergeNCount = 312;
+    tilingDatafromBin->nDealPerCore = 1;
+    tilingDatafromBin->nDealLastCore = 1;
+    tilingDatafromBin->mergeNCount = 30;
     tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 19;
-    tilingDatafromBin->cutDLastTime = 19;
-    tilingDatafromBin->alpha = 0.3;
+    tilingDatafromBin->cutDPerTime = 133;
+    tilingDatafromBin->cutDLastTime = 133;
+    tilingDatafromBin->alpha = 0;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-    ICPU_SET_TILING_KEY(2);
+    ICPU_SET_TILING_KEY(22);
     ICPU_RUN_KF(
         deep_norm_grad, blockDim, dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma, workspace,
         (uint8_t*)(tilingDatafromBin));
@@ -382,7 +387,7 @@ TEST_F(deep_norm_grad_test, test_case_22)
 }
 
 TEST_F(deep_norm_grad_test, test_case_20)
-{ // tiling key 2
+{ // tiling key 20
     size_t N = 10;
     size_t D = 19;
     size_t dyByteSize = N * D * sizeof(int16_t);
@@ -429,6 +434,7 @@ TEST_F(deep_norm_grad_test, test_case_20)
     tilingDatafromBin->cutDLastTime = 19;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(20);
     ICPU_RUN_KF(
@@ -451,7 +457,7 @@ TEST_F(deep_norm_grad_test, test_case_20)
 }
 
 TEST_F(deep_norm_grad_test, test_case_21)
-{ // tiling key 2
+{ // tiling key 21
     size_t N = 10;
     size_t D = 19;
     size_t dyByteSize = N * D * sizeof(int16_t);
@@ -498,6 +504,7 @@ TEST_F(deep_norm_grad_test, test_case_21)
     tilingDatafromBin->cutDLastTime = 19;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(21);
     ICPU_RUN_KF(
@@ -520,9 +527,9 @@ TEST_F(deep_norm_grad_test, test_case_21)
 }
 
 TEST_F(deep_norm_grad_test, test_case_2)
-{ // tiling key 1
-    size_t N = 2;
-    size_t D = 8192;
+{ // tiling key 2
+    size_t N = 10;
+    size_t D = 9;
     size_t dyByteSize = N * D * sizeof(float);
     size_t xByteSize = N * D * sizeof(float);
     size_t gxByteSize = N * D * sizeof(float);
@@ -549,24 +556,25 @@ TEST_F(deep_norm_grad_test, test_case_2)
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(50 * 32 + 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 2;
+    uint32_t blockDim = 10;
 
     char* path_ = get_current_dir_name();
     string path(path_);
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 2;
+    tilingDatafromBin->useCoreNum = 10;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
     tilingDatafromBin->nDealPerCore = 1;
     tilingDatafromBin->nDealLastCore = 1;
-    tilingDatafromBin->mergeNCount = 1;
-    tilingDatafromBin->cutDTime = 2;
-    tilingDatafromBin->cutDPerTime = 6984;
-    tilingDatafromBin->cutDLastTime = 1208;
-    tilingDatafromBin->alpha = 0.3;
+    tilingDatafromBin->mergeNCount = 338;
+    tilingDatafromBin->cutDTime = 1;
+    tilingDatafromBin->cutDPerTime = 9;
+    tilingDatafromBin->cutDLastTime = 9;
+    tilingDatafromBin->alpha = 0;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2);
     ICPU_RUN_KF(
@@ -589,7 +597,7 @@ TEST_F(deep_norm_grad_test, test_case_2)
 }
 
 TEST_F(deep_norm_grad_test, test_case_12)
-{ // tiling key 2
+{ // tiling key 12
     size_t N = 10;
     size_t D = 19;
     size_t dyByteSize = N * D * sizeof(int16_t);
@@ -636,6 +644,7 @@ TEST_F(deep_norm_grad_test, test_case_12)
     tilingDatafromBin->cutDLastTime = 19;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(12);
     ICPU_RUN_KF(

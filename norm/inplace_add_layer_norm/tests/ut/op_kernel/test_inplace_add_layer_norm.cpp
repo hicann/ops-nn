@@ -62,6 +62,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 2;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -202,7 +203,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16)
 
 TEST_F(inplace_add_layer_norm_test, test_case_fp16_special)
 {
-    int N = 1;
+    int N = 40;
     int D = 5120;
     size_t inputByteSize = N * D * sizeof(int16_t);
     size_t gammaByteSize = D * sizeof(int16_t);
@@ -223,7 +224,8 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 1;
+    uint32_t blockDim = 40;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -235,7 +237,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special)
     tilingDatafromBin->numFirstDim = N;
     tilingDatafromBin->firstDimPerCore = 1;
     tilingDatafromBin->firstDimPerCoreTail = 1;
-    tilingDatafromBin->firstDimPerTime = 2;
+    tilingDatafromBin->firstDimPerTime = 1;
     tilingDatafromBin->lastDimPerTime = D;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->aveFactor = 1.0 / D;
@@ -268,7 +270,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special)
 
 TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce)
 {
-    int N = 80;
+    int N = 1024;
     int D = 640;
     size_t inputByteSize = N * D * sizeof(int16_t);
     size_t gammaByteSize = D * sizeof(int16_t);
@@ -290,6 +292,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -299,9 +302,9 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce)
     tilingDatafromBin->numCore = blockDim;
     tilingDatafromBin->numLastDim = D;
     tilingDatafromBin->numFirstDim = N;
-    tilingDatafromBin->firstDimPerCore = 2;
-    tilingDatafromBin->firstDimPerCoreTail = 2;
-    tilingDatafromBin->firstDimPerTime = 2;
+    tilingDatafromBin->firstDimPerCore = 26;
+    tilingDatafromBin->firstDimPerCoreTail = 10;
+    tilingDatafromBin->firstDimPerTime = 20;
     tilingDatafromBin->lastDimPerTime = D;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->aveFactor = 1.0 / D;
@@ -342,7 +345,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce)
 
 TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce_big_N)
 {
-    int N = 80;
+    int N = 2048;
     int D = 320;
     size_t inputByteSize = N * D * sizeof(int16_t);
     size_t gammaByteSize = D * sizeof(int16_t);
@@ -364,6 +367,7 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce_big_N)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -373,9 +377,9 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce_big_N)
     tilingDatafromBin->numCore = blockDim;
     tilingDatafromBin->numLastDim = D;
     tilingDatafromBin->numFirstDim = N;
-    tilingDatafromBin->firstDimPerCore = 2;
-    tilingDatafromBin->firstDimPerCoreTail = 2;
-    tilingDatafromBin->firstDimPerTime = 2;
+    tilingDatafromBin->firstDimPerCore = 52;
+    tilingDatafromBin->firstDimPerCoreTail = 20;
+    tilingDatafromBin->firstDimPerTime = 40;
     tilingDatafromBin->lastDimPerTime = D;
     tilingDatafromBin->eps = 0.00001;
     tilingDatafromBin->aveFactor = 1.0 / D;

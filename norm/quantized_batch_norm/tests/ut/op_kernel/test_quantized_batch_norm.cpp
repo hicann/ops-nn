@@ -45,13 +45,13 @@ protected:
 
 TEST_F(quantized_batch_norm_test, test_case_1000)
 {
-    size_t xByteSize = 1 * 1 * 1 * 18 * sizeof(int32_t);
-    size_t weightByteSize = 1 * sizeof(float);
-    size_t scaleByteSize = 1 * sizeof(float);
-    size_t zeroPointByteSize = 1 * sizeof(int32_t);
+    size_t xByteSize = 1 * 24624 * 130 * 90 * sizeof(int32_t);
+    size_t weightByteSize = 24624 * sizeof(float);
+    size_t scaleByteSize = 24624 * sizeof(float);
+    size_t zeroPointByteSize = 24624 * sizeof(int32_t);
 
     size_t tiling_data_size = sizeof(QuantizedBatchNormWelfordTilingData);
-    uint32_t blockDim = 1;
+    uint32_t blockDim = 48;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightByteSize);
@@ -73,23 +73,24 @@ TEST_F(quantized_batch_norm_test, test_case_1000)
         reinterpret_cast<QuantizedBatchNormWelfordTilingData*>(tiling);
 
     tilingDatafromBin->patternR1 = 1;
-    tilingDatafromBin->patternR0 = 18;
-    tilingDatafromBin->patternA = 1;
-    tilingDatafromBin->blockFactor = 1;
-    tilingDatafromBin->tailCoreBlockFactor = 1;
-    tilingDatafromBin->aUbFactor = 8;
-    tilingDatafromBin->aUbLoop = 1;
+    tilingDatafromBin->patternR0 = 11700;
+    tilingDatafromBin->patternA = 24624;
+    tilingDatafromBin->blockFactor = 513;
+    tilingDatafromBin->tailCoreBlockFactor = 513;
+    tilingDatafromBin->aUbFactor = 512;
+    tilingDatafromBin->aUbLoop = 2;
     tilingDatafromBin->aUbTail = 1;
-    tilingDatafromBin->tailCoreAUbLoop = 1;
+    tilingDatafromBin->tailCoreAUbLoop = 2;
     tilingDatafromBin->tailCoreAUbTail = 1;
-    tilingDatafromBin->r0UbFactor = 256;
+    tilingDatafromBin->r0UbFactor = 1024;
     tilingDatafromBin->r0UbLoop = 2;
-    tilingDatafromBin->r0UbTail = 2;
+    tilingDatafromBin->r0UbTail = 180;
     tilingDatafromBin->procNR0 = 1;
     tilingDatafromBin->nR0Loop = 1;
     tilingDatafromBin->lastLoopNR0 = 1;
-    tilingDatafromBin->patternR0Align = 24;
+    tilingDatafromBin->patternR0Align = 11704;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1000);
     ICPU_RUN_KF(
@@ -145,19 +146,20 @@ TEST_F(quantized_batch_norm_test, test_case_1001)
     tilingDatafromBin->patternA = 1;
     tilingDatafromBin->blockFactor = 1;
     tilingDatafromBin->tailCoreBlockFactor = 1;
-    tilingDatafromBin->aUbFactor = 16;
+    tilingDatafromBin->aUbFactor = 8;
     tilingDatafromBin->aUbLoop = 1;
     tilingDatafromBin->aUbTail = 1;
     tilingDatafromBin->tailCoreAUbLoop = 1;
     tilingDatafromBin->tailCoreAUbTail = 1;
-    tilingDatafromBin->r0UbFactor = 256;
-    tilingDatafromBin->r0UbLoop = 2;
-    tilingDatafromBin->r0UbTail = 16;
+    tilingDatafromBin->r0UbFactor = 64;
+    tilingDatafromBin->r0UbLoop = 1;
+    tilingDatafromBin->r0UbTail = 32;
     tilingDatafromBin->procNR0 = 1;
     tilingDatafromBin->nR0Loop = 1;
     tilingDatafromBin->lastLoopNR0 = 1;
     tilingDatafromBin->patternR0Align = 32;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1001);
     ICPU_RUN_KF(
@@ -226,6 +228,7 @@ TEST_F(quantized_batch_norm_test, test_case_1002)
     tilingDatafromBin->lastLoopNR0 = 1;
     tilingDatafromBin->patternR0Align = 8;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1002);
     ICPU_RUN_KF(
@@ -294,6 +297,7 @@ TEST_F(quantized_batch_norm_test, test_case_1012)
     tilingDatafromBin->lastLoopNR0 = 1;
     tilingDatafromBin->patternR0Align = 8;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1012);
     ICPU_RUN_KF(
@@ -362,6 +366,7 @@ TEST_F(quantized_batch_norm_test, test_case_1003)
     tilingDatafromBin->lastLoopNR0 = 4;
     tilingDatafromBin->patternR0Align = 8;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1003);
     ICPU_RUN_KF(
@@ -430,6 +435,7 @@ TEST_F(quantized_batch_norm_test, test_case_1013)
     tilingDatafromBin->lastLoopNR0 = 4;
     tilingDatafromBin->patternR0Align = 8;
     tilingDatafromBin->epsilon = 1e-5;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1013);
     ICPU_RUN_KF(

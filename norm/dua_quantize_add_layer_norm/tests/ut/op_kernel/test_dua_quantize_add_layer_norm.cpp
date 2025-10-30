@@ -85,6 +85,7 @@ TEST_F(dua_quantize_add_layer_norm_test, test_case_bf16)
     tilingDatafromBin->colTail = 1;
     tilingDatafromBin->isZeroPoint1Exist = 1;
     tilingDatafromBin->isZeroPoint2Exist = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     // normal fp16
     ICPU_SET_TILING_KEY(1000);

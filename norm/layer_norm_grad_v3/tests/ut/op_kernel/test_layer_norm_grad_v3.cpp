@@ -84,6 +84,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_1)
     tilingDatafromBin->bufferElemNums = 1024;
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(101);
     ICPU_RUN_KF(
@@ -169,6 +170,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_2)
     tilingDatafromBin->ubTailOfFormerBlock = 1;
     tilingDatafromBin->ubTailOfTailBlock = 1;
     tilingDatafromBin->bufferElemNums = 1024;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
@@ -233,6 +235,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_workspace_201)
     tilingDatafromBin->ubTail = 1;
     tilingDatafromBin->colAlignM = 1;
     tilingDatafromBin->colAlignV = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
@@ -258,7 +261,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_301)
 {
     size_t row = 18;
     size_t col = 20;
-    size_t deterministicWspSize = 9216;
+    size_t deterministicWspSize = 0;
     size_t dyByteSize = row * col * sizeof(float);
     size_t xByteSize = row * col * sizeof(float);
     size_t rstdByteSize = row * sizeof(float);
@@ -300,9 +303,10 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_301)
     tilingDatafromBin->ubTailOfTailBlock = 1;
     tilingDatafromBin->bFormer = 1;
     tilingDatafromBin->dichotomizeAddDiffSize = 4;
-    tilingDatafromBin->deterministicComputeWspSize = 9216;
+    tilingDatafromBin->deterministicComputeWspSize = 0;
     tilingDatafromBin->coefficient = 0.05;
     tilingDatafromBin->placeHolder = 0.0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockDim;
 
@@ -373,6 +377,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_302)
     tilingDatafromBin->deterministicComputeWspSize = 9216;
     tilingDatafromBin->coefficient = 0.05;
     tilingDatafromBin->placeHolder = 0.0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockDim;
 
@@ -443,6 +448,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_303)
     tilingDatafromBin->deterministicComputeWspSize = 9216;
     tilingDatafromBin->coefficient = 0.05;
     tilingDatafromBin->placeHolder = 0.0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockDim;
 
@@ -513,6 +519,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_304)
     tilingDatafromBin->deterministicComputeWspSize = 9216;
     tilingDatafromBin->coefficient = 0.05;
     tilingDatafromBin->placeHolder = 0.0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockDim;
 
@@ -583,6 +590,7 @@ TEST_F(layer_norm_grad_v3_test, test_case_transpose_305)
     tilingDatafromBin->deterministicComputeWspSize = 9216;
     tilingDatafromBin->coefficient = 0.05;
     tilingDatafromBin->placeHolder = 0.0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockDim;
 
@@ -653,290 +661,11 @@ TEST_F(layer_norm_grad_v3_test, test_case_common_401)
     tilingDatafromBin->nlastRBufferBytes = 512 * 4;
     tilingDatafromBin->lastBrcbBufferBytes = 512 * 4;
     tilingDatafromBin->wholeBufferElemNums = 512 * 4;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
     ICPU_SET_TILING_KEY(401);
-    ICPU_RUN_KF(
-        layer_norm_grad_v3, blockDim, dy, x, rstd, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(dy);
-    AscendC::GmFree(x);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(mean);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dgamma);
-    AscendC::GmFree(dbeta);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(layer_norm_grad_v3_test, test_case_common_402)
-{
-    size_t row = 1;
-    size_t col = 512;
-    size_t dyByteSize = row * col * sizeof(float);
-    size_t xByteSize = row * col * sizeof(float);
-    size_t rstdByteSize = row * sizeof(float);
-    size_t meanByteSize = row * sizeof(float);
-    size_t gammaByteSize = col * sizeof(float);
-    size_t dxByteSize = row * col * sizeof(float);
-    size_t dgammaByteSize = col * sizeof(float);
-    size_t dbetaByteSize = col * sizeof(float);
-    size_t tiling_data_size = sizeof(LayerNormGradV3TilingDataCommon);
-
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
-    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
-    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
-
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(row * col * sizeof(float) * 2 + 16 * 1024 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    LayerNormGradV3TilingDataCommon* tilingDatafromBin = reinterpret_cast<LayerNormGradV3TilingDataCommon*>(tiling);
-
-    tilingDatafromBin->row = 1;
-    tilingDatafromBin->col = 512;
-    tilingDatafromBin->colAlignM = 512;
-    tilingDatafromBin->colAlignV = 512;
-    tilingDatafromBin->blockNum = 1;
-    tilingDatafromBin->blockFormer = 1;
-    tilingDatafromBin->blockTail = 1;
-    tilingDatafromBin->ubFormer = 1;
-    tilingDatafromBin->ubLoopOfFormerBlock = 1;
-    tilingDatafromBin->ubLoopOfTailBlock = 1;
-    tilingDatafromBin->ubTailOfFormerBlock = 1;
-    tilingDatafromBin->ubTailOfTailBlock = 1;
-    tilingDatafromBin->wholeBufferBytes = 512 * 4;
-    tilingDatafromBin->lastRBufferBytes = 512 * 4;
-    tilingDatafromBin->nlastRBufferBytes = 512 * 4;
-    tilingDatafromBin->lastBrcbBufferBytes = 512 * 4;
-    tilingDatafromBin->wholeBufferElemNums = 512 * 4;
-
-    uint32_t blockDim = tilingDatafromBin->blockNum;
-
-    ICPU_SET_TILING_KEY(402);
-    ICPU_RUN_KF(
-        layer_norm_grad_v3, blockDim, dy, x, rstd, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(dy);
-    AscendC::GmFree(x);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(mean);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dgamma);
-    AscendC::GmFree(dbeta);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(layer_norm_grad_v3_test, test_case_common_403)
-{
-    size_t row = 1;
-    size_t col = 512;
-    size_t dyByteSize = row * col * sizeof(float);
-    size_t xByteSize = row * col * sizeof(float);
-    size_t rstdByteSize = row * sizeof(float);
-    size_t meanByteSize = row * sizeof(float);
-    size_t gammaByteSize = col * sizeof(float);
-    size_t dxByteSize = row * col * sizeof(float);
-    size_t dgammaByteSize = col * sizeof(float);
-    size_t dbetaByteSize = col * sizeof(float);
-    size_t tiling_data_size = sizeof(LayerNormGradV3TilingDataCommon);
-
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
-    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
-    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
-
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(row * col * sizeof(float) * 2 + 16 * 1024 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    LayerNormGradV3TilingDataCommon* tilingDatafromBin = reinterpret_cast<LayerNormGradV3TilingDataCommon*>(tiling);
-
-    tilingDatafromBin->row = 1;
-    tilingDatafromBin->col = 512;
-    tilingDatafromBin->colAlignM = 512;
-    tilingDatafromBin->colAlignV = 512;
-    tilingDatafromBin->blockNum = 1;
-    tilingDatafromBin->blockFormer = 1;
-    tilingDatafromBin->blockTail = 1;
-    tilingDatafromBin->ubFormer = 1;
-    tilingDatafromBin->ubLoopOfFormerBlock = 1;
-    tilingDatafromBin->ubLoopOfTailBlock = 1;
-    tilingDatafromBin->ubTailOfFormerBlock = 1;
-    tilingDatafromBin->ubTailOfTailBlock = 1;
-    tilingDatafromBin->wholeBufferBytes = 512 * 4;
-    tilingDatafromBin->lastRBufferBytes = 512 * 4;
-    tilingDatafromBin->nlastRBufferBytes = 512 * 4;
-    tilingDatafromBin->lastBrcbBufferBytes = 512 * 4;
-    tilingDatafromBin->wholeBufferElemNums = 512 * 4;
-
-    uint32_t blockDim = tilingDatafromBin->blockNum;
-
-    ICPU_SET_TILING_KEY(403);
-    ICPU_RUN_KF(
-        layer_norm_grad_v3, blockDim, dy, x, rstd, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(dy);
-    AscendC::GmFree(x);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(mean);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dgamma);
-    AscendC::GmFree(dbeta);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(layer_norm_grad_v3_test, test_case_common_404)
-{
-    size_t row = 1;
-    size_t col = 512;
-    size_t dyByteSize = row * col * sizeof(float);
-    size_t xByteSize = row * col * sizeof(float);
-    size_t rstdByteSize = row * sizeof(float);
-    size_t meanByteSize = row * sizeof(float);
-    size_t gammaByteSize = col * sizeof(float);
-    size_t dxByteSize = row * col * sizeof(float);
-    size_t dgammaByteSize = col * sizeof(float);
-    size_t dbetaByteSize = col * sizeof(float);
-    size_t tiling_data_size = sizeof(LayerNormGradV3TilingDataCommon);
-
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
-    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
-    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
-
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(row * col * sizeof(float) * 2 + 16 * 1024 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    LayerNormGradV3TilingDataCommon* tilingDatafromBin = reinterpret_cast<LayerNormGradV3TilingDataCommon*>(tiling);
-
-    tilingDatafromBin->row = 1;
-    tilingDatafromBin->col = 512;
-    tilingDatafromBin->colAlignM = 512;
-    tilingDatafromBin->colAlignV = 512;
-    tilingDatafromBin->blockNum = 1;
-    tilingDatafromBin->blockFormer = 1;
-    tilingDatafromBin->blockTail = 1;
-    tilingDatafromBin->ubFormer = 1;
-    tilingDatafromBin->ubLoopOfFormerBlock = 1;
-    tilingDatafromBin->ubLoopOfTailBlock = 1;
-    tilingDatafromBin->ubTailOfFormerBlock = 1;
-    tilingDatafromBin->ubTailOfTailBlock = 1;
-    tilingDatafromBin->wholeBufferBytes = 512 * 4;
-    tilingDatafromBin->lastRBufferBytes = 512 * 4;
-    tilingDatafromBin->nlastRBufferBytes = 512 * 4;
-    tilingDatafromBin->lastBrcbBufferBytes = 512 * 4;
-    tilingDatafromBin->wholeBufferElemNums = 512 * 4;
-
-    uint32_t blockDim = tilingDatafromBin->blockNum;
-
-    ICPU_SET_TILING_KEY(404);
-    ICPU_RUN_KF(
-        layer_norm_grad_v3, blockDim, dy, x, rstd, mean, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
-
-    AscendC::GmFree(dy);
-    AscendC::GmFree(x);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(mean);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dgamma);
-    AscendC::GmFree(dbeta);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(layer_norm_grad_v3_test, test_case_common_405)
-{
-    size_t row = 1;
-    size_t col = 512;
-    size_t dyByteSize = row * col * sizeof(float);
-    size_t xByteSize = row * col * sizeof(float);
-    size_t rstdByteSize = row * sizeof(float);
-    size_t meanByteSize = row * sizeof(float);
-    size_t gammaByteSize = col * sizeof(float);
-    size_t dxByteSize = row * col * sizeof(float);
-    size_t dgammaByteSize = col * sizeof(float);
-    size_t dbetaByteSize = col * sizeof(float);
-    size_t tiling_data_size = sizeof(LayerNormGradV3TilingDataCommon);
-
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
-    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
-    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
-
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(row * col * sizeof(float) * 2 + 16 * 1024 * 1024);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
-
-    LayerNormGradV3TilingDataCommon* tilingDatafromBin = reinterpret_cast<LayerNormGradV3TilingDataCommon*>(tiling);
-
-    tilingDatafromBin->row = 1;
-    tilingDatafromBin->col = 512;
-    tilingDatafromBin->colAlignM = 512;
-    tilingDatafromBin->colAlignV = 512;
-    tilingDatafromBin->blockNum = 1;
-    tilingDatafromBin->blockFormer = 1;
-    tilingDatafromBin->blockTail = 1;
-    tilingDatafromBin->ubFormer = 1;
-    tilingDatafromBin->ubLoopOfFormerBlock = 1;
-    tilingDatafromBin->ubLoopOfTailBlock = 1;
-    tilingDatafromBin->ubTailOfFormerBlock = 1;
-    tilingDatafromBin->ubTailOfTailBlock = 1;
-    tilingDatafromBin->wholeBufferBytes = 512 * 4;
-    tilingDatafromBin->lastRBufferBytes = 512 * 4;
-    tilingDatafromBin->nlastRBufferBytes = 512 * 4;
-    tilingDatafromBin->lastBrcbBufferBytes = 512 * 4;
-    tilingDatafromBin->wholeBufferElemNums = 512 * 4;
-
-    uint32_t blockDim = tilingDatafromBin->blockNum;
-
-    ICPU_SET_TILING_KEY(405);
     ICPU_RUN_KF(
         layer_norm_grad_v3, blockDim, dy, x, rstd, mean, gamma, dx, dgamma, dbeta, workspace,
         (uint8_t*)(tilingDatafromBin));

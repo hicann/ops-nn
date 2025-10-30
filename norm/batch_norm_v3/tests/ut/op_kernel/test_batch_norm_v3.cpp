@@ -92,6 +92,7 @@ TEST_F(batch_norm_v3_test, test_case_1000)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1000);
     ICPU_RUN_KF(
@@ -161,6 +162,7 @@ TEST_F(batch_norm_v3_test, test_case_1001)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1001);
     ICPU_RUN_KF(
@@ -230,6 +232,7 @@ TEST_F(batch_norm_v3_test, test_case_1002)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1002);
     ICPU_RUN_KF(
@@ -299,6 +302,7 @@ TEST_F(batch_norm_v3_test, test_case_1012)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1012);
     ICPU_RUN_KF(
@@ -368,6 +372,7 @@ TEST_F(batch_norm_v3_test, test_case_1003)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1003);
     ICPU_RUN_KF(
@@ -437,6 +442,7 @@ TEST_F(batch_norm_v3_test, test_case_1013)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1013);
     ICPU_RUN_KF(
@@ -505,6 +511,7 @@ TEST_F(batch_norm_v3_test, test_case_2000)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2000);
     ICPU_RUN_KF(
@@ -573,6 +580,7 @@ TEST_F(batch_norm_v3_test, test_case_2001)
     tilingDatafromBin->momentum = 0.1;
     tilingDatafromBin->momentumReverse = 0.9;
     tilingDatafromBin->batchVarScale = 1;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(2001);
     ICPU_RUN_KF(
