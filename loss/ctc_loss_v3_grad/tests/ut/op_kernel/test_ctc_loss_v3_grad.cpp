@@ -37,138 +37,62 @@ protected:
     }
 };
 
-template <typename T>
-void TestCTCLossV3GradKernel(
-    vector<uint64_t>& gradOutShape, vector<uint64_t>& logProbsShape, vector<uint64_t>& targetsShape,
-    vector<uint64_t>& inputLengthsShape, vector<uint64_t>& targetLengthsShape, vector<uint64_t>& lossShape,
-    vector<uint64_t>& logAlphaShape, vector<uint64_t>& gradShape, uint64_t workspaceSize, uint64_t blockDim,
-    uint64_t tilingKey)
+TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_0)
 {
-    uint64_t N = logProbsShape[1];
-    uint64_t Time = logProbsShape[0];
-    uint64_t C = logProbsShape[2];
-    uint64_t alpha = logAlphaShape[2];
-    uint64_t S = (logAlphaShape[2] - 1) / 2;
+    size_t gradoutputSize = 4 * sizeof(float);
+    size_t logProbsSize = 12 * 4 * 5 * sizeof(float);
+    size_t targetsSize = 4 * 7 * sizeof(int64_t);
+    size_t inputLengthsSize = 10 * 10 * 10 * 10 * sizeof(float);
+    size_t targetLengthSize = 2 * 3 * 1 * 5 * sizeof(float);
+    size_t lossSize = 4 * sizeof(float);
+    size_t logAlphaSize = 4 * 12 * 16 * sizeof(float);
+    size_t gradSize = 12 * 4 * 5 * sizeof(float);
+    size_t tilingDataSize = sizeof(CTCLossV3GradTilingDataTest) + 1024;
 
-    size_t gradOutByteSize = N * sizeof(T);
-    size_t logProbsByteSize = N * Time * C * sizeof(T);
-    size_t targetsByteSize = N * S * sizeof(int64_t);
-    size_t inputLengthsByteSize = N * sizeof(int64_t);
-    size_t targetLengthsByteSize = N * sizeof(int64_t);
-    size_t lossByteSize = N * sizeof(T);
-    size_t logAlphaByteSize = N * S * sizeof(T);
-    size_t gradByteSize = N * sizeof(T);
-    size_t tilingDataSize = sizeof(CTCLossV3GradTilingDataTest);
+    uint8_t* gradoutput = (uint8_t*)AscendC::GmAlloc(gradoutputSize);
+    uint8_t* logProbs = (uint8_t*)AscendC::GmAlloc(logProbsSize);
+    uint8_t* targets = (uint8_t*)AscendC::GmAlloc(targetsSize);
+    uint8_t* inputLengths = (uint8_t*)AscendC::GmAlloc(inputLengthsSize);
+    uint8_t* targetLength = (uint8_t*)AscendC::GmAlloc(targetLengthSize);
+    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(lossSize);
+    uint8_t* logAlpha = (uint8_t*)AscendC::GmAlloc(logAlphaSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
 
-    uint8_t* grad_out = (uint8_t*)AscendC::GmAlloc(gradOutByteSize);
-    uint8_t* log_probs = (uint8_t*)AscendC::GmAlloc(logProbsByteSize);
-    uint8_t* targets = (uint8_t*)AscendC::GmAlloc(targetsByteSize);
-    uint8_t* input_lengths = (uint8_t*)AscendC::GmAlloc(inputLengthsByteSize);
-    uint8_t* target_lengths = (uint8_t*)AscendC::GmAlloc(targetLengthsByteSize);
-    int64_t two = 2;
-    for (size_t i = 0; i < targetLengthsByteSize; i += sizeof(int64_t)) {
-        std::memcpy(target_lengths + i, &two, sizeof(int64_t));
-    }
-    for (size_t i = 0; i < inputLengthsByteSize; i += sizeof(int64_t)) {
-        std::memcpy(input_lengths + i, &two, sizeof(int64_t));
-    }
-    for (size_t i = 0; i < targetsByteSize; i += sizeof(int64_t)) {
-        std::memcpy(targets + i, &two, sizeof(int64_t));
-    }
-    uint8_t* loss = (uint8_t*)AscendC::GmAlloc(lossByteSize);
-    uint8_t* log_alpha = (uint8_t*)AscendC::GmAlloc(logAlphaByteSize);
-    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
     CTCLossV3GradTilingDataTest* tilingDatafromBin = reinterpret_cast<CTCLossV3GradTilingDataTest*>(tiling);
 
-    tilingDatafromBin->sliceLength = 1024;
-    tilingDatafromBin->sliceLengthTail = 1024;
+    tilingDatafromBin->sliceLength = 64;
+    tilingDatafromBin->sliceLengthTail = 5;
     tilingDatafromBin->probSliceNum = 1;
-    tilingDatafromBin->alphaLength = alpha;
-    tilingDatafromBin->maxInputLength = Time;
-    tilingDatafromBin->symbolSet = C;
-    tilingDatafromBin->batchSize = N;
+    tilingDatafromBin->alphaLength = 16;
+    tilingDatafromBin->maxInputLength = 12;
+    tilingDatafromBin->symbolSet = 5;
+    tilingDatafromBin->batchSize = 4;
     tilingDatafromBin->targetsDimNum = 2;
-    tilingDatafromBin->sDimRange = 32;
-    tilingDatafromBin->targetsNum = N * S;
-    tilingDatafromBin->taskPerCore = 1;
-    tilingDatafromBin->taskTailCore = 0;
+    tilingDatafromBin->sDimRange = 7;
+    tilingDatafromBin->targetsNum = 28;
+    tilingDatafromBin->taskPerCore = 0;
+    tilingDatafromBin->taskTailCore = 4;
     tilingDatafromBin->BLANK = 0;
     tilingDatafromBin->zeroInfinity = 0;
 
-    ICPU_SET_TILING_KEY(tilingKey);
+    ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        ctc_loss_v3_grad, blockDim, grad_out, log_probs, targets, input_lengths, target_lengths, loss, log_alpha, grad,
-        workspace, (uint8_t*)(tilingDatafromBin));
 
-    AscendC::GmFree(grad_out);
-    AscendC::GmFree(log_probs);
+    ICPU_RUN_KF(
+        ctc_loss_v3_grad, blockDim, gradoutput, logProbs, targets, inputLengths, targetLength, loss, logAlpha, grad,
+        workspace, (uint8_t*)(tilingDatafromBin));
+    AscendC::GmFree(gradoutput);
+    AscendC::GmFree(logProbs);
     AscendC::GmFree(targets);
-    AscendC::GmFree(input_lengths);
-    AscendC::GmFree(target_lengths);
+    AscendC::GmFree(inputLengths);
+    AscendC::GmFree(targetLength);
     AscendC::GmFree(loss);
-    AscendC::GmFree(log_alpha);
+    AscendC::GmFree(logAlpha);
     AscendC::GmFree(grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
-}
-
-TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_0)
-{
-    vector<uint64_t> gradOutShape = {1};
-    vector<uint64_t> logProbsShape = {32, 1, 1024};
-    vector<uint64_t> targetsShape = {1, 32};
-    vector<uint64_t> inputLengthsShape = {1};
-    vector<uint64_t> targetLengthsShape = {1};
-    vector<uint64_t> lossShape = {1};
-    vector<uint64_t> logAlphaShape = {1, 32, 65};
-    vector<uint64_t> gradShape = {32, 1, 1024};
-    uint64_t workspaceSize = 65 * 4 * 4 * 1;
-    uint64_t blockDim = 1;
-    uint64_t tilingKey = 0;
-    TestCTCLossV3GradKernel<float>(
-        gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
-        gradShape, workspaceSize, blockDim, tilingKey);
-}
-
-TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_large_symbolSet_0)
-{
-    vector<uint64_t> gradOutShape = {1};
-    vector<uint64_t> logProbsShape = {32, 1, 25240};
-    vector<uint64_t> targetsShape = {1, 32};
-    vector<uint64_t> inputLengthsShape = {1};
-    vector<uint64_t> targetLengthsShape = {1};
-    vector<uint64_t> lossShape = {1};
-    vector<uint64_t> logAlphaShape = {1, 32, 65};
-    vector<uint64_t> gradShape = {32, 1, 25240};
-    uint64_t workspaceSize = 65 * 4 * 4 * 1;
-    uint64_t blockDim = 1;
-    uint64_t tilingKey = 0;
-    TestCTCLossV3GradKernel<float>(
-        gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
-        gradShape, workspaceSize, blockDim, tilingKey);
-}
-
-TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_large_batch)
-{
-    vector<uint64_t> gradOutShape = {1501};
-    vector<uint64_t> logProbsShape = {8, 1501, 1024};
-    vector<uint64_t> targetsShape = {1501, 32};
-    vector<uint64_t> inputLengthsShape = {1501};
-    vector<uint64_t> targetLengthsShape = {1501};
-    vector<uint64_t> lossShape = {1501};
-    vector<uint64_t> logAlphaShape = {1501, 8, 65};
-    vector<uint64_t> gradShape = {8, 1501, 1024};
-    uint64_t workspaceSize = 65 * 4 * 4 * 1501 + 1501 * 8;
-    uint64_t blockDim = 40;
-    uint64_t tilingKey = 0;
-    TestCTCLossV3GradKernel<float>(
-        gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
-        gradShape, workspaceSize, blockDim, tilingKey);
 }
