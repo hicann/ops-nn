@@ -14,7 +14,6 @@ import sys
 import numpy as np
 import glob
 import os
-import tensorflow as tf
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -26,7 +25,6 @@ def compare_data(golden_file_lists, output_file_lists, d_type):
     elif d_type == "float32":
         precision = 1/10000
     else:
-        np_dtype = tf.bfloat16.as_numpy_dtype
         precision = 1/10
 
     data_same = True

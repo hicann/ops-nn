@@ -35,7 +35,7 @@ def gen_data_and_golden(shape_str, d_type="float32"):
     np_type = d_type_dict[d_type]
     shape_list = parse_str_to_shape_list(shape_str)
     for index, shape in enumerate(shape_list):
-        tmp_input = (np.random.rand(*shape) * 2 - 1).astype(np_type)
+        tmp_input = np.random.uniform(-0.5, 0.5, size=shape).astype(np_type)
         tmp_golden = np.sinh(tmp_input.astype(np_type))
 
         tmp_input.astype(np_type).tofile(f"{d_type}_input_t_foreach_sinh_{index}.bin")

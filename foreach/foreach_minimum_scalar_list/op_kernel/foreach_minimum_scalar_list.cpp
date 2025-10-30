@@ -22,6 +22,13 @@
 using namespace AscendC;
 using namespace Common::OpKernel;
 
+template <typename T>
+__aicore__ void MinsAdapter(
+    const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, const T& scalarValue, const int32_t& uValue)
+{
+    Mins(dstLocal, srcLocal, scalarValue, static_cast<uint32_t>(uValue));
+}
+
 extern "C" __global__ __aicore__ void foreach_minimum_scalar_list(
     GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -31,21 +38,21 @@ extern "C" __global__ __aicore__ void foreach_minimum_scalar_list(
     GM_ADDR userWS = nullptr;
 
     if (TILING_KEY_IS(1)) {
-        ForeachOneScalarListBinary<half, half, Mins, 2, 1> op;
+        ForeachOneScalarListBinary<half, half, MinsAdapter<half>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(2)) {
-        ForeachOneScalarListBinary<float, float, Mins, 2, 1> op;
+        ForeachOneScalarListBinary<float, float, MinsAdapter<float>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(3)) {
-        ForeachOneScalarListBinary<int, int, Mins, 2, 1> op;
+        ForeachOneScalarListBinary<int, int, MinsAdapter<int>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     }
 #if __CCE_AICORE__ == 220
     else if (TILING_KEY_IS(4)) {
-        ForeachOneScalarListBinary<bfloat16_t, float, Mins, 2, 1> op;
+        ForeachOneScalarListBinary<bfloat16_t, float, MinsAdapter<float>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     }

@@ -182,7 +182,7 @@ public:
 /**
  ** function: GetTilingN
 */
-uint64_t ForeachCommonTiling::GetTilingN() {
+inline uint64_t ForeachCommonTiling::GetTilingN() {
     switch (dataType) {
         case 1:
             return TILING_FLOAT_N_SCALAR;
@@ -197,7 +197,7 @@ uint64_t ForeachCommonTiling::GetTilingN() {
     }
 }
 
-void ForeachCommonTiling::Init(const std::vector<std::vector<uint64_t>>& shapeInfos, uint16_t dType, uint8_t theCode) {
+inline void ForeachCommonTiling::Init(const std::vector<std::vector<uint64_t>>& shapeInfos, uint16_t dType, uint8_t theCode) {
     opCode = theCode;
 
     dataType = dType;
@@ -215,7 +215,7 @@ void ForeachCommonTiling::Init(const std::vector<std::vector<uint64_t>>& shapeIn
     }
 }
 
-bool ForeachCommonTiling::RunBigKernelTiling(uint32_t coreNumPlatform, uint64_t ubSizePlatForm) {
+inline bool ForeachCommonTiling::RunBigKernelTiling(uint32_t coreNumPlatform, uint64_t ubSizePlatForm) {
     uint32_t needCoreNum = GetNeedCoreNum(coreNumPlatform);
     AssignDataToEachCore(needCoreNum);
     DivideUbMemory(ubSizePlatForm);
@@ -227,7 +227,7 @@ inline T1 ForeachCommonTiling::CeilA2B(T1 a, T2 b) {
     return (a + b - 1) / b;
 }
 
-uint8_t ForeachCommonTiling::GetDataTypeSize() {
+inline uint8_t ForeachCommonTiling::GetDataTypeSize() {
     switch (dataType) {
         case 1: //float
             return 4;
@@ -248,7 +248,7 @@ uint8_t ForeachCommonTiling::GetDataTypeSize() {
     }
 }
 
-uint64_t ForeachCommonTiling::GetTilingKeyVal() {
+inline uint64_t ForeachCommonTiling::GetTilingKeyVal() {
     switch (dataType) {
         case 1:
             return TILING_KEY_FLOAT;
@@ -271,7 +271,7 @@ uint64_t ForeachCommonTiling::GetTilingKeyVal() {
     }
 }
 
-uint32_t ForeachCommonTiling::GetNeedCoreNum(uint32_t coreNumPlatform) {
+inline uint32_t ForeachCommonTiling::GetNeedCoreNum(uint32_t coreNumPlatform) {
     uint32_t tempCoreNum = (uint32_t)CeilA2B(totalDataCount, elementsPerBlock);
     if (tempCoreNum < coreNumPlatform) {
         return tempCoreNum;
@@ -280,7 +280,7 @@ uint32_t ForeachCommonTiling::GetNeedCoreNum(uint32_t coreNumPlatform) {
     }
 }
 
-void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
+inline void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     // Kernel the input data according to 32 byte alignment.
     int64_t blockCount = CeilA2B(totalDataCount, elementsPerBlock);
     // Divisible, representing the amount of data each core needs to process.
@@ -332,7 +332,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory
     */
-    void ForeachCommonTiling::DivideUbMemory(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory(uint64_t ubSizePlatForm) {
         if (opCode <= FOREACH_POINTWISE_OP_CODE) {
             DivideUbMemory1(ubSizePlatForm);
         } else if (opCode <= FOREACH_POW_TENSOR_OP_CODE) {
@@ -361,7 +361,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory1
     */
-    void ForeachCommonTiling::DivideUbMemory1(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory1(uint64_t ubSizePlatForm) {
         if (opCode == ZERO_OP_CODE) {
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_add_scalar/add_scalar_list/expm1/sqrt/zero_inplace
@@ -411,7 +411,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** function: GetLog2TmpBufferFactorSize
     */
-    void ForeachCommonTiling::GetLog2TmpBufferFactorSize(const uint32_t typeSize, uint32_t &extraBuf,
+    inline void ForeachCommonTiling::GetLog2TmpBufferFactorSize(const uint32_t typeSize, uint32_t &extraBuf,
                                     uint32_t LOG2_HALF, uint32_t LOG2_FLOAT,
                                     uint32_t LOG2_BASIC) {
         auto caclFactor = (typeSize == sizeof(float)) ? LOG2_FLOAT : LOG2_HALF;
@@ -421,7 +421,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory2
     */
-    void ForeachCommonTiling::DivideUbMemory2(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory2(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_COS_OP_CODE) {  // foreach_cos
             uint32_t tilingConstant = 6;
             if (dataTypeSize == BYTE_LEN_4) {
@@ -473,7 +473,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory3
     */
-    void ForeachCommonTiling::DivideUbMemory3(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory3(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_BINARY_SCALAR_OP_CODE) {
             // foreach_maximum_scalar/maximum_scalar_list/minimum_scalar/minimum_scalar_list
             uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));
@@ -525,7 +525,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory4
     */
-    void ForeachCommonTiling::DivideUbMemory4(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory4(uint64_t ubSizePlatForm) {
         if ((opCode == FOREACH_ASIN_OP_CODE)) {
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_cosh/asin/acos
@@ -580,7 +580,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory5
     */
-    void ForeachCommonTiling::DivideUbMemory5(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory5(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_ERFC_OP_CODE) {
             // foreach_erfc
             uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));
@@ -632,7 +632,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory6
     */
-    void ForeachCommonTiling::DivideUbMemory6(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory6(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_LERP_SCALAR_OP_CODE) {
             // foreach_lerp_scalar
             uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData) - 128);
@@ -653,6 +653,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
             inputsTensorUbSize = (dataType == 4 || dataType == 2) ?
                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+                inputsTensorUbSize = inputsTensorUbSize / BYTE_REPEAT * BYTE_REPEAT;
         } else if ((opCode == FOREACH_POW_SCALAR_OP_CODE) || (opCode == FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE)) {
             // foreach_pow_scalar/pow_scalar_list/pow_scalar_and_tensor
             uint32_t reserveUbSize = BYTE_BASIC_BLOCK * GetTilingN() * dataTypeSize;
@@ -670,7 +671,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory7
     */
-    void ForeachCommonTiling::DivideUbMemory7(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory7(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_SIN_OP_CODE) {
             // foreach_sin
             uint32_t calcPro = SIN_HALF_CALC_FAC;
@@ -715,7 +716,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory8
     */
-    void ForeachCommonTiling::DivideUbMemory8(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory8(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_EXP_OP_CODE) {
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_exp
@@ -755,7 +756,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory9
     */
-    void ForeachCommonTiling::DivideUbMemory9(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory9(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_ROUND_OFF_NUM_OP_CODE) {
             // foreach_round_off_number
             uint32_t canUseUbSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData)) / 2;
@@ -799,7 +800,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     /**
      ** funtion: DivideUbMemory10
     */
-    void ForeachCommonTiling::DivideUbMemory10(uint64_t ubSizePlatForm) {
+    inline void ForeachCommonTiling::DivideUbMemory10(uint64_t ubSizePlatForm) {
         if (opCode == FOREACH_SIGN_OP_CODE) {
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData) - BYTE_BLOCK);
@@ -814,7 +815,7 @@ void ForeachCommonTiling::AssignDataToEachCore(int64_t needCoreNum) {
     }
 
 
-void ForeachCommonTiling::FillTilingData(ForeachCommonTilingData* tilingData) {
+inline void ForeachCommonTiling::FillTilingData(ForeachCommonTilingData* tilingData) {
     tilingData->inputsTensorUbSize = inputsTensorUbSize;
     memcpy(tilingData->tensorDataCountList, tensorDataCountList, sizeof(tensorDataCountList));
     memcpy(tilingData->tensorStartList, tensorStartList, sizeof(tensorStartList));
