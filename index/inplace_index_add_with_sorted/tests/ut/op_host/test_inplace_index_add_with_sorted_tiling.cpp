@@ -16,19 +16,15 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include "op_log.h"
-
-#include "runtime2_util.h"
+#include "log/log.h"
 #include "kernel_run_context_facker.h"
-#include "math_ops.h"
-#include "matrix_calculation_ops.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "index/index_add_with_sorted/op_host/index_add_with_sorted_tiling.h"
+#include "register/op_impl_registry.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
 
 using namespace std;
 using namespace ge;

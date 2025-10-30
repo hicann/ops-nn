@@ -56,7 +56,6 @@ struct RepeatInterleaveGradCompileInfo {
 
 TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_001)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{2, 32, 16}, {2, 32, 16}};
     gert::StorageShape repeats_shape = {
         {
@@ -143,5 +142,4 @@ TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_001)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }

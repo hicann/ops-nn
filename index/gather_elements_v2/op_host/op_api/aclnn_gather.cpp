@@ -100,7 +100,6 @@ static bool CheckShape(const aclTensor* self, const int64_t dim, const aclTensor
 {
     auto selfDim = self->GetViewShape().GetDimNum();
     auto indexDim = index->GetViewShape().GetDimNum();
-    auto outDim = out->GetViewShape().GetDimNum();
     auto selfShape = self->GetViewShape();
     auto indexShape = index->GetViewShape();
     int64_t selfDim2 = (selfDim == 0) ? 1 : static_cast<int64_t>(selfDim);
@@ -177,8 +176,8 @@ static bool SpecialCheck(const aclTensor* selfContiguous, const aclTensor* index
     bool socVersionCheck = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
     auto indexShape = indexContiguous->GetViewShape();
     int64_t indexShapeProduct = 1;
-    for (size_t i = 0; i < dimSize - 1; i++) {
-        indexShapeProduct *= indexShape.GetDim(i);
+    for (int64_t i = 0; i < dimSize - 1; i++) {
+        indexShapeProduct *= static_cast<int64_t>(indexShape.GetDim(i));
     }
     auto lastDim = indexShape.GetDim(dimSize - 1);
     bool indexShapeCheck = indexShapeProduct >= SHAPE_PRODUCT_LIMIT && lastDim <= UPPER_LIMIT && lastDim >= LOWER_LIMIT;
@@ -252,7 +251,7 @@ static bool IfUseGatherElementsV2(
     int64_t selfPreDim = 1;
     int64_t idxPostDim = 1;
     int64_t idxPreDim = 1;
-    for (size_t i = 0; i < dimSize; i++) {
+    for (int64_t i = 0; i < dimSize; i++) {
         int64_t indexDim = indexShape.GetDim(i);
         int64_t selfDim = selfShape.GetDim(i);
         indexShapeProduct *= indexDim;
@@ -364,7 +363,7 @@ static bool IfMoeUseV2(const int64_t dim, const aclTensor* self, const aclTensor
     auto realOutputDim = index->GetViewShape().GetDim(SECOND_DIM);
 
     auto indexDimNum = index->GetViewShape().GetDimNum();
-    bool dimCheckFlag = indexDimNum == MOE_DIM_NUM && selfDimNum == indexDimNum && dim == FIRST_DIM;
+    bool dimCheckFlag = indexDimNum == MOE_DIM_NUM && selfDimNum == static_cast<int64_t>(indexDimNum) && dim == FIRST_DIM;
     return dimCheckFlag && strideCheckFlag && (inferOutputDim == realOutputDim);
 }
 

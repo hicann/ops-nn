@@ -117,7 +117,7 @@ static aclnnStatus CheckParams(const aclTensor *weight, const aclTensor *indices
   return ACLNN_SUCCESS;
 }
 
-static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices, const aclTensor *out) {
+static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices) {
   bool is910BSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
   const int64_t indicesSize = indices->GetViewShape().GetShapeSize();
@@ -166,7 +166,7 @@ aclnnStatus aclnnEmbeddingGetWorkspaceSize(const aclTensor *weight, const aclTen
 
   // 调用l0算子GatherV2进行计算
   const aclTensor* embeddingResult;
-  if (CheckHighperf(weight, indices, out)) {
+  if (CheckHighperf(weight, indices)) {
     int64_t implMode = HIGH_PERFORMANCE;
     embeddingResult = l0op::GatherV2WithImplMode(weightContiguous, EMBEDDING_DIM, indicesContiguous, implMode,
                                                  uniqueExecutor.get());

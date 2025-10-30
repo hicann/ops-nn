@@ -26,6 +26,7 @@ constexpr int64_t HALF_BLOCL_SIZE = 16;
 constexpr int64_t BLOCK_SIZE_UB = 32;
 constexpr int64_t INT64_DSIZE = 8;
 constexpr int64_t EIGHT_BLOCK_IDX_LEN = 64;
+constexpr int64_t INT_MAX = 2147483647;
 constexpr int32_t RIGHT_SHIFT_LENGTH = 31;
 
 namespace AscendC {
@@ -404,25 +405,33 @@ public:
         int64_t xGmBaseOffset = 0;
         int64_t indexTensorOffset = 0;
         int64_t yTensorOffset = 0;
-        int32_t idx = 0;
+        int64_t idx = 0;
         DoNegativeIndices(indexAlignLength * nbrust);
 
-        for (uint32_t i = 0; i < nbrust; i++) {
+        for (int64_t i = 0; i < nbrust; i++) {
             indexTensorOffset = i * indexAlignLength;
             yTensorOffset = i * yAlignLength;
             GetGmOffset(tmpOffset, xGmBaseOffset);
-            Adds(
-                indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset], static_cast<int32_t>(xGmBaseOffset),
-                length);
-            for (uint32_t j = 0; j < length; j++) {
-                idx = indexTensor_.GetValue(j + indexTensorOffset);
-                T_DATA data = xGm_.GetValue(idx);
-                yTensor_.SetValue(j + yTensorOffset, data);
+            if (xGmBaseOffset < INT_MAX - NUM_TWO * xAxisSize_) {
+                Adds(
+                    indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset], static_cast<int32_t>(xGmBaseOffset),
+                    length);
+                for (int64_t j = 0; j < length; j++) {
+                    idx = static_cast<int64_t>(indexTensor_.GetValue(j + indexTensorOffset));
+                    T_DATA data = xGm_.GetValue(idx);
+                    yTensor_.SetValue(j + yTensorOffset, data);
+                }
+            } else {
+                for (int64_t j = 0; j < length; j++) {
+                    idx = indexTensor_.GetValue(j + indexTensorOffset);
+                    T_DATA data = xGm_.GetValue(idx + xGmBaseOffset);
+                    yTensor_.SetValue(j + yTensorOffset, data);
+                }
             }
             tmpOffset += indexAxisSize_;
         }
     }
-
+    
     template <typename T>
     __aicore__ inline void GatherData(
         LocalTensor<T> targetTensor, int64_t dataOffset, int64_t indexOffset, int64_t length)

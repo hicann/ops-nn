@@ -35,15 +35,15 @@ static constexpr size_t ATTR_AXIS_INDEX = 0;
 static constexpr int64_t MAX_YGRAD_DIM = 8;
 
 static constexpr size_t MERGED_AXES_NUM = 3;
+static const gert::Shape g_vec_1_shape = {1};
 
 using namespace Ops::Base;
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
-{
-    if (inShape.IsScalar()) {
-        return gert::Shape{1};
-    }
-    return inShape;
+static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
+  if (inShape.IsScalar()) {
+    return g_vec_1_shape;
+  }
+  return inShape;
 }
 static ge::graphStatus convertCompileInfo(
     const RepeatInterleaveGradCompileInfo* compileInfo, ReduceOpCompileInfo* reduceCompileInfo,
@@ -58,7 +58,7 @@ static ge::graphStatus convertCompileInfo(
     OP_CHECK_IF(
         ubSize <= static_cast<uint64_t>(CACHE_BUF_SIZE),
         OP_LOGE(
-            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%ld.", ubSize,
+            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.", ubSize,
             CACHE_BUF_SIZE),
         return ge::GRAPH_FAILED);
     reduceCompileInfo->ubSize = ubSize;

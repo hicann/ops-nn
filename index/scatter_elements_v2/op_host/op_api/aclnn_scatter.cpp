@@ -111,8 +111,8 @@ static const std::string& GetReduceStr(int64_t reduce)
 // 除了dim维度以外的每个维度 a <= b 返回true, 否则返回false。 a, b的维度数一样
 static bool CompareTensorShape(const aclTensor* a, const aclTensor* b, int64_t dim = -1)
 {
-    auto aDimSize = a->GetViewShape().GetDimNum();
-    auto bDimSize = b->GetViewShape().GetDimNum();
+    int64_t aDimSize = a->GetViewShape().GetDimNum();
+    int64_t bDimSize = b->GetViewShape().GetDimNum();
     aDimSize = aDimSize < bDimSize ? aDimSize : bDimSize;
     for (int64_t i = 0; i < aDimSize; i++) {
         if (i != dim) {
@@ -428,7 +428,7 @@ static bool IsRouteToUpdate(const aclTensor *x, const op::Shape &selfShape, cons
         return false;
     }
 
-    for (size_t i = viewStrides.size() - 1; i >= 0; i--) {
+    for (int64_t i = viewStrides.size() - 1; i >= 0; i--) {
         if (viewStrides[i] != 0) {
             boardCastIdx = i;
             break;
@@ -542,7 +542,7 @@ static aclnnStatus ExecScatterBase(
 
     CHECK_COND(selfDimNum - 1 >= 0, ACLNN_ERR_PARAM_INVALID, "self dim num must greater than 0");
     std::vector<int64_t> perm(selfDimNum);
-    for (size_t i = 0; i < selfDimNum; ++i) {
+    for (size_t i = 0; i < static_cast<size_t>(selfDimNum); ++i) {
         perm[i] = i;
     }
     std::swap(perm[dimFinal], perm[selfDimNum - 1]);

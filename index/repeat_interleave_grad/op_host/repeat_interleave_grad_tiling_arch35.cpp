@@ -42,15 +42,15 @@ static constexpr int32_t nTwo = 2;
 static constexpr int64_t MAX_YGRAD_DIM = 8;
 constexpr size_t WORKSPACE_SIZE_EXT = static_cast<size_t>(64 * 8); // 额外的workspace，用于block切人Repeat时使用
 constexpr int32_t INT32_SIZE = 4;
+static const gert::Shape g_vec_1_shape = {1};
 
 using namespace Ops::Base;
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
-{
-    if (inShape.IsScalar()) {
-        return gert::Shape{1};
-    }
-    return inShape;
+static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
+  if (inShape.IsScalar()) {
+    return g_vec_1_shape;
+  }
+  return inShape;
 }
 
 class RIGDavidTilingImpl

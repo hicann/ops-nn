@@ -28,20 +28,20 @@
 
 using namespace op;
 
-static const int64_t MAX_SUPPORT_DIM = 8;
-static const int64_t LIMIT_EMBEDDING_DIM_NUM = 14336;
-static const uint64_t INT32_MAX_LIMIT = 2147483647;
-static const uint64_t INT32_INF = 2139095040;
-static const uint64_t SINGLE_CORE_SORT_ROW_NUM = 192;
-static const uint64_t CAST_MAX_NUM = 16777216;
+static const int64_t MAX_SUPPORT_DIM = 8L;
+static const int64_t LIMIT_EMBEDDING_DIM_NUM = 14336L;
+static const int64_t INT32_MAX_LIMIT = 2147483647L;
+static const int64_t INT32_INF = 2139095040L;
+static const uint64_t SINGLE_CORE_SORT_ROW_NUM = 192ULL;
+static const uint64_t CAST_MAX_NUM = 16777216ULL;
 static const int MIN_SORT_CORE_NUM = 1;
 static const int MAX_SORT_CORE_NUM = 4;
 static const int OUT_SHAPE = 2;
 static const int SMALL_DIM_THRESH = 512;
 static const int BLOCK_SIZE = 32;
-static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048;
-static const int64_t MULTIPLES = 5;
-static const int64_t GRAD_ROW_LIMIT = 1024;
+static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048L;
+static const uint64_t MULTIPLES = 5ULL;
+static const int64_t GRAD_ROW_LIMIT = 1024L;
 
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};

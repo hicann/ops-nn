@@ -51,7 +51,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(const aclTensor* self, aclTensor* valueOut, aclTensor* inverseOut) {
+static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut) {
   if (SocVersion::ASCEND910_95 == GetCurrentPlatformInfo().GetSocVersion()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);
   } else {
@@ -64,7 +64,7 @@ static bool CheckDtypeValid(const aclTensor* self, aclTensor* valueOut, aclTenso
   return true;
 }
 
-static bool CheckShapeValid(const aclTensor* self, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut) {
+static bool CheckShapeValid(const aclTensor* self, bool returnInverse, aclTensor* inverseOut) {
   // self的数据维度不能超过8
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
   // self与inverseOut的shape必须保持一致
@@ -78,9 +78,9 @@ static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, aclTen
   // 1. 检查输入输出是否为nullptr
   CHECK_RET(CheckNotNull3Tensor(self, valueOut, inverseOut), ACLNN_ERR_PARAM_NULLPTR);
   // 2. 检查数据类型
-  CHECK_RET(CheckDtypeValid(self, valueOut, inverseOut), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(self, inverseOut), ACLNN_ERR_PARAM_INVALID);
   // 3. 检查数据Shape
-  CHECK_RET(CheckShapeValid(self, returnInverse, valueOut, inverseOut), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShapeValid(self, returnInverse, inverseOut), ACLNN_ERR_PARAM_INVALID);
   return ACLNN_SUCCESS;
 }
 

@@ -86,19 +86,19 @@ static bool CheckShape(const aclTensor *data, const aclTensor *indices, const ac
     }
 
     // indices.shape[-1] <= len(data.shape)
-    if (indices->GetViewShape().GetDim(indicesRank-1) > data->GetViewShape().GetDimNum()) {
+    if (indices->GetViewShape().GetDim(indicesRank-1) > static_cast<int64_t>(data->GetViewShape().GetDimNum())) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the rank of data should bigger than indices");
         return false;
     }
 
     // updates.shape == indices.shape[:-1] + data.shape[indices.shape[-1] :]
-    for (int i = 0;i < indicesRank - 1;++i) {
+    for (uint64_t i = 0;i < indicesRank - 1;++i) {
         if (updates->GetViewShape().GetDim(i) != indices->GetViewShape().GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the shape of data, indices and updates are not matched");
             return false;
         }
     }
-    for (int i = 0;i < dataRank - lastIndicesShapeDim;++i) {
+    for (uint64_t i = 0;i < dataRank - lastIndicesShapeDim;++i) {
         if (data->GetViewShape().GetDim(i+lastIndicesShapeDim) != updates->GetViewShape().GetDim(i+indicesRank-1)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the shape of data, indices and updates are not matched");
             return false;
