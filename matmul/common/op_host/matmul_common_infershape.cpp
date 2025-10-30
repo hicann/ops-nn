@@ -337,7 +337,7 @@ ge::graphStatus UpdateX2NewShape(
         size_t dim_num = new_shape.GetDimNum();
         size_t x2_dim_num = new_shape.GetDimNum();
         size_t k_x2_dim = trans_x2 ? (x2_dim_num - 1UL) : (x2_dim_num - 2UL);
-        size_t n_x2_dim = trans_x2 ? (x2_dim_num - 1UL) : (x2_dim_num - 2UL);
+        size_t n_x2_dim = trans_x2 ? (x2_dim_num - 2UL) : (x2_dim_num - 1UL);
         int64_t k_dim = new_shape.GetDim(k_x2_dim);
         int64_t n_dim = new_shape.GetDim(n_x2_dim);
         if (desc->GetDataType() == ge::DT_FLOAT && k_dim > 0 && n_dim > 0) {
@@ -364,24 +364,22 @@ ge::graphStatus InferShapeForBatchMatMul(
     auto shape_out = context->GetOutputShape(0);
     auto attrs = context->GetAttrs();
     auto op_name = context->GetNodeName();
+    OP_CHECK_IF(shape_x1 == nullptr || shape_x2 == nullptr || shape_out == nullptr,
+        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] shape is null"), return ge::GRAPH_FAILED);
     if (CheckIsUnknownDimNum(*shape_x1) || CheckIsUnknownDimNum(*shape_x2)) {
         shape_out->SetDimNum(1);
         shape_out->SetDim(0, UNKNOWN_DIM_NUM);
         return ge::GRAPH_SUCCESS;
     }
-    OP_CHECK_IF(
-        shape_x1 == nullptr || shape_x2 == nullptr || shape_out == nullptr || attrs == nullptr,
-        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] shape is null"), return ge::GRAPH_FAILED);
-
+    OP_CHECK_IF(attrs == nullptr,
+        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] attrs is null"), return ge::GRAPH_FAILED);
     const bool* adj_x1 = attrs->GetAttrPointer<bool>(attr_adj_idx);
     const bool* adj_x2 = attrs->GetAttrPointer<bool>(attr_adj_idx + 1);
 
-    OP_CHECK_IF(
-        adj_x1 == nullptr || adj_x2 == nullptr, CUBE_INNER_ERR_REPORT(op_name, "[InferShape] attribute is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(adj_x1 == nullptr || adj_x2 == nullptr,
+        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] attribute is null"), return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        context->GetNodeName(), "x1_shape: %s, x2_shape: %s, adj_x1: %d, adj_x2: %d",
+    OP_LOGD(context->GetNodeName(), "x1_shape: %s, x2_shape: %s, adj_x1: %d, adj_x2: %d",
         Ops::Base::ToString(*shape_x1).c_str(), Ops::Base::ToString(*shape_x2).c_str(), *adj_x1, *adj_x2);
 
     auto dim_num = std::max(shape_x1->GetDimNum(), shape_x2->GetDimNum());
@@ -411,9 +409,8 @@ ge::graphStatus InferShapeForBatchMatMul(
     InferShapeBatchTensor InferShapeBatchTensor = {
         shape_x1_new, shape_x2_new, *adj_x1 && !shape_x1_reshape_flag, *adj_x2 && !shape_x2_reshape_flag};
     InferShapeBatchMatMul batchMatMulInfer(context, InferShapeBatchTensor, input_bias_index);
-    OP_CHECK_IF(
-        !batchMatMulInfer.InferShape(), CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to infer output shape"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!batchMatMulInfer.InferShape(),
+        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to infer output shape"), return ge::GRAPH_FAILED);
 
     InferComplementedOutput(shape_x1_reshape_flag, shape_x2_reshape_flag, *shape_out);
     OP_LOGD(context->GetNodeName(), "output shape: %s", Ops::Base::ToString(*(context->GetOutputShape(0))).c_str());
