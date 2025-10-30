@@ -61,14 +61,12 @@ uint64_t GetStepSmallK91095(const MatMulV3Args& args, const MatMulV3RunInfo& run
     uint64_t stepSmallK = runInfo.stepKb;
     uint64_t dtypeSize = args.aDtypeSize;
     ge::DataType inputType = args.aType;
-    ge::Format inputFormat = args.bFormat;
     bool isTrans = args.isBTrans;
     if (isBL1FullLoad) {
         stepBigK = runInfo.stepKb;
         stepSmallK = runInfo.stepKa;
         dtypeSize = args.bDtypeSize;
         inputType = args.bType;
-        inputFormat = args.aFormat;
         isTrans = args.isATrans;
     }
 

@@ -786,11 +786,10 @@ uint64_t WeightQuantBatchMatmulV2WeightNz::GetTilingKey() const
     bool isWeightNz = false;
     uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
     uint64_t fullLoadMode = static_cast<uint64_t>(L1FullloadMode_);
-    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+    return GET_TPL_TILING_KEY(
         socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
         innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
         hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-    return tilingKey_;
 }
 
 void WeightQuantBatchMatmulV2WeightNz::Reset()

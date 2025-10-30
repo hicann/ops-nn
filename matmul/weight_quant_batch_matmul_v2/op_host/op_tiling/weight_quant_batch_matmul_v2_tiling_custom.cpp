@@ -728,11 +728,10 @@ uint64_t WeightQuantBatchMatmulV2TilingCustom::GetTilingKey() const
     uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
     uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
     uint64_t batch = 0UL;
-    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+    return GET_TPL_TILING_KEY(
         socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
         innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
         hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-    return tilingKey_;
 }
 
 bool WeightQuantBatchMatmulV2TilingCustom::GetTilingFromCache()

@@ -371,11 +371,10 @@ uint64_t WeightQuantBatchMatmulV2Msd::GetInnerPreciseTilingKey() const
     uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
     uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
     uint64_t batch = 0UL;
-    uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+    return GET_TPL_TILING_KEY(
         socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
         innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
         hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-    return tilingKey_;
 }
 
 // 4、计算高阶API的TilingData
@@ -412,62 +411,55 @@ uint64_t WeightQuantBatchMatmulV2Msd::GetTilingKey() const
     uint64_t templateExtra;
     uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
     uint64_t batch = 0UL;
-    uint64_t tilingKey_;
 
     if (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) {
         if (highPrecision_) {
             isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
             templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::HIGH_PRECISION);
-            tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         } else {
             if (splitKFlag_) {
                 isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
                 templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::MSD_GENERAL);
-                tilingKey_ = GET_TPL_TILING_KEY(
+                return GET_TPL_TILING_KEY(
                     socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                     innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                     hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-                return tilingKey_;
             }
             isWeightNz = true; // KernelTemplateType::WEIGHT_NZ
             templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
-            tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         }
     }
 
     if (splitKFlag_) {
         isWeightNz = false; // WeightFormat::ND
         templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::MSD_GENERAL);
-        tilingKey_ = GET_TPL_TILING_KEY(
+        return GET_TPL_TILING_KEY(
             socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
             innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
             hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-        return tilingKey_;
     } else {
         if (highPrecision_) {
             isWeightNz = false; // WeightFormat::ND
             templateExtra = static_cast<uint64_t>(KernelTemplateTypeExtra::HIGH_PRECISION);
-            tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         } else {
             isWeightNz = false;
             templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
-            tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         }
     }
 }

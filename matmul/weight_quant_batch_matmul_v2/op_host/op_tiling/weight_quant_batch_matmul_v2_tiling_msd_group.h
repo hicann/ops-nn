@@ -123,11 +123,10 @@ protected:
             uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
             uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
             uint64_t batch = 0UL;
-            uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         } else {
             uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
             uint64_t subSocVersionType = 0UL;
@@ -149,11 +148,10 @@ protected:
             uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
             uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
             uint64_t batch = 0UL;
-            uint64_t tilingKey_ = GET_TPL_TILING_KEY(
+            return GET_TPL_TILING_KEY(
                 socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
                 innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
                 hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
-            return tilingKey_;
         }
     }
 
