@@ -243,7 +243,7 @@ static aclnnStatus DoAdaptiveAvgPool2D(
         CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // reshape(将3d的input转变为4d并增加D=1维)
         op::Shape inputContiguousShape = inputContiguous->GetViewShape();
-        auto inputDimNum = inputContiguousShape.GetDimNum();
+        int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape.GetDimNum());
         std::vector<int64_t> valueShape(ncdhwShapeSize);
         valueShape[0] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(0) : 1;
         valueShape[1] = inputDimNum == nchwShapeSize ? inputContiguousShape.GetDim(1) : inputContiguousShape.GetDim(0);

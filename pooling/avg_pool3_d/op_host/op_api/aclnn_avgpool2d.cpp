@@ -322,7 +322,7 @@ static bool IfSupport2dTo3d() {
 }
 
 // 计算经过avgpool2d后的shape的h和w（n,c与input一致，不用计算）
-static inline const int64_t PoolingOutShape(
+static inline int64_t PoolingOutShape(
     const int64_t inputSize, const int64_t kernelSize, const int64_t padL, const int64_t stride, const bool ceilMode) {
     int64_t outputSize = (stride == 0) ? -1 :
                          (inputSize + padL * PAD_DIM_2 - kernelSize + (ceilMode ? stride - 1 : 0)) / stride + 1;

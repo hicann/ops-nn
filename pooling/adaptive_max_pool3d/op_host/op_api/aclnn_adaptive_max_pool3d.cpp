@@ -135,7 +135,7 @@ static bool CheckOutShape(
     size_t offset = outputDimNum == static_cast<size_t>(CDHW_SHAPE_SIZE) ? 1UL : 2UL;
     // 检查输入self shape与output shape的前2维是否一致
     for (size_t i = 0; i < offset; ++i) {
-        if (selfShape[i] != outputShape[i]) {
+        if (selfShape.GetDim(i) != outputShape.GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The [%lu] dim of outShape value should match the selfShape's.", i);
             return false;
         }

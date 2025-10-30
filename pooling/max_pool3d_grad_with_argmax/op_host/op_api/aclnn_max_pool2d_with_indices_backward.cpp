@@ -615,9 +615,7 @@ static const aclTensor* IndicesInputProcess3D(
     const aclTensor* indices, const aclTensor* gradOutput, aclOpExecutor* executor)
 {
     // 处理2D属性适配3D
-    const bool isIndices3D = indices->GetViewShape().GetDimNum() == DIMENTION_3;
     Shape gradOutputShape = gradOutput->GetViewShape();
-    Shape indxViewShape = indices->GetViewShape();
     int64_t n_batch = gradOutputShape.GetDim(DIM_INX_0);
     int64_t n_plane = gradOutputShape.GetDim(DIM_INX_1);
     int64_t indices_depth = gradOutputShape.GetDim(DIM_INX_2);
@@ -1003,11 +1001,6 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
-    const bool is3d = self->GetViewShape().GetDimNum() == DIMENTION_3;
-    const int64_t height =
-        is3d ? gradOutput->GetViewShape().GetDim(DIM_INX_1) : gradOutput->GetViewShape().GetDim(DIM_INX_2);
-    const int64_t width =
-        is3d ? gradOutput->GetViewShape().GetDim(DIM_INX_2) : gradOutput->GetViewShape().GetDim(DIM_INX_3);
     if (!(kH == 1 && kW == 1) && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                   GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) {
         L2_DFX_PHASE_1(

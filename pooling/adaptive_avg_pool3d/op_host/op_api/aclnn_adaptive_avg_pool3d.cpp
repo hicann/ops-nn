@@ -118,7 +118,7 @@ static bool CheckOutShape(const aclTensor* self, const aclIntArray* outputSize, 
     size_t outputDimNum = outputShape.GetDimNum();
     size_t offset = outputDimNum == static_cast<size_t>(cdhwShapeSize) ? 1UL : 2UL;
     for (size_t i = 0; i < offset; ++i) {
-        if (selfShape[i] != outputShape[i]) {
+        if (selfShape.GetDim(i) != outputShape.GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The [%lu] dim of outShape value should match the selfShape's.", i);
             return false;
         }

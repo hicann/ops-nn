@@ -150,9 +150,6 @@ static const int64_t DIM2 = 2;
 static const int64_t DIM3 = 3;
 static const int64_t DIM4 = 4;
 
-static size_t MIN_ARRAY_DIM_SIZE = 1;
-static size_t MAX_ARRAY_DIM_SIZE = 3;
-
 static const int64_t AVGV2_KERNEL_H_MAX = 255;
 static const int64_t AVGV2_KERNEL_W_MAX = 255;
 static const int64_t AVGV2_KERNEL_SIZE_H_MUL_W = 255;
@@ -751,7 +748,7 @@ static tuple<const aclIntArray*, const aclIntArray*, const aclIntArray*> FillInt
 static const aclTensor* CopyShape2OneDim(const aclTensor* self, aclOpExecutor* executor)
 {
     FVector<int> shapeVec;
-    for (int i = 0; i < self->GetViewShape().GetDimNum(); i++) {
+    for (uint64_t i = 0; i < self->GetViewShape().GetDimNum(); i++) {
         shapeVec.push_back(self->GetViewShape().GetDim(i));
     }
     auto shapeCopy = executor->ConvertToTensor(shapeVec.data(), shapeVec.size(), DataType::DT_INT32);
