@@ -1,0 +1,4365 @@
+{
+  "op_type": "ApplyAdamWV2",
+  "op_list": [
+    {
+      "bin_filename": "ApplyAdamWV2_93c4d0196fcbda7c3109b385632d08e5",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_b2d3a6595d9c6327a31be78fb4c0b908",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_e74ea45c5e2f9a63608597c97d98912a",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_2f44307208fd960fbdffeb70af2b5590",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_396c6818839fd1d52f3935454e9d31e3",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_5ac5edfe05736ec713545f9456f81dba",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_ffcf7ec97013838153d27ccaf100c295",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_408b43eb113443b32c6b134a3d51a17c",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_837a65e3905d85a6b03c766c472ae82a",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_303bc16cc0dcbc99c712963e36cec682",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_93c4d0196fcbda7c3109b385632d08e4",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_b2d3a6595d9c6327a31be78fb4c0b907",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_e74ea45c5e2f9a63608597c97d98912b",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_2f44307208fd960fbdffeb70af2b5591",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_396c6818839fd1d52f3935454e9d31e4",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_5ac5edfe05736ec713545f9456f81dbb",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_ffcf7ec97013838153d27ccaf100c296",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_408b43eb113443b32c6b134a3d51a17d",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_837a65e3905d85a6b03c766c472ae82b",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_303bc16cc0dcbc99c712963e36cec683",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_93c4d0196fcbda7c3109b385632d08f5",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_b2d3a6595d9c6327a31be78fb4c0b918",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_e74ea45c5e2f9a63608597c97d98913a",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_2f44307208fd960fbdffeb70af2b5580",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_396c6818839fd1d52f3935454e9d31f3",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_5ac5edfe05736ec713545f9456f81dca",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_ffcf7ec97013838153d27ccaf100c285",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_408b43eb113443b32c6b134a3d51a16c",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_837a65e3905d85a6b03c766c472ae83a",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_303bc16cc0dcbc99c712963e36cec672",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_93c4d0196fcbda7c3109b385632d07e4",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_b2d3a6595d9c6327a31be78fb4c0b807",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_e74ea45c5e2f9a63608597c97d98922b",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_2f44307208fd960fbdffeb70af2b5691",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_396c6818839fd1d52f3935454e9d32e4",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_5ac5edfe05736ec713545f9456f81ebb",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_ffcf7ec97013838153d27ccaf100c396",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_408b43eb113443b32c6b134a3d51a27d",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_837a65e3905d85a6b03c766c472ae72b",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "ApplyAdamWV2_303bc16cc0dcbc99c712963e36cec583",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "m",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "v",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "grad",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "step",
+          "index": 4,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "max_grad_norm",
+          "index": 5,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 0.1
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    }
+  ]
+}
