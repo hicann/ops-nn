@@ -72,8 +72,8 @@ public:
 
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
         matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>,
-        matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>, RNN_MM_CFG>
+        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
+        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>, RNN_MM_CFG>
         hiddenMM;
 };
 
