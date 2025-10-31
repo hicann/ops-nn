@@ -32,12 +32,9 @@ static ge::graphStatus InferShape4ForeachPowScalarAndTensor(gert::InferShapeCont
 
     std::string errMsg = optiling::ConcatString(
         "num of dynamic input1 ", inputInfo->GetInstanceNum(), "not equal num of dynamic output0 ", outputNum);
-    OP_CHECK_IF(
-        inputInfo->GetInstanceNum() != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
-        return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < inputInfo->GetInstanceNum(); i++) {
-        auto xShape = context->GetDynamicInputShape(1, i);
+    for (uint32_t i = 0; i < outputNum; i++) {
+        auto xShape = context->GetInputShape(i + 1);
         auto yShape = context->GetOutputShape(i);
         if ((xShape == nullptr) || (yShape == nullptr)) {
             return ge::GRAPH_FAILED;
@@ -57,12 +54,9 @@ static ge::graphStatus InferDataType4ForeachPowScalarAndTensor(gert::InferDataTy
 
     std::string errMsg = optiling::ConcatString(
         "num of dynamic input1 ", inputInfomation->GetInstanceNum(), "not equal num of dynamic output0 ", outputNumber);
-    OP_CHECK_IF(
-        inputInfomation->GetInstanceNum() != outputNumber, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
-        return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < inputInfomation->GetInstanceNum(); i++) {
-        auto xDtype = context->GetDynamicInputDataType(1, i);
+    for (uint32_t i = 0; i < outputNumber; i++) {
+        auto xDtype = context->GetInputDataType(i + 1);
         context->SetOutputDataType(i, xDtype);
     }
     return ge::GRAPH_SUCCESS;

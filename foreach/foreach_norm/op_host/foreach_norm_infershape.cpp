@@ -24,19 +24,16 @@ namespace ops {
 static ge::graphStatus InferShape4ForeachNorm(gert::InferShapeContext* context)
 {
     uint32_t outputNum = context->GetComputeNodeOutputNum();
-    const auto inputInfo = context->GetIrInputInstanceInfo(0);
-    if (inputInfo == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    uint32_t inputNum = context->GetComputeNodeInputNum();
 
     std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputInfo->GetInstanceNum(), "not equal num of dynamic output0 ", outputNum);
+        "num of dynamic input0 ", inputNum - 1, "not equal num of dynamic output0 ", outputNum);
     OP_CHECK_IF(
-        inputInfo->GetInstanceNum() != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
+        (inputNum - 1) != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
         return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < inputInfo->GetInstanceNum(); i++) {
-        auto xShape = context->GetDynamicInputShape(0, i);
+    for (uint32_t i = 0; i < inputNum - 1; i++) {
+        auto xShape = context->GetInputShape(i);
         auto yShape = context->GetOutputShape(i);
         if ((xShape == nullptr) || (yShape == nullptr)) {
             return ge::GRAPH_FAILED;
@@ -50,19 +47,16 @@ static ge::graphStatus InferShape4ForeachNorm(gert::InferShapeContext* context)
 static ge::graphStatus InferDataType4ForeachNorm(gert::InferDataTypeContext* context)
 {
     uint32_t outputNum = context->GetComputeNodeOutputNum();
-    const auto inputInfo = context->GetIrInputInstanceInfo(0);
-    if (inputInfo == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    uint32_t inputNum = context->GetComputeNodeInputNum();
 
     std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputInfo->GetInstanceNum(), "not equal num of dynamic output0 ", outputNum);
+        "num of dynamic input0 ", inputNum - 1, "not equal num of dynamic output0 ", outputNum);
     OP_CHECK_IF(
-        inputInfo->GetInstanceNum() != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
+        (inputNum - 1) != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
         return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < inputInfo->GetInstanceNum(); i++) {
-        auto xDtype = context->GetDynamicInputDataType(0, i);
+    for (uint32_t i = 0; i < inputNum - 1; i++) {
+        auto xDtype = context->GetInputDataType(i);
         context->SetOutputDataType(i, xDtype);
     }
     return ge::GRAPH_SUCCESS;

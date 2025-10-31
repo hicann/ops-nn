@@ -25,7 +25,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
-#include "register/op_impl_registry_base.h"
 #include "test_cube_util.h"
 #include "../../../op_host/foreach_non_finite_check_and_unscale_tiling.h"
 
