@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef __quant_batch_matmul_v4_TILING_H__
-#define __quant_batch_matmul_v4_TILING_H__
+#ifndef __QUANT_BATCH_MATMUL_V4_TILING_DEF_H__
+#define __QUANT_BATCH_MATMUL_V4_TILING_DEF_H__
 
 #include <cstdint>
 #include <cstring>
@@ -21,6 +21,69 @@
 #else
 #define __aicore__ [aicore]
 #endif
+
+#pragma pack(1)
+struct QuantBatchMatmulV3Params
+{
+    uint32_t batchA = 0;
+    uint32_t batchB = 0;
+    uint32_t batchC = 0;
+    uint32_t batchA1 = 0;
+    uint32_t batchA2 = 0;
+    uint32_t batchA3 = 0;
+    uint32_t batchA4 = 0;
+    uint32_t batchB1 = 0;
+    uint32_t batchB2 = 0;
+    uint32_t batchB3 = 0;
+    uint32_t batchB4 = 0;
+    uint32_t batchC1 = 0;
+    uint32_t batchC2 = 0;
+    uint32_t batchC3 = 0;
+    uint32_t batchC4 = 0;
+    uint32_t singleCoreBatch = 0;
+    uint32_t isPerTensor = 0;
+    uint32_t isPertoken = 0;
+    uint32_t isDoubleScale = 0;
+    uint32_t biasThreeDim = 0;  // 整块的个数
+    uint32_t ubCalcM = 0;
+    uint32_t ubCalcN = 0;
+    uint32_t needUbBuffer = 0;
+    uint32_t realSingleCoreM = 0;
+    uint32_t realSingleCoreN = 0;
+    uint32_t biasDtype = 0;
+    uint32_t ubSize = 0;
+    uint32_t isMClash = 0;
+    uint32_t isNClash = 0;
+    uint32_t groupSizeM = 0;
+    uint32_t groupSizeN = 0;
+    uint32_t groupSizeK = 0;
+};
+#pragma pack()
+#pragma pack(1)
+struct SlidingWindowParam {
+    uint32_t mTailTile = 0;
+    uint32_t nTailTile = 0;
+};
+#pragma pack()
+#pragma pack(1)
+struct L2cacheTileParam {
+    uint32_t mTileCntL2 = 0;
+    uint32_t nTileCntL2 = 0;
+    uint32_t mTileBlock = 0;
+    uint32_t nTileBlock = 0;
+    uint32_t calOrder = 0;
+    uint32_t isBasicTiling = 0;
+};
+#pragma pack()
+#pragma pack(1)
+struct QuantBatchMatmulV3TilingData
+{
+    QuantBatchMatmulV3Params params;
+    TCubeTiling matmulTiling;
+    L2cacheTileParam tileL2cacheTiling;
+    SlidingWindowParam adaptiveSlidingWin;
+};
+#pragma pack()
 #pragma pack(1)
 struct QuantBatchMatmulV4TilingData {
     uint8_t vecBlockDimN = 0;
@@ -86,7 +149,6 @@ struct QuantBatchMatmulV4TilingData {
     TCubeTiling matmulTiling;
 }__attribute__((__may_alias__));
 #pragma pack()
-
 #pragma pack(1)
 struct QuantBatchMatmulV4MsdTilingData {
     uint8_t coreNum = 0;
@@ -101,18 +163,6 @@ struct QuantBatchMatmulV4MsdTilingData {
     TCubeTiling matmulTiling;
 };
 #pragma pack()
-
-#pragma pack(1)
-struct L2cacheTileParam {
-    uint32_t mTileCntL2 = 0;
-    uint32_t nTileCntL2 = 0;
-    uint32_t mTileBlock = 0;
-    uint32_t nTileBlock = 0;
-    uint32_t calOrder = 0;
-    uint32_t isBasicTiling = 0;
-};
-#pragma pack()
-
 #pragma pack(1)
 struct QuantBatchMatmulV4PerblockTilingData {
     uint32_t groupSizeM = 0;

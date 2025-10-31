@@ -20,8 +20,13 @@
 #include "kernel_operator_intf.h"
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v4_constant.h"
+#if defined(__CCE_KT_TEST__)
+#include "../../quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3_block.h"
+#include "../../quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3_update.h"
+#else
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_block.h"
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_update.h"
+#endif
 
 namespace AscendC {
 
