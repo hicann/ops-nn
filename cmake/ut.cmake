@@ -401,6 +401,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 ${ASCEND_DIR}/include/base/context_builder
                 ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
                 ${PROJECT_SOURCE_DIR}/tests/ut/common
+                ${PROJECT_SOURCE_DIR}/conv/conv3d_backprop_input_v2/op_kernel
                 )
         target_link_libraries(${opName}_${socVersion}_cases_obj PRIVATE
                 $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>

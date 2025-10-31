@@ -12,9 +12,15 @@
  * \file conv3d_transpose_v2.cpp
  * \brief
  */
+#ifdef __CCE_KT_TEST__
+#include "../op_kernel/arch32/conv3d_backprop_input_v2.h"
+#include "../op_kernel/arch32/conv3d_backprop_input_v2_init_output.h"
+#include "../op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"
+#else
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2.h"
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_tiling_data.h"
+#endif
 #include "conv3d_transpose_v2_tiling_key.h"
 
 using namespace AscendC;
@@ -33,7 +39,7 @@ __global__ __aicore__ void conv3d_transpose_v2(
         return;
     }
     REGISTER_TILING_DEFAULT(Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA(tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(Conv3DBackpropInputV2TilingData, tilingData, tiling);
 
 #if __CCE_AICORE__ == 220
     if constexpr (FORMAT_Y == FORMAT_NCDHW) {
