@@ -79,7 +79,10 @@ int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t 
 int32_t CalcHo(int64_t k, int32_t wo, const std::string &op_type) {
   OP_LOGE_IF((k == 0 || wo == 0), 0, op_type, "ho is 0 in CalcHo function.");
   // 完整K是ho*wo，k可能超int32，但是下面除完以后的wo不可能超int32
-  int32_t ho = static_cast<int32_t>(Ops::Base::CeilDiv(k, static_cast<int64_t>(wo)));
+  int64_t ho_64 = Ops::Base::CeilDiv(k, static_cast<int64_t>(wo));
+  OP_TILING_CHECK(ho_64 > INT32_MAX,
+                  CUBE_INNER_ERR_REPORT(op_type, "Calculated ho exceeds int32_t max value"), return -1);
+  int32_t ho = static_cast<int32_t>(ho_64);
   if (k % wo == 0 || wo % k == 0) {
     return ho;
   } else {

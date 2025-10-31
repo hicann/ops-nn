@@ -28,7 +28,7 @@ int32_t MathUtil::GetGcd(int32_t param1, int32_t param2) {
     std::swap(param1, param2);
   }
   if (param2 == 0) {
-    return 0;
+    return param1;
   }
   if (param1 % param2 == 0) {
     return param2;
