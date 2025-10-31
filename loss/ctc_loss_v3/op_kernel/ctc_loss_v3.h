@@ -684,7 +684,7 @@ private:
             logAlphaTensor.SetValue(0, logProbBlank);
             SToMTE3Sync();
         } else if (t < inputLength) {
-            Duplicate<float>(logAlphaTensor, -INFINITY, alphaLengthAlign);
+            Duplicate<float>(logAlphaTensor, -INFINITY, alphaTailSizeAlign);
             CopyInAlpha123Tensor(batchId, t);
             Compare(gtAlpha1MaskTensor, logAlpha2Tensor, logAlpha1Tensor, CMPMODE::GT, doubleSiAlign);
             PipeBarrier<PIPE_V>();
@@ -810,9 +810,9 @@ private:
                 PipeBarrier<PIPE_V>();
                 Add(expLogTensor, expLogTensor, expLogTensor[FLOAT_NUM_PER_BLOCK], FLOAT_NUM_PER_BLOCK);
                 PipeBarrier<PIPE_V>();
-                Log(expLogTensor, expLogTensor, FLOAT_NUM_PER_BLOCK);
+                Log(expLogTensor[FLOAT_NUM_PER_BLOCK], expLogTensor, FLOAT_NUM_PER_BLOCK);
                 VToSSync();
-                float log_likelihood = expLogTensor.GetValue(0) + m;
+                float log_likelihood = expLogTensor.GetValue(FLOAT_NUM_PER_BLOCK) + m;
                 expLogTensor.SetValue(0, (zeroInfinity && log_likelihood == -INFINITY) ? 0.0f : -log_likelihood);
             } else if (targetLength == 0) {
                 float log_likelihood = logAlphaTensor.GetValue(0);

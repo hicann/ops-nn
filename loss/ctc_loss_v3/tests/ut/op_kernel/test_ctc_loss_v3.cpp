@@ -85,16 +85,15 @@ void TestCTCLossV3Kernel(
     tilingDatafromBin->sliceLength = 1024;
     tilingDatafromBin->sliceLengthTail = 1024;
     tilingDatafromBin->probSliceNum = 1;
-    // tilingDatafromBin->alphaLength = alpha;
-    tilingDatafromBin->maxTargetLength = S;
+    tilingDatafromBin->maxTargetLength = 2;
     tilingDatafromBin->timeStep = Time;
     tilingDatafromBin->symbleSet = C;
     tilingDatafromBin->batchSize = N;
     tilingDatafromBin->targetsDimNum = 2;
     tilingDatafromBin->targetsDimLength = S;
     tilingDatafromBin->targetsNum = N * S;
-    tilingDatafromBin->taskPerCore = 1;
-    tilingDatafromBin->taskTailCore = 0;
+    tilingDatafromBin->taskPerCore = 0;
+    tilingDatafromBin->taskTailCore = 1;
     tilingDatafromBin->blank = 0;
     tilingDatafromBin->zeroInfinity = 0;
 
