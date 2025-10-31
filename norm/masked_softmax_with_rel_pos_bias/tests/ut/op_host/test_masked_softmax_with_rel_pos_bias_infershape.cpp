@@ -8,17 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h>
+#include <gtest/gtest.h> // NOLINT
 #include <iostream>
-#include "op_proto_test_util.h"
-#include "experiment_ops.h"
-#include "common/utils/ut_op_common.h"
-#include "array_ops.h"
-#include "util/util.h"
-#include "matrix_calculation_ops.h"
+#include "infershape_test_util.h"
+#include "ut_op_common.h"
+#include "log/log.h"
+#include "../../../op_graph/masked_softmax_with_rel_pos_bias_proto.h"
 
-
-class masked_softmax_with_rel_pos_bias : public testing::Test {
+class MaskedSoftmaxWithRelPosBias : public testing::Test {
  protected:
   static void SetUpTestCase() {
     std::cout << "MaskedSoftmaxWithRelPosBias Proto Test SetUp" << std::endl;
@@ -29,7 +26,7 @@ class masked_softmax_with_rel_pos_bias : public testing::Test {
   }
 };
 
-TEST_F(masked_softmax_with_rel_pos_bias, masked_softmax_with_rel_pos_bias_infershape_test_2_BSH_FLOAT) {
+TEST_F(MaskedSoftmaxWithRelPosBias, MaskedSoftmaxWithRelPosBias_infershape_case_0) {
   ge::op::MaskedSoftmaxWithRelPosBias op;
   op.UpdateInputDesc("x", create_desc({1, 2, 2, 2048, 64}, ge::DT_FLOAT));
   op.UpdateInputDesc("relative_pos_bias", create_desc({2, 2048, 64}, ge::DT_FLOAT));

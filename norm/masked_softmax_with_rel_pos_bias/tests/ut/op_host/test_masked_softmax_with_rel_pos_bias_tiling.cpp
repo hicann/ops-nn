@@ -1,23 +1,18 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
-
-#include <gtest/gtest.h>
-#include "op_log.h"
-
-#include "kernel_run_context_facker.h"
-
-#include "tiling/tiling_type.h"
-#include "tiling/tiling_templates_registry.h"
-#include "experiment_ops.h"
 #include "array_ops.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common/utils/ut_op_util.h"
-#include "common_unittest.h"
+#include <gtest/gtest.h>
+#include "log/log.h"
+#include "register/op_impl_registry.h"
+#include "tiling_base/tiling_templates_registry.h"
+#include "platform/platform_infos_def.h"
+#include "ut_op_util.h"
+#include "kernel_run_context_facker.h"
+#include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "test_cube_util.h"
-#include "auto_tiling_rt2.h"
 #include "../../../op_host/masked_softmax_with_rel_pos_bias_tiling.h"
 
 using namespace std;
@@ -89,9 +84,9 @@ void testTiling(gert::StorageShape &x_shape,
               .NodeInputTd(2, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeOutputTd(0, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeAttrs({
-                  {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                  {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                   {"inner_precision_mode",
-                   ge::AnyValue::CreateFrom<int64_t>(0)},
+                   Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
               })
               .TilingData(param.get())
               .Workspace(ws_size)
@@ -111,9 +106,9 @@ void testTiling(gert::StorageShape &x_shape,
               .NodeInputTd(2, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeOutputTd(0, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeAttrs({
-                  {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                  {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                   {"inner_precision_mode",
-                   ge::AnyValue::CreateFrom<int64_t>(0)},
+                   Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
               })
               .TilingData(param.get())
               .Workspace(ws_size)
@@ -136,7 +131,7 @@ void testTiling(gert::StorageShape &x_shape,
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
 
-    ASSERT_EQ(TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
+    ASSERT_EQ(Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
               ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, key + 10 * i);
@@ -193,9 +188,9 @@ void testTilingFailed(gert::StorageShape &x_shape,
             .NodeInputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs({
-                {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                 {"inner_precision_mode",
-                 ge::AnyValue::CreateFrom<int64_t>(0)},
+                 Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
             })
             .TilingData(param.get())
             .Workspace(ws_size)
@@ -215,9 +210,9 @@ void testTilingFailed(gert::StorageShape &x_shape,
             .NodeInputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeOutputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
             .NodeAttrs({
-                {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                 {"inner_precision_mode",
-                 ge::AnyValue::CreateFrom<int64_t>(0)},
+                 Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
             })
             .TilingData(param.get())
             .Workspace(ws_size)
@@ -239,7 +234,7 @@ void testTilingFailed(gert::StorageShape &x_shape,
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
       "AICoreintrinsicDtypeMap", intrinsics);
 
-  ASSERT_EQ(TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
+  ASSERT_EQ(Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
             ge::GRAPH_FAILED);
 }
 
@@ -289,8 +284,8 @@ void testTilingShapeCheckFailed(gert::StorageShape &x_shape,
           .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
           .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
           .NodeAttrs({
-              {"scale_value", ge::AnyValue::CreateFrom<float>(1.0)},
-              {"inner_precision_mode", ge::AnyValue::CreateFrom<int64_t>(0)},
+              {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+              {"inner_precision_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
           })
           .TilingData(param.get())
           .Workspace(ws_size)
@@ -310,7 +305,7 @@ void testTilingShapeCheckFailed(gert::StorageShape &x_shape,
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
       "AICoreintrinsicDtypeMap", intrinsics);
 
-  ASSERT_EQ(TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
+  ASSERT_EQ(Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
             ge::GRAPH_FAILED);
 }
 
@@ -803,7 +798,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_failed) {
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-  //ASSERT_EQ(TilingRegistry::GetInstance().DoTilingImpl(tiling_context), ge::GRAPH_FAILED);
+  //ASSERT_EQ(Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tiling_context), ge::GRAPH_FAILED);
 }
 
 TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_s2_1) {
@@ -887,9 +882,9 @@ void test310PTiling(gert::StorageShape &x_shape,
               .NodeInputTd(2, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeOutputTd(0, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeAttrs({
-                  {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                  {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                   {"inner_precision_mode",
-                   ge::AnyValue::CreateFrom<int64_t>(0)},
+                   Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
               })
               .TilingData(param.get())
               .Workspace(ws_size)
@@ -909,9 +904,9 @@ void test310PTiling(gert::StorageShape &x_shape,
               .NodeInputTd(2, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeOutputTd(0, testDataType[i], ge::FORMAT_ND, ge::FORMAT_ND)
               .NodeAttrs({
-                  {"scale_value", ge::AnyValue::CreateFrom<float>(scaleValue)},
+                  {"scale_value", Ops::NN::AnyValue::CreateFrom<float>(scaleValue)},
                   {"inner_precision_mode",
-                   ge::AnyValue::CreateFrom<int64_t>(0)},
+                   Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
               })
               .TilingData(param.get())
               .Workspace(ws_size)
@@ -934,7 +929,7 @@ void test310PTiling(gert::StorageShape &x_shape,
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
 
-    ASSERT_EQ(TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
+    ASSERT_EQ(Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tiling_context),
               ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, key + 10 * i);
