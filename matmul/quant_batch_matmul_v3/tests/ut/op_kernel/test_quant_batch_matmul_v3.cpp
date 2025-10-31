@@ -21,12 +21,5 @@ TEST_P(QMMV3_SUITE_NAME_test, generalTest)
     QuantBatchMatmulV3TestUtils::TestOneParamCase(param);
 }
 
-#if defined(__CCE_AICORE__)
-#if __CCE_AICORE__ == 200
-INSTANTIATE_TEST_CASE_P(QUANTMM310P, QMMV3_SUITE_NAME_test,
-                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend310P3", "QMMV3_SUITE_NAME")));
-#elif __CCE_AICORE__ == 220
 INSTANTIATE_TEST_CASE_P(QUANTMM910B, QMMV3_SUITE_NAME_test,
-                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend910B2", "QMMV3_SUITE_NAME")));
-#endif
-#endif
+                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend910B2", "quant_batch_matmul_v3_bf16")));

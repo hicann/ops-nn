@@ -21,6 +21,8 @@
 #include "data_utils.h"
 #include "string.h"
 #include "tikicpulib.h"
+#include "weight_quant_batch_matmul_v2_tiling_def.h"
+#include "../../../op_kernel/weight_quant_batch_matmul_v2.cpp"
 #endif
 
 #include <cstdint>
@@ -28,10 +30,7 @@
 using namespace std;
 // using namespace AscendC;
 
-extern "C" __global__ __aicore__ void weight_quant_batch_matmul_v2(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
-
 class TestWeightQuantBatchMatmulV2 : public testing::Test
 {
 };
+

@@ -16,16 +16,39 @@
 #include <vector>
 #include <fstream>
 #include <limits.h>
+#include <tuple>
+#include <functional>
 
+#ifdef __CCE_KT_TEST__
 #include "quant_batch_matmul_v3_tiling_def.h"
 #include "tikicpulib.h"
 #include "gtest/gtest.h"
+#include "../../../op_kernel/quant_batch_matmul_v3.cpp"
+#endif
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset,
-                                                            GM_ADDR bias, GM_ADDR pertokenScale, GM_ADDR y,
-                                                            GM_ADDR workSpace, GM_ADDR tiling);
+struct TupleHash {
+    uint64_t operator()(const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>& tuple_key) const
+    {
+        const auto& a = std::get<0>(tuple_key);
+        const auto& b = std::get<1>(tuple_key);
+        const auto& c = std::get<2>(tuple_key);
+        const auto& d = std::get<3>(tuple_key);
+        uint64_t seed = std::hash<uint64_t>{}(a);
+        seed ^= std::hash<uint64_t>{}(b) + 0x9e3779b9UL + (seed << 6) + (seed >> 2);
+        seed ^= std::hash<uint64_t>{}(c) + 0x9e3779b9UL + (seed << 6) + (seed >> 2);
+        seed ^= std::hash<uint64_t>{}(d) + 0x9e3779b9UL + (seed << 6) + (seed >> 2);
+        return seed;
+    }
+};
+
+using QuantBatchMatmulFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
+
+static std::unordered_map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, QuantBatchMatmulFunc, TupleHash> funcMap =
+    {{{1UL, 2UL, 0UL, 0UL}, &::quant_batch_matmul_v3<0, 2, 0, 0>},
+     {{2UL, 2UL, 0UL, 0UL}, &::quant_batch_matmul_v3<2, 2, 0, 0>},
+     {{0UL, 2UL, 1UL, 0UL}, &::quant_batch_matmul_v3<0, 2, 1, 0>}};
 
 struct QuantBatchMatmulV3TestParam {
     std::string socVersion;
@@ -53,7 +76,11 @@ struct QuantBatchMatmulV3TestParam {
     // output
     bool result; // false means tiling fail
     uint32_t blockDim;
-    uint64_t tilingKey;
+    // Tiling defined in quant_batch_matmul_v3_tiling_key.h
+    uint64_t trans;
+    uint64_t kernel_template_type;
+    uint64_t pertoken;
+    uint64_t option_attr;
     std::string tilingData;
 };
 
@@ -98,8 +125,8 @@ public:
     static vector<QuantBatchMatmulV3TestParam> GetParams(const string &socVersion, const string &testSuite)
     {
         std::vector<QuantBatchMatmulV3TestParam> params;
-        std::string rootPath(GetExeDirPath() + "../../../../../../../");
-        std::string casePath(rootPath + "ops/matmul/quant_batch_matmul_v3/tests/ut/op_host/test_quant_batch_matmul_v3.csv");
+        std::string rootPath(GetExeDirPath() + "../../../../");
+        std::string casePath(rootPath + "matmul/quant_batch_matmul_v3/tests/ut/op_kernel/test_quant_batch_matmul_v3.csv");
         std::ifstream csvData(casePath, std::ios::in);
         if (!csvData.is_open()) {
             std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -147,7 +174,10 @@ public:
             param.weightNz = testParam[idx++] == "NZ";
             param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
             param.blockDim = stol(testParam[idx++]);
-            param.tilingKey = stol(testParam[idx++]);
+            param.trans = stol(testParam[idx++]);
+            param.kernel_template_type = stol(testParam[idx++]);
+            param.pertoken = stol(testParam[idx++]);
+            param.option_attr = stol(testParam[idx++]);
             param.tilingData = testParam[idx++];
             params.push_back(param);
         }
@@ -201,9 +231,22 @@ public:
         } else {
             AscendC::SetKernelMode(KernelMode::MIX_AIC_1_1);
         }
-        ICPU_SET_TILING_KEY(param.tilingKey);
-        ICPU_RUN_KF(quant_batch_matmul_v3, std::min(MAX_BLOCK_DIM, param.blockDim), x1, x2, scale, offset, bias,
-                    pertokenScale, y, workspace, tiling);
+
+        auto wrapper = [param](
+                           GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR pertokenScale,
+                           GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+            auto key = std::make_tuple(param.trans, param.kernel_template_type, param.pertoken, param.option_attr);
+            auto it = funcMap.find(key);
+            if (it != funcMap.end()) {
+                it->second(x1, x2, scale, offset, bias, pertokenScale, y, workSpace, tiling);
+            } else {
+                throw std::runtime_error("Unsupported parameter combination.");
+            }
+        };
+
+        ICPU_RUN_KF(
+            wrapper, std::min(MAX_BLOCK_DIM, param.blockDim), x1, x2, scale, offset, bias, pertokenScale, y, workspace,
+            tiling);
 
         AscendC::GmFree(x1);
         AscendC::GmFree(x2);

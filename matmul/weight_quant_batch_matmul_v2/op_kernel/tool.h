@@ -43,7 +43,7 @@ using AscendC::TPosition;
 using AscendC::WaitFlag;
 using matmul::MatmulType;
 
-#if defined(__CCE_KT_TEST__)
+#if defined(__CCE_KT_TEST__) && !defined(WQBMMV2_KERNEL_TEST)
 #include <sys/types.h>
 #include <unistd.h>
 

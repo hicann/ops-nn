@@ -12,8 +12,13 @@
  * \file gemm_v2.cpp
  * \brief
  */
+#if defined(__CCE_KT_TEST__)
+#include "../../mat_mul_v3/op_kernel/mat_mul_base_kernel.h"
+#include "../../mat_mul_v3/op_kernel/mat_mul_v3_tiling_key.h"
+#else
 #include "../mat_mul_v3/mat_mul_base_kernel.h"
 #include "../mat_mul_v3/mat_mul_v3_tiling_key.h"
+#endif
 using namespace AscendC;
 using namespace matmul;
 #ifndef DTYPE_BIAS
