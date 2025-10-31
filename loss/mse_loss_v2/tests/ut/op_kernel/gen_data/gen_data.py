@@ -12,16 +12,11 @@ import sys
 import numpy as np
 import torch
 import ast
-from bfloat16 import bfloat16
 
 def get_cpu_data(data_shape, input_predict, input_target, reduction):
     ori_type = input_predict.dtype
-    if ori_type == "bfloat16":
-        input_predict = torch.from_numpy(input_predict).to(torch.float32)
-        input_target = torch.from_numpy(input_target).to(torch.float32)
-    else:
-        input_predict = torch.from_numpy(input_predict)
-        input_target = torch.from_numpy(input_target)
+    input_predict = torch.from_numpy(input_predict)
+    input_target = torch.from_numpy(input_target)
     output = torch.nn.functional.mse_loss(input_predict, input_target, reduction=reduction).numpy().astype(ori_type)
     if reduction == 'none':
         return output

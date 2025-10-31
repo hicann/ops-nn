@@ -60,10 +60,6 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    auto read_file_0 = ReadFile(path + "/gen_data/input_input.bin", inputByteSize, input, inputByteSize);
-    auto read_file_1 = ReadFile(path + "/gen_data/input_target.bin", targetByteSize, target, targetByteSize);
-    cout << read_file_0 << " read_file_0 SetUp\n" << endl;
-    cout << read_file_1 << " read_file_1 SetUp\n" << endl;
     MSELossV2TilingDataTest* tilingDatafromBin = reinterpret_cast<MSELossV2TilingDataTest*>(tiling);
 
     tilingDatafromBin->coreNum = 8;
@@ -78,9 +74,8 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     tilingDatafromBin->tailTileLengthForLastCore = 3840;
 
     ICPU_SET_TILING_KEY(32);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(mse_loss_v2, blockDim, input, target, output, workspace, (uint8_t*)(tilingDatafromBin));
-
-    WriteFile(path + "/gen_data/out.bin", output, outputByteSize);
 
     AscendC::GmFree(input);
     AscendC::GmFree(target);
@@ -88,8 +83,5 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     free(path_);
-
-    // int res = system("cd ./gen_data/ && python3 mse_loss_v2_data_compare.py 'float16'");
     system("rm -rf gen_data");
-    // ASSERT_EQ(res, 0);
 }
