@@ -207,6 +207,7 @@ int main()
     aclrtFree(xDeviceAddr);
     aclrtFree(gxDeviceAddr);
     aclrtFree(gammaDeviceAddr);
+    aclrtFree(betaDeviceAddr);
     aclrtFree(outputMeanDeviceAddr);
     aclrtFree(outputRstdDeviceAddr);
     aclrtFree(outputYDeviceAddr);

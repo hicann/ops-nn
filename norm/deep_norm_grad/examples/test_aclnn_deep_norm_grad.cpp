@@ -116,15 +116,15 @@ int main()
     aclTensor* outputpdgamma = nullptr;
 
     std::vector<float> dyHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    std::vector<int32_t> xHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    std::vector<int32_t> gxHostData = {2, 2, 2, 4, 4, 4, 6, 6, 6, 8, 8, 8};
-    std::vector<int32_t> gammaHostData = {0, 1, 2, 3};
-    std::vector<int32_t> meanHostData = {0, 1, 2};
-    std::vector<int32_t> rstdHostData = {0, 1, 2};
-    std::vector<int32_t> outputpdxHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    std::vector<int32_t> outputpdgxHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    std::vector<int32_t> outputpdbetaHostData = {0, 1, 2, 3};
-    std::vector<int32_t> outputpdgammaHostData = {0, 1, 2, 3};
+    std::vector<float> xHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<float> gxHostData = {2, 2, 2, 4, 4, 4, 6, 6, 6, 8, 8, 8};
+    std::vector<float> gammaHostData = {0, 1, 2, 3};
+    std::vector<float> meanHostData = {0, 1, 2};
+    std::vector<float> rstdHostData = {0, 1, 2};
+    std::vector<float> outputpdxHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<float> outputpdgxHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<float> outputpdbetaHostData = {0, 1, 2, 3};
+    std::vector<float> outputpdgammaHostData = {0, 1, 2, 3};
 
     // 创建self aclTensor
     ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy);
