@@ -288,10 +288,10 @@ static bool CheckRoundMode(const char* roundMode, int32_t dstType)
             return false;
         }
     } else if (dstType == op::DataType::DT_FLOAT8_E4M3FN || dstType == op::DataType::DT_FLOAT8_E5M2) {
-        if (mode != "round" && mode != "hybrid") {
+        if (mode != "round") {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round', 'hybrid'] for float8_e5m2/float8_e4m3fn.",
+                "check roundMode failed, roundMode[%s] not in ['round'] for float8_e5m2/float8_e4m3fn.",
                 mode.c_str());
             return false;
         }
