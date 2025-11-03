@@ -43,7 +43,7 @@ using AscendC::TPosition;
 using AscendC::WaitFlag;
 using matmul::MatmulType;
 
-#if defined(__CCE_KT_TEST__) && !defined(WQBMMV2_KERNEL_TEST)
+#if defined(__CCE_KT_TEST__)
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -57,18 +57,29 @@ constexpr int DEBUG_T_PRECISION = 6;
 constexpr int DEBUG_HALF_WIDTH = 14;
 constexpr int DEBUG_HALF_PRECISION = 4;
 
-template <typename T>
-std::string DoPrintData(
-    const LocalTensor<T>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
+template<typename T>
+void FormatElement(std::ostream& oss, T value) {
+    if constexpr (std::is_same_v<T, uint8_t> || std::is_same_v<T, int8_t>) {
+        oss << static_cast<int>(value);
+    } else if constexpr (std::is_same_v<T, half>) {
+        oss << std::setw(DEBUG_HALF_PRECISION) << value.ToFloat();
+    } else {
+        oss << std::setw(DEBUG_T_WIDTH) << std::setprecision(DEBUG_T_PRECISION) << value;
+    }
+}
+
+template<typename Tensor, typename T>
+std::string DoPrintDataImpl(
+    const Tensor& tensor, size_t count, size_t stride, size_t elementsPerRow, 
+    const std::string& block_id, const std::string& core_type) {
     auto data = tensor.GetPhyAddr();
     std::ostringstream oss;
     for (size_t localCount = 0; localCount < count; ++localCount) {
         if (localCount == 0) {
             oss << "[" << block_id << "][" << core_type << "] ";
         }
-        oss << std::setw(DEBUG_T_WIDTH) << std::setprecision(DEBUG_T_PRECISION) << data[localCount * stride] << " ";
+        FormatElement<T>(oss, data[localCount * stride]);
+        oss << " ";
         if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
             oss << std::endl << "[" << block_id << "][" << core_type << "] ";
         }
@@ -77,123 +88,11 @@ std::string DoPrintData(
     return oss.str();
 }
 
-template <>
-std::string DoPrintData(
-    const LocalTensor<uint8_t>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << (int)data[localCount * stride] << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
-}
-
-template <>
-std::string DoPrintData(
-    const LocalTensor<int8_t>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << (int)data[localCount * stride] << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
-}
-
-template <>
-std::string DoPrintData(
-    const LocalTensor<half>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << std::setw(DEBUG_HALF_PRECISION) << data[localCount * stride].ToFloat() << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
-}
-
-template <typename T>
-std::string DoPrintData(
-    const GlobalTensor<T>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << std::setw(DEBUG_T_WIDTH) << std::setprecision(DEBUG_T_PRECISION) << data[localCount * stride] << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
-}
-
-std::string DoPrintData(
-    const GlobalTensor<int8_t>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << (int)data[localCount * stride] << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
-}
-
-template <>
-std::string DoPrintData(
-    const GlobalTensor<half>& tensor, size_t count, size_t stride, size_t elementsPerRow, const std::string& block_id,
-    const std::string& core_type)
-{
-    auto data = tensor.GetPhyAddr();
-    std::ostringstream oss;
-    for (size_t localCount = 0; localCount < count; ++localCount) {
-        if (localCount == 0) {
-            oss << "[" << block_id << "][" << core_type << "] ";
-        }
-        oss << std::setw(DEBUG_HALF_PRECISION) << data[localCount * stride].ToFloat() << " ";
-        if ((localCount % elementsPerRow == elementsPerRow - 1) && (localCount != count - 1)) {
-            oss << std::endl << "[" << block_id << "][" << core_type << "] ";
-        }
-    }
-    oss << std::endl;
-    return oss.str();
+template<typename Tensor>
+inline std::string DoPrintData(
+    const Tensor& tensor, size_t count, size_t stride, size_t elementsPerRow, 
+    const std::string& block_id, const std::string& core_type) {
+    return DoPrintDataImpl(tensor, count, stride, elementsPerRow, block_id, core_type);
 }
 
 #define PRINT_DATA(data, count, stride, elementsPerRow, format, ...)                                              \
