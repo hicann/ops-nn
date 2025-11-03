@@ -408,6 +408,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 ${PROJECT_SOURCE_DIR}/matmul/weight_quant_batch_matmul_v2/op_kernel
                 ${PROJECT_SOURCE_DIR}/matmul/gemm_v2/op_kernel
                 ${PROJECT_SOURCE_DIR}/matmul/quant_batch_matmul_v4/op_kernel
+                ${PROJECT_SOURCE_DIR}/matmul/transpose_batch_mat_mul/op_kernel
                 )
         target_link_libraries(${opName}_${socVersion}_cases_obj PRIVATE
                 $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>

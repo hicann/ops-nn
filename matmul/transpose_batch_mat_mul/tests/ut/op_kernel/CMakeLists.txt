@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(transpose_batch_mat_mul "ascend910B1" "-DDTYPE_X1=half -DDTYPE_X2=half -DDTYPE_BIAS=half -DDTYPE_Y=half" mat_mul_v3 batch_mat_mul_v3)
 endif()

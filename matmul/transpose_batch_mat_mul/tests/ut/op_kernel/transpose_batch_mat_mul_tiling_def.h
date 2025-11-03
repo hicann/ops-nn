@@ -30,6 +30,8 @@ struct MatMulRunInfo {
     uint32_t transB;
     uint32_t nd2nzA;
     uint32_t nd2nzB;
+    uint32_t isNzA;
+    uint32_t isNzB;
     uint32_t isHf32;
 };
 
@@ -54,6 +56,8 @@ struct MultiBatchInfo {
   uint32_t biasWithBatch;
   uint32_t mOri;
   uint32_t batchTileBlock;
+  uint32_t aBatch;
+  uint32_t bBatch;
 };
 
 struct MatmulTilingData{
