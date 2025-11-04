@@ -147,7 +147,7 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
                 OP_LOGE(op_name, "input_size %ld is too large and will cause overflow of int64.", *input_size),
                 return ge::GRAPH_FAILED);
             int64_t align_dim = (*input_size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE +
-                                (*hidden_size + BLOCK_SIZE) / BLOCK_SIZE * BLOCK_SIZE;
+                                (*hidden_size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
             shape_x2_new.SetDim(0, align_dim);
         }
     }

@@ -152,15 +152,17 @@ int main() {
   // step3 调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceAddmm\n");
   // 调用aclnnInplaceAddmm第一段接口
-  ret = aclnnInplaceAddmmGetWorkspaceSize(self, mat1, mat2, beta, alpha, cubeMathType, &workspaceSize, &executor);
+  uint64_t workspaceSizeForInplace = 0;
+  ret = aclnnInplaceAddmmGetWorkspaceSize(self, mat1, mat2, beta, alpha, cubeMathType, &workspaceSizeForInplace, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
-  if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+  void* workspaceAddrForInplace = nullptr;
+  if (workspaceSizeForInplace > 0) {
+    ret = aclrtMalloc(&workspaceAddrForInplace, workspaceSizeForInplace, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
   // 调用aclnnInplaceAddmm第二段接口
-  ret = aclnnInplaceAddmm(workspaceAddr, workspaceSize, executor, stream);
+  ret = aclnnInplaceAddmm(workspaceAddrForInplace, workspaceSizeForInplace, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddmm failed. ERROR: %d\n", ret); return ret);
 
   // step4（固定写法）同步等待任务执行结束
@@ -190,6 +192,9 @@ int main() {
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
+  }
+  if (workspaceSizeForInplace > 0) {
+    aclrtFree(workspaceAddrForInplace);
   }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
