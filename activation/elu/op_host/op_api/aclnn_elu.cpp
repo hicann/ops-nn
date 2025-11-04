@@ -137,13 +137,11 @@ static aclnnStatus GetWorkspaceSizeCommon(
 
     // 调用Elu算子kernel
     const aclTensor* eluOut;
-    if (std::isinf(alpha->ToFloat()) || std::isnan(alpha->ToFloat()) || std::isinf(inputScale->ToFloat()) ||
-        std::isnan(inputScale->ToFloat())) {
+    if (std::isinf(alpha->ToFloat()) || std::isnan(alpha->ToFloat()) || std::isinf(inputScale->ToFloat()) || std::isnan(inputScale->ToFloat())) {
         aclDataType dataType = aclDataType::ACL_DT_UNDEFINED;
         aclGetDataType(contiguousSelf, &dataType);
         auto oriDataType = dataType;
-        if (oriDataType == aclDataType::ACL_DOUBLE || oriDataType == aclDataType::ACL_FLOAT16 ||
-            oriDataType == aclDataType::ACL_BF16) {
+        if (oriDataType == aclDataType::ACL_DOUBLE || oriDataType == aclDataType::ACL_FLOAT16 || oriDataType == aclDataType::ACL_BF16) {
             dataType = aclDataType::ACL_FLOAT;
         }
         float zeroValue = 0.0f;
@@ -164,9 +162,12 @@ static aclnnStatus GetWorkspaceSizeCommon(
         CHECK_RET(thresholdOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         eluOut = l0op::Muls(thresholdOut, scale->ToFloat(), uniqueExecutor.get());
+
+        // 释放资源
+        aclDestroyScalar(zeroScalar);
+        aclDestroyScalar(negAlphaScalar);
     } else {
-        eluOut =
-            l0op::Elu(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(), uniqueExecutor.get());
+        eluOut = l0op::Elu(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(), uniqueExecutor.get());
     }
 
     CHECK_RET(eluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

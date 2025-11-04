@@ -137,12 +137,6 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
         OP_LOGE(tilingContext->GetNodeName(), "Last dim elements can not be zero."),
         return ge::GRAPH_FAILED);
 
-    if(lastDimSize == 0)
-    {
-       OP_LOGE(tilingContext->GetNodeName(), "Last dim elements can not be zero.");
-       return ge::GRAPH_FAILED;
-    }
-
     batchSize = inputShapeSize / lastDimSize;
 
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());

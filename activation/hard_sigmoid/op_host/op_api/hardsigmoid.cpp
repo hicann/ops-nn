@@ -18,6 +18,11 @@
 
 using namespace op;
 
+namespace {
+    constexpr float kHardSigmoidAlpha = 1.0f / 6.0f;
+    constexpr float kHardSigmoidBeta = 0.5f;
+}
+
 namespace l0op {
 OP_TYPE_REGISTER(HardSigmoid);
 const aclTensor* HardSigmoid(const aclTensor* self, aclOpExecutor* executor)
@@ -26,7 +31,7 @@ const aclTensor* HardSigmoid(const aclTensor* self, aclOpExecutor* executor)
     auto hardsigmoidOut = executor->AllocTensor(self->GetStorageShape(), self->GetDataType(), self->GetStorageFormat());
     CHECK_RET(hardsigmoidOut != nullptr, nullptr);
     auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoid, OP_INPUT(self), OP_ATTR(0.16666666f, 0.5f), OP_OUTPUT(hardsigmoidOut));
+        ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoid, OP_INPUT(self), OP_ATTR(kHardSigmoidAlpha, kHardSigmoidBeta), OP_OUTPUT(hardsigmoidOut));
     OP_CHECK(
         ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
         return nullptr);

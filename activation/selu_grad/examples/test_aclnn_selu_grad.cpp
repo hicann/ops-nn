@@ -86,8 +86,8 @@ int main() {
   aclTensor* gradOutput = nullptr;
   aclTensor* gradInput = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
-  std::vector<int> gradOutputHostData = {1, 1, 1, 1, 1, 1, 1, 1};
-  std::vector<int> gradInputHostData = {0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<float> gradOutputHostData = {1, 1, 1, 1, 1, 1, 1, 1};
+  std::vector<float> gradInputHostData = {0, 0, 0, 0, 0, 0, 0, 0};
 
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

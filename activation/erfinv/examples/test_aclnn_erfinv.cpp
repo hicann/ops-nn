@@ -164,6 +164,9 @@ int main() {
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
   }
+  if (inplaceWorkspaceSize > 0) {
+    aclrtFree(inplaceWorkspaceAddr);
+  }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
