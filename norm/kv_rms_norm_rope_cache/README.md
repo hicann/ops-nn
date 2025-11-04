@@ -209,6 +209,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_kv_rms_norm_rope_cache](examples/test_aclnn_kv_rms_norm_rope_cache.cpp) | 通过[aclnnKvRmsNormRopeCache](docs/aclnnKvRmsNormRopeCache.md)接口方式调用KvRmsNormRopeCache算子。 |
-| 图模式 | - | 通过[算子IR](op_graph/kv_rms_norm_rope_cache_proto.h)构图方式调用KvRmsNormRopeCache算子。         |
-
-<!-- [test_geir_kv_rms_norm_rope_cache](examples/test_geir_kv_rms_norm_rope_cache.cpp) -->
+| 图模式 | [test_geir_kv_rms_norm_rope_cache](examples/test_geir_kv_rms_norm_rope_cache.cpp)  | 通过[算子IR](op_graph/kv_rms_norm_rope_cache_proto.h)构图方式调用KvRmsNormRopeCache算子。         |

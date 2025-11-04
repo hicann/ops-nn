@@ -80,6 +80,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式调用 |  -  | 通过[算子IR](./op_graph/dynamic_quant_update_scatter_v2_proto.h)构图方式调用DynamicQuantUpdateScatterV2算子。 |
-
-<!-- [test_geir_dynamic_quant_update_scatter_v2](./examples/test_geir_dynamic_quant_update_scatter_v2.cpp) -->
+| 图模式调用 | [test_geir_dynamic_quant_update_scatter_v2](./examples/test_geir_dynamic_quant_update_scatter_v2.cpp)   | 通过[算子IR](./op_graph/dynamic_quant_update_scatter_v2_proto.h)构图方式调用DynamicQuantUpdateScatterV2算子。 |

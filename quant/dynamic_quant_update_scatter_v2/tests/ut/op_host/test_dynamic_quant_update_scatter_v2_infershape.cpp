@@ -8,18 +8,18 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h> // NOLINT
+#include <gtest/gtest.h>
 #include <iostream>
-#include "infershape_test_util.h" // NOLINT
-#include "graph/utils/op_desc_utils.h"
+#include "infershape_test_util.h"
 #include "ut_op_common.h"
+#include "log/log.h"
+#include "kernel_run_context_facker.h"
+#include "runtime/infer_shape_range_context.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "register/op_impl_registry.h"
-#include "register/op_impl_registry_base.h"
-#include "kernel_run_context_facker.h"
-#include "log/log.h"
 #include "../../../../dynamic_quant_update_scatter_v2/op_graph/dynamic_quant_update_scatter_v2_proto.h"
+#include "runtime/infer_shape_range_context.h"
 
 class DynamicQuantUpdateScatterV2Test : public testing::Test {
 protected:

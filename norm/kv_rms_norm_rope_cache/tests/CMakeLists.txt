@@ -7,7 +7,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
 
-message(STATUS "=== Debug: start ops.math.is_finite.tests.CMakeLists.txt ")
+message(STATUS "=== Debug: start norm.kv_rms_norm_rope_cache.tests.CMakeLists.txt ")
 file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 message(STATUS "=== Debug: CURRENT_DIRS =${CURRENT_DIRS} ")
 foreach(SUB_DIR ${CURRENT_DIRS})

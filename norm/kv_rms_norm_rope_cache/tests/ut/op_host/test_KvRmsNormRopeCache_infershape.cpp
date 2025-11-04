@@ -15,10 +15,16 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include "op_proto_test_util.h"
-#include "common/utils/ut_op_common.h"
-#include "experiment_ops.h"
-#include "fusion_ops.h"
+#include "infershape_test_util.h"
+#include "ut_op_common.h"
+#include "log/log.h"
+#include "kernel_run_context_facker.h"
+#include "../../../op_graph/kv_rms_norm_rope_cache_proto.h"
+#include "runtime/infer_shape_range_context.h"
+#include "exe_graph/runtime/storage_format.h"
+#include "exe_graph/runtime/storage_shape.h"
+#include "register/op_impl_registry.h"
+
 
 class KvRmsNormRopeCache : public testing::Test
 {
@@ -62,9 +68,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape)
                            &ckv_cache_shape, &k_rope_scale_shape, &ckv_scale_shape, nullptr, nullptr})
                       .OutputShapes({&k_cache_shape_out, &ckv_cache_shape_out, &k_rope_shape, &ckv_shape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -73,10 +79,10 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape)
     auto output2 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
     auto output3 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(3);
 
-    ASSERT_EQ(ge::Shape2String(*output0), "[64, 288, 1, 64]");
-    ASSERT_EQ(ge::Shape2String(*output1), "[64, 288, 1, 512]");
-    ASSERT_EQ(ge::Shape2String(*output2), "[64, 1, 1, 64]");
-    ASSERT_EQ(ge::Shape2String(*output3), "[64, 1, 1, 512]");
+    ASSERT_EQ(Ops::Base::ToString(*output0), "[64, 288, 1, 64]");
+    ASSERT_EQ(Ops::Base::ToString(*output1), "[64, 288, 1, 512]");
+    ASSERT_EQ(Ops::Base::ToString(*output2), "[64, 1, 1, 64]");
+    ASSERT_EQ(Ops::Base::ToString(*output3), "[64, 1, 1, 512]");
 }
 
 TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape_2)
@@ -107,9 +113,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape_2)
                            &ckv_cache_shape, &k_rope_scale_shape, &ckv_scale_shape, nullptr, nullptr})
                       .OutputShapes({&k_cache_shape_out, &ckv_cache_shape_out, &k_rope_shape, &ckv_shape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -118,10 +124,10 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape_2)
     auto output2 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
     auto output3 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(3);
 
-    ASSERT_EQ(ge::Shape2String(*output0), "[64, 288, 1, 64]");
-    ASSERT_EQ(ge::Shape2String(*output1), "[64, 288, 1, 512]");
-    ASSERT_EQ(ge::Shape2String(*output2), "[-1, -1, -1, 64]");
-    ASSERT_EQ(ge::Shape2String(*output3), "[-1, -1, -1, 512]");
+    ASSERT_EQ(Ops::Base::ToString(*output0), "[64, 288, 1, 64]");
+    ASSERT_EQ(Ops::Base::ToString(*output1), "[64, 288, 1, 512]");
+    ASSERT_EQ(Ops::Base::ToString(*output2), "[-1, -1, -1, 64]");
+    ASSERT_EQ(Ops::Base::ToString(*output3), "[-1, -1, -1, 512]");
 }
 
 TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape_error_dim)
@@ -152,9 +158,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_infershape_error_dim)
                            &ckv_cache_shape, &k_rope_scale_shape, &ckv_scale_shape, nullptr, nullptr})
                       .OutputShapes({&k_cache_shape_out, &ckv_cache_shape_out, &k_rope_shape, &ckv_shape})
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -184,9 +190,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_inferdtype_test1)
                               .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeAttrs(
-                                  {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                                   {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                                   {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                                  {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                   {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                                   {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -230,9 +236,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_inferdtype_test2)
                               .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeAttrs(
-                                  {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                                   {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                                   {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                                  {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                   {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                                   {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -278,9 +284,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_inferdtype_test3)
                               .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeAttrs(
-                                  {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                                   {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                                   {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                                  {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                   {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                                   {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -326,9 +332,9 @@ TEST_F(KvRmsNormRopeCache, KvRmsNormRopeCache_inferdtype_test4)
                               .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeAttrs(
-                                  {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                                   {"cache_mode", ge::AnyValue::CreateFrom<std::string>("PA_BNSD")},
-                                   {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                                  {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                   {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("PA_BNSD")},
+                                   {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)

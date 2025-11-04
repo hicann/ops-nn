@@ -8,27 +8,31 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <vector>
+#include <string>
+#include <thread>
+#include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
+#include "kernel_run_context_facker.h"
+#include "log/log.h"
+#include "graph/graph.h"
+#include "kernel_run_context_facker.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "kernel_run_context_facker.h"
-#include "register/op_impl_registry.h"
-#include "register/op_impl_registry_base.h"
-#include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
+#include "register/op_impl_registry.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
+#include "tiling_base/tiling_templates_registry.h"
+#include "../../../op_host/dynamic_quant_update_scatter_v2_tiling.h"
+
+
+
 
 using namespace std;
 using namespace ge;
-
-namespace optiling {
-struct DynamicQuantUpdateScatterV2CompileInfo {
-    int32_t vectorCoreNum = 0;
-    uint64_t ubSize = 0;
-};
-} // namespace optiling
 
 class DynamicQuantUpdateScatterV2Tiling : public testing::Test {
 protected:
@@ -42,6 +46,33 @@ protected:
         std::cout << "DynamicQuantUpdateScatterV2Tiling TearDown" << std::endl;
     }
 };
+
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int32_t tmp = 0;
+    for(size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
+
+    return result;
+}
+
+template <typename T>
+static string to_string(void *buf, size_t size)
+{
+    std::string result;
+    const T* data = reinterpret_cast<const T*>(buf);
+    size_t len = size / sizeof(T);
+    for(size_t i = 0; i < len; i++) {
+        result += std::to_string(data[i]);
+        result += " ";
+    }
+    return result;
+}
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
 {

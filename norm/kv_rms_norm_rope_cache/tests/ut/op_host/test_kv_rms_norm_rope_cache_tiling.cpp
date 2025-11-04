@@ -14,25 +14,20 @@
  */
 
 #include <iostream>
-#include <fstream>
 #include <vector>
+#include <thread>
+#include <nlohmann/json.hpp>
 #include <gtest/gtest.h>
-#include "op_log.h"
-#include "register/op_tiling_registry.h"
-#include "test_common.h"
-#include "array_ops.h"
-#include "experiment_ops.h"
-#include "common/utils/ut_op_util.h"
-#include "op_tiling/op_tiling_util.h"
-#include "common_unittest.h"
-#include "../../../op_host/kv_rms_norm_rope_cache_tiling.h"
+#include <gtest/gtest.h>
+#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "tiling//tiling_base.h"
-#include "tiling/tiling_templates_registry.h"
-#include "tiling/tiling_type.h"
 #include "test_cube_util.h"
+#include "ut_op_util.h"
+#include "ut_op_common.h"
+#include "platform/platform_infos_def.h"
+#include "../../../op_host/kv_rms_norm_rope_cache_tiling.h"
 
 using namespace ut_util;
 using namespace std;
@@ -52,9 +47,35 @@ protected:
     }
 };
 
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int32_t tmp = 0;
+    for(size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
+
+    return result;
+}
+
+template <typename T>
+static string to_string(void *buf, size_t size)
+{
+    std::string result;
+    const T* data = reinterpret_cast<const T*>(buf);
+    size_t len = size / sizeof(T);
+    for(size_t i = 0; i < len; i++) {
+        result += std::to_string(data[i]);
+        result += " ";
+    }
+    return result;
+}
+
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5011)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -144,9 +165,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5011)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -169,12 +190,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5011)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 65792 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5010)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -266,9 +285,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5010)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -291,12 +310,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5010)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 65792 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4011)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -386,9 +403,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4011)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -411,12 +428,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4011)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 65792 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4010)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -506,9 +521,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4010)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -531,12 +546,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4010)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 65792 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5001)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -624,9 +637,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5001)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -649,12 +662,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5001)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 1 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5000)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{38, 1, 3809, 576}, {38, 1, 3809, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{228}, {228}};
@@ -742,9 +753,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5000)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -767,12 +778,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_5000)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "48 0 0 0 1 0 38 0 1 0 3809 0 745 0 3016 0 16 0 925353388 989855744 0 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4001)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64}, {64}};
@@ -860,9 +869,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4001)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -885,12 +894,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4001)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "32 0 0 0 1 0 64 0 1 0 1 0 128 0 2 0 16 0 925353388 989855744 0 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4000)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{38, 1, 3809, 576}, {38, 1, 3809, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{228}, {228}};
@@ -978,9 +985,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4000)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1003,12 +1010,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_4000)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "48 0 0 0 1 0 38 0 1 0 3809 0 745 0 3016 0 16 0 925353388 989855744 0 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_1000)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64, 1}, {64, 1}};
@@ -1095,9 +1100,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_1000)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>("")},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>("")},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1120,12 +1125,10 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_tiling_1000)
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "16 0 4 0 1 0 64 0 1 0 1 0 128 0 0 0 0 0 925353388 989855744 1 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_tiling)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64, 1}, {64, 1}};
@@ -1219,9 +1222,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_tiling)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(false)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1243,14 +1246,11 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_tiling)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "64 0 1 0 1 0 1 0 1 0 0 0 2 0 0 0 2 0 0 0 0 0 0 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 "
-        "1536 0 2048 0 925353388 989855744 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
+        "64 0 1 0 1 0 1 0 1 0 0 0 1 0 1 0 1 0 1 0 0 0 0 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 1536 0 2048 0 925353388 989855744 ");
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv_tiling)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64, 1}, {64, 1}};
@@ -1344,9 +1344,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
                       .NodeAttrs(
-                          {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                           {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                           {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                           {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                           {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1368,14 +1368,11 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "64 0 1 0 1 0 1 0 1 0 0 0 2 0 0 0 2 0 0 0 1 0 0 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 "
-        "1536 0 2048 0 925353388 989855744 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
+        "64 0 1 0 1 0 1 0 1 0 0 0 1 0 1 0 1 0 1 0 1 0 0 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 1536 0 2048 0 925353388 989855744 ");
 }
 
 TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv_with_PA_tiling)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape kv_shape = {{64, 1, 1, 576}, {64, 1, 1, 576}};
     gert::StorageShape gamma_shape = {{512}, {512}};
     gert::StorageShape index_shape = {{64, 1}, {64, 1}};
@@ -1472,9 +1469,9 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv
             .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
 
             .NodeAttrs(
-                {{"epsilon", ge::AnyValue::CreateFrom<float>(1e-05)},
-                 {"cache_mode", ge::AnyValue::CreateFrom<std::string>(cache_mode)},
-                 {"is_output_kv", ge::AnyValue::CreateFrom<bool>(true)}})
+                {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                 {"cache_mode", Ops::NN::AnyValue::CreateFrom<std::string>(cache_mode)},
+                 {"is_output_kv", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
             .TilingData(param.get())
             .Workspace(ws_size)
             .Build();
@@ -1496,7 +1493,5 @@ TEST_F(KvRmsNormRopeCacheTiling, kv_rms_norm_rope_cache_d_full_load_is_output_kv
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "64 0 1 0 1 0 1 0 128 0 0 0 2 0 2 0 2 0 2 0 1 0 1 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 "
-        "1536 0 2048 0 925353388 989855744 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
+        "64 0 1 0 1 0 1 0 128 0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 64 0 64 0 64 0 32 0 32 0 512 0 512 0 512 0 1 0 1 0 1024 0 1536 0 2048 0 925353388 989855744 ");
 }
