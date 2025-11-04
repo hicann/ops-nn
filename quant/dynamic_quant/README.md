@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
 
@@ -69,7 +69,7 @@
       <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td><ul><li>指定组的索引。</li><li>shape支持1D，为[E, ]，且shape跟输出scale shape的第一维相同。</li></ul></td>
+      <td><ul><li>指定组的索引。</li><li>shape支持1D，为[E, ]，且shape跟输出`scale`的shape的第一维相同。</li></ul></td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
@@ -83,7 +83,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>量化后的输出张量，对应公式中的`yOut`。</li><li>数据类型与参数`dst_type`配置的数据类型一致，shape与输入x的保持一致。</li></ul></td>
+      <td><ul><li>量化后的输出张量，对应公式中的`yOut`。</li><li>数据类型与参数`dst_type`配置的数据类型一致，shape与输入`x`的shape保持一致。</li></ul></td>
       <td>INT8、INT4、FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8</td>
       <td>ND</td>
     </tr>
@@ -109,4 +109,4 @@
 | aclnn接口  | [test_aclnn_dynamic_quant](examples/test_aclnn_dynamic_quant.cpp) | 通过[aclnnDynamicQuant](docs/aclnnDynamicQuant.md)接口方式调用DynamicQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_quant_proto.h)构图方式调用DynamicQuant算子。         |
 
-<!--[test_geir_dynamic_quant](examples/test_geir_dynamic_quant.cpp)-->
+<!--[test_geir_dynamic_quant](examples/test_geir_dynamic_quant.cpp)--> 

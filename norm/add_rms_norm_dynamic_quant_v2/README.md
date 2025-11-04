@@ -7,9 +7,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
-- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。
+- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。
 - 计算公式：
 
   $$
@@ -181,3 +182,11 @@
 ## 约束说明
 
 无
+
+## 调用说明
+
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| 图模式 | [test_geir_add_rms_norm_dynamic_quant_v2](examples/test_geir_add_rms_norm_dynamic_quant_v2.cpp)  | 通过[算子IR](op_graph/add_rms_norm_dynamic_quant_v2_proto.h)构图方式调用AddRmsNormDynamicQuantV2算子。         |
+
+<!--[test_geir_add_rms_norm_dynamic_quant_v2](examples/test_geir_add_rms_norm_dynamic_quant_v2.cpp)-->

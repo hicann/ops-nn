@@ -63,13 +63,14 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行线性插值计算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shapesize大于等于入参`x1`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行线性插值计算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`x1`的shape与入参`x2`、出参`out`的一致。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`x1`的shape与入参`x2`、出参`y`的一致。
+
 
 ## 约束说明
 

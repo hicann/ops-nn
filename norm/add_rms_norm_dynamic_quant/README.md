@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuantV2算子相较于AddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果 。
+- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果 。
 
 - 计算公式：
 
@@ -45,8 +45,8 @@
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
-
-
+  
+  
   $$
   scale2Out=\begin{cases}
     row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null) \\
@@ -59,7 +59,7 @@
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ = null)
     \end{cases}
   $$
-
+  
   公式中的row\_max代表每行求最大值。
 
 ## 参数说明
@@ -125,8 +125,8 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>用于防止除0错误，对应对应公式中的`epsilon`。</li><li>默认值为1e-6。</li></ul></td>
-      <td>FLOAT</td>
+      <td><ul><li>用于防止除0错误，对应公式中的`epsilon`。</li><li>默认值为1e-6。</li></ul></td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -172,6 +172,7 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
 
 ## 约束说明
 

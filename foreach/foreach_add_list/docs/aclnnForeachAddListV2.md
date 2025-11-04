@@ -10,9 +10,9 @@
 ## 功能说明
 
 - 算子功能：
-
+  
   两个Tensor列表中的元素逐个相加，并返回一个新的Tensor列表。可以通过设置alpha参数来调整相加的系数。
-
+  
   本接口相较于[aclnnForeachAddList](aclnnForeachAddList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>输入</td>
       <td>表示加法运算的第一个输入张量列表。公式中的`x1`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>输入</td>
       <td>表示加法运算的第二个输入张量列表。对应公式中的`x2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -97,18 +97,18 @@ aclnnStatus aclnnForeachAddListV2(
       <td>alpha</td>
       <td>输入</td>
       <td>表示加法运算中第二个输入的系数。对应公式中的`alpha`。</td>
-      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT、BFLOAT16时，数据类型支持FLOAT、DOUBLE。</li><li>当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
-      <td>FLOAT、FLOAT16、INT32、DOUBLE、INT64</td>
-      <td>ND</td>
+      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
+      <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>表示加法运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shapesize大于等于入参`x1`的shapesize。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -137,16 +137,17 @@ aclnnStatus aclnnForeachAddListV2(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
-    `scalar`的数据类型与入参`x1`的数据类型具有一定对应系：
-    - 当`x1`的数据类型为FLOAT、BFLOAT16时，数据类型支持FLOAT、DOUBLE。
+  
+    `scalar`的数据类型与入参`x1`的数据类型具有一定对应关系：
+    - 当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
     - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
+
 
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：将指定的标量值加到张量列表中的每个张量中，并返回更新后的张量列表。
+- 算子功能：将指定的张量加到张量列表中的每个张量中，并返回更新后的张量列表。
 
 - 计算公式：
 
@@ -50,22 +50,23 @@
     <tr>
       <td>scalar</td>
       <td>输入</td>
-      <td>表示加法运算的输入标量，对应公式中的`scalar`。元素个数为1。</td>
+      <td>表示加法运算的输入张量，对应公式中的`scalar`。元素个数为1。</td>
       <td>FLOAT32、FLOAT16、INT32</td><!--V2多了double、int64-->
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示加法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示加法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - 当`x`的数据类型为FLOAT、FLOAT16、INT32时，`scalar`数据类型与`x`的数据类型保持一致。
-  - 当`x`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 当`x`的数据类型为FLOAT32、FLOAT16、INT32时，`scalar`数据类型与`x`的数据类型保持一致。
+    - 当`x`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
+
 
 ## 约束说明
 

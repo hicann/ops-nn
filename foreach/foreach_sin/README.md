@@ -23,9 +23,9 @@
 
 - 示例
 
-  1. 输入`x`为: [-1, -2]，dtype为`float32`；
+  1. 输入`x`为: [-1, -2]，dtype为`FLOAT32`；
   2. 调用`aclnnForeachSin`算子后；
-  3. 输出`out`为[-0.8415, -0.9093]，dtype为`float32`。
+  3. 输出`out`为[-0.8415, -0.9093]，dtype为`FLOAT32`。
 
 ## 参数说明
 
@@ -55,7 +55,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行正弦函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示进行正弦函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

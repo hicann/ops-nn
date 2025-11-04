@@ -104,7 +104,7 @@
     <tr>
       <td>pd_x</td>
       <td>输出</td>
-      <td>表示反向传播的输出梯度，由`output_mask`的第0个元素控制是否输出，对应计算公式中的`gradInputOut`。`output_mask`第0个元素为True时会进行输出，与输入x的数据类型相同，shape与`x`的shape相等，</td>
+      <td>表示反向传播的输出梯度，由`output_mask`的第0个元素控制是否输出，对应计算公式中的`gradInputOut`。`output_mask`第0个元素为true时会进行输出，与输入x的数据类型相同，shape与`x`的shape相等，</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -118,7 +118,7 @@
     <tr>
       <td>pd_beta</td>
       <td>输出</td>
-      <td>表示反向传播偏置的梯度，由`output_mask`的第2个元素控制是否输出，对应计算公式中的`gradBiasOut`。`output_mask`第2个元素为True时会进行输出，与输入`gamma`的数据类型相同。shape与`pd_gamma`的shape相等。</td>
+      <td>表示反向传播偏置的梯度，由`output_mask`的第2个元素控制是否输出，对应计算公式中的`gradBiasOut`。`output_mask`第2个元素为true时会进行输出，与输入`gamma`的数据类型相同。shape与`pd_gamma`的shape相等。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -128,13 +128,13 @@
 ## 约束说明
 
 无
-<!--LayerNormBackward默认为确定性实现，暂不支持非确定性实现，确定性计算配置后不会生效。-->
+<!--LayerNormBackward默认为确定性实现，暂不支持非确定性实现，[确定性计算](./docs/context/确定性计算.md)配置后不会生效。-->
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_layer_norm_grad_v3](examples/test_aclnn_layer_norm_grad_v3.cpp) | 通过[aclnnLayerNormBarkward](docs/aclnnLayerNormBackward.md)接口方式调用LayerNormGradV3算子。 |
+| aclnn接口  | [test_aclnn_layer_norm_grad_v3](examples/test_aclnn_layer_norm_grad_v3.cpp) | 通过[aclnnLayerNormBackward](docs/aclnnLayerNormBackward.md)接口方式调用LayerNormGradV3算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/layer_norm_grad_v3_proto.h)构图方式调用LayerNormGradV3算子。         |
 
 <!--[test_geir_layer_norm_grad_v3](examples/test_geir_layer_norm_grad_v3.cpp)-->

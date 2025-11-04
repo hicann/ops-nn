@@ -49,7 +49,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

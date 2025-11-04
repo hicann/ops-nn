@@ -22,7 +22,7 @@
   $$
 
   $$
-  rstd = \frac{1}{ \sqrt{\mathrm{Var}[x] + eps}}
+  rstd = \frac{1}{ \sqrt{\mathrm{Var}[x] + eps}} 
   $$
 
   $$
@@ -81,7 +81,7 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的eps。</li><li>默认值为0.00001f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -94,18 +94,19 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>表示进行归一化后的均值，对应公式中的`mean`。当rstd存在时与rstd的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
+      <td>表示进行归一化后的均值，对应公式中的`mean`。与rstd的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>表示进行归一化后的标准差倒数，对应公式中的`rstd`。当mean存在时与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
+      <td>表示进行归一化后的标准差倒数，对应公式中的`rstd`。与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
+
 
 ## 约束说明
 
@@ -119,4 +120,4 @@
 | aclnn接口  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | 图模式 | - | 通过[算子IR](op_graph/layer_norm_v4_proto.h)构图方式调用LayerNormV4算子。         |
 
-<!--[test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp)-->
+<!--[test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp)--> 

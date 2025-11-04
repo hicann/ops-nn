@@ -7,6 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
 - **算子功能**：返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相乘运算的结果。
@@ -28,7 +29,7 @@
 每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用`aclnnForeachMulScalarV2GetWorkspaceSize`接口获取入参并根据计算流程计算所需workspace大小，再调用`aclnnForeachMulScalarV2`接口执行计算。
 
 ```cpp
-aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
+aclnnStatus aclnnForeachMulScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
   aclTensorList       *out,
@@ -37,7 +38,7 @@ aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnForeachMinimumScalarV2(
+aclnnStatus aclnnForeachMulScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
@@ -75,11 +76,11 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>x</td>
       <td>输入</td>
       <td>对应公式中的`x`，表示乘法运算的输入张量列表。</td>
-      <td><ul><li>支持空TensorList</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scalar</td>
@@ -87,19 +88,19 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>对应公式中的`scalar`，表示乘法运算的输入标量。</td>
       <td>-</td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
-      <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>对应公式中的`y`，表示x乘以scalar的输出张量列表。</td>
-      <td><ul><li>支持空TensorList</li><li>支持的最大长度为50个。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>支持的最大长度为50个。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -126,10 +127,10 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
-    `scalar`的数据类型与入参`x1`的数据类型具有一定对应系：
-    - 当`x`的数据类型为FLOAT, BFLOAT16时，`scalar`的数据类型支持FLOAT, DOUBLE。
-    - 当`x`的数据类型为FLOAT16时，`scalar`的数据类型支持FLOAT16, DOUBLE。
-    - 当`x`的数据类型为INT32时，`scalar`的数据类型支持INT32, INT64。
+    `scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
+    - 当`x`的数据类型为FLOAT32、BFLOAT16时，`scalar`的数据类型支持FLOAT32、DOUBLE。
+    - 当`x`的数据类型为FLOAT16时，`scalar`的数据类型支持FLOAT16、DOUBLE。
+    - 当`x`的数据类型为INT32时，`scalar`的数据类型支持INT32、INT64。
 
 - **返回值**：
 
@@ -170,7 +171,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
-    </tr>
+    </tr>            
   </tbody></table>
 
 ## aclnnForeachMulScalarV2

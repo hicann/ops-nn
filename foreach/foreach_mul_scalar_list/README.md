@@ -58,15 +58,16 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示x乘以scalars的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示x乘以scalars的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - 当入参`x`的数据类型为FLOAT、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT。
-  - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。
+    - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
+
 
 ## 约束说明
 

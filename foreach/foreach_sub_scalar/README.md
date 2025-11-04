@@ -50,14 +50,14 @@
     <tr>
       <td>scalar</td>
       <td>输入</td>
-      <td>表示减法运算的第二个输入标量，对应公式中的`scalar`。元素个数为1。</td>
+      <td>表示减法运算的第二个输入张量，对应公式中的`scalar`。元素个数为1。</td>
       <td>FLOAT32、FLOAT16、INT32、INT64、DOUBLE</td><!--V2多了INT64/DOUBLE-->
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示减法运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示减法运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

@@ -6,7 +6,8 @@
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Kirin X90 处理器系列产品</term>       |     √    |
+|  <term>Kirin X90 处理器系列产品</term>     |     √    |
+
 
 ## 功能说明
 
@@ -53,7 +54,7 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的eps。</li><li>默认值为1e-6f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -71,7 +72,7 @@
       <td>ND</td>
   </tbody></table>
 
-<term>Kirin X90 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。
+  - <term>Kirin X90 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

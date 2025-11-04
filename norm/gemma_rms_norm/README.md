@@ -44,7 +44,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>数据缩放因子，对应公式中的g。数据类型与输入x的保持一致。shape支持1-8维度，且满足gamma_shape = x_shape\[n:\], n < x_shape.dims()。</td>
+      <td>数据缩放因子，对应公式中的g。数据类型与输入x的数据类型保持一致。shape支持1-8维度，且满足gamma_shape = x_shape\[n:\], n < x_shape.dims()。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -52,13 +52,13 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，用于防止除0错误，对应公式中的eps。</li><li>默认值为1e-6f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>归一化后的输出数据，对应公式中的GemmaRmsNorm(x)。</li><li>数据类型、shape与输入x的保持一致。</li></ul></td>
+      <td><ul><li>归一化后的输出数据，对应公式中的GemmaRmsNorm(x)。</li><li>数据类型、shape与输入x的数据类型、shape保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

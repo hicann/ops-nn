@@ -7,6 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
 - 算子功能：用于实现两个张量列表内容的复制，要求输入和输出两个张量列表形状相同。
@@ -44,14 +45,14 @@
       <td>x</td>
       <td>输入</td>
       <td>表示进行内容复制的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT、FLOAT16、INT32、BFLOAT16、INT8、UINT8、INT16、UINT16、UINT32、INT64、DOUBLE、BOOL</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT8、UINT8、INT16、UINT16、UINT32、INT64、DOUBLE、BOOL</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行内容复制的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT、FLOAT16、INT32、BFLOAT16、INT8、UINT8、INT16、UINT16、UINT32、INT64、DOUBLE、BOOL</td>
+      <td>表示进行内容复制的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT8、UINT8、INT16、UINT16、UINT32、INT64、DOUBLE、BOOL</td>
       <td>ND</td>
     </tr>
   </tbody></table>

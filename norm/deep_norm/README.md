@@ -11,7 +11,7 @@
 
 - 算子功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
 - 计算公式：
-
+  
   $$
   DeepNorm(x_i^{\prime}) = (\frac{x_i^{\prime} - \bar{x^{\prime}}}{rstd}) * gamma + beta,
   $$
@@ -70,14 +70,14 @@
       <td>alpha</td>
       <td>可选属性</td>
       <td><ul><li>权重参数，用于调整输入x的权重，公式中的输入`alpha`。</li><li>默认值为0.3f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，用于防止除0错误，对应公式中的eps。</li><li>默认值为1e-06f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>

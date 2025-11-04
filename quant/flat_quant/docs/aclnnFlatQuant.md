@@ -7,6 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
 - **算子功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
@@ -91,7 +92,7 @@ aclnnStatus aclnnFlatQuant(
       <td>x</td>
       <td>输入</td>
       <td>输入的原始数据，对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过32768，M和N不超过128。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。></li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过32768，M和N不超过128。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>3</td>
@@ -110,7 +111,7 @@ aclnnStatus aclnnFlatQuant(
     <tr>
       <td>kroneckerP2</td>
       <td>输入</td>
-      <td>输入的计算矩阵1，对应公式中的`kroneckerP2`。</td>
+      <td>输入的计算矩阵2，对应公式中的`kroneckerP2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[M, M]，M与x中M维一致</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -131,7 +132,7 @@ aclnnStatus aclnnFlatQuant(
       <td>out</td>
       <td>输出</td>
       <td>输出张量，对应公式中的out。</td>
-      <td><ul><li>不支持空Tensor。</li><li>类型为INT32时，shape的最后一维是入参x最后一维的1/8，其余维度和x一致。</li><li>型为INT4时，shape与入参x一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是入参x最后一维的1/8，其余维度和x一致。</li><li>数据类型为INT4时，shape与入参x一致。</li></ul></td>
       <td>INT4，INT32</td>
       <td>ND</td>
       <td>3</td>
@@ -224,7 +225,7 @@ aclnnStatus aclnnFlatQuant(
       <td>out的数据类型为INT4时，x的shape尾轴大小不是偶数，或者x的shape与out的shape不一致。</td>
     </tr>
     <tr>
-      <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape</td>
+      <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
     </tr>                               
   </tbody></table>
  

@@ -105,17 +105,17 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>scalar</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第二个输入标量。对应公式中的`scalar`。</td>
-      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT，BFLOAT16时，数据类型支持FLOAT，DOUBLE。</li><li>当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16，DOUBLE。</li></ul></td>
+      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32，BFLOAT16时，数据类型支持FLOAT32，DOUBLE。</li><li>当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16，DOUBLE。</li></ul></td>
       <td>FLOAT32、FLOAT16、DOUBLE</td>
-      <td>ND</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shapesize大于等于入参`x1`的shapesize。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

@@ -63,14 +63,14 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示混合运算中乘法的第一个输入标量列表，对应公式中的`scalars`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
+      <td>表示混合运算中乘法的第一个输入张量，对应公式中的`scalars`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示混合运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shapesize大于等于入参`x1`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示混合运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

@@ -73,8 +73,8 @@ aclnnStatus aclnnForeachSubScalarV2(
       <td>x</td>
       <td>输入</td>
       <td>表示进行减法运算中被减数的张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -83,9 +83,9 @@ aclnnStatus aclnnForeachSubScalarV2(
       <td>scalar</td>
       <td>输入</td>
       <td>表示进行减法运算中的被减数，对应公式中的`scalar`。</td>
-      <td><ul><li>当`x`的数据类型为FLOAT, BFLOAT16时，数据类型支持FLOAT, DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16, DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32, INT64。</li></ul></td>
-      <td>FLOAT、FLOAT16、INT32、INT64、DOUBLE</td>
-      <td>ND</td>
+      <td>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
+      <td>FLOAT32、FLOAT16、INT32、INT64、DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
@@ -93,8 +93,8 @@ aclnnStatus aclnnForeachSubScalarV2(
       <td>out</td>
       <td>输出</td>
       <td>表示减法运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -146,8 +146,8 @@ aclnnStatus aclnnForeachSubScalarV2(
       <td>传入的x、scalar、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x、scalar和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

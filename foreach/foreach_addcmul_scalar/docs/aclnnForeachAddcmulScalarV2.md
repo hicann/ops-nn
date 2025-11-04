@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>输入</td>
       <td>表示混合运算中加法的第一个输入张量列表。公式中的`x1`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`x3`的shape一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>输入</td>
       <td>表示混合运算中乘法的第二个输入张量列表。对应公式中的`x2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>输入</td>
       <td>表示混合运算中乘法的第三个输入张量列表。对应公式中的`x3`。</td>
      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -108,17 +108,17 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>输入</td>
       <td>表示混合运算中乘法的第一个输入标量。对应公式中的`scalar`。</td>
       <td>-</li></ul></td>
-      <td>FLOAT、FLOAT16、INT32、DOUBLE、INT64</td>
-      <td>ND</td>
+      <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shapesize大于等于入参`x1`的shapesize。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -148,15 +148,10 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件/term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   
-    `scalar`的数据类型与入参`x1`的数据类型具有一定对应系：
-    - 当`x1`的数据类型为FLOAT、BFLOAT16时，数据类型支持FLOAT、DOUBLE。
+    `scalar`的数据类型与入参`x1`的数据类型具有一定对应关系：
+    - 当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
     - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
-    - `scalar`数据类型与入参`x1`的数据类型具有一定对应系：
-      - 当`x1`的数据类型为BFLOAT16、FLOAT时，数据类型支持FLOAT、DOUBLE。
-      - 当`x1`的数据类型为FLOAT16时、数据类型支持FLOAT16、FLOAT、DOUBLE。
-      - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
-    - 入参`x1`、`x2`、`x3`和出参`y`支持的最大长度为50个。
 
 - **返回值**：
 

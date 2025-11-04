@@ -18,7 +18,7 @@
   $$
   E(x)表示均值，Var(x)表示方差，均需要在算子内部计算得到；ε表示一个极小的浮点数，防止分母为0的情况。
 
-
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -80,14 +80,14 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到方差中的小值以避免除以零，对应公式中的`ε`。</li><li>默认值为1e-5f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>momentum</td>
       <td>可选属性</td>
       <td><ul><li>动量参数，用于更新训练期间的均值和方差。</li><li>默认值为0.1f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -135,12 +135,10 @@
   </tbody></table>
 
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - 输入x和输出y的数据格式不支持NHWC、NDHWC。
-  - 输出参数`save_rstd`保存的是x方差。
-
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
--->
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 输入x和输出y的数据格式不支持NHWC、NDHWC。
+    - 输出参数`save_rstd`保存的是x方差。
+  
 
 ## 约束说明
 

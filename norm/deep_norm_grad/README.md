@@ -110,7 +110,7 @@
       <td>alpha</td>
       <td>可选属性</td>
       <td><ul><li>含义与deepnorm正向输入alpha相同，deepnorm输入x维度的乘数权重参数，公式中的输入`alpha`。</li><li>默认值为0.3f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -142,7 +142,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 约束说明
 

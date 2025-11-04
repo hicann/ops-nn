@@ -82,17 +82,17 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>scalar</td>
       <td>输入</td>
       <td>对应公式中的`scalar`，表示取最小值运算的输入标量。</td>
-      <td><ul><li>当`x`的数据类型为FLOAT, BFLOAT16时，数据类型支持FLOAT, DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16, DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32, INT64。</li></li></ul></td>
+      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16, DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
-      <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>对应公式中的`y`，表示取最小值运算的输出张量列表。</td>
-      <td><ul><li>支持空TensorList</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空TensorList</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>

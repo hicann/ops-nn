@@ -56,49 +56,49 @@
       <td>x1</td>
       <td>输入</td>
       <td>为正向融合算子的输入x1，对应公式中的`x1`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
       <td>为正向融合算子的输入x2，对应公式中的`x2`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
       <td>表示进行归一化计算的权重，对应公式中的`gamma`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>输入</td>
       <td>表示进行归一化中的偏移量，对应公式中的`beta`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias</td>
       <td>可选输入</td>
       <td>表示DuaQuantizeAddLayerNorm中加法计算的输入，对应公式中的`bias`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales1</td>
       <td>可选输入</td>
       <td>用于量化第一个输入张量的缩放因子，对应公式中的`scales1`。</td>
-      <td>BFLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales2</td>
       <td>可选输入</td>
       <td>用于量化第二个输入张量的缩放因子，对应公式中的`scales2`。</td>
-      <td>BFLOAT16、FLOAT</td>
+      <td>BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -133,7 +133,7 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的`epsilon`。</li><li>默认值为1e-5f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -161,7 +161,7 @@
       <td>x</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
-      <td>FLOAT16、BFLOAT16、FLOAT</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -174,6 +174,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | -  | 通过[算子IR](op_graph/dua_quantize_add_layer_norm_proto.h)构图方式调用DuaQuantizeAddLayerNorm算子。         |
+| 图模式 | [test_geir_dua_quantize_add_layer_norm](examples/test_geir_dua_quantize_add_layer_norm.cpp)  | 通过[算子IR](op_graph/dua_quantize_add_layer_norm_proto.h)构图方式调用DuaQuantizeAddLayerNorm算子。         |
 
 <!--[test_geir_dua_quantize_add_layer_norm](examples/test_geir_dua_quantize_add_layer_norm.cpp)-->

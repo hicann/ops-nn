@@ -50,14 +50,14 @@
     <tr>
       <td>scalar</td>
       <td>输入</td>
-      <td>表示进行x次方运算的底数，对应公式中的`scalar`。与入参`x`的数据类型具有一定对应关系：当x的数据类型为FLOAT、FLOAT16、BFLOAT16时，数据类型支持FLOAT、DOUBLE；当x的数据类型为INT32时，数据类型支持INT64。</td>
+      <td>表示进行x次方运算的底数，对应公式中的`scalar`。与入参`x`的数据类型具有一定对应关系：当x的数据类型为FLOAT32、FLOAT16、BFLOAT16时，数据类型支持FLOAT32、DOUBLE；当x的数据类型为INT32时，数据类型支持INT64。</td>
       <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行x次方运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示进行x次方运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

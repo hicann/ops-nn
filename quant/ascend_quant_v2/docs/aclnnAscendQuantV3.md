@@ -52,6 +52,7 @@ aclnnStatus aclnnAscendQuantV3(
 
 - **参数说明：**
 
+
   <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
   <col style="width: 146px">
   <col style="width: 120px">
@@ -74,61 +75,118 @@ aclnnStatus aclnnAscendQuantV3(
       <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
-      <tr>
-        <td>x</td>
-        <td>输入</td>
-        <td>需要做量化的输入。对应公式中的`x1`。</td>
-        <td><ul><li>ND场景下，如果dstType为3，shape的最后一维需要能被8整除；如果dstType为29，shape的最后一维需要能被2整除。</li><li>NZ场景下，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
-        <td>FLOAT32、FLOAT16、BFLOAT16</td>
-        <td>ND、NZ</td>
-        <td>1-8</td>
-        <td>√</td>
+    <tr>
+      <td>x</td>
+      <td>输入</td>
+      <td>需要做量化的输入。对应公式中的`x1`。</td>
+      <td><ul><li>支持空Tensor。</li><li>数据格式为ND时，如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND、NZ</td>
+      <td>1-8</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>scale</td>
       <td>输入</td>
-      <td>量化中的scale值。对应公式中的`scale`。</td>    
-      <td><ul><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>数据类型要和x保持一致。</li><li>如果x的dtype不是FLOAT32，dtype需要和x的dtype一致。当x为NZ输入时，值为1。scale的数据类型和x保持一致。</li></ul></td>
+      <td>量化中的scale值。对应公式中的`scale`。</td>
+      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>如果`x`的数据类型不是FLOAT32，数据类型需要和`x`的数据类型一致。</li><li>当x为NZ输入时，值为1。scale的数据类型和x保持一致。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
-      <td>-</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>offset</td>
       <td>输入</td>
       <td>可选参数，反向量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>NZ场景下值为空，offset的数据类型和x保持一致。</li></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li><li>数据格式为NZ时，值为空，offset的数据类型和x保持一致。</li></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
-     <tr>
+    <tr>
+      <td>sqrtMode</td>
+      <td>输入</td>
+      <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
+      <td>当取值为true时，公式为y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>roundMode</td>
+      <td>输入</td>
+      <td>指定cast到INT8输出的转换方式。</td>
+      <td><ul><li>支持取值round/ceil/trunc/floor/hybrid。</li><li>当输入`x`的数据格式为NZ时，支持取值round。</li></td>
+      <td>STRING</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstType</td>
+      <td>输入</td>
+      <td>指定输出的数据类型。</td>
+      <td><ul><li>支持取值2，3，29，34，35，36，分别表示INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</li><li>当输入`x`的数据格式为NZ时，支持取值3，表示INT32。</li></td>
+      <td>INT32</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>  
+    <tr>
+      <td>axis</td>
+      <td>输入</td>
+      <td>指定`scale`和`offset`对应`x`的维度。当输入`x`的数据格式为NZ时，取值为-1。</td>
+      <td>-</td>
+      <td>INT32</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr> 
+    <tr>
       <td>y</td>
       <td>输出</td>
-      <td>公式中的y。</td>
-      <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是x最后一维的1/8，其余维度和x一致；其他类型时，shape与x一致。</li></td>
-      <td>当取值为true时，公式为y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
-      <td>-</td>
+      <td>量化的计算输出。对应公式中的`y`。</td>
+      <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是`x`最后一维的1/8，其余维度和`x`一致；其他类型时，shape与`x`一致。</li></td>
+      <td>INT8、INT32、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND、NZ</td>
-      <td>-</td>
+      <td>1-8</td>
       <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
   </tbody>
   </table>
 
- - 在ND场景下`x`支持的数据类型：
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
- - NZ场景下`x`支持的数据类型：<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32。
- - ND场景下`scale`支持的数据类型：
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
- - NZ场景下`scale`支持的数据类型：<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32。
- - ND场景下`y`支持的数据类型：
-   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8，INT32，INT4。
- - NZ场景下`y`支持的数据类型：
-   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT32。 
-  
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    
+    - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
+    - 出参`y`的数据类型仅支持INT8，INT32，INT4。当数据格式为NZ时，数据类型支持INT32。
+    - 入参`roundMode`：支持取值round，ceil，trunc，floor。当输入`x`的数据格式为NZ时，支持取值round。
+    - 入参`dstType`支持取值2，3，29，分别表示INT8、INT32、INT4。当输入`x`的数据格式为NZ时，支持取值3，表示INT32。
+    - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
+
+
 
 - **返回值：**
 
@@ -174,10 +232,10 @@ aclnnStatus aclnnAscendQuantV3(
       <td>axis不在有效取值范围。</td>
     </tr>
     <tr>
-      <td>y的数据类型为int4时，x的shape尾轴大小不是偶数。</td>
+      <td>y的数据类型为INT4时，x的shape尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>y的数据类型为int32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
+      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
     </tr>
   </tbody></table>
 

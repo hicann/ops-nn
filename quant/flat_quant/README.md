@@ -80,13 +80,13 @@
       <td>clip_ratio</td>
       <td>可选属性</td>
       <td><ul><li>用于控制量化的裁剪比例，输入数据范围为(0, 1]。</li><li>默认值为1。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>输出张量，对应公式中的`out`。类型为INT4时，shape与入参`x`一致。</td>
+      <td>输出张量，对应公式中的`out`。数据类型为INT4时，shape与入参`x`一致。</td>
       <td>INT4</td>
       <td>ND</td>
     </tr>

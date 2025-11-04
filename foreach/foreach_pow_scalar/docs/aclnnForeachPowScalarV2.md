@@ -26,16 +26,16 @@
 每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用`aclnnForeachPowScalarV2GetWorkspaceSize`接口获取入参并根据计算流程计算所需workspace大小，再调用`aclnnForeachPowScalarV2`接口执行计算。
 
 ```cpp
-aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
-  const aclTensorList *x, 
-  const aclScalar     *scalar, 
-  aclTensorList       *out, 
-  uint64_t            *workspaceSize, 
+aclnnStatus aclnnForeachPowScalarV2GetWorkspaceSize(
+  const aclTensorList *x,
+  const aclScalar     *scalar,
+  aclTensorList       *out,
+  uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
 
 ```cpp
-aclnnStatus aclnnForeachMinimumScalarV2(
+aclnnStatus aclnnForeachPowScalarV2(
   void          *workspace, 
   uint64_t       workspaceSize, 
   aclOpExecutor *executor, 
@@ -71,7 +71,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>x</td>
       <td>输入</td>
       <td>对应公式中的`x`，表示进行n次方运算的底数。</td>
-      <td><ul><li>支持空TensorList</li><li>该参数中所有Tensor的数据类型保持一致。</ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -81,17 +81,17 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>scalar</td>
       <td>输入</td>
       <td>对应公式中的`exponent`，表示进行n次方运算的指数。</td>
-      <td><ul><li>当`x`的数据类型为FLOAT, BFLOAT16时，数据类型支持FLOAT, DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16, DOUBLE。</li></ul></td>
+      <td><ul><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li></ul></li><li>取值的绝对值必须小于等于(2^31-1)。</li></ul></td>
       <td>FLOAT32、FLOAT16、DOUBLE</td>
-      <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>对应公式中的`y`，表示进行n次方运算的输出结果。</td>
-      <td><ul><li>支持空TensorList</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -153,10 +153,10 @@ aclnnStatus aclnnForeachMinimumScalarV2(
      <tr>
       <td>x与out的shape不满足约束。</td>
     </tr>
-        <tr>
+      <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
     </tr>
-        <tr>
+      <tr>
       <td>x或out中的Tensor维度超过8维。</td>
     </tr>   
 

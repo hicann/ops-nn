@@ -72,19 +72,19 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>x</td>
       <td>输入</td>
       <td>表示进行舍入运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>roundMode</td>
       <td>输入</td>
       <td>表示进行舍入计算的输入标量。对应公式中的`roundMode`。</td>
-      <td><ul><li>元素个数为1。</li><li>当roundmode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundmode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundmode=3，表示对输入进行向正无穷舍入取整操作。</li><li>s当roundmode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundmode=5，表示对输入进行向零舍入操作。</li><li>当roundmode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundmode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</li></ul></td>
+      <td><ul><li>元素个数为1。</li><li>roundMode的取值及对应的舍入策略如下：<ul><li>当roundMode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundMode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundMode=3，表示对输入进行向正无穷舍入取整操作。</li><li>当roundMode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundMode=5，表示对输入进行向零舍入操作。</li><li>当roundMode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundMode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</li></ul></li></ul></td>
       <td>INT8，INT64</td>
-      <td>ND</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
@@ -92,10 +92,10 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>out</td>
       <td>输出</td>
       <td>表示进行舍入运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>×</td>
     </tr>
     <tr>
@@ -146,8 +146,8 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>传入的x、roundMode、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x、roundMode和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

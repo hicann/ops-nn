@@ -125,7 +125,7 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>用于防止除0错误，对应公式中的`epsilon`。</li><li>默认值为1e-6。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -159,10 +159,13 @@
   </tbody></table>
 
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32。
+
 
 
 ## 约束说明
+
+无
 
 ## 调用说明
 
@@ -173,5 +176,5 @@
 | 图模式 | -  | 通过[算子IR](op_graph/add_rms_norm_quant_proto.h)构图方式调用AddRmsNormQuant算子。         |
 
 <!--[test_geir_add_rms_norm_quant](examples/test_geir_add_rms_norm_quant.cpp)-->
-<!-- [test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp) -->
-<!-- [test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp) -->
+<!--[test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp)-->
+<!--[test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp)-->

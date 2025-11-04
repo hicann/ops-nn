@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
 
@@ -110,7 +110,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>x</td>
       <td>输入</td>
       <td>算子输入的Tensor。对应公式中的`x`。</td>
-      <td><ul><li>支持空tensor。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>大于1维</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>smoothScalesOptional</td>
       <td>输入</td>
       <td>算子输入的smoothScales。对应公式描述中的`smoothScalesOptional`。</td>
-      <td><ul><li>支持空tensor。</li><li>数据类型要和x保持一致。</li><li>当没有groupIndexOptional时，shape维度是x的最后一维。当有groupIndexOptional时，shape是两维，第一维大小是专家数，不超过1024，第二维大小是x的最后一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>当没有groupIndexOptional时，shape维度是x的最后一维。当有groupIndexOptional时，shape是两维，第一维大小是专家数，不超过1024，第二维大小是x的最后一维。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -130,7 +130,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>算子输入的groupIndex。</td>
-      <td><ul><li>支持空tensor。</li><li>shape只有一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape只有一维。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>输入</td>
       <td>输出y的类型对应的枚举值。</td>
       <td><ul><li>如果输出y类型为INT8，则为2；y类型为INT4时，则为29。</li></ul></td>
-      <td>Int64_t</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -150,7 +150,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>yOut</td>
       <td>输出</td>
       <td>量化后的输出Tensor。对应公式中的`yOut`。</td>
-      <td><ul><li>支持空tensor。</li><li>shape维度和x保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape维度和x保持一致。</li></ul></td>
       <td>INT4、INT8</td>
       <td>ND</td>
       <td>大于1维</td>
@@ -160,7 +160,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>scaleOut</td>
       <td>输出</td>
       <td>量化使用的scale。对应公式中的`scaleOut`。</td>
-      <td><ul><li>支持空tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>大于0维</td>
@@ -170,7 +170,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>offsetOut</td>
       <td>输出</td>
       <td>量化使用的scale。对应公式中的`offset`。</td>
-      <td><ul><li>支持空tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape维度为x的shape剔除最后一维。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>大于0维</td>
@@ -199,10 +199,11 @@ aclnnStatus aclnnDynamicQuantV2(
   </tbody>
   </table>
 
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -221,7 +222,7 @@ aclnnStatus aclnnDynamicQuantV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x或out参数是空指针。</td>
+      <td>传入的x或yOut参数是空指针。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>

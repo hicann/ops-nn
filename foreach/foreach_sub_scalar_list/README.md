@@ -17,7 +17,7 @@
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   scalars = [{scalars_0}, {scalars_1}, ... {scalars_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
-  $$
+  $$ 
 
   $$
   y_i = x_i - scalars_i (i=0,1,...n-1)
@@ -51,14 +51,14 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示减法运算的第二个输入标量列表，对应公式中的`scalars`。与输入参数的数据类型具有一定对应关系：当入参`x`的数据类型为FLOAT、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
+      <td>表示减法运算的第二个输入标量列表，对应公式中的`scalars`。与输入参数的数据类型具有一定对应关系：当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
       <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示减法运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示减法运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -76,4 +76,4 @@
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sub_scalar_list_proto.h)构图方式调用ForeachSubScalarList算子。         |
 
 <!--[test_geir_foreach_sub_scalar_list](examples/test_geir_foreach_sub_scalar_list.cpp)-->
-<!-- [test_aclnn_foreach_sub_scalar_list](examples/test_aclnn_foreach_sub_scalar_list.cpp) -->
+<!--[test_aclnn_foreach_sub_scalar_list](examples/test_aclnn_foreach_sub_scalar_list.cpp)-->

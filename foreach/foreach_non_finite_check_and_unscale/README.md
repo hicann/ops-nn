@@ -50,14 +50,14 @@
     <tr>
       <td>found_inf</td>
       <td>输入</td>
-      <td>表示用来标记输入`scaled_grads`中是否存在inf或-inf的标量，对应公式中的`foundInf`。仅包含一个元素。如果输入`scaled_grads`中存在inf或-inf的标量，将`found_inf`设置为1；否则，不对`found_inf`进行操作，最后将`scaled_grads`中的所有值乘以`inv_scale`并存储在`scaled_grads`中。</td>
+      <td>表示用来标记输入`scaled_grads`中是否存在inf或-inf的张量，对应公式中的`foundInf`。仅包含一个元素。如果输入`scaled_grads`中存在inf或-inf的张量，将`found_inf`设置为1；否则，不对`found_inf`进行操作，最后将`scaled_grads`中的所有值乘以`inv_scale`并存储在`scaled_grads`中。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inv_scale</td>
       <td>输入</td>
-      <td>表示进行反缩放计算的标量，对应公式中的`invScale`。仅包含一个元素。</td>
+      <td>表示进行反缩放计算的张量，对应公式中的`invScale`。仅包含一个元素。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

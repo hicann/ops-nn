@@ -2,14 +2,14 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
 
-- 算子功能：完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64类型。
+- 算子功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64类型。
 
 - 计算公式：
 
@@ -21,7 +21,7 @@
      $$
 
   3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
-
+     
      $$
      out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
      $$
@@ -30,7 +30,7 @@
      - 若`offset`不存在，不再后续计算。
      - 若`offset`存在：
        1. 将`offset`值处理为int，范围为[-256, 255]。
-
+     
           $$
           offset = Max(Min(INT(Round(offset)),255),-256)
           $$
@@ -84,7 +84,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>量化后的输出结果，对应公式中的`out`。当输入scale的shape为1维时，out的shape也为1维，该维度的shape大小为scale与offset(若不为nullptr)单维shape大小的最大值，当输入scale的shape为2维时，out的shape与输入scale的shape维度和大小完全一致。</td>
+      <td>量化后的输出结果，对应公式中的`out`。当输入scale的shape为1维时，y的shape也为1维，该维度的shape大小为scale与offset(若不为nullptr)单维shape大小的最大值，当输入scale的shape为2维时，y的shape与输入scale的shape维度和大小完全一致。</td>
       <td>UINT64</td><!--opdef只有一个数据类型，aclnn有两个，多了一个INT64-->
       <td>ND</td>
     </tr>
@@ -92,16 +92,16 @@
 
 ## 约束说明
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如aclnnQuantMatmulV4）配套使用。
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](aclnnQuantMatmulV4.md)）配套使用。
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
-- 关于scale、offset、out的shape说明如下：
-  - 当无offset时，out shape与scale shape一致。
-    - 若out作为matmul类算子输入，shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（weight，对应参数x2）的shape n一致。
-    - 若out作为grouped matmul类算子输入，仅在分组模式为m轴分组时使用（对应参数groupType为0），shape支持1维(g,)或2维(g, 1)、(g, n)，其中n与grouped matmul计算中右矩阵（对应参数weight）的shape n一致，g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。
+- 关于scale、offset、y的shape说明如下：
+  - 当无offset时，y shape与scale shape一致。
+    - 若y作为matmul类算子输入，shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
+    - 若y作为grouped matmul类算子输入，仅在分组模式为m轴分组时使用（对应参数groupType为0），shape支持1维(g,)或2维(g, 1)、(g, n)，其中n与grouped matmul计算中右矩阵（对应参数x2）的shape n一致，g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。
   - 当有offset时，仅作为matmul类算子输入：
-    - offset，scale，out的shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（weight，对应参数x2）的shape n一致。
-    - 当输入scale的shape为1维，out的shape也为1维，且shape大小为scale与offset单维shape大小的最大值。
-    - 当输入scale的shape为2维，out的shape与输入scale的shape维度和大小完全一致。
+    - offset，scale，y的shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
+    - 当输入scale的shape为1维，y的shape也为1维，且shape大小为scale与offset单维shape大小的最大值。
+    - 当输入scale的shape为2维，y的shape与输入scale的shape维度和大小完全一致。
 
 ## 调用说明
 

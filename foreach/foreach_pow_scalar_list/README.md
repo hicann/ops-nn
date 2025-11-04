@@ -15,7 +15,7 @@
 
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
-  exponent = [{exponent_0}, {exponent_1}, ... {exponent_{n-1}}]\\
+  exponent = [{exponent_0}, {exponent_1}, ... {exponent_{n-1}}]\\  
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
   $$
 
@@ -51,14 +51,14 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示进行n次方运算的指数，对应公式中的`exponent`。数据类型与入参`x`的数据类型具有一定对应关系：当x的数据类型为FLOAT、FLOAT16、BFLOAT16时，数据类型支持FLOAT；当x的数据类型为INT32时，数据类型支持INT64。</td>
+      <td>表示进行n次方运算的指数，对应公式中的`exponent`。数据类型与入参`x`的数据类型具有一定对应关系：当x的数据类型为FLOAT32、FLOAT16、BFLOAT16时，数据类型支持FLOAT32；当x的数据类型为INT32时，数据类型支持INT64。</td>
       <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行n次方运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。</td>
+      <td>表示进行n次方运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -76,4 +76,4 @@
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_list_proto.h)构图方式调用ForeachPowScalarList算子。         |
 
 <!--[test_geir_foreach_pow_scalar_list](examples/test_geir_foreach_pow_scalar_list.cpp)-->
-<!-- [test_aclnn_foreach_pow_scalar_list](examples/test_aclnn_foreach_pow_scalar_list.cpp) -->
+<!--[test_aclnn_foreach_pow_scalar_list](examples/test_aclnn_foreach_pow_scalar_list.cpp)-->

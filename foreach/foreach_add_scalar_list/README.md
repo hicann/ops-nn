@@ -50,14 +50,14 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示进行加法运算的输入标量列表，对应公式中的`scalars`。数据类型与输入参数的数据类型存在一定的对应关系：当入参`x`的数据类型为FLOAT、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
+      <td>表示进行加法运算的输入标量列表，对应公式中的`scalars`。数据类型与输入参数的数据类型存在一定的对应关系：当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
       <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行加法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shapesize大于等于入参`x`的shapesize。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行加法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -71,7 +71,8 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | -| 通过[aclnnForeachAddScalarList](docs/aclnnForeachAddScalarList.md)接口方式调用ForeachAddScalarList算子。 |
+| aclnn接口  | - | 通过[aclnnForeachAddScalarList](docs/aclnnForeachAddScalarList.md)接口方式调用ForeachAddScalarList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_add_scalar_list_proto.h)构图方式调用ForeachAddScalarList算子。         |
 
 <!--[test_geir_foreach_add_scalar_list](examples/test_geir_foreach_add_scalar_list.cpp)-->
+<!--[test_aclnn_foreach_add_scalar_list](examples/test_aclnn_foreach_add_scalar_list.cpp)-->

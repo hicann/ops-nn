@@ -11,7 +11,7 @@
 
 - 算子功能：GroupNorm用于计算输入张量的组归一化结果，均值，标准差的倒数，该算子是对GroupNorm的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-
+  
   $$
   d\beta = \sum_{i=1}^n dy
   $$
@@ -19,7 +19,7 @@
   $$
   d\gamma = \sum_{i=1}^n (dy \cdot \hat{x})
   $$
-
+  
   $$
   dx = mean \cdot rstd \cdot \gamma \begin{bmatrix}
   dy - \frac{1}{N}  (d\beta + \hat{x} \cdot d\gamma)

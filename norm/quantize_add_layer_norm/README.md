@@ -118,7 +118,7 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的`eps`。</li><li>默认值为1e-5f。</li></ul></td>
-      <td>FLOAT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
@@ -152,6 +152,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | -  | 通过[算子IR](op_graph/quantize_add_layer_norm_proto.h)构图方式调用QuantizeAddLayerNorm算子。         |
+| 图模式 | [test_geir_quantize_add_layer_norm](examples/test_geir_quantize_add_layer_norm.cpp)  | 通过[算子IR](op_graph/quantize_add_layer_norm_proto.h)构图方式调用QuantizeAddLayerNorm算子。         |
 
 <!--[test_geir_quantize_add_layer_norm](examples/test_geir_quantize_add_layer_norm.cpp)-->

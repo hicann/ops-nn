@@ -12,13 +12,13 @@
 - 算子功能：对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为:
-
+    
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrtMode为true时，计算公式为:
-
+    
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -131,7 +131,7 @@ aclnnStatus aclnnAscendQuant(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
+    </tr>  
     <tr>
       <td>y</td>
       <td>输出</td>
@@ -164,11 +164,13 @@ aclnnStatus aclnnAscendQuant(
     </tr>
   </tbody>
   </table>
+  
+ 
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -203,10 +205,10 @@ aclnnStatus aclnnAscendQuant(
       <td>dstType不在有效取值范围。</td>
     </tr>
     <tr>
-      <td>y的数据类型为int4时，x的shape尾轴大小不是偶数。</td>
+      <td>y的数据类型为INT4时，x的shape尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>y的数据类型为int32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
+      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
     </tr>
   </tbody></table>
 
