@@ -514,16 +514,10 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
                 ${PROJECT_SOURCE_DIR}/common/inc
                 ${JSON_INCLUDE}
                 )
-        if(${opName} STREQUAL "dynamic_rnnv2")
-            target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
-                $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
-                ${OPS_NN_DIR}/rnn/dynamic_rnn/op_host/dynamic_lstm_tiling.cpp
-            )
-        else()
-            target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
-                $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
-            )
-        endif()
+       
+        target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
+            $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+        )
 
         target_compile_definitions(${opName}_${socVersion}_tiling_tmp PRIVATE
                 LOG_CPP
