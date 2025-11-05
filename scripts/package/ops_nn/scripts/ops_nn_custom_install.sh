@@ -113,9 +113,15 @@ if [ -n "$ops_nn_version_dir" ]; then
 
     create_ops_nn_opp_link $install_path/latest "ops_nn" $install_path/$version_dir "ops_nn"
 
-    opp_aic_info_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/config/ascend910b
-    ops_aic_info_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/config/ascend910b
-    create_ops_nn_opp_link ${opp_aic_info_path} "aic-ascend910b-ops-info-nn.json" ${ops_aic_info_path} "aic-ascend910b-ops-info-nn.json"
+    PATTERN="ascend*"
+    opp_aic_info_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/config
+    ops_aic_info_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/config
+    files=( $ops_aic_info_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        json_file="aic-${filename}-ops-info-nn.json"
+        create_ops_nn_opp_link ${opp_aic_info_path}/${filename} $json_file ${ops_aic_info_path}/${filename} $json_file
+    done
 
     opp_impl_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/impl
     ops_impl_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe
@@ -129,15 +135,23 @@ if [ -n "$ops_nn_version_dir" ]; then
     ops_ascendc_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/impl/ascendc
     create_ops_nn_opp_link_list ${opp_ascendc_path} ${ops_ascendc_path}
 
-    opp_kernel_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/ascend910b
+    opp_kernel_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel
     ops_kernel_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/kernel
-    create_ops_nn_opp_link ${opp_kernel_path} "ops_nn" ${ops_kernel_path} "ascend910b"
-    create_ops_nn_opp_link_list ${opp_kernel_path} "${ops_kernel_path}/ascend910b"
+    files=( $ops_kernel_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        create_ops_nn_opp_link ${opp_kernel_path}/${filename} "ops_nn" ${ops_kernel_path} "$filename"
+        create_ops_nn_opp_link_list ${opp_kernel_path}/${filename} "${ops_kernel_path}/${filename}"
+    done
 
-    opp_config_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/config/ascend910b
+    opp_config_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/config
     ops_config_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/config
-    create_ops_nn_opp_link ${opp_config_path} "ops_nn" ${ops_config_path} "ascend910b"
-    create_ops_nn_opp_link_list ${opp_config_path} "${ops_config_path}/ascend910b"
+    files=( $ops_config_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        create_ops_nn_opp_link ${opp_config_path}/${filename} "ops_nn" ${ops_config_path} "$filename"
+        create_ops_nn_opp_link_list ${opp_config_path}/${filename} "${ops_config_path}/${filename}"
+    done
 
     opp_host_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${architecture}
     ops_host_path=${ops_nn_dst_dir}/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${architecture}

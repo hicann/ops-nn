@@ -92,8 +92,14 @@ if [ -n "$ops_nn_version_dir" ]; then
 
     opp_path=$install_path/latest
     remove_ops_nn_opp_link ${opp_path} "ops_nn"
-    opp_aic_info_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/config/ascend910b
-    remove_ops_nn_opp_link ${opp_aic_info_path} "aic-ascend910b-ops-info-nn.json"
+
+    PATTERN="ascend*"
+    opp_aic_info_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/config
+    files=( $opp_aic_info_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        remove_ops_nn_opp_link ${opp_aic_info_path}/${filename} "aic-${filename}-ops-info-nn.json"
+    done
 
     opp_dynamic_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/impl/dynamic
     remove_ops_nn_opp_link ${opp_dynamic_path}
@@ -104,11 +110,19 @@ if [ -n "$ops_nn_version_dir" ]; then
     opp_impl_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/impl
     remove_ops_nn_opp_link ${opp_impl_path}
 
-    opp_kernel_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/ascend910b
-    remove_ops_nn_opp_link ${opp_kernel_path}
+    opp_kernel_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel
+    files=( $opp_kernel_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        remove_ops_nn_opp_link ${opp_kernel_path}/${filename}
+    done
 
-    opp_config_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/config/ascend910b
-    remove_ops_nn_opp_link ${opp_config_path}
+    opp_config_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/kernel/config
+    files=( $opp_config_path/$PATTERN )
+    for file_path in "${files[@]}"; do
+        filename=$(basename "$file_path")
+        remove_ops_nn_opp_link ${opp_config_path}/${filename}
+    done
 
     opp_host_path=${opp_dst_dir}/built-in/op_impl/ai_core/tbe/op_host/lib/linux/x86_64
     remove_ops_nn_opp_link ${opp_host_path} "libophost_nn.so"
