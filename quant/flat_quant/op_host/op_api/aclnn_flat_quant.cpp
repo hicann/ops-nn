@@ -37,8 +37,8 @@ static constexpr int32_t K_INDEX = 0;
 static constexpr int32_t M_INDEX = 1;
 static constexpr int32_t N_INDEX = 2;
 static constexpr int32_t CEIL_SIZE = 16;
-static constexpr int32_t MAX_K_SIZE = 32768;
-static constexpr int32_t MAX_MN_SIZE = 128;
+static constexpr int32_t MAX_K_SIZE = 262144;
+static constexpr int32_t MAX_MN_SIZE = 256;
 static constexpr double ZERO = 0.0;
 static constexpr double ONE = 1.0;
 
@@ -164,7 +164,7 @@ static bool CheckDim(const aclTensor *x, const aclTensor *kroneckerP1, const acl
     int64_t N = xShape.GetDim(N_INDEX);
     OP_CHECK(K > 0 && M > 0 && N > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x sizes should greater than 0."), return false);
     OP_CHECK(K <= MAX_K_SIZE && M <= MAX_MN_SIZE && N <= MAX_MN_SIZE,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed 8192, x dim1 and dim2 should not exceed 128."),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed 262144, x dim1 and dim2 should not exceed 256."),
         return false);
     if (out->GetDataType() == op::DataType::DT_INT32) {
         OP_CHECK(N % INT4_NUMS_IN_INT32_SPACE == 0,
@@ -268,7 +268,7 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(const aclTensor *x, const aclTensor *
     auto p2Contiguous = l0op::Contiguous(kroneckerP2, uniqueExecutor.get());
     CHECK_RET(p2Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::tuple<aclTensor *, aclTensor *> result = l0op::FlatQuant(selfContiguous, p1Contiguous, p2Contiguous,
+    std::tuple<aclTensor *, aclTensor *> result = l0op::FlatQuant(selfContiguous, p1Contiguous, p2Contiguous, 
         static_cast<float>(clipRatio), uniqueExecutor.get());
     const aclTensor *resultTensor = std::get<0>(result);
     const aclTensor *quantScaleTensor = std::get<1>(result);

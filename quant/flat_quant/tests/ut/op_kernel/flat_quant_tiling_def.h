@@ -29,6 +29,8 @@ struct FlatQuantTilingData {
     int64_t M;
     int64_t N;
     float clipRatio;
+    TCubeTiling matmulTilingL;
+    TCubeTiling matmulTilingR;
 };
 
 #pragma pack()

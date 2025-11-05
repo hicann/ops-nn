@@ -24,20 +24,26 @@ constexpr uint8_t INPUT_TENSOR_NUM = 3;
 constexpr uint8_t INDEX_ZERO = 0;
 constexpr uint8_t INDEX_ONE = 1;
 constexpr uint8_t INDEX_TWO = 2;
-
 constexpr uint8_t DIM_THREE = 3;
 constexpr uint8_t DIM_TWO = 2;
 
-constexpr uint8_t HALF_TYPE = 1;
-constexpr uint8_t BFLOAT_TYPE = 2;
 constexpr uint8_t BYTE_LEN_2 = 2;
+constexpr uint8_t BYTE_LEN_4 = 4;
 constexpr uint8_t CEIL_SIZE = 16;
-constexpr int32_t MAX_K_SIZE = 32768;
-constexpr int32_t MAX_MN_SIZE = 128;
+constexpr int32_t MAX_K_SIZE = 262144;
+constexpr int32_t MAX_MN_SIZE = 256;
+constexpr int32_t FACTOR_TWO = 2;
+constexpr int32_t K_PER_VEC = 4;
+constexpr int32_t BASE_SIZE = 128;
+constexpr int32_t L1_SIZE = 512 * 1024;
 
 constexpr float ZERO_FLOAT = 0.0f;
 constexpr float ONE_FLOAT = 1.0f;
 
+constexpr uint8_t MM_BASE_MODE = 1;
+constexpr uint8_t MM_DOUBLE_MODE = 2;
+constexpr uint8_t MM_SPLIT_MODE = 3;
+constexpr uint8_t MM_HIGH_MODE = 4;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 
 class FlatQuantTiling {
@@ -48,7 +54,8 @@ public:
 private:
     bool CheckShapes() const;
     bool CheckClipRatio() const;
-    uint8_t GetDataTypeVal() const;
+    void GetKernelMode(int64_t aivNum);
+    ge::graphStatus GetTCubeTiling();
 
     template <typename T1, typename T2>
     inline auto CeilA2B(T1 a, T2 b) const -> T1;
@@ -60,6 +67,8 @@ private:
     gert::Shape xShape;
     gert::Shape p1Shape;
     gert::Shape p2Shape;
+
+    uint8_t mmMode = MM_BASE_MODE;
 
     const float *clipRatio = nullptr;
     FlatQuantTilingData tilingData;
@@ -85,7 +94,6 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
             return ge::GRAPH_FAILED;
         }
     }
-    tilingData.set_dataType(GetDataTypeVal());
 
     // 获取输入的shape
     xShape = tilingContext->GetInputShape(INDEX_ZERO)->GetOriginShape();
@@ -99,20 +107,77 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
     tilingData.set_M(xShape.GetDim(INDEX_ONE));
     tilingData.set_N(xShape.GetDim(INDEX_TWO));
     tilingData.set_clipRatio(*clipRatio);
-
-    int64_t K = xShape.GetDim(INDEX_ZERO);
-    int64_t Mceil = CeilA2B(xShape.GetDim(INDEX_ONE), CEIL_SIZE) * CEIL_SIZE;
-    int64_t Nceil = CeilA2B(xShape.GetDim(INDEX_TWO), CEIL_SIZE) * CEIL_SIZE;
-    size_t *workspaces = tilingContext->GetWorkspaceSizes(1);
-    workspaces[0] = (K * Mceil * Nceil + K * Mceil * Nceil + Mceil * Mceil + Nceil * Nceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
-
     auto compileInfo = tilingContext->GetCompileInfo<FlatQuantCompileInfo>();
+    int64_t aivNum = FACTOR_TWO * compileInfo->coreNum;
+    GetKernelMode(aivNum);
+    if (mmMode == MM_HIGH_MODE && GetTCubeTiling() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     tilingContext->SetBlockDim(compileInfo->coreNum);
-    tilingContext->SetTilingKey(1);
+    tilingContext->SetTilingKey(mmMode);
 
     tilingData.SaveToBuffer(
         tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    return ge::GRAPH_SUCCESS;
+}
+
+void FlatQuantTiling::GetKernelMode(int64_t aivNum)
+{
+    int64_t K = xShape.GetDim(INDEX_ZERO);
+    int64_t M = xShape.GetDim(INDEX_ONE);
+    int64_t Mceil = CeilA2B(M, CEIL_SIZE) * CEIL_SIZE;
+    int64_t N = xShape.GetDim(INDEX_TWO);
+    int64_t Nceil = CeilA2B(N, CEIL_SIZE) * CEIL_SIZE;
+    if (Mceil <= BASE_SIZE / FACTOR_TWO && Nceil <= BASE_SIZE && K > 1) {
+        mmMode = MM_DOUBLE_MODE;
+    } else if (Mceil * Mceil + Nceil * Nceil + FACTOR_TWO * FACTOR_TWO * Mceil * Nceil > L1_SIZE / BYTE_LEN_2) {
+        mmMode = MM_HIGH_MODE;
+    } else if (Mceil > BASE_SIZE || Nceil > BASE_SIZE) {
+        mmMode = MM_SPLIT_MODE;
+    } else {
+        mmMode = MM_BASE_MODE;
+    }
+
+    size_t *workspaces = tilingContext->GetWorkspaceSizes(1);
+    if (mmMode == MM_HIGH_MODE) {
+        int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
+        workspaces[0] = useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * Mceil * N * BYTE_LEN_4) + WORK_SPACE_SIZE;
+    } else if (mmMode == MM_DOUBLE_MODE) {
+        K += (K % FACTOR_TWO);
+        workspaces[0] = (K * Mceil * N + FACTOR_TWO * Mceil * FACTOR_TWO * Mceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+    } else {
+        workspaces[0] = (K * Mceil * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+    }
+}
+
+ge::graphStatus FlatQuantTiling::GetTCubeTiling()
+{
+    int64_t K = xShape.GetDim(INDEX_ZERO);
+    int64_t M = xShape.GetDim(INDEX_ONE);
+    int64_t N = xShape.GetDim(INDEX_TWO);
+    auto mmDataType = static_cast<matmul_tiling::DataType>(dataType);
+
+    matmul_tiling::MatmulApiTiling mmTilingR;
+    mmTilingR.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    mmTilingR.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    mmTilingR.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    mmTilingR.SetOrgShape(K * M, N, N);
+    mmTilingR.SetShape(K_PER_VEC * M, N, N);
+    if (mmTilingR.GetTiling(tilingData.matmulTilingR) == -1) {
+        return ge::GRAPH_FAILED;
+    }
+
+    matmul_tiling::MatmulApiTiling mmTilingL;
+    mmTilingL.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    mmTilingL.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, mmDataType);
+    mmTilingL.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_FLOAT);
+    mmTilingL.SetOrgShape(M, N, M);
+    mmTilingL.SetShape(M, N, M);
+    if (mmTilingL.GetTiling(tilingData.matmulTilingL) == -1) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -136,18 +201,6 @@ bool FlatQuantTiling::CheckShapes() const
 bool FlatQuantTiling::CheckClipRatio() const
 {
     return clipRatio != nullptr && *clipRatio > ZERO_FLOAT && *clipRatio <= ONE_FLOAT;
-}
-
-uint8_t FlatQuantTiling::GetDataTypeVal() const
-{
-    switch (dataType) {
-        case ge::DT_FLOAT16:
-            return HALF_TYPE;
-        case ge::DT_BF16:
-            return BFLOAT_TYPE;
-        default:
-            return 0;
-    }
 }
 
 template <typename T1, typename T2>

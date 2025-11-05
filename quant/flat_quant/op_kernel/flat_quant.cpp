@@ -13,46 +13,59 @@
  * \brief
  */
 
-#include "flat_quant.h"
+#include "flat_quant_vec.h"
+#include "flat_quant_cube.h"
+#include "flat_quant_high.h"
 
 using namespace FlatQuantNS;
 
-extern "C" __global__ __aicore__ void flat_quant(
-                                                 GM_ADDR x,
-                                                 GM_ADDR kronecker_p1,
-                                                 GM_ADDR kronecker_p2,
-                                                 GM_ADDR out,
-                                                 GM_ADDR quant_scale,
-                                                 GM_ADDR workspace,
-                                                 GM_ADDR tiling)
+extern "C" __global__ __aicore__ void flat_quant(GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out,
+                                                 GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
-    const FlatQuantTilingData *__restrict tiling_data = &tilingData;
+    const FlatQuantTilingData* __restrict tiling_data = &tilingData;
+    const TCubeTiling* __restrict mmTilingR = &(tiling_data->matmulTilingR);
+    const TCubeTiling* __restrict mmTilingL = &(tiling_data->matmulTilingL);
 
     GM_ADDR userWS = GetUserWorkspace(workspace);
 
     if (TILING_KEY_IS(1)) {
-        if ASCEND_IS_AIV{
-            if (tiling_data->dataType == 1) {
-                TestVec<half> vec;
-                vec.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
-                vec.Process();
-            } else if (tiling_data->dataType == 2) {
-                TestVec<bfloat16_t> vec;
-                vec.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
-                vec.Process();
-            }
+        if ASCEND_IS_AIV {
+            FlatQuantVec<DTYPE_X, MM_BASE_MODE> op;
+            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
+            op.Process();
         }
-        if ASCEND_IS_AIC{
-            if (tiling_data->dataType == 1) {
-                TestCube<half> cube;
-                cube.Init(workspace, &tilingData);
-                cube.Process();
-            } else if (tiling_data->dataType == 2) {
-                TestCube<bfloat16_t> cube;
-                cube.Init(workspace, &tilingData);
-                cube.Process();
-            }
+        if ASCEND_IS_AIC {
+            FlatQuantCube<DTYPE_X, MM_BASE_MODE> op;
+            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
+            op.Process();
         }
+    } else if (TILING_KEY_IS(2)) {
+        if ASCEND_IS_AIV {
+            FlatQuantVec<DTYPE_X, MM_DOUBLE_MODE> op;
+            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
+            op.Process();
+        }
+        if ASCEND_IS_AIC {
+            FlatQuantCube<DTYPE_X, MM_DOUBLE_MODE> op;
+            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
+            op.Process();
+        }
+    } else if (TILING_KEY_IS(3)) {
+        if ASCEND_IS_AIV {
+            FlatQuantVec<DTYPE_X, MM_SPLIT_MODE> op;
+            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);
+            op.Process();
+        }
+        if ASCEND_IS_AIC {
+            FlatQuantCube<DTYPE_X, MM_SPLIT_MODE> op;
+            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);
+            op.Process();
+        }
+    } else if (TILING_KEY_IS(4)) {
+        FlatQuantHigh<DTYPE_X> op;
+        REGIST_MATMUL_OBJ(&op.pipe, GetSysWorkSpacePtr(), op.matmulR, mmTilingR, op.matmulL, mmTilingL);
+        op.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
+        op.Process();
     }
 }
