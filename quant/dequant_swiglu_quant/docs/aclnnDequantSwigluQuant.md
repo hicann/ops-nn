@@ -317,7 +317,7 @@ aclnnStatus aclnnDequantSwigluQuant(
 
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
-  - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除2。
+  - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
 
 ## 调用示例
 

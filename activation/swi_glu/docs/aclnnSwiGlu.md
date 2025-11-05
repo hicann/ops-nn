@@ -67,7 +67,7 @@ aclnnStatus aclnnSwiGlu(
       <td><ul><li>支持空Tensor。</li><li>维度必须大于0且shape必须在入参dim对应维度上是偶数。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>-</td>
+      <td>1-8</td>
       <td>×</td>
     </tr>
     <tr>
@@ -77,7 +77,7 @@ aclnnStatus aclnnSwiGlu(
       <td>数据类型与计算输入x的类型一致。</td>
       <td>INT8</td>
       <td>ND</td>
-      <td>-</td>
+      <td>1-8</td>
       <td>×</td>
     </tr>
      <tr>

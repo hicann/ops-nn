@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量计算softmax值。
+- 算子功能：对输入张量计算Softmax值。
 
 - 计算公式：
 
@@ -77,7 +77,7 @@ aclnnStatus aclnnSoftmax(
       <tr>
       <td>dim</td>
       <td>输入</td>
-      <td>需要做softmax的轴。</td>
+      <td>需要做Softmax的轴。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

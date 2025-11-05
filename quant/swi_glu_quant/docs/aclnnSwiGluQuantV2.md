@@ -14,7 +14,7 @@
 - 算子支持范围：当前SwiGluQuant支持MoE场景（传入groupIndexOptional）和非MoE场景（groupIndexOptional传空），SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
 - MoE场景动态量化计算公式：  
   $$
-    Act = SwiGLU(x) = Swish(A)*B \\
+    Act = SwiGlu(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act[0\colon g[0],\colon] * smooth\_scales[0\colon g[0],\colon], i=0 \\
     Y_{tmp}^i = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[g[i]\colon g[i+1], \colon], i \in (0, G) \cap \mathbb{Z}\\
     scale=row\_max(abs(Y_{tmp}))/dstTypeScale
@@ -115,7 +115,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>x</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td><ul><li>x的最后一维需要为2的倍数，且x的维数必须大于1维。</li><li>当前仅支持输入x的最后一维长度不超过8192。</li><li>当dstType传入值为29(表示yOut输出为INT4量化)时，x的最后一维需要为4的倍数。</li></ul></td>
+      <td><ul><li>x的最后一维需要为2的倍数，且x的维数必须大于1维。</li><li>当前仅支持输入x的最后一维长度不超过8192。</li><li>当dstType传入值为29（表示yOut输出为INT4量化）时，x的最后一维需要为4的倍数。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>smoothScalesOptional</td>
       <td>输入</td>
       <td>量化的smooth_scales，公式中的smooth_scales。</td>
-      <td>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。</td>
+      <td><ul><li>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。<li>不支持空Tensor。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>offsetsOptional</td>
       <td>输入</td>
       <td>公式中的offsets。</td>
-      <td><ul><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li></ul></td>
+      <td><ul><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index，公式中的group_index。</td>
-      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积。</li></td>
+      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积。</li><li>不支持空Tensor。</li></td>
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>yOut</td>
       <td>输出</td>
       <td>输出张量。</td>
-      <td>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。</td>
+      <td><ul><li>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。<li>不支持空Tensor。</li></ul></td>
       <td>INT8、INT4</td>
       <td>ND</td>
       <td>-</td>

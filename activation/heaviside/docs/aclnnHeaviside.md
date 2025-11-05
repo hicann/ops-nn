@@ -15,7 +15,7 @@
 - 计算公式：
 
   $$
-  \text{heaviside}(\text{input},   \text{values}) =
+  \text{Heaviside}(\text{input},   \text{values}) =
   \begin{cases}
   0, & \text{如果 input} < 0 \\
   \text{values}, & \text{如果  input} = 0 \\

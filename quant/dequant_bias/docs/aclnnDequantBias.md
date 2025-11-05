@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。
+- 算子功能：对输入x反量化操作，将输入的INT32的数据转化为FLOAT16/BFLOAT16输出。
 - 计算公式：
 
   $$
@@ -97,7 +97,7 @@ aclnnStatus aclnnDequantBias(
       <td>activateScaleOptional</td>
       <td>输入</td>
       <td>表示反量化操作输入M维度上乘法的权重，公式中的输入activate_scale。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape为[M]，长度与x的M维长度一致。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape为[M]，长度与x的M维长度一致。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -185,7 +185,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/conte
   <tr>
     <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
     <td rowspan="3">561002</td>
-    <td>输入activateScale、biasOptional的数据类型不在支持的范围内。</td>
+    <td>输入activateScaleOptional、biasOptional的数据类型不在支持的范围内。</td>
   </tr>
   <tr>
     <td>输入和输出的shape中N和M的取值不满足参数要求和约束。</td>
@@ -369,7 +369,7 @@ int main() {
 
   // 调用aclnnDequantBias第一段接口
   ret = aclnnDequantBiasGetWorkspaceSize(input, weight, activation, bias,
-      true, y, &workspaceSize, &executor);
+      1, y, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDequantBiasGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
   // 根据第一段接口计算出的workspaceSize申请device内存

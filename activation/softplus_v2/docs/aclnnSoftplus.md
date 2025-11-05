@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数softplus。
+- 算子功能：激活函数Softplus。
 - 计算公式：
 
 $$
@@ -80,7 +80,7 @@ aclnnStatus aclnnSoftplus(
       <td>beta</td>
       <td>输入</td>
       <td>公式中的beta。</td>
-      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。不满足外，其余场景均满足推导关系）。</li></ul></td>
+      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。这些场景不满足推导关系外，其余场景均满足推导关系）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

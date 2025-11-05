@@ -7,6 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
 - 算子功能：
@@ -64,14 +65,14 @@ aclnnStatus aclnnFatreluMul(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
+  <col style="width: 101px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 200px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -110,7 +111,7 @@ aclnnStatus aclnnFatreluMul(
       <td>out</td>
       <td>输出</td>
       <td>输出的张量，公式中的out。</td>
-      <td><ul><li>输出的数据类型与输入input的数据类型保持一致。</li><li>输出shape最后一维的值为输入shape最后一维值的二分之一。</li><li>其他维度的值和输入`input`的shape其他维度的值保持一致。</li></ul></td>
+      <td><ul><li>输出的数据类型与输入input的数据类型保持一致。</li><li>输出shape最后一维的值为输入shape最后一维值的二分之一。</li><li>其他维度的值和输入input的shape其他维度的值保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>2-8</td>

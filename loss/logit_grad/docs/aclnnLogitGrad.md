@@ -107,7 +107,7 @@ aclnnStatus aclnnLogitGrad(
       <td>out</td>
       <td>输出</td>
       <td>输出张量，公式中的输出dx。</td>
-      <td>输出的数据类型、数据格式和shape与输入input保持一致。</li></ul></td>
+      <td>输出的数据类型、数据格式和shape与输入x保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>

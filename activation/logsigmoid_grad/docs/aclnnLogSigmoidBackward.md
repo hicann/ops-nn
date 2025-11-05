@@ -74,7 +74,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示LogSigmoid激活函数正向输出的梯度，公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>graOutput、self、buffer与gradInput的shape一致。</li><li>graOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>self</td>
       <td>输入</td>
       <td>待进行LogSigmoidBackward计算的入参，公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>graOutput、self、buffer与gradInput的shape一致。</li><li>graOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnLogSigmoidBackward(
        <td>buffer</td>
       <td>输入</td>
       <td>正向计算的中间结果，暂不使用。</td>
-      <td><ul><li>支持空Tensor。</li><li>graOutput、self、buffer与gradInput的shape一致。</li><li>graOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>出参，公式中的gradInput。</td>
-      <td><ul><li>支持空Tensor。</li><li>graOutput、self、buffer与gradInput的shape一致。</li><li>graOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self、buffer与gradInput的shape一致。</li><li>gradOutput、self、buffer与gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

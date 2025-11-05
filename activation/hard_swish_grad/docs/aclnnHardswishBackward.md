@@ -76,7 +76,7 @@ aclnnStatus aclnnHardswishBackward(
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>表示输入张量，公式中的输入self。</td>
+      <td>表示输入张量，公式中的输入gradOutput。</td>
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnHardswishBackward(
       <td>输入</td>
       <td>输入数据。公式中的self。</td>
       <td><ul><li>支持空Tensor。</li><li>softplus的正向输入值。</li><li>shape需要与gradOutput、gradInput相同。</li></ul></td>
-      <td>INT8、INT16、INT32、INT64、UINT8、BOOL、FLOAT16、FLOAT、DOUBLE、BFLOAT16</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

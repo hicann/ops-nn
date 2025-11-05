@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入Tensor完成sigmoid运算。
+- 算子功能：对输入Tensor完成Sigmoid运算。
 
 - 计算公式：
 

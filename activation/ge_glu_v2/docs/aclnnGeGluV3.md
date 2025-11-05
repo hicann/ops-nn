@@ -89,7 +89,7 @@ aclnnStatus aclnnGeGluV3(
       <td>输入</td>
       <td>可选入参。</td>
       <td><ul><li>设定的slice轴，需要对self对应的轴进行对半切。</li><li>dim对应的self的轴必须是双数。</li></ul></td>
-      <td>INT64</td>
+      <td>INT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnGeGluV3(
       <td>输入</td>
       <td>可选入参。</td>
       <td>GeGluV3计算使用的激活函数索引，0表示使用none，1表示使用tanh。</td>
-      <td>INT64</td>
+      <td>INT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -193,7 +193,7 @@ aclnnStatus aclnnGeGluV3(
       <td>self、out、outGelu的维数大于8。</td>
     </tr>
     <tr>
-      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
+      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内或者out、outGelu不为标量Tensor；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
     </tr>
     <tr>
       <td>out、outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</td>

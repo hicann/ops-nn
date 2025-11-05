@@ -94,8 +94,7 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>self</td>
       <td>输入</td>
       <td>正向输入值。公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要gradOutput一致。</li></ul></td>
-      <td>FLOAT16、FLOAT、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要与gradOutput一致。</li></ul></td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

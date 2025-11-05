@@ -34,7 +34,7 @@
   \sigma(x) = {\frac{1} {1+{e}^{-x}}}
   $$
 
-  其中$\sigma(x)$为sigmoid函数，$s(x)$为swish函数，$s^\prime(x)$为swish函数的导数。
+  其中$\sigma(x)$为Sigmoid函数，$s(x)$为Swish函数，$s^\prime(x)$为Swish函数的导数。
 
 ## 函数原型
 
@@ -337,7 +337,7 @@ int main() {
   ret = CreateAclTensor(gradInputHostData, gradInputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT, &gradInput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnSwishBackward第一段接口

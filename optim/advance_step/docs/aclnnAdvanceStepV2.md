@@ -247,17 +247,17 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/conte
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
-    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、accepetdNum是空指针。</td>
+    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum是空指针。</td>
   </tr>
   <tr>
     <td>ACLNN_ERR_PARAM_INVALID</td>
     <td>161002</td>
-    <td>inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、accepetdNum的数据类型不在支持的范围之内。</td>
+    <td>inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
     <td rowspan="5">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
     <td rowspan="5">561002</td>
-    <td>输入inputTokens、inputPositions、seqLens、slotMapping、blockTables、specToken、accepetdNum的shape的第一维长度与numSeqs不一致。</td>
+    <td>输入inputTokens、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum的shape的第一维长度与numSeqs不一致。</td>
   </tr>
   <tr>
     <td>输入sampledTokenIds的shape的第一维长度与numQueries不一致，或者shape的第二维长度不为1。</td>

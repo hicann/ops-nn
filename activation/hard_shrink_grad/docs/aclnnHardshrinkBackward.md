@@ -7,6 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
+
 ## 功能说明
 
 - 算子功能：[aclnnHardshrink](../../hard_shrink/docs/aclnnHardshrink.md)的反向接口，计算反向传播的梯度gradInput。
@@ -48,14 +49,14 @@ aclnnStatus aclnnHardshrinkBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
+  <col style="width: 111px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 200px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -70,47 +71,47 @@ aclnnStatus aclnnHardshrinkBackward(
       <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
-    <tr>
+      <tr>
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入，公式中的grad。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与self满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradOutput、self和gradInput的数据类型一致。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
-      <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>self</td>
-      <td>输入</td>
-      <td>正向输入值。公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput与self的shape满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要gradOutput一致。</li></ul></td>
+      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
-      <td>lambda</td>
+      <td>self</td>
       <td>输入</td>
-      <td>公式中的输入\lambda。</td>
-      <td>当$\lambda$小于0时，按0计算。</td>
+      <td>表示输入的Tensor、公式中的x。</td>
+      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr>
+     <tr>
+      <td>lambd</td>
+      <td>输入</td>
+      <td>公式中的\lambda。</td>
+      <td>当\lambda小于0时，按0计算。</td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
-      <tr>
+     <tr>
       <td>gradInput</td>
       <td>输出</td>
-      <td>输出参数，公式中的HardshrinkBackward(x,grad)。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradInput与self和gradOutput的broadcast后的Tensor的shape一致。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
+      <td>公式中的HardshrinkBackward(x,grad)。</td>
+      <td><ul><li>gradInput与self和gradOutput的broadcast后的Tensor的shape一致。</li><li>支持空Tensor传入。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
-      <tr>
+     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
@@ -130,7 +131,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>-</td>
       <td>-</td>
     </tr>
-   </tbody>
+  </tbody>
   </table>
   
 
@@ -172,7 +173,6 @@ aclnnStatus aclnnHardshrinkBackward(
 
 
 ## aclnnHardshrinkBackward
-
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -270,7 +270,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // 计算连续tensor的strides
+  // 计算连续Tensor的strides
   std::vector<int64_t> strides(shape.size(), 1);
   for (int64_t i = shape.size() - 2; i >= 0; i--) {
     strides[i] = shape[i + 1] * strides[i + 1];

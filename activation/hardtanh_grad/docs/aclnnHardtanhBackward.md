@@ -17,14 +17,12 @@
   $$
 
   $$
-  grad\_self_{i} = \left\{\begin{matrix}
-  \begin{array}{l}
+  grad\_self_{i} = 
+  \begin{cases}
     0,\ \ \ \ \ \ \ if \ \ self_{i}>max \\
     0,\ \ \ \ \ \ \  if\ \ self_{i}<min \\
     1,\ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
-  \end{array}
-  \end{matrix}\right.\begin{array}{l}
-  \end{array}
+  \end{cases}
   $$
 
 ## 函数原型

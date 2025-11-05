@@ -76,7 +76,7 @@ aclnnStatus aclnnSoftmaxBackward(
     <tr>
       <td>output</td>
       <td>输入</td>
-      <td>softmax函数的输出值，公式中的output。</td>
+      <td>Softmax函数的输出值，公式中的output。</td>
       <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与gradOutput保持一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <tr>
       <td>dim</td>
       <td>输入</td>
-      <td>softmax函数的维度。</td>
+      <td>Softmax函数的维度。</td>
       <td>-</td>
       <td>INT64</td>
       <td>-</td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <tr>
       <td>out</td>
       <td>输出</td>
-      <td>函数的输出是输入的梯度值，。</td>
+      <td>函数的输出是输入的梯度值。</td>
       <td><ul><li>对输入进行求导后的结果，支持多种数据类型，不需要额外申请空间，其他数据类型通过自动cast能力支持，但会额外申请空间。</li><li>shape需要与gradOutput保持一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>

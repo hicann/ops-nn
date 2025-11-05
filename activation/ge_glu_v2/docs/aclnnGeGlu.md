@@ -81,7 +81,7 @@ aclnnStatus aclnnGeGlu(
       <td>输入</td>
       <td>可选入参。</td>
       <td><ul><li>设定的slice轴，需要对self对应的轴进行对半切。</li><li>dim对应的self的轴必须是双数。</li></ul></td>
-      <td>INT64</td>
+      <td>INT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnGeGlu(
       <td>输入</td>
       <td>可选入参。</td>
       <td>GeGlu计算使用的激活函数索引，0表示使用none，1表示使用tanh。</td>
-      <td>INT64</td>
+      <td>INT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
