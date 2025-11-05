@@ -38,14 +38,14 @@
     <tr>
       <td>var</td>
       <td>输入/输出</td>
-      <td>表示需要被更新的张量，公式中的var</td>
+      <td>表示需要被更新的张量，公式中的var。</td>
       <td>FLOAT、INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>表示对var的第一维的索引，shape只支持1维，数据取值范围为[0, var.dim[0])</td>
+      <td>表示对var的第一维的索引，shape只支持1维，数据取值范围为[0, var.dim[0])。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -64,4 +64,6 @@
 
 ## 调用说明
 
-无
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------- | ---------------- | -------------------------------------------- |
+| aclnn接口  | [test_aclnn_index_add.cpp](examples/test_aclnn_index_add.cpp) | 通过[aclnnIndexAdd](docs/aclnnIndexAdd.md)接口方式调用InplaceScatterAdd算子。 |
