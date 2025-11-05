@@ -1,5 +1,7 @@
 # 算子调用
-> 说明：本项目阐述如何与社区版CANN开发套件包配合使用，对于商发版（8.3.RC1版本）CANN开发套件包，其使用指导请参见“[商发版本说明](./commercial_release.md)”，此处不详细介绍。
+> **说明1**：本项目阐述如何与社区版CANN开发套件包配合使用，对于**商发版（8.3.RC1版本）** CANN开发套件包，其使用指导请参见“[商发版本说明](commercial_release.md)”，此处不详细介绍。
+>
+> **说明2**：本项目可调用的算子参见[算子列表](../op_list.md)，算子对应aclnn接口参见[aclnn列表](../op_api_list.md)。
 
 ## 前提条件
 
@@ -116,10 +118,13 @@
     bash build.sh --pkg --soc=${soc_version} [--vendor_name=${vendor_name}] [--ops=${op_list}]
     # 以TransposeBatchMatMul算子编译为例
     # bash build.sh --pkg --soc=ascend910b --vendor_name=transpose_batch_mat_mul --ops=transpose_batch_mat_mul
+    # 编译experimental目录下的用户算子
+    # bash build.sh --pkg --experimental --soc=ascend910b --ops=transpose_batch_mat_mul
     ```
     - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件使用"ascend910b"（默认），Atlas A3 训练系列产品/Atlas A3 推理系列产品使用"ascend910_93"。
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
-    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子（参见[算子列表](./op_list.md)）。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
+    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
+    - --experimental（可选）：表示编译用户保存在experimental目录下的算子。
 
     说明：若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是built-in包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。
 
@@ -145,9 +150,12 @@
 
     ```bash
     bash build.sh --pkg [--jit] --soc=${soc_version}
+    # 编译experimental目录下的用户算子
+    # bash build.sh --pkg --experimental [--jit] --soc=${soc_version}
     ```
     - --jit（可选）：设置后表示不编译算子二进制文件，如需使用aclnn调用算子，该选项无需设置。
     - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件使用"ascend910b"（默认），Atlas A3 训练系列产品/Atlas A3 推理系列产品使用"ascend910_93"。
+    - --experimental（可选）：表示编译用户保存在experimental目录下的算子。
 
     若提示如下信息，说明编译成功。
 
@@ -167,9 +175,7 @@
 
 ## 本地验证
 
-通过项目根目录build.sh脚本，可快速调用算子和UT用例，验证项目功能是否正常，build参数介绍参见[build参数说明](./build.md)。
-
-目前算子支持API方式（aclnn接口）和图模式调用，**推荐aclnn调用**，项目可调用算子参见[算子列表](./op_list.md)，算子对应的aclnn接口参见[aclnn接口列表](./op_api_list.md)。
+通过项目根目录build.sh脚本，可快速调用算子和UT用例，验证项目功能是否正常，build参数介绍参见[build参数说明](../context/build.md)。目前算子支持API方式（aclnn接口）和图模式调用，**推荐aclnn调用**。
 
 - **执行算子样例**
 
@@ -180,7 +186,7 @@
         # bash build.sh --run_example transpose_batch_mat_mul eager
         ```
 
-        - \$\{op\}：表示待执行算子（参见[算子列表](./op_list.md)），算子名为小写下划线形式，如transpose_batch_mat_mul。
+        - \$\{op\}：表示待执行算子，算子名为小写下划线形式，如transpose_batch_mat_mul。
         - \$\{mode\}：表示算子执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
 
     - 完成自定义算子包安装后，执行命令如下：

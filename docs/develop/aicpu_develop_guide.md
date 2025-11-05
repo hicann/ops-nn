@@ -35,7 +35,7 @@ graph LR
 ##  前提条件
 **1. 环境部署**
 
-开发算子前，请参考[环境准备](./quick_op_invocation.md#环境准备)完成环境搭建。
+开发算子前，请参考[环境准备](../invocation/quick_op_invocation.md#环境准备)完成环境搭建。
 
 **2. 算子设计**
 
@@ -340,7 +340,7 @@ REG_OP(AddExample)
 
    以`AddExample`算子为例，假设开发交付件在`examples`目录，完整代码参见[add_example_aicpu](../../examples/add_example_aicpu)目录。
 
-   进入项目根目录，执行如下编译命令（命令介绍参见[build参数说明](./build.md)）：
+   进入项目根目录，执行如下编译命令：
 
     ```bash
    # 编译指定算子，如--ops=add_example
@@ -354,7 +354,6 @@ REG_OP(AddExample)
     ```
 
    若未指定\$\{vendor\_name\}默认使用custom作为包名。编译成功后，生成的自定义算子\*\.run包存放于build_out目录。
-
    说明：当前自定义算子包\$\{vendor\_name\}和\$\{op\_list\}均为可选，若都不传入编译的是built-in包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。
 
    注意，构建过程文件在`build`目录，关键文件如下：
@@ -376,7 +375,7 @@ REG_OP(AddExample)
     ├── cann-ops-nn-${vendor_name}-linux.${arch}.run             # 包名
     ├── op_api
     │   ├── include
-    │   │   ├── aclnn_add_example.h                              # aclnn头文件
+    │   │   └── aclnn_add_example.h                              # aclnn头文件
     │   └── lib
     │       └── libcust_opapi.so                                 # 算子aclnn接口动态库
     ├── op_impl
@@ -397,4 +396,4 @@ REG_OP(AddExample)
     ```
 ## 算子验证
 
-开发好的算子完成编译部署后，可通过aclnn方式（推荐）或图模式验证功能，方法请参考[算子调用方式](./op_invocation.md)。
+开发好的算子完成编译部署后，可通过aclnn方式（推荐）或图模式验证功能，方法请参考[算子调用方式](../invocation/op_invocation.md)。

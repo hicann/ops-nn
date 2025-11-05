@@ -1,5 +1,7 @@
 # 商发版本说明
 
+> **说明**：本项目可调用的算子参见[算子列表](../op_list.md)，算子对应aclnn接口参见[aclnn列表](../op_api_list.md)。
+
 若您安装了**商发版**（**8.3.RC1**）CANN开发套件包`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`，需要对部分算子源码进行修改，可通过修改对应的开源项目源码，具体操作如下：
 
 - \$\{cann\_version\}：表示CANN包版本号。
@@ -81,7 +83,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
 
-    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子（参见[算子列表](./op_list.md)）。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
+    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
 
     说明：若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是built-in包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。
 
