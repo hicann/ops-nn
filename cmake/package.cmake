@@ -13,16 +13,8 @@
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/third_party/makeself-fetch.cmake)
 
 function(pack_custom)
-  message(STATUS "System processor: ${CMAKE_SYSTEM_PROCESSOR}")
-  if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
-    set(ARCH x86_64)
-  elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64|arm64|arm")
-    set(ARCH aarch64)
-  else()
-    message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-  endif()
-  set(pack_custom_name "cann-ops-nn-${VENDOR_NAME}-linux.${ARCH}")
-  npu_op_package(${pack_custom_name}
+  
+  npu_op_package(${PACK_CUSTOM_NAME}
     TYPE RUN
     CONFIG
       ENABLE_SOURCE_PACKAGE True
@@ -32,6 +24,10 @@ function(pack_custom)
       ENABLE_DEFAULT_PACKAGE_NAME_RULE False
   )
   set(op_package_list)
+  if(ENABLE_ASC_BUILD)
+    add_custom_kernel_library(ascendc_kernels)
+    list(APPEND op_package_list ${ascendc_kernels})
+  endif()
   if(TARGET ${OPHOST_NAME}_opapi_obj OR TARGET opbuild_gen_aclnn_all)
     list(APPEND op_package_list cust_opapi)
   endif()
@@ -42,7 +38,7 @@ function(pack_custom)
     list(APPEND op_package_list cust_opmaster)
   endif()
 
-  npu_op_package_add(${pack_custom_name}
+  npu_op_package_add(${PACK_CUSTOM_NAME}
     LIBRARY
       ${op_package_list}
   )
@@ -64,17 +60,7 @@ macro(INSTALL_SCRIPTS src_path)
 endmacro()
 
 function(pack_built_in)
-  #### built-in package ####
-  message(STATUS "System processor: ${CMAKE_SYSTEM_PROCESSOR}")
-  if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-      message(STATUS "Detected architecture: x86_64")
-      set(ARCH x86_64)
-  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|arm")
-      message(STATUS "Detected architecture: ARM64")
-      set(ARCH aarch64)
-  else ()
-      message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-  endif ()
+ 
   # 打印路径
   message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
   message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")

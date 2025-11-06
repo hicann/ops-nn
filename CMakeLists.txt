@@ -82,6 +82,10 @@ include(cmake/third_party/eigen.cmake)
 include(cmake/intf_pub_linux.cmake)
 include(cmake/modules/Finddlog.cmake)
 
+if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
+  include(cmake/custom_kernel.cmake)
+endif()
+
 if(ENABLE_TEST)
   # ut common dependencies
   include(cmake/intf_pub_llt_gccnative.cmake)

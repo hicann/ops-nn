@@ -18,6 +18,7 @@ import subprocess
 
 
 KEYS = ['OP_CATEGORY', 'OP_NAME', 'HOSTNAME', 'MODE', 'DIR', 'OPTYPE', 'ACLNNTYPE', 'DEPENDENCIES']
+OP_CATEGORY_SET = {'loss'}
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
@@ -121,14 +122,31 @@ class OpDependenciesParser:
         return self.all_category_ops.keys()
 
 
+def find_category(ops_list, all_category_ops):
+    result = []
+    for value in ops_list.split(';'):
+        keys = [key for key, val in all_category_ops.items() if value in val]
+        if keys:
+            result.append(keys[0])
+    return result
+
+
 def main():
     args = args_parse()
     parser = OpDependenciesParser(args.path)
     (op_dependencies, reverse_op_dependencies) = parser.get_dependencies_by_ops(args.ops.split(';'))
     op_dependencies = ';'.join(op_dependencies)
     reverse_op_dependencies = ';'.join(reverse_op_dependencies)
+    category_set = set(find_category(op_dependencies, parser.all_category_ops))
+    enable_asc_build = 'FALSE'
+    if category_set == OP_CATEGORY_SET:
+        enable_asc_build = 'TRUE'
+    
     logging.info('op_dependencies:%s, reverse_op_dependencies:%s', op_dependencies, reverse_op_dependencies)
-    subprocess.run(['cmake', '-DASCEND_COMPILE_OPS=' + op_dependencies, '..'], cwd=args.path)
+    subprocess.run(['cmake', 
+                    '-DASCEND_COMPILE_OPS=' + op_dependencies, 
+                    '-DENABLE_ASC_BUILD=' + enable_asc_build, '..'], 
+                    cwd=args.path)
 
 
 if __name__ == '__main__':

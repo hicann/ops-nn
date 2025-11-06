@@ -25,6 +25,15 @@ if(NOT CANN_3RD_PKG_PATH)
   set(CANN_3RD_PKG_PATH ${PROJECT_SOURCE_DIR}/build/third_party/pkg)
 endif()
 
+message(STATUS "System processor: ${CMAKE_SYSTEM_PROCESSOR}")
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
+  set(ARCH x86_64)
+elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64|arm64|arm")
+  set(ARCH aarch64)
+else()
+  message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
 # interface, 用于收集aclnn/aclnn_inner/aclnn_exclude的def文件
 add_library(${OPHOST_NAME}_opdef_aclnn_obj INTERFACE)
 add_library(${OPHOST_NAME}_opdef_aclnn_inner_obj INTERFACE)
@@ -70,6 +79,7 @@ if(ENABLE_CUSTOM)
   set(CUST_AICPU_KERNEL_CONFIG        packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/config)
   set(CUST_AICPU_OP_PROTO             packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto)
   set(VERSION_INFO_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/)
+  set(PACK_CUSTOM_NAME                "cann-ops-nn-${VENDOR_NAME}-linux.${ARCH}")
 else()
   # built-in package install path
   set(ACLNN_INC_INSTALL_DIR           ops_nn/built-in/op_api/include)

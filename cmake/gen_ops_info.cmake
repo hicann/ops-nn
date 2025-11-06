@@ -32,6 +32,9 @@ function(kernel_src_copy)
         VERBATIM
       )
       add_dependencies(${KNCPY_TARGET} ${OP_NAME}_src_copy)
+      if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
+        return()
+      endif()
       if(ENABLE_PACKAGE)
         install(
           DIRECTORY ${SRC_DIR}/
@@ -79,7 +82,7 @@ endfunction()
 # generate outpath: ${CMAKE_BINARY_DIR}/tbe/op_info_cfg/ai_core/${compute_unit}/
 # install path: packages/vendors/${VENDOR_NAME}/op_impl/ai_core/tbe/config/${compute_unit}
 ###################################################################################################
-function(add_ops_info_target)
+function(add_ops_info_target_ops)
   set(oneValueArgs TARGET OPS_INFO_DIR COMPUTE_UNIT OUTPUT INSTALL_DIR)
   cmake_parse_arguments(OPINFO "" "${oneValueArgs}" "" ${ARGN})
   get_filename_component(opinfo_file_path "${OPINFO_OUTPUT}" DIRECTORY)
@@ -303,6 +306,10 @@ function(gen_ops_info_and_python)
     DST_DIR ${ASCEND_KERNEL_SRC_DST}
   )
 
+  if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
+    return()
+  endif()
+  
   add_ops_impl_target(
     TARGET ascendc_impl_gen
     OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
@@ -324,7 +331,7 @@ function(gen_ops_info_and_python)
     else()
       set(ops_info_suffix "ops-info-nn.json")
     endif()
-    add_ops_info_target(
+    add_ops_info_target_ops(
       TARGET ops_info_gen_${compute_unit}
       OUTPUT ${CMAKE_BINARY_DIR}/tbe/op_info_cfg/ai_core/${compute_unit}/aic-${compute_unit}-${ops_info_suffix}
       OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}

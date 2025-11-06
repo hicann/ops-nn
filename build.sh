@@ -766,7 +766,7 @@ build_binary() {
   rm -f ${tilingSo}  # 临时方案，简单实现，强制先删再编，tiling代码不变时仅浪费链接时间
   local TMP_BUILD_LIBS=${BUILD_LIBS}
   local TMP_CMAKE_ARGS=${CMAKE_ARGS}
-  CMAKE_ARGS="-DBUILD_PATH=$BUILD_PATH -DENABLE_CUSTOM=FALSE"
+  CMAKE_ARGS="-DBUILD_PATH=$BUILD_PATH -DENABLE_CUSTOM=FALSE -DENABLE_PACKAGE=FALSE"
   BUILD_LIBS+=("${tilingLib}")
   build_lib
   BUILD_LIBS=${TMP_BUILD_LIBS}
