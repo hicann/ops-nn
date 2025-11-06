@@ -30,7 +30,7 @@
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}}
   $$
   $$
-  if(amsgard) : maxGradNorm = max(maxGradNorm,\hat{v}_{t})
+  if(amsgrad) : maxGradNorm = max(maxGradNorm,\hat{v}_{t})
   $$
   $$
   \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}

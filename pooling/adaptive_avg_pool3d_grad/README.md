@@ -34,21 +34,21 @@
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的入参，表示当前节点的梯度。数据类型、数据格式、shape的总维数与入参`self`的保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的入参，表示当前节点的梯度。数据类型、数据格式、shape的总维数与入参`self`保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCDHW、ND</td>
     </tr>
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的入参。数据类型、数据格式、shape的总维数与入参`gradOutput`的保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的入参。数据类型、数据格式、shape的总维数与入参`gradOutput`保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCDHW、ND</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的出参。数据类型、shape与入参`self`的保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的出参。数据类型、shape与入参`self`保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCDHW、ND</td>
     </tr>

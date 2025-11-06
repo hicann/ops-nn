@@ -113,7 +113,7 @@
 
 - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：
   - x1只支持INT8数据类型。
-  - x2只支持IN8、INT4数据类型。
+  - x2只支持INT8、INT4数据类型。
   - x1_scale只支持FLOAT32数据类型。
   - x2_scale只支持UINT64数据类型。
   - y_offset只支持FLOAT32数据类型。
@@ -121,7 +121,7 @@
   - bias、y_scale、x1_offset、x2_offset暂不支持。
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：
   - x1只支持INT8数据类型。
-  - x2只支持IN8、INT4数据类型。
+  - x2只支持INT8、INT4数据类型。
   - x1_scale只支持FLOAT32数据类型。
   - x2_scale只支持UINT64数据类型。
   - y_offset只支持FLOAT32数据类型。

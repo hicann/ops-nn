@@ -99,7 +99,7 @@
   </tbody>
 </table>
 
-- Atlas推理系列产品:不支持BFLOAT16
+- Atlas推理系列产品：不支持BFLOAT16
 
 ## 约束说明
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：

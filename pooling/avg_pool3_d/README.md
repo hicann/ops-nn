@@ -101,7 +101,7 @@ $$
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>待进行avgpool3d计算的出参,公式中的`out`。数据类型、数据格式需要与`self`一致。</td>
+      <td>待进行avgpool3d计算的出参，公式中的`out`。数据类型、数据格式需要与`self`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND、NCDHW</td>
     </tr>

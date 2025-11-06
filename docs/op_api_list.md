@@ -46,7 +46,7 @@
 | [aclnnBinaryCrossEntropyWithLogits](../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) |计算输入logits与标签target之间的BCELoss损失。 |
 | [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../activation/logsigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) |将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。|
 | [aclnnCelu&aclnnInplaceCelu](../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) |aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。|
-| [aclnnChamferDistanceBackward](../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance(倒角距离)的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 |
+| [aclnnChamferDistanceBackward](../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 |
 | [aclnnConvolution](../conv/convolution_forward/docs/aclnnConvolution.md) |实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。|
 | [aclnnConvolutionBackward](../conv/convolution_backward/docs/aclnnConvolutionBackward.md) |实现卷积的反向传播。|
 | [aclnnConvDepthwise2d](../conv/convolution_forward/docs/aclnnConvDepthwise2d.md) |实现二维深度卷积（DepthwiseConv2D）计算。|
@@ -180,7 +180,7 @@
 | [aclnnIndexCopy&aclnnInplaceIndexCopy](../index/scatter_update/docs/aclnnIndexCopy&aclnnInplaceIndexCopy.md) | 将index张量中元素值作为索引，针对指定轴dim，把source中元素复制到selfRef的对应位置上。 |
 | [aclnnIndexFillTensor&aclnnInplaceIndexFillTensor](../index/index_fill_d/docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 |
 | [aclnnIndexPutImpl](../index/index_put_v2/docs/aclnnIndexPutImpl.md) | 根据索引 indices 将输入 x 对应坐标的数据与输入 value 进行替换或累加。 |
-| [aclnnInplacePut](../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作;如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 |
+| [aclnnInplacePut](../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 |
 | [aclnnIndexSelect](../index/gather_v2/docs/aclnnIndexSelect.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 |
 | [aclnnInplaceAddRmsNorm](../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md)|RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。|
 | [aclnnInstanceNorm](../norm/instance_norm_v3/docs/aclnnInstanceNorm.md)|用于执行Instance Normalization（实例归一化）操作。|
@@ -211,7 +211,7 @@
 | [aclnnMaxPool3dWithArgmax](../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md)|对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。|
 | [aclnnMaxPool3dWithArgmaxBackWard](../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md)|正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。|
 | [aclnnMaxUnpool2dBackward](../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。  |
-| [aclnnMaxUnpool3dBackward](../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | axPool3d的逆运算aclnnMaxUnpool3d的反向传播,根据indices索引在out中填入gradOutput的元素值。  |
+| [aclnnMaxUnpool3dBackward](../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | axPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。  |
 | [aclnnMedian](../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 |
 | [aclnnMm](../matmul/mat_mul_v3/docs/aclnnMm.md) |完成2维张量self与张量mat2的矩阵乘计算。|
 | [aclnnMish&aclnnInplaceMish](../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) |一个自正则化的非单调神经网络激活函数。|

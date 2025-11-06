@@ -47,7 +47,7 @@
     <tr>
       <td>b</td>
       <td>输入</td>
-      <td>矩阵乘运算中的左矩阵。</td>
+      <td>矩阵乘运算中的右矩阵。</td>
       <td>FLOAT16, BFLOAT16, FLOAT32</td>
       <td>ND, FRACTAL_NZ</td>
     </tr>
