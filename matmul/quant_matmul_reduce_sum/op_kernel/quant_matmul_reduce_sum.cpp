@@ -76,11 +76,13 @@ extern "C" __global__ __aicore__ void quant_matmul_reduce_sum(
     initParams.y = y;
     initParams.workspace = workspace;
     initParams.tiling = tiling;
-    if (TILING_KEY_IS(0)) {
-        KERNEL_TASK_TYPE(0, KERNEL_TYPE_MIX_AIC_1_2);
+    TILING_KEY_IS(0);
+    KERNEL_TASK_TYPE(0, KERNEL_TYPE_MIX_AIC_1_2);
+    TILING_KEY_IS(1);
+    KERNEL_TASK_TYPE(1, KERNEL_TYPE_MIX_AIC_1_1);
+    #if TILING_KEY_VAR == 0
         RunQuantMatmulReduceSum<false, false, false>(&initParams);
-    } else if (TILING_KEY_IS(1)) {
-        KERNEL_TASK_TYPE(1, KERNEL_TYPE_MIX_AIC_1_1);
+    #elif TILING_KEY_VAR == 1
         RunQuantMatmulReduceSum<false, false, false>(&initParams);
-    }
+    #endif
 }

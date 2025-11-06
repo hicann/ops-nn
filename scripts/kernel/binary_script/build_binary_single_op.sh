@@ -30,10 +30,19 @@ main() {
   test -d "$task_path/" || mkdir -p $task_path/
   rm -f $task_path/*
 
-  bash build_binary_single_op_gen_task.sh $op_type $soc_version $output_path $task_path
+  result=$(bash build_binary_single_op_gen_task.sh $op_type $soc_version $output_path $task_path)
 
-  get_thread_num
-  thread_num=$?
+  #ASCENDC_PAR_COMPILE_JOB为AscendC内部称呼，在这里使用ASCENDC_PER_COMPILE_JOB存储其数值
+  echo "$result"
+  ASCENDC_PER_COMPILE_JOB=$(echo "$result" | grep "ascendc_per_compile_job=" | cut -d= -f2)
+
+  thread_num=${ASCENDC_PER_COMPILE_JOB_THREAD}
+  if [ $ASCENDC_PER_COMPILE_JOB -eq 1 ] || [ $ASCENDC_PER_COMPILE_JOB -eq 0 ]; then
+    unset ASCENDC_PAR_COMPILE_JOB
+  else
+    export ASCENDC_PAR_COMPILE_JOB=${ASCENDC_PER_COMPILE_JOB}
+    thread_num=$(( thread_num / ASCENDC_PER_COMPILE_JOB))
+  fi
 
   bash build_binary_single_op_exe_task.sh $task_path $thread_num $output_path
 }

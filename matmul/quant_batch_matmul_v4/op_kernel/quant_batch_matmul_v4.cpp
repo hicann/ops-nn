@@ -42,7 +42,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
 
     AscendC::TPipe tPipe;
     #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
-        if (TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
+        if constexpr (TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
             WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_MSD_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV4MsdTilingData, tilingDataIn, tiling);
             if ASCEND_IS_AIV {
@@ -57,7 +57,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
             QuantBatchMatmulV4Msd<AscendC::int4b_t, AscendC::int4b_t, float, DTYPE_Y> op;
             op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn, &tPipe);                                                                                             \
             op.Process();
-        } else if (
+        } else if constexpr (
             TRANS == QUANT_BATCH_MATMUL_V4_B_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
             WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_PERBLOCK_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV4PerblockTilingData, tilingDataIn, tiling);
@@ -65,7 +65,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
             op.Init(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, userWS, &tilingDataIn, &tPipe);                                                                                             \
             op.Process();
             tPipe.Destroy();
-        } else if (
+        } else if constexpr (
             TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_MX && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE &&
             WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_PERGROUP_BASIS) {
             GET_TILING_DATA_WITH_STRUCT(QuantBatchMatmulV3TilingData, tilingDataIn, tiling);

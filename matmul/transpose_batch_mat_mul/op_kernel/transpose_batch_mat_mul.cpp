@@ -67,14 +67,14 @@ __global__ __aicore__ void transpose_batch_mat_mul(
 {
     __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
 
-    if (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+    if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA(tilingData, tilingGM);
         BMMV3_IMPL_CLASS_COMMON(
             TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS), TransposeBatchMatMulBlock,
             MM_CFG_NO_PRELOAD);
-    } else if (
+    } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
@@ -82,7 +82,7 @@ __global__ __aicore__ void transpose_batch_mat_mul(
         BMMV3_IMPL_CLASS_COMMON(
             TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS), TransposeBatchMatMulBlock,
             MM_CFG_NO_PRELOAD);
-    } else if (
+    } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
@@ -90,7 +90,7 @@ __global__ __aicore__ void transpose_batch_mat_mul(
         BMMV3_IMPL_CLASS_COMMON(
             TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
             MM_CFG_NO_PRELOAD);
-    } else if (
+    } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
@@ -98,13 +98,13 @@ __global__ __aicore__ void transpose_batch_mat_mul(
         BMMV3_IMPL_CLASS_COMMON(
             TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
             MM_CFG_NO_PRELOAD);
-    } else if (
+    } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tilingGM);
         PPMATMUL_EINSUM_CLASS(PpMatMulNS::PpMatmulEinSum, false, false);
-    } else if (
+    } else if constexpr (
         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_2_1) {

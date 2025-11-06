@@ -34,6 +34,7 @@ main() {
   echo "[INFO]exe_task: opc_cmd_file = ${opc_cmd_file}"
   echo "[INFO]exe_task: out_cmd_file = ${out_cmd_file}"
   echo "[INFO]exe_task: compile_thread_num = ${compile_thread_num}"
+  echo "ASCENDC_PAR_COMPILE_JOB = ${ASCENDC_PAR_COMPILE_JOB}"
 
   CURRENT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
   local topdir=$(readlink -f ${workdir}/../../..)

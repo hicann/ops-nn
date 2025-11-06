@@ -253,8 +253,10 @@ main() {
   # 所有算子的kernel  onebyone 进行编译
   get_thread_num_with_json_config ${binary_config_file}
   local thread_num=$?
+  local ascendc_per_compile_job_thread=${ASCENDC_PER_COMPILE_JOB_THREAD}
+  local ascendc_per_compile_job=$((ascendc_per_compile_job_thread / thread_num))
   echo "[INFO] op:${op_type} thread_num = ${thread_num}"
-
+  echo "ascendc_per_compile_job=${ascendc_per_compile_job}"
   for impl_mode in ${impl_list_array[@]}; do
     impl_mode_name=$impl_mode
     if [ ${#var_array[@]} -ge 2 ]; then

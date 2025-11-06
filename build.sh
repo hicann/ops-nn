@@ -800,6 +800,7 @@ build_binary() {
 
   echo "--------------- binary build start ---------------"
   if echo "${all_targets}" | grep -wq "binary"; then
+    export ASCENDC_PER_COMPILE_JOB_THREAD=$THREAD_NUM
     cmake --build . --target binary -- ${VERBOSE} -j1
     if [ $? -ne 0 ]; then
       print_error "Kernel compile failed!" && exit 1
@@ -1052,10 +1053,6 @@ if [[ -z "$GENOP_NAME" ]] || [[ -z "$GENOP_TYPE" ]]; then
 
 main() {
   checkopts "$@"
-  if [ "$THREAD_NUM" -gt "$CORE_NUMS" ]; then
-    echo "compile thread num:$THREAD_NUM over core num:$CORE_NUMS, adjust to core num"
-    THREAD_NUM=$CORE_NUMS
-  fi
   if [[ "$ENABLE_GENOP" == "TRUE" ]]; then
     gen_op
     exit $?
