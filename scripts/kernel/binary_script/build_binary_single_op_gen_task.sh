@@ -28,20 +28,6 @@ function get_binary_config_file() {
   local topdir=$(readlink -f ${workdir}/../../..)
   local binary_config_dir=${topdir}/build/tbe/config  #build dir
 
-  # 检查并处理以 "_apt" 结尾的 op_file_name
-  if [[ "$op_file_name" == *_apt ]]; then
-    op_file_name="${op_file_name%_apt}"
-  fi
-
-  # 检查并处理以 "_apt" 结尾的 op_file_name
-  if [[ "$op_file_name" == *_910b ]]; then
-    op_file_name="${op_file_name%_910b}"
-  fi
-
-  if [[ "$op_file_name" == "dynamic_rnn_v2" ]]; then
-    op_file_name="dynamic_rnnv2"
-  fi
-
   # 优先级1：build/tbe/config路径下，带_binary后缀
   local primary_pattern="${binary_config_dir}/${soc_version_lower}/${op_file_name}/${op_file_name}_binary.json"
   if [ -f "${primary_pattern}" ]; then
@@ -78,20 +64,6 @@ function get_simplified_key_config_file() {
   local soc_version_lower="$4"
   local topdir=$(readlink -f ${workdir}/../../..)
   local binary_config_dir=${topdir}/build/tbe/config  #build dir
-
-  # 检查并处理以 "_apt" 结尾的 op_file_name
-  if [[ "$op_file_name" == *_apt ]]; then
-    op_file_name="${op_file_name%_apt}"
-  fi
-
-  # 检查并处理以 "_apt" 结尾的 op_file_name
-  if [[ "$op_file_name" == *_910b ]]; then
-    op_file_name="${op_file_name%_910b}"
-  fi
-
-  if [[ "$op_file_name" == "dynamic_rnn_v2" ]]; then
-    op_file_name="dynamic_rnnv2"
-  fi
 
   # 优先级1： 搜索build/tbe/config路径，后缀simplified_key.ini
   local primary_pattern="${binary_config_dir}/${soc_version_lower}/${op_file_name}/${op_file_name}_simplified_key.ini"
@@ -178,8 +150,22 @@ main() {
   # step 3: get binary_config_file, file with _binary.json suffix
   local op_file_name=${op_python_path##*/}
   local op_file_name_prefix=${op_file_name%.*}
-  local binary_config_file=$(get_binary_config_file ${workdir} ${soc_version_lower} ${op_type} ${op_file_name_prefix})
-  local binary_bin_path="${output_path}/${soc_version_lower}/${op_file_name_prefix}/"
+  local op_name=${op_file_name_prefix}
+  # 检查并处理以 "_apt" 结尾的 op_file_name
+  if [[ "$op_name" == *_apt ]]; then
+    op_name="${op_name%_apt}"
+  fi
+
+  # 检查并处理以 "_apt" 结尾的 op_file_name
+  if [[ "$op_name" == *_910b ]]; then
+    op_name="${op_name%_910b}"
+  fi
+
+  if [[ "$op_name" == "dynamic_rnn_v2" ]]; then
+    op_name="dynamic_rnnv2"
+  fi
+  local binary_config_file=$(get_binary_config_file ${workdir} ${soc_version_lower} ${op_type} ${op_name})
+  local binary_bin_path="${output_path}/${soc_version_lower}/${op_name}/"
   local binary_compile_json_file="${output_path}/config/${soc_version_lower}/${op_file_name_prefix}.json"
   local binary_compile_json_path="${output_path}/config/${soc_version_lower}"
   echo "[INFO] op:${op_type} python path is ${op_python_path}"
@@ -205,7 +191,7 @@ main() {
   fi
 
   # step 4: get simplified_key_mode from binary_simplified_key_mode.ini
-  local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_file_name_prefix} ${soc_version_lower})
+  local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
   local key_mode_default=0
   if [ -f ${simplified_key_file} ]; then
     if file "$simplified_key_file" | grep -q "CRLF"; then
