@@ -213,6 +213,9 @@ class MaskedSoftmaxWithRelPosBiasBWN {
       biasMaskFloatLocal = attenMaskFloatLocal[calNum];
     }
     LocalTensor<float> yFloatLocal = biasMaskFloatLocal[calNum];
+    // Set xFloatLocal size equal to yFloatLocal, avoid AscendC::SoftMax index out of range
+    xFloatLocal.SetSize(yFloatLocal.GetSize());
+
     //cast
     Cast(xFloatLocal, xLocal, RoundMode::CAST_NONE, calNum);
     if constexpr (existAtten) {

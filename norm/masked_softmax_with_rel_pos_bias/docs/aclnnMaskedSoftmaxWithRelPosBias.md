@@ -151,7 +151,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   </tbody>
   </table>
 
-  - <term>Atlas 训练系列产品</term>：不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
   
 - **返回值：**
   <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/context/aclnn返回码.md">aclnn返回码</a>。</p>

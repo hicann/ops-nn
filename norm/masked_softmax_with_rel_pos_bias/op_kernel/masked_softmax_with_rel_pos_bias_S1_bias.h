@@ -150,6 +150,9 @@ class MaskedSoftmaxWithRelPosBiasBS1Bias {
       LocalTensor<float> xFloatLocal = castBuffer.Get<float>();
       LocalTensor<float> biasFloatLocal = xFloatLocal[elementNum];
       LocalTensor<float> yFloatLocal = biasFloatLocal[elementNum];
+      // Set xFloatLocal size equal to yFloatLocal, avoid AscendC::SoftMax index out of range
+      xFloatLocal.SetSize(yFloatLocal.GetSize());
+
       // cast
       Cast(xFloatLocal, xLocal, RoundMode::CAST_NONE, elementNum);
       Cast(biasFloatLocal, biasLocal, RoundMode::CAST_NONE, elementNum);

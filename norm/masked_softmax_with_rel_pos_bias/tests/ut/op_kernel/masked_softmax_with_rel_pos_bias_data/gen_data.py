@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------
+
 import os
 import numpy as np
 from numpy import array
@@ -17,7 +29,7 @@ def softmax(x, dtype):
     x_sum = x_sum.astype(np.float16)
     return ans, x_max, x_sum
 
-def masked_softmax_with_relposbias_data(BS, W, N, S1, S2, dtype, tilingkey):
+def masked_softmax_with_rel_pos_bias_data(BS, W, N, S1, S2, dtype, tilingkey):
     x_shape = [BS, W, N, S1, S2]
     atten_mask_shape = [1, W, 1, S1, S2]
     bias_shape = [1, 1, N, S1, S2]
@@ -26,15 +38,15 @@ def masked_softmax_with_relposbias_data(BS, W, N, S1, S2, dtype, tilingkey):
         dtype = tf.bfloat16.as_numpy_dtype
     x = np.random.uniform(-1.0, 1.0, x_shape).astype(dtype)
     x.tofile(f"x.bin")
-    scaleValue = 1.0;
+    scaleValue = 1.0
     atten_mask = np.zeros(atten_mask_shape).astype(dtype);
     if (tilingkey % 10) == 1:
         atten_mask = np.random.uniform(-1.0, 1.0, atten_mask_shape).astype(dtype)   
-        scaleValue = 2.0;
+        scaleValue = 2.0
     elif (tilingkey % 10) == 2:
         atten_mask = np.random.uniform(-1.0, 1.0, atten_mask_shape).astype(dtype)
     elif (tilingkey % 10) == 3:
-        scaleValue = 2.0;
+        scaleValue = 2.0
 
     atten_mask.tofile(f"atten_mask.bin")
     bias = np.random.uniform(-1.0, 1.0, bias_shape).astype(dtype)
@@ -51,4 +63,4 @@ if __name__ == '__main__':
     dtype = sys.argv[6]
     tilingkey = int(sys.argv[7])
     print("BS", BS, "W", W, "N", N, "S1", S1, "S2", S2, "dtype", dtype, "tilingkey", tilingkey)
-    masked_softmax_with_relposbias_data(BS, W, N, S1, S2, dtype, tilingkey)
+    masked_softmax_with_rel_pos_bias_data(BS, W, N, S1, S2, dtype, tilingkey)

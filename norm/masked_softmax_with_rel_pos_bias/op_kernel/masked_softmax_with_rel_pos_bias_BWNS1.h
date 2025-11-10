@@ -178,6 +178,8 @@ private:
       LocalTensor<float> attenMaskFloatLocal = xFloatLocal[mulLoopStepSizeAndS2AlignedSize];
       LocalTensor<float> biasMaskFloatLocal = attenMaskFloatLocal[mulLoopStepSizeAndS2AlignedSize];
       LocalTensor<float> yFloatLocal = biasMaskFloatLocal[mulLoopStepSizeAndS2AlignedSize];
+      // Set xFloatLocal size equal to yFloatLocal, avoid AscendC::SoftMax index out of range
+      xFloatLocal.SetSize(yFloatLocal.GetSize());
 
       // cast
       Cast(xFloatLocal, xLocal, RoundMode::CAST_NONE, mulNumAndS2);
