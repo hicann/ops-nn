@@ -83,7 +83,7 @@ aclnnStatus aclnnMishBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>计算得到梯度，作为反向传播下一步反向算子的计算输入。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>

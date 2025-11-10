@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量计算logsoftmax值。
+- 算子功能：对输入张量计算Logsoftmax值。
 
 - 计算公式：
 
@@ -76,7 +76,7 @@ aclnnStatus aclnnLogSoftmax(
       <tr>
       <td>dim</td>
       <td>输入</td>
-      <td>需要做logsoftmax的轴。</td>
+      <td>需要做Logsoftmax的轴。</td>
       <td>-</td>
       <td>INT64</td>
       <td>-</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnLogSoftmax(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>dim的类型不是int。</td>
+      <td>dim的类型不是INT。</td>
     </tr>
     <tr>
       <td>dim值不在self维度范围内。</td>

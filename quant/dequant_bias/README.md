@@ -13,15 +13,15 @@
 - 计算公式：
 
   $$
-  y = A \times \text{weight_scale} \times \text{activate_scale}
+  y = A \times \text{weight\_scale} \times \text{activate\_scale}
   $$
+  $$
+    y = (A + \text{bias}) \times \text{weight\_scale} \times \text{activate\_scale}
 
   $$
-  y = (A + \text{bias}) \times \text{weight_scale} \times \text{activate_scale}
   $$
+    y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 
-  $$
-  y = A \times \text{weight_scale} \times \text{activate_scale} + \text{bias}
   $$
   
 ## 参数说明
@@ -73,7 +73,7 @@
     <tr>
       <td>outputDtype</td>
       <td>属性</td>
-      <td><ul><li>输出out的数据类型。</li><li>值为[1，27]。</li></ul></td>
+      <td><ul><li>输出out的数据类型。</li><li>值为[1,27]。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

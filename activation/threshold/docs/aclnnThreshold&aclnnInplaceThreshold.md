@@ -273,7 +273,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>threshold</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见[互推导关系]（../../../docs/context/互推导关系.md））。</td>
+      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -283,7 +283,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>value</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见[互推导关系]（../../../docs/context/互推导关系.md））。</td>
+      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -311,8 +311,7 @@ aclnnStatus aclnnInplaceThreshold(
     </tr>
     </tbody>
   </table>
-  
-   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64。
+
 
 
 - **返回值**

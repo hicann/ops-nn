@@ -6,10 +6,7 @@
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品 </term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
+
 
 ## 功能说明
 - 算子功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。
@@ -153,8 +150,8 @@
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
 - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
-- 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
-- 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
+- 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，参数置为空指针。
+- 当输入x的数据类型不为INT32时，biasOptional不允许输入，参数置为空指针。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 输出yOut的尾轴不超过5120.
 

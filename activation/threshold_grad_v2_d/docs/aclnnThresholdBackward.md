@@ -71,7 +71,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>输入</td>
       <td>公式中的gradOutput。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与self保持一致。</li><li>shape需要与self满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
-      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
+      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -81,7 +81,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>输入</td>
       <td>公式中的threshold。</td>
       <td>数据类型与gradOutput的数据类型满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
-      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
+      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>输入</td>
       <td>公式中的self。</td>
       <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系。</a></li></ul></td>
-      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
+      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>输出</td>
       <td>公式中的out。</td>
       <td><ul><li>dtype需要与self相同。</li><li>shape需要与self和gradOutput进行broadcast之后的shape相等。</li></ul></td>
-      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8、INT64</td>
+      <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -130,8 +130,6 @@ aclnnStatus aclnnThresholdBackward(
   </tbody>
   </table>
   
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8。
-
 
 - **返回值：**
 
