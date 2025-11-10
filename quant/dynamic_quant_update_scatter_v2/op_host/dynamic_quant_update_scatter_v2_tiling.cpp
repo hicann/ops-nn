@@ -306,7 +306,7 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::GetCompileInfo(gert::TilingCo
     ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
         (vectorCoreNum <= 0 || ubSize <= 0),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%llu.", vectorCoreNum, ubSize),
+        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.", vectorCoreNum, ubSize),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -385,7 +385,7 @@ static ge::graphStatus TilingPrepareForDynamicQuantUpdateScatterV2(gert::TilingP
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
         OP_LOGE(
-            context, "DynamicQuantUpdateScatterV2 GetHardwareInfo Failed, vectorCoreNum:%u, ubSize:%llu.", 
+            context, "DynamicQuantUpdateScatterV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.", 
             compileInfo->vectorCoreNum, compileInfo->ubSize),
         return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
