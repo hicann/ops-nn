@@ -12,7 +12,7 @@
  * \file batch_mat_mul_v3.cpp
  * \brief
  */
-#include "./batch_mat_mul_v3.h"
+#include "batch_mat_mul_v3.h"
 #include "batch_mat_mul_v3_tiling_key.h"
 
 using namespace AscendC;

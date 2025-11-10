@@ -16,11 +16,7 @@
 #define BATCH_MATMUL_V3_BLOCK_H
 
 #include "kernel_operator.h"
-#if defined(__CCE_KT_TEST__)
-#include "../../mat_mul_v3/op_kernel/mat_mul_v3_common.h"
-#else
 #include "../mat_mul_v3/mat_mul_v3_common.h"
-#endif
 #include "lib/matmul_intf.h"
 
 using namespace AscendC;

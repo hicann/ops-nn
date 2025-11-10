@@ -18,7 +18,7 @@
 #include "tikicpulib.h"
 
 #include "mat_mul_v3_tiling_def.h"
-#include "../../../op_kernel/mat_mul_v3.cpp"
+#include "mat_mul_v3.cpp"
 #include "data_utils.h"
 #include "string.h"
 #include <iostream>

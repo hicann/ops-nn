@@ -18,7 +18,7 @@
 #include "tikicpulib.h"
 
 #include "gemm_v2_tiling_def.h"
-#include "../../../op_kernel/gemm_v2.cpp"
+#include "gemm_v2.cpp"
 #include "data_utils.h"
 #include "string.h"
 #include <iostream>
@@ -29,9 +29,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 using namespace std;
-
-extern "C" __global__ __aicore__ void gemm_v2(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR alpha, GM_ADDR beta, GM_ADDR ref_c,
-    GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM);
 
 class gemm_v2_test : public testing::Test {
     protected:

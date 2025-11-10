@@ -15,13 +15,8 @@
 #ifndef TRANSPOSE_BATCH_MAT_MUL_BLOCK_H
 #define TRANSPOSE_BATCH_MAT_MUL_BLOCK_H
 
-#if defined(__CCE_KT_TEST__)
-#include "../../batch_mat_mul_v3/op_kernel/batch_mat_mul_v3_com_base_block_struct.h"
-#include "../../mat_mul_v3/op_kernel/mat_mul_v3_common.h"
-#else
 #include "../batch_mat_mul_v3/batch_mat_mul_v3_com_base_block_struct.h"
 #include "../mat_mul_v3/mat_mul_v3_common.h"
-#endif
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 

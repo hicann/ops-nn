@@ -24,7 +24,7 @@
 
 #include "data_utils.h"
 #include "batch_mat_mul_v3_tiling_def.h"
-#include "../../../op_kernel/batch_mat_mul_v3.cpp"
+#include "batch_mat_mul_v3.cpp"
 #include "string.h"
 #endif
 
@@ -33,9 +33,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 // #include "kernel_operator.h"
 using namespace std;
-
-extern "C" __global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-                                                       GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM);
 
 class batch_mat_mul_v3_test : public testing::Test {
    protected:

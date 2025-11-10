@@ -22,7 +22,7 @@
 #include <string>
 #include "transpose_batch_mat_mul_tiling_def.h"
 
-#include "../../../op_kernel/transpose_batch_mat_mul.cpp"
+#include "transpose_batch_mat_mul.cpp"
 
 #endif
 

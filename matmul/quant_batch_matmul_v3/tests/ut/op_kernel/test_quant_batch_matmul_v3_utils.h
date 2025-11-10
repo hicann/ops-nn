@@ -23,7 +23,7 @@
 #include "quant_batch_matmul_v3_tiling_def.h"
 #include "tikicpulib.h"
 #include "gtest/gtest.h"
-#include "../../../op_kernel/quant_batch_matmul_v3.cpp"
+#include "quant_batch_matmul_v3.cpp"
 #endif
 
 using namespace std;

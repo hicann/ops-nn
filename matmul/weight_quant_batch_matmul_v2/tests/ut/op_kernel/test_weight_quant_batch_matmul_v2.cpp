@@ -22,7 +22,7 @@
 #include "string.h"
 #include "tikicpulib.h"
 #include "weight_quant_batch_matmul_v2_tiling_def.h"
-#include "../../../op_kernel/weight_quant_batch_matmul_v2.cpp"
+#include "weight_quant_batch_matmul_v2.cpp"
 #endif
 
 #include <cstdint>

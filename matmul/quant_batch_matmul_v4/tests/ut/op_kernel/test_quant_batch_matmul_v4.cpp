@@ -20,17 +20,13 @@
 #include "string.h"
 #include "tikicpulib.h"
 #include "quant_batch_matmul_v4_tiling_def.h"
-#include "../../../op_kernel/quant_batch_matmul_v4.cpp"
+#include "quant_batch_matmul_v4.cpp"
 #endif
 
 #include <cstdint>
 
 using namespace std;
 // using namespace AscendC;
-
-extern "C" __global__ __aicore__ void quant_batch_matmul_v4(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-    GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class quant_batch_matmul_v4_test : public testing::Test {
     protected:
@@ -88,7 +84,7 @@ TEST_F(quant_batch_matmul_v4_test, quant_batch_matmul_v4_perblock_0)
     system("cp -r ../../../../matmul/quant_batch_matmul_v4/tests/ut/op_kernel/quant_batch_matmul_v4_data ./");
     system("chmod -R 755 ./quant_batch_matmul_v4_data/");
     system("cd ./quant_batch_matmul_v4_data/ && rm -rf ./*bin");
-    system("cd ./quant_batch_matmul_v4_data/ && python3 gen_data.py 10 1024 1536 4303356032 5");
+    system("cd ./quant_batch_matmul_v4_data/ && python3 gen_data.py 128 1024 1536 4303356032 5");
 
     char * path_ = get_current_dir_name();
     string path(path_);
