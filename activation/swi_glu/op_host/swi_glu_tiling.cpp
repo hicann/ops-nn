@@ -114,6 +114,7 @@ private:
     inline bool MustBeSingleBaseRowLen(uint32_t baseColLen_) const;
 
     inline bool isInvalidBaseShape(uint32_t baseRowlen_, uint32_t baseColLen_) const;
+    inline bool isValidTailCol(uint32_t baseRowlen_, uint32_t baseColLen_) const;
 
     template<GLU_FLAG Glu_Flag>
     inline bool CalcOptBaseShape(GluSingleTilingOptParam &optTiling) const;
@@ -309,6 +310,16 @@ inline bool GluSingleTilingCalculator::isInvalidBaseShape(uint32_t baseRowlen_, 
 {
     return ((baseRowlen_ < static_cast<uint32_t>(1)) || (baseRowlen_ > static_cast<uint32_t>(1) && MustBeSingleBaseRowLen(baseColLen_)));
 }
+
+inline bool GluSingleTilingCalculator::isValidTailCol(uint32_t baseRowlen_, uint32_t baseColLen_) const
+{
+    if (baseColLen_ == static_cast<uint32_t>(0)) {
+        return false;
+    }
+    uint32_t tailColLen = tilingData->get_colLen() % baseColLen_;
+    return !(baseRowlen_ > static_cast<uint32_t>(1) && MustBeSingleBaseRowLen(tailColLen));
+}
+
 inline bool GluSingleTilingCalculator::isSupportSocV(uint32_t dtype, platform_ascendc::SocVersion socVersion_) const
 {
     if ((socVersion_ == platform_ascendc::SocVersion::ASCEND310P) && (dtype == ge::DT_BF16)) {
@@ -337,7 +348,9 @@ inline bool GluSingleTilingCalculator::CalcOptBaseShape(GluSingleTilingOptParam&
             return (optTiling.optTotalTileNum > static_cast<uint64_t>(0));
         }
         // 保存较优的base shape
-        SaveOptBaseShape(baseRowlen_, baseColLen_, optTiling);
+        if (isValidTailCol(baseRowlen_, baseColLen_)) {
+            SaveOptBaseShape(baseRowlen_, baseColLen_, optTiling);
+        }
 
         // baseColLen已经到达下限 或者 baseRowlen已经达到上限，无法继续调整，结束
         if (baseColLen_ <= alignPackLen || (baseRowlen_ >= getBaseRowLenUpBound())) {

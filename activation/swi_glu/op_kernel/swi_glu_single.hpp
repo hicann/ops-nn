@@ -44,7 +44,7 @@ public:
 protected:
     __aicore__ inline void InitGmBuffer(GM_ADDR input_gm, GM_ADDR beta_gm, GM_ADDR output_gm)
     {
-        this->beta = -1.0f /* * (((__gm__ float*)beta_gm)[0]) */;
+        this->beta = -1.0f;
         // get start index for current core, core parallel
         this->aGm.SetGlobalBuffer((__gm__ inType*)input_gm, singleTiling.totalBlockLen);
         this->cGm.SetGlobalBuffer((__gm__ outType*)output_gm, singleTiling.totalBlockLen / 2);
