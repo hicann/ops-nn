@@ -38,8 +38,7 @@ ACLNN_API aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
 /**
  * aclnnLinalgVectorNorm的第二段接口，用于执行计算
  * @param [in] workspace: 在npu device侧申请的workspace内存地址
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，
- * 由第一段接口aclnnLinalgVectorNormGetWorkspaceSize获取
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnLinalgVectorNormGetWorkspaceSize获取
  * @param [in] executor: 返回op执行器，包含算子计算流程
  * @param [in] stream: acl stream流
  * @return aclnnStatus: 返回状态码

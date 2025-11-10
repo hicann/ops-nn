@@ -43,7 +43,7 @@ ACLNN_API aclnnStatus aclnnQuantizeGetWorkspaceSize(
  * 算子功能：对输入Tensor进行量化。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnTopkGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnQuantizeGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。

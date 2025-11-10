@@ -78,7 +78,7 @@ ACLNN_API aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
  * 算子功能：将输入tensor转换为指定的dtype类型。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddRmsNormQuantGetWorkspaceSize。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddRmsNormQuantGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

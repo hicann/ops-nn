@@ -78,8 +78,7 @@ ACLNN_API aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
  * @brief aclnnAddRmsNormQuant的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu
- * device侧申请的workspace大小，由第一段接口aclnnAddRmsNormDynamicQuantGetWorkspaceSize。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
