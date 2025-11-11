@@ -55,7 +55,7 @@ ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize(
  * @brief A second interface of aclnnMaxPool3dWithArgmaxBackward, used to perform calculation.
  * @param [in] workspace: start address of the workspace memory allocated on the NPU device.
  * @param [in] workspace_size: size of the workspace applied on the NPU device, which is obtained by calling the first
- * segment interface aclnnMaxPool3dWithIndicesBackwardGetWorkspaceSize.
+ * segment interface aclnnMaxPool3dWithArgmaxBackwardGetWorkspaceSize.
  * @param [in] exector: op executor, including the operator calculation process.
  * @param [in] stream: acl stream.
  * @return aclnnStatus: returned status code
