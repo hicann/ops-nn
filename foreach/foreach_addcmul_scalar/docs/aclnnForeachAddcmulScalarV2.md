@@ -9,11 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
-
-  返回一个和输入张量列表同样形状大小的新张量列表，对张量列表x2和张量列表x3执行逐元素乘法，将结果乘以标量值scalar后将结果与张量列表x1执行逐元素加法。
-  
-  本接口相较于[aclnnForeachAddcmulScalar](aclnnForeachAddcmulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以标量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。本接口相较于[aclnnForeachAddcmulScalar](aclnnForeachAddcmulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$

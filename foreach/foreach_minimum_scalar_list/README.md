@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表, 对张量列表x和标量列表scalars执行逐元素比较，返回最小值的张量。
+- 算子功能：对张量列表x和标量列表scalars执行逐元素比较，计算每个元素对应的最小值。
 
 - 计算公式：
 
@@ -51,7 +51,7 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示取最小值运算的输入标量列表，对应公式中的`scalars`。数据类型与输入参数的数据类型具有一定对应关系：当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32。<!--、DOUBLE-->；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
+      <td>表示取最小值运算的输入标量列表，对应公式中的`scalars`。元素个数与`x`中Tensor的个数相等。数据类型与输入参数的数据类型具有一定对应关系：当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32。<!--、DOUBLE-->；当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</td>
       <td>FLOAT32、INT64</td><!--aclnn多了一个double-->
       <td>ND</td>
     </tr>

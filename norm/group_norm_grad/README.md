@@ -73,7 +73,7 @@
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
-    </tr>
+    <tr>
       <td>gamma</td>
       <td>输入</td>
       <td>表示每个channel的缩放系数，对应公式中的`γ`，数据类型与`mean`相同。必须是1D。`gamma`的值需要与`x`的C轴值一致。</td><!--C在IR原型中没有这些参数，看看么破-->

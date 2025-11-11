@@ -59,7 +59,7 @@
     <tr>
       <td>gamma</td>
       <td>可选输入</td>
-      <td>数据缩放因子，公式中的输入`g`。shape需要与`x1`后几维保持一致，后几维为x1需要Norm的维度。</td>
+      <td>数据缩放因子，公式中的输入`g`。shape需要与`x1`后几维保持一致，后几维为x1需要norm的维度。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

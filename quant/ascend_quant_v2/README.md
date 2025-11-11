@@ -49,7 +49,7 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>scale/td>
+      <td>scale</td>
       <td>输入</td>
       <td>量化中的scale值，对应公式中的`scale`。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
@@ -58,7 +58,7 @@
     <tr>
       <td>offset</td>
       <td>可选输入</td>
-      <td>反向量化中的offset值，对应公式中的`offset`。</td>
+      <td>反量化中的offset值，对应公式中的`offset`。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- **算子功能**：返回一个和输入张量列表同样形状大小的新张量列表，对张量列表x1和标量值scalar执行逐元素比较，返回最小值的张量。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- **算子功能**：对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - **计算公式**：
 
   $$
@@ -153,7 +153,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2、out的shape不满足约束。</td>
+      <td>x、out的shape不满足约束。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>

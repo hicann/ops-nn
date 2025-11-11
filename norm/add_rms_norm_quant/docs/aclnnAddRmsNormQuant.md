@@ -123,7 +123,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>gamma</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`g`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`需要Norm的维度保持一致，数据类型需要与`x1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`需要norm的维度保持一致，数据类型需要与`x1`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

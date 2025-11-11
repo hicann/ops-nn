@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，对张量列表x1和张量列表x2执行逐元素比较，返回最大值的张量。
+- 算子功能：对张量列表x1和张量列表x2执行逐元素比较，计算每个元素对应的最大值。
 - 计算公式：
   
   $$
@@ -92,7 +92,7 @@ aclnnStatus aclnnForeachMaximumList(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示取最大值运算的输出张量，对应公式中的`y`。</td>
+      <td>表示取最大值运算的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>

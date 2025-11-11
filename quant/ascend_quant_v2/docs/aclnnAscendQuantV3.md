@@ -98,7 +98,7 @@ aclnnStatus aclnnAscendQuantV3(
     <tr>
       <td>offset</td>
       <td>输入</td>
-      <td>可选参数，反向量化中的offset值。对应公式中的`offset`。</td>
+      <td>可选参数，反量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li><li>数据格式为NZ时，值为空，offset的数据类型和x保持一致。</li></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>

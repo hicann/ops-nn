@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：两个Tensor列表中的元素逐个相加，并返回一个新的Tensor列表。可以通过设置alpha参数来调整相加的系数。
+- 算子功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。
 
 - 计算公式：
 
@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>alpha</td>
       <td>输入</td>
       <td>表示加法运算中第二个输入的系数。对应公式中的`alpha`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1`的数据类型具有一定对应关：<ul><li>当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。</li><li>当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。</li><li>当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>

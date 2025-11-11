@@ -9,9 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
-  返回一个和输入张量列表同样形状大小的新张量列表，将张量x除以标量值scalar。
-  本接口相较于[aclnnForeachDivScalar](aclnnForeachDivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口
+- 算子功能：计算张量列表x除以标量scalar。本接口相较于[aclnnForeachDivScalar](aclnnForeachDivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口
 - 计算公式：
   
   $$

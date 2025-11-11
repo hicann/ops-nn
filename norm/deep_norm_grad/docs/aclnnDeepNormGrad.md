@@ -134,7 +134,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>gamma</td>
       <td>输入</td>
       <td>表示前向传播的缩放参数，对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的度。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`x`的数据类型保持一致。</li><li>shape维度和输入`x`后几维的维度相同，后几维表示需要norm的维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-7</td>
@@ -325,7 +325,7 @@ aclnnStatus aclnnDeepNormGrad(
   DOUBLE：指令不支持DOUBLE。
 - **边界值场景说明**
   * 当输入是inf时，输出为inf。
-  * 当输入是nan时，输出为nan。
+  * 当输入是NaN时，输出为NaN。
 
 ## 调用示例
 

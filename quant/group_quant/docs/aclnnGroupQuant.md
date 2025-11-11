@@ -240,7 +240,7 @@ aclnnStatus aclnnGroupQuant(
 - 如果属性`dstType`为3(INT32)，那么输入`x`的shape的最后一维需要能被8整除，输入`x`的shape尾轴是输出`y`的shape尾轴大小的8倍。
 - 输入`groupIndex`必须是非递减序列，最小值不能小于0，最大值必须与输入`x`的shape的第0维大小相等；当不满足约束限制时，参数`groupIndex`不校验。
 - 输入`scale`的第0维大小不支持为0。
-- 输入`offsetOptional`的shape当前仅支持[1, ]或[ , ]。
+- 输入`offsetOptional`的shape当前仅支持[1, ]或[]。
 
 ## 调用示例
 

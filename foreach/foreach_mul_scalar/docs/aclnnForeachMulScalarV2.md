@@ -10,8 +10,7 @@
 
 ## 功能说明
 
-- **算子功能**：返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相乘运算的结果。
-  本接口相较于[aclnnForeachMulScalar](aclnnForeachMulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- **算子功能**：对输入张量列表的每个张量与张量scalar执行相乘运算。本接口相较于[aclnnForeachMulScalar](aclnnForeachMulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 
 - **计算公式**：
 

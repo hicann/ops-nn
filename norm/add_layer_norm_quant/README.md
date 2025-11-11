@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuant算子将LayerNorm前的Add算子和LayerNorm归一化输出给到的1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或是DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。
+- 算子功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuant算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或是DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。
 - 计算公式*：
 
   $$
@@ -42,7 +42,7 @@
       $$
   
   - 当quantMode输入为"dynamic"时，输入zeroPoints1和zeroPoints2无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
-    - 若scales1和scales2均无输入，则y2和scale2输出无实际意义。计算公式如下所示：
+    - 若scales1和scales2均无输入，则y2和scale2输出无实际意义，可忽略。计算公式如下所示：
   
       $$
       outScales1 = row\_max(abs(y))/127
@@ -52,7 +52,7 @@
       y1 = round(y / outScales1)
       $$
   
-    - 若仅输入scales1，则y2和scale2输出无实际意义。计算公式如下所示：
+    - 若仅输入scales1，则y2和scale2输出无实际意义，可忽略。计算公式如下所示：
   
       $$
       tmp1 = y * scales1

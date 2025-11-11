@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，将张量x除以张量scalar。
+- 算子功能：计算张量列表x除以张量scalar。
 
 - 计算公式：
 
@@ -44,21 +44,21 @@
       <td>x</td>
       <td>输入</td>
       <td>表示除法运算的第一个输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalar</td>
       <td>输入</td>
-      <td>表示除法运算的第二个输入张量，对应公式中的`scalar`。元素个数为1。数据类型与入参`x`的数据类型具有一定对应关系：当`x`的数据类型为FLOAT32、FLOAT16时，数据类型与`x`的数据类型保持一致；当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</td>
-      <td>FLOAT32、FLOAT16、INT32</td><!--V2多了个double-->
+      <td>表示除法运算的第二个输入张量，对应公式中的`scalar`。元素个数为1。数据类型与入参`x`的数据类型具有一定对应关系：当`x`的数据类型为FLOAT32、FLOAT16时，数据类型与`x`的数据类型保持一致或者DOUBLE；当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</td>
+      <td>FLOAT32、FLOAT16、DOUBLE</td><!--V2多了个double-->
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示张量x除以张量scalar的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>

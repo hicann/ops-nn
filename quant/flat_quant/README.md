@@ -58,7 +58,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>输入的原始数据，对应公式中的`x`。shape为[K, M, N]，其中，K不超过32768，M和N不超过128。`out`的数据类型为INT4，N必须是偶数。</td>
+      <td>输入的原始数据，对应公式中的`x`。shape为[K, M, N]，其中，K不超过262144，M和N不超过256。`out`的数据类型为INT4，N必须是偶数。</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

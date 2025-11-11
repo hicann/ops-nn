@@ -351,7 +351,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
 
 ## 约束说明
 
-当任一输入的空Tensor时，输出为空Tensor。
+当任一输入的为空Tensor时，输出为空Tensor。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。

@@ -128,7 +128,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>gamma</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`需要Norm的维度保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`需要norm的维度保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -359,13 +359,13 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 ## 约束说明
 
 - 可选输出`xOut`和`rmsNormOut`，必须且只能选择其一进行输出。
-- 当需要输出`y2`时，此时要求`gamma`与`scale`的shape保持一致，且需要与`x1`需要Norm的维度保持一致，可选输出只能输出`xOut`。
+- 当需要输出`y2`时，此时要求`gamma`与`scale`的shape保持一致，且需要与`x1`需要norm的维度保持一致，可选输出只能输出`xOut`。
 - 当需要输出`xOut`时，且参数`scales1`和`zeroPoints1Optional`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维时，此时`scales2Optional`和`zeroPoints2Optional`不生效。
 - 当需要输出`rmsNormOut`时，参数`scales1`和`zeroPoints1Optional`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维，且`betaOptional`和`xOut`必须传空指针，此时`scales2Optional`和`zeroPoints2Optional`不生效。
 
 - **边界值场景说明**
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是nan时，输出为nan。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
 
 - **维度的边界说明**
 

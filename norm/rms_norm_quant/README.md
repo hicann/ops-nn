@@ -97,7 +97,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示LayerNorm的结果输出`y`，对应公式中的y。shape需要与输入`x`一致。</td>
+      <td>表示最终量化输出Tensor，对应公式中的`y`。shape需要与输入`x`一致。</td>
       <td>INT8</td>
       <td>ND</td>
     </tr>

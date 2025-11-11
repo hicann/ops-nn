@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相乘运算的结果。
+- 算子功能：对输入张量列表与标量列表执行逐元素相乘运算。
 
 - 计算公式：
 
@@ -84,7 +84,7 @@ aclnnStatus aclnnForeachMulScalarList(
       <td>scalars</td>
       <td>输入</td>
       <td>表示乘法运算的输入标量列表，对应公式中的`scalars`。</td>
-      <td>-</td>
+      <td>元素个数与`x`中Tensor的个数相等。</td>
       <td>FLOAT32、INT64、DOUBLE</td>
       <td>-</td>
       <td>-</td>

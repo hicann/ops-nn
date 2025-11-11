@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对多个张量进行逐元素加、乘、除操作，并返回一个新的张量列表。
+- 算子功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalars，再与$x1_{i}$相加。
 - 计算公式：
   
   $$
@@ -104,7 +104,7 @@ aclnnStatus aclnnForeachAddcdivList(
       <td>scalars</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第二个输入张量。对应公式中的`scalars`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

@@ -9,52 +9,57 @@
 
 ## 功能说明
 
-- 算子功能：为输入张量进行per-token对称/非对称动态量化。在MOE场景下，每个专家的smoothScalesOptional是不同的，根据输入的groupIndexOptional进行区分。
+- 算子功能：为输入张量进行per-token对称/非对称动态量化。在MOE场景下，每个专家的smooth_scales是不同的，根据输入的group_index进行区分。
 
 - 计算公式：
   - 对称量化：
-    - 若不输入smoothScalesOptional，则
+    - 若不输入smooth_scales，则
       $$
-        scaleOut=row\_max(abs(x))/127
-      $$
-      $$
-        yOut=round(x/scaleOut)
-      $$
-    - 若输入smoothScalesOptional，则
-      $$
-        input = x\cdot smoothScalesOptional
+        scale=row\_max(abs(x))/127
       $$
       $$
-        scaleOut=row\_max(abs(input))/127
+        y=round(x/scale)
+      $$
+    - 若输入smooth_scales，则
+      $$
+        input = x\cdot smooth_scales
       $$
       $$
-        yOut=round(input/scaleOut)
+        scale=row\_max(abs(input))/127
+      $$
+      $$
+        y=round(input/scale)
       $$
   - 非对称量化：
-    - 若不输入smoothScalesOptional，则
+    - 若不输入smooth_scales，则
       $$
-        scaleOut=(row\_max(x) - row\_min(x))/scale\_opt
-      $$
-      $$
-        offset=offset\_opt-row\_max(x)/scaleOut
+        scale=(row\_max(x) - row\_min(x))/scale\_opt
       $$
       $$
-        yOut=round(x/scaleOut+offset)
-      $$
-    - 若输入smoothScalesOptional，则
-      $$
-        input = x\cdot smoothScalesOptional
+        offset=offset\_opt-row\_max(x)/scale
       $$
       $$
-        scaleOut=(row\_max(input) - row\_min(input))/scale\_opt
+        y=round(x/scale+offset)
+      $$
+    - 若输入smooth_scales，则
+      $$
+        input = x\cdot smooth_scales
       $$
       $$
-        offset=offset\_opt-row\_max(input)/scaleOut
+        scale=(row\_max(input) - row\_min(input))/scale\_opt
       $$
       $$
-        yOut=round(input/scaleOut+offset)
+        offset=offset\_opt-row\_max(input)/scale
       $$
-  其中row\_max代表每行求最大值，row_min代表每行求最小值。当输出yOut类型为INT8时，scale_opt为255.0，offset_opt为127.0；yOut类型为INT4时，scale_opt为15.0，offset_opt为7.0。
+      $$
+        y=round(input/scale+offset)
+      $$
+  
+  其中：
+  - row_max代表每行求最大值。
+  - row_min代表每行求最小值。
+  - 当输出y类型为INT8时，scale_opt为255.0，offset_opt为127.0。
+  - 当输出y类型为INT4时，scale_opt为15.0，offset_opt为7.0。
 
 ## 参数说明
 
@@ -77,14 +82,14 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>算子输入的Tensor，对应公式中的x。</li><li>shape维度要大于1。</li></ul></td>
+      <td><ul><li>算子输入的Tensor，对应公式中的`x`。</li><li>shape维度要大于1。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scales</td>
       <td>可选输入</td>
-      <td><ul><li>算子输入的Tensor，对应公式中的smoothScalesOptional。</li><li>数据类型与x的数据类型保持一致。当group_index为空时，形状为1维。Dim[0]是x的最后一个维度；当group_index不为空时，形状为2维。Dim[0]是专家数(E)。E必须不大于1024。Dim[1]是x的最后一个维度。</li></ul></td>
+      <td><ul><li>算子输入的Tensor，对应公式中的`smooth_scales`。</li><li>数据类型与x的数据类型保持一致。当group_index为空时，形状为1维。Dim[0]是x的最后一个维度；当group_index不为空时，形状为2维。Dim[0]是专家数(E)。E必须不大于1024。Dim[1]是x的最后一个维度。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -119,21 +124,21 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td><ul><li>量化后的输出张量，对应公式中的yOut。</li><li>shape与输入x的保持一致。当y的数据类型为INT4，x的最后一个维度必须能被2整除。</li></ul></td>
+      <td><ul><li>量化后的输出张量，对应公式中的`y`。</li><li>shape与输入x的保持一致。当y的数据类型为INT4，x的最后一个维度必须能被2整除。</li></ul></td>
       <td>INT8、INT4、FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale</td>
       <td>输出</td>
-      <td><ul><li>量化后的缩放系数，对应公式中的scaleOut。</li><li>当quant_mode为"pertoken"时，形状与x去掉最后一个维度后的形状相同。当quant_mode为"pertensor"时，形状为(1,)。</li></ul></td>
+      <td><ul><li>量化后的缩放系数，对应公式中的`scale`。</li><li>当quant_mode为"pertoken"时，形状与x去掉最后一个维度后的形状相同。当quant_mode为"pertensor"时，形状为(1,)。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>offset</td>
       <td>输出</td>
-      <td><ul><li>非对称量化使用的offset，对应公式中的offset。</li><li>shape与scale的shape保持一致。</li></ul></td>
+      <td><ul><li>非对称量化使用的offset，对应公式中的`offset`。</li><li>shape与scale的shape保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

@@ -10,8 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入的两个张量列表的相减运算的结果。
-  本接口相较于[aclnnForeachSubList](aclnnForeachSubList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 算子功能：对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。本接口相较于[aclnnForeachSubList](aclnnForeachSubList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$

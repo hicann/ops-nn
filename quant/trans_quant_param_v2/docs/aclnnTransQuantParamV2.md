@@ -20,7 +20,7 @@
      $$
 
   3. 根据`offset`取值进行后续计算：
-     - 若`offset`不存在，不再后续计算。
+     - 若`offset`不存在，不再进行后续计算。
      - 若`offset`存在：
        1. 将`offset`值处理为int，范围为[-256, 255]。
      
@@ -83,7 +83,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>scale</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在nan和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在NaN和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>offset</td>
       <td>输入</td>
       <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在nan和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>scale、offset或out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>若offset的shape不是(t,)或(1, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致(或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致)。</td>
+      <td>若offset的shape不是(t,)或(1, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）。</td>
     </tr>
     <tr>
       <td>若scale的shape不是一维(t,)、(g,)或二维(1, n)、(g, 1)、(g, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致），g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。</tr>

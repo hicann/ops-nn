@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，按元素做误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。
+- 算子功能：按元素做误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。
 - 计算公式：
 
   $$

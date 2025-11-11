@@ -9,8 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对多个张量进行逐元素加、乘、除操作，并返回一个新的张量列表。
-  本接口相较于[aclnnForeachAddcdivScalar](aclnnForeachAddcdivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 算子功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。本接口相较于[aclnnForeachAddcdivScalar](aclnnForeachAddcdivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
   
   $$

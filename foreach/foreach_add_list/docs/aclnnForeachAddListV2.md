@@ -9,11 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
-  
-  两个Tensor列表中的元素逐个相加，并返回一个新的Tensor列表。可以通过设置alpha参数来调整相加的系数。
-  
-  本接口相较于[aclnnForeachAddList](aclnnForeachAddList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 算子功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。本接口相较于[aclnnForeachAddList](aclnnForeachAddList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$

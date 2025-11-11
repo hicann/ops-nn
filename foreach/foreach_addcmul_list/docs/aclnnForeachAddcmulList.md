@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，对张量列表x2和张量列表x3执行逐元素乘法，将结果乘以张量scalars后将结果与张量列表x1执行逐元素加法。
+- 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，并将结果乘以张量scalars，最后将之前计算的结果与张量列表x1执行逐元素相加。
 - 计算公式：
   
   $$
@@ -105,14 +105,14 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>scalars</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第一个输入张量。对应公式中的`scalars`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>out</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>

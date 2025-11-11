@@ -73,7 +73,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示LayerNorm的结果输出`y`，对应公式中的y。shape与`x`的shape一致。</td>
+      <td>表示分组量化后的输出，对应公式中的y。shape与`x`的shape一致。</td>
       <td>INT4、INT8</td>
       <td>ND</td>
     </tr>
@@ -82,9 +82,9 @@
 ## 约束说明
 
 - 输入`scale`与输入`offset`的数据类型一致。
-- 如果属性`dstType`为29(INT4)，那么输入`y`的shape的最后一维需要能被2整除。
-- 输入`groupIndex`必须是非递减序列，最大值必须与输入`x`的shape的第1维大小相等。
-- 输入`offsetOptional`的shape当前仅支持[1, ]或[ , ]。
+- 如果属性`dst_type`为29(INT4)，那么输出`y`的shape的最后一维需要能被2整除。
+- 输入`group_index`必须是非递减序列，最大值必须与输入`x`的shape的第1维大小相等。
+- 输入`offset`的shape当前仅支持[1, ]或[]。
 
 ## 调用说明
 

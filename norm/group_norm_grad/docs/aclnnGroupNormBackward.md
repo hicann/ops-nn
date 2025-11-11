@@ -143,7 +143,6 @@ aclnnStatus aclnnGroupNormBackward(
       <td>-</td>
       <td>-</td>
     </tr>
-    </tr>
     <tr>
       <td>C</td>
       <td>输入</td>
@@ -163,7 +162,6 @@ aclnnStatus aclnnGroupNormBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
     </tr>
     <tr>
       <td>group</td>

@@ -10,7 +10,8 @@
 
 ## 功能说明
 
-- 算子功能：返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相加运算的结果。
+- 算子功能：输入张量列表和输入标量列表执行逐元素相加运算。
+
 - 计算公式：
 
   $$
@@ -84,7 +85,7 @@ aclnnStatus aclnnForeachAddScalarList(
       <td>scalars</td>
       <td>输入</td>
       <td>表示加法运算的输入标量。对应公式中的`scalar`。</td>
-      <td>数据类型与入参`x`的数据类型存在一定的对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></td>
+      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型存在一定的对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
       <td>FLOAT32、INT64</td>
       <td>-</td>
       <td>-</td>

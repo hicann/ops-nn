@@ -92,7 +92,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>gamma</td>
       <td>输入</td>
       <td>表示RmsNorm的缩放因子（权重）。对应公式中的`gamma`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1Ref`后几维保持一致，后几维为`x1Ref`需要Norm的维度。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1Ref`后几维保持一致，后几维为`x1Ref`需要norm的维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -220,7 +220,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 
   - **边界值场景说明**
     * 当输入是inf时，输出为inf。
-    * 当输入是nan时，输出为nan。
+    * 当输入是NaN时，输出为NaN。
 
 ## 调用示例
 

@@ -56,7 +56,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示RmsNorm的缩放因子（权重），对应公式中的`g`。shape需要与`x1`后几维保持一致，后几维为x1需要Norm的维度。</td>
+      <td>表示RmsNorm的缩放因子（权重），对应公式中的`g`。shape需要与`x1`后几维保持一致，后几维为x1需要norm的维度。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

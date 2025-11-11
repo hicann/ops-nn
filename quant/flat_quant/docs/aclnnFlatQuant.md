@@ -92,7 +92,7 @@ aclnnStatus aclnnFlatQuant(
       <td>x</td>
       <td>输入</td>
       <td>输入的原始数据，对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过32768，M和N不超过128。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过262144，M和N不超过256。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>3</td>
@@ -207,7 +207,7 @@ aclnnStatus aclnnFlatQuant(
       <td>x的维度不为3。</td>
     </tr>
     <tr>
-      <td>x的第一维度超过32768，或者第二维度超过128，或者第三维度超过128。</td>
+      <td>x的第一维度超过262144，或者第二维度超过256，或者第三维度超过256。</td>
     </tr>
     <tr>
       <td>kroneckerP1的维度不为2，或者第一维度和第二维度与x的第二维度不一致。</td>
