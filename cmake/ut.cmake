@@ -49,7 +49,7 @@ function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
     # add op tiling ut static lib
     add_library(${OP_TILING_MODULE_NAME}_static_lib STATIC
         $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
-        $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OP_TILING_MODULE_NAME}_common_obj>>
+        $<$<TARGET_EXISTS:${OP_TILING_MODULE_NAME}_common_obj>:$<TARGET_OBJECTS:${OP_TILING_MODULE_NAME}_common_obj>>
     )
     target_link_libraries(${OP_TILING_MODULE_NAME}_static_lib PRIVATE
         ${OP_TILING_MODULE_NAME}_common_obj
@@ -92,7 +92,10 @@ function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     )
 
     # add infershape ut static lib
-    add_library(${OP_INFERSHAPE_MODULE_NAME}_static_lib STATIC)
+    add_library(${OP_INFERSHAPE_MODULE_NAME}_static_lib STATIC
+        $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
+        $<$<TARGET_EXISTS:${OP_INFERSHAPE_MODULE_NAME}_common_obj>:$<TARGET_OBJECTS:${OP_INFERSHAPE_MODULE_NAME}_common_obj>>
+    )
     target_link_libraries(${OP_INFERSHAPE_MODULE_NAME}_static_lib PRIVATE
         ${OP_INFERSHAPE_MODULE_NAME}_common_obj
         ${OP_INFERSHAPE_MODULE_NAME}_cases_obj
@@ -286,7 +289,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
     endif()
 
     set(kernel_source_files ${ASCEND_KERNEL_SRC_DST}/${opName})
-    
+
     foreach(oriSocVersion ${supportedSocVersion})
         ## standardize socVersion
         STRING(REPLACE "ascend" "Ascend" socVersion "${oriSocVersion}")
@@ -510,7 +513,7 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
                 ${PROJECT_SOURCE_DIR}/common/inc
                 ${JSON_INCLUDE}
                 )
-       
+
         target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
             $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
         )

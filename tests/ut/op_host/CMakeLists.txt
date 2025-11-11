@@ -18,24 +18,6 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         endif()
     endforeach()
 
-    # add ophost source so: libophost_nn_ut.so
-    add_library(${OPHOST_NAME}_ut SHARED
-        $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
-        $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
-        $<$<TARGET_EXISTS:${COMMON_NAME}_obj>:$<TARGET_OBJECTS:${COMMON_NAME}_obj>>
-    )
-    target_link_libraries(${OPHOST_NAME}_ut PRIVATE
-        $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
-        -Wl,--no-as-needed
-        $<$<TARGET_EXISTS:opsbase>:opsbase>
-        $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:optiling>>
-        -Wl,--as-needed
-        -Wl,--whole-archive
-        rt2_registry_static
-        -Wl,--no-whole-archive
-        tiling_api
-    )
-
     ## add ophost ut exe:  nn_op_host_ut
     set(OP_HOST_UT_EXE ${PKG_NAME}_op_host_ut)
     add_executable(${OP_HOST_UT_EXE}
@@ -49,7 +31,6 @@ if(UT_TEST_ALL OR OP_HOST_UT)
 
     target_compile_definitions(${OP_HOST_UT_EXE} PRIVATE LOG_CPP)
     target_compile_options(${OP_HOST_UT_EXE} PUBLIC -fPIE -fno-access-control)
-    add_dependencies(${OP_HOST_UT_EXE} ${OPHOST_NAME}_ut)
     target_link_libraries(${OP_HOST_UT_EXE} PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         -Wl,--whole-archive
