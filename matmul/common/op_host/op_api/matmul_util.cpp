@@ -342,9 +342,7 @@ static inline bool IsSplitKThenForbiddenNd2Nz(const uint64_t mDim, const uint64_
   return kIsEnoughMultiCore && mnIsNotEnoughCore && !(!transposeX1 && transposeX2);
 }
 
-static bool CheckAscendCScenario(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo, const bool transposeX1,
-    const bool transposeX2)
+static bool CheckAscendCScenario(const MmOpInfo& mmOpInfo)
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
@@ -396,7 +394,7 @@ static const aclTensor* GetMatMulOp(
     const bool transposeX2, const bool offsetX, const bool enableHf32, const int64_t opImplModeEnum,
     aclOpExecutor* executor)
 {
-    if (CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
+    if (CheckAscendCScenario(mmOpInfo) ||
         CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2)) {
         OP_LOGI("Hit matmul_v3 scenario.");
         const aclTensor* mmOut =
