@@ -38,9 +38,10 @@ public:
     __aicore__ inline LayerNormGradV3Common(){};
     __aicore__ inline void Init(
         GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR pdGamma, GM_ADDR pdBeta,
-        GM_ADDR workspace, const LayerNormGradV3TilingDataCommon* tilingData)
+        GM_ADDR workspace, const LayerNormGradV3TilingDataCommon* tilingData, TPipe& pipeIn)
     {
         // init gm inputs
+        pipe = pipeIn;
         int64_t curRowsNum =
             (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail;
         int64_t formerBlockLength = tilingData->blockFormer * tilingData->col;

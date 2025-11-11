@@ -29,9 +29,10 @@ public:
     {}
     __aicore__ inline void Init(
         GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR pdGamma, GM_ADDR pdBeta,
-        GM_ADDR workspace, const LayerNormGradV3TilingDataTranspose* __restrict tilingData)
+        GM_ADDR workspace, const LayerNormGradV3TilingDataTranspose* __restrict tilingData, TPipe& pipeIn)
     {
         // load tiling data
+        pipe = pipeIn;
         col = tilingData->col;
         row = tilingData->row;
         coff = tilingData->coefficient;
