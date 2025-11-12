@@ -77,7 +77,7 @@
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>公式中的输出。</td>
+      <td>公式中的`self`，Device侧的aclTensor。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

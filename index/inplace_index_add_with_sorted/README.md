@@ -38,21 +38,21 @@
     <tr>
       <td>var</td>
       <td>输入/输出</td>
-      <td>表示待被累加的张量。</td>
+      <td>公式中的`var`，表示待被累加的张量。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>value</td>
       <td>输入</td>
-      <td>表示需要加到var上的张量。</td>
+      <td>公式中的`updates`，表示需要加到var上的张量。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>sorted_indices</td>
       <td>输入</td>
-      <td>表示经过排序后的索引。</td>
+      <td>公式中的`indices`，表示经过排序后的索引。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
@@ -66,7 +66,7 @@
     <tr>
       <td>alpha</td>
       <td>输入</td>
-      <td>表示对value的缩放，与value相乘后再累加至var。</td>
+      <td>公式中的`alpha`，表示对value的缩放，与value相乘后再累加至var。</td>
       <td>FLOAT、INT32、INT16</td>
       <td>ND</td>
     </tr>

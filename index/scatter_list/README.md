@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -32,37 +31,53 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>var</td>
       <td>输入</td>
-      <td>公式中的`self`，Device侧的aclTensor。</td>
-      <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+      <td>表示待被更新的张量，Device侧的aclTensor。</td>
+      <td>DT_INT8、DT_INT16、DT_INT32、DT_UINT8、DT_UINT16、DT_UINT32、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>index</td>
+      <td>indice</td>
       <td>输入</td>
-      <td>公式中的`index`，Device侧的aclTensor。</td>
+      <td>表示待更新的索引张量，Device侧的aclTensor。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
     </tr>
-      <td>src</td>
+    <tr>
+      <td>updates</td>
       <td>输入</td>
-      <td>公式中的`src`，Device侧的aclTensor。</td>
-      <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
+      <td>表示需要更新到var上的张量，Device侧的aclTensor。</td>
+      <td>DT_INT8、DT_INT16、DT_INT32、DT_UINT8、DT_UINT16、DT_UINT32、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>mask</td>
       <td>输入</td>
-      <td>Host侧的整型，选择应用的reduction操作。</td>
+      <td>表示需要更新数据的掩码，Device侧的aclTensor。</td>
+      <td>DT_UINT8</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>var</td>
+      <td>输出</td>
+      <td>表示更新后的张量，Device侧的aclTensor。</td>
+      <td>FLOAT32、FLOAT16、DOUBLE、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、BOOL</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>reduce</td>
+      <td>属性</td>
+      <td>HOST侧的字符串，选择应用的reduction操作</td>
+      <td>string</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>axis</td>
+      <td>属性</td>
+      <td>用来scatter的维度。</td>
       <td>int64_t</td>
       <td>-</td>
-    <tr>
-      <td>out</td>
-      <td>输出</td>
-      <td>待进行abs计算的出参，公式中的out_i。</td>
-      <td>FLOAT、FLOAT16、DOUBLE、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、BOOL</td>
-      <td>ND</td>
     </tr>
   </tbody></table>
 
@@ -71,9 +86,8 @@
 
 无
 
-<!--## 调用说明-->
+## 调用说明
 
-<!--| 调用方式 | 调用样例                                                                   | 说明                                                           |
-|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|-->
-<!--| aclnn调用 | [test_aclnn_scatter_list](./examples/test_aclnn_scatter_list.cpp) | 通过[aclnnScatterList](./docs/aclnnScatterList.md)接口方式调用ScatterList算子。 |-->
-<!--| 图模式调用 | [test_geir_scatter_list](./examples/test_geir_scatter_list.cpp)   | 通过[算子IR](./op_graph/scatter_list_proto.h)构图方式调用ScatterList算子。 |-->
+| 调用方式 | 调用样例                                                                   | 说明                                                           |
+|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_scatter_list](./examples/test_aclnn_scatter_list.cpp) | 通过[aclnnScatterList](./docs/aclnnScatterList.md)接口方式调用ScatterList算子。 |

@@ -55,7 +55,7 @@
       <td>axis</td>
       <td>可选属性</td>
       <td><ul><li>表示ReduceSum作用的维度。取值范围为[-n, n)，其中n为y_grad的维度。</li><li>默认值为-1。</li></td>
-      <td>Int</td>
+      <td>int64_t</td>
       <td>-</td>
     </tr>
   </tbody></table>

@@ -33,7 +33,7 @@
         <td>grad</td>
         <td>输入</td>
         <td>表示数据的原始梯度。</td>
-        <td>FLOAT、FLOAT16、BFLOAT16</td>
+        <td>FLOAT</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -47,7 +47,7 @@
         <td>out</td>
         <td>输出</td>
         <td>表示梯度求和的结果输出。</td>
-        <td>FLOAT、FLOAT16、BFLOAT16</td>
+        <td>FLOAT</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -60,20 +60,18 @@
       <tr>
         <td>padding_idx</td>
         <td>可选属性</td>
-        <td><ul><li>将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。</li><li>默认值为-1。</li></td>
+        <td><ul><li>将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。</li><li>默认值为-1。</li></ul></td>
         <td>Int</td>
         <td>-</td>
       </tr>
       <tr>
         <td>scale_grad_by_freq</td>
         <td>可选属性</td>
-        <td><ul><li>根据单词出现的频率，是否对梯度进行缩放。</li><li>默认值为false。</li></td>
+        <td><ul><li>根据单词出现的频率，是否对梯度进行缩放。</li><li>默认值为false。</li></ul></td>
         <td>Bool</td>
         <td>-</td>
       </tr>
     </tbody></table>
-
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：grad不支持BFLOAT16、FLOAT16，indices不支持INT64。
 
 ## 约束说明
 

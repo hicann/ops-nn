@@ -61,13 +61,14 @@
       <td>int64_t</td>
       <td>-</td>
     </tr>
-      <tr>
+    <tr>
       <td>index</td>
       <td>输入</td>
       <td>公式中的`index`，Device侧的aclTensor。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
     </tr>
+    <tr>
       <td>src</td>
       <td>输入</td>
       <td>公式中的`src`，Device侧的aclTensor。</td>
@@ -75,10 +76,10 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>reduction</td>
       <td>输入</td>
-      <td>Host侧的整型，选择应用的reduction操作。</td>
-      <td>int64_t</td>
+      <td>Host侧的字符串，选择应用的reduction操作。</td>
+      <td>string</td>
       <td>-</td>
     </tr>
     <tr>
