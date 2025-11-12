@@ -80,6 +80,7 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* values, 
 
     return ACLNN_SUCCESS;
 }
+} // namespace
 
 aclnnStatus aclnnHeavisideGetWorkspaceSize(
     const aclTensor* input, const aclTensor* values, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -154,7 +155,6 @@ aclnnStatus aclnnHeaviside(void* workspace, uint64_t workspaceSize, aclOpExecuto
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-} // namespace
 
 #ifdef __cplusplus
 }
