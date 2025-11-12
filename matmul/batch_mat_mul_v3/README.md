@@ -15,9 +15,9 @@
 - 计算公式：
 
   $$
-  C=op(A) \times op(B) + bias
+  out = self@mat2 + bias
   $$
-  其中，$op(A)$，$op(B)$ 输入维度支持2~6维，最后两维做矩阵乘计算。例如，$op(A)$，$op(B)$ 输入维度分别为$(B, M, K)$，$(B, K, N)$ 时，$op(C)$ 维度为 $(B, M, N)$。$bias$ 是维度为$(B, 1, N)$的向量。
+  其中，$self$，$mat2$ 输入维度支持2~6维，最后两维做矩阵乘计算。例如，$self$，$mat2$ 输入维度分别为$(B, M, K)$，$(B, K, N)$ 时，$out$ 维度为 $(B, M, N)$。$bias$ 是维度为$(B, 1, N)$的向量。其中，B为矩阵乘法的batch数，M为第一个张量$self$的行数和输出张量$out$的行数，N为第二个张量$mat2$的列数和输出张量$out$的列数，K为第一个张量$self$的列数和第二个张量$mat2$的行数。
 
 ## 参数说明
 
@@ -38,37 +38,34 @@
   </tr></thead>
 <tbody>
   <tr>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">a</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">self</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算中的左矩阵。</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16, BFLOAT16, FLOAT32</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND, FRACTAL_NZ</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16、BFLOAT16、FLOAT32</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">b</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">mat2</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的右矩阵。</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, BFLOAT16, FLOAT32</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND, FRACTAL_NZ</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16、BFLOAT16、FLOAT32</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">bias</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算后累加的偏置，对应公式中的bias。</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16, FLOAT32</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16、FLOAT32</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">c</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">out</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输出</span></td>
     <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">通用矩阵乘运算的计算结果。</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, BFLOAT16, FLOAT32</span></td>
-    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND, FRACTAL_NZ</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16、BFLOAT16、FLOAT32</span></td>
+    <td class="tg-22a9"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
 </tbody></table>
-
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
 
 ## 约束说明
 
