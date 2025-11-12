@@ -58,10 +58,16 @@
 #include "level0/ones_like.h"
 #include "level0/div.h"
 #include "level0/realdiv.h"
+#include "level0/threshold.h"
 namespace l0op {
 const aclTensor* TensorMove(const aclTensor* x, const aclTensor* /*y*/, aclOpExecutor* /*executor*/)
 {
     return x;
+}
+const aclTensor* Threshold(
+    const aclTensor* self, const aclScalar* threshold, const aclScalar* /*value*/, aclOpExecutor* /*executor*/)
+{
+    return self;
 }
 const aclTensor* ZerosLike(const aclTensor* self, aclOpExecutor* /*executor*/)
 {

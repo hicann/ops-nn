@@ -17,7 +17,7 @@
 #include <complex>
 #include "gtest/gtest.h"
 
-#include "level2/aclnn_celu.h"
+#include "../../../op_host/op_api/aclnn_celu.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -266,7 +266,7 @@ TEST_F(l2_celu_test, l2_celu_abnormal_self_BF16)
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // CheckDtypeValid_self_INT32

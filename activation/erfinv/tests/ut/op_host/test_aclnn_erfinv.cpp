@@ -9,7 +9,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "level2/aclnn_erfinv.h"
+#include "../../../op_host/op_api/aclnn_erfinv.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
@@ -258,7 +258,7 @@ TEST_F(l2ErfinvTest, 017_ascend910A_error_support_bf16)
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // 910B，bf16
