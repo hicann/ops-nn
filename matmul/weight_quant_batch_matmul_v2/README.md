@@ -109,10 +109,10 @@
 </tbody></table>
 
 - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：
-  - weigh只支持INT8、INT4、INT32。
+  - weight只支持INT8、INT4、INT32。
   - antiquant_scale只支持FLOAT16、BF16、UINT64、INT64。
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-  - weigh只支持INT8、INT4、INT32。
+  - weight只支持INT8、INT4、INT32。
   - antiquant_scale只支持FLOAT16、BF16、UINT64、INT64。
 
 ## 约束说明

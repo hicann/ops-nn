@@ -19,6 +19,45 @@
       $$
       out = ((x1 @ (x2*x2scale)) + yoffset) * x1scale
       $$
+    - 无x1Scale无bias：
+      $$
+      out = x1@x2 * x2Scale + x2Offset
+      $$
+
+    - bias INT32：
+      $$
+      out = (x1@x2 + bias) * x2Scale + x2Offset
+      $$
+
+    - bias BFLOAT16/FLOAT32（此场景无offset）：
+      $$
+      out = x1@x2 * x2Scale + bias
+      $$
+
+    - x1Scale无bias：
+      $$
+      out = x1@x2 * x2Scale * x1Scale
+      $$
+
+    - x1Scale， bias INT32（此场景无offset）：
+      $$
+      out = (x1@x2 + bias) * x2Scale * x1Scale
+      $$
+
+    - x1Scale， bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
+      $$
+      out = x1@x2 * scale * x1Scale + bias
+      $$
+    
+    - x1，x2为INT8，x1Scale, x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16  (pertoken-pergroup量化):
+      $$
+      out = (x1 @ x2) * x1scale * x2scale + bias
+      $$
+
+    - x1，x2为INT4，x1Scale, x2Scale为FLOAT32，x2Offset为FLOAT16, out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化):
+      $$
+      out = x1scale * x2scale @ (x1 @ x2 - x1 @ x2offset)
+      $$
 
 
 ## 算子规格
@@ -43,94 +82,93 @@
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">x1</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算中的左矩阵。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT8_E5M2, FLOAT8_E4M3FN, INT8</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">INT4, INT8</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算中的右矩阵。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT4_E1M2, FLOAT4_E2M1, INT4, INT8</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">INT4, INT8</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND, FRACTAL_NZ</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">bias</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算后累加的偏置，对应公式中的bias。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">BF16, FLOAT16, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">BFLOAT16, FLOAT16, FLOAT32</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x1_scale</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，量化参数的缩放因子，对应公式的x1Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, DT_BF16, DT_FLOAT8_E8M0, DT_FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BFLOAT16, FLOAT16, FLOAT32</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">x2_scale</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘计算时，量化参数的缩放因子，对应公式的x2Scale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16, BF16, FLOAT8_E8M0, UINT64, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">BFLOAT16, FLOAT16, FLOAT32, UINT64</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">y_scale</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算后，量化参数的缩放因子，对应公式的yScale。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, BFLOAT16, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">UINT64</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">x1_offset</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘计算时，量化参数的偏置因子，对应公式的x1Offset。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16, BFLOAT16, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">BFLOAT16, FLOAT16</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">x2_offset</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘计算时，量化参数的偏置因子，对应公式的x2Offset。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, BFLOAT16, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BFLOAT16, FLOAT16</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">y_offset</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">输入</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">矩阵乘运算后，量化参数的偏置因子，对应公式的yOffset。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">FLOAT16, BFLOAT16, FLOAT32</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">BFLOAT16, FLOAT16, FLOAT32</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--theme-table-header-bg)">ND</span></td>
   </tr>
   <tr>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">y</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">输出</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">矩阵乘运算的计算结果。</span></td>
-    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">FLOAT16, BF16</span></td>
+    <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">BFLOAT16, FLOAT16</span></td>
     <td class="tg-zgfj"><span style="color:var(--theme-aide-text);background-color:var(--devui-base-bg, #ffffff)">ND</span></td>
   </tr>
 </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：
-  - x1只支持INT8数据类型。
-  - x2只支持INT8、INT4数据类型。
-  - x1_scale只支持FLOAT32数据类型。
-  - x2_scale只支持UINT64数据类型。
-  - y_offset只支持FLOAT32数据类型。
-  - y只支持FLOAT16和BFLOAT16数据类型。
-  - bias、y_scale、x1_offset、x2_offset暂不支持。
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-  - x1只支持INT8数据类型。
-  - x2只支持INT8、INT4数据类型。
-  - x1_scale只支持FLOAT32数据类型。
-  - x2_scale只支持UINT64数据类型。
-  - y_offset只支持FLOAT32数据类型。
-  - y只支持FLOAT16和BFLOAT16数据类型。
-  - bias、y_scale、x1_offset、x2_offset暂不支持。
+- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+
+  | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
+  | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
+  | INT8                      | INT32                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr         | FLOAT32    | FLOAT16/BFLOAT16                       |
+  | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
+  | INT8                      | INT8                      | nullptr        | UINT64/INT64    | nullptr/FLOAT32| nullptr     | nullptr/INT32   | nullptr       | INT8                                   |
+  | INT8                      | INT8                      | nullptr/FLOAT32| BFLOAT16        | nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
+  | INT8                      | INT8                      | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
+  | INT4/INT32                | INT4/INT32                | nullptr        | UINT64/INT64    | nullptr        | nullptr     | nullptr/INT32   | nullptr       | INT32                                  |
+  | INT8                      | INT8                      | nullptr        | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32   | nullptr       | FLOAT16                                |
+  | INT8                      | INT8                      | FLOAT32        | FLOAT32| nullptr        | nullptr     | FLOAT32   | nullptr       | BFLOAT16                                |
+  | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
+  | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
+  | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
 
 ## 约束说明
 
-- 不支持空tansor。
+- 不支持空tensor。
 - 支持连续tensor，[非连续tensor](../../docs/context/非连续的Tensor.md)只支持转置场景。
 
 ## 调用说明

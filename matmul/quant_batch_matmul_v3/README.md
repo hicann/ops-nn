@@ -45,7 +45,6 @@
       out = x1@x2 * scale * pertokenScaleOptional + bias
       $$
 
-    - 无bias：
 
 ## 参数说明
 

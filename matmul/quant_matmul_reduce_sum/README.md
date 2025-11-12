@@ -49,7 +49,7 @@
       <td>输入</td>
       <td>矩阵乘运算中的右矩阵。</td>
       <td>INT8</td>
-      <td>NZ</td>
+      <td>FRACTAL_NZ</td>
     </tr>
     <tr>
       <td>x1Scale</td>
