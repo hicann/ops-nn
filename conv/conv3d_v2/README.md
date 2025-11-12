@@ -279,7 +279,7 @@
   </tr>
   </table>
 
-- 当 `groups` 为 1, `dilation` 全为 1，`padding` 全为 0，`filter` 没有为 1 的维度， `x` 的 `D` * `H` * `W` 小于 65536，`bias` 为 `FLOAT32` 时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
+- 当 `groups` 为 1, `dilation` 全为 1，`padding` 全为 0，`filter` 没有为 1 的维度， `x` 的 `D` * `H` * `W` 小于 65536，`bias` 为 `FLOAT` 时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
 
 - `x`、`filter`、`bias`、`scale`、`y` 中每一组 `tensor` 的每一维大小都应不大于 1000000。
 
