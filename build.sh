@@ -454,7 +454,6 @@ checkopts() {
   USE_CMD="$*"
 
   ENABLE_DEBUG=FALSE
-  ENABLE_CONVERAGE=FALSE
   ENABLE_UT_EXEC=TRUE
   ENABLE_ASAN=FALSE
   ENABLE_VALGRIND=FALSE
@@ -749,9 +748,6 @@ build_lib() {
     fi
   done
 
-  if [[ "$ENABLE_CONVERAGE" =~ "TRUE" ]]; then
-    cmake --build . --target generate_ops_cpp_cov -- -j $THREAD_NUM
-  fi
   print_success "Build libs ${BUILD_LIBS[@]} success!"
 }
 

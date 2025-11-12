@@ -21,7 +21,7 @@ logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
 
-class UtMathcer():
+class UtMatcher():
     def __init__(self):
         self.ops = set()
 
@@ -45,22 +45,25 @@ class UtMathcer():
         pass
 
 
-class OpApiUt(UtMathcer):
+class OpApiUt(UtMatcher):
     def _ut_match(self, changed_file):
-        return changed_file.find('op_api') != -1
+        return (
+            changed_file.find('op_api') != -1 
+            or (changed_file.find('op_host') != -1 and changed_file.find('test_aclnn_') != -1)
+        )
 
 
-class OpHostUt(UtMathcer):
+class OpHostUt(UtMatcher):
     def _ut_match(self, changed_file):
         return changed_file.find('op_host') != -1 and changed_file.find('config') == -1
 
 
-class OpKernelUt(UtMathcer):
+class OpKernelUt(UtMatcher):
     def _ut_match(self, changed_file):
         return changed_file.find('op_kernel') != -1
 
 
-class OpGraphUt(UtMathcer):
+class OpGraphUt(UtMatcher):
     def _ut_match(self, changed_file):
         return changed_file.find('op_graph') != -1
 

@@ -55,5 +55,5 @@ class OpTilingUtEnvironment : public testing::Environment {
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc,argv);
   testing::AddGlobalTestEnvironment(new OpTilingUtEnvironment());
-  _exit(RUN_ALL_TESTS());
+  return RUN_ALL_TESTS();
 }
