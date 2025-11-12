@@ -116,7 +116,7 @@
 
 * grad_out的元素数量必须为N。
 * log_probs的shape为(T, N, C)，其中T>=max(input_lengths)。
-* target的shape为(N, S)或者(sum(target_lengths),)，其中S>=max(target_lengths)，值为[0, C)。
+* targets的shape为(N, S)或者(sum(target_lengths),)，其中S>=max(target_lengths)，值为[0, C)。
 * input_lengths的元素数量必须为N，值为[0, T]。
 * target_lengths的元素数量必须为N，值为[1, S]。
 * neg_log_likelihood的shape必须为1维(N)。

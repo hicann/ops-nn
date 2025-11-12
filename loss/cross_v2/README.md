@@ -13,11 +13,11 @@
 - 计算公式：
 
   $$
-  a \times b = \left|\begin {array}{c}
+  out = a \times b = \left|\begin {array}{c}
   i&j&k \\
   x_1&y_1&z_1 \\
   x_1&y_1&z_1 \\
-  \end{array}\right|
+  \end{array}\right| = (y_1z_2 - y_2z_1)i -(x_1z_2-x_2z_1)j+(x_1y_2-x_2y_1)k
 
   $$
 
@@ -40,14 +40,14 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1</td>
+      <td>a</td>
       <td>输入</td>
       <td>输入tensor。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>b</td>
       <td>输入</td>
       <td>输入tensor。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、BFLOAT16</td>
@@ -61,7 +61,7 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>out</td>
       <td>输出</td>
       <td>输出tensor。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、BFLOAT16</td>
@@ -71,7 +71,7 @@
 
 ## 约束说明
 
-x1和x2的维度要大于dim，且x1和x2的dim维大小必须是3。
+a和b的维度要大于dim，且a和b的dim维大小必须是3。
 
 ## 调用说明
 

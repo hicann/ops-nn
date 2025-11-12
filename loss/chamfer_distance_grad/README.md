@@ -40,7 +40,7 @@
   
   最终计算公式如下，i∈[0,n)：
 
-  $grad_xyz1[2*i] = 2*grad\_dist_1*(x_{1_i}-x_2) - 2*grad\_dist_1*(x_{1_i}-x_2)$
+  $grad_xyz1[2*i] = 2*grad\_dist1*(x_{1_i}-x_2) - 2*grad\_dist1*(x_{1_i}-x_2)$
   
   $grad_xyz1[2*i+1] = 2*grad\_dist1*(y_{1_i}-y_2) - 2*grad\_dist1*(y_{1_i}-y_2)$
   

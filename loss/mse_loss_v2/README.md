@@ -53,14 +53,14 @@ $$
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>公式中的输入x </td>
+      <td>公式中的输入x，任意形状，只要与target相同即可。 </td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>target</td>
       <td>输入</td>
-      <td>公式中的输入y。</td>
+      <td>公式中的输入y，与输入同形状。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>

@@ -79,7 +79,7 @@
     <tr>
       <td>zero_infinity</td>
       <td>属性</td>
-      <td>是否为零无限损失和相关梯度</td>
+      <td>是否将无限损失和相关的梯度置零。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -102,6 +102,6 @@
 ## 约束说明
 
 * log_probs的shape为(T, N, C)，其中T>=max(input_lengths)。
-* target的shape为(N, S)或者(sum(target_lengths),)，其中S>=max(target_lengths)。
+* targets的shape为(N, S)或者(sum(target_lengths),)，其中S>=max(target_lengths)。
 * reduction的取值范围为{'none', 'mean', 'sum'}。
 
