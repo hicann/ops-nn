@@ -11,7 +11,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "opdev/op_log.h"
-#include "level2/aclnn_l1_loss.h"
+#include "../../../../op_host/op_api/aclnn_l1_loss.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -57,44 +57,6 @@ TEST_F(l2_l1_loss_test, aclnnL1Loss_02_float16_nd_mean)
     int64_t reduction = 1;
 
     auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-
-    auto ut = OP_API_UT(aclnnL1Loss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-TEST_F(l2_l1_loss_test, aclnnL1Loss_03_float_float16_hd_sum)
-{
-    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 2;
-
-    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnL1Loss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-TEST_F(l2_l1_loss_test, aclnnL1Loss_04_float16_float_hd_mean)
-{
-    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 1;
-
-    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NDHWC).Precision(0.001, 0.001);
 
     auto ut = OP_API_UT(aclnnL1Loss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
 

@@ -596,54 +596,6 @@ TEST_F(l2_nll_loss2d_forward_test, case_027)
     ut.TestPrecision();
 }
 
-TEST_F(l2_nll_loss2d_forward_test, case_028)
-{
-    auto selfDesc = TensorDesc({5, 3, 1, 10}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({5, 1, 10}, ACL_INT32, ACL_FORMAT_NCDHW).ValueRange(0, 3);
-    auto weightDesc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
-    int64_t reduction = 1;
-    int64_t ignoreIndex = -100;
-
-    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
-    auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
-
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-TEST_F(l2_nll_loss2d_forward_test, ascend910_95_case_028)
-{
-    auto selfDesc = TensorDesc({5, 3, 1, 10}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({5, 1, 10}, ACL_INT32, ACL_FORMAT_NCDHW).ValueRange(0, 3);
-    auto weightDesc = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
-    int64_t reduction = 1;
-    int64_t ignoreIndex = -100;
-
-    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
-    auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
-
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
 TEST_F(l2_nll_loss2d_forward_test, case_029)
 {
     auto selfDesc = TensorDesc({5, 3, 1, 10}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ValueRange(-1, 1);

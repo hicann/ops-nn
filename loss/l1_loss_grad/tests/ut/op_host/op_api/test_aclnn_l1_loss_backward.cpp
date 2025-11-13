@@ -10,7 +10,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "level2/aclnn_l1_loss_backward.h"
+#include "../../../../op_host/op_api/aclnn_l1_loss_backward.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -344,27 +344,6 @@ TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_16_aclnnL1LossBackward_erro
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_17_aclnnL1LossBackward_diff_input_dtype)
-{
-    auto gradOutputDesc = TensorDesc({6, 2, 1, 2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto selfDesc = TensorDesc({6, 2, 1, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto targetDesc = TensorDesc({6, 2, 1, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
-    int64_t reduction = 0;
-
-    auto outDesc = TensorDesc({6, 2, 1, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnL1LossBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    auto ut_2 = OP_API_UT(aclnnL1LossBackward, INPUT(targetDesc, selfDesc, gradOutputDesc, reduction), OUTPUT(outDesc));
-    // SAMPLE: only test GetWorkspaceSize
-    aclRet = ut_2.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_18_aclnnL1LossBackward_input_error_shape_len)

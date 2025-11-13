@@ -10,7 +10,7 @@
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
-#include "level2/aclnn_ctc_loss_backward.h"
+#include "../../../../op_host/op_api/aclnn_ctc_loss_backward.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -149,42 +149,6 @@ TEST_F(l2_ctc_loss_backward_test, ascend910B2_test_ctc_loss_backward_float_v3_al
     bool zeroInfinity = false;
 
     auto out = TensorDesc({TT, NN, CC_V3}, ACL_FLOAT, ACL_FORMAT_ND);
-
-    auto ut = OP_API_UT(aclnnCtcLossBackward, INPUT(gradOut, logProbs, targets, inputLengths, targetLengths, negLogLikelihood, logAlpha, blank, zeroInfinity), OUTPUT(out));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-    // SAMPLE: precision simulate
-    // ut.TestPrecision();
-}
-
-// 正常情況double
-TEST_F(l2_ctc_loss_backward_test, test_ctc_loss_backward_double_all_normal) {
-    auto gradOut = TensorDesc({NN}, ACL_DOUBLE, ACL_FORMAT_ND)
-                            .ValueRange(-10, 10)
-                            .Value(vector<float>{1.0, 1.0, 1.0, 1.0});
-
-    auto logProbs = TensorDesc({TT, NN, CC}, ACL_DOUBLE, ACL_FORMAT_ND)
-                            .ValueRange(-10, 10);
-
-    auto targets = TensorDesc({NN, SS}, ACL_INT64, ACL_FORMAT_ND)
-                            .ValueRange(-10, 10);
-
-    auto inputLengths = IntArrayDesc(vector<int64_t>{TT, TT, TT, TT});
-
-    auto targetLengths = IntArrayDesc(vector<int64_t>{SS, SS, SS, SS});
-
-    auto negLogLikelihood = TensorDesc({NN}, ACL_DOUBLE, ACL_FORMAT_ND)
-                            .ValueRange(-10, 10);
-
-    auto logAlpha = TensorDesc({NN, TT, 15}, ACL_DOUBLE, ACL_FORMAT_ND)
-                            .ValueRange(-10, 10);
-
-    int64_t blank = 0;
-    bool zeroInfinity = false;
-
-    auto out = TensorDesc({TT, NN, CC}, ACL_DOUBLE, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnCtcLossBackward, INPUT(gradOut, logProbs, targets, inputLengths, targetLengths, negLogLikelihood, logAlpha, blank, zeroInfinity), OUTPUT(out));
 

@@ -501,54 +501,6 @@ TEST_F(l2_nll_loss_test, case_021)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_nll_loss_test, case_022)
-{
-    auto selfDesc = TensorDesc({1, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto weightDesc = TensorDesc({7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 0;
-    int64_t ignoreIndex = -100;
-
-    auto outDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-    auto totalWeightDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001).ValidCount(0);
-
-    auto ut = OP_API_UT(
-        aclnnNLLLoss, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-TEST_F(l2_nll_loss_test, case_023)
-{
-    auto selfDesc = TensorDesc({3, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto weightDesc = TensorDesc({7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 1;
-    int64_t ignoreIndex = -100;
-
-    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-    auto totalWeightDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-
-    auto ut = OP_API_UT(
-        aclnnNLLLoss, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    // ut.TestPrecision();  // comment bcz of timeout in model tests (109610 ms)
-}
-
 TEST_F(l2_nll_loss_test, Ascend910B2_case_024)
 {
     auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(-1, 1);

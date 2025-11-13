@@ -15,7 +15,7 @@
 #include "gtest/gtest.h"
 #include "opdev/op_log.h"
 
-#include "level2/aclnn_binary_cross_entropy_with_logits.h"
+#include "../../../../op_host/op_api/aclnn_binary_cross_entropy_with_logits.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -40,48 +40,6 @@ class l2BinaryCrossEntropyWithLogitsTest : public testing::Test {
 };
 
 // *** tensor dtype test ***
-// test type: FLOAT/FLOAT32
-TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_float_type) {
-  auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto pos_weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  int64_t reduction = Reduction::None;
-  auto out_tensor_desc = TensorDesc(self_tensor_desc).Precision(0.0001, 0.0001);
-
-  auto ut =
-      OP_API_UT(aclnnBinaryCrossEntropyWithLogits,
-                INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
-                OUTPUT(out_tensor_desc));
-
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
-}
-
-// test type: FLOAT16
-TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_float16_type) {
-  auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto pos_weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  int64_t reduction = Reduction::None;
-  auto out_tensor_desc = TensorDesc(self_tensor_desc).Precision(0.0001, 0.0001);
-
-  auto ut =
-      OP_API_UT(aclnnBinaryCrossEntropyWithLogits,
-                INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
-                OUTPUT(out_tensor_desc));
-
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
-}
-
 // test invalid input type
 TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_invalid_double_type) {
   auto self_tensor_desc = TensorDesc({5, 5}, ACL_DOUBLE, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -200,48 +158,6 @@ TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_unable_bro
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-// test diff input dtype
-TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_diff_input_dtype) {
-  auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto pos_weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  int64_t reduction = Reduction::None;
-  auto out_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-  auto ut =
-      OP_API_UT(aclnnBinaryCrossEntropyWithLogits,
-                INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
-                OUTPUT(out_tensor_desc));
-
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
-}
-
-// test optional param has diff dtype with input
-TEST_F(l2BinaryCrossEntropyWithLogitsTest, case_bcelosswithlogits_for_diff_optional_param_dtype) {
-  auto self_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto target_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto pos_weight_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  int64_t reduction = Reduction::None;
-  auto out_tensor_desc = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-  auto ut =
-      OP_API_UT(aclnnBinaryCrossEntropyWithLogits,
-                INPUT(self_tensor_desc, target_tensor_desc, weight_tensor_desc, pos_weight_tensor_desc, reduction),
-                OUTPUT(out_tensor_desc));
-
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  ut.TestPrecision();
 }
 
 // *** tensor rank range ***

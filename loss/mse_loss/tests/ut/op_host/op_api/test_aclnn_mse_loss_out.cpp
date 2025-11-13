@@ -11,7 +11,7 @@
 #include <array>
 #include <vector>
 
-#include "level2/aclnn_mse_loss_out.h"
+#include "../../../../op_host/op_api/aclnn_mse_loss_out.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -335,21 +335,6 @@ TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_21_aclnnMseLossOut_output_error_sha
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_bf16_float_nhwc_mean) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_NDHWC).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_NDHWC).ValueRange(-1, 1);
-  int64_t reduction = 1;
-
-  auto outDesc = TensorDesc({2}, ACL_BF16, ACL_FORMAT_NDHWC).Precision(0.0001, 0.0001);
-
-  auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 

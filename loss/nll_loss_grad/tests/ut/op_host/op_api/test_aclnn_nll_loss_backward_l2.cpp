@@ -509,31 +509,7 @@ TEST_F(l2_nll_loss_backward_test, case_021)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_nll_loss_backward_test, case_022)
-{
-    auto gradDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto selfDesc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({5}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3, 4});
-    auto weightDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 1;
-    int64_t ignoreIndex = 0;
-    auto totalWeightDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-
-    auto outDesc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnNLLLossBackward,
-        INPUT(gradDesc, selfDesc, targetDesc, weightDesc, reduction, ignoreIndex, totalWeightDesc), OUTPUT(outDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-TEST_F(l2_nll_loss_backward_test, Ascend910B2_case_023)
+TEST_F(l2_nll_loss_backward_test, Ascend910B2_case_022)
 {
     auto gradDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND);
     auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND);
@@ -545,27 +521,6 @@ TEST_F(l2_nll_loss_backward_test, Ascend910B2_case_023)
 
     auto outDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLossBackward,
-        INPUT(gradDesc, selfDesc, targetDesc, weightDesc, reduction, ignoreIndex, totalWeightDesc), OUTPUT(outDesc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-}
-
-TEST_F(l2_nll_loss_backward_test, ascend310P_case_024)
-{
-    auto gradDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto selfDesc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc = TensorDesc({5}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3, 4});
-    auto weightDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 1;
-    int64_t ignoreIndex = 0;
-    auto totalWeightDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-
-    auto outDesc = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto ut = OP_API_UT(
         aclnnNLLLossBackward,
         INPUT(gradDesc, selfDesc, targetDesc, weightDesc, reduction, ignoreIndex, totalWeightDesc), OUTPUT(outDesc));

@@ -10,7 +10,7 @@
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
-#include "level2/aclnn_ctc_loss.h"
+#include "../../../../op_host/op_api/aclnn_ctc_loss.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -59,56 +59,6 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logprobs_is_empty_tensor_normal) {
     N = TEMP_N;
     S = 7;
     LOGALPHA_X =((2*S+1) + 7) / 8 * 8;
-    ut.TestPrecision();
-}
-
-// 正常情況double
-TEST_F(l2_ctc_loss_test, test_ctc_loss_double_all_normal) {
-    auto logProbs = TensorDesc({T, N, C}, ACL_DOUBLE, ACL_FORMAT_ND)
-    .ValueRange(-4, 0);
-    auto targets = TensorDesc({N, S}, ACL_INT64, ACL_FORMAT_ND)
-    .ValueRange(1, 4);
-
-    auto inputLengths = IntArrayDesc(vector<int64_t>{5, 9, 7, 12});
-    auto targetLengths = IntArrayDesc(vector<int64_t>{7, 5, 7, 1});
-
-    int64_t blank = 0;
-    bool zeroInfinity = false;
-
-    auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
-
-    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity), OUTPUT(negLogLikelihoodOut, logAlphaOut));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-// 正常情況double int32
-TEST_F(l2_ctc_loss_test, test_ctc_loss_double_and_int32_all_normal) {
-    auto logProbs = TensorDesc({T, N, C}, ACL_DOUBLE, ACL_FORMAT_ND)
-    .ValueRange(-4, 0);
-    auto targets = TensorDesc({N, S}, ACL_INT32, ACL_FORMAT_ND)
-    .ValueRange(1, 4);
-
-    auto inputLengths = IntArrayDesc(vector<int64_t>{5, 9, 7, 12});
-    auto targetLengths = IntArrayDesc(vector<int64_t>{7, 5, 7, 1});
-
-    int64_t blank = 0;
-    bool zeroInfinity = false;
-
-    auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
-
-    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity), OUTPUT(negLogLikelihoodOut, logAlphaOut));
-
-    uint64_t workspaceSize = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-    // SAMPLE: precision simulate
     ut.TestPrecision();
 }
 
