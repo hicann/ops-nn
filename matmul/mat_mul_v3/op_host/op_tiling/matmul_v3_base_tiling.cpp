@@ -2316,7 +2316,7 @@ bool MatmulV3BaseTiling::CheckSingleTilingOk(MatmulV3RunInfo &tmpRunInfo)
     tmpRunInfo.singleCoreK = tmpRunInfo.stepKa * tmpRunInfo.baseK;
     tmpRunInfo.dbL0c = DB_SIZE;
     tilingEnable_.tilingEnableSplitCore = TilingEnableSplitCore::SINGLE_CORE_SPLIT_K;
-    if (isNKM || isNKMsmallK) { // 走51：NKM模板
+    if ((isNKM || isNKMsmallK) && (!args_.nd2nzA && !args_.nd2nzB)) { // 走51：NKM模板
         tilingEnable_.tilingEnableSplitCore = TilingEnableSplitCore::SINGLE_CORE_NKM_SPLIT_K;
     } else if (args_.aType != ge::DT_FLOAT && args_.nValue % ALIGN_128 == 0 && !isMKNsmallK) {
         IsGmToL1ByShape();  // 走61：GM_to_L1分核模板;当前 isMKNsmallK 用例走21模板性能优于61
