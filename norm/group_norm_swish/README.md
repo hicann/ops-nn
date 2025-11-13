@@ -18,7 +18,7 @@
     $$
     \left\{
     \begin{array} {rcl}
-    yOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
+    yOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * gamma + \beta \\
     meanOut& &= E[x]\\
     rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
     \end{array}
@@ -54,7 +54,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>`yOut`计算公式中的x。</td>
+      <td>计算公式中的x。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

@@ -92,7 +92,7 @@
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示将输入gradOut的C维度分为group组。</td>
+      <td>out输出张量。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
     </tr>
