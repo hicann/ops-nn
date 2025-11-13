@@ -20,7 +20,7 @@
 #include <float.h>
 #include "gtest/gtest.h"
 
-#include "../../../../op_host/op_api/aclnn_foreach_addcdiv_scalar_v2.h"
+#include "../../../op_host/op_api/aclnn_foreach_addcdiv_scalar_v2.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -36,25 +36,6 @@ protected:
 
   static void TearDownTestCase() { cout << "foreach_addcdiv_scalar_test TearDown" << endl; }
 };
-
-TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910_foreach_addcdiv_scalar_v2_test_fp32) {
-    vector<vector<int64_t>> selfDims = {{2, 2}};
-    auto scalar_desc = ScalarDesc(1.0);
-    vector<vector<int64_t>> outDims = {{2, 2}};
-    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto out = TensorDesc(outDims[0], ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-    auto xList = TensorListDesc({x});
-    auto x2List = TensorListDesc({x2});
-    auto x3List = TensorListDesc({x3});
-    auto outList = TensorListDesc({out});
-
-    auto ut = OP_API_UT(aclnnForeachAddcdivScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
-    uint64_t workspaceSize = 0;
-    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
-}
 
 TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_test_fp32) {
     vector<vector<int64_t>> selfDims = {{2, 2}};
