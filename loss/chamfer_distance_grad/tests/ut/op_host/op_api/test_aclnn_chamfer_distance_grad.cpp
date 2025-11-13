@@ -10,7 +10,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "level2/aclnn_chamfer_distance_backward.h"
+#include "../../../../op_host/op_api/aclnn_chamfer_distance_backward.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
