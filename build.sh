@@ -894,9 +894,9 @@ build_single_example() {
       fi
       export CUST_LIBRARY_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"     # 仅自定义算子需要
       export CUST_INCLUDE_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/include" # 仅自定义算子需要
-      g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${CUST_INCLUDE_PATH} -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi -lcust_opapi -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
+      g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${CUST_INCLUDE_PATH} -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
     elif [[ "${PKG_MODE}" == "" ]]; then
-      g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi -lopapi_nn -lascendcl -lnnopbase -o test_aclnn_${example}
+      g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi -lascendcl -lnnopbase -o test_aclnn_${example}
     else
       usage "run_example"
       exit 1
@@ -948,10 +948,10 @@ build_example() {
   success_example=$(IFS=,; echo "${success_example[*]}")
 
   if [[ ${#files[@]} -eq 0 ]]; then
-    echo "In ${EXAMPLE_MODE} mode, the operator ${OP_NAME} does not include example use case."
+    echo "ERROR: ${OP_NAME} doesn't have ${EXAMPLE_MODE} examples."
   elif [[ ${failed_example} != "" || ${success_example} == "" ]]; then
-    echo "Run example failed, op_name: ${OP_NAME}, exist examples: ${examples}, success examples: ${success_example},\
- failed_example: ${failed_example[@]}, mode: ${EXAMPLE_MODE}."
+    echo "Run ${EXAMPLE_MODE} example failed, op_name: ${OP_NAME}, \
+success examples: ${success_example}, failed_example: ${failed_example[@]}."
     exit 1
   fi
 }

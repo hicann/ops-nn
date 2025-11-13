@@ -23,6 +23,7 @@
 #include "platform/platform_infos_def.h"
 #include "../../../op_host/expand_into_jagged_permute_tiling.h"
 
+
 using namespace ut_util;
 using namespace std;
 using namespace ge;

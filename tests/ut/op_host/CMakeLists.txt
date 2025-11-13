@@ -18,11 +18,31 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         endif()
     endforeach()
 
+    # add ophost source so: libophost_nn_ut.so
+    add_library(${OPHOST_NAME}_ut SHARED
+        $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
+        $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
+        $<$<TARGET_EXISTS:${COMMON_NAME}_obj>:$<TARGET_OBJECTS:${COMMON_NAME}_obj>>
+    )
+    target_sources(${OPHOST_NAME}_ut PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../op_api/empty_runtime.cpp)
+    target_link_libraries(${OPHOST_NAME}_ut PRIVATE
+        $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        -Wl,--no-as-needed
+        $<$<TARGET_EXISTS:opsbase>:opsbase>
+        $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:optiling>>
+        -Wl,--as-needed
+        -Wl,--whole-archive
+        rt2_registry_static
+        -Wl,--no-whole-archive
+        tiling_api
+    )
+
     ## add ophost ut exe:  nn_op_host_ut
     set(OP_HOST_UT_EXE ${PKG_NAME}_op_host_ut)
     add_executable(${OP_HOST_UT_EXE}
         test_op_host_main.cpp
     )
+    add_dependencies(${OP_HOST_UT_EXE} ${OPHOST_NAME}_ut)
 
     # 当前桩函数实现不完整，优先从环境变量中链接so
     set_target_properties(${OP_HOST_UT_EXE} PROPERTIES
