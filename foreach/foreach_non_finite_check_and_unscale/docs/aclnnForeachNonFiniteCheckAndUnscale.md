@@ -9,11 +9,11 @@
 
 ## 功能说明
 
-- 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
+- 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
   $$
-  foundInf = \begin{cases}1.0, & 当 inf \in  scaledGrads 或 NaN \in scaledGrads,\\
+  foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
     foundInf, &其他.
   \end{cases}
   $$
@@ -82,7 +82,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
     <tr>
       <td>foundInf</td>
       <td>输入/输出</td>
-      <td>表示用来标记输入scaledGrads中是否存在inf或-inf的张量，对应公式中的`foundInf`。</td>
+      <td>表示用来标记输入scaledGrads中是否存在Inf或-Inf的张量，对应公式中的`foundInf`。</td>
       <td><ul><li>支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>

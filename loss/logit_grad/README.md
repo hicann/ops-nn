@@ -16,7 +16,7 @@
 $$
 dx_i=
 \begin{cases} 
-nan, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
+NaN, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
 0, & \text{if } x < \text{eps} \text{ or } x > 1 - \text{eps},eps \geq 0 \\
 \frac{dy_i}{x_i \cdot (1 - x_i)}, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
 \end{cases}
@@ -73,15 +73,15 @@ $$
 ## 约束说明
 
 - eps的取值对x和输出的影响：
-  - eps小于0时，x取值范围不在[0, 1]，输出nan。
+  - eps小于0时，x取值范围不在[0, 1]，输出NaN。
   - eps大于等于0时，x取值范围不在[eps, 1 - eps]，输出0。
-  - eps大于1时，输出nan，取值为1时为inf。
-  - eps取值为inf时，输出0。
-  - eps取值为nan时，输出nan。
+  - eps大于1时，输出NaN，取值为1时为Inf。
+  - eps取值为Inf时，输出0。
+  - eps取值为NaN时，输出NaN。
 - x取值对输出的影响：
-  - x取值0和1时，输出inf。
-  - x为inf或nan时，输出为nan。
-- dy为inf或nan时，输出为inf或nan。
+  - x取值0和1时，输出Inf。
+  - x为Inf或NaN时，输出为NaN。
+- dy为Inf或NaN时，输出为Inf或NaN。
 
 ## 调用说明
 

@@ -99,8 +99,8 @@
 ## 约束说明
 Shape描述：
   - self.shape = (N, C, Din, Hin, Win)
-  - outputSize = [Din, Hout, Wout]
-  - outputOut.shape = (N, C, Din, Hout, Wout)
-  - indicesOut.shape = (N, C, Din, Hout, Wout)
+  - outputSize = [Dout, Hout, Wout]
+  - outputOut.shape = (N, C, Dout, Hout, Wout)
+  - indicesOut.shape = (N, C, Dout, Hout, Wout)
 
 

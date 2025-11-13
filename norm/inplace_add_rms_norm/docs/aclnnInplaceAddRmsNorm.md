@@ -219,7 +219,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 ## 约束说明
 
   - **边界值场景说明**
-    * 当输入是inf时，输出为inf。
+    * 当输入是Inf时，输出为Inf。
     * 当输入是NaN时，输出为NaN。
 
 ## 调用示例

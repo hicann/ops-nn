@@ -262,7 +262,7 @@ aclnnStatus aclnnAddRmsNormCast(
   参数x1、x2、gamma、y1Out、y2Out、rstdOut、xOut的shape中每一维大小都不大于INT32的最大值2147483647。
 
 - 边界值场景说明：
-  - 当输入是inf时，输出为inf。
+  - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 
 ## 调用示例

@@ -463,7 +463,7 @@ private:
     GlobalTensor<T> inputGMX;
     // 输入Y的GM地址
     GlobalTensor<T> inputGMY;
-    // 输入Z的GM地址
+    // 输出Z的GM地址
     GlobalTensor<T> outputGMZ;
 
     // 总数据长度

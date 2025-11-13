@@ -62,14 +62,14 @@
     <tr>
       <td>scale</td>
       <td>输入</td>
-      <td>量化参数，对应公式中的`scale`。shape是1维（t，），t = 1或n，以及2维（1，n）其中n与matmul计算中的右矩阵的shape n一致。用户需要保证scale数据中不存在NaN和inf。</td>
+      <td>量化参数，对应公式中的`scale`。shape是1维（t，），t = 1或n，以及2维（1，n）其中n与matmul计算中的右矩阵的shape n一致。用户需要保证scale数据中不存在NaN和Inf。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>offset</td>
       <td>可选输入</td>
-      <td>量化可选参数，对应公式中描述中的`offset`。shape是1维（t，），以及2维（1，n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。用户需要保证offset数据中不存在NaN和inf。</td>
+      <td>量化可选参数，对应公式中描述中的`offset`。shape是1维（t，），以及2维（1，n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。用户需要保证offset数据中不存在NaN和Inf。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

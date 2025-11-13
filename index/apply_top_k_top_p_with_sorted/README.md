@@ -17,11 +17,11 @@
   $$topKValue[b][v] = sortedValue[b][sortedValue.size(1) - k[b]]$$
   - 生成top-k需要过滤的mask。
   $$topKMask = sortedValue < topKValue$$
-  - 通过topKMask将小于阈值的部分置为-inf。
+  - 通过topKMask将小于阈值的部分置为-Inf。
   $$
   sortedValue[b][v] = 
   \begin{cases}
-  -inf & \text{topKMask[b][v]=true}\\
+  -Inf & \text{topKMask[b][v]=true}\\
   sortedValue[b][v] & \text{topKMask[b][v]=false}
   \end{cases}
   $$
@@ -32,11 +32,11 @@
   - 生成top-p的mask，累计概率小于等于1-p的位置需要过滤掉，并保证每个batch至少保留一个元素。
   $$topPMask[b][v] = probsSum[b][v] <= 1-p[b]$$
   $$topPMask[b][-1] = false$$
-  - 通过topPMask将小于阈值的部分置为-inf。
+  - 通过topPMask将小于阈值的部分置为-Inf。
   $$
   sortedValue[b][v] = 
   \begin{cases}
-  -inf & \text{topPMask[b][v]=true}\\
+  -Inf & \text{topPMask[b][v]=true}\\
   sortedValue[b][v] & \text{topPMask[b][v]=false}
   \end{cases}
   $$

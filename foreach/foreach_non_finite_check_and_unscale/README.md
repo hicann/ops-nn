@@ -9,11 +9,11 @@
 
 ## 功能说明
 
-- 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
+- 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
   $$
-  foundInf = \begin{cases}1.0, & 当 inf \in  scaledGrads 或 NaN \in scaledGrads,\\
+  foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
     foundInf, &其他.
   \end{cases}
   $$
@@ -50,7 +50,7 @@
     <tr>
       <td>found_inf</td>
       <td>输入</td>
-      <td>表示用来标记输入`scaled_grads`中是否存在inf或-inf的张量，对应公式中的`foundInf`。仅包含一个元素。如果输入`scaled_grads`中存在inf或-inf的张量，将`found_inf`设置为1；否则，不对`found_inf`进行操作，最后将`scaled_grads`中的所有值乘以`inv_scale`并存储在`scaled_grads`中。</td>
+      <td>表示用来标记输入`scaled_grads`中是否存在Inf或-Inf的张量，对应公式中的`foundInf`。仅包含一个元素。如果输入`scaled_grads`中存在Inf或-Inf的张量，将`found_inf`设置为1；否则，不对`found_inf`进行操作，最后将`scaled_grads`中的所有值乘以`inv_scale`并存储在`scaled_grads`中。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

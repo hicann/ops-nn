@@ -59,7 +59,7 @@
 │   │       ├── CMakeLists.txt
 │   │       └── ut                                      # 可选，UT测试用例，根据实际情况开发相应的用例
 │   │           ├── CMakeLists.txt                      # UT用例CMakeList文件
-│   │           ├── graph_plugin                        # grap_plugin测试用例目录
+│   │           ├── graph_plugin                        # graph_plugin测试用例目录
 │   │           │   ├── CMakeLists.txt
 │   │           │   └── fusion_pass                     # 融合规则测试用例目录
 │   │           │       └── CMakeLists.txt

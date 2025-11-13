@@ -76,7 +76,7 @@
     <tr>
       <td>seq_length</td>
       <td>输入</td>
-      <td>每个batch真实的长度，维度为batch_size的向量。</td>
+      <td>每个batch真实的长度，维度为（T， Batch, input_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
@@ -174,7 +174,7 @@
     <tr>
       <td>cell_depth</td>
       <td>属性</td>
-      <td>multi_rnn的级数，默认为且当前只支持1。</td>
+      <td>multi_rnn的级数，默认为1,且当前只支持1。</td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -195,8 +195,8 @@
     <tr>
       <td>cell_clip</td>
       <td>属性</td>
-      <td>默认值为"-1"(没有剪切)。</td>
-      <td>LIST</td>
+      <td>默认值为-1.0(没有剪切)。</td>
+      <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
@@ -217,7 +217,7 @@
       <td>activation</td>
       <td>属性</td>
       <td>激活函数"tanh"。</td>
-      <td>BOOL</td>
+      <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>

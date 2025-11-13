@@ -31,9 +31,9 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
   <col style="width: 150px">
-  <col style="width: 100px">
+  <col style="width: 150px">
   <col style="width: 500px">
   <col style="width: 300px">
   <col style="width: 200px">
@@ -48,60 +48,67 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
-      <td>待进行MaxPool3dWithArgmaxV2计算的入参。</td>
+      <td>待进行MaxPool3DWithArgmaxV2计算的入参。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>NCDHW</td>
     </tr>
     <tr>
-      <td>kernelSize</td>
-      <td>输入</td>
+      <td>ksize</td>
+      <td>属性</td>
       <td>表示最大池化的窗口大小。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>stride</td>
-      <td>输入</td>
+      <td>strides</td>
+      <td>属性</td>
       <td>表示窗口移动的步长。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>padding</td>
-      <td>输入</td>
+      <td>pads</td>
+      <td>属性</td>
       <td>表示每一条边补充的层数，补充的位置填写“负无穷”。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>dilation</td>
-      <td>输入</td>
+      <td>可选属性</td>
       <td>表示控制窗口中元素的步幅。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>ceilMode</td>
-      <td>输入</td>
+      <td>ceil_mode</td>
+      <td>可选属性</td>
       <td>为True时表示计算输出形状时用向上取整的方法，为False时则表示向下取整。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
-      <td>输入</td>
-      <td>表示池化后的结果。数据类型、数据格式需要与`self`一致。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>data_format</td>
+      <td>可选属性</td>
+      <td>输入数据格式，支持"NCDHW"。</td>
+      <td>STRING</td>
+      <td>-</td>
     </tr>
     <tr>
-      <td>indices</td>
+      <td>y</td>
       <td>输出</td>
-      <td>最大值的索引位置组成的Tensor。shape需要与`out`一致。</td>
+      <td>表示池化后的结果。数据类型、数据格式需要与`x`一致。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>NCDHW</td>
+    </tr>
+    <tr>
+      <td>argmax</td>
+      <td>输出</td>
+      <td>最大值的索引位置组成的Tensor。shape需要与`y`一致。</td>
       <td>INT32</td>
-      <td>ND</td>
+      <td>NCDHW</td>
     </tr>
   </tbody></table>
 

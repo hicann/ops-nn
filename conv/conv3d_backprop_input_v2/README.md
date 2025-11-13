@@ -35,18 +35,18 @@
 
     | groups |        dtype           | out_backprop format | filter format |     y format   |
     |--------|------------------------|---------------------|---------------|----------------|
-    |  =1    |hifloat8/float8_e4m3fn  |       NCDHW         |      NCDHW    |     NCDHW      |
-    |  =1    |hifloat8/float8_e4m3fn  |       NDHWC         |      NCDHW    |     NDHWC      |
-    |  =1    |float16/bfloat16/float32|       NCDHW         |      NCDHW    |     NCDHW      |
-    |  =1    |float16/bfloat16/float32|       NCDHW         |      NDHWC    |     NCDHW      |
-    |  =1    |float16/bfloat16/float32|       NCDHW         |      DHWCN    |     NCDHW      |
-    |  =1    |float16/bfloat16/float32|       NDHWC         |      NDHWC    |     NDHWC      |
-    |  =1    |float16/bfloat16/float32|       NDHWC         |      NCDHW    |     NDHWC      |
-    |  =1    |float16/bfloat16/float32|       NDHWC         |      DHWCN    |     NDHWC      |
-    |  >1    |hifloat8/float8_e4m3fn  |       NCDHW         |      NCDHW    |     NCDHW      |
-    |  >1    |float16/bfloat16/float32|       NCDHW         |      NCDHW    |     NCDHW      |
-    |  >1    |float16/bfloat16/float32|       NCDHW         |      NDHWC    |     NCDHW      |
-    |  >1    |float16/bfloat16/float32|       NCDHW         |      DHWCN    |     NCDHW      |
+    |  =1    |HIFLOAT8/FLOAT8_E4M3FN  |       NCDHW         |      NCDHW    |     NCDHW      |
+    |  =1    |HIFLOAT8/FLOAT8_E4M3FN  |       NDHWC         |      NCDHW    |     NDHWC      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NCDHW    |     NCDHW      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NDHWC    |     NCDHW      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      DHWCN    |     NCDHW      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NDHWC    |     NDHWC      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NCDHW    |     NDHWC      |
+    |  =1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      DHWCN    |     NDHWC      |
+    |  >1    |HIFLOAT8/FLOAT8_E4M3FN  |       NCDHW         |      NCDHW    |     NCDHW      |
+    |  >1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NCDHW    |     NCDHW      |
+    |  >1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NDHWC    |     NCDHW      |
+    |  >1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      DHWCN    |     NCDHW      |
 
 ## 约束说明
 

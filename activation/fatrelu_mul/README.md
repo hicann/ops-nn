@@ -68,7 +68,7 @@
     <tr>
       <td>threshold</td>
       <td>输入</td>
-      <td><ul><li>公式中的输入threshold。</li><li>threshold不支持nan和inf。</li></ul></td>
+      <td><ul><li>公式中的输入threshold。</li><li>threshold不支持NaN和Inf。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>

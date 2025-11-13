@@ -121,7 +121,7 @@
 | [aclnnForeachMulScalarList](../foreach/foreach_mul_scalar_list/docs/aclnnForeachMulScalarList.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相乘运算的结果。 |
 | [aclnnForeachMulScalarV2](../foreach/foreach_mul_scalar/docs/aclnnForeachMulScalarV2.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行scalar相乘运算的结果。 |
 | [aclnnForeachNeg](../foreach/foreach_neg/docs/aclnnForeachNeg.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表中每个张量的相反数。 |
-| [aclnnForeachNonFiniteCheckAndUnscale](../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) |  遍历scaledGrads中的所有Tensor，检查是否存在inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。 |
+| [aclnnForeachNonFiniteCheckAndUnscale](../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) |  遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。 |
 | [aclnnForeachNorm](../foreach/foreach_norm/docs/aclnnForeachNorm.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行范数运算的结果。 |
 | [aclnnForeachPowList](../foreach/foreach_pow_list/docs/aclnnForeachPowList.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行x2次方运算的结果。 |
 | [aclnnForeachPowScalar](../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalar.md) |  返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行n次方运算的结果。 |
@@ -166,7 +166,7 @@
 | [aclnnGroupNormBackward](../norm/group_norm_grad/docs/aclnnGroupNormBackward.md)|[aclnnGroupNorm](../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。|
 | [aclnnGroupNormSiluV2](../norm/group_norm_silu/docs/aclnnGroupNormSiluV2.md)|计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。|
 | [aclnnGroupNormSwish](../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)|计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。|
-| [aclnnGroupNormSwishGrad]()|[aclnnGroupNormSwish](../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。|
+| [aclnnGroupNormSwishGrad](../../norm/group_norm_swish_grad/docs/aclnnGroupNormSwishGrad.md)|[aclnnGroupNormSwish](../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。|
 | [aclnnGroupQuant](../quant/group_quant/docs/aclnnGroupQuant.md)|对输入x进行分组量化操作。|
 | [aclnnHardshrinkBackward](../activation/hard_shrink_grad/docs/aclnnHardshrinkBackward.md) |aclnnHardshrink计算反向传播的梯度gradInput。|
 | [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) |激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。|
@@ -227,7 +227,7 @@
 | [aclnnNLLLoss2d](../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。|
 | [aclnnNLLLoss2dBackward](../loss/nll_loss_grad/docs/aclnnNLLLoss2dBackward.md) | 负对数似然损失反向。|
 | [aclnnNLLLossBackward](../loss/nll_loss_grad/docs/aclnnNLLLossBackward.md) | 负对数似然损失函数的反向传播。|
-| [aclnnNonzero](../index/non_zero/docs/aclnnNonzero.md) | 取方阵的逆矩阵。 |
+| [aclnnNonzero](../index/non_zero/docs/aclnnNonzero.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 |
 | [aclnnNonzeroV2](../index/non_zero/docs/aclnnNonzeroV2.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 |
 | [aclnnPrelu](../activation/prelu/docs/aclnnPrelu.md) |激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。|
 | [aclnnPreluBackward](../activation/prelu_grad_update/docs/aclnnPreluBackward.md) |完成aclnnPreluBackward的反向函数。|

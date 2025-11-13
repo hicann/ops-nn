@@ -208,8 +208,8 @@ aclnnStatus aclnnLogit(
 
 ## 约束说明
 
-- input取值范围不在[0, 1]，输出nan，取值0时为-inf，取值为1时为inf。
-- eps大于1时，输出nan，取值为1时为inf。
+- input取值范围不在[0, 1]，输出NaN，取值0时为-Inf，取值为1时为Inf。
+- eps大于1时，输出NaN，取值为1时为Inf。
 
 ## 调用示例
 

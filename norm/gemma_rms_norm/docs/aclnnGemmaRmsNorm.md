@@ -229,7 +229,7 @@ aclnnStatus aclnnGemmaRmsNorm(
   DOUBLE：指令不支持DOUBLE。
 
 - **边界值场景说明**
-  - 当输入是inf时，输出为inf。
+  - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 - **各平台支持数据类型说明**
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |

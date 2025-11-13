@@ -83,7 +83,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>scale</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在NaN和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>offset</td>
       <td>输入</td>
       <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
