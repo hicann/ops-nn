@@ -28,10 +28,10 @@ namespace ge {
  * @par Outputs:
  * @li y: A tensor list which store the tensors whose value are minimum with the scalars in scalar list
  */
-REG_OP(ForeachMinimumScalarList)
-    .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
-    .INPUT(scalars, TensorType({DT_FLOAT, DT_INT64}))
+REG_OP(ForeachMinimumList)
+    .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
+    .DYNAMIC_INPUT(x2, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
     .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))
-    .OP_END_FACTORY_REG(ForeachMinimumScalarList)
+    .OP_END_FACTORY_REG(ForeachMinimumList)
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_MINIMUM_LIST_H_
