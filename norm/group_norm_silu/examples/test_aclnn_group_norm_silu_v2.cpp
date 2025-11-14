@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_group_norm_silu.h"
@@ -109,23 +110,35 @@ int main() {
   bool activateSilu = true;
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> selfTensorPtr(self, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建gamma aclTensor
   ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT, &gamma);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gammaTensorPtr(gamma, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> gammaDeviceAddrPtr(gammaDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建beta aclTensor
   ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT, &beta);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> betaTensorPtr(beta, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> betaDeviceAddrPtr(betaDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> outTensorPtr(out, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建meanOut aclTensor
   ret = CreateAclTensor(meanOutHostData, meanOutShape, &meanOutDeviceAddr, aclDataType::ACL_FLOAT, &meanOut);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> meanOutTensorPtr(meanOut, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> meanOutDeviceAddrPtr(meanOutDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建rstdOut aclTensor
   ret = CreateAclTensor(rstdOutHostData, rstdOutShape, &rstdOutDeviceAddr, aclDataType::ACL_FLOAT, &rstdOut);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> rstdOutTensorPtr(rstdOut, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void *)> rstdOutDeviceAddrPtr(rstdOutDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-
+  
   // 3. 调用CANN算子库API，需要修改为具体的API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
