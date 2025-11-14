@@ -362,11 +362,6 @@ function(gen_ops_info_and_python)
         )
         set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
         if(EXISTS ${binary_json})
-          list(FIND ASCEND_OP_NAME ${op_name} INDEX)
-          if(NOT "${ASCEND_OP_NAME}" STREQUAL "" AND INDEX EQUAL -1)
-            # 非指定算子，只编译kernel
-            continue()
-          endif()
           # binary compile from binary json config
           message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
           compile_from_config(

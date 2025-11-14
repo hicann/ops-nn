@@ -4,9 +4,8 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -35,7 +34,8 @@
 using namespace std;
 using namespace ge;
 
-class ScatterElementsV2Tiling : public testing::Test {
+class ScatterElementsV2Tiling : public testing::Test
+{
 protected:
     static void SetUpTestCase()
     {
@@ -63,7 +63,7 @@ static string to_string(const std::stringstream& tiling_data)
 }
 
 template <typename T>
-static string to_string(void* buf, size_t size)
+static string to_string(void *buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -597,10 +597,10 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_other_error)
     EXPECT_NE(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-static void ExecuteTestCase(
-    ge::DataType data_dtype, ge::DataType indices_dtype, ge::DataType updates_dtype, gert::StorageShape data_shape,
-    gert::StorageShape indices_shape, gert::StorageShape updates_shape, int64_t axis, string reduction,
-    uint64_t tilingKeyValue, string expectTilingData, int32_t deterministic, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType indices_dtype, ge::DataType updates_dtype,
+                            gert::StorageShape data_shape, gert::StorageShape indices_shape,
+                            gert::StorageShape updates_shape, int64_t axis, string reduction, uint64_t tilingKeyValue,
+                            string expectTilingData, int32_t deterministic, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -638,10 +638,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -661,9 +659,8 @@ static void ExecuteTestCase(
                       .NodeInputTd(2, updates_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, data_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<string>(reduction)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -697,9 +694,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_dim_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 2";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 2, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 2, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_dim_not_same)
@@ -710,9 +705,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_dim_not_same)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_updates_dim_not_same)
@@ -723,9 +716,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_updates_dim_not_same
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_updates_shape_invalid)
@@ -736,9 +727,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_updates_shape_invali
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_shape_invalid)
@@ -749,9 +738,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_shape_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_invalid)
@@ -762,9 +749,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "sum", tilingKeyValue, expectTilingData, 0,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, shape1, shape2, shape3, 0, "sum", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_none_dtype_invalid)
@@ -775,9 +760,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_none_dtype_invalid
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_add_dtype_invalid)
@@ -788,9 +771,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_add_dtype_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_DOUBLE, ge::DT_INT64, ge::DT_DOUBLE, shape1, shape2, shape3, 0, "add", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_DOUBLE, ge::DT_INT64, ge::DT_DOUBLE, shape1, shape2, shape3, 0, "add", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_mul_dtype_invalid)
@@ -801,9 +782,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_reduction_mul_dtype_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 0";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_BOOL, ge::DT_INT64, ge::DT_BOOL, shape1, shape2, shape3, 0, "mul", tilingKeyValue, expectTilingData, 0,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_BOOL, ge::DT_INT64, ge::DT_BOOL, shape1, shape2, shape3, 0, "mul", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_dtype_invalid)
@@ -814,9 +793,7 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_dtype_invalid)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 1";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_dtype_not_same)
@@ -827,7 +804,5 @@ TEST_F(ScatterElementsV2Tiling, test_tiling_ascendc_indices_data_dtype_not_same)
     string expectTilingData = "5 1 1 1 1 1 1 3 1 1 1 1 1 1 5 1 1 1 1 1 1 114688 6 15 10 2 1 1 1 0 0 0 1 1 0 1";
     uint64_t tilingKeyValue = 1001004;
 
-    ExecuteTestCase(
-        ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData,
-        0, ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, shape1, shape2, shape3, 0, "none", tilingKeyValue, expectTilingData, 0, ge::GRAPH_FAILED);
 }

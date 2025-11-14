@@ -164,6 +164,10 @@ main() {
   if [[ "$op_name" == "dynamic_rnn_v2" ]]; then
     op_name="dynamic_rnnv2"
   fi
+  if [[ "$op_name" == "embedding_bag" ]]; then
+    op_file_name_prefix="embedding_bag"
+  fi
+
   local binary_config_file=$(get_binary_config_file ${workdir} ${soc_version_lower} ${op_type} ${op_name})
   local binary_bin_path="${output_path}/${soc_version_lower}/${op_name}/"
   local binary_compile_json_file="${output_path}/config/${soc_version_lower}/${op_file_name_prefix}.json"

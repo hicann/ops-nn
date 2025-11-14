@@ -8,4 +8,4 @@
 # ============================================================================
 
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE scatter_elements_v2 ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE scatter_elements_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES linear_index scatter_add_with_sorted)
