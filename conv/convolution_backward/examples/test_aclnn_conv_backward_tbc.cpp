@@ -8,18 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /**
- * @brief 编译运行流程说明
- * 
- * 参照 docs/context/op_invocation.md 内 [编译与运行] 章节调用
- * 
- * 调用流程示例：
- * 1. 安装nn包: 
- *  ./cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run --full --install-path=/usr/local/Ascend/ascend-toolkit
- *  export ASCEND_OPS_NN_PATH=/usr/local/Ascend/ascend-toolkit/latest/ops_nn
- * 2. 执行example:
- *  bash build.sh --run_example convolution_backward eager --example_name=conv_backward_2d
- */
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -68,15 +56,15 @@ int Init(int32_t deviceId, aclrtStream *stream)
 }
 
 template <typename T>
-int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **DeviceAddr,
+int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **deviceAddr,
                     aclDataType dataType, aclTensor **tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
-    auto ret = aclrtMalloc(DeviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+    auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
-    ret = aclrtMemcpy(*DeviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
     // 计算连续tensor的strides
@@ -88,10 +76,10 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
     // 调用aclCreateTensor接口创建aclTensor
     if (shape.size() == 4) {
         *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NCHW,
-                                  shape.data(), shape.size(), *DeviceAddr);
+                                  shape.data(), shape.size(), *deviceAddr);
     } else {
         *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                                  shape.data(), shape.size(), *DeviceAddr);
+                                  shape.data(), shape.size(), *deviceAddr);
     }
 
     return 0;
@@ -104,45 +92,39 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
+int aclnnConvTbcBackwardTest(int32_t deviceId, aclrtStream &stream)
 {
     // 1. 初始化
     auto ret = Init(deviceId, &stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> gradOutputShape = {4, 320, 80, 80};
-    std::vector<int64_t> inputShape = {4, 320, 80, 80};
-    std::vector<int64_t> weightShape = {320, 320, 3, 3};
-    std::vector<int64_t> biasSize = {320};
-    std::vector<int64_t> stride = {1, 1};
-    std::vector<int64_t> padding = {1,1};
-    std::vector<int64_t> dilation = {1, 1};
-    bool transposed = false;
-    std::vector<int64_t> outputPadding = {0, 0};
-    int groups = 1;
-    bool outputMask[3] = {true, true, true};
+    std::vector<int64_t> selfShape = {5, 1, 2};
+    std::vector<int64_t> inputShape = {5, 1, 2};
+    std::vector<int64_t> weightShape = {1, 2, 2};
+    std::vector<int64_t> biasShape = {2};
+    const int64_t pad = 0;
     int8_t cubeMathType = 1;
 
-    std::vector<int64_t> gradInputShape = {4, 320, 80, 80};
-    std::vector<int64_t> gradWeightShape = {320, 320, 3, 3};
-    std::vector<int64_t> gradBiasShape = {320};
+    std::vector<int64_t> gradInputShape = {5, 1, 2};
+    std::vector<int64_t> gradWeightShape = {1, 2, 2};
+    std::vector<int64_t> gradBiasShape = {2};
 
-    // 创建gradOutput aclTensor
-    std::vector<float> gradOutputData(GetShapeSize(gradOutputShape), 1);
-    aclTensor *gradOutput = nullptr;
-    void *gradOutputDeviceAddr = nullptr;
-    ret = CreateAclTensor(gradOutputData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradOutputTensorPtr(gradOutput, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradOutputDeviceAddrPtr(gradOutputDeviceAddr, aclrtFree);
+    // 创建self aclTensor
+    std::vector<float> selfData(GetShapeSize(selfShape), 1);
+    aclTensor *self = nullptr;
+    void *selfdeviceAddr = nullptr;
+    ret = CreateAclTensor(selfData, selfShape, &selfdeviceAddr, aclDataType::ACL_FLOAT, &self);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> selfTensorPtr(self, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void *)> selfdeviceAddrPtr(selfdeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建input aclTensor
     std::vector<float> inputData(GetShapeSize(inputShape), 1);
     aclTensor *input = nullptr;
-    void *inputDeviceAddr = nullptr;
-    ret = CreateAclTensor(inputData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
+    void *inputdeviceAddr = nullptr;
+    ret = CreateAclTensor(inputData, inputShape, &inputdeviceAddr, aclDataType::ACL_FLOAT, &input);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> inputTensorPtr(input, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> inputDeviceAddrPtr(inputDeviceAddr, aclrtFree);
+    std::unique_ptr<void, aclError (*)(void *)> inputDeviceAddrPtr(inputdeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建weight aclTensor
@@ -152,6 +134,15 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     ret = CreateAclTensor(weightData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> weightTensorPtr(weight, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void *)> weightDeviceAddrPtr(weightDeviceAddr, aclrtFree);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
+
+    // 创建bias aclTensor
+    std::vector<float> biasData(GetShapeSize(biasShape), 1);
+    aclTensor *bias = nullptr;
+    void *biasDeviceAddr = nullptr;
+    ret = CreateAclTensor(biasData, biasShape, &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> biasTensorPtr(bias, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void *)> biasDeviceAddrPtr(biasDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建gradInput aclTensor
@@ -173,52 +164,21 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建gradBias aclTensor
-    std::vector<float> gradBiasData(GetShapeSize(biasSize), 1);
+    std::vector<float> gradBiasData(GetShapeSize(gradBiasShape), 1);
     aclTensor *gradBias = nullptr;
     void *gradBiasDeviceAddr = nullptr;
-    ret = CreateAclTensor(gradBiasData, biasSize, &gradBiasDeviceAddr, aclDataType::ACL_FLOAT, &gradBias);
+    ret = CreateAclTensor(gradBiasData, gradBiasShape, &gradBiasDeviceAddr, aclDataType::ACL_FLOAT, &gradBias);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradBiasTensorPtr(gradBias, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void *)> gradBiasDeviceAddrPtr(gradBiasDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建biasSizes aclIntArray
-    aclIntArray *biasSizes = aclCreateIntArray(biasSize.data(), 1);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> biasSizesPtr(biasSizes, aclDestroyIntArray);
-    CHECK_FREE_RET(biasSizes != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
-    // 创建strides aclIntArray
-    aclIntArray *strides = aclCreateIntArray(stride.data(), 2);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> stridesPtr(strides, aclDestroyIntArray);
-    CHECK_FREE_RET(strides != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
-    // 创建pads aclIntArray
-    aclIntArray *pads = aclCreateIntArray(padding.data(), 2);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> padsPtr(pads, aclDestroyIntArray);
-    CHECK_FREE_RET(pads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
-    // 创建dilations aclIntArray
-    aclIntArray *dilations = aclCreateIntArray(dilation.data(), 2);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
-    CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
-    // 创建outputPads aclIntArray
-    aclIntArray *outputPads = aclCreateIntArray(outputPadding.data(), 2);
-    std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> outputPadsPtr(outputPads, aclDestroyIntArray);
-    CHECK_FREE_RET(outputPads != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
-    // 创建outMask aclBoolArray
-    aclBoolArray *outMask = aclCreateBoolArray(outputMask, 3);
-    std::unique_ptr<aclBoolArray, aclnnStatus (*)(const aclBoolArray *)> outMaskPtr(outMask, aclDestroyBoolArray);
-    CHECK_FREE_RET(outMask != nullptr, return ACL_ERROR_INTERNAL_ERROR);
-
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor *executor;
-    // 调用aclnnConvolutionBackwardGetWorkspaceSize第一段接口
-    ret = aclnnConvolutionBackwardGetWorkspaceSize(gradOutput, input, weight, biasSizes, strides, pads, dilations,
-                                                   transposed, outputPads, groups, outMask, cubeMathType, gradInput,
-                                                   gradWeight, gradBias, &workspaceSize, &executor);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
+    // 调用aclnnConvTbcBackward第一段接口
+    ret = aclnnConvTbcBackwardGetWorkspaceSize(self, input, weight, bias, pad, cubeMathType, gradInput, gradWeight,
+                                               gradBias, &workspaceSize, &executor);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvTbcBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
                    return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void *workspaceAddr = nullptr;
@@ -228,9 +188,9 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
         CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnConvolutionBackward第二段接口
-    ret = aclnnConvolutionBackward(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackward failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnConvTbcBackward第二段接口
+    ret = aclnnConvTbcBackward(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvTbcBackward failed. ERROR: %d\n", ret); return ret);
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -241,7 +201,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradInputResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < 10; i++) {
+    for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("gradInputResult[%ld] is: %f\n", i, gradInputResult[i]);
     }
 
@@ -251,7 +211,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradWeightResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < 10; i++) {
+    for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("gradWeightResult[%ld] is: %f\n", i, gradWeightResult[i]);
     }
 
@@ -261,7 +221,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                       size * sizeof(gradBiasResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
                    return ret);
-    for (int64_t i = 0; i < 10; i++) {
+    for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("gradBiasResult[%ld] is: %f\n", i, gradBiasResult[i]);
     }
     return ACL_SUCCESS;
@@ -273,8 +233,8 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = aclnnConvolutionBackwardTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackwardTest failed. ERROR: %d\n", ret); return ret);
+    auto ret = aclnnConvTbcBackwardTest(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvTbcBackwardTest failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
     return 0;

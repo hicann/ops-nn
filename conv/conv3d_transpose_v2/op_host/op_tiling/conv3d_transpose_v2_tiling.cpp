@@ -34,7 +34,7 @@ static ge::graphStatus Conv3DTransposeV2TilingFunc(gert::TilingContext *context)
 static ge::graphStatus TilingParseForConv3DTransposeV2(gert::TilingParseContext *context)
 {
     auto platformInfoPtr = context->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null ");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
     OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");

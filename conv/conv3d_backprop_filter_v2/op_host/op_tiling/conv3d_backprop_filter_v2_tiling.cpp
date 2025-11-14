@@ -33,7 +33,7 @@ static ge::graphStatus Conv3DBackpropFilterV2TilingFunc(gert::TilingContext *con
 static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseContext *context)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null ");
 
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
     OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");
