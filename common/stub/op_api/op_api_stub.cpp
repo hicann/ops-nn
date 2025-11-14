@@ -65,7 +65,7 @@ const aclTensor* TensorMove(const aclTensor* x, const aclTensor* /*y*/, aclOpExe
     return x;
 }
 const aclTensor* Threshold(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* /*value*/, aclOpExecutor* /*executor*/)
+    const aclTensor* self, const aclScalar* /*threshold*/, const aclScalar* /*value*/, aclOpExecutor* /*executor*/)
 {
     return self;
 }
