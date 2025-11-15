@@ -255,8 +255,8 @@ void Conv3dTilingAlgorithm::GetL1TilingRange()
         this->l1TilingRange.kBL1Range.emplace_back(dk * tilingIns_->shapeCalc.singleCi1);
     }
     // kAL1 has limit of postk due to load3d instr
-    const uint64_t limitKAL1 = (static_cast<uint64_t>(POSTK_LIMIT) + static_cast<uint64_t>(tilingIns_->cubeInfo.k0)) /
-        this->l1TilingCalc.ci0HkWk;
+    // ensure final kAL1 (after multiplying by ci0HkWk) <= POSTK_LIMIT (65535)
+    const uint64_t limitKAL1 = static_cast<uint64_t>(POSTK_LIMIT) / this->l1TilingCalc.ci0HkWk;
     std::vector<uint64_t>::iterator up = std::upper_bound(this->l1TilingRange.kAL1Range.begin(),
                                                           this->l1TilingRange.kAL1Range.end(), limitKAL1);
     this->l1TilingRange.kAL1Range.erase(up, this->l1TilingRange.kAL1Range.end());
