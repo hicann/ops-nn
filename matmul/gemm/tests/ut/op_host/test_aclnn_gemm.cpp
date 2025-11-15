@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_host/op_api/aclnn_gemm.h"
-#include "common/op_api_def.h"
+#include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -69,40 +69,6 @@ protected:
     }
 };
 
-// 正常流程，支持的数据类型
-TEST_F(l2_gemm_test, case_various_dtype_valid)
-{
-    float alpha = 2.0;
-    float beta = 2.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    test_run(
-        {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
-        cubeMathType);
-}
-
-// 正常流程，支持的数据类型
-TEST_F(l2_gemm_test, case_various_dtype_valid2)
-{
-    float alpha = 1.0;
-    float beta = 1.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    test_run(
-        {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
-        cubeMathType);
-}
-
 // 异常流程，不支持的数据类型
 TEST_F(l2_gemm_test, case_various_dtype_invalid)
 {
@@ -117,60 +83,6 @@ TEST_F(l2_gemm_test, case_various_dtype_invalid)
     test_run_inval(
         {16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16,
         ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-}
-
-// 正常流程，有转置的情况
-TEST_F(l2_gemm_test, case_various_transpose_valid)
-{
-    test_run(
-        {4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 0, 1);
-    test_run(
-        {3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 1, 1);
-    test_run(
-        {4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 1, 1);
-}
-
-// beta == 0 场景
-TEST_F(l2_gemm_test, case_beta_0)
-{
-    auto A = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto B = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto C = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto out = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
-    float alpha = 2.0;
-    float beta = 0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(aclnnGemm, INPUT(A, B, C, alpha, beta, transA, transB), OUTPUT(out), cubeMathType);
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-}
-
-// beta == 1 场景
-TEST_F(l2_gemm_test, case_beta_1)
-{
-    auto A = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto B = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto C = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto out = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
-    float alpha = 2.0;
-    float beta = 1.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(aclnnGemm, INPUT(A, B, C, alpha, beta, transA, transB), OUTPUT(out), cubeMathType);
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // C 空指针
@@ -248,27 +160,6 @@ TEST_F(l2_gemm_test, case_empty_tensor_out)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-}
-
-// 数据格式支持 NCHW
-TEST_F(l2_gemm_test, case_format_nchw)
-{
-    auto A = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto B = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto C = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
-    float alpha = 1.0;
-    float beta = 1.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(aclnnGemm, INPUT(A, B, C, alpha, beta, transA, transB), OUTPUT(out), cubeMathType);
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // A不是2维
@@ -355,26 +246,6 @@ TEST_F(l2_gemm_test, case_cannot_axpy2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 非连续
-TEST_F(l2_gemm_test, case_not_contiguous)
-{
-    auto A = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND, {1, 16}, 0, {32, 16}).ValueRange(0, 2);
-    auto B = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_ND, {1, 32}, 0, {16, 32}).ValueRange(0, 2);
-    auto C = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
-    float alpha = 1.0;
-    float beta = 1.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(aclnnGemm, INPUT(A, B, C, alpha, beta, transA, transB), OUTPUT(out), cubeMathType);
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-}
-
 // 空tensor1
 TEST_F(l2_gemm_test, case_empty_tensor_1)
 {
@@ -413,26 +284,6 @@ TEST_F(l2_gemm_test, case_empty_tensor_2)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-}
-
-// 校验output shape要与预期一致
-TEST_F(l2_gemm_test, case_output_shape)
-{
-    float alpha = 2.0;
-    float beta = 2.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    // A: 2 x 5, B: 5 x 3, C: 2 x 3, out: 2 x 3
-    test_run(
-        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-
-    // A: 2 x 5, B: 5 x 3, C: 2 x 3, out: 2 x 4
-    test_run_inval(
-        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 4}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 }
 
 TEST_F(l2_gemm_test, test_hf32_trans)

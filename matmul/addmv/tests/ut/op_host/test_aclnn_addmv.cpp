@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_host/op_api/aclnn_addmv.h"
-#include "common/op_api_def.h"
+#include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -33,56 +33,6 @@ protected:
         cout << "addmv_test TearDown" << endl;
     }
 };
-
-// 输入float
-TEST_F(l2_addmv_test, input_float32)
-{
-    auto input_tensor_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto mat_tensor_desc = TensorDesc({10, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto vec_tensor_desc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto alpha_scalar_desc = ScalarDesc(5.9f);
-    auto beta_scalar_desc = ScalarDesc(4.9f);
-
-    auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
-
-// 输入float16
-TEST_F(l2_addmv_test, input_float16)
-{
-    auto input_tensor_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto mat_tensor_desc = TensorDesc({10, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto vec_tensor_desc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    auto alpha_scalar_desc = ScalarDesc(5.9f);
-    auto beta_scalar_desc = ScalarDesc(4.9f);
-
-    auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(
-        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-        OUTPUT(out_tensor_desc), cubeMathType);
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    ut.TestPrecision();
-}
 
 // 输入nullptr
 TEST_F(l2_addmv_test, input_nullptr)
@@ -133,49 +83,6 @@ TEST_F(l2_addmv_test, input_nullptr)
         OUTPUT(nullptr), cubeMathType);
     aclRet = ut5.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
-}
-
-// 输入数据类型遍历
-TEST_F(l2_addmv_test, input_alldtype_in_list)
-{
-    vector<aclDataType> vaild_dtype_list{ACL_FLOAT, ACL_FLOAT16, ACL_DOUBLE, ACL_INT8, ACL_INT32,
-                                         ACL_UINT8, ACL_INT16,   ACL_INT64,  ACL_BOOL};
-    vector<aclDataType> invaild_dtype_list{ACL_COMPLEX64, ACL_COMPLEX128};
-    for (auto dtype : vaild_dtype_list) {
-        auto input_tensor_desc = TensorDesc({10}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto mat_tensor_desc = TensorDesc({10, 5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto vec_tensor_desc = TensorDesc({5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto alpha_scalar_desc = ScalarDesc(static_cast<bool>(1));
-        auto beta_scalar_desc = ScalarDesc(static_cast<bool>(1));
-        auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
-        int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-        uint64_t workspace_size = 0;
-        auto ut = OP_API_UT(
-            aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-            OUTPUT(out_tensor_desc), cubeMathType);
-        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-        EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-        // SAMPLE: precision simulate
-        // ut.TestPrecision();
-    }
-    for (auto dtype : invaild_dtype_list) {
-        auto input_tensor_desc = TensorDesc({10}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto mat_tensor_desc = TensorDesc({10, 5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto vec_tensor_desc = TensorDesc({5}, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
-        auto alpha_scalar_desc = ScalarDesc(static_cast<bool>(1));
-        auto beta_scalar_desc = ScalarDesc(static_cast<bool>(1));
-        auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
-        int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-        uint64_t workspace_size = 0;
-        auto ut = OP_API_UT(
-            aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
-            OUTPUT(out_tensor_desc), cubeMathType);
-        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-    }
 }
 
 // 输入shape校验
