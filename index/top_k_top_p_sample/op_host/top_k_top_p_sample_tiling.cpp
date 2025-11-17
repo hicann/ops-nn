@@ -417,6 +417,7 @@ static ge::graphStatus TilingForTopKTopPSample(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForTopKTopPSample(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "Enter TilingPrepareForTopKTopPSample");
     return ge::GRAPH_SUCCESS;
 }
 
