@@ -40,6 +40,8 @@ public:
         GM_ADDR p, GM_ADDR k, GM_ADDR out);
     __aicore__ inline void InitBuffer(TPipe *inputPipe);
     __aicore__ inline void Process();
+    __aicore__ inline void ProcessTopK();
+private:
     __aicore__ inline void InitCopyIn(uint32_t loopBatch, int64_t currentGmIdx);
     __aicore__ inline void InitProcess(uint32_t loopBatch);
     __aicore__ inline void ProcessKLtKMax(uint32_t loopBatch);
@@ -51,15 +53,7 @@ public:
     __aicore__ inline void ReduceSumWithAddsAndExpImpl(uint32_t offset, uint32_t loopDataNum);
     __aicore__ inline void CumSumWithAddsAndExpImpl(
         uint32_t offset, uint32_t loopDataNum, uint32_t cumsumInner, float cumsumData);
-    // topp func
-    __aicore__ inline void ProcessTopP();
-    __aicore__ inline void ProcessTopPSingleBatch(uint32_t loopBatch);
-    __aicore__ inline void InitProcessTopP(uint32_t loopBatch);
-    __aicore__ inline void GetSoftmaxSum(uint32_t loopBatch);
-    __aicore__ inline void ScatterTopP(uint32_t loopBatch, float &cumsumData);
-
     // topk func
-    __aicore__ inline void ProcessTopK();
     __aicore__ inline void InitProcessTopK(uint32_t loopBatch);
     __aicore__ inline void ProcessKLtKMaxTopK(uint32_t loopBatch);
     __aicore__ inline void ProcessRemainTopK(uint32_t loopBatch);
@@ -624,7 +618,6 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ScatterCu
     }
 }
 
-
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProcessTopK(uint32_t loopBatch) {
     int64_t initGmIdx = baseGmIdx_ + vocabSize_ - dataNumInit_;
@@ -684,136 +677,6 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessKL
     }
 }
 
-template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProcessTopP(uint32_t loopBatch) {
-    int64_t initGmIdx = baseGmIdx_ + vocabSize_ - dataNumInit_;
-    DataCopyPad(pLocal, mGmP_[batchOffset_ + loopBatch], {1, static_cast<uint32_t>(sizeof(inputT)), 0, 0, 0},
-                {false, 0, 0, 0});
-    DataCopyPad(sortedValueLocal[ubFactorElementAligned_], mGmSortedValue_[initGmIdx],
-                {1, static_cast<uint32_t>(dataNumInit_ * sizeof(inputT)), 0, 0, 0},
-                {false, 0, 0, 0});
-    if constexpr (!IsSameType<inputT, float>::value) {
-        MTE2ToVSync();
-        Cast(tmpLocal, pLocal, RoundMode::CAST_NONE, DATA_PER_BLOCK_B32);
-        Cast(sortedValueLocalFp32[ubFactorElementAligned_], sortedValueLocal[ubFactorElementAligned_],
-             RoundMode::CAST_NONE, dataNumInit_);
-        VToSSync();
-    } else {
-        MTE2ToSSync();
-    }
-    if constexpr (IsSameType<inputT, float>::value) {
-        pValue = float(1.0) - mGmP_[batchOffset_ + loopBatch].GetValue(0);
-    } else if constexpr (IsSameType<inputT, half>::value) {
-        pValue = float(1.0) - static_cast<float>(mGmP_[batchOffset_ + loopBatch].GetValue(0));
-    } else {
-        pValue = float(1.0) - ToFloat(mGmP_[batchOffset_ + loopBatch].GetValue(0));
-    }
-    maxValue = -calLocalFp32[ubFactorElementAligned_].GetValue(dataNumInit_ - 1);
-}
-
-template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessTopP() {
-    pLocal = pInQueue_.AllocTensor<inputT>();
-    outTensor = outQueue_.AllocTensor<outputT>();
-    sortedValueLocal = sortedValueInQueue_.AllocTensor<inputT>();
-    sortedIndicesLocal = sortedIndicesInQueue_.AllocTensor<int32_t>();
-    Duplicate(negInfLocal.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, DATA_PER_BLOCK_B32);
-    if constexpr (IsSameType<inputT, float>::value) {
-        calLocalFp32 = sortedValueLocal;
-        Duplicate(outTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, ubFactorElementAligned_);
-    } else if constexpr (IsSameType<inputT, half>::value) {
-        calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), FLOAT16_NEG_INF, ubFactorElementAligned_);
-    } else {
-        calLocalFp32 = sortedValueLocalFp32;
-        Duplicate(outTensor.template ReinterpretCast<uint16_t>(), BF16_NEG_INF, ubFactorElementAligned_);
-    }
-
-    for (uint32_t loopBatch = 0; loopBatch < loopBatch_; loopBatch++) {
-        baseGmIdx_ = batchOffset_ * vocabSize_ + loopBatch * vocabSize_;
-        InitProcessTopP(loopBatch); // Get maxPValue.
-        ProcessTopPSingleBatch(loopBatch);
-    }
-    pInQueue_.FreeTensor(pLocal);
-    sortedValueInQueue_.FreeTensor(sortedValueLocal);
-    sortedIndicesInQueue_.FreeTensor(sortedIndicesLocal);
-    outQueue_.FreeTensor(outTensor);
-}
-
-template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessTopPSingleBatch(uint32_t loopBatch) {
-    reduceSumValue = 0;
-    float cumsumData = 0;
-    GetSoftmaxSum(loopBatch);
-    reduceSumValueInvert = 1 / reduceSumValue;
-    ScatterTopP(loopBatch, cumsumData);
-}
-
-template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ScatterTopP(uint32_t loopBatch, float &cumsumData) {
-    uint32_t loopDataNum = ubFactorElementAligned_;
-    uint32_t cumsumInner = ubFactorElementAligned_;
-    uint8_t repeatTimes = ((ubFactorElementAligned_) + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
-    for (int32_t loopInner = 0; loopInner < loopInnerOnlyP_; loopInner++) {
-        int64_t currentGmIdx = baseGmIdx_ + loopInner * ubFactorElementAligned_;
-        if (loopInner == (loopInnerOnlyP_ - 1)) {
-            repeatTimes = (tailUbFactorElement_ + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
-            loopDataNum = tailUbFactorElement_;
-            cumsumInner = tailUbFactorElementAligned_;
-        }
-        DataCopyPad(sortedValueLocal.template ReinterpretCast<inputT>(), mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0},
-                    {false, 0, 0, 0});
-        DataCopyPad(sortedIndicesLocal, mGmSortedIndices_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(int32_t)), 0, 0, 0},
-                    {false, 0, 0, 0});
-        if constexpr (!IsSameType<inputT, float>::value) {
-            MTE2ToVSync();
-            Cast(sortedValueLocalFp32, sortedValueLocal, RoundMode::CAST_NONE, loopDataNum);
-            PipeBarrier<PIPE_V>();
-        } else {
-            MTE2ToVSync();
-        }
-        CumSumWithAddsAndExpImpl(0, loopDataNum, cumsumInner, cumsumData);
-        VToSSync();
-        float cumsumDataTmp = cumSumRes.GetValue(loopDataNum - 1);
-        cumsumData = cumsumDataTmp;
-        if (cumsumDataTmp <= pValue) {
-            continue;
-        }
-        // Scatter calculation according to the cumsum value.
-        ScatterCumtomImpl(loopBatch, loopDataNum, 0);
-    }
-}
-
-template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum(uint32_t loopBatch) {
-    uint8_t repeatTimes = (dataNumInit_ + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
-    uint32_t loopDataNum = ubFactorElementAligned_;
-    for (int32_t loopInner = 0; loopInner < loopInnerOnlyP_; loopInner++) {
-        int64_t currentGmIdx = baseGmIdx_ + loopInner * ubFactorElementAligned_;
-        if (loopInner == (loopInnerOnlyP_ - 1)) {
-            repeatTimes = ((tailUbFactorElement_) + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
-            loopDataNum = tailUbFactorElement_;
-        }
-        // Move out -infinity to fill GM
-        DataCopyPad(mGmOut_[currentGmIdx], outTensor, {1, (uint32_t)(loopDataNum * sizeof(outputT)), 0, 0, 0});
-        DataCopyPad(sortedValueLocal.template ReinterpretCast<inputT>(), mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0},
-                    {false, 0, 0, 0});
-
-        if constexpr (!IsSameType<inputT, float>::value) {
-            MTE2ToVSync();
-            Cast(sortedValueLocalFp32, sortedValueLocal, RoundMode::CAST_NONE, loopDataNum);
-            PipeBarrier<PIPE_V>();
-        } else {
-            MTE2ToVSync();
-        }
-        ReduceSumWithAddsAndExpImpl(0, loopDataNum);
-        VToSSync();
-        reduceSumValue += reduceLocal.GetValue(0); // Sum up to obtain the sum of exp reduce for the first x loops in the row.
-    }
-}
 } // namespace
 
 #endif // APPLY_TOP_K_TOP_P_WITH_SORTED_H_KERNEL

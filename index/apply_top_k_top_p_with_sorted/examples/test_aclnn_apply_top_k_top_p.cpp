@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_apply_top_k_top_p.h"
 

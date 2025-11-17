@@ -38,6 +38,7 @@ BEGIN_TILING_DATA_DEF(ApplyTopKTopPWithSortedTilingData)
     TILING_DATA_FIELD_DEF(uint32_t, tailUbFactorElement);
     TILING_DATA_FIELD_DEF(uint32_t, tailUbFactorElementAligned);
     TILING_DATA_FIELD_DEF(uint32_t, calUbSize);
+    TILING_DATA_FIELD_DEF(uint32_t, iterateTimes);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(ApplyTopKTopPWithSorted, ApplyTopKTopPWithSortedTilingData)
 

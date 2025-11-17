@@ -33,6 +33,7 @@ namespace {
     constexpr int32_t P_INPUT_INDEX = 2;
     constexpr int32_t K_INPUT_INDEX = 3;
     constexpr uint32_t DIM_INDEX0 = 0;
+    constexpr uint32_t FLOAT_BYTES = 4;
     static std::map<ge::DataType, uint32_t> DTYPE_MAP = {{ge::DT_BF16, 2}, {ge::DT_FLOAT16, 1}, {ge::DT_FLOAT, 0}};
     static std::map<ge::DataType, uint32_t> DATATYPE_LEN_MAP = {
         {ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}, {ge::DT_FLOAT, 4}};
@@ -87,8 +88,10 @@ private:
     uint32_t ubFactorElementAligned_ = 0;
     uint32_t tailUbFactorElement_ = 0;
     uint32_t tailUbFactorElementAligned_ = 0;
-    uint32_t onlyTopK = 0;
-    uint32_t onlyTopP = 0;
+    uint32_t iterateTimes_ = 0;
+    uint32_t onlyTopK_ = 0;
+    uint32_t onlyTopP_ = 0;
+    uint64_t platformUbSize_ = 0;
 };
 
 ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
@@ -142,8 +145,8 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape() {
         OP_LOGE(opName_, "the dimNum of q and k should be 0 at the same time.");
         return ge::GRAPH_FAILED;
     }
-    onlyTopK = (kDimNum != 0 && pDimNum == 0) ? ONLY_TOP_K_KEY : 0;
-    onlyTopP = (pDimNum != 0 && kDimNum == 0) ? ONLY_TOP_P_KEY : 0;
+    onlyTopK_ = (kDimNum != 0 && pDimNum == 0) ? ONLY_TOP_K_KEY : 0;
+    onlyTopP_ = (pDimNum != 0 && kDimNum == 0) ? ONLY_TOP_P_KEY : 0;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -152,35 +155,35 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::Init() {
     OP_LOGD(opName_, "TilingForApplyTopKTopPWithSorted init.");
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingcontext->GetPlatformInfo());
     coreNum_ = platformInfo.GetCoreNumAiv();
-    uint64_t platformUbSize = 0;
-    platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, platformUbSize);
-    OP_LOGD(opName_, "platformUbSize: %lu.", platformUbSize);
-    uint32_t avaliableUb = static_cast<uint32_t>(platformUbSize) - SYS_RESERVED_UB - SELECT_RESERVED_UB;
+    platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, platformUbSize_);
+    OP_LOGD(opName_, "platformUbSize: %lu.", platformUbSize_);
+    uint32_t avaliableUb = static_cast<uint32_t>(platformUbSize_) - SYS_RESERVED_UB - SELECT_RESERVED_UB;
     calUbSize_ = FloorAlign(avaliableUb, BLOCK_BYTES);
     if (CheckShape() == ge::GRAPH_FAILED) {
         OP_LOGE(opName_, "check shape failed.");
         return ge::GRAPH_FAILED;
     }
+    uint32_t tempValue = 1;
+    while (tempValue < vocabSize_) {
+        tempValue <<= 1;
+        iterateTimes_++;
+    } // ceil(log2(vocabSize_))
     return ge::GRAPH_SUCCESS;
 }
 
 void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
-    tilingKey_ += onlyTopK;
-    tilingKey_ += onlyTopP;
+    tilingKey_ += onlyTopK_;
+    tilingKey_ += onlyTopP_;
     tilingcontext->SetTilingKey(tilingKey_);
 }
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
 {
-    if (batchSize_ <= coreNum_) {
-        batchPerCore_ = uint32_t(1);
-        usedCoreNum_ = batchSize_;
-        tailBatch_ = uint32_t(0);
-        return;
+    if (coreNum_ > 0) {
+        batchPerCore_ = coreNum_ == uint32_t(0) ? batchSize_ : batchSize_ / coreNum_;
+        tailBatch_ = batchSize_ % coreNum_;
+        usedCoreNum_ = coreNum_;
     }
-    batchPerCore_ = coreNum_ == uint32_t(0) ? batchSize_ : batchSize_ / coreNum_;
-    tailBatch_ = batchSize_ % coreNum_;
-    usedCoreNum_ = coreNum_;
 }
 
 void ApplyTopKTopPWithSortedTiling::CalDataPerCore()
@@ -202,6 +205,9 @@ void ApplyTopKTopPWithSortedTiling::CalDataPerCore()
     uint32_t outTensorBytes = ubFactorElementAligned_ * inputDataTypeByte;
 
     calUbSize_ = calUbSize_ - sortedValueBytes - sortedIndicesBytes - pBytes - kBytes - outTensorBytes;
+    if (onlyTopP_ > 0) {
+        calUbSize_ =  static_cast<uint32_t>(platformUbSize_);
+    }
 }
 
 void ApplyTopKTopPWithSortedTiling::FillTilingData()
@@ -218,6 +224,7 @@ void ApplyTopKTopPWithSortedTiling::FillTilingData()
     tilingData.set_tailUbFactorElement(tailUbFactorElement_);
     tilingData.set_tailUbFactorElementAligned(tailUbFactorElementAligned_);
     tilingData.set_calUbSize(calUbSize_);
+    tilingData.set_iterateTimes(iterateTimes_);
 }
 
 void ApplyTopKTopPWithSortedTiling::PrintTilingData()
@@ -234,6 +241,7 @@ void ApplyTopKTopPWithSortedTiling::PrintTilingData()
     OP_LOGD(opName_, "tailUbFactorElement: %u.", tilingData.get_tailUbFactorElement());
     OP_LOGD(opName_, "tailUbFactorElementAligned: %u.", tilingData.get_tailUbFactorElementAligned());
     OP_LOGD(opName_, "calUbSize: %u.", tilingData.get_calUbSize());
+    OP_LOGD(opName_, "iterateTimes: %u.", tilingData.get_iterateTimes());
 }
 
 ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
@@ -249,7 +257,7 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
     OP_LOGD(opName_, "tilingKey: %u.", tilingKey_);
     uint32_t syncWorkspaceSize = SYS_WORKSPACESIZE;
     size_t* currentWorkspace = tilingcontext->GetWorkspaceSizes(1);
-    currentWorkspace[0] = syncWorkspaceSize;
+    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES : syncWorkspaceSize;
 
     tilingData.SaveToBuffer(tilingcontext->GetRawTilingData()->GetData(),
                             tilingcontext->GetRawTilingData()->GetCapacity());

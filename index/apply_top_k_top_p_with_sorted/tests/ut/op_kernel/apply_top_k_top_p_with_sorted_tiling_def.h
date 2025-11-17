@@ -26,6 +26,7 @@ struct ApplyTopKTopPWithSortedTilingData {
     uint32_t tailUbFactorElement = 0;
     uint32_t tailUbFactorElementAligned = 0;
     uint32_t calUbSize = 0;
+    uint32_t iterateTimes = 0;
 };
 
 inline void InitApplyTopKTopPWithSortedTilingData(uint8_t* tiling, ApplyTopKTopPWithSortedTilingData* data)
