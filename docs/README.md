@@ -33,7 +33,7 @@
 | ------------------------------------------- | ------------------------------------------------------------ |
 | [算子列表](op_list.md)                      | 介绍项目包含的所有算子。                                 |
 | [aclnn列表](op_api_list.md)                 | 介绍项目包含的所有aclnn前缀的算子API，通过该API可直调算子。  |
-| [算子开发指南](develop/quick_op_develop.md)    | 介绍算子具体开发流程，包括算子原型定义、Tiling实现、Kernel实现等。 |
+| [算子开发指南](develop/aicore_develop_guide.md)    | 介绍算子具体开发流程，包括算子原型定义、Tiling实现、Kernel实现等。 |
 | [算子调用方式](invocation/op_invocation.md) | 介绍不同算子调用方式，包括aclnn调用、图模式调用等，方便算子快速应用于AI业务中。 |
 | [算子调试调优](debug/op_debug_prof.md)      | 介绍常见的算子调试、调优方法。                               |
 
