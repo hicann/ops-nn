@@ -11,7 +11,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_max_unpool2d_backward.h"
+#include "aclnn_max_unpool2d_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

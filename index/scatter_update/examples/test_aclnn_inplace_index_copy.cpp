@@ -14,7 +14,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_index_copy.h"
+#include "aclnn_index_copy.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_repeat_interleave.h"
+#include "aclnn_repeat_interleave.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

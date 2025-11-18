@@ -11,7 +11,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_embedding_renorm.h"
+#include "aclnn_embedding_renorm.h"
 
 #define CHECK_RET(cond, return_expr) \
  do {                                \

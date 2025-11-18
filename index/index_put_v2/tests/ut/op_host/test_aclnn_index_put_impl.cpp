@@ -15,7 +15,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "level2/aclnn_index_put_impl.h"
+#include "../../../op_host/op_api/aclnn_index_put_impl.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 

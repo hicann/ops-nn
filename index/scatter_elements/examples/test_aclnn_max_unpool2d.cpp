@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_max_unpool2d.h"
+#include "aclnn_max_unpool2d.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

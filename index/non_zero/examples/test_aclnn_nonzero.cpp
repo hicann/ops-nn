@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_nonzero.h"
+#include "aclnn_nonzero.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

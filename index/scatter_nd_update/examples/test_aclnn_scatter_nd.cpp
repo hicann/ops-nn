@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_scatter_nd.h"
+#include "aclnn_scatter_nd.h"
 #include "aclnn/aclnn_base.h"
 
 

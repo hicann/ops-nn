@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "level2/aclnn_kthvalue.h"
+#include "aclnn_kthvalue.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

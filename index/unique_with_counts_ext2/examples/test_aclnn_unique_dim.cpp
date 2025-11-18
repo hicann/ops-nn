@@ -11,7 +11,7 @@
 #include <vector>
 #include "math.h"
 #include "acl/acl.h"
-#include "level2/aclnn_unique_dim.h"
+#include "aclnn_unique_dim.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \
