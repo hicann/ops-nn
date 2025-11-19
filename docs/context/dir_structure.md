@@ -98,6 +98,7 @@
 │   │   └── tests                                       # 算子测试用例目录
 │   ├── CMakeLists.txt
 │   └── README.md                                       # 项目示例介绍文档
+├── experimental                                        # 用户自定义算子存放目录
 ├── scripts                                             # 脚本目录，包含自定义算子、Kernel构建相关配置文件
 ├── tests                                               # 项目级测试目录
 │   ├── requirements.txt                                # 测试用例依赖的第三方组件

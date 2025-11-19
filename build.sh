@@ -145,7 +145,7 @@ usage() {
         echo "Examples:"
         echo "    bash build.sh --pkg --soc=ascend910b --vendor_name=customize -j16 -O3"
         echo "    bash build.sh --pkg --ops=add,sub --debug"
-        echo "    bash build.sh --pkg --experimental --soc=ascend910b"
+        echo "    bash build.sh --pkg --experimental --soc=ascend910b --ops=\${experimental_op}"
         return
         ;;
       opkernel)
@@ -1066,7 +1066,7 @@ main() {
   fi
 
   mkdir -p "${BUILD_PATH}"
-  cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake ..
+  cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} ..
 
   if [[ "$CI_MODE" == "TRUE" ]]; then
     set_ci_mode

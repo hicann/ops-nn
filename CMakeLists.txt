@@ -123,12 +123,7 @@ if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   add_subdirectory(common)
 endif()
 
-if(ENABLE_EXPERIMENTAL)
-  message(STATUS "Build experimental module")
-  add_category_subdirectory_experimental()
-else()
-  add_category_subdirectory()
-endif()
+add_category_subdirectory()
 
 message(STATUS "Ops for this compilation contains: ${COMPILED_OPS}")
 
