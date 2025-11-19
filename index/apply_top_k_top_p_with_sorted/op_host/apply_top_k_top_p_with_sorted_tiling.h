@@ -26,19 +26,19 @@
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(ApplyTopKTopPWithSortedTilingData)
-    TILING_DATA_FIELD_DEF(uint32_t, batchSize);
-    TILING_DATA_FIELD_DEF(uint32_t, vocabSize);
-    TILING_DATA_FIELD_DEF(uint32_t, batchPerCore);
-    TILING_DATA_FIELD_DEF(uint32_t, tailBatch);
-    TILING_DATA_FIELD_DEF(uint32_t, blockNum);
-    TILING_DATA_FIELD_DEF(uint32_t, dataNumInit);
-    TILING_DATA_FIELD_DEF(uint32_t, dataNumInitAligned);
-    TILING_DATA_FIELD_DEF(uint32_t, ubFactorElement);
-    TILING_DATA_FIELD_DEF(uint32_t, ubFactorElementAligned);
-    TILING_DATA_FIELD_DEF(uint32_t, tailUbFactorElement);
-    TILING_DATA_FIELD_DEF(uint32_t, tailUbFactorElementAligned);
-    TILING_DATA_FIELD_DEF(uint32_t, calUbSize);
-    TILING_DATA_FIELD_DEF(uint32_t, iterateTimes);
+    TILING_DATA_FIELD_DEF(uint64_t, batchSize);
+    TILING_DATA_FIELD_DEF(uint64_t, vocabSize);
+    TILING_DATA_FIELD_DEF(uint64_t, batchPerCore);
+    TILING_DATA_FIELD_DEF(uint64_t, tailBatch);
+    TILING_DATA_FIELD_DEF(uint64_t, blockNum);
+    TILING_DATA_FIELD_DEF(uint64_t, dataNumInit);
+    TILING_DATA_FIELD_DEF(uint64_t, dataNumInitAligned);
+    TILING_DATA_FIELD_DEF(uint64_t, ubFactorElement);
+    TILING_DATA_FIELD_DEF(uint64_t, ubFactorElementAligned);
+    TILING_DATA_FIELD_DEF(uint64_t, tailUbFactorElement);
+    TILING_DATA_FIELD_DEF(uint64_t, tailUbFactorElementAligned);
+    TILING_DATA_FIELD_DEF(uint64_t, calUbSize);
+    TILING_DATA_FIELD_DEF(uint64_t, iterateTimes);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(ApplyTopKTopPWithSorted, ApplyTopKTopPWithSortedTilingData)
 

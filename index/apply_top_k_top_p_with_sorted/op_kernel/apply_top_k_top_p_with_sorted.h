@@ -96,25 +96,25 @@ private:
     TBuf<TPosition::VECCALC> calBuf_;
 
     // tilingData
-    uint32_t batchSize_ = 0;
-    uint32_t vocabSize_ = 0;
-    uint32_t batchPerCore_ = 0;
-    uint32_t tailBatch_ = 0;
-    uint32_t blockNum_ = 0;
-    uint32_t dataNumInit_ = 0;
+    uint64_t batchSize_ = 0;
+    uint64_t vocabSize_ = 0;
+    uint64_t batchPerCore_ = 0;
+    uint64_t tailBatch_ = 0;
+    uint64_t blockNum_ = 0;
+    uint64_t dataNumInit_ = 0;
     uint32_t dataNumInitAligned_ = 0;
-    uint32_t ubFactorElement_ = 0;
-    uint32_t ubFactorElementAligned_ = 0;
-    uint32_t tailUbFactorElement_ = 0;
-    uint32_t tailUbFactorElementAligned_ = 0;
-    uint32_t calUbSize_ = 0;
+    uint64_t ubFactorElement_ = 0;
+    uint64_t ubFactorElementAligned_ = 0;
+    uint64_t tailUbFactorElement_ = 0;
+    uint64_t tailUbFactorElementAligned_ = 0;
+    uint64_t calUbSize_ = 0;
 
-    uint32_t blockIdx_ = 0;
-    uint32_t loopBatch_ = 0;
-    uint32_t batchOffset_ = 0;
-    uint32_t bufOffsetLoop = 0;
-    uint32_t loopInner_ = 0;
-    uint32_t loopInnerOnlyP_ = 0;
+    uint64_t blockIdx_ = 0;
+    uint64_t loopBatch_ = 0;
+    int64_t batchOffset_ = 0;
+    uint64_t bufOffsetLoop = 0;
+    uint64_t loopInner_ = 0;
+    uint64_t loopInnerOnlyP_ = 0;
     int64_t baseGmIdx_ = 0;
 
     GlobalTensor<inputT> mGmSortedValue_;
@@ -162,7 +162,7 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitTilin
     tailBatch_ = tilingData.tailBatch;
     blockNum_ = tilingData.blockNum;
     dataNumInit_ = tilingData.dataNumInit;
-    dataNumInitAligned_ = AscendC::AlignUp(dataNumInit_, DATA_PER_BLOCK_B32);
+    dataNumInitAligned_ = AscendC::AlignUp(static_cast<uint32_t>(dataNumInit_), DATA_PER_BLOCK_B32);
     ubFactorElement_ = tilingData.ubFactorElement;
     ubFactorElementAligned_ = tilingData.ubFactorElementAligned;
     tailUbFactorElement_ = tilingData.tailUbFactorElement;

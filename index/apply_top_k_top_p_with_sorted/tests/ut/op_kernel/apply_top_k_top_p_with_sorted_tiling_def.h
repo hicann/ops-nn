@@ -14,19 +14,19 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 struct ApplyTopKTopPWithSortedTilingData {
-    uint32_t batchSize = 0;
-    uint32_t vocabSize = 0;
-    uint32_t batchPerCore = 0;
-    uint32_t tailBatch = 0;
-    uint32_t blockNum = 0;
-    uint32_t dataNumInit = 0;
-    uint32_t dataNumInitAligned = 0;
-    uint32_t ubFactorElement = 0;
-    uint32_t ubFactorElementAligned = 0;
-    uint32_t tailUbFactorElement = 0;
-    uint32_t tailUbFactorElementAligned = 0;
-    uint32_t calUbSize = 0;
-    uint32_t iterateTimes = 0;
+    uint64_t batchSize = 0;
+    uint64_t vocabSize = 0;
+    uint64_t batchPerCore = 0;
+    uint64_t tailBatch = 0;
+    uint64_t blockNum = 0;
+    uint64_t dataNumInit = 0;
+    uint64_t dataNumInitAligned = 0;
+    uint64_t ubFactorElement = 0;
+    uint64_t ubFactorElementAligned = 0;
+    uint64_t tailUbFactorElement = 0;
+    uint64_t tailUbFactorElementAligned = 0;
+    uint64_t calUbSize = 0;
+    uint64_t iterateTimes = 0;
 };
 
 inline void InitApplyTopKTopPWithSortedTilingData(uint8_t* tiling, ApplyTopKTopPWithSortedTilingData* data)

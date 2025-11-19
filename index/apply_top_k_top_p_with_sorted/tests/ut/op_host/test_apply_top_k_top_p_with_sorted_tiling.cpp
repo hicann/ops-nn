@@ -60,8 +60,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     auto data = tiling_data->GetData();
 
     stringstream ss;
-    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(uint32_t)) {
-        ss << std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)])) << " ";
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(uint64_t)) {
+        ss << std::to_string((reinterpret_cast<const uint64_t*>(tiling_data->GetData())[i / sizeof(uint64_t)])) << " ";
     }
 
     return ss.str();
@@ -170,7 +170,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 151488 18 0 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 151488 18 "},
     {"test_case_float16_succ",
      ge::DT_FLOAT16,
      ge::DT_INT32,
@@ -182,7 +182,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 0 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 "},
     {"test_case_bfloat16_succ",
      ge::DT_BF16,
      ge::DT_INT32,
@@ -194,7 +194,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 0 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 "},
     {"test_case_sorted_value_one_dim_failed",
      ge::DT_FLOAT,
      ge::DT_INT32,

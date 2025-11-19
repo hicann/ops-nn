@@ -112,16 +112,16 @@ private:
     TBuf<TPosition::VECCALC> calBuf_;
 
     // tilingData
-    uint32_t batchSize_ = 0;
-    uint32_t vocabSize_ = 0;
-    uint32_t batchPerCore_ = 0;
-    uint32_t tailBatch_ = 0;
-    uint32_t blockNum_ = 0;
-    uint32_t dataNumInitAligned_ = 0;
-    uint32_t calUbSize_ = 0;
-    uint32_t blockIdx_ = 0;
-    uint32_t loopBatch_ = 0;
-    uint32_t batchOffset_ = 0;
+    uint64_t batchSize_ = 0;
+    uint64_t vocabSize_ = 0;
+    uint64_t batchPerCore_ = 0;
+    uint64_t tailBatch_ = 0;
+    uint64_t blockNum_ = 0;
+    uint64_t dataNumInitAligned_ = 0;
+    uint64_t calUbSize_ = 0;
+    uint64_t blockIdx_ = 0;
+    uint64_t loopBatch_ = 0;
+    int64_t batchOffset_ = 0;
     uint32_t bufOffsetLoop = 0;
     int64_t baseGmIdx_ = 0;
 
