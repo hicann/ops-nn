@@ -16,7 +16,6 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 
-#include <unistd.h>
 #include "opdev/platform.h"
 
 using namespace op;

@@ -9,7 +9,6 @@
  */
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_rrelu_with_noise.h"
 

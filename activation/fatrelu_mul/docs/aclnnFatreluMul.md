@@ -300,7 +300,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {2, 4}; 
+  std::vector<int64_t> inputShape = {2, 4};
 
   std::vector<float> inputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
 
@@ -312,7 +312,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建threshold aclTensor
-  std::vector<int64_t> threShape = {1}; 
+  std::vector<int64_t> threShape = {1};
 
   std::vector<float> threData = {0.01};
 
@@ -364,6 +364,7 @@ int main() {
 
   // 7.释放device资源，需要根据具体API的接口定义修改
   aclrtFree(inputDeviceAddr);
+  aclrtFree(threDeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);

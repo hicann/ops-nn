@@ -18,8 +18,6 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
 
-#include <unistd.h>
-
 using namespace op;
 using namespace std;
 
