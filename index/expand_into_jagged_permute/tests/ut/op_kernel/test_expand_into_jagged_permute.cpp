@@ -50,7 +50,7 @@ TEST_F(expand_into_jagged_permute_test, test_int32)
 {
     size_t permuteByteSize = 3 * sizeof(int32_t);
     size_t inputOffsetsByteSize = 4 * sizeof(int32_t);
-    size_t outputOffsetsByteSize = 6144 * 8 * sizeof(int32_t);
+    size_t outputOffsetsByteSize = 4 * 8 * sizeof(int32_t);
     // output
     size_t outputPermuteByteSize = 6 * sizeof(int32_t);
 

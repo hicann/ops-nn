@@ -115,7 +115,7 @@ static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermutePar
     param.numTail = param.permute - SIZE * (param.taskNum - 1);
 }
 
-static ge::graphStatus SetTilingKey(const gert::TilingContext* context, ExpandIntoJaggedPermuteParam& param) {
+static ge::graphStatus SetTilingKey(ExpandIntoJaggedPermuteParam& param) {
     uint64_t tilingkey = 0;
     int64_t limitedSize = 512;
     if(param.inputoffset <= limitedSize){
@@ -170,7 +170,7 @@ static ge::graphStatus TilingForExpandIntoJaggedPermute(gert::TilingContext* con
     }
     ExpandIntoJaggedPermuteParam param;
     Init(context, param);
-    SetTilingKey(context, param);
+    SetTilingKey(param);
     SetTilingData(context, param);
     PrintTilingData(context, param);
     return context->SetTilingKey(param.tilingKey);
@@ -179,6 +179,9 @@ static ge::graphStatus TilingForExpandIntoJaggedPermute(gert::TilingContext* con
 
 ge::graphStatus TilingPrepareExpandIntoJaggedPermute(gert::TilingParseContext *context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
