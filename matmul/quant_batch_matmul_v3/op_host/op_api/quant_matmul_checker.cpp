@@ -9,10 +9,10 @@
  */
 
 /*!
- * \file aclnn_quant_matmul_checker.cpp
+ * \file quant_matmul_checker.cpp
  * \brief
  */
-#include "aclnn_quant_matmul_checker.h"
+#include "quant_matmul_checker.h"
 
 using namespace op;
 using namespace ge;

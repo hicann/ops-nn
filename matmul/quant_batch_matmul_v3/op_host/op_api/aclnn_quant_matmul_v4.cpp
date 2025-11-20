@@ -26,7 +26,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "util/math_util.h"
-#include "aclnn_quant_matmul_checker.h"
+#include "quant_matmul_checker.h"
 
 using namespace op;
 using Ops::NN::SwapLastTwoDimValue;

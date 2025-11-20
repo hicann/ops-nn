@@ -90,6 +90,27 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
   endif()
 endfunction()
 
+function(gen_aclnn_master_header aclnn_master_header_name aclnn_master_header opbuild_out_headers)
+  # 规范化，防止生成的代码编译失败
+  string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" aclnn_master_header_name "${aclnn_master_header_name}")
+  string(TOUPPER ${aclnn_master_header_name} aclnn_master_header_name)
+
+  # 生成include内容
+  set(aclnn_all_header_include_content "")
+  foreach(header_file ${opbuild_out_headers})
+    get_filename_component(header_name ${header_file} NAME)
+    set(aclnn_all_header_include_content "${aclnn_all_header_include_content}#include \"${header_name}\"\n")
+  endforeach()
+
+  # 根据模板生成头文件
+  message(STATUS "create aclnn master header file: ${aclnn_master_header}")
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/aclnn_ops_nn.h.in"
+    "${aclnn_master_header}"
+    @ONLY
+  )
+endfunction()
+
 function(gen_aclnn_with_opdef)
   set(opbuild_out_srcs)
   set(opbuild_out_headers)
@@ -100,10 +121,21 @@ function(gen_aclnn_with_opdef)
   gen_aclnn_classify(${OPHOST_NAME}_opdef_aclnn_exclude_obj aclnnExc "${opbuild_out_srcs}" "${opbuild_out_headers}"
                      opbuild_out_srcs opbuild_out_headers)
 
+    # 创建汇总头文件
+    if(ENABLE_CUSTOM)
+    set(aclnn_master_header_name "aclnn_ops_nn_${VENDOR_NAME}")
+  else()
+    set(aclnn_master_header_name "aclnn_ops_nn")
+  endif()
+  set(aclnn_master_header "${CMAKE_CURRENT_BINARY_DIR}/${aclnn_master_header_name}.h")
+  gen_aclnn_master_header(${aclnn_master_header_name} "${aclnn_master_header}" "${opbuild_out_headers}")
+
   # 将头文件安装到packages/vendors/vendor_name/op_api/include
   if(ENABLE_PACKAGE)
     install(FILES ${opbuild_out_headers} DESTINATION ${ACLNN_INC_INSTALL_DIR} OPTIONAL)
+    install(FILES ${aclnn_master_header} DESTINATION ${ACLNN_INC_INSTALL_DIR} OPTIONAL)
     install(FILES ${opbuild_out_headers} DESTINATION ${ACLNN_OP_INC_INSTALL_DIR} OPTIONAL)
+    install(FILES ${aclnn_master_header} DESTINATION ${ACLNN_OP_INC_INSTALL_DIR} OPTIONAL)
     foreach(aclnn_header_path ${opbuild_out_headers})
       string(REGEX REPLACE "^.*/" "" filename "${aclnn_header_path}")
       list(APPEND aclnn_header_file "${filename}")

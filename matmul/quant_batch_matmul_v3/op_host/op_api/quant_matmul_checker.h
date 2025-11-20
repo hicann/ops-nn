@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OP_API_SRC_ACLNN_QUANT_MATMUL_CHECKER_H_
-#define OP_API_SRC_ACLNN_QUANT_MATMUL_CHECKER_H_
+#ifndef OP_API_SRC_QUANT_MATMUL_CHECKER_H_
+#define OP_API_SRC_QUANT_MATMUL_CHECKER_H_
 
 #include <map>
 #include "aclnn/aclnn_base.h"

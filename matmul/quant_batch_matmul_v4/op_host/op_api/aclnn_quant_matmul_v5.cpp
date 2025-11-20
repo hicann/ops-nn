@@ -11,7 +11,7 @@
 #include <cmath>
 #include <dlfcn.h>
 #include "matmul/common/op_host/op_api/matmul_util.h"
-#include "matmul/quant_batch_matmul_v3/op_host/op_api/aclnn_quant_matmul_checker.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_api/quant_matmul_checker.h"
 #include "securec.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/transdata.h"
