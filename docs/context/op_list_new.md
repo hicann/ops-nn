@@ -1573,7 +1573,7 @@
     <td>待定</td>
     <td>待定</td>
     <td>AI Core</td>
-    <td>ChamferDistance(倒角距离)的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。</td>
+    <td>ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。</td>
   </tr>
   <tr>
     <td>loss</td>

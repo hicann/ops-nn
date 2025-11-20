@@ -263,7 +263,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
 
 **2. InferShape推导实现。**
 
-Infershape函数的作用是根据输入的shape推导输出的shape。
+InferShape函数的作用是根据输入的shape推导输出的shape。
 
 **3. InferDataType推导实现。**
 

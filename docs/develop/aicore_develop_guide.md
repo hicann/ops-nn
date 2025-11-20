@@ -2,7 +2,7 @@
 
 > 说明：  
 > 1. 算子开发过程中涉及的基本概念如Tiling、Kernel、Ascend C接口等，详细介绍请参考[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)。  
-> 2. AI CORE算子是使用Ascend C语言开发，运行在AI CORE硬件单元算子，AI CPU算子是使用C++语言开发，运行在AI CPU硬件单元算子，如果你想贡献aicpu算子，请参考[AI CPU算子开发指南](./aicpu_develop_guide.md)。
+> 2. AI CORE算子使用Ascend C语言开发，运行在AI CORE硬件单元，AI CPU算子使用C++语言开发，运行在AI CPU硬件单元，如果你想贡献aicpu算子，请参考[AI CPU算子开发指南](./aicpu_develop_guide.md)。
 
 开发指南以`AddExample`算子开发为例，介绍新算子开发流程以及涉及的交付件，流程图如下，完整样例代码请访问项目`examples`目录。
 
@@ -76,9 +76,9 @@ ${op_name}                              # 替换为实际算子名的小写下�
 
 **交付件2：${op_name}_def.cpp**
 
-算子原型定义。
+算子信息库。
 
-以自定义`AddExample`算子说明为例，请参考[AddExample算子原型定义](../../examples/add_example/op_host/add_example_def.cpp)。
+以自定义`AddExample`算子说明为例，请参考[AddExample算子信息库](../../examples/add_example/op_host/add_example_def.cpp)。
 ## Tiling实现
 
 ### Tiling简介
@@ -99,28 +99,36 @@ Tiling主要切分逻辑。
 
 ```CPP
 // ${op_name}_tiling.cpp
-// 1.Tiling需要获取运行环境信息，包括可用核数、UB(Unified Buffer)大小，并将获取到的信息传递给CompileInfo
+// 1.Tiling需要获取运行环境信息，包括可用核数、UB(Unified Buffer)大小，并将获取到的信息传递给`CompileInfo`。 由于自动生成的aclnn接口实现不调用该函数，直接返回`ge::GRAPH_SUCCESS`即可。
 static ge::graphStatus TilingParse(gert::TilingParseContext* context)
 {
-    // 1.1获取环境信息
-    auto compileInfo = context->GetCompiledInfo<CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-    auto platformInfo = context->GetPlatformInfo();
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    // 1.2获取可用核数
-    compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    // 1,3获取UB大小
-    uint64_t ubSizePlatForm;
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-    compileInfo->ubSize = static_cast<int64_t>(ubSizePlatForm);
-    ...
     return ge::GRAPH_SUCCESS;
+
+    // 若手写aclnn接口，可以按照下面步骤完善parse函数
+    // // 1.1获取环境信息
+    // auto compileInfo = context->GetCompiledInfo<CompileInfo>();
+    // OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    // auto platformInfo = context->GetPlatformInfo();
+    // auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    // // 1.2获取可用核数
+
+    // compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    // // 1,3获取UB大小
+    // uint64_t ubSizePlatForm;
+    // ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    // compileInfo->ubSize = static_cast<int64_t>(ubSizePlatForm);
+    // ...
+    // return ge::GRAPH_SUCCESS;
 }
 
 // 2.Tiling计算主入口
 static ge::graphStatus TilingFunc(gert::TilingContext* context){
-    // 2.1获取TilingParse中传递的环境信息
-    auto compileInfo = reinterpret_cast<const CompileInfo*>(tilingContext->GetCompileInfo());
+    // 2.1获取平台信息
+    uint64_t ubSize;
+    int64_t coreNum;
+    OP_CHECK_IF(
+        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
+        return ge::GRAPH_FAILED);
     
     // 2.2获取输入信息
     // 获取输入张量shape信息
@@ -187,7 +195,7 @@ struct ${op_name}TilingData {
 };
 ```
 
-如需实现复杂参数组合完成分支选择（涉及多TilingKey场景），请参考[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)中"算子实现 > 工程化算子开发 > Host侧Tiling实现 > Tiling模板编程"。
+如需实现复杂参数组合完成分支选择（涉及多TilingKey场景），请参考[《Ascend C算子开发》](https://hiascend.com/document/redirect/CannCommunityOpdevAscendC)中“算子实现 > 工程化算子开发 > Host侧Tiling实现 > Tiling模板编程”。
 
 ## Kernel实现
 
@@ -213,7 +221,7 @@ graph LR
 
 ### 代码实现
 
-Kernel一个需要两个交付件：`${op_name}.cpp` `${op_name}.h`
+Kernel需要两个交付件：`${op_name}.cpp` `${op_name}.h`
 
 **交付件1：${op_name}.cpp**
 
@@ -272,16 +280,16 @@ private:
 
 private:
     // 管道对象，用于管理数据流（拷贝和计算的流水线）
-    TPipe pipe_;
+    TPipe pipe;
     // 输入队列X，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buff达到流水并行，为2
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueX_;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueX;
     // 输入队列Y，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buff达到流水并行，为2
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueY_;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueY;
     // 输出队列Z，从LM拷贝到GM，BUFFER_NUM表示 buffer数量，这里开启double buff达到流水并行，为2
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueueZ_;
+    TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueueZ;
 
     // 输入X的GM地址
-    GlobalTensor<T> inputGMX_;
+    GlobalTensor<T> inputGMX;
     // 输入Y的GM地址
     GlobalTensor<T> inputGMY;
     // 输出Z的GM地址
@@ -370,13 +378,13 @@ __aicore__ inline void AddExample<T>::Process()
     # 安装run包
     ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
     ```
-    自定义算子包安装在`${ASCEND_HOME_PATH}/latest/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录，可提前在环境变量中配置。自定义算子包不支持卸载。
+    自定义算子包安装在`${ASCEND_HOME_PATH}/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录，可提前在环境变量中配置。自定义算子包不支持卸载。
     
 
 ## 算子验证
 ```bash
     # 执行前需要导入环境变量
-    export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/latest/opp/vendors/${vendor_name}/op_api/lib:${LD_LIBRARY_PATH}
+    export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/op_api/lib:${LD_LIBRARY_PATH}
 ```
 
 1. **UT验证。**
