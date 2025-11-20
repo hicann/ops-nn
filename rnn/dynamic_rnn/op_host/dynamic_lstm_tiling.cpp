@@ -64,7 +64,7 @@ ge::graphStatus LstmBaseTiling::TilingWithAscendC(gert::TilingContext* context) 
   auto platformInfo = context->GetPlatformInfo();
 
   int32_t doubleNum = 2;
-  rnnParams.sysAicCoreNum = context->GetPlatformInfo()->GetCoreNum();
+  rnnParams.sysAicCoreNum = context->GetPlatformInfo()->GetCoreNumByType("AiCore");
   rnnParams.sysAivCoreNum = rnnParams.sysAicCoreNum * doubleNum;
   platformInfo->GetLocalMemSize(fe::LocalMemType::UB, rnnParams.ubSize);
   platformInfo->GetLocalMemSize(fe::LocalMemType::L1, rnnParams.l1Size);
@@ -163,7 +163,7 @@ ge::graphStatus LstmBaseTiling::GetMMTilingDataSplit(const gert::TilingContext* 
   int32_t hiddenBlock = 4;
   int64_t aivDouble = 2;
   matmul_tiling::MultiCoreMatmulTiling rnnMatmul1;
-  dynamicRnnParams.usedCoreNum = context->GetPlatformInfo()->GetCoreNum() * aivDouble;
+  dynamicRnnParams.usedCoreNum = context->GetPlatformInfo()->GetCoreNumByType("AiCore") * aivDouble;
   auto ret = rnnMatmul1.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
   OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "mm1 SetAType fail."),
                   return ge::GRAPH_FAILED);
