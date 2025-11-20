@@ -18,7 +18,7 @@
 
 // op kernel building at build_out directory, it's not fully aligned with source code structure
 // current op_kernel folder is absent in build_out directory, so the relative path to common has just one layer
-#include "foreach_triangle.h"
+#include "../foreach_utils/foreach_triangle.h"
 
 using namespace AscendC;
 using namespace Common::OpKernel;
