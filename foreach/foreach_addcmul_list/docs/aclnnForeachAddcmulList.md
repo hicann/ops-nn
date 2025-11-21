@@ -75,7 +75,7 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>x1</td>
       <td>输入</td>
       <td>表示混合运算中加法的第一个输入张量列表。对应公式中的`x1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`x3`的shape一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>

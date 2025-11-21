@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
+- 接口功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
     
@@ -89,7 +89,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>scale</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>如果`x`的数据类型不是FLOAT32，数据类型需要和`x`的数据类型一致。</li><li>当x为NZ输入时，值为1。scale的数据类型和x保持一致。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>`scale`支持1维张量或多维张量，shape与输入`x`和属性`axis`有关（当`scale`的shape为1维张量时，`scale`的第0维需要等于x的第`axis`维或等于1；当`scale`的shape为多维张量时，`scale`的维数需要和`x`保持一致，`scale`的第`axis`维需要等于x的第`axis`维或等于1，且`scale`其他维度为1）。</li><li>数据类型、数据格式需要和`x`的数据类型和数据格式一致。</li><li>当数据格式为NZ时，`scale`的所有元素值为1。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
       <td>1-8</td>
@@ -185,7 +185,6 @@ aclnnStatus aclnnAscendQuantV3(
     - 入参`roundMode`：支持取值round，ceil，trunc，floor。当输入`x`的数据格式为NZ时，支持取值round。
     - 入参`dstType`支持取值2，3，29，分别表示INT8、INT32、INT4。当输入`x`的数据格式为NZ时，支持取值3，表示INT32。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
-
 
 
 - **返回值：**
@@ -284,7 +283,7 @@ aclnnStatus aclnnAscendQuantV3(
 
 ## 约束说明
 
-无。
+无
 
 ## 调用示例
 

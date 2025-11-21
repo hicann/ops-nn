@@ -21,7 +21,7 @@
   y_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} g_i + beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
 
-  - divMod为True时：
+  - divMode为True时：
 
     $$
     y1=round((y/scales1)+zero\_points1)
@@ -30,7 +30,7 @@
     $$
     y2=round((y/scales2)+zero\_points2)
     $$
-  - divMod为False时：
+  - divMode为False时：
 
     $$
     y1=round((y*scales1)+zero\_points1)

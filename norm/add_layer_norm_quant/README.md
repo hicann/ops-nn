@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuant算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或是DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。
+- 算子功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuant算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。
 - 计算公式*：
 
   $$
@@ -20,7 +20,7 @@
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
   
-  - 当quantMode输入为"static"时，输出outScales1和outScales2无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或是AscendQuantV2：
+  - 当quantMode输入为"static"时，输出outScales1和outScales2无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
   
       $$
@@ -166,7 +166,7 @@
     <tr>
       <td>quant_mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或是 "dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
+      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或"dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
       <td>String</td>
       <td>-</td>
     </tr>
@@ -187,7 +187,7 @@
     <tr>
       <td>div_mode</td>
       <td>可选属性</td>
-      <td><ul><li>表示静态量化处理scale的方法是乘法或是除法，对应公式中的`divMode`。</li><li>默认值为true。</li></ul></td>
+      <td><ul><li>表示静态量化处理scale的方法是乘法或除法，对应公式中的`divMode`。</li><li>默认值为true。</li></ul></td>
       <td>BOOL</td>
       <td>-</td>
     </tr>

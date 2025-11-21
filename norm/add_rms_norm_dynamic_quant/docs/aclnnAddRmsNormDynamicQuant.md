@@ -152,7 +152,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
     <tr>
       <td>smoothScale1Optional</td>
       <td>输入</td>
-      <td>表示量化过程中得到y1使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
+      <td>表示量化过程中得到y1Out使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
     <tr>
       <td>smoothScale2Optional</td>
       <td>输入</td>
-      <td>表示量化过程中得到y2使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
+      <td>表示量化过程中得到y2Out使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。必须与smoothScale1Optional配套使用。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuant(
     <tr>
       <td>y2Out</td>
       <td>输出</td>
-      <td>表示量化输出Tensort，对应公式中的`y2Out`。</td>
+      <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`y1Out`保持一致。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>

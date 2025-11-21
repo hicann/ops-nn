@@ -226,7 +226,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>y2Out</td>
       <td>输出</td>
-      <td>表示量化输出Tensort，对应公式中的`y2Out`。</td>
+      <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选输出。</li><li>shape需要与输入`x1`/`x2`一致。</li><li>当`scales2Optional`为空时，该输出的值无效。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>

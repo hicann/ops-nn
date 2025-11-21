@@ -87,7 +87,7 @@
     <tr>
       <td>bias</td>
       <td>可选输入</td>
-      <td>表示AddLayerNorm中加法计算的输入，对应公式中的`bias`。shape可以和`gamma`/`beta`或是和`x1`/`x2`一致。</td>
+      <td>表示AddLayerNorm中加法计算的输入，对应公式中的`bias`。shape可以和`gamma`/`beta`或`x1`/`x2`一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

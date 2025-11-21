@@ -191,7 +191,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>output</td>
       <td>输出</td>
       <td>表示模型输出的量化后的数据，对应公式中的`output`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape、数据格式、数据类型与输入`input`的保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape、数据格式、数据类型与输入`input`保持一致。</li></ul></td>
       <td>INT8，UINT8，INT32</td>
       <td>NCHW</td>
       <td>4</td>

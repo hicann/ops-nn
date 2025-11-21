@@ -124,7 +124,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>biasOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape可以和`gamma`/`beta`或是和`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -269,7 +269,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>（meanOut、rstdOut）的shape不是完全相同的shape。</td>
     </tr>
     <tr>
-      <td>gamma的维度和x的需要作norm的维度不相同，或者是meanOut的维度和x的不需要norm的维度不相同，或是meanOut的需要norm的维度不为1。</td>
+      <td>gamma的维度和x的需要作norm的维度不相同，或meanOut的维度和x的不需要norm的维度不相同，或meanOut的需要norm的维度不为1。</td>
     </tr>
   </tbody></table>
 

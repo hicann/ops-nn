@@ -118,7 +118,7 @@
     <tr>
       <td>dx</td>
       <td>输出</td>
-      <td>计算输出的梯度，用于更新输入`x`的梯度，对应公式中的`dx`。数据类型与`dy`相同，shape与`x`相同，</td>
+      <td>计算输出的梯度，用于更新输入`x`的梯度，对应公式中的`dx`。数据类型与`dy`相同，shape与`x`相同。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
