@@ -15,7 +15,6 @@
 #ifndef _FAKE_QUANT_AFFINE_CACHEMASK_BASE_H_
 #define _FAKE_QUANT_AFFINE_CACHEMASK_BASE_H_
 
-#include <cmath>
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 
