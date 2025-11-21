@@ -93,4 +93,12 @@
 
 无
 
+## 调用说明
+
+| 调用方式 | 调用样例                                                                   | 说明                                                             |
+|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_ge_glu](./examples/test_aclnn_ge_glu.cpp) | 通过[aclnnGeGlu](./docs/aclnnGeGlu.md)接口方式调用GeGluV2算子。    |
+| aclnn调用 | [test_aclnn_ge_glu_v3](./examples/test_aclnn_ge_glu_v3.cpp) | 通过[aclnnGeGluV3](./docs/aclnnGeGluV3.md)接口方式调用GeGluV2算子。    |
+| 图模式调用 | -   | 通过[算子IR](./op_graph/ge_glu_v2_proto.h)构图方式调用GeGluV2算子。 |
+
 

@@ -162,7 +162,7 @@ aclnnStatus aclnnSoftplus(
       <td>beta，threshold的数据类型无法转换成self的数据类型。</td>
     </tr>
     <tr>
-      <td>self与out的数据类型不一致且无法转化。</td>
+      <td>self与out的数据类型不一致且无法转换。</td>
     </tr>
   </tbody></table>
 
