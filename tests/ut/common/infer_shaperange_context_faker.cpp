@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include "infer_shaperange_context_faker.h"
@@ -24,7 +25,7 @@ InferShapeRangeContextFaker::InferShapeRangeContextFaker(InferShapeRangeContextF
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::SetOpType(const std::string opType)
 {
     opType_ = opType;
-    OpInferShapeRangeContextBuilder::MutableOpInfo().OpType(opType.c_str()).OpName(opType.c_str());
+    OpInferShapeRangeContextBuilder::OpType(opType.c_str()).OpName(opType.c_str());
     return *this;
 }
 
@@ -40,40 +41,55 @@ InferShapeRangeContextFaker& InferShapeRangeContextFaker::IrInstanceNum(const st
 
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::NodeIoNum(size_t inputNum, size_t outputNum)
 {
-    OpInferShapeRangeContextBuilder::MutableOpInfo().IONum(inputNum, outputNum);
+    OpInferShapeRangeContextBuilder::IONum(inputNum, outputNum);
     return *this;
 }
 
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-    const gert::StorageShape& shape)
+    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferShapeRangeContextBuilder::MutableOpInfo().SetInputTd(index, dtype, originFormat, storageFormat, shape);
+    while (inputMinTensors_.size() <= index) {
+        inputMinTensors_.emplace_back(Tensor());
+    }
+
+    while (inputMaxTensors_.size() <= index) {
+        inputMaxTensors_.emplace_back(Tensor());
+    }
+
+    inputMinTensors_[index].SetDataType(dtype);
+    inputMinTensors_[index].SetOriginFormat(originFormat);
+    inputMinTensors_[index].SetStorageFormat(storageFormat);
+
+    inputMaxTensors_[index].SetDataType(dtype);
+    inputMaxTensors_[index].SetOriginFormat(originFormat);
+    inputMaxTensors_[index].SetStorageFormat(storageFormat);
     return *this;
 }
 
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::NodeOutputTd(
     int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferShapeRangeContextBuilder::MutableOpInfo().SetOutputTd(index, dtype, originFormat, storageFormat);
+    OpInferShapeRangeContextBuilder::OutputTensorDesc(index, dtype, originFormat, storageFormat);
     return *this;
 }
 
-InferShapeRangeContextFaker& InferShapeRangeContextFaker::InputTensors(const std::vector<Range<Tensor>*>& inputTensors)
+InferShapeRangeContextFaker& InferShapeRangeContextFaker::InputTensorsRange(
+    const std::vector<Range<Tensor>*>& inputTensors)
 {
-    OpInferShapeRangeContextBuilder::InputTensors(inputTensors);
+    OpInferShapeRangeContextBuilder::InputTensorsRange(inputTensors);
     return *this;
 }
 
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::InputShapeRanges(
     const std::vector<Range<Shape>*>& inputShapeRanges)
 {
-    inputTensorRanges_.clear();
-    inputMinTensors_.clear();
-    inputMaxTensors_.clear();
-    inputTensorRanges_.reserve(inputShapeRanges.size());
-    inputMinTensors_.resize(inputShapeRanges.size());
-    inputMaxTensors_.resize(inputShapeRanges.size());
+    while (inputMinTensors_.size() < inputShapeRanges.size()) {
+        inputMinTensors_.emplace_back(Tensor());
+    }
+
+    while (inputMaxTensors_.size() < inputShapeRanges.size()) {
+        inputMaxTensors_.emplace_back(Tensor());
+    }
 
     std::vector<Range<Tensor>*> inputTensorRangePtrs;
     for (size_t idx = 0; idx < inputShapeRanges.size(); ++idx) {
@@ -85,23 +101,19 @@ InferShapeRangeContextFaker& InferShapeRangeContextFaker::InputShapeRanges(
                 inputMinTensors_[idx].MutableOriginShape() = *minShape;
                 inputMaxTensors_[idx].MutableStorageShape() = *maxShape;
                 inputMaxTensors_[idx].MutableOriginShape() = *maxShape;
-                inputTensorRanges_.emplace_back(std::move(Range(&inputMinTensors_[idx], &inputMaxTensors_[idx])));
-                inputTensorRangePtrs.push_back(&(inputTensorRanges_[idx]));
-                continue;
             }
         }
-
-        inputTensorRanges_.emplace_back(std::move(Range<Tensor>(nullptr, nullptr)));
-        inputTensorRangePtrs.push_back(nullptr);
     }
 
-    return InputTensors(inputTensorRangePtrs);
+    return *this;
 }
 
 InferShapeRangeContextFaker& InferShapeRangeContextFaker::OutputShapeRanges(
     const std::vector<Range<Shape>*>& outputShapeRanges)
 {
-    OpInferShapeRangeContextBuilder::OutputShapes(outputShapeRanges);
+    for (size_t idx = 0; idx < outputShapeRanges.size(); ++idx) {
+        NodeOutputTd(idx, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
     return *this;
 }
 
@@ -120,6 +132,16 @@ KernelRunContextHolder InferShapeRangeContextFaker::Build()
     if (opType_.empty()) {
         SetOpType("fakeOp");
     }
+
+    inputTensorRanges_.clear();
+    inputTensorRanges_.reserve(inputMaxTensors_.size());
+    std::vector<Range<Tensor>*> inputTensorRangePtrs;
+    for (size_t idx = 0; idx < inputMaxTensors_.size(); ++idx) {
+        inputTensorRanges_.emplace_back(std::move(Range(&inputMinTensors_[idx], &inputMaxTensors_[idx])));
+        inputTensorRangePtrs.push_back(&(inputTensorRanges_[idx]));
+    }
+
+    InputTensorsRange(inputTensorRangePtrs);
 
     inferShapeRangeContextHolder_ = std::move(OpInferShapeRangeContextBuilder::Build());
     SetContext(inferShapeRangeContextHolder_.GetContext());

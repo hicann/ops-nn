@@ -21,7 +21,6 @@
 #include "gnode.h"
 #include "any_value.h"
 #include "op_impl_registry.h"
-#include "../../../common/stub/op_tiling/op_cache_def_tiling.h"
 
 static const std::map<std::string, Ops::NN::AnyValue::ValueType> kAttrTypesMap = {
   {"VT_INT", Ops::NN::AnyValue::ValueType::VT_INT},
@@ -203,7 +202,7 @@ ge::graphStatus InferShapeTest(ge::Operator& op, const Runtime2TestParam& param)
             case Ops::NN::AnyValue::ValueType::VT_STRING: {
               std::string value;
               if(op.GetAttr(item, value) != GRAPH_SUCCESS) return GRAPH_FAILED;
-                faker.Attr(item, value);
+              faker.Attr(item, AscendString(value.c_str()));
             }
             break;
             case Ops::NN::AnyValue::ValueType::VT_LIST_INT: {
@@ -342,7 +341,6 @@ ge::graphStatus InferDataTypeTest(ge::Operator& op, const Runtime2TestParam& par
       }
     }
     faker.InputDataTypes(input_datatype_ref);
-    faker.InputTensors(input_tensors_ref);
   }
 
   std::vector<ge::DataType> output_datatype(output_size);
@@ -385,7 +383,7 @@ ge::graphStatus InferDataTypeTest(ge::Operator& op, const Runtime2TestParam& par
             case Ops::NN::AnyValue::ValueType::VT_STRING: {
               std::string value;
               if(op.GetAttr(item, value) != GRAPH_SUCCESS) return GRAPH_FAILED;
-                faker.Attr(item, value);
+                faker.Attr(item, AscendString(value.c_str()));
             }
             break;
             case Ops::NN::AnyValue::ValueType::VT_LIST_INT: {

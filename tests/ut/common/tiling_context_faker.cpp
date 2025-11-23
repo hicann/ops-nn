@@ -23,45 +23,75 @@ TilingContextFaker::TilingContextFaker(TilingContextFaker&& faker) : KernelRunCo
 TilingContextFaker& TilingContextFaker::SetOpType(const std::string opType)
 {
     opType_ = opType;
-    OpTilingContextBuilder::MutableOpInfo().OpType(opType.c_str()).OpName(opType.c_str());
+    OpTilingContextBuilder::OpType(opType.c_str()).OpName(opType.c_str());
     return *this;
 }
 
 TilingContextFaker& TilingContextFaker::NodeIoNum(size_t inputNum, size_t outputNum)
 {
-    OpTilingContextBuilder::MutableOpInfo().IONum(inputNum, outputNum);
+    inputInstanceNum_.resize(inputNum, 1);
+    outputInstanceNum_.resize(outputNum, 1);
+    inputInstanceNumPacked_ = inputInstanceNum_;
     return *this;
 }
 
 TilingContextFaker& TilingContextFaker::IrInstanceNum(
     const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
 {
-    OpTilingContextBuilder::MutableOpInfo().IOInstanceNum(inputInstanceNum, outputInstanceNum);
+    inputInstanceNum_ = inputInstanceNum;
+    outputInstanceNum_ = outputInstanceNum;
+    inputInstanceNumPacked_ = inputInstanceNum_;
     return *this;
 }
 
 TilingContextFaker& TilingContextFaker::IrInstanceNum(const std::vector<uint32_t>& instanceNum)
 {
+    // 部分算子ut实现有问题，例如DeepNormGrad，在非tensor list场景下误用了IrInstanceNum传入tensor list含义的vector
+    if (instanceNum.size() >= inputInstanceNum_.size()) {
+        inputInstanceNum_ = instanceNum;
+        inputInstanceNumPacked_ = inputInstanceNum_;
+    }
     return *this;
 }
 
 TilingContextFaker& TilingContextFaker::NodeInputTd(
     int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    while (inputTensors_.size() <= index) {
+    int32_t lowTensorIdx = 0;
+    int32_t highTensorIdx = 0;
+    if (index >= inputInstanceNum_.size()) {
+        printf("error NodeInputTd index\n");
+        return *this;
+    }
+
+    int32_t nonZeroNum = 0;
+    for (int32_t i = 0; i < inputInstanceNum_.size(); ++i) {
+        if (inputInstanceNum_[i] != 0) {
+            nonZeroNum++;
+        }
+
+        if (nonZeroNum > index) {
+            index = i;
+            break;
+        }
+    }
+    CalcInputTensorIndex(index, lowTensorIdx, highTensorIdx);
+    while (inputTensors_.size() <= highTensorIdx) {
         inputTensors_.emplace_back(Tensor());
     }
 
-    inputTensors_[index].SetDataType(dtype);
-    inputTensors_[index].SetOriginFormat(originFormat);
-    inputTensors_[index].SetStorageFormat(storageFormat);
-    OpTilingContextBuilder::MutableOpInfo().SetInputTd(index, dtype, originFormat, storageFormat);
+    for (int32_t idx = lowTensorIdx; idx <= highTensorIdx; ++idx) {
+        inputTensors_[idx].SetDataType(dtype);
+        inputTensors_[idx].SetOriginFormat(originFormat);
+        inputTensors_[idx].SetStorageFormat(storageFormat);
+    }
     return *this;
 }
 
 TilingContextFaker& TilingContextFaker::NodeOutputTd(
     int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
+    // 暂时没有输出TensorList的场景
     while (outputTensors_.size() <= index) {
         outputTensors_.emplace_back(Tensor());
     }
@@ -80,6 +110,11 @@ TilingContextFaker& TilingContextFaker::OutputTensors(const std::vector<Tensor*>
 
 TilingContextFaker& TilingContextFaker::InputShapes(const std::initializer_list<void*>& inputShapes)
 {
+    return InputShapes(std::vector<void*>(inputShapes));
+}
+
+TilingContextFaker& TilingContextFaker::InputShapes(const std::vector<void*>& inputShapes)
+{
     std::vector<StorageShape*> inputShapesNew;
     for (auto shape : inputShapes) {
         inputShapesNew.push_back((StorageShape*)shape);
@@ -93,18 +128,15 @@ TilingContextFaker& TilingContextFaker::InputShapes(const std::vector<Shape*>& i
         inputTensors_.emplace_back(Tensor());
     }
 
-    std::vector<Tensor*> inputTensorsPtr;
     for (size_t idx = 0; idx < inputShapes.size(); ++idx) {
         if (inputShapes[idx] != nullptr) {
             inputTensors_[idx].MutableStorageShape() = *(inputShapes[idx]);
             inputTensors_[idx].MutableOriginShape() = *(inputShapes[idx]);
-            inputTensorsPtr.push_back(&(inputTensors_[idx]));
         } else {
-            inputTensorsPtr.push_back(nullptr);
+            inputInstanceNumPacked_[idx] = 0;
         }
     }
 
-    OpTilingContextBuilder::InputTensors(inputTensorsPtr);
     return *this;
 }
 
@@ -114,18 +146,16 @@ TilingContextFaker& TilingContextFaker::InputShapes(const std::vector<StorageSha
         inputTensors_.emplace_back(Tensor());
     }
 
-    std::vector<Tensor*> inputTensorsPtr;
     for (size_t idx = 0; idx < inputShapes.size(); ++idx) {
         if (inputShapes[idx] != nullptr) {
             inputTensors_[idx].MutableStorageShape() = inputShapes[idx]->MutableStorageShape();
             inputTensors_[idx].MutableOriginShape() = inputShapes[idx]->MutableOriginShape();
-            inputTensorsPtr.push_back(&(inputTensors_[idx]));
         } else {
-            inputTensorsPtr.push_back(nullptr);
+            inputInstanceNumPacked_[idx] = 0;
         }
     }
 
-    return InputTensors(inputTensorsPtr);
+    return *this;
 }
 
 TilingContextFaker& TilingContextFaker::InputTensors(const std::vector<Tensor*>& inputTensors)
@@ -223,9 +253,12 @@ TilingContextFaker& TilingContextFaker::ConstInput(
         while (inputTensors_.size() <= constPair.first) {
             inputTensors_.emplace_back(Tensor());
         }
+
+        // 暂时没有tensor list和const input共存场景
         Tensor* tensor = (Tensor*)constPair.second.get();
         inputTensors_[constPair.first].SetData(TensorData(tensor->GetAddr()));
     }
+
     return *this;
 }
 
@@ -247,14 +280,22 @@ KernelRunContextHolder TilingContextFaker::Build()
         SetOpType("fakeOp");
     }
 
+    OpTilingContextBuilder::IOInstanceNum(inputInstanceNumPacked_, outputInstanceNum_);
+
+    // InputShapes信息不全，需要NodeInputTd收集齐信息后在build之前传入Tensor
+    std::vector<Tensor*> inputTensorsPtr;
+    bool inputPacked = std::find(inputInstanceNum_.begin(), inputInstanceNum_.end(), 0) != inputInstanceNum_.end();
+    for (size_t idx = 0; idx < inputTensors_.size(); ++idx) {
+        if (inputPacked || inputInstanceNumPacked_[idx] > 0) {
+            inputTensorsPtr.push_back(&(inputTensors_[idx]));
+        }
+    }
+    InputTensors(inputTensorsPtr);
+
     // OutputShapes信息不全，需要NodeOutputTd收集齐信息后在build之前传入Tensor
     std::vector<Tensor*> outputTensorsPtr;
     for (size_t idx = 0; idx < outputTensors_.size(); ++idx) {
         outputTensorsPtr.push_back(&(outputTensors_[idx]));
-
-        OpTilingContextBuilder::MutableOpInfo().SetOutputTd(
-            idx, outputTensors_[idx].GetDataType(), outputTensors_[idx].GetOriginFormat(),
-            outputTensors_[idx].GetStorageFormat());
     }
     OutputTensors(outputTensorsPtr);
 

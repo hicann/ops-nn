@@ -28,14 +28,15 @@ public:
 
     InferShapeContextFaker& NodeIoNum(size_t inputNum, size_t outputNum);
 
+    InferShapeContextFaker& IrInputNum(size_t inputNum);
+
     InferShapeContextFaker& IrInstanceNum(
         const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum);
 
     InferShapeContextFaker& IrInstanceNum(const std::vector<uint32_t>& instanceNum);
 
     InferShapeContextFaker& NodeInputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-        const gert::StorageShape& shape = {});
+        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
 
     InferShapeContextFaker& NodeOutputTd(
         int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
@@ -43,13 +44,7 @@ public:
     template <typename T>
     InferShapeContextFaker& Attr(const std::string& attrName, T attr)
     {
-        OpInferShapeContextBuilder::MutableOpInfo().Attr(AscendString(attrName.c_str()), attr);
-        return *this;
-    }
-
-    InferShapeContextFaker& Attr(const std::string& attrName, const std::string& attr)
-    {
-        OpInferShapeContextBuilder::MutableOpInfo().Attr(attrName.c_str(), AscendString(attr.c_str()));
+        OpContextBuilderBase::AppendAttr(attr);
         return *this;
     }
 
@@ -57,11 +52,11 @@ public:
 
     InferShapeContextFaker& InputShapes(const std::initializer_list<void*>& inputShapes);
 
-    // InferShapeContextFaker& InputShapes(const std::initializer_list<Shape*>& inputShapes);
-
     InferShapeContextFaker& InputShapes(const std::vector<void*>& inputShapes);
 
     InferShapeContextFaker& InputShapes(const std::vector<Shape*>& inputShapes);
+
+    InferShapeContextFaker& InputShapes(const std::vector<StorageShape*>& inputShapes);
 
     InferShapeContextFaker& OutputShapes(const std::initializer_list<Shape*>& outputShapes);
 

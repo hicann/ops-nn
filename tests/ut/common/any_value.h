@@ -20,6 +20,10 @@
 #include <string>
 #include <vector>
 
+#include "graph/ascend_string.h"
+
+using ge::AscendString;
+
 namespace Ops {
 namespace NN {
 class AnyValue {

@@ -24,7 +24,7 @@ InferDataTypeContextFaker::InferDataTypeContextFaker(InferDataTypeContextFaker&&
 InferDataTypeContextFaker& InferDataTypeContextFaker::SetOpType(const std::string opType)
 {
     opType_ = opType;
-    OpInferDataTypeContextBuilder::MutableOpInfo().OpType(opType.c_str()).OpName(opType.c_str());
+    OpInferDataTypeContextBuilder::OpType(opType.c_str()).OpName(opType.c_str());
     return *this;
 }
 
@@ -35,14 +35,14 @@ InferDataTypeContextFaker& InferDataTypeContextFaker::IrInputNum(size_t inputNum
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::NodeIoNum(size_t inputNum, size_t outputNum)
 {
-    OpInferDataTypeContextBuilder::MutableOpInfo().IONum(inputNum, outputNum);
+    OpInferDataTypeContextBuilder::IONum(inputNum, outputNum);
     return *this;
 }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::IrInstanceNum(
     const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
 {
-    OpInferDataTypeContextBuilder::MutableOpInfo().IOInstanceNum(inputInstanceNum, outputInstanceNum);
+    OpInferDataTypeContextBuilder::IOInstanceNum(inputInstanceNum, outputInstanceNum);
     return *this;
 }
 
@@ -52,43 +52,38 @@ InferDataTypeContextFaker& InferDataTypeContextFaker::IrInstanceNum(const std::v
 }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-    const gert::StorageShape& shape)
+    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferDataTypeContextBuilder::MutableOpInfo().SetInputTd(index, dtype, originFormat, storageFormat, shape);
+    OpInferDataTypeContextBuilder::InputTensorDesc(index, dtype, originFormat, storageFormat);
     return *this;
 }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::NodeOutputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-    const gert::StorageShape& shape)
+    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferDataTypeContextBuilder::MutableOpInfo().SetOutputTd(index, dtype, originFormat, storageFormat, shape);
-    return *this;
-}
-
-InferDataTypeContextFaker& InferDataTypeContextFaker::InputTensors(const std::vector<Tensor*>& inputTensors)
-{
+    OpInferDataTypeContextBuilder::OutputTensorDesc(index, originFormat, storageFormat);
     return *this;
 }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::InputDataTypes(const std::vector<void*>& inputDataTypes)
 {
-    std::vector<ge::DataType*> inputDataTypesNew;
-    for (auto& inputDataType : inputDataTypes) {
-        inputDataTypesNew.push_back(reinterpret_cast<ge::DataType*>(inputDataType));
+    for (size_t idx = 0; idx < inputDataTypes.size(); ++idx) {
+        if (inputDataTypes[idx] != nullptr) {
+            ge::DataType dtype = *(ge::DataType*)inputDataTypes[idx];
+            NodeInputTd(idx, dtype, ge::FORMAT_ND, ge::FORMAT_ND);
+        }
     }
-    OpInferDataTypeContextBuilder::Inputs(inputDataTypesNew);
     return *this;
 }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::OutputDataTypes(const std::vector<void*>& outputDataTypes)
 {
-    std::vector<ge::DataType*> outputDataTypesNew;
-    for (auto& outputDataType : outputDataTypes) {
-        outputDataTypesNew.push_back(reinterpret_cast<ge::DataType*>(outputDataType));
+    for (size_t idx = 0; idx < outputDataTypes.size(); ++idx) {
+        if (outputDataTypes[idx] != nullptr) {
+            ge::DataType dtype = *(ge::DataType*)outputDataTypes[idx];
+            NodeOutputTd(idx, dtype, ge::FORMAT_ND, ge::FORMAT_ND);
+        }
     }
-    OpInferDataTypeContextBuilder::Outputs(outputDataTypesNew);
     return *this;
 }
 

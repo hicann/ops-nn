@@ -309,9 +309,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 )
         add_dependencies(${opName}_${socVersion}_tiling_tmp json)
         target_include_directories(${opName}_${socVersion}_tiling_tmp PRIVATE
-                ${ASCEND_DIR}/include/op_common/atvoss
-                ${ASCEND_DIR}/include/op_common
-                ${ASCEND_DIR}/include/op_common/op_host
+                ${OPBASE_INC_DIRS}
                 ${PROJECT_SOURCE_DIR}/common/inc
                 ${JSON_INCLUDE}
                 )
@@ -507,9 +505,7 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
                 )
         add_dependencies(${opName}_${socVersion}_tiling_tmp json)
         target_include_directories(${opName}_${socVersion}_tiling_tmp PRIVATE
-                ${ASCEND_DIR}/include/op_common/atvoss
-                ${ASCEND_DIR}/include/op_common
-                ${ASCEND_DIR}/include/op_common/op_host
+                ${OPBASE_INC_DIRS}
                 ${PROJECT_SOURCE_DIR}/common/inc
                 ${JSON_INCLUDE}
                 )

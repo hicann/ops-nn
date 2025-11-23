@@ -43,11 +43,12 @@ void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_inf
                                           {"l0_c_size", "L0C_SIZE"},
                                           {"l1_size", "L1_SIZE"},
                                           {"bt_size", "BT_SIZE"},
-                                          {"load3d_constraints", "load3d_constraints"}};
+                                          {"load3d_constraints", "load3d_constraints"},
+                                          {"lut_type", "lut_type"}};
   aicore_spec["cube_freq"] = "cube_freq";
   for (auto &t : aicore_spec_keys) {
     if (compile_info_json.contains("hardware_info") && compile_info_json["hardware_info"].contains(t.second)) {
-      if (t.second == "load3d_constraints") {
+      if (t.second == "load3d_constraints" || t.second == "lut_type") {
         aicore_spec[t.first] = compile_info_json["hardware_info"][t.second].get<string>();
       } else {
         aicore_spec[t.first] = to_string(compile_info_json["hardware_info"][t.second].get<uint32_t>());
@@ -58,13 +59,16 @@ void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_inf
   std::string intrinsics_keys[] = {"Intrinsic_data_move_l12ub", "Intrinsic_data_move_l0c2ub",
                                    "Intrinsic_fix_pipe_l0c2out", "Intrinsic_data_move_out2l1_nd2nz",
                                    "Intrinsic_matmul_ub_to_ub", "Intrinsic_conv_ub_to_ub",
-                                   "Intrinsic_data_move_l12bt"};
+                                   "Intrinsic_data_move_l12bt", "Intrinsic_mmad"};
   for (string key : intrinsics_keys) {
     if (compile_info_json.contains("hardware_info") && compile_info_json["hardware_info"].contains(key) &&
         compile_info_json["hardware_info"][key].get<bool>()) {
       intrinsics[key] = "float16";
       if (key.find("Intrinsic_data_move_l12bt") != string::npos) {
         intrinsics[key] = "bf16";
+      }
+      if (key.find("Intrinsic_mmad") != string::npos) {
+        intrinsics[key] = "s8s4";
       }
     }
   }

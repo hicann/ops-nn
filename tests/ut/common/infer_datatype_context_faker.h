@@ -36,27 +36,17 @@ public:
     InferDataTypeContextFaker& IrInstanceNum(const std::vector<uint32_t>& instanceNum);
 
     InferDataTypeContextFaker& NodeInputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-        const gert::StorageShape& shape = {});
+        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
 
     InferDataTypeContextFaker& NodeOutputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-        const gert::StorageShape& shape = {});
+        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
 
     template <typename T>
     InferDataTypeContextFaker& Attr(const std::string& attrName, T attr)
     {
-        OpInferDataTypeContextBuilder::MutableOpInfo().Attr(AscendString(attrName.c_str()), attr);
+        OpContextBuilderBase::AppendAttr(attr);
         return *this;
     }
-
-    InferDataTypeContextFaker& Attr(const std::string& attrName, const std::string& attr)
-    {
-        OpInferDataTypeContextBuilder::MutableOpInfo().Attr(attrName.c_str(), AscendString(attr.c_str()));
-        return *this;
-    }
-
-    InferDataTypeContextFaker& InputTensors(const std::vector<Tensor*>& inputTensors);
 
     InferDataTypeContextFaker& InputDataTypes(const std::vector<void*>& inputDataTypes);
 

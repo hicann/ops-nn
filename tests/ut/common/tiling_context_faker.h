@@ -26,11 +26,14 @@ public:
 
     TilingContextFaker& SetOpType(const std::string opType);
 
+    // 可选调用，用来表达有输入输出个数
     TilingContextFaker& NodeIoNum(size_t inputNum, size_t outputNum);
 
+    // 可选调用，对于tensor list和可选输入不带的场景，vector对应索引的数值可大于1或者0
     TilingContextFaker& IrInstanceNum(
         const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum);
 
+    // 可选调用，只针对输入，对于tensor list和可选输入不带的场景，vector对应索引的数值可大于1或者0
     TilingContextFaker& IrInstanceNum(const std::vector<uint32_t>& instanceNum);
 
     TilingContextFaker& NodeInputTd(
@@ -42,11 +45,13 @@ public:
     template <typename T>
     TilingContextFaker& Attr(const std::string& attrName, T attr)
     {
-        OpTilingContextBuilder::MutableOpInfo().Attr(attrName.c_str(), attr);
+        OpContextBuilderBase::AppendAttr(attr);
         return *this;
     }
 
     TilingContextFaker& InputShapes(const std::initializer_list<void*>& inputShapes);
+
+    TilingContextFaker& InputShapes(const std::vector<void*>& inputShapes);
 
     TilingContextFaker& InputShapes(const std::vector<Shape*>& inputShapes);
 

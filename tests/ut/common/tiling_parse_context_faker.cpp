@@ -24,13 +24,13 @@ TilingParseContextFaker::TilingParseContextFaker(TilingParseContextFaker&& faker
 TilingParseContextFaker& TilingParseContextFaker::SetOpType(const std::string opType)
 {
     opType_ = opType;
-    OpTilingParseContextBuilder::MutableOpInfo().OpType(opType.c_str()).OpName(opType.c_str());
+    OpTilingParseContextBuilder::OpType(opType.c_str()).OpName(opType.c_str());
     return *this;
 }
 
 TilingParseContextFaker& TilingParseContextFaker::KernelIONum(size_t inputNum, size_t outputNum)
 {
-    OpTilingParseContextBuilder::MutableOpInfo().IONum(inputNum, outputNum);
+    OpTilingParseContextBuilder::IONum(inputNum, outputNum);
     return *this;
 }
 
@@ -46,7 +46,7 @@ TilingParseContextFaker& TilingParseContextFaker::Inputs(const std::vector<void*
 TilingParseContextFaker& TilingParseContextFaker::Outputs(const std::vector<void*>& outputs)
 {
     void* compileInfo = outputs.front();
-    OpTilingParseContextBuilder::CompileInfo(compileInfo);
+    OpTilingParseContextBuilder::CompiledInfo(compileInfo);
     return *this;
 }
 

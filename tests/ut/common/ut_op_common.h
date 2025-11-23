@@ -22,7 +22,9 @@
 #include "runtime/infer_shape_context.h"
 #include "runtime/kernel_context.h"
 #include "infer_shape_context_faker.h"
+#include "infer_shaperange_context_faker.h"
 #include "infer_datatype_context_faker.h"
+#include "op_impl_registry.h"
 #include "graph/operator.h"
 
 using namespace std;

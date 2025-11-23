@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include "infer_shape_context_faker.h"
@@ -24,20 +25,25 @@ InferShapeContextFaker::InferShapeContextFaker(InferShapeContextFaker&& faker)
 InferShapeContextFaker& InferShapeContextFaker::SetOpType(const std::string opType)
 {
     opType_ = opType;
-    OpInferShapeContextBuilder::MutableOpInfo().OpType(opType.c_str()).OpName(opType.c_str());
+    OpInferShapeContextBuilder::OpType(opType.c_str()).OpName(opType.c_str());
     return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::NodeIoNum(size_t inputNum, size_t outputNum)
 {
-    OpInferShapeContextBuilder::MutableOpInfo().IONum(inputNum, outputNum);
+    OpInferShapeContextBuilder::IONum(inputNum, outputNum);
+    return *this;
+}
+
+InferShapeContextFaker& InferShapeContextFaker::IrInputNum(size_t inputNum)
+{
     return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::IrInstanceNum(
     const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
 {
-    OpInferShapeContextBuilder::MutableOpInfo().IOInstanceNum(inputInstanceNum, outputInstanceNum);
+    OpInferShapeContextBuilder::IOInstanceNum(inputInstanceNum, outputInstanceNum);
     return *this;
 }
 
@@ -47,10 +53,18 @@ InferShapeContextFaker& InferShapeContextFaker::IrInstanceNum(const std::vector<
 }
 
 InferShapeContextFaker& InferShapeContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat,
-    const gert::StorageShape& shape)
+    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferShapeContextBuilder::MutableOpInfo().SetInputTd(index, dtype, originFormat, storageFormat, shape);
+    while (inputTensors_.size() <= index) {
+        inputTensors_.emplace_back(Tensor());
+    }
+
+    // 非空表示是Const Tensor，dtype已经有了
+    if (inputTensors_[index].GetAddr() == nullptr) {
+        inputTensors_[index].SetDataType(dtype);
+    }
+    inputTensors_[index].SetOriginFormat(originFormat);
+    inputTensors_[index].SetStorageFormat(storageFormat);
     return *this;
 }
 
@@ -61,28 +75,65 @@ InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::initializ
 
 InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<void*>& inputShapes)
 {
-    std::vector<Tensor*> inputTensors;
-    for (auto shape: inputShapes) {
-        inputTensors.push_back((Tensor*)shape);
+    std::vector<Shape*> inputShapesNew;
+    for (auto shape : inputShapes) {
+        inputShapesNew.push_back((Shape*)shape);
     }
-
-    return InputTensors(inputTensors);
+    return InputShapes(inputShapesNew);
 }
 
 InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<Shape*>& inputShapes)
 {
-    std::vector<Tensor*> inputTensors;
-    for (auto shape: inputShapes) {
-        inputTensors.push_back((Tensor*)shape);
+    for (size_t idx = 0; idx < inputShapes.size(); ++idx) {
+        if (inputShapes[idx] != nullptr) {
+            while (inputTensors_.size() <= idx) {
+                inputTensors_.emplace_back(Tensor());
+            }
+
+            inputTensors_[idx].MutableStorageShape() = *(inputShapes[idx]);
+            inputTensors_[idx].MutableOriginShape() = *(inputShapes[idx]);
+
+            Tensor* tensor = (Tensor*)inputShapes[idx];
+            const TensorData& data = tensor->GetTensorData();
+            if (data.GetPlacement() == TensorPlacement::kFollowing && tensor->GetAddr() != nullptr &&
+                data.GetSize() > 0) {
+                inputTensors_[idx].SetData(TensorData(tensor->GetAddr()));
+                inputTensors_[idx].SetDataType(tensor->GetDataType());
+            }
+        }
     }
 
-    return InputTensors(inputTensors);
+    return *this;
+}
+
+InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<StorageShape*>& inputShapes)
+{
+    for (size_t idx = 0; idx < inputShapes.size(); ++idx) {
+        if (inputShapes[idx] != nullptr) {
+            while (inputTensors_.size() <= idx) {
+                inputTensors_.emplace_back(Tensor());
+            }
+
+            inputTensors_[idx].MutableStorageShape() = inputShapes[idx]->MutableStorageShape();
+            inputTensors_[idx].MutableOriginShape() = inputShapes[idx]->MutableOriginShape();
+
+            Tensor* tensor = (Tensor*)inputShapes[idx];
+            const TensorData& data = tensor->GetTensorData();
+            if (data.GetPlacement() == TensorPlacement::kFollowing && tensor->GetAddr() != nullptr &&
+                data.GetSize() > 0) {
+                inputTensors_[idx].SetData(TensorData(tensor->GetAddr()));
+                inputTensors_[idx].SetDataType(tensor->GetDataType());
+            }
+        }
+    }
+
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::NodeOutputTd(
     int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
 {
-    OpInferShapeContextBuilder::MutableOpInfo().SetOutputTd(index, dtype, originFormat, storageFormat);
+    OpInferShapeContextBuilder::OutputTensorDesc(index, dtype, originFormat, storageFormat);
     return *this;
 }
 
@@ -94,42 +145,32 @@ InferShapeContextFaker& InferShapeContextFaker::InputTensors(const std::vector<T
 
 InferShapeContextFaker& InferShapeContextFaker::OutputShapes(const std::initializer_list<Shape*>& outputShapes)
 {
-    return OutputShapes(std::vector<Shape*>(outputShapes));
+    // 输出shape在这里是出参，不需要传入，这里兼容老用例，提供空实现
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::OutputShapes(const std::initializer_list<StorageShape*>& outputShapes)
 {
-    return OutputShapes(std::vector<StorageShape*>(outputShapes));
+    // 输出shape在这里是出参，不需要传入，这里兼容老用例，提供空实现
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::OutputShapes(const std::vector<Shape*>& outputShapes)
 {
-    outputShapes_.clear();
-    outputShapes_.resize(outputShapes.size());
-    std::vector<StorageShape*> outputShapePtrs;
-    for (size_t idx = 0; idx < outputShapes.size(); ++idx) {
-        auto shape = outputShapes[idx];
-        outputShapes_[idx].MutableStorageShape() = *shape;
-        outputShapes_[idx].MutableOriginShape() = *shape;
-        outputShapePtrs.emplace_back(&outputShapes_.back());
-    }
-
-    return OutputShapes(outputShapePtrs);
+    // 输出shape在这里是出参，不需要传入，这里兼容老用例，提供空实现
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::OutputShapes(const std::vector<StorageShape*>& outputShapes)
 {
-    OpInferShapeContextBuilder::OutputShapes(outputShapes);
+    // 输出shape在这里是出参，不需要传入，这里兼容老用例，提供空实现
     return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::OutputShapes(const std::vector<void*>& outputShapes)
 {
-    std::vector<StorageShape*> outputShapesNew;
-    for (auto& shape : outputShapes) {
-        outputShapesNew.emplace_back(static_cast<StorageShape*>(shape));
-    }
-    return OutputShapes(outputShapesNew);
+    // 输出shape在这里是出参，不需要传入，这里兼容老用例，提供空实现
+    return *this;
 }
 
 InferShapeContextFaker& InferShapeContextFaker::NodeAttrs(
@@ -147,6 +188,13 @@ KernelRunContextHolder InferShapeContextFaker::Build()
     if (opType_.empty()) {
         SetOpType("fakeOp");
     }
+
+    // InputShapes信息不全，需要NodeInputTd收集齐信息后在build之前传入Tensor
+    std::vector<Tensor*> inputTensorsPtr;
+    for (size_t idx = 0; idx < inputTensors_.size(); ++idx) {
+        inputTensorsPtr.push_back(&(inputTensors_[idx]));
+    }
+    InputTensors(inputTensorsPtr);
 
     inferShapeContextHolder_ = std::move(OpInferShapeContextBuilder::Build());
     SetContext(inferShapeContextHolder_.GetContext());

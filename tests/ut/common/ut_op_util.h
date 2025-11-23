@@ -19,6 +19,7 @@
 #include "graph/tensor.h"
 #include "infershape_test_util.h"
 #include "array_ops.h"
+#include "platform/platform_info.h"
 
 using namespace ge;
 

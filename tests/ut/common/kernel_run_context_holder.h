@@ -8,10 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_HOLDER_H_
 #define NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_HOLDER_H_
 
+#include <numeric>
 #include "op_tiling_parse_context_builder.h"
 #include "op_tiling_context_builder.h"
 #include "op_infer_shape_context_builder.h"
@@ -35,6 +35,10 @@ public:
         inputMaxTensors_ = std::move(holder.inputMaxTensors_);
         inputTensorRanges_ = std::move(holder.inputTensorRanges_);
 
+        inputInstanceNumPacked_ = std::move(holder.inputInstanceNumPacked_);
+        inputInstanceNum_ = std::move(holder.inputInstanceNum_);
+        outputInstanceNum_ = std::move(holder.outputInstanceNum_);
+
         tilingContextHolder_ = std::move(holder.tilingContextHolder_);
         tilingParseContextHolder_ = std::move(holder.tilingParseContextHolder_);
         inferShapeContextHolder_ = std::move(holder.inferShapeContextHolder_);
@@ -42,6 +46,7 @@ public:
         inferDataTypeContextHolder_ = std::move(holder.inferDataTypeContextHolder_);
         return *this;
     }
+
     KernelRunContextHolder(KernelRunContextHolder&& holder)
     {
         KernelRunContextHolder::operator=(std::move(holder));
@@ -58,9 +63,21 @@ public:
         return static_cast<T*>(context_);
     }
 
+    void CalcInputTensorIndex(int32_t inputIdx, int32_t& lowTensorIdx, int32_t& highTensorIdx)
+    {
+        if (inputIdx == 0) {
+            lowTensorIdx = 0;
+            highTensorIdx = inputInstanceNum_[0] - 1;
+            return;
+        }
+
+        lowTensorIdx = std::accumulate(inputInstanceNum_.begin(), inputInstanceNum_.begin() + inputIdx, 0);
+        highTensorIdx = lowTensorIdx + inputInstanceNum_[inputIdx] - 1;
+    }
+
 protected:
     // 需要在holder里存储部分数据，避免这些数据在Context析构前就被释放
-    void *context_ = nullptr;
+    void* context_ = nullptr;
     std::string opType_;
     std::vector<StorageShape> outputShapes_;
     std::vector<Tensor> inputTensors_;
@@ -69,6 +86,10 @@ protected:
     std::vector<Tensor> inputMaxTensors_;
     std::vector<Range<Tensor>> inputTensorRanges_;
 
+    std::vector<uint32_t> inputInstanceNumPacked_;
+    std::vector<uint32_t> inputInstanceNum_; // 存储用例原始输入，可能根据InputShapes里的空指针剔除占位
+    std::vector<uint32_t> outputInstanceNum_;
+
     // 这不是很好的实现，GE没有提供构造holder的接口，直接取private成员变量耦合更强，只能多存几份了
     ContextHolder<TilingContext> tilingContextHolder_;
     ContextHolder<TilingParseContext> tilingParseContextHolder_;
@@ -76,5 +97,5 @@ protected:
     ContextHolder<InferShapeRangeContext> inferShapeRangeContextHolder_;
     ContextHolder<InferDataTypeContext> inferDataTypeContextHolder_;
 };
-}
-#endif  //NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_HOLDER_H_
+} // namespace gert
+#endif // NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_HOLDER_H_
