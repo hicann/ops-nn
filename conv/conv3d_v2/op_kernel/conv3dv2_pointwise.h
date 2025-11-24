@@ -25,7 +25,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, const Conv3DTilingData *allTilingData)
+        GM_ADDR y, GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
     {
         this->InitTilingData(allTilingData);
         this->InitC1N1();

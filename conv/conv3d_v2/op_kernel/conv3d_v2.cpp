@@ -13,11 +13,10 @@
  * \brief
  */
 
-#include "conv3dv2_tiling_key.h"
-#include "conv3dv2_with_groups.h"
-#include "conv3dv2_pointwise.h"
-#include "conv3dv2_hw_mode.h"
 #include "conv3dv2.h"
+#include "lib/matmul_intf.h"
+#include "conv3dv2_tiling_key.h"
+#include "conv3d_v2_kernel_dispatch.h"
 
 using namespace AscendC;
 
@@ -40,15 +39,7 @@ constexpr QuantType quantType = QuantType::NO_QUANT;
 constexpr QuantType quantType = QuantType::PER_CHANNEL_NO_OFFSET;
 #endif
 
-template <class KernelType, class... InitArgs>
-__aicore__ inline void DispatchConvKernel(KernelType&& op, InitArgs... args) {
-    op.Init(args...);
-    ASC_OP_LOGD("[Conv3dv2] Op init success.\n");
-    op.Process();
-    ASC_OP_LOGD("[Conv3dv2] Op process success.\n");
-}
-
-template <uint8_t ConvL0PingPong, uint8_t BL1ByPassFlag, uint8_t GroupConvType, uint8_t OutputOrder>
+template <uint8_t ConvL0PingPongT, uint8_t BL1ByPassFlagT, uint8_t GroupConvTypeT, uint8_t OutputOrderT>
 __global__ __aicore__ void conv3dv2(
     GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset, GM_ADDR offset_w, GM_ADDR y,
     GM_ADDR workspace, GM_ADDR tiling)
@@ -61,6 +52,7 @@ __global__ __aicore__ void conv3dv2(
 
     GM_ADDR user_workspace = GetUserWorkspace(workspace);
     ASC_OP_LOGD("[Conv3dv2] Get workspace success.\n");
+    REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingData);
     GET_TILING_DATA(tilingData, tiling);
     ASC_OP_LOGD("[Conv3dv2] Get tiling data success.\n");
     ASC_OP_LOGD(
@@ -79,30 +71,11 @@ __global__ __aicore__ void conv3dv2(
     using BIAS_TYPE = ConvType<TPosition::GM, ConvFormat::ND, float>;
 #endif
 
-    using ParamType = Conv3DV2Param<ConvL0PingPong, BL1ByPassFlag, GroupConvType, OutputOrder, quantType>;
-    if constexpr (aFormat == ConvFormat::NCDHW) {
-        // PointWise
-        if constexpr (
-            BL1ByPassFlag == static_cast<uint8_t>(ConvBL1ByPass::BYPASS_OFF) &&
-            GroupConvType == static_cast<uint8_t>(GroupConvType::NoGroup_Conv) &&
-            OutputOrder == static_cast<uint8_t>(OutputOrder::M_Mode)) {
-            KernelConv3DV2PointWise<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, ParamType> op;
-            DispatchConvKernel(op, x, filter, bias, scale, offset, y, user_workspace, &tilingData);
-        }
-
-    } else if constexpr (GroupConvType == static_cast<uint8_t>(GroupConvType::GroupConv_Weight_Gfz)) {
-        // Group Convolution (Only if aFormat != NCDHW)
-        KernelConv3DV2WithGroups<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, ParamType> op;
-        DispatchConvKernel(op, x, filter, bias, scale, offset, y, user_workspace, &tilingData);
-
-    } else if constexpr (OutputOrder == static_cast<uint8_t>(OutputOrder::HW_Mode)) {
-        // HW mode (The conditions above are false)
-        KernelConv3DV2HwMode<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, ParamType> op;
-        DispatchConvKernel(op, x, filter, bias, scale, offset, y, user_workspace, &tilingData);
-
-    } else {
-        // base (Default)
-        KernelConv3DV2<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, ParamType> op;
-        DispatchConvKernel(op, x, filter, bias, scale, offset, y, user_workspace, &tilingData);
-    }
+    DispatchConv3DV2Kernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE,
+                           static_cast<ConvL0PingPong>(ConvL0PingPongT),
+                           static_cast<ConvBL1ByPass>(BL1ByPassFlagT),
+                           static_cast<GroupConvType>(GroupConvTypeT),
+                           static_cast<OutputOrder>(OutputOrderT),
+                           quantType>(
+        x, filter, bias, scale, offset, y, user_workspace, &tilingData);
 }

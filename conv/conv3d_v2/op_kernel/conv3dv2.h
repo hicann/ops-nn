@@ -19,21 +19,10 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "conv3d/conv3d_api.h"
-#include "lib/matmul_intf.h"
+#include "conv3d_v2_tiling_data.h"
 
 using namespace AscendC;
 using namespace conv3d;
-
-template <uint8_t pingPong_T, uint8_t bl1BypassFlag_T, uint8_t groupConvType_T,
-          uint8_t outputOrder_T, QuantType quantType_T>
-struct Conv3DV2Param : public ConvParam {
-    __aicore__ inline Conv3DV2Param() = default;
-    constexpr static int8_t outputOrder = static_cast<int8_t>(outputOrder_T);
-    constexpr static int8_t l0pingpong = static_cast<int8_t>(pingPong_T);
-    constexpr static int8_t bl1bypass = static_cast<int8_t>(bl1BypassFlag_T);
-    constexpr static int8_t groupConvType = static_cast<int8_t>(groupConvType_T);
-    constexpr static int8_t quantType = static_cast<int8_t>(quantType_T);
-};
 
 struct DataToFill {
     __aicore__ inline DataToFill(uint64_t &singleCoreDim_, uint64_t &dimIdxStart_, bool &isDimTail_)
@@ -50,7 +39,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, const Conv3DTilingData *allTilingData)
+        GM_ADDR y, GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
     {
         if ASCEND_IS_AIV {
             blockIdx = blockIdx / subblocknum;
@@ -75,7 +64,7 @@ public:
     }
 
 protected:
-    __aicore__ inline void InitTilingData(const Conv3DTilingData *allTilingData)
+    __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
     {
         this->allTilingData = allTilingData;
         this->conv3dRunInfo = &(allTilingData->conv3dRunInfo);
@@ -274,9 +263,9 @@ protected:
     GlobalTensor<float> scaleGm;
 
     // Tiling data
-    const TConv3DTiling *conv3dApiTiling;
-    const Conv3DRunInfo *conv3dRunInfo;
-    const Conv3DTilingData *allTilingData;
+    const Ops::NN::Conv3dV2::TConv3DTiling *conv3dApiTiling;
+    const Ops::NN::Conv3dV2::Conv3DRunInfo *conv3dRunInfo;
+    const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData;
 
     uint32_t blockIdx = GetBlockIdx();
     uint32_t subblocknum = GetSubBlockNum();
@@ -310,9 +299,9 @@ protected:
 
     static constexpr uint8_t n0 = 16;
     static constexpr uint8_t SINGLE_BLOCK_SIZE = 32;
-    static constexpr uint8_t c0In = SINGLE_BLOCK_SIZE / sizeof(A_T);
-    static constexpr uint8_t c0K = SINGLE_BLOCK_SIZE / sizeof(B_T);
-    static constexpr uint8_t c0Out = SINGLE_BLOCK_SIZE / sizeof(C_T);
+    static constexpr uint8_t c0In = SINGLE_BLOCK_SIZE / static_cast<uint8_t>(sizeof(A_T));
+    static constexpr uint8_t c0K = SINGLE_BLOCK_SIZE / static_cast<uint8_t>(sizeof(B_T));
+    static constexpr uint8_t c0Out = SINGLE_BLOCK_SIZE / static_cast<uint8_t>(sizeof(C_T));
 };
 
 #endif // CONV3DV2_H

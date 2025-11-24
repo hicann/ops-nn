@@ -21,6 +21,7 @@
 #include "conv3d_config.h"
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "../conv3d_v2_tiling_data.h"
 #include "kernel_utils.h"
 
 namespace Conv3dFunc {
@@ -30,12 +31,12 @@ __aicore__ inline void InitKDirectionBaseValue(
     Intf *self, uint64_t updateKAL1 = 0, uint64_t updateKBL1 = 0, uint64_t updateKL0 = 0)
 {
     // K方向变量计算
-    uint64_t currentKAL1 = updateKAL1 == 0 ? self->ctx.conv3dTiling->kAL1 : updateKAL1;
-    uint64_t currentKBL1 = updateKBL1 == 0 ? self->ctx.conv3dTiling->kBL1 : updateKBL1;
+    uint64_t currentKAL1 = updateKAL1 == 0UL ? static_cast<uint64_t>(self->ctx.conv3dTiling->kAL1) : updateKAL1;
+    uint64_t currentKBL1 = updateKBL1 == 0UL ? static_cast<uint64_t>(self->ctx.conv3dTiling->kBL1) : updateKBL1;
 
     self->ctx.cin1 = CeilDIV(self->ctx.singleCoreCin, self->ctx.cin0);
     if constexpr (!Intf::bl1bypass && Intf::groupConvType) {
-        self->ctx.singleCoreKL0 = updateKL0 == 0 ? self->ctx.conv3dTiling->kL0 : updateKL0;
+        self->ctx.singleCoreKL0 = updateKL0 == 0UL ? static_cast<uint64_t>(self->ctx.conv3dTiling->kL0) : updateKL0;
     } else {
         self->ctx.singleCoreKL0 = self->ctx.conv3dTiling->kL0;
     }
@@ -178,7 +179,7 @@ struct Init {
 
     static __aicore__ inline void InitParams(Intf *self, const void *__restrict tiling)
     {
-        self->ctx.conv3dTiling = (TConv3DTiling *)tiling;
+        self->ctx.conv3dTiling = static_cast<const Ops::NN::Conv3dV2::TConv3DTiling *>(tiling);
         self->ctx.kernelH = self->ctx.conv3dTiling->kernelH;
         self->ctx.kernelW = self->ctx.conv3dTiling->kernelW;
         self->ctx.kernelD = self->ctx.conv3dTiling->kernelD;
@@ -240,11 +241,11 @@ struct Init {
         }
         uint64_t biasBTSpacesize = self->ctx.conv3dTiling->nL0;
 
-        uint64_t hoAL1Max = ((self->ctx.conv3dTiling->mAL1 < self->ctx.singleCoreM ? self->ctx.conv3dTiling->mAL1
-                                                                                   : self->ctx.singleCoreM) /
-                                self->ctx.orgWo) +
-                            2;
-        uint64_t hiAL1Max = (hoAL1Max - 1) * self->ctx.strideH + self->ctx.dilatedKernelH;
+        uint64_t mAL1OrSingleCoreM = (self->ctx.conv3dTiling->mAL1 < self->ctx.singleCoreM)
+                                      ? self->ctx.conv3dTiling->mAL1
+                                      : self->ctx.singleCoreM;
+        uint64_t hoAL1Max = (mAL1OrSingleCoreM / self->ctx.orgWo) + 2UL;
+        uint64_t hiAL1Max = (hoAL1Max - 1UL) * self->ctx.strideH + self->ctx.dilatedKernelH;
         uint64_t win = self->ctx.orgWi;
         if constexpr (Intf::outputOrder) {
             hiAL1Max = self->ctx.dilatedKernelH;

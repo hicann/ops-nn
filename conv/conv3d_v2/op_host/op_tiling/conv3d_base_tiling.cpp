@@ -1,9 +1,9 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
 */
@@ -22,6 +22,7 @@
 #include "platform/platform_infos_def.h"
 #include "runtime_kb_api.h"
 #include "log/log.h"
+#include "securec.h"
 #include "graph/utils/type_utils.h"
 #include "error_util.h"
 #include "../../op_kernel/conv3dv2_tiling_key.h"
@@ -137,36 +138,36 @@ void Conv3dBaseTiling::PrintOpTilingData()
         "mDim: %u, nDim: %u, groupDim: %u, strideH: %u, strideW: %u, strideD: %u, dilationH: %u,"\
         "dilationW: %u, dilationD: %u, padHead: %u, padTail: %u, padTop: %u, padBottom: %u,"\
         "padLeft: %u, padRight: %u, hasBias: %u, k0: %u",
-        tilingData_.conv3dRunInfo.get_batch(),
-        tilingData_.conv3dRunInfo.get_cin(),
-        tilingData_.conv3dRunInfo.get_din(),
-        tilingData_.conv3dRunInfo.get_hin(),
-        tilingData_.conv3dRunInfo.get_win(),
-        tilingData_.conv3dRunInfo.get_cout(),
-        tilingData_.conv3dRunInfo.get_kd(),
-        tilingData_.conv3dRunInfo.get_kh(),
-        tilingData_.conv3dRunInfo.get_kw(),
-        tilingData_.conv3dRunInfo.get_dout(),
-        tilingData_.conv3dRunInfo.get_hout(),
-        tilingData_.conv3dRunInfo.get_wout(),
-        tilingData_.conv3dRunInfo.get_batchDim(),
-        tilingData_.conv3dRunInfo.get_doDim(),
-        tilingData_.conv3dRunInfo.get_mDim(),
-        tilingData_.conv3dRunInfo.get_nDim(),
-        tilingData_.conv3dRunInfo.get_groupDim(),
-        tilingData_.conv3dRunInfo.get_strideH(),
-        tilingData_.conv3dRunInfo.get_strideW(),
-        tilingData_.conv3dRunInfo.get_strideD(),
-        tilingData_.conv3dRunInfo.get_dilationH(),
-        tilingData_.conv3dRunInfo.get_dilationW(),
-        tilingData_.conv3dRunInfo.get_dilationD(),
-        tilingData_.conv3dRunInfo.get_padHead(),
-        tilingData_.conv3dRunInfo.get_padTail(),
-        tilingData_.conv3dRunInfo.get_padTop(),
-        tilingData_.conv3dRunInfo.get_padBottom(),
-        tilingData_.conv3dRunInfo.get_padLeft(),
-        tilingData_.conv3dRunInfo.get_padRight(),
-        tilingData_.conv3dRunInfo.get_hasBias(),
+        tilingData_.conv3dRunInfo.batch,
+        tilingData_.conv3dRunInfo.cin,
+        tilingData_.conv3dRunInfo.din,
+        tilingData_.conv3dRunInfo.hin,
+        tilingData_.conv3dRunInfo.win,
+        tilingData_.conv3dRunInfo.cout,
+        tilingData_.conv3dRunInfo.kd,
+        tilingData_.conv3dRunInfo.kh,
+        tilingData_.conv3dRunInfo.kw,
+        tilingData_.conv3dRunInfo.dout,
+        tilingData_.conv3dRunInfo.hout,
+        tilingData_.conv3dRunInfo.wout,
+        tilingData_.conv3dRunInfo.batchDim,
+        tilingData_.conv3dRunInfo.doDim,
+        tilingData_.conv3dRunInfo.mDim,
+        tilingData_.conv3dRunInfo.nDim,
+        tilingData_.conv3dRunInfo.groupDim,
+        tilingData_.conv3dRunInfo.strideH,
+        tilingData_.conv3dRunInfo.strideW,
+        tilingData_.conv3dRunInfo.strideD,
+        tilingData_.conv3dRunInfo.dilationH,
+        tilingData_.conv3dRunInfo.dilationW,
+        tilingData_.conv3dRunInfo.dilationD,
+        tilingData_.conv3dRunInfo.padHead,
+        tilingData_.conv3dRunInfo.padTail,
+        tilingData_.conv3dRunInfo.padTop,
+        tilingData_.conv3dRunInfo.padBottom,
+        tilingData_.conv3dRunInfo.padLeft,
+        tilingData_.conv3dRunInfo.padRight,
+        tilingData_.conv3dRunInfo.hasBias,
         g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_K_IDX));
 }
 
@@ -249,33 +250,33 @@ void Conv3dBaseTiling::PrintApiTilingDataShapeInfo()
         "kernelH: %u, kernelW: %u, groupOpt: %u, cinOpt: %u, coutOpt: %u, strideH: %u, "\
         "strideW: %u, strideD: %u, dilationH: %u, dilationW: %u, dilationD: %u, "\
         "padHead: %u, padTail: %u, padTop: %u, padBottom: %u, padLeft: %u, padRight: %u",
-        tilingData_.conv3dApiTiling.get_groups(),
-        tilingData_.conv3dApiTiling.get_orgDo(),
-        tilingData_.conv3dApiTiling.get_orgCo(),
-        tilingData_.conv3dApiTiling.get_orgHo(),
-        tilingData_.conv3dApiTiling.get_orgWo(),
-        tilingData_.conv3dApiTiling.get_orgDi(),
-        tilingData_.conv3dApiTiling.get_orgCi(),
-        tilingData_.conv3dApiTiling.get_orgHi(),
-        tilingData_.conv3dApiTiling.get_orgWi(),
-        tilingData_.conv3dApiTiling.get_kernelD(),
-        tilingData_.conv3dApiTiling.get_kernelH(),
-        tilingData_.conv3dApiTiling.get_kernelW(),
-        tilingData_.conv3dApiTiling.get_groupOpt(),
-        tilingData_.conv3dApiTiling.get_cinOpt(),
-        tilingData_.conv3dApiTiling.get_coutOpt(),
-        tilingData_.conv3dApiTiling.get_strideH(),
-        tilingData_.conv3dApiTiling.get_strideW(),
-        tilingData_.conv3dApiTiling.get_strideD(),
-        tilingData_.conv3dApiTiling.get_dilationH(),
-        tilingData_.conv3dApiTiling.get_dilationW(),
-        tilingData_.conv3dApiTiling.get_dilationD(),
-        tilingData_.conv3dApiTiling.get_padHead(),
-        tilingData_.conv3dApiTiling.get_padTail(),
-        tilingData_.conv3dApiTiling.get_padTop(),
-        tilingData_.conv3dApiTiling.get_padBottom(),
-        tilingData_.conv3dApiTiling.get_padLeft(),
-        tilingData_.conv3dApiTiling.get_padRight());
+        tilingData_.conv3dApiTiling.groups,
+        tilingData_.conv3dApiTiling.orgDo,
+        tilingData_.conv3dApiTiling.orgCo,
+        tilingData_.conv3dApiTiling.orgHo,
+        tilingData_.conv3dApiTiling.orgWo,
+        tilingData_.conv3dApiTiling.orgDi,
+        tilingData_.conv3dApiTiling.orgCi,
+        tilingData_.conv3dApiTiling.orgHi,
+        tilingData_.conv3dApiTiling.orgWi,
+        tilingData_.conv3dApiTiling.kernelD,
+        tilingData_.conv3dApiTiling.kernelH,
+        tilingData_.conv3dApiTiling.kernelW,
+        tilingData_.conv3dApiTiling.groupOpt,
+        tilingData_.conv3dApiTiling.cinOpt,
+        tilingData_.conv3dApiTiling.coutOpt,
+        tilingData_.conv3dApiTiling.strideH,
+        tilingData_.conv3dApiTiling.strideW,
+        tilingData_.conv3dApiTiling.strideD,
+        tilingData_.conv3dApiTiling.dilationH,
+        tilingData_.conv3dApiTiling.dilationW,
+        tilingData_.conv3dApiTiling.dilationD,
+        tilingData_.conv3dApiTiling.padHead,
+        tilingData_.conv3dApiTiling.padTail,
+        tilingData_.conv3dApiTiling.padTop,
+        tilingData_.conv3dApiTiling.padBottom,
+        tilingData_.conv3dApiTiling.padLeft,
+        tilingData_.conv3dApiTiling.padRight);
 }
 
 void Conv3dBaseTiling::PrintApiTilingDataDecisionInfo()
@@ -286,31 +287,31 @@ void Conv3dBaseTiling::PrintApiTilingDataDecisionInfo()
         "nBL1: %u, mAL1: %u, pBufferFlag: %u, offsetx: %d, bl1FullLoad: %u, al1FullLoad: %u, "\
         "bl1BypassFlag: %u, iterateMNOrder: %u, biasFullLoadFlag: %u, fixpParamsFullLoadFlag: %u,"\
         "hf32Enable: %u, hf32TransMode: %u, mUB: %u, nUB: %u, quantType: %u, scaleAndBiasLoadType: %u",
-        tilingData_.conv3dApiTiling.get_singleCoreCo(),
-        tilingData_.conv3dApiTiling.get_singleCoreDo(),
-        tilingData_.conv3dApiTiling.get_singleCoreM(),
-        tilingData_.conv3dApiTiling.get_singleCoreGroupOpt(),
-        tilingData_.conv3dApiTiling.get_mL0(),
-        tilingData_.conv3dApiTiling.get_kL0(),
-        tilingData_.conv3dApiTiling.get_nL0(),
-        tilingData_.conv3dApiTiling.get_kAL1(),
-        tilingData_.conv3dApiTiling.get_kBL1(),
-        tilingData_.conv3dApiTiling.get_nBL1(),
-        tilingData_.conv3dApiTiling.get_mAL1(),
-        tilingData_.conv3dApiTiling.get_pBufferFlag(),
-        tilingData_.conv3dApiTiling.get_offsetx(),
-        tilingData_.conv3dApiTiling.get_bl1FullLoad(),
-        tilingData_.conv3dApiTiling.get_al1FullLoad(),
-        tilingData_.conv3dApiTiling.get_bl1BypassFlag(),
-        tilingData_.conv3dApiTiling.get_iterateMNOrder(),
-        tilingData_.conv3dApiTiling.get_biasFullLoadFlag(),
-        tilingData_.conv3dApiTiling.get_fixpParamsFullLoadFlag(),
-        tilingData_.conv3dApiTiling.get_hf32Enable(),
-        tilingData_.conv3dApiTiling.get_hf32TransMode(),
-        tilingData_.conv3dApiTiling.get_mUB(),
-        tilingData_.conv3dApiTiling.get_nUB(),
-        tilingData_.conv3dApiTiling.get_quantType(),
-        tilingData_.conv3dApiTiling.get_scaleAndBiasLoadType());
+        tilingData_.conv3dApiTiling.singleCoreCo,
+        tilingData_.conv3dApiTiling.singleCoreDo,
+        tilingData_.conv3dApiTiling.singleCoreM,
+        tilingData_.conv3dApiTiling.singleCoreGroupOpt,
+        tilingData_.conv3dApiTiling.mL0,
+        tilingData_.conv3dApiTiling.kL0,
+        tilingData_.conv3dApiTiling.nL0,
+        tilingData_.conv3dApiTiling.kAL1,
+        tilingData_.conv3dApiTiling.kBL1,
+        tilingData_.conv3dApiTiling.nBL1,
+        tilingData_.conv3dApiTiling.mAL1,
+        tilingData_.conv3dApiTiling.pBufferFlag,
+        tilingData_.conv3dApiTiling.offsetx,
+        tilingData_.conv3dApiTiling.bl1FullLoad,
+        tilingData_.conv3dApiTiling.al1FullLoad,
+        tilingData_.conv3dApiTiling.bl1BypassFlag,
+        tilingData_.conv3dApiTiling.iterateMNOrder,
+        tilingData_.conv3dApiTiling.biasFullLoadFlag,
+        tilingData_.conv3dApiTiling.fixpParamsFullLoadFlag,
+        tilingData_.conv3dApiTiling.hf32Enable,
+        tilingData_.conv3dApiTiling.hf32TransMode,
+        tilingData_.conv3dApiTiling.mUB,
+        tilingData_.conv3dApiTiling.nUB,
+        tilingData_.conv3dApiTiling.quantType,
+        tilingData_.conv3dApiTiling.scaleAndBiasLoadType);
 }
 
 void Conv3dBaseTiling::PrintApiTilingDataScalarInfo()
@@ -320,22 +321,22 @@ void Conv3dBaseTiling::PrintApiTilingDataScalarInfo()
         "oriHixOriWixk0: %lu, oriWixk0: %lu, orgHixWi: %lu, orgHoxWo: %lu, mAL1DivmL0: %u, "\
         "nBL1DivnL0: %u, cin1InAL1: %u, kAL1Tail: %u, "\
         "cin1InAL1Tail: %u, KBL1Divk0: %u, kBL1Tail: %u, KBL1TailDivk0: %u, nL0xk0: %u, kL0xorgCoAlignN0: %lu",
-        tilingData_.conv3dApiTiling.get_kernelHxkernelW(),
-        tilingData_.conv3dApiTiling.get_cin1xOriHixOriWixk0(),
-        tilingData_.conv3dApiTiling.get_oriHixOriWixk0(),
-        tilingData_.conv3dApiTiling.get_oriWixk0(),
-        tilingData_.conv3dApiTiling.get_orgHixWi(),
-        tilingData_.conv3dApiTiling.get_orgHoxWo(),
-        tilingData_.conv3dApiTiling.get_mAL1DivmL0(),
-        tilingData_.conv3dApiTiling.get_nBL1DivnL0(),
-        tilingData_.conv3dApiTiling.get_cin1InAL1(),
-        tilingData_.conv3dApiTiling.get_kAL1Tail(),
-        tilingData_.conv3dApiTiling.get_cin1InAL1Tail(),
-        tilingData_.conv3dApiTiling.get_KBL1Divk0(),
-        tilingData_.conv3dApiTiling.get_kBL1Tail(),
-        tilingData_.conv3dApiTiling.get_KBL1TailDivk0(),
-        tilingData_.conv3dApiTiling.get_nL0xk0(),
-        tilingData_.conv3dApiTiling.get_kL0xorgCoAlignN0());
+        tilingData_.conv3dApiTiling.kernelHxkernelW,
+        tilingData_.conv3dApiTiling.cin1xOriHixOriWixk0,
+        tilingData_.conv3dApiTiling.oriHixOriWixk0,
+        tilingData_.conv3dApiTiling.oriWixk0,
+        tilingData_.conv3dApiTiling.orgHixWi,
+        tilingData_.conv3dApiTiling.orgHoxWo,
+        tilingData_.conv3dApiTiling.mAL1DivmL0,
+        tilingData_.conv3dApiTiling.nBL1DivnL0,
+        tilingData_.conv3dApiTiling.cin1InAL1,
+        tilingData_.conv3dApiTiling.kAL1Tail,
+        tilingData_.conv3dApiTiling.cin1InAL1Tail,
+        tilingData_.conv3dApiTiling.KBL1Divk0,
+        tilingData_.conv3dApiTiling.kBL1Tail,
+        tilingData_.conv3dApiTiling.KBL1TailDivk0,
+        tilingData_.conv3dApiTiling.nL0xk0,
+        tilingData_.conv3dApiTiling.kL0xorgCoAlignN0);
 }
 
 void Conv3dBaseTiling::PrintLibApiTilingData()
@@ -504,7 +505,7 @@ uint64_t Conv3dBaseTiling::CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint3
                             static_cast<double>(shapeInfo_.dOut) / static_cast<double>(doDim) *
                             static_cast<double>(shapeInfo_.ho * shapeInfo_.wo) /
                             static_cast<double>(mDim) / static_cast<double>(opInfo_.l2Rate);
-    double singleM1 = outputOrder_ == M_Mode ?
+    double singleM1 = outputOrder_ == M_MODE ?
             static_cast<double>(CeilDiv(shapeInfo_.ho * shapeInfo_.wo, blockDimConst.m0)) / static_cast<double>(mDim) :
             static_cast<double>(CeilDiv(CeilDiv(shapeInfo_.ho, mDim) * shapeInfo_.wo, blockDimConst.m0));
     double cubeCalcCost = static_cast<double>(shapeInfo_.batch) / static_cast<double>(batchDim) *
@@ -616,9 +617,9 @@ ge::graphStatus Conv3dBaseTiling::CheckInputLimitsHwMode()
 
 ge::graphStatus Conv3dBaseTiling::InitOutputOrder()
 {
-    uint64_t minL1LoadSize = CalcMinL1LoadSize(M_Mode);
+    uint64_t minL1LoadSize = CalcMinL1LoadSize(M_MODE);
     if (minL1LoadSize <= opInfo_.l1Size) {
-        outputOrder_ = M_Mode;
+        outputOrder_ = M_MODE;
         return ge::GRAPH_SUCCESS;
     } else if (isPointWise) {
         OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
@@ -654,7 +655,7 @@ uint64_t Conv3dBaseTiling::CalcMinL1LoadSize(int8_t outputOrder)
 
     uint32_t minBiasSize = flagInfo_.hasBias ? AlignB(n0 * biasDtypeSize, C0_SIZE): 0;
     uint64_t minAL1Size = 0;
-    if (outputOrder == M_Mode) {
+    if (outputOrder == M_MODE) {
         uint64_t hoAL1min = m0 / shapeInfo_.wo + 2;
         uint64_t tmpHiAL1 = InferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
         minAL1Size = tmpHiAL1 * shapeInfo_.wi * k0 * fMapDtypeSize;
@@ -850,7 +851,7 @@ void Conv3dBaseTiling::SetSingleOutputShapeByMode()
     int32_t singleCoreCo = blockDimRes.nDim == 1 ? shapeInfo_.coutOpt :
         AlignB(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_N_IDX)) / blockDimRes.nDim;
     int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), blockDimRes.doDim);
-    if (outputOrder_ == M_Mode) {
+    if (outputOrder_ == M_MODE) {
         int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(blockDimRes.mDim));
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo);
     } else {
@@ -861,36 +862,36 @@ void Conv3dBaseTiling::SetSingleOutputShapeByMode()
 
 ge::graphStatus Conv3dBaseTiling::InitConv3dApiTiling()
 {
-    tilingData_.conv3dRunInfo.set_batch(shapeInfo_.batch);
-    tilingData_.conv3dRunInfo.set_cin(shapeInfo_.cIn);
-    tilingData_.conv3dRunInfo.set_din(shapeInfo_.di);
-    tilingData_.conv3dRunInfo.set_hin(shapeInfo_.hi);
-    tilingData_.conv3dRunInfo.set_win(shapeInfo_.wi);
-    tilingData_.conv3dRunInfo.set_cout(shapeInfo_.cOut);
-    tilingData_.conv3dRunInfo.set_kd(shapeInfo_.kd);
-    tilingData_.conv3dRunInfo.set_kh(shapeInfo_.kh);
-    tilingData_.conv3dRunInfo.set_kw(shapeInfo_.kw);
-    tilingData_.conv3dRunInfo.set_dout(shapeInfo_.dOut);
-    tilingData_.conv3dRunInfo.set_hout(shapeInfo_.ho);
-    tilingData_.conv3dRunInfo.set_wout(shapeInfo_.wo);
-    tilingData_.conv3dRunInfo.set_batchDim(blockDimRes.batchDim);
-    tilingData_.conv3dRunInfo.set_mDim(blockDimRes.mDim);
-    tilingData_.conv3dRunInfo.set_nDim(blockDimRes.nDim);
-    tilingData_.conv3dRunInfo.set_doDim(blockDimRes.doDim);
-    tilingData_.conv3dRunInfo.set_groupDim(blockDimRes.groupDim);
-    tilingData_.conv3dRunInfo.set_strideH(attrInfo_.strideH);
-    tilingData_.conv3dRunInfo.set_strideW(attrInfo_.strideW);
-    tilingData_.conv3dRunInfo.set_strideD(attrInfo_.strideD);
-    tilingData_.conv3dRunInfo.set_dilationH(attrInfo_.dilationH);
-    tilingData_.conv3dRunInfo.set_dilationW(attrInfo_.dilationW);
-    tilingData_.conv3dRunInfo.set_dilationD(attrInfo_.dilationD);
-    tilingData_.conv3dRunInfo.set_padHead(attrInfo_.padh);
-    tilingData_.conv3dRunInfo.set_padTail(attrInfo_.padt);
-    tilingData_.conv3dRunInfo.set_padTop(attrInfo_.padu);
-    tilingData_.conv3dRunInfo.set_padBottom(attrInfo_.padd);
-    tilingData_.conv3dRunInfo.set_padLeft(attrInfo_.padl);
-    tilingData_.conv3dRunInfo.set_padRight(attrInfo_.padr);
-    tilingData_.conv3dRunInfo.set_hasBias(flagInfo_.hasBias);
+    tilingData_.conv3dRunInfo.batch = shapeInfo_.batch;
+    tilingData_.conv3dRunInfo.cin = shapeInfo_.cIn;
+    tilingData_.conv3dRunInfo.din = shapeInfo_.di;
+    tilingData_.conv3dRunInfo.hin = shapeInfo_.hi;
+    tilingData_.conv3dRunInfo.win = shapeInfo_.wi;
+    tilingData_.conv3dRunInfo.cout = shapeInfo_.cOut;
+    tilingData_.conv3dRunInfo.kd = shapeInfo_.kd;
+    tilingData_.conv3dRunInfo.kh = shapeInfo_.kh;
+    tilingData_.conv3dRunInfo.kw = shapeInfo_.kw;
+    tilingData_.conv3dRunInfo.dout = shapeInfo_.dOut;
+    tilingData_.conv3dRunInfo.hout = shapeInfo_.ho;
+    tilingData_.conv3dRunInfo.wout = shapeInfo_.wo;
+    tilingData_.conv3dRunInfo.batchDim = blockDimRes.batchDim;
+    tilingData_.conv3dRunInfo.mDim = blockDimRes.mDim;
+    tilingData_.conv3dRunInfo.nDim = blockDimRes.nDim;
+    tilingData_.conv3dRunInfo.doDim = blockDimRes.doDim;
+    tilingData_.conv3dRunInfo.groupDim = blockDimRes.groupDim;
+    tilingData_.conv3dRunInfo.strideH = attrInfo_.strideH;
+    tilingData_.conv3dRunInfo.strideW = attrInfo_.strideW;
+    tilingData_.conv3dRunInfo.strideD = attrInfo_.strideD;
+    tilingData_.conv3dRunInfo.dilationH = attrInfo_.dilationH;
+    tilingData_.conv3dRunInfo.dilationW = attrInfo_.dilationW;
+    tilingData_.conv3dRunInfo.dilationD = attrInfo_.dilationD;
+    tilingData_.conv3dRunInfo.padHead = attrInfo_.padh;
+    tilingData_.conv3dRunInfo.padTail = attrInfo_.padt;
+    tilingData_.conv3dRunInfo.padTop = attrInfo_.padu;
+    tilingData_.conv3dRunInfo.padBottom = attrInfo_.padd;
+    tilingData_.conv3dRunInfo.padLeft = attrInfo_.padl;
+    tilingData_.conv3dRunInfo.padRight = attrInfo_.padr;
+    tilingData_.conv3dRunInfo.hasBias = flagInfo_.hasBias;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -903,11 +904,11 @@ ge::graphStatus Conv3dBaseTiling::DoOpTiling()
 
     if (GetTilingFromRepo()) {
         OP_LOGD(context_->GetNodeName(), "Conv3D AscendC: get tiling from knowledge_tiling.");
-        blockDimRes.batchDim = tilingData_.conv3dRunInfo.get_batchDim();
-        blockDimRes.nDim = tilingData_.conv3dRunInfo.get_nDim();
-        blockDimRes.mDim = tilingData_.conv3dRunInfo.get_mDim();
-        blockDimRes.doDim = tilingData_.conv3dRunInfo.get_doDim();
-        blockDimRes.groupDim = tilingData_.conv3dRunInfo.get_groupDim();
+        blockDimRes.batchDim = tilingData_.conv3dRunInfo.batchDim;
+        blockDimRes.nDim = tilingData_.conv3dRunInfo.nDim;
+        blockDimRes.mDim = tilingData_.conv3dRunInfo.mDim;
+        blockDimRes.doDim = tilingData_.conv3dRunInfo.doDim;
+        blockDimRes.groupDim = tilingData_.conv3dRunInfo.groupDim;
 
         SetAdditionalTilingInfo();
 
@@ -1306,82 +1307,82 @@ bool Conv3dBaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuni
 
 void Conv3dBaseTiling::TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling)
 {
-    tilingData_.conv3dApiTiling.set_groups(aoeTiling->groups);
-    tilingData_.conv3dApiTiling.set_orgCi(aoeTiling->orgCi);
-    tilingData_.conv3dApiTiling.set_orgDi(aoeTiling->orgDi);
-    tilingData_.conv3dApiTiling.set_orgHi(aoeTiling->orgHi);
-    tilingData_.conv3dApiTiling.set_orgWi(aoeTiling->orgWi);
-    tilingData_.conv3dApiTiling.set_orgDo(aoeTiling->orgDo);
-    tilingData_.conv3dApiTiling.set_orgCo(aoeTiling->orgCo);
-    tilingData_.conv3dApiTiling.set_orgHo(aoeTiling->orgHo);
-    tilingData_.conv3dApiTiling.set_orgWo(aoeTiling->orgWo);
-    tilingData_.conv3dApiTiling.set_kernelD(aoeTiling->kernelD);
-    tilingData_.conv3dApiTiling.set_kernelH(aoeTiling->kernelH);
-    tilingData_.conv3dApiTiling.set_kernelW(aoeTiling->kernelW);
-    tilingData_.conv3dApiTiling.set_singleCoreDo(aoeTiling->singleCoreDo);
-    tilingData_.conv3dApiTiling.set_singleCoreCo(aoeTiling->singleCoreCo);
-    tilingData_.conv3dApiTiling.set_singleCoreM(aoeTiling->singleCoreM);
-    tilingData_.conv3dApiTiling.set_mL0(aoeTiling->mL0);
-    tilingData_.conv3dApiTiling.set_kL0(aoeTiling->kL0);
-    tilingData_.conv3dApiTiling.set_nL0(aoeTiling->nL0);
-    tilingData_.conv3dApiTiling.set_kAL1(aoeTiling->kAL1);
-    tilingData_.conv3dApiTiling.set_kBL1(aoeTiling->kBL1);
-    tilingData_.conv3dApiTiling.set_nBL1(aoeTiling->nBL1);
-    tilingData_.conv3dApiTiling.set_mAL1(aoeTiling->mAL1);
-    tilingData_.conv3dApiTiling.set_strideD(aoeTiling->strideD);
-    tilingData_.conv3dApiTiling.set_strideH(aoeTiling->strideH);
-    tilingData_.conv3dApiTiling.set_strideW(aoeTiling->strideW);
-    tilingData_.conv3dApiTiling.set_dilationD(aoeTiling->dilationD);
-    tilingData_.conv3dApiTiling.set_dilationH(aoeTiling->dilationH);
-    tilingData_.conv3dApiTiling.set_dilationW(aoeTiling->dilationW);
-    tilingData_.conv3dApiTiling.set_padHead(aoeTiling->padHead);
-    tilingData_.conv3dApiTiling.set_padTail(aoeTiling->padTail);
-    tilingData_.conv3dApiTiling.set_padTop(aoeTiling->padTop);
-    tilingData_.conv3dApiTiling.set_padBottom(aoeTiling->padBottom);
-    tilingData_.conv3dApiTiling.set_padLeft(aoeTiling->padLeft);
-    tilingData_.conv3dApiTiling.set_padRight(aoeTiling->padRight);
-    tilingData_.conv3dApiTiling.set_pBufferFlag(aoeTiling->pBufferFlag);
-    tilingData_.conv3dApiTiling.set_iterateMNOrder(aoeTiling->iterateMNOrder);
-    tilingData_.conv3dApiTiling.set_bl1FullLoad(aoeTiling->bl1FullLoad);
-    tilingData_.conv3dApiTiling.set_al1FullLoad(aoeTiling->al1FullLoad);
-    tilingData_.conv3dApiTiling.set_bl1BypassFlag(aoeTiling->bl1BypassFlag);
-    tilingData_.conv3dApiTiling.set_biasFullLoadFlag(aoeTiling->biasFullLoadFlag);
-    tilingData_.conv3dApiTiling.set_fixpParamsFullLoadFlag(aoeTiling->fixpParamsFullLoadFlag);
-    tilingData_.conv3dApiTiling.set_offsetx(aoeTiling->offsetx);
+    tilingData_.conv3dApiTiling.groups = aoeTiling->groups;
+    tilingData_.conv3dApiTiling.orgCi = aoeTiling->orgCi;
+    tilingData_.conv3dApiTiling.orgDi = aoeTiling->orgDi;
+    tilingData_.conv3dApiTiling.orgHi = aoeTiling->orgHi;
+    tilingData_.conv3dApiTiling.orgWi = aoeTiling->orgWi;
+    tilingData_.conv3dApiTiling.orgDo = aoeTiling->orgDo;
+    tilingData_.conv3dApiTiling.orgCo = aoeTiling->orgCo;
+    tilingData_.conv3dApiTiling.orgHo = aoeTiling->orgHo;
+    tilingData_.conv3dApiTiling.orgWo = aoeTiling->orgWo;
+    tilingData_.conv3dApiTiling.kernelD = aoeTiling->kernelD;
+    tilingData_.conv3dApiTiling.kernelH = aoeTiling->kernelH;
+    tilingData_.conv3dApiTiling.kernelW = aoeTiling->kernelW;
+    tilingData_.conv3dApiTiling.singleCoreDo = aoeTiling->singleCoreDo;
+    tilingData_.conv3dApiTiling.singleCoreCo = aoeTiling->singleCoreCo;
+    tilingData_.conv3dApiTiling.singleCoreM = aoeTiling->singleCoreM;
+    tilingData_.conv3dApiTiling.mL0 = aoeTiling->mL0;
+    tilingData_.conv3dApiTiling.kL0 = aoeTiling->kL0;
+    tilingData_.conv3dApiTiling.nL0 = aoeTiling->nL0;
+    tilingData_.conv3dApiTiling.kAL1 = aoeTiling->kAL1;
+    tilingData_.conv3dApiTiling.kBL1 = aoeTiling->kBL1;
+    tilingData_.conv3dApiTiling.nBL1 = aoeTiling->nBL1;
+    tilingData_.conv3dApiTiling.mAL1 = aoeTiling->mAL1;
+    tilingData_.conv3dApiTiling.strideD = aoeTiling->strideD;
+    tilingData_.conv3dApiTiling.strideH = aoeTiling->strideH;
+    tilingData_.conv3dApiTiling.strideW = aoeTiling->strideW;
+    tilingData_.conv3dApiTiling.dilationD = aoeTiling->dilationD;
+    tilingData_.conv3dApiTiling.dilationH = aoeTiling->dilationH;
+    tilingData_.conv3dApiTiling.dilationW = aoeTiling->dilationW;
+    tilingData_.conv3dApiTiling.padHead = aoeTiling->padHead;
+    tilingData_.conv3dApiTiling.padTail = aoeTiling->padTail;
+    tilingData_.conv3dApiTiling.padTop = aoeTiling->padTop;
+    tilingData_.conv3dApiTiling.padBottom = aoeTiling->padBottom;
+    tilingData_.conv3dApiTiling.padLeft = aoeTiling->padLeft;
+    tilingData_.conv3dApiTiling.padRight = aoeTiling->padRight;
+    tilingData_.conv3dApiTiling.pBufferFlag = aoeTiling->pBufferFlag;
+    tilingData_.conv3dApiTiling.iterateMNOrder = aoeTiling->iterateMNOrder;
+    tilingData_.conv3dApiTiling.bl1FullLoad = aoeTiling->bl1FullLoad;
+    tilingData_.conv3dApiTiling.al1FullLoad = aoeTiling->al1FullLoad;
+    tilingData_.conv3dApiTiling.bl1BypassFlag = aoeTiling->bl1BypassFlag;
+    tilingData_.conv3dApiTiling.biasFullLoadFlag = aoeTiling->biasFullLoadFlag;
+    tilingData_.conv3dApiTiling.fixpParamsFullLoadFlag = aoeTiling->fixpParamsFullLoadFlag;
+    tilingData_.conv3dApiTiling.offsetx = aoeTiling->offsetx;
 }
 
 void Conv3dBaseTiling::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling)
 {
-    tilingData_.conv3dRunInfo.set_batch(shapeInfo_.batch);
-    tilingData_.conv3dRunInfo.set_cin(aoeTiling->orgCi);
-    tilingData_.conv3dRunInfo.set_din(aoeTiling->orgDi);
-    tilingData_.conv3dRunInfo.set_hin(aoeTiling->orgHi);
-    tilingData_.conv3dRunInfo.set_win(aoeTiling->orgWi);
-    tilingData_.conv3dRunInfo.set_cout(aoeTiling->orgCo);
-    tilingData_.conv3dRunInfo.set_kd(aoeTiling->kernelD);
-    tilingData_.conv3dRunInfo.set_kh(aoeTiling->kernelH);
-    tilingData_.conv3dRunInfo.set_kw(aoeTiling->kernelW);
-    tilingData_.conv3dRunInfo.set_dout(aoeTiling->orgDo);
-    tilingData_.conv3dRunInfo.set_hout(aoeTiling->orgHo);
-    tilingData_.conv3dRunInfo.set_wout(aoeTiling->orgWo);
-    tilingData_.conv3dRunInfo.set_batchDim(aoeTiling->batchDim);
-    tilingData_.conv3dRunInfo.set_mDim(aoeTiling->mDim);
-    tilingData_.conv3dRunInfo.set_nDim(aoeTiling->nDim);
-    tilingData_.conv3dRunInfo.set_doDim(aoeTiling->doDim);
-    tilingData_.conv3dRunInfo.set_groupDim(aoeTiling->groupDim);
-    tilingData_.conv3dRunInfo.set_strideH(aoeTiling->strideH);
-    tilingData_.conv3dRunInfo.set_strideW(aoeTiling->strideW);
-    tilingData_.conv3dRunInfo.set_strideD(aoeTiling->strideD);
-    tilingData_.conv3dRunInfo.set_dilationH(aoeTiling->dilationH);
-    tilingData_.conv3dRunInfo.set_dilationW(aoeTiling->dilationW);
-    tilingData_.conv3dRunInfo.set_dilationD(aoeTiling->dilationD);
-    tilingData_.conv3dRunInfo.set_padHead(aoeTiling->padHead);
-    tilingData_.conv3dRunInfo.set_padTail(aoeTiling->padTail);
-    tilingData_.conv3dRunInfo.set_padTop(aoeTiling->padTop);
-    tilingData_.conv3dRunInfo.set_padBottom(aoeTiling->padBottom);
-    tilingData_.conv3dRunInfo.set_padLeft(aoeTiling->padLeft);
-    tilingData_.conv3dRunInfo.set_padRight(aoeTiling->padRight);
-    tilingData_.conv3dRunInfo.set_hasBias(flagInfo_.hasBias);
+    tilingData_.conv3dRunInfo.batch = shapeInfo_.batch;
+    tilingData_.conv3dRunInfo.cin = aoeTiling->orgCi;
+    tilingData_.conv3dRunInfo.din = aoeTiling->orgDi;
+    tilingData_.conv3dRunInfo.hin = aoeTiling->orgHi;
+    tilingData_.conv3dRunInfo.win = aoeTiling->orgWi;
+    tilingData_.conv3dRunInfo.cout = aoeTiling->orgCo;
+    tilingData_.conv3dRunInfo.kd = aoeTiling->kernelD;
+    tilingData_.conv3dRunInfo.kh = aoeTiling->kernelH;
+    tilingData_.conv3dRunInfo.kw = aoeTiling->kernelW;
+    tilingData_.conv3dRunInfo.dout = aoeTiling->orgDo;
+    tilingData_.conv3dRunInfo.hout = aoeTiling->orgHo;
+    tilingData_.conv3dRunInfo.wout = aoeTiling->orgWo;
+    tilingData_.conv3dRunInfo.batchDim = aoeTiling->batchDim;
+    tilingData_.conv3dRunInfo.mDim = aoeTiling->mDim;
+    tilingData_.conv3dRunInfo.nDim = aoeTiling->nDim;
+    tilingData_.conv3dRunInfo.doDim = aoeTiling->doDim;
+    tilingData_.conv3dRunInfo.groupDim = aoeTiling->groupDim;
+    tilingData_.conv3dRunInfo.strideH = aoeTiling->strideH;
+    tilingData_.conv3dRunInfo.strideW = aoeTiling->strideW;
+    tilingData_.conv3dRunInfo.strideD = aoeTiling->strideD;
+    tilingData_.conv3dRunInfo.dilationH = aoeTiling->dilationH;
+    tilingData_.conv3dRunInfo.dilationW = aoeTiling->dilationW;
+    tilingData_.conv3dRunInfo.dilationD = aoeTiling->dilationD;
+    tilingData_.conv3dRunInfo.padHead = aoeTiling->padHead;
+    tilingData_.conv3dRunInfo.padTail = aoeTiling->padTail;
+    tilingData_.conv3dRunInfo.padTop = aoeTiling->padTop;
+    tilingData_.conv3dRunInfo.padBottom = aoeTiling->padBottom;
+    tilingData_.conv3dRunInfo.padLeft = aoeTiling->padLeft;
+    tilingData_.conv3dRunInfo.padRight = aoeTiling->padRight;
+    tilingData_.conv3dRunInfo.hasBias = flagInfo_.hasBias;
 }
 
 void Conv3dBaseTiling::SetAdditionalTilingInfo()
@@ -1391,32 +1392,35 @@ void Conv3dBaseTiling::SetAdditionalTilingInfo()
     uint64_t n0 = static_cast<uint64_t>(g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_N_IDX));
     uint64_t singleCi1 = CeilDiv(shapeInfo_.cinOpt, k0);
     uint64_t ci0HkWk = shapeInfo_.kh * shapeInfo_.kw * k0;
-    uint64_t alignCinKhKwKd = AlignB(shapeInfo_.cinOpt, k0) * tilingData_.conv3dApiTiling.get_kernelH() * tilingData_.conv3dApiTiling.get_kernelW() * tilingData_.conv3dApiTiling.get_kernelD();
-    uint64_t kAL1TailCheck = alignCinKhKwKd % tilingData_.conv3dApiTiling.get_kAL1();
-    uint32_t kAL1Tail = kAL1TailCheck == 0 ? tilingData_.conv3dApiTiling.get_kAL1() : kAL1TailCheck;
-    uint64_t kBL1TailCheck = alignCinKhKwKd % tilingData_.conv3dApiTiling.get_kBL1();
-    uint32_t kBL1Tail = kBL1TailCheck == 0 ? tilingData_.conv3dApiTiling.get_kBL1() : kBL1TailCheck;
+    uint64_t alignCinKhKwKd = AlignB(shapeInfo_.cinOpt, k0) * tilingData_.conv3dApiTiling.kernelH * tilingData_.conv3dApiTiling.kernelW * tilingData_.conv3dApiTiling.kernelD;
+    uint64_t kAL1TailCheck = alignCinKhKwKd % tilingData_.conv3dApiTiling.kAL1;
+    uint32_t kAL1Tail = kAL1TailCheck == 0 ? tilingData_.conv3dApiTiling.kAL1 : kAL1TailCheck;
+    uint64_t kBL1TailCheck = alignCinKhKwKd % tilingData_.conv3dApiTiling.kBL1;
+    uint32_t kBL1Tail = kBL1TailCheck == 0 ? tilingData_.conv3dApiTiling.kBL1 : kBL1TailCheck;
 
-    tilingData_.conv3dApiTiling.set_groupOpt(attrInfo_.groupOpt);
-    tilingData_.conv3dApiTiling.set_coutOpt(static_cast<uint64_t>(shapeInfo_.coutOpt));
-    tilingData_.conv3dApiTiling.set_cinOpt(static_cast<uint64_t>(shapeInfo_.cinOpt));
-    tilingData_.conv3dApiTiling.set_singleCoreGroupOpt(singleCoreGroupOpt);
-    tilingData_.conv3dApiTiling.set_orgHixWi(tilingData_.conv3dApiTiling.get_orgHi() * tilingData_.conv3dApiTiling.get_orgWi());
-    tilingData_.conv3dApiTiling.set_orgHoxWo(tilingData_.conv3dApiTiling.get_orgHo() * tilingData_.conv3dApiTiling.get_orgWo());
-    tilingData_.conv3dApiTiling.set_cin1xOriHixOriWixk0(singleCi1 * tilingData_.conv3dApiTiling.get_orgHi() * tilingData_.conv3dApiTiling.get_orgWi() * k0);
-    tilingData_.conv3dApiTiling.set_oriHixOriWixk0(tilingData_.conv3dApiTiling.get_orgHi() * tilingData_.conv3dApiTiling.get_orgWi() * k0);
-    tilingData_.conv3dApiTiling.set_oriWixk0(tilingData_.conv3dApiTiling.get_orgWi() * k0);
-    tilingData_.conv3dApiTiling.set_kernelHxkernelW(tilingData_.conv3dApiTiling.get_kernelH() * tilingData_.conv3dApiTiling.get_kernelW());
-    tilingData_.conv3dApiTiling.set_nL0xk0(tilingData_.conv3dApiTiling.get_nL0() * k0);
-    tilingData_.conv3dApiTiling.set_kL0xorgCoAlignN0(tilingData_.conv3dApiTiling.get_kL0() * AlignB(tilingData_.conv3dApiTiling.get_orgCo(), n0));
-    tilingData_.conv3dApiTiling.set_mAL1DivmL0(CeilDiv(tilingData_.conv3dApiTiling.get_mAL1(), tilingData_.conv3dApiTiling.get_mL0()));
-    tilingData_.conv3dApiTiling.set_nBL1DivnL0(CeilDiv(tilingData_.conv3dApiTiling.get_nBL1(), tilingData_.conv3dApiTiling.get_nL0()));
-    tilingData_.conv3dApiTiling.set_cin1InAL1(tilingData_.conv3dApiTiling.get_kAL1() / ci0HkWk);
-    tilingData_.conv3dApiTiling.set_kAL1Tail(kAL1Tail);
-    tilingData_.conv3dApiTiling.set_cin1InAL1Tail(kAL1Tail / ci0HkWk);
-    tilingData_.conv3dApiTiling.set_KBL1Divk0(tilingData_.conv3dApiTiling.get_kBL1() / k0);
-    tilingData_.conv3dApiTiling.set_kBL1Tail(kBL1Tail);
-    tilingData_.conv3dApiTiling.set_KBL1TailDivk0(kBL1Tail / k0);
+    tilingData_.conv3dApiTiling.groupOpt = attrInfo_.groupOpt;
+    tilingData_.conv3dApiTiling.coutOpt = static_cast<uint64_t>(shapeInfo_.coutOpt);
+    tilingData_.conv3dApiTiling.cinOpt = static_cast<uint64_t>(shapeInfo_.cinOpt);
+    tilingData_.conv3dApiTiling.singleCoreGroupOpt = singleCoreGroupOpt;
+    tilingData_.conv3dApiTiling.orgHixWi = tilingData_.conv3dApiTiling.orgHi * tilingData_.conv3dApiTiling.orgWi;
+    tilingData_.conv3dApiTiling.orgHoxWo = tilingData_.conv3dApiTiling.orgHo * tilingData_.conv3dApiTiling.orgWo;
+    tilingData_.conv3dApiTiling.cin1xOriHixOriWixk0 = singleCi1 * tilingData_.conv3dApiTiling.orgHi * tilingData_.conv3dApiTiling.orgWi * k0;
+    tilingData_.conv3dApiTiling.oriHixOriWixk0 = tilingData_.conv3dApiTiling.orgHi * tilingData_.conv3dApiTiling.orgWi * k0;
+    tilingData_.conv3dApiTiling.oriWixk0 = tilingData_.conv3dApiTiling.orgWi * k0;
+    tilingData_.conv3dApiTiling.kernelHxkernelW = tilingData_.conv3dApiTiling.kernelH * tilingData_.conv3dApiTiling.kernelW;
+    tilingData_.conv3dApiTiling.nL0xk0 = tilingData_.conv3dApiTiling.nL0 * k0;
+    tilingData_.conv3dApiTiling.kL0xorgCoAlignN0 = tilingData_.conv3dApiTiling.kL0 * AlignB(tilingData_.conv3dApiTiling.orgCo, n0);
+    tilingData_.conv3dApiTiling.mAL1DivmL0 = CeilDiv(tilingData_.conv3dApiTiling.mAL1, tilingData_.conv3dApiTiling.mL0);
+    tilingData_.conv3dApiTiling.nBL1DivnL0 = CeilDiv(tilingData_.conv3dApiTiling.nBL1, tilingData_.conv3dApiTiling.nL0);
+    tilingData_.conv3dApiTiling.cin1InAL1 = tilingData_.conv3dApiTiling.kAL1 / ci0HkWk;
+    tilingData_.conv3dApiTiling.kAL1Tail = kAL1Tail;
+    tilingData_.conv3dApiTiling.cin1InAL1Tail = kAL1Tail / ci0HkWk;
+    tilingData_.conv3dApiTiling.KBL1Divk0 = tilingData_.conv3dApiTiling.kBL1 / k0;
+    tilingData_.conv3dApiTiling.kBL1Tail = kBL1Tail;
+    tilingData_.conv3dApiTiling.KBL1TailDivk0 = kBL1Tail / k0;
+
+    // Set outputOrder to tiling data
+    tilingData_.conv3dApiTiling.outputOrder = static_cast<uint8_t>(outputOrder_);
 }
 
 void Conv3dBaseTiling::InitConv3dOriginFormat()
@@ -1567,7 +1571,7 @@ ge::graphStatus Conv3dBaseTiling::GetWorkspaceSize()
     if (flagInfo_.hasScale) {
         wssize += blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.mDim *
                 blockDimRes.doDim * blockDimRes.groupDim * WORKSPACE_NUM *
-                tilingData_.conv3dApiTiling.get_nL0() * tilingData_.conv3dApiTiling.get_mL0() *
+                tilingData_.conv3dApiTiling.nL0 * tilingData_.conv3dApiTiling.mL0 *
                 g_dtypeSizeTab.at(conv3dApiTiling_.cubeInfo.madType);
     }
 
@@ -1577,9 +1581,20 @@ ge::graphStatus Conv3dBaseTiling::GetWorkspaceSize()
 
 ge::graphStatus Conv3dBaseTiling::PostTiling()
 {
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
-                             context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    void *tilingBuf = context_->GetRawTilingData()->GetData();
+    size_t tilingBufCap = context_->GetRawTilingData()->GetCapacity();
+    if (tilingBuf == nullptr || tilingBufCap < sizeof(tilingData_)) {
+        OP_LOGE(context_->GetNodeName(),
+                "Conv3D AscendC: tiling buffer null or capacity too small, cap=%zu need=%zu.",
+                tilingBufCap, sizeof(tilingData_));
+        return ge::GRAPH_FAILED;
+    }
+    errno_t cpyRet = memcpy_s(tilingBuf, tilingBufCap, &tilingData_, sizeof(tilingData_));
+    if (cpyRet != EOK) {
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: memcpy_s tiling data failed, ret=%d.", cpyRet);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
     context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.mDim *
                           blockDimRes.doDim * blockDimRes.groupDim);
 
@@ -1615,7 +1630,7 @@ void Conv3dBaseTiling::GetBlockDimRange()
     // nRange
     uint32_t n0 = g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_N_IDX);
     CalcCommFactor(CeilDiv(shapeInfo_.coutOpt, n0), opInfo_.aicoreNum, blockDimRanges.nRange);
-    if (outputOrder_ == M_Mode) {
+    if (outputOrder_ == M_MODE) {
         // mRange
         uint32_t m0 = g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_M_IDX);
         uint64_t m1 = CeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0);
@@ -1742,8 +1757,8 @@ ge::graphStatus Conv3dBaseTiling::DoLibApiTiling()
 }
 
 ge::graphStatus Conv3dBaseTiling::SetTilingKey() {
-    uint64_t pbufferFlag = tilingData_.conv3dApiTiling.get_pBufferFlag();
-    uint64_t bl1Bypass = tilingData_.conv3dApiTiling.get_bl1BypassFlag();
+    uint64_t pbufferFlag = tilingData_.conv3dApiTiling.pBufferFlag;
+    uint64_t bl1Bypass = tilingData_.conv3dApiTiling.bl1BypassFlag;
     uint64_t convL0PingPong = L0_PINGPONG_ALL_CLOSE;
     uint64_t groupConvType = NOGROUP_CONV;
 
@@ -1755,7 +1770,7 @@ ge::graphStatus Conv3dBaseTiling::SetTilingKey() {
     } else if (static_cast<bool>(pbufferFlag & PBUFFERFLAG_L0B_MASK)) {
         convL0PingPong = L0_PINGPONG_L0B_OPEN;
     }
-    if (tilingData_.conv3dApiTiling.get_groups() > 1) {
+    if (tilingData_.conv3dApiTiling.groups > 1) {
         groupConvType = GROUPCONV_WEIGHT_GFZ;
     }
     tilingKey_ = GET_TPL_TILING_KEY(convL0PingPong, bl1Bypass, groupConvType, static_cast<uint64_t>(outputOrder_));

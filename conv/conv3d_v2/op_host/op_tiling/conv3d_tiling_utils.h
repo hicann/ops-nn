@@ -17,7 +17,6 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV3D_TILING_UTILS_H
 
 #include <vector>
-#include "tiling/tiling_api.h"
 #include "conv3d_api_tiling.h"
 #include "conv3d_api_tiling_utils.h"
 
@@ -113,18 +112,6 @@ constexpr uint32_t MKN_N_IDX = 2;
 constexpr uint32_t COUNT_PARAMS_WITH_BIAS = 4; // [fmap, weight, bias, output]
 constexpr uint32_t COUNT_PARAMS_WITHOUT_BIAS = 3; // [fmap, weight, output]
 
-constexpr int8_t M_Mode = 0;
-constexpr int8_t HW_Mode = 1;
-
-// Tiling key keeps same as kernel side
-constexpr uint64_t L0_PINGPONG_ALL_CLOSE = 0;
-constexpr uint64_t L0_PINGPONG_L0A_OPEN = 1;
-constexpr uint64_t L0_PINGPONG_L0B_OPEN = 2;
-constexpr uint64_t L0_PINGPONG_ALL_OPEN = 3;
-
-constexpr uint64_t NOGROUP_CONV = 0;
-constexpr uint64_t GROUPCONV_WEIGHT_GFZ = 1;
-
 constexpr uint64_t INITIAL_AICORE_ZERO = 0;
 constexpr uint64_t INITIAL_L2_RATE_ZERO = 0;
 
@@ -169,20 +156,6 @@ struct Conv3DAscendcShapesInfo {
     uint64_t coutOpt = 1;
 };
 
-struct Conv3DDescInfo {
-    ge::DataType weightDtype = ge::DT_BF16;
-    ge::DataType fMapDtype = ge::DT_BF16;
-    ge::DataType biasDtype = ge::DT_FLOAT;
-    ge::DataType scaleDtype = ge::DT_FLOAT;
-    ge::DataType outDtype = ge::DT_BF16;
-
-    ge::Format weightFormat = ge::FORMAT_FRACTAL_Z_3D;
-    ge::Format fMapFormat = ge::FORMAT_NDC1HWC0;
-    ge::Format biasFormat = ge::FORMAT_ND;
-    ge::Format scaleFormat = ge::FORMAT_ND;
-    ge::Format outFormat = ge::FORMAT_NDC1HWC0;
-};
-
 struct Conv3DTilingFlag {
     bool hasBias = false;
     bool hasScale = false;
@@ -214,11 +187,6 @@ struct BlockDimRes {
   uint64_t minCost = 0;
 };
 
-static std::map<ge::DataType, std::string> g_dtypeToStrTab = {
-    {ge::DataType::DT_FLOAT16, "float16"}, {ge::DataType::DT_FLOAT, "float32"}, {ge::DataType::DT_BF16, "bfloat16"},
-    {ge::DataType::DT_INT8, "int8"}, {ge::DataType::DT_UINT8, "uint8"}, {ge::DataType::DT_INT64, "int64"},
-    {ge::DataType::DT_UINT64, "uint64"}, {ge::DataType::DT_INT32, "int32"}};
-
 static std::map<Conv3dApiTiling::ConvDtype, std::string> g_convDtypeToStr = {
     {Conv3dApiTiling::ConvDtype::FLOAT16, "float16"},
     {Conv3dApiTiling::ConvDtype::FLOAT32, "float32"},
@@ -229,41 +197,6 @@ static std::map<Conv3dApiTiling::ConvDtype, std::string> g_convDtypeToStr = {
     {Conv3dApiTiling::ConvDtype::INT64, "int64"},
     {Conv3dApiTiling::ConvDtype::UINT64, "uint64"},
     {Conv3dApiTiling::ConvDtype::INT32, "int32"},
-};
-
-static std::map<ge::DataType, uint32_t> g_dataTypeSizeTab = {
-    {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_BF16, 2}, {ge::DataType::DT_INT8, 1},
-    {ge::DataType::DT_UINT8, 1}, {ge::DataType::DT_INT64, 8}, {ge::DataType::DT_UINT64, 8}, {ge::DataType::DT_INT32, 4}};
-
-static std::map<ge::DataType, Conv3dApiTiling::ConvDtype> g_dtypeMap = {
-    {ge::DT_FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16},
-    {ge::DT_FLOAT, Conv3dApiTiling::ConvDtype::FLOAT32},
-    {ge::DT_BF16, Conv3dApiTiling::ConvDtype::BF16},
-    {ge::DT_INT8, Conv3dApiTiling::ConvDtype::INT8},
-    {ge::DT_UINT8, Conv3dApiTiling::ConvDtype::UINT8},
-    {ge::DT_INT64, Conv3dApiTiling::ConvDtype::INT64},
-    {ge::DT_UINT64, Conv3dApiTiling::ConvDtype::UINT64},
-    {ge::DT_INT32, Conv3dApiTiling::ConvDtype::INT32}
-};
-
-static std::map<ge::Format, std::string> g_formatToStrTab = {
-    {ge::FORMAT_NCHW, "NCHW"}, {ge::FORMAT_NHWC, "NHWC"}, {ge::FORMAT_HWCN, "HWCN"}, {ge::FORMAT_DHWNC, "DHWNC"},
-    {ge::FORMAT_DHWCN, "DHWCN"}, {ge::FORMAT_NDHWC, "NDHWC"}, {ge::FORMAT_NCDHW, "NCDHW"},
-    {ge::FORMAT_NC1HWC0, "NC1HWC0"}, {ge::FORMAT_ND, "ND"}, {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
-    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
-
-static std::map<ge::Format, Conv3dApiTiling::ConvFormat> g_formatMap = {
-    {ge::FORMAT_ND, Conv3dApiTiling::ConvFormat::ND},
-    {ge::FORMAT_NCHW, Conv3dApiTiling::ConvFormat::NCHW},
-    {ge::FORMAT_NHWC, Conv3dApiTiling::ConvFormat::NHWC},
-    {ge::FORMAT_HWCN, Conv3dApiTiling::ConvFormat::HWCN},
-    {ge::FORMAT_DHWNC, Conv3dApiTiling::ConvFormat::DHWNC},
-    {ge::FORMAT_DHWCN, Conv3dApiTiling::ConvFormat::DHWCN},
-    {ge::FORMAT_NDHWC, Conv3dApiTiling::ConvFormat::NDHWC},
-    {ge::FORMAT_NCDHW, Conv3dApiTiling::ConvFormat::NCDHW},
-    {ge::FORMAT_NC1HWC0, Conv3dApiTiling::ConvFormat::NC1HWC0},
-    {ge::FORMAT_NDC1HWC0, Conv3dApiTiling::ConvFormat::NDC1HWC0},
-    {ge::FORMAT_FRACTAL_Z_3D, Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D}
 };
 
 struct AscendOpsCubeTypeMap {

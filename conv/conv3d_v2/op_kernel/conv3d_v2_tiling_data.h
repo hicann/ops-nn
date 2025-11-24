@@ -1,32 +1,27 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
 */
 
 /*!
- * \file conv3d_v2_tiling_def.h
+ * \file conv3d_v2_tiling_data.h
  * \brief
  */
-
 #ifndef CONV3D_V2_TILING_DATA_H
 #define CONV3D_V2_TILING_DATA_H
 
 #include "kernel_tiling/kernel_tiling.h"
 
-#define DT_BF16 bfloat16_t
-#define ORIG_DTYPE_START DT_BF16
-#define __CCE_UT_TEST__
-
 namespace Ops {
 namespace NN {
 namespace Conv3dV2 {
 
-#pragma pack(1)
+#pragma pack(push, 8)
 
 #define CONV3D_COMMON_ATTRS \
     uint32_t strideH = 0; \
@@ -166,18 +161,10 @@ struct Conv3DV2TilingData {
     Conv3DRunInfo conv3dRunInfo;
 };
 
-#pragma pack()
+#pragma pack(pop)
 
 } // namespace Conv3dV2
 } // namespace NN
 } // namespace Ops
-
-inline void InitTilingData(uint8_t* tiling, Ops::NN::Conv3dV2::Conv3DV2TilingData* constData) {
-    memcpy(constData, tiling, sizeof(Ops::NN::Conv3dV2::Conv3DV2TilingData));
-}
-
-#define GET_TILING_DATA(tilingData, tilingArg) \
-    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData; \
-    InitTilingData(tilingArg, &tilingData)
 
 #endif // CONV3D_V2_TILING_DATA_H

@@ -17,7 +17,7 @@
 #define ASCENDC_TIKCFW_TILING_CONV3D_TILING_BASE_H
 
 #include "conv3d_api_tiling_utils.h"
-#include "conv3d_v2_tiling.h"
+#include "../../op_kernel/conv3d_v2_tiling_data.h"
 
 namespace Conv3dApiTiling {
 
@@ -156,7 +156,7 @@ public:
     explicit Conv3dTilingBase(const platform_ascendc::PlatformAscendC& ascendcPlatform);
     explicit Conv3dTilingBase(const PlatformInfo& platform);
     virtual ~Conv3dTilingBase() = default;
-    virtual int64_t GetTiling(optiling::TConv3DTiling& tiling) = 0;
+    virtual int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling& tiling) = 0;
     void SetOrgWeightShape(int64_t orgCo, int64_t orgKd, int64_t orgKh, int64_t orgKw);
     void SetOrgFmapShape(int64_t orgCi, int64_t orgDi, int64_t orgHi, int64_t orgWi);
     void SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw);
@@ -198,9 +198,9 @@ public:
 
 protected:
     virtual int64_t Compute() = 0;
-    void SetFinalTilingBasicInfo(optiling::TConv3DTiling& tiling);
-    void SetFinalTilingDecisionInfo(optiling::TConv3DTiling& tiling);
-    void SetFinalTiling(optiling::TConv3DTiling& tiling);
+    void SetFinalTilingBasicInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetFinalTilingDecisionInfo(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetFinalTiling(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void PrintTilingDataBasicInfo() const;
     void PrintTilingDataDecision() const;
     void PrintTilingData() const;

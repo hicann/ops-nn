@@ -25,7 +25,7 @@ public:
     Conv3dTiling() = default;
     explicit Conv3dTiling(const PlatformInfo& platform) : Conv3dTilingBase(platform) {};
     ~Conv3dTiling() override = default;
-    int64_t GetTiling(optiling::TConv3DTiling &tiling) override;
+    int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling) override;
 protected:
     int64_t Compute() override;
 };
@@ -33,4 +33,3 @@ protected:
 } // namespace Conv3dApiTiling
 
 #endif // ASCENDC_TIKCFW_TILING_CONV3D_TILING_H
-

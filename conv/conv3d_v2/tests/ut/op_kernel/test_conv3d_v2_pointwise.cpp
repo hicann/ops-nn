@@ -102,20 +102,20 @@ void CallSimpleKernel(
     size_t inputByteSize = VectorReduceMul(inputShapeNew) * BF16_SIZE;
     size_t weightByteSize = VectorReduceMul(weightShapeNew) * BF16_SIZE;
     size_t outputByteSize = VectorReduceMul(outputShapeNew) * BF16_SIZE;
-    size_t tilingDataSize = sizeof(Conv3DRunInfo);
+    size_t tilingDataSize = sizeof(Ops::NN::Conv3dV2::Conv3DRunInfo);
 
     uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightByteSize);
     uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(Conv3DTilingData));
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(Ops::NN::Conv3dV2::Conv3DV2TilingData));
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
     char* path_ = get_current_dir_name();
     std::string path(path_);
 
-    Conv3DTilingData* tilingDataFromBin = reinterpret_cast<Conv3DTilingData*>(tiling);
+    Ops::NN::Conv3dV2::Conv3DV2TilingData* tilingDataFromBin = reinterpret_cast<Ops::NN::Conv3dV2::Conv3DV2TilingData*>(tiling);
 
     tilingDataFromBin->conv3dRunInfo.batch = inputShapeNew[0];
     tilingDataFromBin->conv3dRunInfo.din = inputShapeNew[2];

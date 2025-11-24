@@ -25,7 +25,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, const Conv3DTilingData *allTilingData)
+        GM_ADDR y, GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
     {
         this->InitTilingData(allTilingData);
         this->InitC1N1();
@@ -139,8 +139,9 @@ protected:
             return false;
         }
         uint64_t groupDimTailCout = AlignB(this->conv3dRunInfo->cout % this->conv3dApiTiling->coutOpt, this->c0Out);
-        if (isGroupOptDimTail && groupDimTailCout != 0 && this->nIdxStart >= groupDimTailCout) {
-            singleCoreGroupOpt -= 1;
+        if (isGroupOptDimTail && groupDimTailCout != 0UL &&
+            static_cast<uint64_t>(this->nIdxStart) >= groupDimTailCout) {
+            singleCoreGroupOpt -= 1UL;
             ASC_OP_LOGD(
                 "[IterateAllWithGroups] No real data exists in groupTail. Skip the groupTail processing. nIdxStart "
                 "%d. \n",

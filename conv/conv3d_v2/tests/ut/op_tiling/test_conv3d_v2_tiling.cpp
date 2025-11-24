@@ -200,50 +200,50 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2KB)
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
     conv3dBT.BlockDimDecision();
 
-    conv3dBT.tilingData_.conv3dApiTiling.set_groups(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgCi(3);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgDi(26);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgHi(134);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgWi(134);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgDo(20);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgCo(20);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgHo(128);
-    conv3dBT.tilingData_.conv3dApiTiling.set_orgWo(128);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kernelD(7);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kernelH(7);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kernelW(7);
-    conv3dBT.tilingData_.conv3dApiTiling.set_singleCoreDo(10);
-    conv3dBT.tilingData_.conv3dApiTiling.set_singleCoreCo(64);
-    conv3dBT.tilingData_.conv3dApiTiling.set_singleCoreM(16384);
-    conv3dBT.tilingData_.conv3dApiTiling.set_mL0(512);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kL0(32);
-    conv3dBT.tilingData_.conv3dApiTiling.set_nL0(64);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kAL1(1568);
-    conv3dBT.tilingData_.conv3dApiTiling.set_kBL1(1568);
-    conv3dBT.tilingData_.conv3dApiTiling.set_nBL1(64);
-    conv3dBT.tilingData_.conv3dApiTiling.set_mAL1(512);
-    conv3dBT.tilingData_.conv3dApiTiling.set_strideD(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_strideH(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_strideW(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_dilationD(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_dilationH(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_dilationW(1);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padHead(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padTail(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padTop(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padBottom(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padLeft(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_padRight(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_pBufferFlag(11);
-    conv3dBT.tilingData_.conv3dApiTiling.set_iterateMNOrder(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_bl1FullLoad(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_al1FullLoad(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_bl1BypassFlag(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_biasFullLoadFlag(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_fixpParamsFullLoadFlag(0);
-    conv3dBT.tilingData_.conv3dApiTiling.set_offsetx(0);
+    conv3dBT.tilingData_.conv3dApiTiling.groups = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.orgCi = 3;
+    conv3dBT.tilingData_.conv3dApiTiling.orgDi = 26;
+    conv3dBT.tilingData_.conv3dApiTiling.orgHi = 134;
+    conv3dBT.tilingData_.conv3dApiTiling.orgWi = 134;
+    conv3dBT.tilingData_.conv3dApiTiling.orgDo = 20;
+    conv3dBT.tilingData_.conv3dApiTiling.orgCo = 20;
+    conv3dBT.tilingData_.conv3dApiTiling.orgHo = 128;
+    conv3dBT.tilingData_.conv3dApiTiling.orgWo = 128;
+    conv3dBT.tilingData_.conv3dApiTiling.kernelD = 7;
+    conv3dBT.tilingData_.conv3dApiTiling.kernelH = 7;
+    conv3dBT.tilingData_.conv3dApiTiling.kernelW = 7;
+    conv3dBT.tilingData_.conv3dApiTiling.singleCoreDo = 10;
+    conv3dBT.tilingData_.conv3dApiTiling.singleCoreCo = 64;
+    conv3dBT.tilingData_.conv3dApiTiling.singleCoreM = 16384;
+    conv3dBT.tilingData_.conv3dApiTiling.mL0 = 512;
+    conv3dBT.tilingData_.conv3dApiTiling.kL0 = 32;
+    conv3dBT.tilingData_.conv3dApiTiling.nL0 = 64;
+    conv3dBT.tilingData_.conv3dApiTiling.kAL1 = 1568;
+    conv3dBT.tilingData_.conv3dApiTiling.kBL1 = 1568;
+    conv3dBT.tilingData_.conv3dApiTiling.nBL1 = 64;
+    conv3dBT.tilingData_.conv3dApiTiling.mAL1 = 512;
+    conv3dBT.tilingData_.conv3dApiTiling.strideD = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.strideH = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.strideW = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.dilationD = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.dilationH = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.dilationW = 1;
+    conv3dBT.tilingData_.conv3dApiTiling.padHead = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.padTail = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.padTop = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.padBottom = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.padLeft = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.padRight = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.pBufferFlag = 11;
+    conv3dBT.tilingData_.conv3dApiTiling.iterateMNOrder = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.bl1FullLoad = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.al1FullLoad = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.bl1BypassFlag = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.biasFullLoadFlag = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.fixpParamsFullLoadFlag = 0;
+    conv3dBT.tilingData_.conv3dApiTiling.offsetx = 0;
     conv3dBT.SetAdditionalTilingInfo();
-    ASSERT_EQ(conv3dBT.tilingData_.conv3dApiTiling.get_groupOpt(), conv3dBT.attrInfo_.groupOpt);
+    ASSERT_EQ(conv3dBT.tilingData_.conv3dApiTiling.groupOpt, conv3dBT.attrInfo_.groupOpt);
 }
 
 
@@ -446,7 +446,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BlockDimEqualToHoDim)
     conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
     conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
     conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
-    conv3dBT.outputOrder_ = optiling::Conv3dOpsTiling::HW_Mode;
+    conv3dBT.outputOrder_ = 1;
 
     conv3dBT.BlockDimDecision();
     optiling::Conv3dOpsTiling::BlockDimRes res = {1, static_cast<uint32_t>(shapeInfo.ho), 1, 1, 1, 1};
@@ -455,6 +455,67 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BlockDimEqualToHoDim)
     ASSERT_EQ(conv3dBT.blockDimRes.nDim, res.nDim);
     ASSERT_EQ(conv3dBT.blockDimRes.doDim, res.doDim);
     ASSERT_EQ(conv3dBT.blockDimRes.groupDim, res.groupDim);
+}
+
+TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
+{
+    uint32_t aicoreNum = 20;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("Conv3DV2")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .Build();
+    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+
+    optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
+    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    opInfo.aicoreNum = aicoreNum;
+    opInfo.l2Rate = 110;
+    opInfo.l1Size = 64; // make sure M_MODE fits into L1
+
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    shapeInfo.batch = 1;
+    shapeInfo.cIn = 1;
+    shapeInfo.di = 1;
+    shapeInfo.hi = 1;
+    shapeInfo.wi = 1;
+    shapeInfo.cOut = 16;
+    shapeInfo.kd = 1;
+    shapeInfo.kh = 1;
+    shapeInfo.kw = 1;
+    shapeInfo.dOut = 1;
+    shapeInfo.ho = 1;
+    shapeInfo.wo = 1;
+
+    conv3dBT.attrInfo_.groups = 1;
+    conv3dBT.attrInfo_.groupOpt = conv3dBT.attrInfo_.groups;
+    conv3dBT.shapeInfo_.cinOpt = shapeInfo.cIn;
+    conv3dBT.shapeInfo_.coutOpt = shapeInfo.cOut;
+
+    ge::graphStatus ret = conv3dBT.InitOutputOrder();
+    ASSERT_EQ(ret, ge::GRAPH_SUCCESS);
+    // outputOrder_ should be M_MODE (0)
+    ASSERT_EQ(conv3dBT.outputOrder_, 0);
+
+    uint64_t minL1LoadSize = conv3dBT.CalcMinL1LoadSize(0);
+    ASSERT_LE(minL1LoadSize, opInfo.l1Size);
+
+    conv3dBT.blockDimRes.batchDim = 1;
+    conv3dBT.blockDimRes.mDim = 4;
+    conv3dBT.blockDimRes.nDim = 1;
+    conv3dBT.blockDimRes.doDim = 1;
+    conv3dBT.blockDimRes.groupDim = 1;
+    conv3dBT.SetSingleOutputShapeByMode();
+    EXPECT_EQ(conv3dBT.conv3dApiTiling_.shapeInfo.singleCo, static_cast<int64_t>(shapeInfo.cOut));
+    EXPECT_EQ(conv3dBT.conv3dApiTiling_.shapeInfo.singleDo, static_cast<int64_t>(shapeInfo.dOut));
+    uint64_t expectedSingleM = optiling::Conv3dOpsTiling::CeilDiv(
+        static_cast<uint64_t>(shapeInfo.ho * shapeInfo.wo),
+        static_cast<uint64_t>(conv3dBT.blockDimRes.mDim));
+    EXPECT_EQ(conv3dBT.conv3dApiTiling_.shapeInfo.singleM, static_cast<uint64_t>(expectedSingleM));
 }
 
 TEST_F(Conv3DV2TilingRuntime, TestConv3DV2CheckPointWiseSuccess)

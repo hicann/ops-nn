@@ -1,9 +1,9 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
 */
@@ -19,8 +19,9 @@
 #include "tiling_base/tiling_base.h"
 #include "conv3d_tuning_tiling.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "conv3d_v2_tiling.h"
+#include "../../op_kernel/conv3d_v2_tiling_data.h"
 #include "conv3d_api_tiling.h"
+#include "tiling/tiling_api.h"
 #include "conv3d_tiling_utils.h"
 #include "conv/common/op_host/op_tiling/cube_tiling.h"
 
@@ -77,6 +78,60 @@ struct Conv3DOrignalFormat {
     uint32_t FORMAT_DATA_W_INDEX = Conv3dApiTiling::INITIAL_INDEX;
 };
 
+struct Conv3DDescInfo {
+    ge::DataType weightDtype = ge::DT_BF16;
+    ge::DataType fMapDtype = ge::DT_BF16;
+    ge::DataType biasDtype = ge::DT_FLOAT;
+    ge::DataType scaleDtype = ge::DT_FLOAT;
+    ge::DataType outDtype = ge::DT_BF16;
+
+    ge::Format weightFormat = ge::FORMAT_FRACTAL_Z_3D;
+    ge::Format fMapFormat = ge::FORMAT_NDC1HWC0;
+    ge::Format biasFormat = ge::FORMAT_ND;
+    ge::Format scaleFormat = ge::FORMAT_ND;
+    ge::Format outFormat = ge::FORMAT_NDC1HWC0;
+};
+
+static std::map<ge::DataType, uint32_t> g_dataTypeSizeTab = {
+    {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_BF16, 2}, {ge::DataType::DT_INT8, 1},
+    {ge::DataType::DT_UINT8, 1}, {ge::DataType::DT_INT64, 8}, {ge::DataType::DT_UINT64, 8}, {ge::DataType::DT_INT32, 4}};
+
+static std::map<ge::DataType, Conv3dApiTiling::ConvDtype> g_dtypeMap = {
+    {ge::DT_FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16},
+    {ge::DT_FLOAT, Conv3dApiTiling::ConvDtype::FLOAT32},
+    {ge::DT_BF16, Conv3dApiTiling::ConvDtype::BF16},
+    {ge::DT_INT8, Conv3dApiTiling::ConvDtype::INT8},
+    {ge::DT_UINT8, Conv3dApiTiling::ConvDtype::UINT8},
+    {ge::DT_INT64, Conv3dApiTiling::ConvDtype::INT64},
+    {ge::DT_UINT64, Conv3dApiTiling::ConvDtype::UINT64},
+    {ge::DT_INT32, Conv3dApiTiling::ConvDtype::INT32}
+};
+
+static std::map<ge::Format, std::string> g_formatToStrTab = {
+    {ge::FORMAT_NCHW, "NCHW"}, {ge::FORMAT_NHWC, "NHWC"}, {ge::FORMAT_HWCN, "HWCN"}, {ge::FORMAT_DHWNC, "DHWNC"},
+    {ge::FORMAT_DHWCN, "DHWCN"}, {ge::FORMAT_NDHWC, "NDHWC"}, {ge::FORMAT_NCDHW, "NCDHW"},
+    {ge::FORMAT_NC1HWC0, "NC1HWC0"}, {ge::FORMAT_ND, "ND"}, {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
+    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
+
+static std::map<ge::Format, Conv3dApiTiling::ConvFormat> g_formatMap = {
+    {ge::FORMAT_ND, Conv3dApiTiling::ConvFormat::ND},
+    {ge::FORMAT_NCHW, Conv3dApiTiling::ConvFormat::NCHW},
+    {ge::FORMAT_NHWC, Conv3dApiTiling::ConvFormat::NHWC},
+    {ge::FORMAT_HWCN, Conv3dApiTiling::ConvFormat::HWCN},
+    {ge::FORMAT_DHWNC, Conv3dApiTiling::ConvFormat::DHWNC},
+    {ge::FORMAT_DHWCN, Conv3dApiTiling::ConvFormat::DHWCN},
+    {ge::FORMAT_NDHWC, Conv3dApiTiling::ConvFormat::NDHWC},
+    {ge::FORMAT_NCDHW, Conv3dApiTiling::ConvFormat::NCDHW},
+    {ge::FORMAT_NC1HWC0, Conv3dApiTiling::ConvFormat::NC1HWC0},
+    {ge::FORMAT_NDC1HWC0, Conv3dApiTiling::ConvFormat::NDC1HWC0},
+    {ge::FORMAT_FRACTAL_Z_3D, Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D}
+};
+
+static std::map<ge::DataType, std::string> g_dtypeToStrTab = {
+    {ge::DataType::DT_FLOAT16, "float16"}, {ge::DataType::DT_FLOAT, "float32"}, {ge::DataType::DT_BF16, "bfloat16"},
+    {ge::DataType::DT_INT8, "int8"}, {ge::DataType::DT_UINT8, "uint8"}, {ge::DataType::DT_INT64, "int64"},
+    {ge::DataType::DT_UINT64, "uint64"}, {ge::DataType::DT_INT32, "int32"}};
+
 using Ops::NN::Optiling::TilingBaseClass;
 namespace Conv3dOpsTiling {
 
@@ -110,7 +165,7 @@ private:
     Conv3DTilingParseInfo opRunInfo_;
     Conv3DAscendcShapesInfo shapeInfo_;
     Conv3DAttrInfo attrInfo_;
-    Conv3DTilingData tilingData_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData_;
     Conv3DDescInfo descInfo_;
     Conv3DTilingFlag flagInfo_;
     Conv3DOrignalFormat originalFormat_;
@@ -123,7 +178,7 @@ private:
 
     bool useTilingRepo_ = false;
     bool isPointWise = false;
-    int8_t outputOrder_ = M_Mode;
+    int8_t outputOrder_ = 0;
 
 private:
     bool CheckDims(const gert::Shape& inputShape);

@@ -25,6 +25,7 @@
 #include "conv3d_common_func.h"
 #include "../conv_common/conv_framework_util.h"
 #include "../conv_common/conv_common_func.h"
+#include "../conv3d_v2_tiling_data.h"
 
 constexpr int32_t QUE_DEPTH_SIZE_TWO = 2;
 
@@ -74,7 +75,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const struct TConv3DTiling *__restrict conv3dTiling;
+        const Ops::NN::Conv3dV2::TConv3DTiling *__restrict conv3dTiling;
 
         TPipe pipe;
 

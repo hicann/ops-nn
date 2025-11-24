@@ -22,7 +22,7 @@
 
 namespace Conv3dApiTiling {
 
-int64_t Conv3dTiling::GetTiling(optiling::TConv3DTiling &tiling)
+int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
 {
     int64_t ret = Compute();
     if (ret == INVALID_VALUE) {
