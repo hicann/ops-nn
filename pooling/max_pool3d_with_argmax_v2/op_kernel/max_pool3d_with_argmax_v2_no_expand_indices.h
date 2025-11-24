@@ -39,7 +39,7 @@ public:
     __aicore__ inline MaxPool3DWithArgmaxV2NoExpandIndices(void){};
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
-        const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling);
+        const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict__ tiling);
     __aicore__ inline void Process(void);
     __aicore__ inline void CalNextIdxData(uint64_t idx);
     __aicore__ inline void CalCurIdxData(uint64_t idx);
@@ -261,7 +261,7 @@ public:
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
-    const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling)
+    const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict__ tiling)
 {
     // variable from tiling
     tilingData = tiling;

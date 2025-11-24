@@ -47,7 +47,7 @@ public:
     }
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const MaxPool3DGradWithArgmaxTilingData* tiling)
+        const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
         // load tiling data
         InitParams(tiling);
@@ -57,7 +57,7 @@ public:
         InitUbBuffer();
     }
 
-    __aicore__ inline void InitParams(const MaxPool3DGradWithArgmaxTilingData* tiling)
+    __aicore__ inline void InitParams(const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
         para_.ncDim = tiling->ncDim;
         para_.diDim = tiling->diDim;

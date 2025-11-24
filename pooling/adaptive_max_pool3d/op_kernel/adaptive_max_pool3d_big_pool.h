@@ -101,7 +101,7 @@ public:
     __aicore__ inline AdaptiveMaxPool3dBigPool(){};
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType);
+        const AdaptiveMaxPool3dBigPoolTilingData* __restrict__ tiling, int64_t dataType);
     __aicore__ inline void Process();
 
 private:
@@ -248,7 +248,7 @@ private:
 template <typename T1, typename T2>
 __aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-    const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType)
+    const AdaptiveMaxPool3dBigPoolTilingData* __restrict__ tiling, int64_t dataType)
 {
     pipe = pipe_in;
     tilingData = tiling;

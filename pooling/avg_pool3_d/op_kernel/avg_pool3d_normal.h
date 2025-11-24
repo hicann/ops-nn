@@ -26,8 +26,8 @@ class AvgPool3dNormal {
 public:
     __aicore__ inline AvgPool3dNormal(){};
     __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* tiling, TPipe* pipe);
-    __aicore__ inline void InitTiling(const AvgPool3DTilingData* tiling);
+        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe);
+    __aicore__ inline void InitTiling(const AvgPool3DTilingData* __restrict__ tiling);
     __aicore__ inline void Process();
 
 private:
@@ -115,7 +115,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void AvgPool3dNormal<T>::InitTiling(const AvgPool3DTilingData* tiling) {
+__aicore__ inline void AvgPool3dNormal<T>::InitTiling(const AvgPool3DTilingData* __restrict__ tiling) {
     useCoreNum = tiling->useCoreNum;
     N = tiling->inN;
     C = tiling->inC;
@@ -159,7 +159,7 @@ __aicore__ inline void AvgPool3dNormal<T>::InitTiling(const AvgPool3DTilingData*
 
 template <typename T>
 __aicore__ inline void AvgPool3dNormal<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* tiling, TPipe* pipe) {
+    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe) {
     InitTiling(tiling);
 
     cBlockIdx = GetBlockIdx();

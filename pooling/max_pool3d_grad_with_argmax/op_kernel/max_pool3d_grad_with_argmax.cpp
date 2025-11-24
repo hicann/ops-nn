@@ -111,97 +111,97 @@ extern "C" __global__ __aicore__ void max_pool3d_grad_with_argmax(
     } else // Russian kernel
         if (TILING_KEY_IS(100000)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxNoSplit<float, float> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(100001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxNoSplit<half, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(200001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxNoSplit<float, half> op(tilingData);
             op.Init(grad, x, argmax, y, nullptr);
             op.Process();
         } else if (TILING_KEY_IS(100002)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxNoSplit<float, bfloat16_t> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(110000)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitD<float, float> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(110001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitD<half, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(210001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitD<float, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(110002)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitD<float, bfloat16_t> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111000)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitH<float, float> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitH<half, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(211001)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitH<float, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111002)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitH<float, bfloat16_t> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111100)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitW<float, float> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111101)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitW<half, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(211101)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitW<float, half> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();
         } else if (TILING_KEY_IS(111102)) {
             GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict tilingData = &tilingDataIn;
+            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
             KernelMaxPool3DGradWithArgmaxSplitW<float, bfloat16_t> op(tilingData);
             op.Init(grad, x, argmax, y, userWS);
             op.Process();

@@ -96,7 +96,7 @@ public:
     __aicore__ inline MaxPool3DWithArgmaxBigKernel(){};
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict tiling, int64_t dataType);
+        const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict__ tiling, int64_t dataType);
     __aicore__ inline void Process();
 
 private:
@@ -236,7 +236,7 @@ private:
 template <typename T1, typename T2, const bool IS_MASK>
 __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-    const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict tiling, int64_t dataType)
+    const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict__ tiling, int64_t dataType)
 {
     pipe = pipe_in;
     tilingData = tiling;

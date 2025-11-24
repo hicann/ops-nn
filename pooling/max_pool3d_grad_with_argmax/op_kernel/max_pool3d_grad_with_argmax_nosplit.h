@@ -26,7 +26,7 @@ template <typename T, typename S>
 class KernelMaxPool3DGradWithArgmaxNoSplit : public KernelMaxPool3DGradWithArgmaxBase<T, S> {
 public:
     __aicore__ KernelMaxPool3DGradWithArgmaxNoSplit(
-        const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict tilingData_)
+        const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData_)
         : KernelMaxPool3DGradWithArgmaxBase<T, S>(
               tilingData_->inputShapes[D_DIM], tilingData_->inputShapes[H_DIM], tilingData_->inputShapes[W_DIM],
               tilingData_->outShapes[D_DIM], tilingData_->outShapes[H_DIM], tilingData_->outShapes[W_DIM],

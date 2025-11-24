@@ -25,7 +25,7 @@ using namespace AscendC;
 template <typename T, typename S>
 class KernelMaxPool3DWithArgmaxV2NoSplit : public KernelMaxPool3DWithArgmaxV2Base<T, S> {
 public:
-    __aicore__ KernelMaxPool3DWithArgmaxV2NoSplit(const MaxPool3DWithArgmaxV2NoSplitTilingData* __restrict tilingData_)
+    __aicore__ KernelMaxPool3DWithArgmaxV2NoSplit(const MaxPool3DWithArgmaxV2NoSplitTilingData* __restrict__ tilingData_)
         : KernelMaxPool3DWithArgmaxV2Base<T, S>(
               tilingData_->inputShapes[D_DIM], tilingData_->inputShapes[H_DIM], tilingData_->inputShapes[W_DIM],
               tilingData_->outShapes[D_DIM], tilingData_->outShapes[H_DIM], tilingData_->outShapes[W_DIM],

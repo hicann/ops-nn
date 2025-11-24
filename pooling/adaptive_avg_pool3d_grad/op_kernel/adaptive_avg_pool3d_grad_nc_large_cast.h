@@ -26,7 +26,7 @@ public:
     __aicore__ inline KernelAdaptiveAvgPool3DGradNcLargeCast()
     {}
     __aicore__ inline void Init(
-        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* tiling_data,
+        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data,
         TPipe* tmpPipe)
     {
         pipe = tmpPipe;

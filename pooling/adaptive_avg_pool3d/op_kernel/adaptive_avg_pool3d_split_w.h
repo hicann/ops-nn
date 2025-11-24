@@ -27,11 +27,11 @@ public:
     __aicore__ inline KernelAdaptiveAvgPool3dSplitW()
     {}
     __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* tiling, TPipe* pipe);
+        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void InitTiling(const AdaptiveAvgPool3dTilingData* tiling);
+    __aicore__ inline void InitTiling(const AdaptiveAvgPool3dTilingData* __restrict__ tiling);
     __aicore__ inline void CopyIn(int64_t offset, uint16_t blockCount, uint32_t blockLen, uint8_t rightPadding);
     __aicore__ inline void CopyOut(int64_t outputPointIdx, int64_t len);
     __aicore__ inline void DataCopyOutNonPad(
@@ -71,7 +71,7 @@ private:
 
 template <typename T, int32_t QUEUE_DEPTH>
 __aicore__ inline void KernelAdaptiveAvgPool3dSplitW<T, QUEUE_DEPTH>::InitTiling(
-    const AdaptiveAvgPool3dTilingData* tiling)
+    const AdaptiveAvgPool3dTilingData* __restrict__ tiling)
 {
     inputShape = PoolShape(tiling->inD, tiling->inH, tiling->inW);
     outputShape = PoolShape(tiling->outD, tiling->outH, tiling->outW);
@@ -256,7 +256,7 @@ __aicore__ inline void KernelAdaptiveAvgPool3dSplitW<T, QUEUE_DEPTH>::ReduceMean
 
 template <typename T, int32_t QUEUE_DEPTH>
 __aicore__ inline void KernelAdaptiveAvgPool3dSplitW<T, QUEUE_DEPTH>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* tiling, TPipe* pipe)
+    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe)
 {
     InitTiling(tiling);
 

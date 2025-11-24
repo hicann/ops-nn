@@ -33,7 +33,7 @@ private:
 
 public:
     __aicore__ KernelMaxPool3DGradWithArgmaxSplitD(
-        const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict tilingData_)
+        const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData_)
         : KernelMaxPool3DGradWithArgmaxBase<T, S>(
               tilingData_->inputShapes[D_DIM], tilingData_->inputShapes[H_DIM], tilingData_->inputShapes[W_DIM],
               tilingData_->outShapes[D_DIM], tilingData_->outShapes[H_DIM], tilingData_->outShapes[W_DIM],

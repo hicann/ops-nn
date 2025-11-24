@@ -26,7 +26,7 @@ template <typename T, typename S>
 class KernelMaxPool3DWithArgmaxV2HugeKernel : public KernelMaxPool3DWithArgmaxV2Base<T, S> {
 public:
     __aicore__ KernelMaxPool3DWithArgmaxV2HugeKernel(
-        const MaxPool3DWithArgmaxV2HugeKernelTilingData* __restrict tilingData_)
+        const MaxPool3DWithArgmaxV2HugeKernelTilingData* __restrict__ tilingData_)
         : KernelMaxPool3DWithArgmaxV2Base<T, S>(
               tilingData_->inputShapes[D_DIM], tilingData_->inputShapes[H_DIM], tilingData_->inputShapes[W_DIM],
               tilingData_->outShapes[D_DIM], tilingData_->outShapes[H_DIM], tilingData_->outShapes[W_DIM],

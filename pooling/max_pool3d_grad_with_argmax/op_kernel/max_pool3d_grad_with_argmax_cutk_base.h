@@ -69,7 +69,7 @@ public:
     __aicore__ inline MaxPool3DGradWithArgmaxCutKBase()
     {}
 
-    __aicore__ inline void InitParams(const MaxPool3DGradWithArgmaxTilingData* tiling)
+    __aicore__ inline void InitParams(const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
         params_.ncDim = tiling->ncDim;
         params_.diDim = tiling->diDim;

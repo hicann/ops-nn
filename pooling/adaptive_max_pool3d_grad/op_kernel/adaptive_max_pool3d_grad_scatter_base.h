@@ -35,7 +35,7 @@ public:
         pipe_ = pipe;
     }
 
-    __aicore__ inline void InitParams(const AdaptiveMaxPool3DGradTilingData* tiling)
+    __aicore__ inline void InitParams(const AdaptiveMaxPool3DGradTilingData* __restrict__ tiling)
     {
         params_.ncDim = tiling->ncDim; // 池化正向输出结果NC维度
         params_.doDim = tiling->doDim; // 池化正向输出结果d维度

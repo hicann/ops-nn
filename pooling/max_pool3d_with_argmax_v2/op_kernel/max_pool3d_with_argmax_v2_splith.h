@@ -34,7 +34,7 @@ private:
     uint32_t hOutStart = 0;
 
 public:
-    __aicore__ KernelMaxPool3DWithArgmaxV2SplitH(const MaxPool3DWithArgmaxV2SplitHTilingData* __restrict tilingData_)
+    __aicore__ KernelMaxPool3DWithArgmaxV2SplitH(const MaxPool3DWithArgmaxV2SplitHTilingData* __restrict__ tilingData_)
         : KernelMaxPool3DWithArgmaxV2Base<T, S>(
               tilingData_->inputShapes[D_DIM], tilingData_->inputShapes[H_DIM], tilingData_->inputShapes[W_DIM],
               tilingData_->outShapes[D_DIM], tilingData_->outShapes[H_DIM], tilingData_->outShapes[W_DIM],
