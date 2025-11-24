@@ -27,7 +27,7 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* __restrict__ tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tiling->num_row;
@@ -37,8 +37,8 @@ public:
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
         this->ubFactor = tiling->ub_factor;
-        this->epsilon = tiling->epsilon;
         this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
+        this->epsilon = tiling->epsilon;  
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
@@ -48,8 +48,8 @@ public:
         } else {
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
@@ -88,7 +88,7 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint32_t gm_bias = i_o * rowFactor * numCol;
+        uint64_t gm_bias = static_cast<uint64_t>(i_o) * rowFactor * numCol;
         uint32_t elementNum = calc_row_num * numColAlign;
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(elementNum);
@@ -107,7 +107,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyInX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         LocalTensor<T> x1Local = inQueueX.AllocTensor<T>();
         if (isNumColAlign) {
@@ -149,7 +149,7 @@ private:
         return xLocal;
     }
 
-    __aicore__ inline void CopyOutX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutX(uint64_t gm_bias, uint32_t calc_row_num)
     {
         // CopyOut x1 + x2
         auto xOut = outQueueY.DeQue<T>();
@@ -253,7 +253,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(uint64_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         if (isNumColAlign) {
@@ -268,7 +268,7 @@ private:
     __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-        DataCopyCustom<float>(rstdGm[outer_progress * rowFactor], rstdLocal, num);
+        DataCopyCustom<float>(rstdGm[static_cast<uint64_t>(outer_progress) * rowFactor], rstdLocal, num);
         outQueueRstd.FreeTensor(rstdLocal);
     }
 #endif

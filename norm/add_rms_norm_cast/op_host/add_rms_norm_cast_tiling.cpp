@@ -248,7 +248,7 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
     OP_LOGI("Tiling4AddRmsNormCast", "usr Workspace: %zu", usrSize);
     OP_LOGI(
         "Tiling4AddRmsNormCast",
-        "numRow: %d, numCol: %d, blockFactor: %d, rowFactor: %d, ubFactor: %d, epsilon: %f, avgFactor: %f",
+        "numRow: %u, numCol: %u, blockFactor: %u, rowFactor: %u, ubFactor: %u, epsilon: %f, avgFactor: %f",
         numRow, numCol, blockFactor, rowFactor, ubFactor, *epsilon, avgFactor);
 
     return ge::GRAPH_SUCCESS;

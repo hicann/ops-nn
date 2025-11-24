@@ -27,17 +27,17 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* __restrict__ tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
+        uint32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
         this->numRow = tiling->num_row;
         this->numCol = tiling->num_col;
-        uint32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
-        this->numColAlign = AlignUp(numCol, numPerBlock);
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
         this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
+        this->numColAlign = AlignUp(numCol, numPerBlock);
         this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
 
         blockIdx_ = GetBlockIdx();

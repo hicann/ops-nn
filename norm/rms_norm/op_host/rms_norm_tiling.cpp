@@ -98,7 +98,7 @@ void SetByDtype(ge::DataType dataType, uint32_t& dtypeKey, uint32_t& dataPerBloc
     }
 }
 
-int32_t FindPowerTwo(int32_t n)
+uint32_t FindPowerTwo(uint64_t n)
 {
     // Set all the bits after the first 1 in the binary of n to 1,
     // then add 1 and shift one bit to the right to find max power of 2 no more than n (32 bit).
@@ -107,12 +107,13 @@ int32_t FindPowerTwo(int32_t n)
     n |= n >> MOV_4;
     n |= n >> MOV_8;
     n |= n >> MOV_16; // Set the first 32 bits of n's binary to 1
-    return (n + 1) >> 1;
+    n |= n >> BLOCK_SIZE;
+    return static_cast<uint32_t>(n + 1) >> 1;
 }
 
 void OnceReduceMaxColsAlign64(uint64_t& onceReduceMaxCols, uint32_t& mask, uint32_t& leftNum)
 {
-    uint32_t nowCols = static_cast<uint32_t>(FindPowerTwo(static_cast<int32_t>(onceReduceMaxCols)));
+    uint32_t nowCols = FindPowerTwo(onceReduceMaxCols);
     leftNum = static_cast<uint32_t>(onceReduceMaxCols) - nowCols;
     while (nowCols > FLOAT_BLOCK_ALIGN_NUM) {
         nowCols = nowCols / DIV_TO_HALF;

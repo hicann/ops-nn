@@ -278,9 +278,17 @@ static ge::graphStatus Tiling4DeepNorm(gert::TilingContext* context)
     tiling.set_nl_firstdim_per_core(rowWork);
     tiling.set_l_firstdim_per_core(lFirstdimPerCoreNum);
     tiling.set_first_dim_per_times(firstDimPerTime);
-    tiling.set_eps_str(*reinterpret_cast<uint32_t*>(&eps));
-    tiling.set_ave_str(*reinterpret_cast<uint32_t*>(&tempAve));
-    tiling.set_alpha_str(*reinterpret_cast<uint32_t*>(&tempAlpha));
+    uint32_t temp_eps;
+    memcpy_s(&temp_eps, sizeof(float), &eps, sizeof(float));
+    tiling.set_eps_str(temp_eps);
+
+    uint32_t temp_ave;
+    memcpy_s(&temp_ave, sizeof(float), &tempAve, sizeof(float));
+    tiling.set_ave_str(temp_ave);
+
+    uint32_t temp_alpha;
+    memcpy_s(&temp_alpha, sizeof(float), &tempAlpha, sizeof(float));
+    tiling.set_alpha_str(temp_alpha);
     context->SetBlockDim(numCore);
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());

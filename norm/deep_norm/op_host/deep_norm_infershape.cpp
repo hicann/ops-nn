@@ -33,6 +33,9 @@ static ge::graphStatus InferShape4DeepNorm(gert::InferShapeContext* context)
 
     size_t x_dim_num = x_shape->GetDimNum();
     size_t gamma_dim_num = gamma_shape->GetDimNum();
+    OP_CHECK_IF(
+        x_dim_num <= gamma_dim_num, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+        return GRAPH_FAILED);
 
     gert::Shape* mean_shape = context->GetOutputShape(OUTPUT_MEAN_INDEX);
     gert::Shape* rstd_shape = context->GetOutputShape(OUTPUT_RSTD_INDEX);

@@ -313,6 +313,7 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
         const int64_t shapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
         aclIntArray* shapeArray = uniqueExecutor.get()->AllocIntArray(shapes, 5);
         inputContiguous = l0op::Reshape(inputContiguous, shapeArray, uniqueExecutor.get());
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
     }
 

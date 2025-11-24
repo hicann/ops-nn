@@ -106,7 +106,7 @@ class TransQuantParamV2 {
 public:
     __aicore__ inline TransQuantParamV2(){};
     __aicore__ inline void Init(
-        GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, const TransQuantParamV2TilingData* tilingData,
+        GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, const TransQuantParamV2TilingData* __restrict__ tilingData,
         TPipe* tPipe)
     {
         if ASCEND_IS_AIC {
@@ -151,11 +151,11 @@ public:
                 }
             }
             if (offsetLength_ > 1) {
-                CalOffset(eachLength, eachLength * loopidx, resTensor);
+                CalOffset(eachLength, static_cast<uint64_t>(eachLength) * loopidx, resTensor);
             }
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-            DataCopy(yGm_[eachLength * loopidx], resTensor, ub2GmParams);
+            DataCopy(yGm_[static_cast<uint64_t>(eachLength) * loopidx], resTensor, ub2GmParams);
             SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
         }
@@ -168,14 +168,14 @@ public:
         }
         if (tailLength != 0) {
             if (offsetLength_ > 1) {
-                CalOffset(tailLength, eachLength * loops, resTensor);
+                CalOffset(tailLength, static_cast<uint64_t>(eachLength) * loops, resTensor);
             }
             DataCopyParams ub2GmParams1;
             SetCopyParams(ub2GmParams1);
             ub2GmParams1.blockLen = tailLength * sizeof(uint64_t);
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-            DataCopyGlobal(yGm_[eachLength * loops], resTensor, ub2GmParams1);
+            DataCopyGlobal(yGm_[static_cast<uint64_t>(eachLength) * loops], resTensor, ub2GmParams1);
         }
     }
 
@@ -322,7 +322,7 @@ protected:
         }
     }
 
-    __aicore__ inline void CalOffset(uint32_t length, uint32_t gmOffset, LocalTensor<uint64_t> resTensor)
+    __aicore__ inline void CalOffset(uint32_t length, uint64_t gmOffset, LocalTensor<uint64_t> resTensor)
     {
         uint32_t alignedLength = Align<uint32_t>(length * sizeof(float), UB_ALIGN_SIZE) / sizeof(float);
         LocalTensor<float> offsetFp32_ = offsetUb_.Get<float>(alignedLength);

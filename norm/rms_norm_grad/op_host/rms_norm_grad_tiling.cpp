@@ -237,6 +237,9 @@ static bool CheckGammaAndDgammaShape(
 {
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
     size_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
+    OP_CHECK_IF(
+        dyDimNum <= gammaDimNum, OP_LOGE(context, "dy dim num should not be smaller than gamma dim num."),
+        return false);
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
             gammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i),

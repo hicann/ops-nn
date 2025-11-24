@@ -30,12 +30,12 @@ public:
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* __restrict__ tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        this->numRow = tiling->num_row;
         this->numCol = tiling->num_col;
+        this->numRow = tiling->num_row;
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
-        this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
+        this->ubFactor = tiling->ub_factor;
         this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
 
         blockIdx_ = GetBlockIdx();
@@ -84,7 +84,9 @@ public:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            uint32_t gm_bias = (i_o * rowFactor + i_i) * numCol;
+            uint64_t gm_bias =
+                (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) + static_cast<uint64_t>(i_i)) *
+                static_cast<uint64_t>(numCol);
             CopyIn(gm_bias);
             Compute(i_i, gammaLocal, rstdLocal);
             CopyOutY(gm_bias);
@@ -94,7 +96,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gm_bias)
+    __aicore__ inline void CopyIn(uint64_t gm_bias)
     {
         LocalTensor<T> x1Local_in = inQueueX.AllocTensor<T>();
         LocalTensor<T> x2Local = sqxBuf.Get<T>();
@@ -285,7 +287,7 @@ private:
         outQueueY.EnQue<half>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, numCol);
@@ -296,7 +298,7 @@ private:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
 #if __CCE_AICORE__ == 220
-        DataCopyCustom<float>(rstdGm[outer_progress * rowFactor], rstdLocal, num);
+        DataCopyCustom<float>(rstdGm[static_cast<uint64_t>(outer_progress) * rowFactor], rstdLocal, num);
 #endif
         outQueueRstd.FreeTensor(rstdLocal);
     }
