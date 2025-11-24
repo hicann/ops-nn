@@ -142,7 +142,6 @@ aclnnStatus aclnnLogSoftmax(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>dim的类型不是INT。</td>
     </tr>
     <tr>
       <td>dim值不在self维度范围内。</td>

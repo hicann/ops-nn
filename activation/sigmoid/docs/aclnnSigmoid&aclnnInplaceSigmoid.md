@@ -149,7 +149,7 @@ aclnnStatus aclnnInplaceSigmoid(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>self和out的数据类型和数据格式不在支持的范围之内。</td>
+      <td>self和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和out的shape不匹配。</td>

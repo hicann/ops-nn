@@ -136,7 +136,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>输入</td>
       <td>公式中的offsets。</td>
       <td><ul><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li><li>不支持空Tensor。</li></ul></td>
-      <td>FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index，公式中的group_index。</td>
-      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积。</li><li>不支持空Tensor。</li></td>
+      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnSwiGluQuantV2(
     </tr> 
       <tr>
       <td>activateLeft</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>表示左矩阵是否参与运算，用户必须传参。</td>
       <td>-</td>
       <td>BOOL</td>
@@ -163,8 +163,8 @@ aclnnStatus aclnnSwiGluQuantV2(
     </tr>
      <tr>
       <td>quantModeOptional</td>
-      <td>输出</td>
-      <td>输出张量。</td>
+      <td>输入</td>
+      <td>计算输入。</td>
       <td>用户必须传参，"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化，"static"静态量化。静态量化仅支持per_tensor量化和per_channel量化。</td>
       <td>STRING</td>
       <td>-</td>
@@ -173,8 +173,8 @@ aclnnStatus aclnnSwiGluQuantV2(
     </tr>
       <tr>
       <td>groupListType</td>
-      <td>输出</td>
-      <td>输出张量。</td>
+      <td>输入</td>
+      <td>计算输入。</td>
       <td>用户必须传参，0表示cumsum模式、1表示count模式。当前仅支持0表示cumsum模式，1表示count模式。</td>
       <td>INT64</td>
       <td>-</td>
@@ -183,8 +183,8 @@ aclnnStatus aclnnSwiGluQuantV2(
     </tr>
      <tr>
       <td>dstType</td>
-      <td>输出</td>
-      <td>输出张量。</td>
+      <td>输入</td>
+      <td>计算输入。</td>
       <td>用户必须传参，2表示yOut为int8量化输出、29表示yOut为int4量化输出。当前仅支持输入2和29，默认值是2。</td>
       <td>INT64</td>
       <td>-</td>

@@ -177,7 +177,7 @@ aclnnStatus aclnnGeluBackwardV2(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>gradOutput、self、gradInput的数据类型和数据格式不在支持的范围之内。</td>
+      <td>gradOutput、self、gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>gradOutput、self、gradInput的维度关系不满足可broadcast原则。</td>
