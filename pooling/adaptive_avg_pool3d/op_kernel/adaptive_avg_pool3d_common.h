@@ -69,13 +69,11 @@ struct IndexBuffer {
 
 __aicore__ inline int64_t StartIndex(int64_t idx, int64_t osize, int64_t isize)
 {
-    ASSERT_MSG(osize != 0, "Division by zero error!");
     return (idx / osize) * isize + ((idx % osize) * isize) / osize;
 }
 
 __aicore__ inline int64_t EndIndex(int64_t idx, int64_t osize, int64_t isize)
 {
-    ASSERT_MSG(osize != 0, "Division by zero error!");
     return 1 + ((idx + 1) * isize - 1) / osize;
 }
 
