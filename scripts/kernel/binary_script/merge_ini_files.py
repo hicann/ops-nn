@@ -29,7 +29,7 @@ def merge_ini_files(ini_files, output_file):
 
     for ini_file in ini_files:
         if not os.path.exists(ini_file):
-            print(f"[Warnig] ini file {ini_file} not exist, skip")
+            print(f"[Warning] ini file {ini_file} not exist, skip")
             continue
 
         try:

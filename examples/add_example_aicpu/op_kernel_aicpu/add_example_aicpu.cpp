@@ -16,12 +16,16 @@
  */
 #include "add_example_aicpu.h"
 
-#include <cmath>
+// #include <cmath>
 #include <string>
-#include "cust_cpu_utils.h"
+// #include "cust_cpu_utils.h"
+#include "securec.h"
+#include "log.h"
+#include "status.h"
+#include "utils/kernel_util.h"
 
 namespace {
-const char* const kAddExample = "AddExample";
+const char* const kAddExample = "AddExampleAicpu";
 const uint32_t kFirstInputIndex = 0;
 const uint32_t kSecondInputIndex = 1;
 const uint32_t kFirstOutputIndex = 0;
@@ -79,8 +83,8 @@ uint32_t AddExampleCpuKernel::AddCompute(CpuKernelContext& ctx) {
   }
 
   int64_t num_elements = input0->NumElements();
-  KERNEL_LOG_INFO("Num of elements is %ld", data_size);
-  for (int i = 0; i < num_elements; i++) {
+  KERNEL_LOG_INFO("Num of elements is %ld", num_elements);
+  for (int64_t i = 0; i < num_elements; i++) {
     y[i] = x0[i] + x1[i];
   }
   return kSuccess;

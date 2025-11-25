@@ -22,8 +22,6 @@
 
 namespace optiling {
 
-using namespace Ops::Math::OpTiling;
-
 const uint32_t BLOCK_DIM = 8;
 const int64_t TILE_NUM = 8;
 const uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U;
@@ -33,9 +31,17 @@ constexpr uint32_t INDEXZERO = 0;
 constexpr uint32_t INDEXONE = 1;
 constexpr uint32_t INDEXTWO = 2;
 constexpr uint32_t INDEXTHREE = 3;
+static const gert::Shape g_vec_1_shape = {1};
 
 struct AddExampleCompileInfo {
 };
+
+inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
+  if (in_shape.IsScalar()) {
+    return g_vec_1_shape;
+  }
+  return in_shape;
+}
 
 // 获取平台信息如ubSize, coreNum
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)

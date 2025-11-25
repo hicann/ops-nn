@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file add_example_infer.cpp
+ * \file add_example_infershape.cpp
  * \brief
  */
 #include "register/op_impl_registry.h"
@@ -44,5 +44,17 @@ static ge::graphStatus InferShapeAddExample(gert::InferShapeContext* context)
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(AddExample).InferShape(InferShapeAddExample);
+static ge::graphStatus InferDataTypeAddExample(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeAddExample");
+
+    // 设置输出的dtype
+    ge::DataType sizeDtype = context->GetInputDataType(IDX_0);
+    context->SetOutputDataType(IDX_0, sizeDtype);
+
+    OP_LOGD(context->GetNodeName(), "End to do InferDataTypeAddExample");
+    return GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(AddExample).InferShape(InferShapeAddExample).InferDataType(InferDataTypeAddExample);
 } // namespace ops

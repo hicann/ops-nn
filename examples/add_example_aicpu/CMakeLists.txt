@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
-if(NOT ENABLE_TEST)
+if(NOT ENABLE_TEST AND NOT BENCHMARK)
     list(REMOVE_ITEM CURRENT_DIRS tests)
 endif()
 foreach(SUB_DIR ${CURRENT_DIRS})

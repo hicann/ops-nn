@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file add_example_proto.h
+ * \file add_example_aicpu_proto.h
  * \brief
  */
-#ifndef OPS_OP_PROTO_INC_AddEXAMPLE_H_
-#define OPS_OP_PROTO_INC_AddEXAMPLE_H_
+#ifndef OPS_OP_PROTO_INC_AddEXAMPLEAICPU_H_
+#define OPS_OP_PROTO_INC_AddEXAMPLEAICPU_H_
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
@@ -24,21 +24,20 @@ namespace ge {
 *@brief Returns x1 + x2.
 *@par Inputs:
 *Two inputs, including:
-* @li x1: A NCHW or NHWC Tensor. Must be one of the following types: float32.
-* @li x2: A NCHW or NHWC Tensor. Must be one of the following types: float32. \n
+* @li x1: A NCHW or NHWC Tensor. Must be one of the following types: float32, int32.
+* @li x2: A NCHW or NHWC Tensor. Must be one of the following types: float32, int32. \n
 
 *@par Outputs:
 *y: A NCHW or NHWC Tensor. Must be one of the following types: float32.
 *@par Third-party framework compatibility
 *Compatible with the TensorFlow operator Add.
 */
-REG_OP(AddExample)
+REG_OP(AddExampleAicpu)
     .INPUT(x1, TensorType({DT_FLOAT, DT_INT32}))
     .INPUT(x2, TensorType({DT_FLOAT, DT_INT32}))
     .OUTPUT(y, TensorType({DT_FLOAT, DT_INT32}))
-    .OP_END_FACTORY_REG(AddExample)
+    .OP_END_FACTORY_REG(AddExampleAicpu)
 
 } // namespace ge
 
-#endif // OPS_OP_PROTO_INC_AddEXAMPLE_H_
-
+#endif // OPS_OP_PROTO_INC_AddEXAMPLEAICPU_H_
