@@ -31,6 +31,7 @@ constexpr uint32_t MRGSORT_PER_NUM = 4;
 constexpr uint32_t MRGSORT_PER_NUM_LAST = 2;
 constexpr uint32_t SORT32_PERGROUP_LEN = 2 * TOPK_MAX;
 constexpr float TOPP_MAX = 1.0f;
+constexpr uint32_t FP32_NEG_INF_BITS = 0b11111111100000000000000000000000;
 
 template <typename T>
 class TopKTopPSampleKernel
@@ -196,8 +197,9 @@ private:
         topKGlobal.SetGlobalBuffer((__gm__ uint32_t*)topKs + this->startTaskId);    // top_k in [B, ]
         topPGlobal.SetGlobalBuffer((__gm__ T*)topPs + this->startTaskId);           // top_p in [B, ]
         
+        uint32_t coreEle_ = this->rtCoreRowNum == 0 ? this->rowLen : this->rtCoreRowNum * this->rowLen; 
         // Write tensors shall aligned to their batch offset
-        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset);           // logits_top_kp_select in [B, S]
+        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset, coreEle_);           // logits_top_kp_select in [B, S]
         dstIndexGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsSelectIdx + this->startTaskId);  // logits_select_idx in [B, ]
 
         if (q != nullptr) {
@@ -209,7 +211,6 @@ private:
         }
 
         // Init shared workspace
-
         // the workspace seems to be a shared cache for intermediate results from the GM data
         uint32_t count = this->rowNum * this->rowLen;
         uint32_t offset = 0;    // offsets for different cache blocks shared by ALL kernels
@@ -227,7 +228,10 @@ private:
 
         // Init top_kp_selected_logits GM to zeros when if isNeedLogits
         if(this->isNeedLogits){
-            AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(0.0));
+            AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(SEL_LOGITS_DEF_VAL));
+            // Sync single core I/O steps
+            SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+            // Prevent dirty write under multi-core scenarios
             SyncAll();
         } 
 
@@ -829,6 +833,9 @@ private:
     uint32_t rowIdToppList[ROW_LEN_MAX]{0};
     uint32_t rowIdTopkList[ROW_LEN_MAX]{0};
     uint32_t ifFind{0};
+
+    const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
+    const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
 }; // namespace TopKTopPSample
 };
 #endif // TOP_K_TOP_P_SAMPLE_H

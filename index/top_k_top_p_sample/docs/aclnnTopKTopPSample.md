@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
   根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。
 
   算子包含三个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：TopK采样、TopP采样、指数采样（本文档中Sample所指）。它们可以构成八种计算场景。如下表所示：
@@ -399,7 +399,8 @@ aclnnStatus aclnnTopKTopPSample(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
 
 ## 约束说明
-- 对于所有参数，它们的尺寸必须满足，batch>0，0<vocSize<=2^20。
+- 对于所有采样参数，它们的尺寸必须满足，batch>0，0<vocSize<=2^20。
+- topK和topP只接受非负值作为合法输入；传入0和负数不会跳过相应batch的采样，反而会引起预期之外的错误。
 - logits、q、logitsTopKPselect的尺寸和维度必须完全一致。
 - logits、topK、topP、logitsSelectIdx除最后一维以外的所有维度必须顺序和大小完全一致。目前logits只能是2维，topK、topP、logitsSelectIdx必须是1维非空Tensor。logits、topK、topP不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
 - 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
