@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-message(STATUS "=== Debug: start ops.math.is_finite.graph_plugin.CMakeLists.txt ")
+message(STATUS "=== Debug: start ops.norm.masked_softmax_with_rel_pos_bias.op_graph.CMakeLists.txt ")

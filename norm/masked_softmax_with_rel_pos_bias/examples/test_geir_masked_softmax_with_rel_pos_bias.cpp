@@ -32,7 +32,7 @@
 
 #include "experiment_ops.h"
 #include "nn_other.h"
-#include "../graph_plugin/masked_softmax_with_rel_pos_bias_proto.h"
+#include "../op_graph/masked_softmax_with_rel_pos_bias_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0  

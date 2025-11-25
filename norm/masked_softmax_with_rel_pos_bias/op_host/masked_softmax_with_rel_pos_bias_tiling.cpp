@@ -46,7 +46,7 @@ static const int32_t BUFF_NUM = 2;
 static const int32_t X_INPUT_INDEX = 0;
 static const int32_t ATTEN_INPUT_INDEX = 1;
 static const int32_t BIAS_INPUT_INDEX = 2;
-static const int32_t Y_OUTPUT_INDEX = 3;
+static const int32_t Y_OUTPUT_INDEX = 0;
 static constexpr int32_t MASKED_SOFTMAX_INVALED_KEY = 0;
 static constexpr int32_t BWN_FLOAT_ATTEN_MULS = 301;
 static constexpr int32_t BWN_FLOAT_ATTEN = 302;
@@ -179,8 +179,8 @@ class MaskedSoftmaxWithRelPosBiasBaseTiling : public TilingBaseClass {
   bool existMuls{false};
   float scaleValue{1.0f};
   uint32_t softMaskMinTmpSize{0};
-  uint32_t bf16AttenAndBiasCastTempSize{0};
-  uint32_t bf16XCastTempSize{0};
+  uint64_t bf16AttenAndBiasCastTempSize{0};
+  uint64_t bf16XCastTempSize{0};
   platform_ascendc::SocVersion socVersion{platform_ascendc::SocVersion::RESERVED_VERSION};
   MaskedSoftmaxWithRelPosBiasTilingData tilingData;
 };
@@ -208,7 +208,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetPlatformInfo() {
 }
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::CheckOutShape() {
-  auto y_shape = context_->GetOutputShape(X_INPUT_INDEX);
+  auto y_shape = context_->GetOutputShape(Y_OUTPUT_INDEX);
   OP_CHECK_NULL_WITH_CONTEXT(context_, y_shape);
   if (y_shape->GetStorageShape().GetDimNum() == 5) {  // 5 is for 5 dim
     if (y_shape->GetStorageShape().GetDim(DIM_0) != b_ || y_shape->GetStorageShape().GetDim(DIM_1) != w_ ||
@@ -248,7 +248,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetXTensorDims(const gert
             x_shape->GetStorageShape().GetDimNum());
     return ge::GRAPH_FAILED;
   }
-  if (b_ * w_ * n_ * s1_ * s2_ == 0) {
+  if (b_ == 0 || w_ == 0 || n_ == 0 || s1_ == 0 || s2_ == 0) {
     OP_LOGE(context_, "Do tiling failed, b_[%u]), w_[%u], n_[%u], s1[%u], s2_[%u]", b_, w_, n_, s1_, s2_);
     return ge::GRAPH_FAILED;
   }
@@ -285,7 +285,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetAttenMaskTensorDims(
     OP_LOGE(context_, "Do tiling failed, att_b_[%u]), att_n_[%u]", att_b_, att_n_);
     return ge::GRAPH_FAILED;
   }
-  if (att_b_ * att_w_ * att_n_ * att_s1_ * att_s2_ == 0) {
+  if (att_b_ == 0 || att_w_ == 0 || att_n_ == 0 || att_s1_ == 0 || att_s2_ == 0) {
     OP_LOGE(context_, "Do tiling failed,  att_b_[%u],  att_w_[%u], att_n_[%u], att_s1_[%u], att_s2_[%u]", att_b_,
             att_w_, att_n_, att_s1_, att_s2_);
     return ge::GRAPH_FAILED;
@@ -327,7 +327,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetBiasTensorDims() {
     OP_LOGE(context_, "Do tiling failed, bias_b_[%u]), bias_b_[%u]", bias_b_, bias_w_);
     return ge::GRAPH_FAILED;
   }
-  if (bias_b_ * bias_w_ * bias_n_ * bias_s1_ * bias_s2_ == 0) {
+  if (bias_b_ == 0 || bias_w_ == 0 || bias_n_ == 0 || bias_s1_ == 0 || bias_s2_ == 0) {
     OP_LOGE(context_, "Do tiling failed,  bias_b_[%u],  bias_w_[%u], bias_n_[%u], bias_s1_[%u], bias_s2_[%u]", bias_b_,
             bias_w_, bias_n_, bias_s1_, bias_s2_);
     return ge::GRAPH_FAILED;
@@ -467,8 +467,8 @@ class MaskedSoftmaxWithRelPosBiasBTiling : public MaskedSoftmaxWithRelPosBiasBas
   ge::graphStatus PostTiling() override;
 
  private:
-  uint32_t xSize{0};
-  uint32_t attenBiasAndTempSize{0};
+  uint64_t xSize{0};
+  uint64_t attenBiasAndTempSize{0};
 };
 
 // 需要根据切分规则判断Ub能否用满
@@ -479,25 +479,25 @@ bool MaskedSoftmaxWithRelPosBiasBTiling::IsCapable() {
     return false;
   }
   // initBuf 需要32B对齐
-  xSize = w_ * n_ * s1_ * s2AlignedSize * dtypeSize;
-  uint32_t xySize = BUFF_NUM * xSize;
+  xSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * dtypeSize;
+  uint64_t xySize = BUFF_NUM * xSize;
   if (existAtten) {
     if (dataType != ge::DT_FLOAT) {
-      attenBiasAndTempSize = (w_ + n_) * s1_ * s2AlignedSize * dtypeSize;
+      attenBiasAndTempSize = static_cast<uint64_t>(w_ + n_) * s1_ * s2AlignedSize * dtypeSize;
       // 只需要针对x，atten， bias申请cast temp buffer， y不需要
-      bf16AttenAndBiasCastTempSize = w_ * n_ * s1_ * s2AlignedSize * BUFF_NUM * dtypeSize * BUFF_NUM;
-      bf16XCastTempSize = w_ * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
+      bf16AttenAndBiasCastTempSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * BUFF_NUM * dtypeSize * BUFF_NUM;
+      bf16XCastTempSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
     } else {
       // atten需要从[w, s1, s2] -> [w, n,s1, s2], 所以需要预留一块temp buffer存储atten
-      attenBiasAndTempSize = (BUFF_NUM * w_ * n_ * s1_ * s2AlignedSize + w_ * s1_ * s2AlignedSize) * dtypeSize;
+      attenBiasAndTempSize = (static_cast<uint64_t>(BUFF_NUM) * w_ * n_ * s1_ * s2AlignedSize + static_cast<uint64_t>(w_) * s1_ * s2AlignedSize) * dtypeSize;
     }
   } else {
     if (dataType != ge::DT_FLOAT) {
-      attenBiasAndTempSize = (w_ + n_) * s1_ * s2AlignedSize * dtypeSize;
-      bf16AttenAndBiasCastTempSize = w_ * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
-      bf16XCastTempSize = w_ * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
+      attenBiasAndTempSize = static_cast<uint64_t>(w_ + n_) * s1_ * s2AlignedSize * dtypeSize;
+      bf16AttenAndBiasCastTempSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
+      bf16XCastTempSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;
     } else {
-      attenBiasAndTempSize = w_ * n_ * s1_ * s2AlignedSize * dtypeSize;
+      attenBiasAndTempSize = static_cast<uint64_t>(w_) * n_ * s1_ * s2AlignedSize * dtypeSize;
     }
   }
   ge::Shape softMaxSrcShape({1, s2AlignedSize});
@@ -514,10 +514,10 @@ bool MaskedSoftmaxWithRelPosBiasBTiling::IsCapable() {
       xySize * 2 + attenBiasAndTempSize + softMaskMinTmpSize + bf16AttenAndBiasCastTempSize + bf16XCastTempSize; // 2 is for double buffer
   // 需要进一步考虑double buffer
   if (totalSize <= aicoreParams_.ubSize) {
-    OP_LOGD(context_, "Do B tiling success, totalSize is %u, dtypeSize is %u.", totalSize, dtypeSize);
+    OP_LOGD(context_, "Do B tiling success, totalSize is %lu, dtypeSize is %u.", totalSize, dtypeSize);
     return true;
   } else {
-    OP_LOGD(context_, "Do B tiling failed, totalSize is %u, dtypeSize is %u.", totalSize, dtypeSize);
+    OP_LOGD(context_, "Do B tiling failed, totalSize is %lu, dtypeSize is %u.", totalSize, dtypeSize);
     return false;
   }
 }
@@ -570,8 +570,8 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBTiling::DoOpTiling() {
   tilingData.set_singleCoreSize(singleCoreSize);
 
   auto xYUbSize = BUFF_NUM * xSize;  // 包括x和y
-  uint32_t stackNum = (aicoreParams_.ubSize - attenBiasAndTempSize- bf16AttenAndBiasCastTempSize) /
-                      (xYUbSize * 2 + bf16XCastTempSize + softMaskMinTmpSize); // 2 is for double buffer
+  uint32_t stackNum = (aicoreParams_.ubSize - static_cast<uint32_t>(attenBiasAndTempSize - bf16AttenAndBiasCastTempSize)) /
+                      (xYUbSize * 2 + static_cast<uint32_t>(bf16XCastTempSize) + softMaskMinTmpSize); // 2 is for double buffer
   stackNum = std::min(stackNum, singleCoreSize / BUFF_NUM);
   // 这个loopNum并没有在device侧使用
   uint32_t loopNum = 0;
@@ -586,19 +586,19 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBTiling::DoOpTiling() {
   if (stackNum != 0) {
     auto inQueueLen = stackNum * xSize;
     tilingData.set_inQueueLen(inQueueLen);
-    auto xCastTempSize = stackNum * bf16XCastTempSize;
-    tilingData.set_castTempSize(xCastTempSize + bf16AttenAndBiasCastTempSize);
+    auto xCastTempSize = stackNum * static_cast<uint32_t>(bf16XCastTempSize);
+    tilingData.set_castTempSize(xCastTempSize + static_cast<uint32_t>(bf16AttenAndBiasCastTempSize));
   } else {
     // 如果是这种情况，就应该针对loopTailNum开启double buffer，而不是stackNum
     // 这种情况，应该也设置模板参数因为就不需要开启double buffer，或者针对tail
     // 开启double buffer
     auto inQueueLen = loopTailNum * xSize;
     tilingData.set_inQueueLen(inQueueLen);
-    auto xCastTempSize = loopTailNum * bf16XCastTempSize;
-    tilingData.set_castTempSize(xCastTempSize + bf16AttenAndBiasCastTempSize);
+    auto xCastTempSize = loopTailNum * static_cast<uint32_t>(bf16XCastTempSize);
+    tilingData.set_castTempSize(xCastTempSize + static_cast<uint32_t>(bf16AttenAndBiasCastTempSize));
   }
 
-  tilingData.set_maskQueueLen(attenBiasAndTempSize);
+  tilingData.set_maskQueueLen(static_cast<uint32_t>(attenBiasAndTempSize));
 
   if (existAtten) {
     auto attenBiasNum = w_ * n_ * s1_ * s2AlignedSize * BUFF_NUM;
@@ -739,7 +739,7 @@ class MaskedSoftmaxWithRelPosBiasBWTiling : public MaskedSoftmaxWithRelPosBiasBa
   ge::graphStatus DoOpTiling() override;
   uint64_t GetTilingKey() const override;
   ge::graphStatus PostTiling() override;
-  uint32_t totalSize{0};
+  uint64_t totalSize{0};
 };
 
 // 需要根据切分规则判断Ub能否用满
@@ -751,13 +751,13 @@ bool MaskedSoftmaxWithRelPosBiasBWTiling::IsCapable() {
   }
 
   // softmax last dim需要32B对齐
-  uint32_t totalAlignedSize = n_ * s1_ * s2AlignedSize * dtypeSize;
+  uint64_t totalAlignedSize = static_cast<uint64_t>(n_) * s1_ * s2AlignedSize * dtypeSize;
   totalSize += totalAlignedSize * 3 * BUFF_NUM;  // 3代表x,y,和bias
   if (existAtten) {
     totalSize += totalAlignedSize * BUFF_NUM;
   }
   if (dataType != ge::DT_FLOAT) {
-    totalSize += 3 * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;  // 对于BF16和f16，需要多3个BUFF
+    totalSize += static_cast<uint64_t>(3) * n_ * s1_ * s2AlignedSize * dtypeSize * BUFF_NUM;  // 对于BF16和f16，需要多3个BUFF
   }
 
   ge::Shape softMaxSrcShape({n_ * s1_, s2AlignedSize});
@@ -773,13 +773,13 @@ bool MaskedSoftmaxWithRelPosBiasBWTiling::IsCapable() {
     return false;
   }
   OP_LOGD(context_, "softMaxMinTmpSize[%u], totalSize[%u].", softMaxMinTmpSize, totalSize);
-  totalSize += softMaxMinTmpSize;
+  totalSize += static_cast<uint64_t>(softMaxMinTmpSize);
 
   if (totalSize <= aicoreParams_.ubSize) {
-    OP_LOGD(context_, "Do BW tiling success, totalSize is %u, dtypeSize is %u.", totalSize, dtypeSize);
+    OP_LOGD(context_, "Do BW tiling success, totalSize is %lu, dtypeSize is %u.", totalSize, dtypeSize);
     return true;
   } else {
-    OP_LOGD(context_, "Do BW tiling failed, totalSize is %u, dtypeSize is %u.", totalSize, dtypeSize);
+    OP_LOGD(context_, "Do BW tiling failed, totalSize is %lu, dtypeSize is %u.", totalSize, dtypeSize);
     return false;
   }
 }
@@ -885,10 +885,10 @@ class MaskedSoftmaxWithRelPosBiasS1BiasTiling : public MaskedSoftmaxWithRelPosBi
   ge::graphStatus PostTiling() override;
 
  private:
-  uint32_t xSize{0};
-  uint32_t biasSize{0};
-  uint32_t bf16ABiasCastTempSize{0};
-  uint32_t bf16YCastTempSize{0};
+  uint64_t xSize{0};
+  uint64_t biasSize{0};
+  uint64_t bf16ABiasCastTempSize{0};
+  uint64_t bf16YCastTempSize{0};
 };
 
 // 需要根据切分规则判断Ub能否用满
@@ -898,9 +898,9 @@ bool MaskedSoftmaxWithRelPosBiasS1BiasTiling::IsCapable() {
     return false;
   }
   // initBuf 需要32B对齐
-  xSize = s2AlignedSize * dtypeSize;
-  uint32_t xySize = 2 * xSize;
-  biasSize = s2AlignedSize * dtypeSize;
+  xSize = static_cast<uint64_t>(s2AlignedSize) * dtypeSize;
+  uint64_t xySize = 2 * xSize;
+  biasSize = static_cast<uint64_t>(s2AlignedSize) * dtypeSize;
   ge::Shape softMaxSrcShape({1, s2AlignedSize});
   // 这个是针对每一行, 先使用min
   if (dataType != ge::DT_FLOAT) {
@@ -915,13 +915,13 @@ bool MaskedSoftmaxWithRelPosBiasS1BiasTiling::IsCapable() {
   auto totalSize = (xySize + biasSize) * 2 + softMaskMinTmpSize + bf16XCastTempSize + bf16ABiasCastTempSize +
                    bf16YCastTempSize;  // 2 is for double buffer
   if (totalSize <= aicoreParams_.ubSize) {
-    OP_LOGD(context_, "Do BWNS1 tiling success with no atten, totalSize is %u, dtypeSize is %u.",
+    OP_LOGD(context_, "Do BWNS1 tiling success with no atten, totalSize is %lu, dtypeSize is %u.",
                 totalSize, dtypeSize);
     return true;
   } else {
     OP_LOGE(
         context_,
-        "Do BWNS1 tiling failed with no atten, min used size is %u which has execeed UB space %lu, dtypeSize is "
+        "Do BWNS1 tiling failed with no atten, min used size is %lu which has execeed UB space %lu, dtypeSize is "
         "%u, please check your shape size.",
         totalSize, aicoreParams_.ubSize, dtypeSize);
     return false;
@@ -978,8 +978,8 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::DoOpTiling() {
   tilingData.set_singleCoreSize(singleCoreSize);
 
   auto xYUbSize = 2 * xSize;  // 2 is for x and y
-  uint32_t stackNum = aicoreParams_.ubSize / ((xYUbSize + biasSize) * 2 + softMaskMinTmpSize + bf16XCastTempSize +
-                                              bf16ABiasCastTempSize + bf16YCastTempSize);
+  uint32_t stackNum = aicoreParams_.ubSize / ((xYUbSize + static_cast<uint32_t>(biasSize)) * 2 + softMaskMinTmpSize + static_cast<uint32_t>(bf16XCastTempSize +
+                                              bf16ABiasCastTempSize + bf16YCastTempSize));
   uint32_t loopNum = 0;
   if (tailSize != 0) {
     stackNum = std::min(stackNum, (singleCoreSize - 1) / BUFF_NUM);
@@ -997,16 +997,16 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::DoOpTiling() {
   if (stackNum != 0) {
     auto inQueueLen = stackNum * xSize;
     tilingData.set_inQueueLen(inQueueLen);
-    tilingData.set_maskQueueLen(stackNum * biasSize);
-    tilingData.set_castTempSize(stackNum * (bf16XCastTempSize + bf16ABiasCastTempSize + bf16YCastTempSize));
+    tilingData.set_maskQueueLen(stackNum * static_cast<uint32_t>(biasSize));
+    tilingData.set_castTempSize(stackNum * (static_cast<uint32_t>(bf16XCastTempSize + bf16ABiasCastTempSize + bf16YCastTempSize)));
   } else {
     // 如果是这种情况，就应该针对loopTailNum开启double buffer，而不是stackNum
     // 这种情况，应该也设置模板参数因为就不需要开启double buffer，或者针对tail
     // 开启double buffer
     auto inQueueLen = xSize;
     tilingData.set_inQueueLen(inQueueLen);
-    tilingData.set_maskQueueLen(biasSize);
-    tilingData.set_castTempSize(bf16XCastTempSize + bf16ABiasCastTempSize + bf16YCastTempSize);
+    tilingData.set_maskQueueLen(static_cast<uint32_t>(biasSize));
+    tilingData.set_castTempSize(static_cast<uint32_t>(bf16XCastTempSize + bf16ABiasCastTempSize + bf16YCastTempSize));
   }
 
   tilingData.set_stackNum(stackNum);
@@ -1103,7 +1103,7 @@ class MaskedSoftmaxWithRelPosBiasBWNTiling : public MaskedSoftmaxWithRelPosBiasB
   ge::graphStatus PostTiling() override;
 
   void SetDate();
-  uint32_t minUsedSize{0};
+  uint64_t minUsedSize{0};
 };
 
 // 需要根据切分规则判断Ub能否用满
@@ -1115,14 +1115,14 @@ bool MaskedSoftmaxWithRelPosBiasBWNTiling::IsCapable() {
   }
   minUsedSize = 0;
   if (dataType != ge::DT_FLOAT) {
-    minUsedSize += s1_ * s2AlignedSize * sizeof(float) * 3; // 3 is for x and bias and y
+    minUsedSize += static_cast<uint64_t>(s1_) * s2AlignedSize * sizeof(float) * 3; // 3 is for x and bias and y
     if (existAtten) {
-      minUsedSize += s1_ * s2AlignedSize * sizeof(float); // for atten
+      minUsedSize += static_cast<uint64_t>(s1_) * s2AlignedSize * sizeof(float); // for atten
     }
   }
-  minUsedSize += s1_ * s2AlignedSize * dtypeSize * 3 * BUFF_NUM;  //3 代表x,y和bias
+  minUsedSize += static_cast<uint64_t>(s1_) * s2AlignedSize * dtypeSize * 3 * BUFF_NUM;  //3 代表x,y和bias
   if (existAtten) {
-    minUsedSize += s1_ * s2AlignedSize * dtypeSize * BUFF_NUM; // for atten
+    minUsedSize += static_cast<uint64_t>(s1_) * s2AlignedSize * dtypeSize * BUFF_NUM; // for atten
   }
   ge::Shape softMaxSrcShape({1, s2AlignedSize});
   if (dataType != ge::DT_FLOAT) {
@@ -1131,14 +1131,14 @@ bool MaskedSoftmaxWithRelPosBiasBWNTiling::IsCapable() {
   } else {
     softMaskMinTmpSize = s1_ * AscendC::GetSoftMaxFlashV2MinTmpSize(softMaxSrcShape, dtypeSize, dtypeSize, false, false);
   }
-  OP_LOGD(context_, "softMaskMinTmpSize[%u], minUsedSize[%u].", softMaskMinTmpSize, minUsedSize);
-  minUsedSize += softMaskMinTmpSize;
+  OP_LOGD(context_, "softMaskMinTmpSize[%u], minUsedSize[%lu].", softMaskMinTmpSize, minUsedSize);
+  minUsedSize += static_cast<uint64_t>(softMaskMinTmpSize);
   if (minUsedSize <= aicoreParams_.ubSize) {
-    OP_LOGD(context_, "Do BWN tiling success, minUsedSize is %u, dtypeSize is %u.", minUsedSize,
+    OP_LOGD(context_, "Do BWN tiling success, minUsedSize is %lu, dtypeSize is %u.", minUsedSize,
                 dtypeSize);
     return true;
   } else {
-    OP_LOGD(context_, "Do BWN tiling failed, minUsedSize is %u, dtypeSize is %u.", minUsedSize,
+    OP_LOGD(context_, "Do BWN tiling failed, minUsedSize is %lu, dtypeSize is %u.", minUsedSize,
                 dtypeSize);
     return false;
   }
@@ -1153,7 +1153,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNTiling::DoOpTiling() {
     tailStartCoreIdx = tailSize;
     singleCoreSize += 1;
   }
-  uint32_t stackNum = aicoreParams_.ubSize / minUsedSize; // 此值代表一次处理的batch个数
+  uint32_t stackNum = aicoreParams_.ubSize / static_cast<uint32_t>(minUsedSize); // 此值代表一次处理的batch个数
   if (stackNum > n_) {
     OP_LOGW(context_, "stackNum > n_, stackNum[%u], n_[%u].", stackNum, n_);
     stackNum = n_;
@@ -1253,22 +1253,22 @@ class MaskedSoftmaxWithRelPosBiasBWNS1Tiling : public MaskedSoftmaxWithRelPosBia
   void SetDate();
 
  private:
-  uint32_t xSize{0};
-  uint32_t biasSize{0};
-  uint32_t attenMaskSize{0};
-  uint32_t bf16ABiasCastTempSize{0};
-  uint32_t bf16AttenMaskCastTempSize{0};
-  uint32_t bf16YCastTempSize{0};
-  uint32_t minUsedSize{0};
-  uint32_t minComputeSize{0};
+  uint64_t xSize{0};
+  uint64_t biasSize{0};
+  uint64_t attenMaskSize{0};
+  uint64_t bf16ABiasCastTempSize{0};
+  uint64_t bf16AttenMaskCastTempSize{0};
+  uint64_t bf16YCastTempSize{0};
+  uint64_t minUsedSize{0};
+  uint64_t minComputeSize{0};
 };
 
 // 需要根据切分规则判断Ub能否用满
 bool MaskedSoftmaxWithRelPosBiasBWNS1Tiling::IsCapable() {
-  xSize = s2AlignedSize * dtypeSize;
-  uint32_t xySize = 2 * xSize;
-  biasSize = s2AlignedSize * dtypeSize;
-  attenMaskSize = s2AlignedSize * dtypeSize;
+  xSize = static_cast<uint64_t>(s2AlignedSize) * dtypeSize;
+  uint64_t xySize = 2 * xSize;
+  biasSize = static_cast<uint64_t>(s2AlignedSize) * dtypeSize;
+  attenMaskSize = static_cast<uint64_t>(s2AlignedSize) * dtypeSize;
   ge::Shape softMaxSrcShape({1, s2AlignedSize});
 
   if (dataType != ge::DT_FLOAT) {
@@ -1284,16 +1284,16 @@ bool MaskedSoftmaxWithRelPosBiasBWNS1Tiling::IsCapable() {
 
   minComputeSize = (xySize + biasSize + attenMaskSize) * 2 +  // 2 is for cast
                    bf16XCastTempSize + bf16ABiasCastTempSize + bf16AttenMaskCastTempSize + bf16YCastTempSize;
-  minUsedSize = minComputeSize + softMaskMinTmpSize;
+  minUsedSize = minComputeSize + static_cast<uint64_t>(softMaskMinTmpSize);
   // 需要进一步考虑double buffer
   if (minUsedSize <= aicoreParams_.ubSize) {
-    OP_LOGD(context_, "Do tiling BWNS1 success, minUsedSize is %u, dtypeSize is %u.", minUsedSize,
+    OP_LOGD(context_, "Do tiling BWNS1 success, minUsedSize is %lu, dtypeSize is %u.", minUsedSize,
                 dtypeSize);
     return true;
   } else {
     OP_LOGE(
         context_,
-        "Do tiling BWNS1 failed, minUsedSize is %u which has exceed UB space %lu, dtypeSize is %u, Please check "
+        "Do tiling BWNS1 failed, minUsedSize is %lu which has exceed UB space %lu, dtypeSize is %u, Please check "
         "your shape size.",
         minUsedSize, aicoreParams_.ubSize, dtypeSize);
     return false;
@@ -1320,7 +1320,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNS1Tiling::DoOpTiling() {
   tilingData.set_s2DtypeSize(s2_ * dtypeSize);
   tilingData.set_s2Aligned(s2AlignedSize);
 
-  uint32_t stackNum = aicoreParams_.ubSize / minUsedSize;
+  uint32_t stackNum = aicoreParams_.ubSize / static_cast<uint32_t>(minUsedSize);
   stackNum = std::min(stackNum, static_cast<uint32_t>((singleCoreSize + 1) / DOUBLE_NUM));
   tilingData.set_stackNum(stackNum);
 
@@ -1333,7 +1333,7 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNS1Tiling::DoOpTiling() {
   }
 
   auto softMaxShape = ge::Shape({stackNum, s2AlignedSize});
-  uint32_t localWorkSpaceSize = aicoreParams_.ubSize - stackNum * minComputeSize;
+  uint32_t localWorkSpaceSize = aicoreParams_.ubSize - stackNum * static_cast<uint32_t>(minComputeSize);
   AscendC::SoftMaxFlashV2TilingFunc(softMaxShape, sizeof(float), sizeof(float), localWorkSpaceSize,
                                     tilingData.softmaxTilingData, false, false);
 

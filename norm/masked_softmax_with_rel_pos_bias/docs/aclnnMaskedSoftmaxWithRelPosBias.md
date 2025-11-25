@@ -50,10 +50,9 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   <col style="width: 146px">
   <col style="width: 110px">
   <col style="width: 301px">
-  <col style="width: 219px">
+  <col style="width: 300px">
   <col style="width: 328px">
   <col style="width: 101px">
-  <col style="width: 143px">
   <col style="width: 146px">
   </colgroup>
   <thead>
@@ -64,7 +63,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <th>使用说明</th>
       <th>数据类型</th>
       <th>数据格式</th>
-      <th>维度(shape)</th>
       <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
@@ -72,30 +70,27 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>x</td>
       <td>输入</td>
       <td>待计算入参，对应公式中的x。</td>
-      <td>无</td>
+      <td>shape为4维(B*W, N, S1, S2)或5维(B, W, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
       <td>-</td>
     </tr>
     <tr>
       <td>attenMaskOptional</td>
       <td>输入</td>
       <td>待计算入参，对应公式中的attenMaskOptional。</td>
-      <td>无</td>
+      <td>shape为3维(W, S1, S2)、4维(W, 1, S1, S2)或5维(1, W, 1, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
       <td>-</td>
     </tr>
     <tr>
       <td>relativePosBias</td>
       <td>输入</td>
       <td>待计算入参，对应公式中的relativePosBias。</td>
-      <td>无</td>
+      <td>shape为3维(N, S1, S2)、4维(1, N, S1, S2)或5维(1, 1, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
       <td>-</td>
     </tr>
     <tr>
@@ -106,7 +101,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>DOUBLE</td>
       <td>ND</td>
       <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>innerPrecisionMode</td>
@@ -116,7 +110,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>INT64</td>
       <td>ND</td>
       <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>out</td>
@@ -125,7 +118,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape与x相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
       <td>-</td>
     </tr>
     <tr>
@@ -136,13 +128,11 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

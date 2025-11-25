@@ -88,4 +88,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp) | 通过[aclnnMaskedSoftmaxWithRelPosBias](docs/aclnnMaskedSoftmaxWithRelPosBias.md)接口方式调用MaskedSoftmaxWithRelPosBias算子。 |
-| 图模式 | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp)  | 通过[算子IR](graph_plugin/masked_softmax_with_rel_pos_bias_proto.h)构图方式调用MaskedSoftmaxWithRelPosBias算子。         |
+| 图模式 | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp)  | 通过[算子IR](op_graph/masked_softmax_with_rel_pos_bias_proto.h)构图方式调用MaskedSoftmaxWithRelPosBias算子。         |
