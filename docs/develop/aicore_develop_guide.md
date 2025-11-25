@@ -339,7 +339,7 @@ __aicore__ inline void AddExample<T>::Process()
 
 为实现该调用方式，需提前生成算子对应的二进制包，增加二进制编译json文件，以`AddExample`算子为例：
 
-1. 在`scripts/kernel/binary_config`目录[ascendc_config.json](../../scripts/kernel/binary_config/ascendc_config.json)中，注册算子的NPU型号和实现模式，示例如下，输入实际name和compute_units即可。
+1. 在`scripts/kernel/binary_config`目录[ascendc_config.json](../../scripts/kernel/binary_config/ascendc_config.json)中，注册算子的NPU型号和实现模式，示例如下，输入实际name和compute_units即可。如果未生成aclnn接口，请检查`examples/add_example/op_host`下的CMakeLists，ACLNNTYPE为aclnn生成aclnn接口，ACLNNTYPE为aclnn_exclude不生成接口。
 
     ```json
     {"name":"AddExample", "compute_units": ["${soc_version}"], "auto_sync":true, "impl_mode" : "high_performance"},
