@@ -732,7 +732,7 @@ bool Conv3dTilingEngine::CheckGroupOptAgainstWeightShape(uint64_t weightD, uint6
     if (expectedWeightD != weightD) {
         OP_LOGE(logTag_.c_str(),
                 "Weight D dimension mismatch: expected %lu, got %lu "
-                "(groupOpt=%lu, cinOpt=%lu, k0=%lu, kdkhkw=%lu)",
+                "(groupOpt=%ld, cinOpt=%lu, k0=%lu, kdkhkw=%lu)",
                 expectedWeightD, weightD, attrInfo_.groupOpt, shapeInfo_.cinOpt, k0, kdkhkw);
         return false;
     }
@@ -868,15 +868,16 @@ void Conv3dTilingEngine::CheckOutputShapeSizeLimits()
 void Conv3dTilingEngine::CheckAttrShapeSizeLimits()
 {
     // Check stride and dilation dimensions (legacy code checks these)
-    if (attrInfo_.strideD > MAX_ORI_ONE_DIM_SIZE) {
+    if (attrInfo_.strideD > static_cast<int64_t>(MAX_ORI_ONE_DIM_SIZE)) {
         OP_LOGW(logTag_.c_str(), "Conv3D AscendC: StrideD (%ld) is out of range[1, %lu].",
                 attrInfo_.strideD, MAX_ORI_ONE_DIM_SIZE);
     }
-    if (attrInfo_.dilationD > MAX_ORI_ONE_DIM_SIZE) {
+    if (attrInfo_.dilationD > static_cast<int64_t>(MAX_ORI_ONE_DIM_SIZE)) {
         OP_LOGW(logTag_.c_str(), "Conv3D AscendC: DilationD (%ld) is out of range[1, %lu].",
                 attrInfo_.dilationD, MAX_ORI_ONE_DIM_SIZE);
     }
-    if (attrInfo_.padHead > MAX_ORI_ONE_DIM_SIZE || attrInfo_.padTail > MAX_ORI_ONE_DIM_SIZE) {
+    if (attrInfo_.padHead > static_cast<int64_t>(MAX_ORI_ONE_DIM_SIZE) ||
+        attrInfo_.padTail > static_cast<int64_t>(MAX_ORI_ONE_DIM_SIZE)) {
         OP_LOGW(logTag_.c_str(), "Conv3D AscendC: PadHead/PadTail (%ld/%ld) is out of range[1, %lu].",
                 attrInfo_.padHead, attrInfo_.padTail, MAX_ORI_ONE_DIM_SIZE);
     }
