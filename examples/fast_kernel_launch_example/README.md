@@ -24,17 +24,18 @@ AscendOps 是一个轻量级，高性能的算子开发工程模板，它集成�
 ## 环境要求 | Prerequisites
 *   Python: 3.8+
 *   CANN Ascend Toolkit
+*   CANN Ascend Legacy
 *   PyTorch: 2.1.0+
-*   PyTorchAdapter
+*   PyTorchAdapter 7.1.0+
 
 ## 环境准备 | Preparation
 
-1. **安装社区版CANN toolkit包**
+1. **安装社区版CANN toolkit包和社区版CANN legacy包**
 
     根据实际环境，安装社区版CANN toolkit包和社区版CANN legacy包，社区包的安装部署参考[算子调用](../../docs/invocation/quick_op_invocation.md)环境准备章节。
 
 2. **配置环境变量**
-	
+
 	根据实际场景，选择合适的命令。
 
     ```bash
@@ -42,28 +43,36 @@ AscendOps 是一个轻量级，高性能的算子开发工程模板，它集成�
    source /usr/local/Ascend/set_env.sh
    # 指定路径安装
    # source ${install-path}/set_env.sh
-    ```  
+    ```
+
 3. **安装torch与torch_npu包**
-   
-   根据实际环境，下载对应torch包并安装: `torch-${torch_version}+cpu-${python_version}-linux_${arch}.whl` 下载链接为:[官网地址](http://download.pytorch.org/whl/torch)
 
-   安装命令如下：
+   根据实际环境，下载对应 torch 包，常见的 wheel 文件名示例如下：
+
+   - x86_64 Linux 版本：`torch-${torch_version}+cpu-${python_version}-linux_x86_64.whl`
+   - ARM Linux（旧版本通常无 `+cpu` 后缀）：`torch-${torch_version}-${python_version}-linux_aarch64.whl`
+
+   说明：上面示例中的版本号及 `+cpu` 后缀仅作为示例。不同操作系统和架构（尤其是 ARM Linux）对应的 wheel 名称可能没有 `+cpu` 后缀，请以 PyTorch 官方下载页面或 `pip` 实际可用的包名为准。
+
+   下载链接为：[官网地址](http://download.pytorch.org/whl/torch)
+
+   安装命令如下（将 `<torch_whl>` 替换为实际下载的文件名）：
 
     ```sh
-    pip3 install torch-${torch_version}+cpu-${python_version}-linux_${arch}.whl
+    pip3 install <torch_whl>
     ```
 
-   根据实际环境，安装对应torch-npu包: `torch_npu-${torch_version}-${python_version}-linux_${arch}.whl` 下载链接:[官网地址](https://www.hiascend.com/document/detail/zh/Pytorch/710/configandinstg/instg/insg_0004.html)
+   根据实际环境，安装对应 torch-npu 包，例如：`torch_npu-${torch_version}-${python_version}-linux_${arch}.whl`，下载链接：[官网地址](https://www.hiascend.com/document/detail/zh/Pytorch/710/configandinstg/instg/insg_0004.html)
 
-   可以直接使用pip命令下载安装，命令如下：
+   可以直接使用 pip 命令下载安装（将 `<torch_npu_whl>` 替换为实际下载的文件名），命令如下：
 
     ```sh
-    pip3 install torch_npu-${torch_version}-${python_version}-linux_${arch}.whl
+    pip3 install <torch_npu_whl>
     ```
-    
-    - \$\{torch\_version\}：表示torch包版本号。
-    - \$\{python\_version\}：表示python版本号。
-    - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
+
+    - ${torch_version}：表示 torch 包版本号。
+    - ${python_version}：表示 python 版本号。
+    - ${arch}：表示 CPU 架构，如 aarch64、x86_64。
 
 ## 安装步骤 | Installation
 
@@ -117,7 +126,7 @@ compare CPU Result vs NPU Result: True
 
 ## 开发新算子 | Developing New Operators
 1. 编写算子调用文件
-   
+
     在 `ascend_ops/csrc/` 目录下添加新的算子目录 `mykernel`，在 `mykernel` 目录下添加新的算子调用文件 `mykernel_torch.cpp`
     ```c++
     __global__ __aicore__ void mykernel(GM_ADDR input, GM_ADDR output, int64_t num_element) {
@@ -143,7 +152,7 @@ compare CPU Result vs NPU Result: True
     ```
 
 2. 在`mykernel`目录下创建`CMakeLists.txt`
-   
+
     将如下样例中的mykernel，替换为自己的算子名称
     ```cmake
     message(STATUS "BUILD_TORCH_OPS ON in mykernel")
@@ -167,7 +176,7 @@ compare CPU Result vs NPU Result: True
     ```
 
 3. 在 `ascend_ops/csrc/npu_ops_def.cpp`中添加TORCH_LIBRARY_IMPL定义
-   
+
     ```c++
     TORCH_LIBRARY(ascend_ops, m) {
         m.def("mykernel(Tensor x) -> Tensor");
