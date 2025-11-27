@@ -199,6 +199,10 @@ macro(add_op_subdirectory)
           add_subdirectory(${OP_DIR}/${SUB_DIR})
       endif()
   endforeach()
+  # op_api目录已移出的算子，add_modules_sources在算子根路径CMakeLists中，且CMakeLists旧实现已删除
+  if(IS_DIRECTORY "${OP_DIR}/op_api")
+    add_subdirectory(${OP_DIR})
+  endif() 
 endmacro()
 
 # useage: add_category_subdirectory 根据ASCEND_OP_NAME和ASCEND_COMPILE_OPS添加指定算子工程
@@ -255,6 +259,11 @@ function(add_modules_sources)
   file(GLOB OPAPI_HEADERS ${SOURCE_DIR}/op_api/aclnn_*.h)
   if(OPAPI_HEADERS)
     target_sources(${OPHOST_NAME}_aclnn_exclude_headers INTERFACE ${OPAPI_HEADERS})
+  endif()
+
+  # op_api目录已移出的算子，SOURCE_DIR为算子根目录路径，路径不以op_host结尾；移出前SOURCE_DIR为算子op_host目录路径
+  if(NOT "${SOURCE_DIR}" MATCHES "/op_host$")
+    set(SOURCE_DIR ${SOURCE_DIR}/op_host)
   endif()
 
   # 获取算子层级目录名称
