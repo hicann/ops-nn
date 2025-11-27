@@ -23,7 +23,7 @@ template <typename T>
 class MSELossV2Sum : public MSELossV2Base<T>
 {
 public:
-    __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Base<T>(pipe, tilingData)
     {
         this->pipe->InitBuffer(this->uploadQue, 1, this->BYTES_PER_BLOCK);
@@ -143,7 +143,7 @@ template <>
 class MSELossV2Sum<float> : public MSELossV2Base<float>
 {
 public:
-    __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Base<float>(pipe, tilingData)
     {
         this->pipe->InitBuffer(this->uploadQue, 1, this->BYTES_PER_BLOCK);

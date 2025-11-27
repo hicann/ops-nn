@@ -23,7 +23,7 @@ template <typename T>
 class MSELossV2Mean : public MSELossV2Sum<T>
 {
 public:
-    __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Sum<T>(pipe, tilingData), scale(tilingData->scale)
     {}
 
@@ -67,7 +67,7 @@ template <>
 class MSELossV2Mean<float> : public MSELossV2Sum<float>
 {
 public:
-    __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Sum<float>(pipe, tilingData), scale(tilingData->scale)
     {}
 

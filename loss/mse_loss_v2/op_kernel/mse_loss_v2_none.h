@@ -23,7 +23,7 @@ template <typename T>
 class MSELossV2None : public MSELossV2Base<T>
 {
 public:
-    __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Base<T>(pipe, tilingData)
     {
         this->pipe->InitBuffer(this->dstQue, this->bufferNum, this->tileLength * MSELossV2Base<T>::HALF_SIZE);
@@ -88,7 +88,7 @@ template <>
 class MSELossV2None<float> : public MSELossV2Base<float>
 {
 public:
-    __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2None(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : MSELossV2Base<float>(pipe, tilingData)
     {
         this->pipe->InitBuffer(this->dstQue, this->bufferNum, this->tileLength * MSELossV2Base<float>::FLOAT_SIZE);

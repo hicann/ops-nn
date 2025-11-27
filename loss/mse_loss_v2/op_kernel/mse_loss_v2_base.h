@@ -23,7 +23,7 @@ template <typename T>
 class MSELossV2Base
 {
 public:
-    __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : pipe(pipe),
           bufferNum(tilingData->bufferNum),
           epochs(tilingData->epochs),
@@ -101,7 +101,7 @@ template <>
 class MSELossV2Base<float>
 {
 public:
-    __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
+    __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* __restrict tilingData)
         : pipe(pipe),
           bufferNum(tilingData->bufferNum),
           epochs(tilingData->epochs),
