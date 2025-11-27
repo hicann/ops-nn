@@ -44,7 +44,7 @@ public:
 
 protected:
     __aicore__ inline void ParseTilingData(
-        const ScatterListTilingData* tilingData, ScatterListTilingData& m_tilingData);
+        const ScatterListTilingData* __restrict__ tilingData, ScatterListTilingData& m_tilingData);
     __aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR tensorListPtr, const uint64_t& batchIdx);
     __aicore__ inline int64_t CeilDivMul(const int64_t& value, const int64_t& factor);
     __aicore__ inline void Mte2ToS();
@@ -64,7 +64,7 @@ protected:
 
 template <typename T>
 __aicore__ inline void ScatterListBase<T>::ParseTilingData(
-    const ScatterListTilingData* tilingData, ScatterListTilingData& m_tilingData)
+    const ScatterListTilingData* __restrict__ tilingData, ScatterListTilingData& m_tilingData)
 {
     m_tilingData.dim0Count = tilingData->dim0Count;
     m_tilingData.dim1Count = tilingData->dim1Count;

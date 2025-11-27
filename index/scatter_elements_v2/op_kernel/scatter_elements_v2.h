@@ -146,7 +146,7 @@ public:
         uPadParams = {false, 0, 0, static_cast<U>(0)};
     }
 
-    __aicore__ inline void CopyInIndex(int indicesIndex)
+    __aicore__ inline void CopyInIndex(int64_t indicesIndex)
     {
         if constexpr (IS_CAST_INT) {
             DataCopyPadGm2UBImpl(

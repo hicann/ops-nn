@@ -30,7 +30,7 @@ public:
     __aicore__ inline ScatterListRLBLE(){};
     __aicore__ inline void Init(
         GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+        const ScatterListTilingData* __restrict__ tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -77,7 +77,7 @@ private:
 template <typename T1, typename T2>
 __aicore__ inline void ScatterListRLBLE<T1, T2>::Init(
     GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+    const ScatterListTilingData* __restrict__ tilingData)
 {
     blockIdx = GetBlockIdx();
     varPtr = var;

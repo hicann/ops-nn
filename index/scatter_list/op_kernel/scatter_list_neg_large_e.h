@@ -27,7 +27,7 @@ public:
     __aicore__ inline ScatterListNegLargeE(){};
     __aicore__ inline void Init(
         GM_ADDR var, GM_ADDR indice, GM_ADDR update, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+        const ScatterListTilingData* __restrict__ tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -66,7 +66,7 @@ private:
 template <typename T1, typename T2>
 __aicore__ inline void ScatterListNegLargeE<T1, T2>::Init(
     GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+    const ScatterListTilingData* __restrict__ tilingData)
 {
     this->ParseTilingData(tilingData, m_tilingData);
     blockIdx = GetBlockIdx();
