@@ -300,7 +300,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {2, 4}; 
+  std::vector<int64_t> inputShape = {2, 4};
 
   std::vector<float> inputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
 
@@ -311,7 +311,7 @@ int main() {
   ret = CreateAclTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  char* approximate = "tanh";  
+  char approximate[] = "tanh";
 
   std::vector<int64_t> outShape = {2, 2};
   std::vector<float> outHostData(2 * 2, 1);

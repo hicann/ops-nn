@@ -299,7 +299,6 @@ aclnnStatus aclnnAdvanceStep(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
 
 ```Cpp
-#include <unistd.h>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -336,7 +335,7 @@ void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
 }
 
 int Init(int64_t deviceId, aclrtStream* stream) {
-    // 固定写法，AscendCL初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -370,7 +369,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+    // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -378,8 +377,8 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> inputShape = {8,1};
-    std::vector<int64_t> input2Shape = {4,1};
+    std::vector<int64_t> inputShape = {8,1}; 
+    std::vector<int64_t> input2Shape = {4,1}; 
     std::vector<int64_t> inputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<int64_t> input2HostData = {0, 1, 2, 3};
 
