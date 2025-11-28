@@ -30,6 +30,9 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static bool RenormInferShape(const op::Shape& selfShape, op::Shape& outShape, const int64_t dim)
 {
     size_t real_dim_num = selfShape.GetDimNum();
+    if (dim >= real_dim_num || dim < 0) {
+        return false;
+    }
     outShape.SetDimNum(real_dim_num);
     for (size_t i = 0; i < real_dim_num; ++i) {
         outShape.SetDim(i, 1);
@@ -79,7 +82,9 @@ const aclTensor* Renorm(
         return nullptr;
     }
     auto out = executor->AllocTensor(outShape, self->GetDataType(), op::Format::FORMAT_ND);
-    RenormAiCore(self, normType, dim, maxNorm, out, executor);
+    if (!RenormAiCore(self, normType, dim, maxNorm, out, executor)) {
+        return nullptr;
+    }
     return out;
 }
 } // namespace l0op

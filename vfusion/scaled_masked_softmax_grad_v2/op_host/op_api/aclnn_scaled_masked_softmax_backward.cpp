@@ -65,8 +65,23 @@ static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, 
     bool formatValid = gradOutput->GetStorageFormat() == op::Format::FORMAT_ND &&
                        y->GetStorageFormat() == op::Format::FORMAT_ND &&
                        out->GetStorageFormat() == op::Format::FORMAT_ND;
+    if (!formatValid) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "Input and output format only support [ND]. Actual: gradOutput:[%s], y:[%s], out:[%s].",
+            op::ToString(gradOutput->GetStorageFormat()).GetString(), op::ToString(y->GetStorageFormat()).GetString(),
+                op::ToString(out->GetStorageFormat()).GetString());
+        return false;
+    }
     if (mask != nullptr) {
         formatValid = formatValid && mask->GetStorageFormat() == op::Format::FORMAT_ND;
+    }
+    if (!formatValid) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "Mask format only support [ND]. Actual: mask:[%s].",
+            op::ToString(mask->GetStorageFormat()).GetString());
+        return false;
     }
     return formatValid;
 }
