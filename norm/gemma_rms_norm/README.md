@@ -44,7 +44,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>数据缩放因子，对应公式中的g。数据类型与输入x的数据类型保持一致。shape支持1-8维度，且满足gamma_shape = x_shape\[n:\], n < x_shape.dims()。</td>
+      <td>数据缩放因子，对应公式中的g。数据类型与输入x的数据类型保持一致。shape支持1-8维度，且满足gamma_shape = x_shape[n:], n < x_shape.dims()。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

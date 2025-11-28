@@ -113,7 +113,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>x2</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型与`x1`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>gamma</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`g`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`需要norm的维度保持一致，数据类型需要与`x1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x1`需要norm（层归一化）的维度保持一致，数据类型与`x1`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>scales1</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`进行的scales张量，对应公式中的`scales1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>scales2Optional</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`进行的scales张量。对应公式中的`scales2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape需要与scales1保持一致，数据类型需要与`scales1`保持一致。<li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。<li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>zeroPoints1Optional</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`进行的offset张量。对应公式中的`zero_points1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape需要与`scales1`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致。</li></ul></td>
       <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>zeroPoints2Optional</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`进行的offset张量。对应公式中的`zero_points2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape需要与`scales1`保持一致，数据类型需要与`zeroPoints1Optional`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
       <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>y1Out</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与输入`x1`/`x2`一致。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>1-8</td>
@@ -222,7 +222,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>xOut</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`scales1`保持一致，数据类型需要与`zeroPoints1Optional`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

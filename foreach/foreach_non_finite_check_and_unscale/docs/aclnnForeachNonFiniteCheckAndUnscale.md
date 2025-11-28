@@ -73,7 +73,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>scaledGrads</td>
       <td>输入/输出</td>
       <td>表示进行反缩放计算的输入和输出张量列表，对应公式中的`scaledGrads`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持的最大长度为256个。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>foundInf</td>
       <td>输入/输出</td>
       <td>表示用来标记输入scaledGrads中是否存在Inf或-Inf的张量，对应公式中的`foundInf`。</td>
-      <td><ul><li>支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>invScale</td>
       <td>输入</td>
       <td>表示进行反缩放计算的张量，对应公式中的`invScale`。</td>
-      <td><ul><li>支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
