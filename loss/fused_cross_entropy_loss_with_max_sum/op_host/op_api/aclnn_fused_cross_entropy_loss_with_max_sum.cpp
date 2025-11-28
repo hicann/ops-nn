@@ -87,8 +87,8 @@ static inline bool CheckShape(
 
 static aclnnStatus CheckParams(
     const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits, float labelSmoothing,
-    const aclTensor* inputOptional, const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional,
-    aclTensor* lossOut, aclTensor* softMaxOutOptional)
+    [[maybe_unused]] const aclTensor* inputOptional, [[maybe_unused]] const aclTensor* weightOptional,
+    const aclTensor* vocabParallelLogitsOptional, aclTensor* lossOut, aclTensor* softMaxOutOptional)
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
