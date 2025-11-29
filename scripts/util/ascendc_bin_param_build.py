@@ -25,31 +25,6 @@ import opdesc_parser
 PYF_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-def convert_to_camel(op_names: str):
-    """
-    convert op_name(snake format) to op_type(camel format)
-    """
-    op_names = op_names.strip()
-    if "," in op_names:
-        op_names = op_names.split(",")
-    elif ";" in op_names:
-        op_names = op_names.split(";")
-    else:
-        op_names = [op_names]
-
-    op_types = []
-    for name in op_names:
-        op_type = ""
-        words = name.split("_")
-        if len(words) > 1:
-            for word in words:
-                op_type += word.strip().capitalize()
-        else:
-            op_type = name.capitalize()
-        op_types.append(op_type)
-    return op_types
-
-
 class BinParamBuilder(opdesc_parser.OpDesc):
     def __init__(self: any, op_type: str):
         super().__init__(op_type)
@@ -337,9 +312,10 @@ if __name__ == '__main__':
     args = parse_args(sys.argv)
     if len(args.argv) <= 3:
         raise RuntimeError('arguments must greater than 3')
-    ops = convert_to_camel(args.ops)
+    op_types = []
+    op_types.append(args.ops)
     gen_bin_param_file(args.argv[1],
                     args.argv[2],
                     args.argv[3],
                     opc_config_file=args.opc_config_file,
-                    ops=ops)
+                    ops=op_types)

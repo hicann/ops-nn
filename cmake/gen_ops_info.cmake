@@ -152,7 +152,7 @@ endfunction()
 # outpath: ${CMAKE_BINARY_DIR}/binary/${compute_unit}
 ###################################################################################################
 function(generate_bin_scripts)
-  set(oneValueArgs TARGET OP_NAME OPS_INFO_DIR COMPUTE_UNIT OUT_DIR)
+  set(oneValueArgs TARGET OP_NAME OP_TYPE OPS_INFO_DIR COMPUTE_UNIT OUT_DIR)
   cmake_parse_arguments(GENBIN "" "${oneValueArgs}" "" ${ARGN})
   file(MAKE_DIRECTORY ${GENBIN_OUT_DIR}/gen)
   file(MAKE_DIRECTORY ${GENBIN_OUT_DIR}/gen/${GENBIN_OP_NAME})
@@ -162,17 +162,19 @@ function(generate_bin_scripts)
                             ${GENBIN_OPS_INFO_DIR}/aic-${GENBIN_COMPUTE_UNIT}-ops-info.ini
                             ${GENBIN_OUT_DIR}/gen/${GENBIN_OP_NAME} ${GENBIN_COMPUTE_UNIT}
                             --opc-config-file ${ASCEND_AUTOGEN_PATH}/${CUSTOM_OPC_OPTIONS}
-                            --ops ${GENBIN_OP_NAME}
+                            --ops ${GENBIN_OP_TYPE}
                     COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_bin_param_build.py
                             ${GENBIN_OPS_INFO_DIR}/inner/aic-${GENBIN_COMPUTE_UNIT}-ops-info.ini
                             ${GENBIN_OUT_DIR}/gen/${GENBIN_OP_NAME} ${GENBIN_COMPUTE_UNIT}
                             --opc-config-file ${ASCEND_AUTOGEN_PATH}/${CUSTOM_OPC_OPTIONS}
-                            --ops ${GENBIN_OP_NAME}
+                            --ops ${GENBIN_OP_TYPE}
                     COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_bin_param_build.py
                             ${GENBIN_OPS_INFO_DIR}/exc/aic-${GENBIN_COMPUTE_UNIT}-ops-info.ini
                             ${GENBIN_OUT_DIR}/gen/${GENBIN_OP_NAME} ${GENBIN_COMPUTE_UNIT}
                             --opc-config-file ${ASCEND_AUTOGEN_PATH}/${CUSTOM_OPC_OPTIONS}
-                            --ops ${GENBIN_OP_NAME}
+                            --ops ${GENBIN_OP_TYPE}
+                    COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${OPS_KERNEL_BINARY_SCRIPT}/merge_ops_config_json.py
+                            ${GENBIN_OUT_DIR}/gen/${GENBIN_OP_NAME}
   )
   if(NOT TARGET ${GENBIN_TARGET})
     add_custom_target(${GENBIN_TARGET})
@@ -200,13 +202,12 @@ endfunction()
 # install path: ${BIN_KERNEL_INSTALL_DIR}/${compute_unit}
 ###################################################################################################
 function(compile_from_config)
-  set(oneValueArgs TARGET OP_NAME BINARY_JSON OPS_INFO_DIR IMPL_DIR CONFIG_DIR OP_PYTHON_DIR OUT_DIR INSTALL_DIR COMPUTE_UNIT)
+  set(oneValueArgs TARGET OP_NAME OP_TYPE BINARY_JSON OPS_INFO_DIR IMPL_DIR CONFIG_DIR OP_PYTHON_DIR OUT_DIR INSTALL_DIR COMPUTE_UNIT)
   cmake_parse_arguments(CONFCMP "" "${oneValueArgs}" "" ${ARGN})
   file(MAKE_DIRECTORY ${CONFCMP_OUT_DIR}/src)
   file(MAKE_DIRECTORY ${CONFCMP_OUT_DIR}/bin)
   file(MAKE_DIRECTORY ${CONFCMP_OUT_DIR}/gen)
-  get_op_type_from_binary_json("${CONFCMP_BINARY_JSON}" OP_TYPE)
-  message(STATUS "start to compile op: ${CONFCMP_OP_NAME}, op_type: ${OP_TYPE}")
+  message(STATUS "start to compile op: ${CONFCMP_OP_NAME}, op_type: ${CONFCMP_OP_TYPE}")
   # add Environment Variable Configurations of python & ccache
   set(_ASCENDC_ENV_VAR)
   list(APPEND _ASCENDC_ENV_VAR export HI_PYTHON=${ASCEND_PYTHON_EXECUTABLE} &&)
@@ -214,18 +215,26 @@ function(compile_from_config)
   if(${CMAKE_CXX_COMPILER_LAUNCHER} MATCHES "ccache$")
     list(APPEND _ASCENDC_ENV_VAR export ASCENDC_CCACHE_EXECUTABLE=${CMAKE_CXX_COMPILER_LAUNCHER} &&)
   endif()
-  # copy binary config file to tbe/config
-  binary_config_copy(
-    TARGET bin_conf_${CONFCMP_OP_NAME}_${CONFCMP_COMPUTE_UNIT}_copy
-    OP_NAME ${CONFCMP_OP_NAME}
-    CONF_DIR ${CONFCMP_CONFIG_DIR}
-    DST_DIR ${ASCEND_KERNEL_CONF_DST}
-    COMPUTE_UNIT ${CONFCMP_COMPUTE_UNIT}
-  )
+  if(EXISTS ${CONFCMP_BINARY_JSON})
+    # copy binary config file to tbe/config
+    binary_config_copy(
+      TARGET bin_conf_${CONFCMP_OP_NAME}_${CONFCMP_COMPUTE_UNIT}_copy
+      OP_NAME ${CONFCMP_OP_NAME}
+      CONF_DIR ${CONFCMP_CONFIG_DIR}
+      DST_DIR ${ASCEND_KERNEL_CONF_DST}
+      COMPUTE_UNIT ${CONFCMP_COMPUTE_UNIT}
+    )
+  else()
+    file(MAKE_DIRECTORY ${ASCEND_KERNEL_CONF_DST}/${CONFCMP_COMPUTE_UNIT}/${CONFCMP_OP_NAME})
+    add_custom_target(bin_conf_${CONFCMP_OP_NAME}_${CONFCMP_COMPUTE_UNIT}_copy
+          COMMAND cp ${CMAKE_BINARY_DIR}/binary/${CONFCMP_COMPUTE_UNIT}/gen/${CONFCMP_OP_NAME}/${CONFCMP_OP_NAME}_binary.json  ${ASCEND_KERNEL_CONF_DST}/${CONFCMP_COMPUTE_UNIT}/${CONFCMP_OP_NAME}
+          COMMENT "cp ${CMAKE_BINARY_DIR}/binary/${CONFCMP_COMPUTE_UNIT}/gen/${CONFCMP_OP_NAME}/${CONFCMP_OP_NAME}_binary.json  ${ASCEND_KERNEL_CONF_DST}/${CONFCMP_COMPUTE_UNIT}/${CONFCMP_OP_NAME}"
+    )
+  endif()
 
   add_custom_target(config_compile_${CONFCMP_COMPUTE_UNIT}_${CONFCMP_OP_NAME}
     COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_single_op.sh
-            ${OP_TYPE}
+            ${CONFCMP_OP_TYPE}
             ${CONFCMP_COMPUTE_UNIT}
             ${CONFCMP_OUT_DIR}/bin
     WORKING_DIRECTORY ${OPS_KERNEL_BINARY_SCRIPT}
@@ -291,6 +300,47 @@ function(gen_binary_info_config_json)
   endif()
 endfunction()
 
+# ######################################################################################################################
+# get op_type from *_def.cpp
+# ######################################################################################################################
+function(get_op_type_from_op_name OP_NAME OP_TYPE)
+  execute_process(
+    COMMAND
+      find ${CMAKE_CURRENT_SOURCE_DIR} -name ${OP_NAME}_def.cpp -exec grep OP_ADD {} \;
+    OUTPUT_VARIABLE op_type
+    )
+  if(NOT op_type)
+    set(op_type "")
+  else()
+    string(REGEX REPLACE "[\t ]*OP_ADD\\([\t ]*" "" op_type ${op_type})
+    string(REGEX REPLACE "[\t ]*\\).*$" "" op_type ${op_type})
+  endif()
+  set(${OP_TYPE}
+      ${op_type}
+      PARENT_SCOPE
+    )
+endfunction()
+
+# ######################################################################################################################
+# check op_type is or not support in compute_unit
+# ######################################################################################################################
+function(check_op_supported OP_NAME COMPUTE_UNIT OP_SUPPORTED_COMPUTE_UNIT)
+  set(cmd "find ${CMAKE_CURRENT_SOURCE_DIR} -name ${OP_NAME}_def.cpp -exec grep '\.AddConfig(\\s*\"${COMPUTE_UNIT}\"' {} \;")
+  execute_process(
+    COMMAND bash -c "${cmd}"
+    OUTPUT_VARIABLE op_supported_compute_unit
+    )
+  if(NOT op_supported_compute_unit)
+    set(op_supported_compute_unit FALSE)
+  else()
+    set(op_supported_compute_unit TRUE)
+  endif()
+  set(${OP_SUPPORTED_COMPUTE_UNIT}
+      ${op_supported_compute_unit}
+      PARENT_SCOPE
+    )
+endfunction()
+
 # binary compile
 function(gen_ops_info_and_python)
   gen_aclnn_with_opdef()
@@ -350,12 +400,29 @@ function(gen_ops_info_and_python)
 
   if(ENABLE_BINARY OR ENABLE_CUSTOM)
     foreach(compute_unit ${ASCEND_COMPUTE_UNIT})
+      set(HAS_OP_COMPILE_OF_COMPUTE_UNIT FALSE)
       foreach(OP_DIR ${COMPILED_OP_DIRS})
         get_filename_component(op_name ${OP_DIR} NAME)
+        set(op_type)
+        get_op_type_from_op_name("${op_name}" op_type)
+        if(NOT op_type)
+          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not need to compile.")
+          continue()
+        endif()
+
+        set(check_op_supported_result)
+        check_op_supported("${op_name}" "${compute_unit}" check_op_supported_result)
+        if(NOT check_op_supported_result)
+          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not supported.")
+          continue()
+        endif()
+
+        set(HAS_OP_COMPILE_OF_COMPUTE_UNIT TRUE)
         # generate opc shell scripts for autogen binary config ops
         generate_bin_scripts(
           TARGET gen_bin_scripts
           OP_NAME ${op_name}
+          OP_TYPE ${op_type}
           OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
           COMPUTE_UNIT ${compute_unit}
           OUT_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
@@ -364,28 +431,37 @@ function(gen_ops_info_and_python)
         if(EXISTS ${binary_json})
           # binary compile from binary json config
           message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
-          compile_from_config(
-            TARGET ascendc_bin_${compute_unit}_${op_name}
-            OP_NAME ${op_name}
-            BINARY_JSON ${binary_json}
-            OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
-            IMPL_DIR ${OP_DIR}/op_kernel
-            CONFIG_DIR ${OP_DIR}/op_host/config
-            OP_PYTHON_DIR ${CMAKE_BINARY_DIR}/tbe/dynamic
-            OUT_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
-            INSTALL_DIR ${BIN_KERNEL_INSTALL_DIR}
-            COMPUTE_UNIT ${compute_unit}
-          )
-          add_dependencies(ascendc_bin_${compute_unit}_${op_name} merge_ini_${compute_unit} ascendc_impl_gen)
+        else()
+          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with auto gen config.")
         endif()
-      endforeach()
 
-      # generate binary_info_config.json
-      gen_binary_info_config_json(
-        TARGET gen_bin_info_config_${compute_unit}
-        BIN_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
-        COMPUTE_UNIT ${compute_unit}
-      )
+        # binary compile from binary json config
+        compile_from_config(
+          TARGET ascendc_bin_${compute_unit}_${op_name}
+          OP_NAME ${op_name}
+          OP_TYPE ${op_type}
+          BINARY_JSON ${binary_json}
+          OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
+          IMPL_DIR ${OP_DIR}/op_kernel
+          CONFIG_DIR ${OP_DIR}/op_host/config
+          OP_PYTHON_DIR ${CMAKE_BINARY_DIR}/tbe/dynamic
+          OUT_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
+          INSTALL_DIR ${BIN_KERNEL_INSTALL_DIR}
+          COMPUTE_UNIT ${compute_unit}
+        )
+
+        add_dependencies(ascendc_bin_${compute_unit}_${op_name} merge_ini_${compute_unit} ascendc_impl_gen)
+      endforeach()
+      if(HAS_OP_COMPILE_OF_COMPUTE_UNIT)
+        # generate binary_info_config.json
+        gen_binary_info_config_json(
+          TARGET gen_bin_info_config_${compute_unit}
+          BIN_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
+          COMPUTE_UNIT ${compute_unit}
+        )
+      else()
+        message(STATUS "[WARNING] There is no operator support for ${compute_unit}.")
+      endif()
     endforeach()
   endif()
 endfunction()

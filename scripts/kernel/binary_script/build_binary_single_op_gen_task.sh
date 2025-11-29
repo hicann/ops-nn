@@ -84,7 +84,6 @@ function get_simplified_key_config_file() {
     fi
   done
   if [ -z "${simplified_key_config_file}" ]; then
-    echo "[ERROR]  get_simplified_key_config_file ${op_file_name}_simplified_key.ini failed" >&2
     return 1
   fi
   echo "$simplified_key_config_file"
@@ -197,7 +196,9 @@ main() {
   # step 4: get simplified_key_mode from binary_simplified_key_mode.ini
   local simplified_key_file=$(get_simplified_key_config_file ${workdir} ${op_type} ${op_name} ${soc_version_lower})
   local key_mode_default=0
-  if [ -f ${simplified_key_file} ]; then
+  if [ -z ${simplified_key_file} ] || [ ! -f ${simplified_key_file} ]; then
+    echo "[INFO] No simplified_key_file found. Using default key_mode_default=0"
+  else
     if file "$simplified_key_file" | grep -q "CRLF"; then
       if ! command -vv dos2unix &> /dev/null; then
         echo "[ERROR] dos2unix is not installed. Cannot convert simplified_key_file to unix line endings !"
