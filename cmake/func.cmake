@@ -239,15 +239,87 @@ macro(add_category_subdirectory)
   endforeach()
 endmacro()
 
+function(concat_op_names)
+  set(multiValueArgs OPTYPE ACLNNTYPE ACLNN_EXTRA_VERSION)
+  cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  if(${ARG_ACLNNTYPE} STREQUAL "aclnn")
+    set(ACLNN_PREFIX aclnn_${ARG_OPTYPE})
+    set(ACLNN_EXTRA_HEADER "")
+    set(ACLNN_EXTRA_SRC "")
+
+    list(LENGTH ARG_ACLNN_EXTRA_VERSION AclnnExtraVersionLen)
+    math(EXPR index "${AclnnExtraVersionLen} - 1")
+    if (index GREATER_EQUAL 0)
+      foreach(i RANGE ${index})
+        list(GET ARG_ACLNN_EXTRA_VERSION ${i} version)
+        list(APPEND ACLNN_EXTRA_HEADER ${ACLNN_PREFIX}_${version}.h)
+        list(APPEND ACLNN_EXTRA_SRC ${ACLNN_PREFIX}_${version}.cpp)
+      endforeach()
+    endif()
+
+    list(APPEND ACLNN_EXTRA_HEADERS ${ACLNN_EXTRA_HEADER})
+    list(REMOVE_DUPLICATES ACLNN_EXTRA_HEADERS)
+    list(APPEND ACLNN_EXTRA_SRCS ${ACLNN_EXTRA_SRC})
+    list(REMOVE_DUPLICATES ACLNN_EXTRA_SRCS)
+
+    set(ACLNN_EXTRA_HEADERS
+      ${ACLNN_EXTRA_HEADERS}
+      CACHE STRING "Aclnn Extra Headers" FORCE
+    )
+    set(ACLNN_EXTRA_SRCS
+      ${ACLNN_EXTRA_SRCS}
+      CACHE STRING "Aclnn Extra Sources" FORCE
+    )
+
+  elseif(${ARG_ACLNNTYPE} STREQUAL "aclnn_inner")
+    set(ACLNNINNER_PREFIX aclnnInner_${ARG_OPTYPE})
+    set(ACLNNINNER_EXTRA_HEADER "")
+    set(ACLNNINNER_EXTRA_SRC "")
+
+    list(LENGTH ARG_ACLNN_EXTRA_VERSION AclnnExtraVersionLen)
+    math(EXPR index "${AclnnExtraVersionLen} - 1")
+    if (index GREATER_EQUAL 0)
+      foreach(i RANGE ${index})
+        list(GET ARG_ACLNN_EXTRA_VERSION ${i} version)
+        list(APPEND ACLNNINNER_EXTRA_HEADER ${ACLNNINNER_PREFIX}_${version}.h)
+        list(APPEND ACLNNINNER_EXTRA_SRC ${ACLNNINNER_PREFIX}_${version}.cpp)
+      endforeach()
+    endif()
+
+    list(APPEND ACLNNINNER_EXTRA_HEADERS ${ACLNNINNER_EXTRA_HEADER})
+    list(REMOVE_DUPLICATES ACLNNINNER_EXTRA_HEADERS)
+    list(APPEND ACLNNINNER_EXTRA_SRCS ${ACLNNINNER_EXTRA_SRC})
+    list(REMOVE_DUPLICATES ACLNNINNER_EXTRA_SRCS)
+
+    set(ACLNNINNER_EXTRA_HEADERS
+      ${ACLNNINNER_EXTRA_HEADERS}
+      CACHE STRING "AclnnInner Extra Headers" FORCE
+    )
+    set(ACLNNINNER_EXTRA_SRCS
+      ${ACLNNINNER_EXTRA_SRCS}
+      CACHE STRING "AclnnInner Extra Sources" FORCE
+    )
+
+  endif()
+endfunction()
+
 # useage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
+# ACLNNEXTRAVERSION 算子版本(ex., v2, v3, 5, etc.)
 # 需一一对应
 function(add_modules_sources)
-  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES)
+  set(multiValueArgs OPTYPE ACLNNTYPE ACLNN_EXTRA_VERSION DEPENDENCIES)
   set(oneValueArgs DIR)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   set(SOURCE_DIR ${MODULE_DIR})
+
+  list(LENGTH MODULE_OPTYPE OpTypeLen)
+  list(LENGTH MODULE_ACLNN_EXTRA_VERSION AclnnExtraVersionLen)
+  if((AclnnExtraVersionLen GREATER 1) AND (OpTypeLen GREATER 1))
+    message(FATAL_ERROR "There should be only 1 optype if there are more than 1 aclnn extra versions!")
+  endif()
 
   # opapi 默认全部编译
   file(GLOB OPAPI_SRCS ${SOURCE_DIR}/op_api/*.cpp)
@@ -320,7 +392,10 @@ function(add_modules_sources)
         if(OPDEF_SRCS)
           target_sources(${OPHOST_NAME}_opdef_${AclnnType}_obj INTERFACE ${OPDEF_SRCS})
         endif()
-      elseif(${AclnnType} STREQUAL "no_need_aclnn")
+        if(AclnnExtraVersionLen GREATER 0)
+          concat_op_names(OPTYPE ${OpType} ACLNNTYPE ${AclnnType} ACLNN_EXTRA_VERSION ${MODULE_ACLNN_EXTRA_VERSION})
+        endif()
+      elseif(${AclnnType} STREQUAL "no_need_alcnn")
         message(STATUS "aicpu or host aicpu no need aclnn.")
       else()
         message(FATAL_ERROR "ACLNN TYPE UNSPPORTED, ONLY SUPPORT aclnn/aclnn_inner/aclnn_exclude")

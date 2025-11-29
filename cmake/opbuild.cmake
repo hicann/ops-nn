@@ -85,8 +85,21 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
       set(${opbuild_out_headers} ${ori_out_headers} ${exclude_headers} PARENT_SCOPE)
     endif()
   else()
-    set(${opbuild_out_srcs} ${ori_out_srcs} ${out_srcs} PARENT_SCOPE)
-    set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} PARENT_SCOPE)
+    function(add_parent_path input_list output_list)
+      set(path_list "")
+      foreach(item ${input_list})
+        list(APPEND path_list "${ASCEND_AUTOGEN_PATH}/${item}")
+      endforeach()
+      set(${output_list} "${path_list}" PARENT_SCOPE)
+    endfunction()
+
+    add_parent_path("${ACLNN_EXTRA_SRCS}" PARENT_ACLNN_EXTRA_SRCS)
+    add_parent_path("${ACLNN_EXTRA_HEADERS}" PARENT_ACLNN_EXTRA_HEADERS)
+    add_parent_path("${ACLNNINNER_EXTRA_SRCS}" PARENT_ACLNNINNER_EXTRA_SRCS)
+    add_parent_path("${ACLNNINNER_EXTRA_HEADERS}" PARENT_ACLNNINNER_EXTRA_HEADERS)
+
+    set(${opbuild_out_srcs} ${ori_out_srcs} ${out_srcs} ${PARENT_ACLNN_EXTRA_SRCS} ${PARENT_ACLNNINNER_EXTRA_SRCS} PARENT_SCOPE)
+    set(${opbuild_out_headers} ${ori_out_headers} ${out_headers} ${PARENT_ACLNN_EXTRA_HEADERS} ${PARENT_ACLNNINNER_EXTRA_HEADERS} PARENT_SCOPE)
   endif()
 endfunction()
 
