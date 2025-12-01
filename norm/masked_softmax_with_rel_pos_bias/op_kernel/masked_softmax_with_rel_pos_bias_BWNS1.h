@@ -94,7 +94,7 @@ public:
 private:
   __aicore__ inline void ProcessAlignedSize() {
     SoftMaxShapeInfo softmaxShapeInfo{stackNum, s2AlignedSize, stackNum, s2_};
-    uint32_t loopOffset = 0;
+    int64_t loopOffset = 0;
     for (uint32_t i = 0; i < loopCount; i++) {
       CopyIn(loopOffset, stackNum, mulLoopStepSizeAndS2AlignedSize);
       Compute(softmaxShapeInfo, tilingData->softmaxTilingData, mulLoopStepSizeAndS2AlignedSize);
@@ -115,7 +115,7 @@ private:
 #if (__CCE_AICORE__ > 200)
   __aicore__ inline void ProcessNotAlignedSize() {
     SoftMaxShapeInfo softmaxShapeInfo{stackNum, s2AlignedSize, stackNum, s2_};
-    uint32_t loopOffset = 0;
+    int64_t loopOffset = 0;
     for (uint32_t i = 0; i < loopCount; i++) {
       CopyInPad(loopOffset, stackNum);
       Compute(softmaxShapeInfo, tilingData->softmaxTilingData, mulLoopStepSizeAndS2AlignedSize);
@@ -135,28 +135,28 @@ private:
   }
 #endif
 
-  __aicore__ inline void CopyIn(uint32_t loopOffset, uint32_t num, uint32_t mulNumAndS2) {
+  __aicore__ inline void CopyIn(int64_t loopOffset, uint32_t num, uint32_t mulNumAndS2) {
     LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
     LocalTensor<T> maskLocal = maskQueue.AllocTensor<T>();
     DataCopy(xLocal, xGm[loopOffset * s2_], mulNumAndS2);
 
-    uint32_t localOffset = offset + loopOffset;
-    uint32_t tmpS1 = s1_ - localOffset % s1_;
+    int64_t localOffset = offset + loopOffset;
+    uint32_t tmpS1 = s1_ - static_cast<uint32_t>(localOffset % s1_);
     if (num <= tmpS1) {
-      uint32_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
+      int64_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
       DataCopy(maskLocal[0], attenMaskGm[attenMaskGmOffset * s2_], mulNumAndS2);
-      uint32_t biasGmOffset = localOffset % (mulNAndS1);
+      int64_t biasGmOffset = localOffset % (mulNAndS1);
       DataCopy(maskLocal[mulLoopStepSizeAndS2_], biasGm[biasGmOffset * s2_], mulNumAndS2);
     } else {
       uint32_t tailNum = num - tmpS1;
 
-      uint32_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
+      int64_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
       DataCopy(maskLocal[0], attenMaskGm[attenMaskGmOffset * s2_], tmpS1 * s2_);
 
       attenMaskGmOffset = (localOffset + tmpS1) / (mulNAndS1) % w_ * s1_ + (localOffset + tmpS1) % s1_;
       DataCopy(maskLocal[tmpS1 * s2_], attenMaskGm[attenMaskGmOffset * s2_], tailNum * s2_);
 
-      uint32_t biasGmOffset = localOffset % (mulNAndS1);
+      int64_t biasGmOffset = localOffset % (mulNAndS1);
       DataCopy(maskLocal[mulLoopStepSizeAndS2_], biasGm[biasGmOffset * s2_], tmpS1 * s2_);
 
       biasGmOffset = (localOffset + tmpS1) % (mulNAndS1);
@@ -240,14 +240,14 @@ private:
     vecOutQueue.EnQue<T>(yLocal);
   }
 
-  __aicore__ inline void CopyOut(int32_t loopOffset, uint32_t mulNumAndS2) {
+  __aicore__ inline void CopyOut(int64_t loopOffset, uint32_t mulNumAndS2) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     DataCopy(yGm[loopOffset * s2_], yLocal, mulNumAndS2);
     vecOutQueue.FreeTensor(yLocal);
   }
 
 #if (__CCE_AICORE__ > 200)
-  __aicore__ inline void CopyInPad(uint32_t loopOffset, uint32_t num) {
+  __aicore__ inline void CopyInPad(int64_t loopOffset, uint32_t num) {
     LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
     LocalTensor<T> maskLocal = maskQueue.AllocTensor<T>();
 
@@ -256,14 +256,14 @@ private:
     DataCopyPadParams padParamsNormal{false, 0, 0, 0};
     DataCopyPad(xLocal, xGm[loopOffset * s2_], copyParamsLast, padParamsNormal);
 
-    uint32_t localOffset = offset + loopOffset;
-    uint32_t tmpS1 = s1_ - localOffset % s1_;
+    int64_t localOffset = offset + loopOffset;
+    uint32_t tmpS1 = s1_ - static_cast<uint32_t>(localOffset % s1_);
     if (num <= tmpS1) {
       DataCopyParams copyParamsMask{(uint16_t)(num), (uint16_t)(s2DtypeSize), (uint16_t)(0), (uint16_t)(0)};
 
-      uint32_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
+      int64_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
       DataCopyPad(maskLocal[0], attenMaskGm[attenMaskGmOffset * s2_], copyParamsMask, padParamsNormal);
-      uint32_t biasGmOffset = localOffset % (mulNAndS1);
+      int64_t biasGmOffset = localOffset % (mulNAndS1);
       DataCopyPad(maskLocal[mulLoopStepSizeAndS2AlignedSize], biasGm[biasGmOffset * s2_],
                   copyParamsMask, padParamsNormal);
     } else {
@@ -271,14 +271,14 @@ private:
       DataCopyParams copyParamsMask{(uint16_t)(tmpS1), (uint16_t)(s2DtypeSize), (uint16_t)(0), (uint16_t)(0)};
       DataCopyParams tailCopyParamsMask{(uint16_t)(tailNum), (uint16_t)(s2DtypeSize), (uint16_t)(0), (uint16_t)(0)};
 
-      uint32_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
+      int64_t attenMaskGmOffset = localOffset / (mulNAndS1) % w_ * s1_ + localOffset % s1_;
       DataCopyPad(maskLocal[0], attenMaskGm[attenMaskGmOffset * s2_], copyParamsMask, padParamsNormal);
 
       attenMaskGmOffset = (localOffset + tmpS1) / (mulNAndS1) % w_ * s1_ + (localOffset + tmpS1) % s1_;
       DataCopyPad(maskLocal[tmpS1 * s2AlignedSize], attenMaskGm[attenMaskGmOffset * s2_],
                   tailCopyParamsMask, padParamsNormal);
 
-      uint32_t biasGmOffset = localOffset % (mulNAndS1);
+      int64_t biasGmOffset = localOffset % (mulNAndS1);
       DataCopyPad(maskLocal[mulLoopStepSizeAndS2AlignedSize], biasGm[biasGmOffset * s2_], copyParamsMask, padParamsNormal);
 
       biasGmOffset = (localOffset + tmpS1)% (mulNAndS1);
@@ -290,7 +290,7 @@ private:
     maskQueue.EnQue(maskLocal);
   }
 
-  __aicore__ inline void CopyOutPad(int32_t loopOffset, uint32_t num) {
+  __aicore__ inline void CopyOutPad(int64_t loopOffset, uint32_t num) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     DataCopyParams copyParamsLast{(uint16_t)(num), (uint16_t)(s2DtypeSize), (uint16_t)(0), (uint16_t)(0)};
     DataCopyPad(yGm[loopOffset * s2_], yLocal, copyParamsLast);

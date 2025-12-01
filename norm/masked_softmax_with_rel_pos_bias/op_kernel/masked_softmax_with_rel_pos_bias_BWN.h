@@ -298,7 +298,7 @@ class MaskedSoftmaxWithRelPosBiasBWN {
 
     DataCopyParams copyParamsLast{(uint16_t)(s1_ * stackSize), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
     DataCopyPadParams padParamsNormal{false, 0, 0, 0};
-    DataCopyPad(xLocal, xGm[(process * this->onceBatchSize) * s1s2_], copyParamsLast, padParamsNormal);
+    DataCopyPad(xLocal, xGm[(static_cast<int64_t>(process) * this->onceBatchSize) * s1s2_], copyParamsLast, padParamsNormal);
     auto biasLocal = maskLocal[totalSizeAligned];
     uint32_t localOffset = (process * this->onceBatchSize + relative_pos_bias_offset);
     tmpn = n_ - localOffset % n_;
@@ -307,26 +307,26 @@ class MaskedSoftmaxWithRelPosBiasBWN {
         uint32_t i = 0;
         DataCopyParams attenMaskCopyParamsLast{(uint16_t)(s1_), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
         DataCopyPad(maskLocal[i * s1s2AlignedSize_],
-                    attenMaskGm[(process * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
+                    attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
                     attenMaskCopyParamsLast, padParamsNormal);
       }
       DataCopyParams biasCopyParamsLast{(uint16_t)(s1_ * stackSize), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
-      DataCopyPad(biasLocal, biasGm[(localOffset % n_) * s1s2_], biasCopyParamsLast, padParamsNormal);
+      DataCopyPad(biasLocal, biasGm[static_cast<int64_t>(localOffset % n_) * s1s2_], biasCopyParamsLast, padParamsNormal);
     } else {
       if constexpr (existAtten) {
           uint32_t i = 0;
           DataCopyParams attenMaskCopyParamsLast{(uint16_t)(s1_), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
           DataCopyPad(maskLocal[i * s1s2AlignedSize_],
-                      attenMaskGm[(process * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
+                      attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
                       attenMaskCopyParamsLast, padParamsNormal);
           uint32_t i2 = tmpn;
           DataCopyPad(maskLocal[i2 * s1s2AlignedSize_],
-                      attenMaskGm[(process * this->onceBatchSize + i2 + atten_mask_offset) / n_ % w_ * s1s2_],
+                      attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i2 + atten_mask_offset) / n_ % w_ * s1s2_],
                       attenMaskCopyParamsLast, padParamsNormal);
       }
       uint32_t tailNum = stackSize - tmpn;
       DataCopyParams biasCopyParamsLast{(uint16_t)(s1_ * tmpn), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
-      DataCopyPad(biasLocal, biasGm[(localOffset % n_) * s1s2_], biasCopyParamsLast, padParamsNormal);
+      DataCopyPad(biasLocal, biasGm[static_cast<int64_t>(localOffset % n_) * s1s2_], biasCopyParamsLast, padParamsNormal);
       DataCopyParams biasCopyParamsLastTail{(uint16_t)(s1_ * tailNum), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
       DataCopyPad(biasLocal[tmpn*s1s2AlignedSize_], biasGm, biasCopyParamsLastTail, padParamsNormal);
     }
@@ -337,7 +337,7 @@ class MaskedSoftmaxWithRelPosBiasBWN {
   __aicore__ inline void CopyOutNonAligned(int32_t process, uint32_t stackSize) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     DataCopyParams copyParamsLast{(uint16_t)(stackSize * s1_), (uint16_t)(s2_ * sizeof(T)), (uint16_t)(0), (uint16_t)(0)};
-    DataCopyPad(yGm[process * this->onceBatchSize * s1s2_], yLocal, copyParamsLast);
+    DataCopyPad(yGm[static_cast<int64_t>(process) * this->onceBatchSize * s1s2_], yLocal, copyParamsLast);
     vecOutQueue.FreeTensor(yLocal);
   }
 #endif
@@ -345,7 +345,7 @@ class MaskedSoftmaxWithRelPosBiasBWN {
   __aicore__ inline void CopyInAligned(int32_t process, uint32_t stackSize, uint32_t& tmpn) {
     LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
     LocalTensor<T> maskLocal = maskQueue.AllocTensor<T>();
-    DataCopy(xLocal, xGm[(process * this->onceBatchSize) * s1s2_], stackSize * s1s2AlignedSize_);
+    DataCopy(xLocal, xGm[(static_cast<int64_t>(process) * this->onceBatchSize) * s1s2_], stackSize * s1s2AlignedSize_);
     auto biasLocal = maskLocal[totalSizeAligned];
     {
       uint32_t localOffset = (process * this->onceBatchSize + relative_pos_bias_offset);
@@ -353,21 +353,21 @@ class MaskedSoftmaxWithRelPosBiasBWN {
       if (stackSize <= tmpn) {
         if constexpr (existAtten) {
           uint32_t i = 0;
-          DataCopy(maskLocal[i * s1s2AlignedSize_], attenMaskGm[(process * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
+          DataCopy(maskLocal[i * s1s2AlignedSize_], attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
                    s1s2AlignedSize_);
         }
-        DataCopy(biasLocal, biasGm[(localOffset % n_) * s1s2_], stackSize * s1s2AlignedSize_);
+        DataCopy(biasLocal, biasGm[static_cast<int64_t>(localOffset % n_) * s1s2_], stackSize * s1s2AlignedSize_);
       } else {
         if constexpr (existAtten) {
           uint32_t i = 0;
-          DataCopy(maskLocal[i * s1s2AlignedSize_], attenMaskGm[(process * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
+          DataCopy(maskLocal[i * s1s2AlignedSize_], attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i + atten_mask_offset) / n_ % w_ * s1s2_],
                    s1s2AlignedSize_);
           uint32_t i2 = tmpn;
-          DataCopy(maskLocal[i2 * s1s2AlignedSize_], attenMaskGm[(process * this->onceBatchSize + i2 + atten_mask_offset) / n_ % w_ * s1s2_],
+          DataCopy(maskLocal[i2 * s1s2AlignedSize_], attenMaskGm[(static_cast<int64_t>(process) * this->onceBatchSize + i2 + atten_mask_offset) / n_ % w_ * s1s2_],
                    s1s2AlignedSize_);
         }
         uint32_t tailNum = stackSize - tmpn;
-        DataCopy(biasLocal, biasGm[(localOffset % n_) * s1s2_], tmpn * s1s2AlignedSize_);
+        DataCopy(biasLocal, biasGm[static_cast<int64_t>(localOffset % n_) * s1s2_], tmpn * s1s2AlignedSize_);
         DataCopy(biasLocal[tmpn*s1s2AlignedSize_], biasGm, tailNum * s1s2AlignedSize_);
       }
     }
@@ -377,7 +377,7 @@ class MaskedSoftmaxWithRelPosBiasBWN {
 
   __aicore__ inline void CopyOutAligned(int32_t process, uint32_t stackSize) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
-    DataCopy(yGm[process * this->onceBatchSize * s1s2_], yLocal, stackSize * s1s2AlignedSize_);
+    DataCopy(yGm[static_cast<int64_t>(process) * this->onceBatchSize * s1s2_], yLocal, stackSize * s1s2AlignedSize_);
     vecOutQueue.FreeTensor(yLocal);
   }
 

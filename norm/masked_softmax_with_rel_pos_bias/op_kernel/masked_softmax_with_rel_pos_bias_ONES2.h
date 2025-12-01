@@ -71,7 +71,7 @@ private:
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     DataCopyParams copyParamsLast{(uint16_t)(1), (uint16_t)(num * typeSize), (uint16_t)(0), (uint16_t)(0)};
 #if __CCE_AICORE__ == 220
-    DataCopyPad(yGm[i * stackNum], yLocal, copyParamsLast);
+    DataCopyPad(yGm[static_cast<int64_t>(i) * stackNum], yLocal, copyParamsLast);
 #endif
     vecOutQueue.FreeTensor(yLocal);
   }

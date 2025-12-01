@@ -70,7 +70,7 @@ class MaskedSoftmaxWithRelPosBiasBS1Bias {
     uint32_t elementNum = tilingData->xCopyEleNum;
     SoftMaxShapeInfo softmaxShapeInfo{stackNum, s2Aligned, stackNum, s2_};
     LocalTensor<uint8_t> softmaxSharedTmpBuffer = softmaxBuffer.Get<uint8_t>();
-    uint32_t offset = 0;
+    int64_t offset = 0;
     uint32_t loopNum = tilingData->loopNum;
     for (uint32_t loopCount = 0; loopCount < loopNum; loopCount++) {
       CopyIn(offset, stackNum, elementNum);
@@ -105,11 +105,11 @@ class MaskedSoftmaxWithRelPosBiasBS1Bias {
   }
 
  protected:
-  __aicore__ inline void CopyIn(uint32_t offset, uint32_t stackNum, uint32_t copyEleNum) {
+  __aicore__ inline void CopyIn(int64_t offset, uint32_t stackNum, uint32_t copyEleNum) {
     LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
     LocalTensor<T> biasLocal = maskQueue.AllocTensor<T>();
-    uint32_t ns1Offset = (s1StartOffset + offset) % ns1;
-    uint32_t tmpNS1 = ns1 - ns1Offset;
+    int64_t ns1Offset = (s1StartOffset + offset) % ns1;
+    int64_t tmpNS1 = ns1 - ns1Offset;
     if constexpr (isAligend) {
       DataCopy(xLocal, xGm[offset * s2_], copyEleNum);
       if (tmpNS1 >= stackNum) {
@@ -204,7 +204,7 @@ class MaskedSoftmaxWithRelPosBiasBS1Bias {
     vecOutQueue.EnQue<T>(yLocal);
   }
 
-  __aicore__ inline void CopyOut(uint32_t offset, uint32_t stackNum, uint32_t copyEleNum) {
+  __aicore__ inline void CopyOut(int64_t offset, uint32_t stackNum, uint32_t copyEleNum) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     if constexpr (isAligend) {
       DataCopy(yGm[offset * s2_], yLocal, copyEleNum);

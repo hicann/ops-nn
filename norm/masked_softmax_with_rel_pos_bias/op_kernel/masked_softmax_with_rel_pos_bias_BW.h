@@ -104,14 +104,14 @@ class MaskedSoftmaxWithRelPosBiasBW {
   __aicore__ inline void CopyIn(int32_t b) {
     LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
     if (isAligend) {
-      DataCopy(xLocal, xGm[b * ns1s2], totalSizeAligned);
+      DataCopy(xLocal, xGm[static_cast<int64_t>(b) * ns1s2], totalSizeAligned);
     } else {
 #if (__CCE_AICORE__ > 200)
       // 数据copy的时候，需要考虑softmax的最后一个轴需要32B对齐
       DataCopyParams copyParamsLast{(uint16_t)(ns1), s2DtypeSize, (uint16_t)(0),
                                     (uint16_t)(0)};
       DataCopyPadParams padParamsNormal{false, 0, 0, 0};
-      DataCopyPad(xLocal, xGm[b * ns1s2], copyParamsLast, padParamsNormal);
+      DataCopyPad(xLocal, xGm[static_cast<int64_t>(b) * ns1s2], copyParamsLast, padParamsNormal);
 #endif
     }
 
@@ -216,12 +216,12 @@ class MaskedSoftmaxWithRelPosBiasBW {
     __aicore__ inline void CopyOut(int32_t b) {
       LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
       if (isAligend) {
-        DataCopy(yGm[b * ns1s2], yLocal, totalSizeAligned);
+        DataCopy(yGm[static_cast<int64_t>(b) * ns1s2], yLocal, totalSizeAligned);
       } else {
 #if (__CCE_AICORE__ > 200)
         DataCopyParams copyParamsLast{(uint16_t)(ns1), s2DtypeSize, (uint16_t)(0),
                                       (uint16_t)(0)};
-        DataCopyPad(yGm[b * ns1s2], yLocal, copyParamsLast);
+        DataCopyPad(yGm[static_cast<int64_t>(b) * ns1s2], yLocal, copyParamsLast);
 #endif
       }
       vecOutQueue.FreeTensor(yLocal);

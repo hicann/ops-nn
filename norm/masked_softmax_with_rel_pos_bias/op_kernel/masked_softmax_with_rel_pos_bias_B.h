@@ -86,7 +86,7 @@ class MaskedSoftmaxWithRelPosBiasB {
       BroadCastBias(attenMaskLocal);
     }
 
-    uint32_t offset = 0;
+    int64_t offset = 0;
     uint32_t stackNum = tilingData->stackNum;
     uint32_t loopNum = 0;
     if (stackNum != 0) {
@@ -95,7 +95,7 @@ class MaskedSoftmaxWithRelPosBiasB {
     // 存在loopNum，stackNum为零的情况
     uint32_t mulsNum = stackNum * wns1s2Aligned;
     SoftMaxShapeInfo softmaxShapeInfo{stackNum * wns1, s2Aligned, stackNum * wns1, s2_};
-    for (uint32_t loopCount = 0; loopCount < loopNum; loopCount++) {
+    for (int64_t loopCount = 0; loopCount < loopNum; loopCount++) {
       offset = loopCount * stackNum;
       CopyInX(offset, stackNum, tilingData->xCopyEleNum);
       if constexpr (existAtten) {
@@ -197,7 +197,7 @@ class MaskedSoftmaxWithRelPosBiasB {
     }
   }
 
-  __aicore__ inline void CopyInX(uint32_t offset, uint32_t stackNum, uint32_t copyEleNum) {
+  __aicore__ inline void CopyInX(int64_t offset, uint32_t stackNum, uint32_t copyEleNum) {
     if constexpr (isAligend) {
       LocalTensor<T> xLocal = vecInQueue.AllocTensor<T>();
       DataCopy(xLocal, xGm[offset * wns1s2Aligned], copyEleNum);
@@ -213,7 +213,7 @@ class MaskedSoftmaxWithRelPosBiasB {
     }
   }
 
-  __aicore__ inline void ComputeAttenMaskAndBias(uint32_t offset, LocalTensor<T>& attenMaskLocal, uint32_t stackNum,
+  __aicore__ inline void ComputeAttenMaskAndBias(int64_t offset, LocalTensor<T>& attenMaskLocal, uint32_t stackNum,
                                                  uint32_t mulsNum, const SoftMaxShapeInfo& softmaxShapeInfo,
                                                  const SoftMaxTiling& softmaxTilingData) {
     LocalTensor<T> xLocal = vecInQueue.DeQue<T>();
@@ -246,7 +246,7 @@ class MaskedSoftmaxWithRelPosBiasB {
     vecInQueue.FreeTensor(xLocal);
   }
 
-  __aicore__ inline void ComputeBias(uint32_t offset, LocalTensor<T>& biasLocal, uint32_t stackNum, uint32_t mulsNum,
+  __aicore__ inline void ComputeBias(int64_t offset, LocalTensor<T>& biasLocal, uint32_t stackNum, uint32_t mulsNum,
                                      const SoftMaxShapeInfo& softmaxShapeInfo, const SoftMaxTiling& softmaxTilingData) {
     LocalTensor<T> xLocal = vecInQueue.DeQue<T>();
     LocalTensor<T> yLocal = vecOutQueue.AllocTensor<T>();
@@ -270,7 +270,7 @@ class MaskedSoftmaxWithRelPosBiasB {
     vecInQueue.FreeTensor(xLocal);
   }
 
-  __aicore__ inline void CopyOut(uint32_t offset, uint32_t stackNum, uint32_t copyEleNum) {
+  __aicore__ inline void CopyOut(int64_t offset, uint32_t stackNum, uint32_t copyEleNum) {
     if constexpr (isAligend) {
       LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
       DataCopy(yGm[offset * wns1s2], yLocal, copyEleNum);
@@ -347,7 +347,7 @@ class MaskedSoftmaxWithRelPosBiasBBf16AndHalf
       BroadCastBias(attenMaskLocal, biasCastTensor);
     }
 
-    uint32_t offset = 0;
+    int64_t offset = 0;
     uint32_t stackNum = this->tilingData->stackNum;
     uint32_t loopNum = 0;
     if (stackNum != 0) {
@@ -357,7 +357,7 @@ class MaskedSoftmaxWithRelPosBiasBBf16AndHalf
     // 存在loopNum，stackNum为零的情况
     uint32_t mulsNum = stackNum * this->wns1s2Aligned;
     SoftMaxShapeInfo softmaxShapeInfo{stackNum * this->wns1, this->s2Aligned, stackNum * this->wns1, this->s2_};
-    for (uint32_t loopCount = 0; loopCount < loopNum; loopCount++) {
+    for (int64_t loopCount = 0; loopCount < loopNum; loopCount++) {
       offset = loopCount * stackNum;
       this->CopyInX(offset, stackNum, this->tilingData->xCopyEleNum);
       if constexpr (existAtten) {
@@ -449,7 +449,7 @@ class MaskedSoftmaxWithRelPosBiasBBf16AndHalf
     }
   }
 
-  __aicore__ inline void ComputeAttenMaskAndBias(uint32_t offset, LocalTensor<float>& xCastTensor,
+  __aicore__ inline void ComputeAttenMaskAndBias(int64_t offset, LocalTensor<float>& xCastTensor,
                                                  LocalTensor<float>& attenMaskLocal, LocalTensor<float>& biasCastTensor,
                                                  uint32_t stackNum, uint32_t mulsNum,
                                                  const SoftMaxShapeInfo& softmaxShapeInfo,
@@ -491,7 +491,7 @@ class MaskedSoftmaxWithRelPosBiasBBf16AndHalf
     this->vecInQueue.FreeTensor(xLocal);
   }
 
-  __aicore__ inline void ComputeBias(uint32_t offset, LocalTensor<float>& xCastTensor, LocalTensor<float>& biasLocal,
+  __aicore__ inline void ComputeBias(int64_t offset, LocalTensor<float>& xCastTensor, LocalTensor<float>& biasLocal,
                                      uint32_t stackNum, uint32_t mulsNum, const SoftMaxShapeInfo& softmaxShapeInfo,
                                      const SoftMaxTiling& softmaxTilingData) {
     LocalTensor<T> xLocal = this->vecInQueue.template DeQue<T>();
