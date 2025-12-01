@@ -29,7 +29,7 @@ public:
 
     __aicore__ inline KernelMultiScaleDeformableAttnOpt(GM_ADDR value, GM_ADDR valueSpatialShapes,
         GM_ADDR valueLevelStartIndex, GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
-        const MultiScaleDeformableAttnFunctionTilingData* tilingData, TPipe* pipe)
+        const MultiScaleDeformableAttnFunctionTilingData* __restrict tilingData, TPipe* pipe)
         : pipe_(pipe), blkIdx_(GetBlockIdx())
     {
         InitTiling(tilingData);
@@ -53,7 +53,7 @@ private:
         endOffset_ = startOffset_ + avgTasks + (blkIdx_ < remainTasks ? 1 : 0);
     }
 
-    __aicore__ inline void InitTiling(const MultiScaleDeformableAttnFunctionTilingData* tilingData)
+    __aicore__ inline void InitTiling(const MultiScaleDeformableAttnFunctionTilingData *__restrict tilingData)
     {
         batchSize_ = tilingData->batchSize;
         numKeys_ = tilingData->numKeys;
@@ -218,15 +218,19 @@ __aicore__ inline void KernelMultiScaleDeformableAttnOpt<num_points, embed_dims>
     const LocalTensor<float>& location, const LocalTensor<float>& attentionWeight, uint32_t batch, uint32_t query,
     uint32_t pl)
 {
-    uint32_t sampleOffset = (batch * numQueries_ + query) * oneQueryNum_;
+    int64_t sampleOffset = (batch * numQueries_ + query) * oneQueryNum_;
     WaitFlag<HardEvent::V_MTE2>(0);
     WaitFlag<HardEvent::V_MTE2>(1);
     if (num_points == 8 && pointLoops_ == 1) {
         DataCopy(location, locationGm_[sampleOffset * 2], cpDoubleSampleParams_);
         DataCopy(attentionWeight, attentionWeightsGm_[sampleOffset], cpSampleParams_);
     } else {
-        DataCopyPad(location, locationGm_[sampleOffset * 2 + pl * num_points * 2], cpDoubleSampleParams_, {});
-        DataCopyPad(attentionWeight, attentionWeightsGm_[sampleOffset + pl * num_points], cpSampleParams_, {});
+        DataCopyPad(location,
+            locationGm_[sampleOffset * 2 + static_cast<int64_t>(pl) * static_cast<int64_t>(num_points) * 2],
+            cpDoubleSampleParams_, {});
+        DataCopyPad(attentionWeight,
+            attentionWeightsGm_[sampleOffset + static_cast<int64_t>(pl) * static_cast<int64_t>(num_points)],
+            cpSampleParams_, {});
     }
 
     SetFlag<HardEvent::MTE2_V>(copyEvt_);

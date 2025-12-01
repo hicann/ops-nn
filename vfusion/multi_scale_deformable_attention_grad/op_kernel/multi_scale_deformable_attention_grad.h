@@ -22,7 +22,7 @@ public:
     __aicore__ inline void Init(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm,
                             GM_ADDR sampling_loc_gm, GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
                             GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm, GM_ADDR grad_attn_weight_gm,
-                            const MultiScaleDeformableAttentionGradTilingData *tiling_data, TPipe *tmpPipe)
+                            const MultiScaleDeformableAttentionGradTilingData* __restrict tiling_data, TPipe *tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();

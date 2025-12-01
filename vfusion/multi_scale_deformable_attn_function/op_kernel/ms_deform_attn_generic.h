@@ -24,7 +24,7 @@ public:
     __aicore__ inline KernelMultiScaleDeformableAttn() {}
     __aicore__ inline void Init(GM_ADDR value, GM_ADDR valueSpatialShapes, GM_ADDR valuLevelStartIndex,
         GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
-        const MultiScaleDeformableAttnFunctionTilingData* tiling_data, TPipe* tmpPipe)
+        const MultiScaleDeformableAttnFunctionTilingData* __restrict tiling_data, TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();

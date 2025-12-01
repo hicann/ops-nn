@@ -121,16 +121,6 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *indices) {
   return true;
 }
 
-// CheckMaxNormNotNegative 检查maxNorm是否在[0, +∞]范围内
-static bool CheckMaxNormNotNegative(const double maxNorm) {
-  if (maxNorm < 0.0f) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-      "maxNorm should be greater than or equal to 0, but now maxNorm is [%f].", maxNorm);
-    return false;
-  }
-  return true;
-}
-
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, const double maxNorm) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_INNER_NULLPTR);
@@ -143,9 +133,6 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, 
 
   // 4. 检查indices的维度是否超过8
   CHECK_RET(CheckIndicesDimension(indices), ACLNN_ERR_PARAM_INVALID);
-
-  // 5. 检查maxNorm取值是否合法
-  CHECK_RET(CheckMaxNormNotNegative(maxNorm), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
 }

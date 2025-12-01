@@ -406,18 +406,3 @@ TEST_F(l2EmbeddingRenormTest, testcase_031_invalid_dtype) {
  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
  EXPECT_EQ(workspaceSize, 7UL);
 }
-
-//CheckMaxNormNotNegative 测试maxNorm取非法值是否拦截
-TEST_F(l2EmbeddingRenormTest, testcase_032_invalid_maxNorm) {
- auto selfDesc = TensorDesc({3,3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10,10).Value(vector<float>{1,1,1,2,3,4,5,6,7});
- auto indicesDesc = TensorDesc({3}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-3,2).Value(vector<int64_t>{0,2,1});
- double normType = 1.;
- double maxNorm = -1.;
- auto ut = OP_API_UT(aclnnEmbeddingRenorm, INPUT(selfDesc, indicesDesc, maxNorm, normType),OUTPUT());
-
- // test GetWorkspaceSize
- uint64_t workspaceSize = 7;
- aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
- EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
- EXPECT_EQ(workspaceSize, 7UL);
-}

@@ -31,7 +31,7 @@ public:
     __aicore__ inline KernelMultiScaleDeformableAttn310P(){};
     __aicore__ inline void Init(GM_ADDR value, GM_ADDR valueSpatialShapes, GM_ADDR valueLevelStartIndex,
                                 GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
-                                const MultiScaleDeformableAttnFunctionTilingData* tilingData);
+                                const MultiScaleDeformableAttnFunctionTilingData* __restrict tilingData);
     __aicore__ inline void MSDAProcess();
 
 private:
@@ -46,7 +46,7 @@ private:
                                           int64_t loopOffset, int64_t outBaseOffset, int16_t loopElems,
                                           int64_t weightBaseOffset, LocalTensor<float> output,
                                           LocalTensor<float> gridOutput);
-    __aicore__ inline void ParseTilingData(const MultiScaleDeformableAttnFunctionTilingData* tilingData);
+    __aicore__ inline void ParseTilingData(const MultiScaleDeformableAttnFunctionTilingData* __restrict tilingData);
     __aicore__ inline void PerLoopCompute(int32_t nIdx, int32_t hwIdx, int32_t calHWElems, int32_t calHWElemsAlign,
                                           LocalTensor<float> location, int64_t locationOffset,
                                           LocalTensor<float> output, LocalTensor<float> gridOutput, int64_t valueOffset,
@@ -243,7 +243,7 @@ private:
 template <typename T>
 __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::Init(
     GM_ADDR value, GM_ADDR valueSpatialShapes, GM_ADDR valueLevelStartIndex, GM_ADDR samplingLocations,
-    GM_ADDR attentionWeights, GM_ADDR output, const MultiScaleDeformableAttnFunctionTilingData* tilingData)
+    GM_ADDR attentionWeights, GM_ADDR output, const MultiScaleDeformableAttnFunctionTilingData* __restrict tilingData)
 {
     blockIDX = GetBlockIdx();
     // 初始化tiling
@@ -356,12 +356,12 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ClearGM()
 
 /**
  * @description: 解析tiling数据，计算分核数据
- * @param {MultiScaleDeformableAttnFunctionTilingData*} tilingData
+ * @param {MultiScaleDeformableAttnFunctionTilingData* __restrict} tilingData
  * @return {*}
  */
 template <typename T>
 __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ParseTilingData(
-    const MultiScaleDeformableAttnFunctionTilingData* tilingData)
+    const MultiScaleDeformableAttnFunctionTilingData* __restrict tilingData)
 {
     batchSize_ = tilingData->batchSize;
     numKeys_ = tilingData->numKeys;

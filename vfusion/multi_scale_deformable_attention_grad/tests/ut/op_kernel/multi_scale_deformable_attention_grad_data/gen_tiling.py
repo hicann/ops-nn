@@ -37,7 +37,8 @@ def gen_tiling(batch, num_heads, channels, num_levels, num_points, num_queries):
         "num_levels": num_levels,
         "num_query": num_queries,
         "num_point": num_points,
-        "max_ub_num": max_ub_num
+        "max_ub_num": max_ub_num,
+        "core_num": core_num
     }
 
     variables_array = [variables_dict[key] for key in variables_dict]

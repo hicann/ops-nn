@@ -45,7 +45,7 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     uint64_t batch_size = 1;
     uint64_t spatial_size = 24;
     uint64_t num_heads = 8;
-    uint64_t channels = 2;
+    uint64_t channels = 8;
     uint64_t num_levels = 1;
     uint64_t num_query = 100;
     uint64_t num_point = 2;
@@ -81,8 +81,8 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     system("cp -rf ../../../../vfusion/multi_scale_deformable_attention_grad/tests/ut/op_kernel/multi_scale_deformable_attention_grad_data/ ./");
     system("chmod -R 755 ./multi_scale_deformable_attention_grad_data/");
     system("cd ./multi_scale_deformable_attention_grad_data/ && rm -rf ./*bin");
-    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_data.py 1 8 2 1 2 100");
-    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_tiling.py 1 8 2 1 2 100");
+    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_data.py 1 8 8 1 2 100");
+    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_tiling.py 1 8 8 1 2 100");
 
     char * path_ = get_current_dir_name();
     string path(path_);
