@@ -45,7 +45,7 @@ void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-    // 固定写法，AscendCL初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -79,7 +79,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+    // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
