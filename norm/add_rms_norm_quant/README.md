@@ -75,7 +75,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape需要与x1需要norm的维度保持一致。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape与x1需要norm（层归一化）的维度保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
