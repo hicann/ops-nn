@@ -121,7 +121,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *indices) {
   return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices, const double maxNorm) {
+static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_INNER_NULLPTR);
 
@@ -148,7 +148,7 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
   L2_DFX_PHASE_1(aclnnEmbeddingRenorm, DFX_IN(selfRef, indices, maxNorm, normType), DFX_OUT(selfRef));
 
   // 固定写法 参数检查
-  auto ret = CheckParams(selfRef, indices, maxNorm);
+  auto ret = CheckParams(selfRef, indices);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 固定写法，创建OpExecutor

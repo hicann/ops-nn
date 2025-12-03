@@ -30,7 +30,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static bool RenormInferShape(const op::Shape& selfShape, op::Shape& outShape, const int64_t dim)
 {
     size_t real_dim_num = selfShape.GetDimNum();
-    if (dim >= real_dim_num || dim < 0) {
+    if (dim < 0 || static_cast<size_t>(dim) >= real_dim_num ) {
         return false;
     }
     outShape.SetDimNum(real_dim_num);
