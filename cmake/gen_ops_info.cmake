@@ -404,17 +404,23 @@ function(gen_ops_info_and_python)
       foreach(OP_DIR ${COMPILED_OP_DIRS})
         get_filename_component(op_name ${OP_DIR} NAME)
         set(op_type)
-        get_op_type_from_op_name("${op_name}" op_type)
-        if(NOT op_type)
-          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not need to compile.")
-          continue()
-        endif()
+        set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
+        if(EXISTS ${binary_json})
+          get_op_type_from_binary_json("${binary_json}" op_type)
+          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
+        else()
+          get_op_type_from_op_name("${op_name}" op_type)
+          if(NOT op_type)
+            message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not need to compile.")
+            continue()
+          endif()
 
-        set(check_op_supported_result)
-        check_op_supported("${op_name}" "${compute_unit}" check_op_supported_result)
-        if(NOT check_op_supported_result)
-          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not supported.")
-          continue()
+          set(check_op_supported_result)
+          check_op_supported("${op_name}" "${compute_unit}" check_op_supported_result)
+          if(NOT check_op_supported_result)
+            message(STATUS "[INFO] On [${compute_unit}], [${op_name}] not supported.")
+            continue()
+          endif()
         endif()
 
         set(HAS_OP_COMPILE_OF_COMPUTE_UNIT TRUE)
@@ -427,14 +433,6 @@ function(gen_ops_info_and_python)
           COMPUTE_UNIT ${compute_unit}
           OUT_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
         )
-        set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
-        if(EXISTS ${binary_json})
-          # binary compile from binary json config
-          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
-        else()
-          message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with auto gen config.")
-        endif()
-
         # binary compile from binary json config
         compile_from_config(
           TARGET ascendc_bin_${compute_unit}_${op_name}
