@@ -1,19 +1,18 @@
 # aclnnExpandIntoJaggedPermute
 
-- ## 产品支持情况
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/expand_into_jagged_permute)
+
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |     √   |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
+
 
 ## 功能说明
 
-- **算子功能**：将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况
+- **接口功能**：将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况。
 - **计算公式**：
 
 $$
@@ -27,55 +26,217 @@ $$
 
 ## 函数原型
 
-每个算子分为两段式接口，必须先调用“aclnnExpandIntoJaggedPermuteGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnExpandIntoJaggedPermute”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnExpandIntoJaggedPermuteGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnExpandIntoJaggedPermute”接口执行计算。
 
-aclnnExpandIntoJaggedPermuteGetWorkspaceSize。
-
-* `aclnnStatus aclnnExpandIntoJaggedPermuteGetWorkspaceSize(const aclTensor *permute, const aclTensor *inputOffset, const aclTensor *outputOffset, int64_t outputSize, const aclTensor *outputPermuteOutOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
-* `aclnnStatus aclnnExpandIntoJaggedPermute(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```c++
+aclnnStatus aclnnExpandIntoJaggedPermuteGetWorkspaceSize(
+    const aclTensor *permute,
+    const aclTensor *inputOffset,
+    const aclTensor *outputOffset,
+    int64_t          outputSize,
+    const aclTensor *outputPermuteOutOut,
+    uint64_t        *workspaceSize,
+    aclOpExecutor  **executor)
+```
+```c++
+aclnnStatus aclnnExpandIntoJaggedPermute(
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
+```
 
 ## aclnnExpandIntoJaggedPermuteGetWorkspaceSize
 
 - **参数说明：**
-  
-  - permute（aclTensor*，计算输入）：Device侧的aclTensor，公式中的输入permute，代表表级别的置换索引。要求为一维的Tensor，shape为(inputLen)，取值范围为[0,inputLen-1]。数据类型支持INT32。支持非连续的Tensor，数据格式支持ND。
-  - inputOffset（aclTensor*，计算输入）：Device侧的aclTensor，公式中的inputOffset，代表表级别长度的互斥偏移量。要求为一维的Tensor，shape为(inputLen+1)。数据类型与permute一致。支持非连续的Tensor，数据格式支持ND。
-  - outputOffset（aclTensor*，计算输入）：Device侧的aclTensor，公式中的outputOffset，代表表级别置换长度的互斥偏移量。要求为一维的Tensor，shape为(inputLen+1)，Tensor的值严格单调递增且最后一个值等于outputSize。数据类型与permute一致。支持非连续的Tensor，数据格式支持ND。
-  - outputSize（int64_t，计算输入）：Host侧的int，代表输出结果的长度，数据类型支持INT32、INT64。
-  - outputPermuteOut（aclTensor*，计算输出）：Device侧的aclTensor，公式中的输出，要求为一维的Tensor，shape为(outputSize)。数据类型与permute一致。数据格式支持ND。
-  - workspaceSize（uint64\_t\*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
+
+    <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 187px">
+    <col style="width: 121px">
+    <col style="width: 287px">
+    <col style="width: 387px">
+    <col style="width: 187px">
+    <col style="width: 187px">
+    <col style="width: 187px">
+    <col style="width: 146px">
+    </colgroup>
+    <thead>
+    <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+    </tr></thead>
+    <tbody>
+    <tr>
+        <td>permute</td>
+        <td>输入</td>
+        <td>公式中的输入permute，代表表级别的置换索引。</td>
+        <td>要求为一维的Tensor，取值范围为[0,inputLen-1]。</td>
+        <td>INT32</td>
+        <td>ND</td>
+        <td>inputLen</td>
+        <td>√</td>
+    </tr>
+    <tr>
+        <td>inputOffset</td>
+        <td>输入</td>
+        <td>公式中的inputOffset，代表表级别长度的互斥偏移量。</td>
+        <td>要求为一维的Tensor，Tensor的值严格单调递增且最后一个值等于outputSize。</td>
+        <td>与permute一致。</td>
+        <td>ND</td>
+        <td>inputLen+1</td>
+        <td>√</td>
+    </tr>
+    <tr>
+        <td>outputOffset</td>
+        <td>输入</td>
+        <td>公式中的outputOffset，表示第一个共享专家。</td>
+        <td>要求为一维的Tensor，Tensor的值严格单调递增且最后一个值等于outputSize。</td>
+        <td>与permute一致。</td>
+        <td>ND</td>
+        <td>inputLen+1</td>
+        <td>√</td>
+    </tr>
+    <tr>
+        <td>outputSize</td>
+        <td>输入</td>
+        <td>代表输出结果的长度。</td>
+        <td>-</td>
+        <td>INT32、INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>outputPermute</td>
+        <td>输出</td>
+        <td>公式中的输出。</td>
+        <td>shape为(outputSize)。</td>
+        <td>与permute一致。</td>
+        <td>ND</td>
+        <td>-</td>
+        <td>√</td>
+    </tr>
+    <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+    </tr>
+    <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+    </tr>
+    </tbody></table>
+
 - **返回值：**
-  
-  返回aclnnStatus状态码，具体参见[aclnn返回码](common/aclnn返回码.md)。
-```
-  第一段接口完成入参校验，出现以下场景时报错：
-  161001(ACLNN_ERR_PARAM_NULLPTR): 1. 输入和输出的Tensor是空指针。
-  161002(ACLNN_ERR_PARAM_INVALID): 1. 输入和输出的数据类型不在支持的范围内。
-                                   1. 输入和输出的Shape不在支持的范围内。
-```
+
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+    第一段接口完成入参校验，出现以下场景时报错：
+
+    <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+        <col style="width: 267px">
+        <col style="width: 124px">
+        <col style="width: 775px">
+        </colgroup>
+        <thead>
+            <tr>
+            <th>返回值</th>
+            <th>错误码</th>
+            <th>描述</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+            <td> ACLNN_ERR_PARAM_NULLPTR </td>
+            <td> 161001 </td>
+            <td>传入的必选输入、必选输出或者必选属性，是空指针。</td>
+            </tr>
+            <tr>
+            <td> ACLNN_ERR_PARAM_INVALID </td>
+            <td> 161002 </td>
+            <td>输入和输出的数据类型和数据格式不在支持的范围之内。</td>
+            </tr>
+            <tr>
+            <td rowspan="2"> ACLNN_ERR_INNER_TILING_ERROR </td>
+            <td rowspan="2"> 561002 </td>
+            <td>多个输入tensor之间的shape信息不匹配。</td>
+            </tr>
+            <tr>
+            <td>输入属性和输入tensor之间的shape信息不匹配。</td>
+            </tr>
+        </tbody></table>
 
 ## aclnnExpandIntoJaggedPermute
 
 - **参数说明：**
 
-    - workspace（void\*，入参）：在Device侧申请的workspace内存地址。
-    - workspaceSize（uint64\_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnaclnnExpandIntoJaggedPermuteGetWorkspaceSize获取。
-    - executor（aclOpExecutor\*，入参）：op执行器，包含了算子计算流程。
-    - stream（aclrtStream,入参）：指定执行任务的AscendCL stream流。
-- **返回值：**
+    <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+        <col style="width: 173px">
+        <col style="width: 133px">
+        <col style="width: 860px">
+        </colgroup>
+            <thead>
+                <tr>
+                <th>参数名</th>
+                <th>输入/输出</th>
+                <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                <td>workspace</td>
+                <td>输入</td>
+                <td>在Device侧申请的workspace内存地址。</td>
+                </tr>
+                <tr>
+                <td>workspaceSize</td>
+                <td>输入</td>
+                <td>在Device侧申请的workspace大小，由第一段接口aclnnExpandIntoJaggedPermuteGetWorkspaceSize获取。</td>
+                </tr>
+                <tr>
+                <td>executor</td>
+                <td>输入</td><td> op执行器，包含了算子计算流程。</td>
+                </tr>
+                <tr>
+                <td>stream</td>
+                <td>输入</td>
+                <td> 指定执行任务的Stream。</td>
+                </tr>
+            </tbody>
+        </table>
 
-    返回aclnnStatus状态码，具体参见[aclnn返回码](./common/aclnn返回码.md)。
+- **返回值**
+  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-inputOffset、outputOffset的shape要相同。
-permute、inputOffset、outputOffset、outputPermuteOut的数据类型需要相同。
-outputOffset的值要求严格单调递增且最后一个值等于outputSize。
+1.inputOffset、outputOffset的shape要相同。
+
+2.permute、inputOffset、outputOffset、outputPermuteOut的数据类型需要相同。
+
+3.outputOffset的值要求严格单调递增且最后一个值等于outputSize。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](common/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include "aclnnop/aclnn_expand_into_jagged_permute.h"
@@ -171,7 +332,7 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
 
 int Init(int32_t deviceId, aclrtStream* stream)
 {
-    // 固定写法，AscendCL初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -206,7 +367,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考AscendCL对外接口列表
+  // 1. （固定写法）device/stream初始化, 参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -215,10 +376,10 @@ int main() {
             return ret);
 
   // 2. 构造输入与输出, 需要根据API的接口自定义构造
-  std::vector<int32_t> permuteShape = {3};
-  std::vector<int32_t>inputOffsetsShape = {4};
-  std::vector<int32_t> outputOffsetsShape = {4};
-  std::vector<int32_t> outputPermuteShape= {6};
+  std::vector<int64_t> permuteShape = {3};
+  std::vector<int64_t>inputOffsetsShape = {4};
+  std::vector<int64_t> outputOffsetsShape = {4};
+  std::vector<int64_t> outputPermuteShape= {6};
   void* permuteDeviceAddr = nullptr;
   void* inputOffsetsDeviceAddr = nullptr;
   void* outputOffsetsDeviceAddr = nullptr;
@@ -228,26 +389,27 @@ int main() {
   aclTensor* inputOffsets = nullptr;
   aclTensor* outputOffsets = nullptr;
   aclTensor* outputPermute = nullptr;
+  int64_t outputSize = 6;
 
 
-  std::vector<int> permuteHostData = {1, 0, 2};
-  std::vector<int> inputOffsetsHostData = {0, 3, 5, 8};
-  std::vector<int>outputOffsetsHostData = {0, 2, 4, 6};
-  std::vector<int> outputPermuteHostData = {3, 4, 0, 1, 5, 6};
+  std::vector<int32_t> permuteHostData = {1, 0, 2};
+  std::vector<int32_t> inputOffsetsHostData = {0, 3, 5, 8};
+  std::vector<int32_t>outputOffsetsHostData = {0, 2, 4, 6};
+  std::vector<int32_t> outputPermuteHostData = {3, 4, 0, 1, 5, 6};
 
   ret = CreateAclTensor(permuteHostData, permuteShape,
-                        &permuteDeviceAddr, aclDataType::ACL_INT_32,
+                        &permuteDeviceAddr, aclDataType::ACL_INT32,
                         &permute);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(inputOffsetsHostData, inputOffsetsShape, &inputOffsetsDeviceAddr,
-                      aclDataType::ACL_INT_32, &inputOffsets);
+                      aclDataType::ACL_INT32, &inputOffsets);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(outputOffsetsHostData, outputOffsetsShape, &outputOffsetsDeviceAddr,
-                      aclDataType::ACL_INT_32, &outputOffsets);
+                      aclDataType::ACL_INT32, &outputOffsets);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   ret = CreateAclTensor(outputPermuteHostData , outputPermuteShape , &outputPermuteDeviceAddr,
-                      aclDataType::ACL_INT32, &outputPermute );
+                      aclDataType::ACL_INT32, &outputPermute);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API, 需要修改为具体的Api名称
@@ -255,8 +417,8 @@ int main() {
   aclOpExecutor *executor;
 
   // 调用aclnnExpandIntoJaggedPermute第一段接口
-  ret = aclnnExpandIntoJaggedPermuteGetWorkspaceSize(permute, inputOffsets, outputOffsets, outputSize,
-                                               outputPermute, &workspaceSize, &executor);
+  ret = aclnnExpandIntoJaggedPermuteGetWorkspaceSize(permute, inputOffsets, outputOffsets, 
+                                               outputSize, outputPermute, &workspaceSize, &executor);
   CHECK_RET(
       ret == ACL_SUCCESS,
       LOG_PRINT("aclnnExpandIntoJaggedPermuteGetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -284,7 +446,7 @@ int main() {
             return ret);
 
   // 5.获取输出的值,将device侧内存上的结果拷贝至host侧,需要根据具体API的接口定义修改
-  PrintOutResult(outputPermuteGradShape, &outputPermuteDeviceAddr);
+  PrintOutResult(outputPermuteShape, &outputPermuteDeviceAddr);
 
   // 6. 释放aclTensor和aclScalar,需要根据具体API的接口定义修改
   aclDestroyTensor(permute);
