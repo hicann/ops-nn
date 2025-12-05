@@ -31,23 +31,16 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>stride</td>
+      <td>indices</td>
       <td>输入</td>
-      <td>步长。</td>
+      <td>输入索引。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>indices_list</td>
+      <td>shape</td>
       <td>输入</td>
-      <td>索引列表。</td>
-      <td>INT32、INT64</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>value_size</td>
-      <td>输入</td>
-      <td>值的大小。</td>
+      <td>输入数据的shape信息。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -57,6 +50,20 @@
       <td>待输出的索引。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
+    </tr>
+    <tr>
+      <td>axis</td>
+      <td>可选属性</td>
+      <td>待计算的轴。</td>
+      <td>Int</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>combine</td>
+      <td>可选属性</td>
+      <td>是否合轴。</td>
+      <td>Bool</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
