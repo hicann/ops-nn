@@ -123,7 +123,11 @@ aclnnStatus aclnnQuantMatmulV5(
       <td>x1</td>
       <td>输入</td>
       <td>公式中的输入x1。</td>
-      <td>-</td>
+      <td>
+        <ul>
+          <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
+        </ul>
+      </td>
       <td>INT4、INT8、INT32</td>
       <td>ND</td>
       <td>2-6</td>
@@ -135,14 +139,13 @@ aclnnStatus aclnnQuantMatmulV5(
       <td>公式中的输入x2。</td>
       <td>
         <ul>
-          <li>AI处理器亲和数据排布格式。</li>
+          <li>AI处理器亲和数据排布格式下，shape支持4-8维。</li>
           <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
-          <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
         </ul>
       </td>
       <td>INT4、INT8、INT32</td>
       <td>ND</td>
-      <td>2-6</td>
+      <td>2-8</td>
       <td>x</td>
     </tr>
     <tr>
@@ -263,7 +266,7 @@ aclnnStatus aclnnQuantMatmulV5(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>✓</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -439,8 +442,8 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr。
     - A4W4 pergroup非对称量化时: 支持输入类型为FLOAT16，形状为（ceil(k, 256)，n）。
   - bias的约束如下：
-    - 当前版本不支持，需要传入nullptr。
     - A8W8 perblock对称量化时，数据类型支持float32，shape支持一维(n, )。
+    - A4W4 pergroup当前不支持，需要传入nullptr。
   - transposeX1：x1和x2为INT32、INT4时，transposeX1仅支持false，各个维度表示：（m, k）。
   - transposeX2的约束如下：
     - ND格式下，为false时维度为：（batch，k，n），为true时维度为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
