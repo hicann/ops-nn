@@ -575,7 +575,9 @@ __aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::CopyMaxOut(int64_t curI
     if (inputDataTypeKey == 2) {
         LocalTensor<float> maxfloat32 = maxUB.Get<float>();
         LocalTensor<bfloat16_t> maxbfloat16 = maxUB.Get<bfloat16_t>();
-        PipeBarrier<PIPE_ALL>();
+        event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(eventIDSToV);
+        WaitFlag<HardEvent::S_V>(eventIDSToV);
         Cast(maxbfloat16, maxfloat32, RoundMode::CAST_RINT, 8);
         PipeBarrier<PIPE_V>();
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
