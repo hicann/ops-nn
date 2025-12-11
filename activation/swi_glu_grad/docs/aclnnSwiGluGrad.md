@@ -101,7 +101,7 @@ aclnnStatus aclnnSwiGluGrad(
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>A</sub>和out<sub>B</sub>的合并。</td>
       <td><ul><li>数据类型与计算输入x的类型一致。</li><li>shape与x一致。</li></ul></td>
-      <td>INT8</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>

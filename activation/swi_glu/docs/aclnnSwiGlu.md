@@ -70,12 +70,22 @@ aclnnStatus aclnnSwiGlu(
       <td>1-8</td>
       <td>×</td>
     </tr>
+     <tr>
+      <td>dim</td>
+      <td>输入</td>
+      <td>需要进行切分的维度序号，对x相应轴进行对半切分。</td>
+      <td>取值范围为[-x.dim(), x.dim()-1]。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>i</sub>。</td>
       <td>数据类型与计算输入x的类型一致。</td>
-      <td>INT8</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
       <td>×</td>

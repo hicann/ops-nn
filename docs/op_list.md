@@ -2564,6 +2564,26 @@
     <td>AI Core</td>
     <td>完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64类型。</td>
   </tr>
+   <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/bidirection_lstm/README.md">bidirection_lstm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。</td>
+  </tr>
+    <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/bidirection_lstm_v2/README.md">bidirection_lstm_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。</td>
+  </tr>
   <tr>
     <td>rnn</td>
     <td><a href="../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>

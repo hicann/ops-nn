@@ -22,6 +22,7 @@
 | [aclnnAddRmsNormDynamicQuantV2](../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuantV2.md)|RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。|
 | [aclnnAddRmsNorm](../norm/add_rms_norm/docs/aclnnAddRmsNorm.md)|RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。|
 | [aclnnAddRmsNormQuantV2](../norm/add_rms_norm_quant/docs/aclnnAddRmsNormQuantV2.md)|RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。|
+| [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md)|推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。|默认确定性实现|
 | [aclnnAdvanceStepV2](../optim/advance_step/docs/aclnnAdvanceStepV2.md)|推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。|
 | [aclnnApplyAdamWV2](../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md)|实现adamW优化器功能。|
 | [aclnnApplyFusedEmaAdam](../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md)|实现FusedEmaAdam融合优化器功能。|
@@ -41,6 +42,8 @@
 | [aclnnBatchNormBackward](../norm/batch_norm_grad_v3/docs/aclnnBatchNormBackward.md)|[aclnnBatchNorm](../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。|
 | [aclnnBatchNormGatherStatsWithCounts](../norm/sync_batch_norm_gather_stats_with_counts/docs/aclnnBatchNormGatherStatsWithCounts.md)|收集所有device的均值和方差，更新全局的均值和标准差的倒数。|
 | [aclnnBatchNormReduceBackward](../norm/sync_batch_norm_backward_reduce/docs/aclnnBatchNormReduceBackward.md)|主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。|
+| [aclnnBidirectionLSTM](../../rnn/bidirection_lstm/docs/aclnnBidirectionLSTM.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。 |默认确定性实现|
+| [aclnnBidirectionLSTMV2](../../rnn/bidirection_lstm_v2/docs/aclnnBidirectionLSTMV2.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。 |默认确定性实现|
 | [aclnnBinaryCrossEntropy](../loss/binary_cross_entropy/docs/aclnnBinaryCrossEntropy.md) | 计算self和target的二元交叉熵。 |
 | [aclnnBinaryCrossEntropyBackward](../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。 |
 | [aclnnBinaryCrossEntropyWithLogits](../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) |计算输入logits与标签target之间的BCELoss损失。 |
@@ -57,6 +60,7 @@
 | [aclnnDeepNorm](../norm/deep_norm/docs/aclnnDeepNorm.md)|对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。|
 | [aclnnDeepNormGrad](../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md)|[aclnnDeepNorm](../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。|
 | [aclnnDequantBias](../quant/dequant_bias/docs/aclnnDequantBias.md)|对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。|
+| [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md)|在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。|默认确定性实现|
 | [aclnnDequantSwigluQuantV2](../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md)|在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。|
 | [aclnnDynamicQuantV2](../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md)|为输入张量进行per-token对称/非对称动态量化。|
 | [aclnnDynamicQuantV3](../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md)|为输入张量进行动态量化。|
@@ -172,7 +176,9 @@
 | [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) |激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。|
 | [aclnnHardsigmoidBackward](../activation/hard_sigmoid_grad/docs/aclnnHardsigmoidBackward.md) |aclnnHardsigmoid的反向传播。|
 | [aclnnHardswishBackward](../activation/hard_swish_grad/docs/aclnnHardswishBackward.md) |aclnnHardswish的反向传播，完成张量self的梯度计算。|
+| [aclnnHardswishBackwardV2](../../activation/hard_swish_grad_v2/docs/aclnnHardswishBackwardV2.md) |aclnnHardswish的反向传播，完成张量self的梯度计算。|默认确定性实现|
 | [aclnnHardswish&aclnnInplaceHardswish](../activation/hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md) |激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。|
+| [aclnnHardtanh](../../activation/hardtanh_tanh/docs/aclnnHardtanh&aclnnInplaceHardtanh.md) |将输入的所有元素限制在[clipValueMin,clipValueMax]范围内，若元素大于clipValueMax则限制为clipValueMax，若元素小于clipValueMin则限制为clipValueMin，否则等于元素本身。|默认确定性实现|
 | [aclnnHardtanhBackward](../activation/hardtanh_grad/docs/aclnnHardtanhBackward.md) |激活函数aclnnHardtanh的反向。|
 | [aclnnHeaviside](../activation/heaviside/docs/aclnnHeaviside.md) |计算输入input中每个元素的Heaviside阶跃函数，作为模型的激活函数。|
 | [aclnnIndex](../index/index/docs/aclnnIndex.md) | 根据索引indices将输入x对应坐标的数据取出。  |
@@ -265,6 +271,7 @@
 | [aclnnSoftMarginLossBackward](../loss/soft_margin_loss_grad/docs/aclnnSoftMarginLossBackward.md) | 计算aclnnSoftMarginLoss二分类逻辑损失函数的反向传播。 |
 | [aclnnSoftmax](../activation/softmax_v2/docs/aclnnSoftmax.md) |对输入张量计算softmax值。|
 | [aclnnSoftmaxBackward](../activation/softmax_grad/docs/aclnnSoftmaxBackward.md) |完成softmax的反向传播。|
+| [aclnnSoftmaxCrossEntropyWithLogits](../../activation/softmax_cross_entropy_with_logits/docs/aclnnSoftmaxCrossEntropyWithLogits.md) |计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。|默认确定性实现|
 | [aclnnSoftplus](../activation/softplus_v2/docs/aclnnSoftplus.md) |激活函数softplus。|
 | [aclnnSoftplusBackward](../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) |aclnnSoftplus的反向传播。|
 | [aclnnSoftshrink](../activation/softshrink/docs/aclnnSoftshrink.md) |以元素为单位，强制收缩λ范围内的元素。|
@@ -272,6 +279,7 @@
 | [aclnnSquaredRelu](../activation/squared_relu/docs/aclnnSquaredRelu.md) |SquaredReLU 函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。|
 | [aclnnSwiGlu](../activation/swi_glu/docs/aclnnSwiGlu.md) |Swish门控线性单元激活函数，实现x的SwiGlu计算。|
 | [aclnnSwiGluGrad](../activation/swi_glu_grad/docs/aclnnSwiGluGrad.md) |完成aclnnSwiGlu的反向计算，完成x的SwiGlu反向梯度计算。|
+| [aclnnSwiGluQuant](../../quant/swi_glu_quant/docs/aclnnSwiGluQuant.md)|在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算。|默认确定性实现|
 | [aclnnSwiGluQuantV2](../quant/swi_glu_quant/docs/aclnnSwiGluQuantV2.md)|在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。|
 | [aclnnSwish](../activation/swish/docs/aclnnSwish.md) |Swish激活函数，对输入Tensor逐元素进行Swish函数运算并输出结果Tensor。|
 | [aclnnSwishBackward](../activation/swish_grad/docs/aclnnSwishBackward.md) |aclnnSwishBackward是aclnnSwish激活函数的反向传播，用于计算Swish激活函数的梯度。 |
