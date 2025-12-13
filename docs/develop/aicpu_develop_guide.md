@@ -35,7 +35,7 @@ graph LR
 ##  前提条件
 **1. 环境部署**
 
-开发算子前，请参考[环境准备](../invocation/quick_op_invocation.md#环境准备)完成环境搭建。
+开发算子前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
 
 **2. 算子设计**
 
