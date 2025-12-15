@@ -105,11 +105,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
         tilingData_.set_isOutputKv(0);
     }
 
-    OP_CHECK_IF(
-        (!isRegbase_) && (quantMode_ != NON_QUANT_MODE && quantMode_ != SYMMETRIC_QUANT_MODE),
-        OP_LOGE(context_->GetNodeName(), "Only Support SYMMETRIC_QUANT or NON_QUANT."), return ge::GRAPH_FAILED);
-
-    if ((!isRegbase_) && (quantMode_ > 0)) {
+    if ((!isRegbase_) && (quantMode_ == QUANT_MODE)) {
         OP_CHECK_IF(
             !CheckScaleValid(context_), OP_LOGE(context_->GetNodeName(), "quant scale shape check failed."),
             return ge::GRAPH_FAILED);
@@ -122,7 +118,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
         (!isRegbase_) && (dv_ != RMS_NORM_LENGTH),
         OP_LOGE(context_->GetNodeName(), "rms_norm last dim only support 512."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        (!isRegbase_) && (currentCacheMode_ == CacheMode::Norm) && (quantMode_ == SYMMETRIC_QUANT_MODE),
+        (!isRegbase_) && (currentCacheMode_ == CacheMode::Norm) && (quantMode_ == QUANT_MODE),
         OP_LOGE(context_->GetNodeName(), "CacheMode::Norm do not support quant!"), return ge::GRAPH_FAILED);
 
     auto scale1Shape = context_->GetOptionalInputShape(K_ROPE_SCALE_IDX);
@@ -138,7 +134,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
         tilingData_.set_isVQuant(0);
     }
 
-    if (currentCacheMode_ == CacheMode::PA && quantMode_ == SYMMETRIC_QUANT_MODE) {
+    if (currentCacheMode_ == CacheMode::PA && quantMode_ == QUANT_MODE) {
         DoOpTilingPaBlkNz();
         tilingKey_ = TLING_KEY_5011;
         return ge::GRAPH_SUCCESS;
@@ -146,7 +142,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_BLK_BNSD) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ == QUANT_MODE) {
             tilingKey_ = TLING_KEY_5010;
         } else {
             tilingKey_ = TLING_KEY_5000;
@@ -156,7 +152,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_NZ) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ == QUANT_MODE) {
             tilingKey_ = TLING_KEY_4011;
         } else {
             tilingKey_ = TLING_KEY_4001;
@@ -166,7 +162,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingDs::DoOpTiling()
 
     if (currentCacheMode_ == CacheMode::PA_BLK_NZ) {
         DoOpTilingPaBlkNz();
-        if (quantMode_ == SYMMETRIC_QUANT_MODE) {
+        if (quantMode_ == QUANT_MODE) {
             tilingKey_ = TLING_KEY_4010;
         } else {
             tilingKey_ = TLING_KEY_4000;

@@ -174,8 +174,7 @@ constexpr int64_t DEFAULT_WORKSPACE_SIZE = 32;
 constexpr int64_t BATCHES_FOR_EACH_CORE = 4;
 
 constexpr int64_t NON_QUANT_MODE = 0;
-constexpr int64_t SYMMETRIC_QUANT_MODE = 1;
-constexpr int64_t ASYMMETRIC_QUANT_MODE = 2;
+constexpr int64_t QUANT_MODE = 1;
 
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
 static constexpr int64_t FULL_LOAD_BASE_TILING_KEY = 10000;

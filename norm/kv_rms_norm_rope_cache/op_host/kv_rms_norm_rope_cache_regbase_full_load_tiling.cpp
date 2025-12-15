@@ -169,10 +169,10 @@ ge::graphStatus KvRmsNormRopeCacheRegbaseFullLoadTiling::DoOpTiling()
         OP_LOGE(context_->GetNodeName(), "c_kv_scale shape invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         !CheckScaleOffsetShape(offset1Shape, dk_, kOffsetType_),
-        OP_LOGE(context_->GetNodeName(), "k_rope_scale shape invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_->GetNodeName(), "k_rope_offset shape invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         !CheckScaleOffsetShape(offset2Shape, dv_, vOffsetType_),
-        OP_LOGE(context_->GetNodeName(), "c_kv_scale shape invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_->GetNodeName(), "c_kv_offset shape invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (dk_ % CONST_TWO) != 0, OP_LOGE(context_->GetNodeName(), "headsize of cos is invalid."),
         return ge::GRAPH_FAILED);

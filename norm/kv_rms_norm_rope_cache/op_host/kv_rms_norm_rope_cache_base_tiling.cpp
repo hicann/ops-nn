@@ -204,21 +204,13 @@ int64_t KvRmsNormRopeCacheTilingBase::GetQuantMode(const gert::TilingContext* co
 {
     auto scale1Shape = context->GetOptionalInputShape(K_ROPE_SCALE_IDX);
     auto scale2Shape = context->GetOptionalInputShape(C_KV_SCALE_IDX);
-    auto offset1Shape = context->GetOptionalInputShape(K_ROPE_OFFSET_IDX);
-    auto offset2Shape = context->GetOptionalInputShape(C_KV_OFFSET_IDX);
-    bool allNullPtr =
-        (scale1Shape == nullptr) && (scale2Shape == nullptr) && (offset1Shape == nullptr) && (offset2Shape == nullptr);
-    bool symmetricQuant = ((scale1Shape != nullptr) && (offset1Shape == nullptr)) ||
-                          ((scale2Shape != nullptr) && (offset2Shape == nullptr));
-    bool asymmetricQuant = ((scale1Shape != nullptr) && (offset1Shape != nullptr)) ||
-                           ((scale2Shape != nullptr) && (offset2Shape != nullptr));
+
+    bool allNullPtr = (scale1Shape == nullptr) && (scale2Shape == nullptr);
 
     if (allNullPtr) {
         return NON_QUANT_MODE;
-    } else if (symmetricQuant) {
-        return SYMMETRIC_QUANT_MODE;
-    } else if (asymmetricQuant) {
-        return ASYMMETRIC_QUANT_MODE;
+    } else {
+        return QUANT_MODE;
     }
     return -1;
 }
@@ -261,6 +253,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingBase::GetShapeAttrsInfo()
     auto cosShapeTuple = GetShapeTuple(context_, COS_INDEX);
     // Dv
     const gert::StorageShape* gammaShapePtr = context_->GetInputShape(GAMMA_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaShapePtr);
     kv_ = std::get<SHAPE_IDX_D>(kvShapeTuple);
     dv_ = gammaShapePtr->GetStorageShape().GetDim(0);
     dk_ = std::get<SHAPE_IDX_D>(cosShapeTuple);
