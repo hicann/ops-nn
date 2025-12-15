@@ -36,6 +36,7 @@ function(gen_ophost_symbol)
             rt2_registry_static
             tiling_api
             -Wl,--no-whole-archive
+            -Wl,-Bsymbolic
     )
 
   target_link_directories(${OPHOST_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -68,6 +69,7 @@ function(gen_opgraph_symbol)
                 -Wl,--whole-archive
                 rt2_registry_static
                 -Wl,--no-whole-archive
+                -Wl,-Bsymbolic
         )
 
       target_link_directories(${OPGRAPH_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
@@ -157,6 +159,7 @@ function(gen_cust_optiling_symbol)
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:optiling>>
             $<$<TARGET_EXISTS:opsbase>:opsbase>
+            -Wl,-Bsymbolic
     )
 endfunction()
 
