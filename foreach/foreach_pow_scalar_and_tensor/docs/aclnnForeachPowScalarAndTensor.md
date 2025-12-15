@@ -222,6 +222,7 @@ aclnnStatus aclnnForeachPowScalarAndTensor(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_pow_scalar_and_tensor.h"
 
@@ -295,7 +296,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclScalar* alpha = nullptr;

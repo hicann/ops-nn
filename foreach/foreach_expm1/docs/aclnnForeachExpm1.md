@@ -209,6 +209,7 @@ aclnnStatus aclnnForeachExpm1(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_expm1.h"
 
@@ -234,7 +235,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -283,7 +284,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* out1 = nullptr;

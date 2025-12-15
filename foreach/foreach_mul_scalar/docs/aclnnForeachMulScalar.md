@@ -232,6 +232,7 @@ aclnnStatus aclnnForeachMulScalar(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_mul_scalar.h"
 
@@ -306,7 +307,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   void* alphaDeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;

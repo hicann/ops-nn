@@ -252,6 +252,7 @@ aclnnStatus aclnnForeachAddcmulScalar(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_addcmul_scalar.h"
 
@@ -277,7 +278,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -326,7 +327,7 @@ int main() {
   std::vector<int64_t> anotherShape1 = {2, 3};
   std::vector<int64_t> anotherShape2 = {1, 3};
   std::vector<int64_t> outShape1 = {2, 3};
-  std::vector<int64_t> outShape2 = {1, 3};  
+  std::vector<int64_t> outShape2 = {1, 3};
   std::vector<int64_t> alphaShape = {1};
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
@@ -376,7 +377,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclTensor
   ret = CreateAclTensor(alphaValueHostData, alphaShape, &alphaDeviceAddr, aclDataType::ACL_FLOAT, &alpha);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out1 aclTensor
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

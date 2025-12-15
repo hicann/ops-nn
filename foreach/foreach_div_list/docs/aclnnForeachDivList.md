@@ -222,6 +222,7 @@ aclnnStatus aclnnForeachDivList(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_div_list.h"
 
@@ -299,7 +300,7 @@ int main() {
   void* other1DeviceAddr = nullptr;
   void* other2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* other1 = nullptr;

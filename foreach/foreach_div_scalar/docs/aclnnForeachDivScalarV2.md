@@ -220,6 +220,7 @@ aclnnStatus aclnnForeachDivScalarV2(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_div_scalar_v2.h"
 
@@ -293,7 +294,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclScalar* alpha = nullptr;

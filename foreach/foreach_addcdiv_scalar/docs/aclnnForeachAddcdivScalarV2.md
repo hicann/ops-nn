@@ -240,6 +240,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_addcdiv_scalar_v2.h"
 
@@ -265,7 +266,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -322,7 +323,7 @@ int main() {
   void* another1DeviceAddr = nullptr;
   void* another2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* other1 = nullptr;
@@ -361,7 +362,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret); 
+  CHECK_RET(alpha != nullptr, return ret);
   // 创建out1 aclTensor
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

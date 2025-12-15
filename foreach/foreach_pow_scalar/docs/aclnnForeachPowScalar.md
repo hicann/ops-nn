@@ -224,6 +224,7 @@ aclnnStatus aclnnForeachPowScalar(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_pow_scalar.h"
 

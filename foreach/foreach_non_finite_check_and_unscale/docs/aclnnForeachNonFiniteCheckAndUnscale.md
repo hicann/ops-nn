@@ -218,6 +218,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_non_finite_check_and_unscale.h"
 

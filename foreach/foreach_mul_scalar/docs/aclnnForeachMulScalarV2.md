@@ -226,6 +226,7 @@ aclnnStatus aclnnForeachMulScalarV2(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_mul_scalar_v2.h"
 

@@ -235,6 +235,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_add_list.h"
 

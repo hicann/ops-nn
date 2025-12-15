@@ -193,6 +193,7 @@ aclnnStatus aclnnForeachZeroInplace(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_zero_inplace.h"
 
