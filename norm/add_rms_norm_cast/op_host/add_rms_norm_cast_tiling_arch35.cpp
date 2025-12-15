@@ -391,7 +391,17 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::GetWorkspaceSize()
 {
     tilingParams.workspaceSize = 0;
     if (TILING_TYPE_SPILT == tilingParams.tilingType) {
-        tilingParams.workspaceSize = WORKSPACE_COUNT * tilingParams.usedCoreNum * tilingParams.numN * sizeof(float);
+        const uint64_t workspaceCount = WORKSPACE_COUNT;
+        const uint64_t usedCoreNum = tilingParams.usedCoreNum;
+        const uint64_t numN = tilingParams.numN;
+
+        // check： workspaceCount * usedCoreNum * numN * sizeof(float) < UINT64_MAX 
+        const uint64_t maxAllowed = std::numeric_limits<uint64_t>::max() / workspaceCount / usedCoreNum / sizeof(float);
+        if (numN > maxAllowed) {
+            OP_LOGE(nodeName.c_str(), "Overflow detected: numN is %lu.", numN);
+            return ge::GRAPH_FAILED;
+        }        
+        tilingParams.workspaceSize = WORKSPACE_COUNT * tilingParams.usedCoreNum * tilingParams.numN * sizeof(float);        
     } else if (TILING_TYPE_MAGIC_AND_WONDERFUL == tilingParams.tilingType) {
         tilingParams.workspaceSize = tilingParams.usedCoreNum * MIGIC_AND_WONDERFUL_BYTES;
     }
