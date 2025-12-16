@@ -46,13 +46,6 @@
 
     自定义算子包安装路径为`${ASCEND_HOME_PATH}/opp/vendors`，\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/latest。注意自定义算子包不支持卸载。
 
-3. **（可选）卸载自定义算子包**
-
-    自定义算子包安装后在`${ASCEND_HOME_PATH}/vendors/custom_nn/scripts`目录下会生成`uninstall.sh`脚本，通过执行该脚本可卸载自定义算子包，具体命令如下：
-    ```bash
-    bash ${ASCEND_HOME_PATH}/vendors/custom_nn/scripts/uninstall.sh
-    ```
-
 ### ops-nn包
 
 1. **编译ops-nn包**
@@ -80,13 +73,6 @@
     ```
 
     \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
-
-3. **（可选）卸载ops-nn包**
-
-    ```bash
-    # 卸载命令
-    ./${install_path}/cann/share/info/ops_nn/script/uninstall.sh
-    ```
 
 ## 本地验证
 

@@ -226,7 +226,7 @@ int main()
 
 ![原理图](../figures/IR调用.png)
 
-构图流程介绍请参考[《图模式开发指南》](https://hiascend.com/document/redirect/CannCommunityAscendGraph)中”构建Graph > 使用图开发接口全新构建Graph > 通过算子原型构建Graph“章节。
+构图流程介绍请参考[《图模式开发指南》](https://hiascend.com/document/redirect/CannCommunityAscendGraph)中“构建Graph > 使用图开发接口全新构建Graph > 通过算子原型构建Graph”章节。
 ### 示例代码
 
 `AddExample`算子以图方式调用的示例代码如下（详细代码参见[test_geir_add_example.cpp](../../examples/add_example/examples/test_geir_add_example.cpp)），**仅为参考**，其他算子的调用过程类似，请替换为实际的算子原型。
