@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 # ######################################################################################################################
@@ -19,20 +19,38 @@ function(gen_opbuild_target)
     return()
   endif()
 
-  add_library(gen_op_host_${OPBUILD_PREFIX} SHARED ${OPBUILD_IN_SRCS})
+  if (NOT TARGET gen_op_host_${OPBUILD_PREFIX})
+    add_library(gen_op_host_${OPBUILD_PREFIX} SHARED ${OPBUILD_IN_SRCS})
+  endif()
   target_link_libraries(gen_op_host_${OPBUILD_PREFIX} PRIVATE $<BUILD_INTERFACE:intf_pub_cxx17> exe_graph register
                                                               c_sec)
   target_compile_options(gen_op_host_${OPBUILD_PREFIX} PRIVATE -fno-common)
+  string(REPLACE ";" "\;" OPS_PRODUCT_NAME "${ASCEND_COMPUTE_UNIT}")
 
+  if(ENABLE_ASAN)
+    execute_process(
+      COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
+      OUTPUT_VARIABLE LIBASAN_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE result
+    )
+    if(NOT result EQUAL 0)
+      message(FATAL_ERROR "compiler not support asan, please disable asan")
+    endif()
+  endif()
+  message("LIBASAN_PATH = ${LIBASAN_PATH}")
   add_custom_command(
     OUTPUT ${OPBUILD_OUT_SRCS} ${OPBUILD_OUT_HEADERS}
     COMMAND
       OPS_PROTO_SEPARATE=1 OPS_PROJECT_NAME=${OPBUILD_PREFIX} OPS_ACLNN_GEN=${OPBUILD_GENACLNN}
-      OPS_PRODUCT_NAME=\"${ASCEND_COMPUTE_UNIT}\"
+      OPS_PRODUCT_NAME=\"${OPS_PRODUCT_NAME}\"
+      env LD_PRELOAD=${LIBASAN_PATH}
       env LD_LIBRARY_PATH=${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64:$ENV{LD_LIBRARY_PATH} ${OP_BUILD_TOOL}
       $<TARGET_FILE:gen_op_host_${OPBUILD_PREFIX}> ${OPBUILD_OUT_DIR}/${OPBUILD_OUT_SUB_DIR})
 
-  add_custom_target(${OPBUILD_TARGET} DEPENDS ${OPBUILD_OUT_SRCS} ${OPBUILD_OUT_HEADERS})
+  if (NOT TARGET ${OPBUILD_TARGET})
+    add_custom_target(${OPBUILD_TARGET} DEPENDS ${OPBUILD_OUT_SRCS} ${OPBUILD_OUT_HEADERS})
+  endif()
   add_dependencies(${OPBUILD_TARGET} gen_op_host_${OPBUILD_PREFIX})
   if(TARGET op_build)
     add_dependencies(${OPBUILD_TARGET} op_build)
@@ -118,7 +136,7 @@ function(gen_aclnn_master_header aclnn_master_header_name aclnn_master_header op
   # 根据模板生成头文件
   message(STATUS "create aclnn master header file: ${aclnn_master_header}")
   configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/aclnn_ops_nn.h.in"
+    "${OPS_NN_CMAKE_DIR}/aclnn_ops_nn.h.in"
     "${aclnn_master_header}"
     @ONLY
   )
@@ -134,8 +152,8 @@ function(gen_aclnn_with_opdef)
   gen_aclnn_classify(${OPHOST_NAME}_opdef_aclnn_exclude_obj aclnnExc "${opbuild_out_srcs}" "${opbuild_out_headers}"
                      opbuild_out_srcs opbuild_out_headers)
 
-    # 创建汇总头文件
-    if(ENABLE_CUSTOM)
+  # 创建汇总头文件
+  if(ENABLE_CUSTOM)
     set(aclnn_master_header_name "aclnn_ops_nn_${VENDOR_NAME}")
   else()
     set(aclnn_master_header_name "aclnn_ops_nn")
@@ -149,6 +167,11 @@ function(gen_aclnn_with_opdef)
     install(FILES ${aclnn_master_header} DESTINATION ${ACLNN_INC_INSTALL_DIR} OPTIONAL)
     install(FILES ${opbuild_out_headers} DESTINATION ${ACLNN_OP_INC_INSTALL_DIR} OPTIONAL)
     install(FILES ${aclnn_master_header} DESTINATION ${ACLNN_OP_INC_INSTALL_DIR} OPTIONAL)
+    if(ENABLE_STATIC)
+      # 将头文件安装到静态库目录
+      install(FILES ${opbuild_out_headers} DESTINATION ${CMAKE_BINARY_DIR}/static_library_files/include OPTIONAL)
+      install(FILES ${opbuild_out_headers} DESTINATION ${CMAKE_BINARY_DIR}/static_library_files/include/aclnnop OPTIONAL)
+    endif()
     foreach(aclnn_header_path ${opbuild_out_headers})
       string(REGEX REPLACE "^.*/" "" filename "${aclnn_header_path}")
       list(APPEND aclnn_header_file "${filename}")
@@ -170,11 +193,17 @@ function(gen_aclnn_with_opdef)
     message(STATUS "no operator info to generate")
     return()
   endif()
-  add_custom_target(opbuild_custom_gen_aclnn_all)
+
+  if (NOT TARGET opbuild_custom_gen_aclnn_all)
+    add_custom_target(opbuild_custom_gen_aclnn_all
+                      COMMAND python3 ${PROJECT_SOURCE_DIR}/scripts/util/modify_gen_aclnn_static.py ${CMAKE_BINARY_DIR})
+  endif()
   add_dependencies(opbuild_custom_gen_aclnn_all ${dependency_list})
   if(opbuild_out_srcs)
     set_source_files_properties(${opbuild_out_srcs} PROPERTIES GENERATED TRUE)
-    add_library(opbuild_gen_aclnn_all OBJECT ${opbuild_out_srcs})
+    if (NOT TARGET opbuild_gen_aclnn_all)
+      add_library(opbuild_gen_aclnn_all OBJECT ${opbuild_out_srcs})
+    endif()
     add_dependencies(opbuild_gen_aclnn_all opbuild_custom_gen_aclnn_all)
     target_include_directories(opbuild_gen_aclnn_all PRIVATE ${OPAPI_INCLUDE})
   endif()

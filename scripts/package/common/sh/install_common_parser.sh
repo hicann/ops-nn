@@ -1,10 +1,10 @@
 #!/bin/sh
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -949,8 +949,7 @@ del_ascend_install_info() {
     local package="$2"
     local package_dirpath
 
-    get_package_dirpath "package_dirpath" "$package"
-    rm -f "$install_path/$package_dirpath/ascend_install.info"
+    rm -f "$curpath/../ascend_install.info"
 }
 
 # 执行拷贝动作
@@ -1213,7 +1212,7 @@ do_remove() {
         ret="$?" && [ $ret -ne 0 ] && return $ret
 
         if [ "$REMOVE_INSTALL_INFO" = "y" ]; then
-            del_ascend_install_info "$install_path" "$package"
+            del_ascend_install_info "$install_path"
         fi
     fi
 
@@ -1946,6 +1945,7 @@ IS_RECREATE_SOFTLINK=""
 WITH_DOCKER_ROOT_PREFIX=""
 FEATURE_EXCLUDE_ALL="n"
 REMOVE_INSTALL_INFO="n"  # 卸载时移除ascend_install.info文件
+USE_SHARE_INFO="n"  # 包信息安装到share/info目录下
 CHIP="all"
 FEATURE="all"
 INCREMENT="n"  # 增量安装
@@ -2163,6 +2163,10 @@ while true; do
         ;;
     --remove-install-info)
         REMOVE_INSTALL_INFO="y"
+        shift
+        ;;
+    --use-share-info)
+        USE_SHARE_INFO="y"
         shift
         ;;
     --increment)

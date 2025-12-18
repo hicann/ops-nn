@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -63,9 +63,17 @@ function(add_tiling_modules)
       add_dependencies(${OPHOST_NAME}_tiling_obj json)
     endif()
     target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${OP_TILING_INCLUDE})
+    set(ENABLE_DLOPEN_LEGACY OFF)
+    if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND NOT ENABLE_STATIC)
+      file(GLOB COMMON_SRC ${OPS_NN_DIR}/common/src/*.cpp ${OPS_NN_DIR}/common/src/op_host/*.cpp)
+      target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${COMMON_SRC})
+      set(ENABLE_DLOPEN_LEGACY ON)
+    endif()
+
     target_compile_definitions(
       ${OPHOST_NAME}_tiling_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="OP_TILING" OP_SUBMOD_NAME="OPS_NN"
                                         $<$<BOOL:${ENABLE_TEST}>:ASCEND_OPTILING_UT> LOG_CPP
+                                        $<$<BOOL:${ENABLE_DLOPEN_LEGACY}>:NN_ENABLE_DLOPEN_LEGACY>
       )
     target_compile_options(
       ${OPHOST_NAME}_tiling_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
@@ -130,6 +138,7 @@ function(add_aicpu_kernel_modules)
   endif()
 endfunction()
 
+option(PREPROCESS_ONLY "preprocess only, no cache aicpu targets" OFF)
 function(add_aicpu_cust_kernel_modules target_name)
   message(STATUS "add_aicpu_cust_kernel_modules for ${target_name}")
   if(NOT TARGET ${target_name})
@@ -153,8 +162,10 @@ function(add_aicpu_cust_kernel_modules target_name)
               -Wl,--no-whole-archive
               Eigen3::EigenNn
       )
-    if (NOT ${target_name} IN_LIST AICPU_CUST_OBJ_TARGETS)
-      set(AICPU_CUST_OBJ_TARGETS ${AICPU_CUST_OBJ_TARGETS} ${target_name} CACHE INTERNAL "All aicpu cust obj targets")
+    if(NOT PREPROCESS_ONLY)
+      if (NOT ${target_name} IN_LIST AICPU_CUST_OBJ_TARGETS)
+        set(AICPU_CUST_OBJ_TARGETS ${AICPU_CUST_OBJ_TARGETS} ${target_name} CACHE INTERNAL "All aicpu cust obj targets")
+      endif()
     endif()
   endif()
 endfunction()
@@ -168,10 +179,16 @@ function(add_graph_plugin_modules)
     endif()
     target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${OP_PROTO_INCLUDE})
     target_compile_definitions(${GRAPH_PLUGIN_NAME}_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="GRAPH_PLUGIN" LOG_CPP)
-    target_compile_options(
-      ${GRAPH_PLUGIN_NAME}_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
-                                       -fvisibility=hidden
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      target_compile_options(
+        ${GRAPH_PLUGIN_NAME}_obj PRIVATE -Dgoogle=ascend_private -fvisibility=hidden
       )
+    else()
+      target_compile_options(
+        ${GRAPH_PLUGIN_NAME}_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
+                                        -fvisibility=hidden
+      )
+    endif()
     target_link_libraries(
       ${GRAPH_PLUGIN_NAME}_obj
       PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
@@ -194,15 +211,15 @@ macro(add_op_subdirectory)
   if((NOT ENABLE_TEST AND NOT BENCHMARK) OR OP_ONLY_COMPILE)
       list(REMOVE_ITEM CURRENT_DIRS tests)
   endif()
+  # op_api目录已移出的算子，add_modules_sources在算子根路径CMakeLists中，且CMakeLists旧实现已删除
+  if(NOT EXISTS "${OP_DIR}/op_host/CMakeLists.txt")
+    add_subdirectory(${OP_DIR})
+  endif()
   foreach(SUB_DIR ${CURRENT_DIRS})
       if(EXISTS "${OP_DIR}/${SUB_DIR}/CMakeLists.txt")
           add_subdirectory(${OP_DIR}/${SUB_DIR})
       endif()
   endforeach()
-  # op_api目录已移出的算子，add_modules_sources在算子根路径CMakeLists中，且CMakeLists旧实现已删除
-  if(IS_DIRECTORY "${OP_DIR}/op_api")
-    add_subdirectory(${OP_DIR})
-  endif() 
 endmacro()
 
 # useage: add_category_subdirectory 根据ASCEND_OP_NAME和ASCEND_COMPILE_OPS添加指定算子工程
@@ -304,13 +321,56 @@ function(concat_op_names)
   endif()
 endfunction()
 
-# useage: add_modules_sources(DIR OPTYPE ACLNNTYPE DEPENDENCIES) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
+# 从两个长度一致的列表中查找相同位置的元素
+function(find_value_by_key key_list value_list search_key result)
+  list(LENGTH key_list key_list_length)
+  list(LENGTH value_list value_list_length)
+  if(NOT ${key_list_length} EQUAL ${value_list_length})
+    message(FATAL_ERROR "key_list length is ${key_list_length}, value_list length is ${value_list_length}, not equal")
+  endif()
+  set(found_value "")
+  if(key_list_length GREATER 0)
+    list(FIND key_list ${search_key} index)
+    if(NOT ${index} EQUAL -1)
+      list(GET value_list ${index} found_value)
+    endif()
+  endif()
+  set(${result} ${found_value} PARENT_SCOPE)
+endfunction()
+
+function(add_tiling_sources source_dir tiling_dir disable_in_opp)
+  if(NOT disable_in_opp)
+    set(disable_in_opp FALSE)
+  endif()
+  if(NOT BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND disable_in_opp)
+    message(STATUS "don't need add tiling sources")
+    return()
+  endif()
+
+  if("${tiling_dir}" STREQUAL "")
+    file(GLOB OPTILING_SRCS ${source_dir}/*_tiling*.cpp)
+  else()
+    file(GLOB OPTILING_SRCS ${source_dir}/*_tiling*.cpp ${source_dir}/${tiling_dir}/*_tiling*.cpp)
+  endif()
+  file(GLOB_RECURSE SUB_OPTILING_SRC ${source_dir}/op_tiling/*.cpp)
+
+  if (OPTILING_SRCS OR SUB_OPTILING_SRC)
+    add_tiling_modules()
+    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})
+    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${source_dir}/../../ ${source_dir})
+  endif()
+endfunction()
+
+# useage: add_modules_sources(DIR OPTYPE ACLNNTYPE ACLNN_EXTRA_VERSION DEPENDENCIES COMPUTE_UNIT TILING_DIR DISABLE_IN_OPP) ACLNNTYPE 支持类型aclnn/aclnn_inner/aclnn_exclude OPTYPE 和 ACLNNTYPE
 # DEPENDENCIES 算子依赖
 # ACLNNEXTRAVERSION 算子版本(ex., v2, v3, 5, etc.)
+# COMPUTE_UNIT 设置支持芯片版本号，必须与TILING_DIR一一对应，示例：ascend910b ascend910_95
+# TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与COMPUTE_UNIT一一对应，示例：arch32 arch35
+# DISABLE_IN_OPP 设置是否在opp包中编译tiling文件，布尔类型：TRUE，FALSE
 # 需一一对应
 function(add_modules_sources)
-  set(multiValueArgs OPTYPE ACLNNTYPE ACLNN_EXTRA_VERSION DEPENDENCIES)
-  set(oneValueArgs DIR)
+  set(multiValueArgs OPTYPE ACLNNTYPE ACLNN_EXTRA_VERSION DEPENDENCIES COMPUTE_UNIT TILING_DIR)
+  set(oneValueArgs DIR DISABLE_IN_OPP)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   set(SOURCE_DIR ${MODULE_DIR})
@@ -331,6 +391,7 @@ function(add_modules_sources)
   file(GLOB OPAPI_HEADERS ${SOURCE_DIR}/op_api/aclnn_*.h)
   if(OPAPI_HEADERS)
     target_sources(${OPHOST_NAME}_aclnn_exclude_headers INTERFACE ${OPAPI_HEADERS})
+    target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${SOURCE_DIR}/op_api)
   endif()
 
   # op_api目录已移出的算子，SOURCE_DIR为算子根目录路径，路径不以op_host结尾；移出前SOURCE_DIR为算子op_host目录路径
@@ -360,13 +421,9 @@ function(add_modules_sources)
     target_sources(${OPHOST_NAME}_infer_obj PRIVATE ${OPINFER_SRCS})
   endif()
 
-  file(GLOB OPTILING_SRCS ${SOURCE_DIR}/*_tiling*.cpp)
-  file(GLOB_RECURSE SUB_OPTILING_SRC ${SOURCE_DIR}/op_tiling/*.cpp)
-  if (OPTILING_SRCS OR SUB_OPTILING_SRC)
-    add_tiling_modules()
-    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})
-    target_include_directories(${OPHOST_NAME}_tiling_obj PRIVATE ${SOURCE_DIR}/../../ ${SOURCE_DIR})
-  endif()
+  # 添加tiling文件
+  find_value_by_key("${MODULE_COMPUTE_UNIT}" "${MODULE_TILING_DIR}" "${ASCEND_COMPUTE_UNIT}" tiling_dir)
+  add_tiling_sources("${SOURCE_DIR}" "${tiling_dir}" "${MODULE_DISABLE_IN_OPP}")
 
   file(GLOB AICPU_SRCS ${SOURCE_DIR}/*_aicpu*.cpp)
   if(AICPU_SRCS)
@@ -395,7 +452,7 @@ function(add_modules_sources)
         if(AclnnExtraVersionLen GREATER 0)
           concat_op_names(OPTYPE ${OpType} ACLNNTYPE ${AclnnType} ACLNN_EXTRA_VERSION ${MODULE_ACLNN_EXTRA_VERSION})
         endif()
-      elseif(${AclnnType} STREQUAL "no_need_alcnn")
+      elseif(${AclnnType} STREQUAL "no_need_aclnn")
         message(STATUS "aicpu or host aicpu no need aclnn.")
       else()
         message(FATAL_ERROR "ACLNN TYPE UNSPPORTED, ONLY SUPPORT aclnn/aclnn_inner/aclnn_exclude")
@@ -431,7 +488,7 @@ macro(add_graph_plugin_sources)
     endif()
   endif()
 
-  file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph_plugin*.cpp)
+  file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp)
   if(GRAPH_PLUGIN_SRCS)
     add_graph_plugin_modules()
     target_sources(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${GRAPH_PLUGIN_SRCS})
@@ -495,4 +552,34 @@ function(get_op_type_from_binary_json BINARY_JSON OP_TYPE)
   string(REGEX REPLACE "\"" "" op_type ${op_type})
 
   set(${OP_TYPE} ${op_type} PARENT_SCOPE)
+endfunction()
+
+###################################################################################################
+# convert short socVersion to long socVersion
+###################################################################################################
+function(map_compute_unit compute_unit compute_unit_long)
+    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend910_95")
+    set(compute_unit_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend910_9599")
+    list(FIND compute_unit_keys ${compute_unit} index)
+    if(NOT index EQUAL -1)
+        list(GET compute_unit_values ${index} mapped_value)
+        set(${compute_unit_long} ${mapped_value} PARENT_SCOPE)
+    else()
+        set(${compute_unit_long} ${compute_unit} PARENT_SCOPE)
+    endif()
+endfunction()
+
+###################################################################################################
+# get target dir of different socVersions
+###################################################################################################
+function(get_target_dir compute_unit_long target_dir)
+  set(compute_unit_long_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend910_9599")
+  set(target_dir_values "arch22" "" "" "arch35")
+  list(FIND compute_unit_long_values ${compute_unit_long} index)
+  if(NOT index EQUAL -1)
+        list(GET target_dir_values ${index} mapped_value)
+        set(${target_dir} ${mapped_value} PARENT_SCOPE)
+    else()
+        set(${target_dir} "" PARENT_SCOPE)
+    endif()
 endfunction()

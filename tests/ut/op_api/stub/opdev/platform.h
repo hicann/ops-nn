@@ -1,12 +1,12 @@
 /**
+ * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef OPS_MATH_DEV_TESTS_UT_OP_API_STUB_OPDEV_PLATFORM_H
 #define OPS_MATH_DEV_TESTS_UT_OP_API_STUB_OPDEV_PLATFORM_H
@@ -54,6 +54,7 @@ class PlatformThreadLockCtx;
 
 class PlatformInfo {
     friend const PlatformInfo& GetCurrentPlatformInfo();
+    friend PlatformInfo& GetCurrentPlatformInfoMock();
     friend class PlatformThreadLockCtx;
 
 public:
@@ -81,6 +82,8 @@ public:
 
     fe::PlatFormInfos *GetPlatformInfos() const;
 
+    uint32_t coreNum_ = 0;
+
 private:
     PlatformInfo &operator=(const PlatformInfo &other) = delete;
 
@@ -101,9 +104,28 @@ private:
 
 const PlatformInfo& GetCurrentPlatformInfo();
 
+PlatformInfo& GetCurrentPlatformInfoMock();
+
 ge::AscendString ToString(SocVersion socVersion);
 
-void SetPlatformSocVersion(SocVersion socVersion);
+class SocVersionManager {
+public:
+    explicit SocVersionManager(SocVersion newVersion);
+
+    ~SocVersionManager();
+
+private:
+    SocVersion originalVersion_; //保存原始的Soc版本
+
+    SocVersionManager(const SocVersionManager&) = delete;
+    SocVersionManager(const SocVersionManager&&) = delete;
+    SocVersionManager& operator=(const SocVersionManager&) = delete;
+    SocVersionManager& operator=(const SocVersionManager&&) = delete;
+
+    void SetPlatformSocVersion(SocVersion socVersion);
+};
+
+void SetCubeCoreNum(uint32_t coreNum);
 
 } // namespace op
 

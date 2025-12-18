@@ -63,5 +63,5 @@ REG_OP(ScatterList)
                {DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT16, DT_INT32, DT_INT64, DT_UINT8, DT_UINT16, DT_UINT32,
                 DT_UINT64}))
     .OP_END_FACTORY_REG(ScatterList)
-
+}
 #endif // OPS_OP_PROTO_INC_SCATTER_LIST_H_

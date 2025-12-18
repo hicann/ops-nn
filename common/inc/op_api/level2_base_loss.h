@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef LEVEL2_BASE_LOSS_H_
 #define LEVEL2_BASE_LOSS_H_
@@ -25,7 +25,7 @@ extern "C" {
 namespace op
 {
 // 针对reduction!='none'且self为空tensor场景，对out按照给定值进行填充
-[[maybe_unused]] inline static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpExecutor* executor)
+inline static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpExecutor* executor)
 {
     FVector<int64_t> tmp = {1};
     auto dims = executor->ConvertToTensor(tmp.data(), tmp.size(), op::DataType::DT_INT64);
@@ -41,7 +41,7 @@ namespace op
     return ACLNN_SUCCESS;
 }
 
-[[maybe_unused]] inline static aclIntArray* GetBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
+inline static aclIntArray* GetBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
 {
     int64_t tensorSize = static_cast<int64_t>(broadcastShape.GetDimNum());
     std::vector<int64_t> tensorShape(tensorSize);

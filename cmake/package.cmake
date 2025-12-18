@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 #### CPACK to package run #####
@@ -13,7 +13,7 @@
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/third_party/makeself-fetch.cmake)
 
 function(pack_custom)
-  
+
   npu_op_package(${PACK_CUSTOM_NAME}
     TYPE RUN
     CONFIG
@@ -46,7 +46,7 @@ endfunction()
 
 macro(INSTALL_SCRIPTS src_path)
   install(DIRECTORY ${src_path}/
-      DESTINATION ops_nn/script
+      DESTINATION share/info/ops_nn/script
       FILE_PERMISSIONS
           OWNER_READ OWNER_WRITE OWNER_EXECUTE  # 文件权限
           GROUP_READ GROUP_EXECUTE
@@ -60,7 +60,6 @@ macro(INSTALL_SCRIPTS src_path)
 endmacro()
 
 function(pack_built_in)
- 
   # 打印路径
   message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
   message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")
@@ -79,7 +78,7 @@ function(pack_built_in)
   )
 
   install(FILES ${SCRIPTS_FILES}
-      DESTINATION ops_nn/script
+      DESTINATION share/info/ops_nn/script
   )
   set(COMMON_FILES
       ${CMAKE_SOURCE_DIR}/scripts/package/common/sh/install_common_parser.sh
@@ -103,13 +102,13 @@ function(pack_built_in)
       ${CMAKE_SOURCE_DIR}/scripts/package/common/cfg/path.cfg
   )
   install(FILES ${CMAKE_SOURCE_DIR}/version.info
-      DESTINATION .
+      DESTINATION share/info/ops_nn
   )
   install(FILES ${CONF_FILES}
       DESTINATION ops_nn/conf
   )
   install(FILES ${PACKAGE_FILES}
-      DESTINATION ops_nn/script
+      DESTINATION share/info/ops_nn/script
   )
   install(FILES ${LATEST_MANGER_FILES}
       DESTINATION latest_manager
@@ -126,7 +125,7 @@ function(pack_built_in)
       ${CMAKE_SOURCE_DIR}/scripts/package/ops_nn/scripts/setenv.fish
   )
   install(FILES ${BIN_FILES}
-      DESTINATION ops_nn/bin
+      DESTINATION share/info/ops_nn/bin
   )
 
   string(FIND "${ASCEND_COMPUTE_UNIT}" ";" SEMICOLON_INDEX)
@@ -156,7 +155,7 @@ function(pack_built_in)
   set(CPACK_CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}")
   set(CPACK_CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
   set(CPACK_CMAKE_CURRENT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-  # set(CPACK_COMPONENTS_ALL runtime documentation)
+  set(CPACK_MAKESELF_PATH "${MAKESELF_PATH}")
   set(CPACK_SOC "${compute_unit}")
   set(CPACK_ARCH "${ARCH}")
   set(CPACK_SET_DESTDIR ON)

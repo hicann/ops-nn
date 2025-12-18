@@ -1,10 +1,10 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -22,7 +22,7 @@ fi
 _CURR_PATH=$(dirname $(readlink -f $0))
 _FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
 _COMMON_PARSER_FILE="${_CURR_PATH}""/install_common_parser.sh"
-_VERSION_INFO_FILE="${_CURR_PATH}""/../../version.info"
+_VERSION_INFO_FILE="${_CURR_PATH}""/../version.info"
 _INSTALL_SHELL_FILE="${_CURR_PATH}""/opp_install.sh"
 SCENE_FILE="${_CURR_PATH}""/../scene.info"
 platform_data=$(grep -e "arch" "$SCENE_FILE" | cut --only-delimited -d"=" -f2-)
@@ -30,7 +30,7 @@ ops_nn_platform_old_dir=ops_nn_$platform_data-linux
 ops_nn_platform_dir=ops_nn
 upper_ops_nn_platform=$(echo "${ops_nn_platform_dir}" | tr 'a-z' 'A-Z')
 
-_INSTALL_INFO_SUFFIX="${ops_nn_platform_dir}/ascend_install.info"
+_INSTALL_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/ascend_install.info"
 common_func_path="${_CURR_PATH}/common_func.inc"
 version_cfg="${_CURR_PATH}/version_cfg.inc"
 common_fuc_v2="${_CURR_PATH}/common_func_v2.inc"
@@ -377,22 +377,13 @@ if [ "${_TARGET_INSTALL_PATH}" = "" ] || [ "${_TARGET_USERNAME}" = "" ] ||
 fi
 
 # init log file path
-_UNINSTALL_SHELL_FILE="${install_version_dir}""/${ops_nn_platform_dir}/script/opp_uninstall.sh"
+_UNINSTALL_SHELL_FILE="${install_version_dir}""/share/info/${ops_nn_platform_dir}/script/opp_uninstall.sh"
 # adpter for old version's path
 if [ ! -f "${_UNINSTALL_SHELL_FILE}" ]; then
-    _UNINSTALL_SHELL_FILE="${install_version_dir}""/${ops_nn_platform_dir}/scripts/opp_uninstall.sh"
+    _UNINSTALL_SHELL_FILE="${install_version_dir}""/share/info/${ops_nn_platform_dir}/scripts/opp_uninstall.sh"
 fi
 
-if [ "$pkg_is_multi_version" = "true" ] && [ "${is_upgrade}" = "y" ]; then
-    _INSTALL_INFO_FILE="${upgrade_install_info}"
-    if [ -z ${upgrade_install_info} ]; then
-        if [ -f ${upgrade_old_install_info} ]; then
-            _INSTALL_INFO_FILE="${upgrade_old_install_info}"
-        fi
-    fi
-else
-    _INSTALL_INFO_FILE="${install_version_dir}/${_INSTALL_INFO_SUFFIX}"
-fi
+_INSTALL_INFO_FILE="${install_version_dir}/${_INSTALL_INFO_SUFFIX}"
 _IS_ADAPTER_MODE="false"
 if [ ! -f "${_INSTALL_INFO_FILE}" ]; then
     _INSTALL_INFO_FILE="/etc/ascend_install.info"
@@ -413,8 +404,8 @@ checkinstalledtype "${install_type}"
 checkfileexist "${_FILELIST_FILE}"
 checkfileexist "${_COMMON_PARSER_FILE}"
 # check the ops_nn module sub directory exist or not
-opp_sub_dir="${_TARGET_INSTALL_PATH}/${upgrade_version_dir}""/${ops_nn_platform_dir}/"
-old_opp_sub_dir="${_TARGET_INSTALL_PATH}/${upgrade_old_version_dir}""/${ops_nn_platform_old_dir}/"
+opp_sub_dir="${install_version_dir}/${upgrade_version_dir}""/share/info/${ops_nn_platform_dir}/"
+old_opp_sub_dir="${install_version_dir}/${upgrade_old_version_dir}""/share/info/${ops_nn_platform_old_dir}/"
 if [ -d ${old_opp_sub_dir}/built-in ]; then
     opp_sub_dir=${old_opp_sub_dir}
 fi
@@ -514,7 +505,7 @@ logandprint "[INFO]: Install ops_nn module path in the install folder."
 setenv
 
 sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --install --username="${_TARGET_USERNAME}" --usergroup="${_TARGET_USERGROUP}" --set-cann-uninstall \
-    --version=${pkg_version} --version-dir=$pkg_version_dir $upgrade_option ${in_install_for_all} ${in_feature_1} ${chip_type_1} "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
+    --use-share-info --version=${pkg_version} --version-dir=$pkg_version_dir $upgrade_option ${in_install_for_all} ${in_feature_1} ${chip_type_1} "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Install ops_nn module files failed."
 logandprint "[INFO]: upgradePercentage:50%"
 
@@ -572,39 +563,6 @@ for dir in ${subdirs}; do
 done
 chown "${_TARGET_USERNAME}":"${_TARGET_USERGROUP}" "${install_version_dir}/${ops_nn_platform_dir}" 2> /dev/null
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Change ops_nn onwership failed.."
-
-# logandprint "[INFO1]: Creating ("${atvoss_dst_dir}""/atvoss") soft link from ("${atvoss_ops_nn_dir}""/atvoss")."
-# logandprint "[INFO1]: Creating ("${atvoss_dst_dir}""/atvoss") soft link from ("${atvoss_ops_nn_dir}""/atvoss")."
-
-# # create atvoss softlink
-# atvoss_ops_nn_dir=${_TARGET_INSTALL_PATH}/latest/ops_nn/include/op_common
-# atvoss_dst_dir=${_TARGET_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common
-# if [ ! -d "${atvoss_dst_dir}" ];then
-#     mkdir -p "${atvoss_dst_dir}"
-# fi
-# # require write permission
-# chmod u+w "${atvoss_dst_dir}" 2> /dev/null
-# logandprint "[INFO]: Creating ("${atvoss_dst_dir}""/atvoss") soft link from ("${atvoss_ops_nn_dir}""/atvoss")."
-# createsoftlink "${atvoss_ops_nn_dir}""/atvoss" "${atvoss_dst_dir}""/atvoss"
-# logwitherrorlevel "$?" "warn" "[WARNING]: Create soft link for "${atvoss_dst_dir}""/atvoss". That may \
-# cause some issues for atvoss."
-
-# # create atvoss op_kernel softlink
-# atvoss_op_kernel_src_dir=${_TARGET_INSTALL_PATH}/latest/ops_nn/include/op_common/op_kernel
-# atvoss_op_kernel_dst_dir=${_TARGET_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common/op_kernel
-# if [ ! -d "${atvoss_op_kernel_dst_dir}" ];then
-#     mkdir -p "${atvoss_op_kernel_dst_dir}"
-# fi
-# chmod u+w "${atvoss_op_kernel_dst_dir}" 2> /dev/null
-# op_kernel_files="math_util.h platform_util.h"
-# for file_name in $op_kernel_files;
-# do
-#     logandprint "[INFO]: Creating ("${atvoss_op_kernel_dst_dir}""/${file_name}") soft link from ("${atvoss_op_kernel_src_dir}""/${file_name}")."
-#     createsoftlink "${atvoss_op_kernel_src_dir}""/${file_name}" "${atvoss_op_kernel_dst_dir}""/${file_name}"
-#     logwitherrorlevel "$?" "warn" "[WARNING]: Create soft link for "${atvoss_op_kernel_dst_dir}""/${file_name}". That may \
-#     cause some issues for atvoss."
-# done
-# chmod -R "${_BUILTIN_PERM}" "${atvoss_dst_dir}" 2> /dev/null
 
 #chmod to support copy
 if [ -d "${install_version_dir}/${ops_nn_platform_dir}/vendors" ] && [ "$(id -u)" != "0" ]; then

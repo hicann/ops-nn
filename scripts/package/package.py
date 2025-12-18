@@ -2,10 +2,10 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import Dict, Iterator, List, Set, Tuple, TextIO
+import shutil
 
 from common.py.utils import pkg_utils
 from common.py.filelist import (
@@ -28,7 +29,7 @@ from common.py.filelist import (
     get_transform_nested_path_func,
 )
 from common.py.packer import (
-    PackageName, create_makeself_pkg_params_factory, create_run_package_command
+    PackageName, create_makeself_pkg_params_factory, create_run_package_command, exec_pack_cmd
 )
 from common.py.pkg_parser import (
     ParseOption, XmlConfig, parse_xml_config, get_cann_version_info
@@ -45,25 +46,29 @@ from common.py.utils.comm_log import CommLog
 def get_comments(package_name: PackageName) -> str:
     """获取run包注释。"""
     comments = '_'.join(
-        [package_name.product_name.upper(), package_name.func_name.upper(), 'RUN_PACKAGE']
+        [package_name.chip_name.upper(), package_name.func_name.upper(), 'RUN_PACKAGE']
     )
     return f'"{comments}"'
 
 
-def get_compress_cmd(pkg_args: Namespace,
+def get_compress_cmd(delivery_dir: str,
+                     pkg_args: Namespace,
                      xml_config: XmlConfig) -> str:
     """获取makeself压缩命令"""
     suffix = xml_config.package_attr.get('suffix')
     if suffix == "run":
         package_name = PackageName(xml_config.package_attr, pkg_args, xml_config.version)
         factory = create_makeself_pkg_params_factory(
-            package_name.getvalue(), get_comments(package_name)
+            pkg_args.pkg_output_dir, package_name.getvalue(), get_comments(package_name)
         )
-        params = factory(xml_config.package_attr)
+        params = factory(pkg_args.makeself_dir, xml_config.package_attr, pkg_args.independent_pkg)
         pack_cmd, err_msg = create_run_package_command(params)
         if err_msg:
             CommLog.cilog_error(err_msg)
             CommLog.cilog_error("create_run_command failed!")
+            raise CompressError(package_name.getvalue())
+        if pkg_args.independent_pkg:
+            exec_pack_cmd(delivery_dir, pack_cmd, package_name.getvalue())
     else:
         CommLog.cilog_error("the repack type '%s' is not support!", suffix)
         sys.exit(FAIL)
@@ -237,7 +242,7 @@ def parse_install_info(infos: List,
     """根据配置解析生成安装信息。"""
     for target_config in infos:
         target_name = get_target_name(target_config)
-        if target_config.get("optional") == 'true':
+        if target_config.get("optional") == 'true' and operate_type in ('copy', 'move'):
             path = os.path.join(TOP_DIR, DELIVERY_PATH, target_config.get('dst_path'))
             vaule = os.path.join(TOP_DIR, DELIVERY_PATH, target_config.get('dst_path'), target_name)
             if not os.path.exists(path):
@@ -321,7 +326,7 @@ def execute_repack_process(xml_config: XmlConfig,
             if not result:
                 return FAIL
     try:
-        package_name = get_compress_cmd(pkg_args, xml_config)
+        package_name = get_compress_cmd(pkg_args.pkg_output_dir, pkg_args, xml_config)
     except CompressError:
         return FAIL
 
@@ -508,8 +513,7 @@ def generate_filelist_file_by_xml_config(xml_config: XmlConfig,
     )
     generate_filelist(file_install_list, 'filelist.csv')
     # 先生成再检查，有利于问题定位
-    if package_check:
-        check_filelist(file_install_list, check_features, check_move)
+    check_filelist(file_install_list, check_features, check_move)
 
 
 def get_pkg_xml_relative_path(pkg_args: Namespace) -> str:
@@ -606,6 +610,11 @@ def main(pkg_name='', xml_file='', main_args=None):
         return FAIL
 
     generate_config_inc(xml_config.package_attr)
+    
+    if main_args.independent_pkg:
+        src_file_path = os.path.join(TOP_DIR, "build", "filelist.csv")
+        dst_file_path = os.path.join(main_args.pkg_output_dir, "share", "info", main_args.pkg_name, "script")
+        shutil.copy(src_file_path, dst_file_path)
 
     package_option = PackageOption(
         main_args.os_arch, main_args.package_suffix, main_args.not_in_name, main_args.pkg_version, main_args.ext_name,
@@ -665,6 +674,10 @@ def args_parse():
                         help="This parameter define package func name, has higher priority than func name in xml")
     parser.add_argument('--source_root', metavar='source_root', required=False, dest='source_root', nargs='?', const='',
                         help='source root dir.')
+    parser.add_argument('--makeself_dir', metavar='makeself_dir', required=False, dest='makeself_dir', 
+                        nargs='?', const='', help='makeself dir.')
+    parser.add_argument('--independent_pkg', action='store_true', help='Independent pkg.')                    
+    parser.add_argument('--pkg-output-dir', default='', help='Package dirpath.')
     parser.add_argument('--version_dir', nargs='?', const='', default='', help='Set version dir.')
     parser.add_argument('--tag', metavar='tag', nargs='?', const='', default='')
     parser.add_argument('--disable-multi-version', action='store_true', help='Disable multi version.')
@@ -691,3 +704,4 @@ if __name__ == "__main__":
         CommLog.cilog_info("%s", traceback.format_exc())
         status = FAIL
     sys.exit(status)
+open

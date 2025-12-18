@@ -17,7 +17,7 @@
 #define CONV_BACKPROP_FILTER_CONTEXT_UTILS_H_
 
 #include <exe_graph/runtime/tiling_context.h>
-#include "common/op_host/op_tiling/tbe_tiling_api.h"
+#include "tbe_tiling_api.h"
 
 namespace Ops {
 namespace NN {

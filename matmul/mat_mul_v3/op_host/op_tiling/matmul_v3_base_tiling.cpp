@@ -795,7 +795,7 @@ bool MatmulV3BaseTiling::GetTilingFromRepo()
         return false;
     }
 
-    auto ret = RuntimeKb::QueryBank(inputArgs.get(), inputArgsSize, "MatMulV3",
+    auto ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "MatMulV3",
         compileInfo_.socVersionStr, static_cast<uint32_t>(compileInfo_.aicNum), tuningTiling);
     if (ret != 0U || tuningTiling == nullptr) {
         return false;

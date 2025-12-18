@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -16,6 +16,7 @@ import sys
 import os
 import re
 import datetime
+import json
 from typing import List
 
 import opdesc_parser
@@ -33,13 +34,15 @@ import os, sys
 import ctypes
 import json
 import shutil
-from tbe.common.platform import get_soc_spec
-from tbe.common.utils import para_check
-from tbe.tikcpp import compile_op, replay_op, check_op_cap, generalize_op_params, get_code_channel, OpInfo
-from tbe.common.buildcfg import get_default_build_config
-from tbe.common.buildcfg import get_current_build_config
-import tbe.common.register as tbe_register
+from asc_op_compile_base.common.platform import get_soc_spec
+from asc_op_compile_base.common.utils import para_check
+from asc_op_compile_base.asc_op_compiler import compile_op, replay_op, check_op_cap, generalize_op_params, get_code_channel, OpInfo
+from asc_op_compile_base.common.buildcfg import get_default_build_config
+from asc_op_compile_base.common.buildcfg import get_current_build_config
+from asc_op_compile_base.common import register as tbe_register
 PYF_PATH = os.path.dirname(os.path.realpath(__file__))
+
+__version__ = '2.0.0'
 
 DTYPE_MAP = {{"float32": ["DT_FLOAT", "float"],
     "float16": ["DT_FLOAT16", "half"],
@@ -170,14 +173,21 @@ def {}({}, kernel_name="{}", impl_mode=""):
         bisheng_path = os.path.dirname(bisheng)
         tikcpp_path = os.path.realpath(os.path.join(bisheng_path, "..", "..", "tikcpp"))
     else:
-        tikcpp_path = os.path.realpath("/usr/local/Ascend/latest/compiler/tikcpp")
+        tikcpp_path = os.path.realpath("/usr/local/Ascend/cann/compiler/tikcpp")
     options.append("-I" + tikcpp_path)
     options.append("-I" + os.path.join(tikcpp_path, "..", "..", "include"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw", "impl"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw", "interface"))
-    options.append("-I" + os.path.join(tikcpp_path, "..", "ascendc", "act"))
+    options.append("-I" + os.path.join(tikcpp_path, 
+        "..", "..", "..", "latest", os.uname().machine+"-linux", "asc", "atcos"))
     options.append("-I" + os.path.join(PYF_PATH, "..", "ascendc", "common"))
+
+    ascend_home_path = os.environ.get('ASCEND_HOME_PATH')
+    if ascend_home_path is None:
+        ascend_home_path = os.path.realpath("/usr/local/Ascend/cann")
+    options.append("-I" + os.path.join(ascend_home_path, "pkg_inc", "op_common"))
+
     if impl_mode == "high_performance":
         options.append("-DHIGH_PERFORMANCE=1")
     elif impl_mode == "high_precision":
@@ -345,7 +355,7 @@ class AdpBuilder(opdesc_parser.OpDesc):
             else:
                 src_file = os.path.join(impl_path, self.op_file, self.op_file + ".cpp")
             if not os.path.exists(src_file):
-                print(f"[INFO]: operator: {self.op_file} source file: {src_file} does not found, please check.")
+                print(f"[ERROR]: operator: {self.op_file} source file: {src_file} does not found, please check.")
                 return
         out_path = os.path.abspath(path)
         if self.dynamic_shape and not out_path.endswith('dynamic'):
@@ -370,9 +380,9 @@ class AdpBuilder(opdesc_parser.OpDesc):
     def _gen_op_compile_option(self: any, op_compile_option_all: list = None):
         if op_compile_option_all is not None:
             if self.op_type in op_compile_option_all:
-                self.op_compile_option = op_compile_option_all[self.op_type]
+                self.op_compile_option = json.dumps(op_compile_option_all[self.op_type])
             elif "__all__" in op_compile_option_all:
-                self.op_compile_option = op_compile_option_all["__all__"]
+                self.op_compile_option = json.dumps(op_compile_option_all["__all__"])
 
 
     def _ip_argpack(self: any, default: bool = True) -> list:

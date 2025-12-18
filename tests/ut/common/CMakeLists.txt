@@ -1,9 +1,9 @@
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
 
@@ -27,12 +27,23 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     )
     target_include_directories(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
         ${JSON_INCLUDE}
+        ${ASCEND_DIR}/pkg_inc
+        ${ASCEND_DIR}/include/external
         ${ASCEND_DIR}/include/exe_graph
         ${ASCEND_DIR}/include/base/context_builder
         )
     target_link_libraries(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         c_sec
+    )
+
+    target_compile_options(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
+        -fno-access-control
+    )
+
+    target_compile_definitions(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
+        _GLIBCXX_USE_CXX11_ABI=0
+        LOG_CPP
     )
 
     file(GLOB OP_INFERSHAPE_UT_COMMON_SRC
@@ -47,11 +58,23 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         ${OP_INFERSHAPE_UT_COMMON_SRC}
     )
     target_include_directories(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
+        ${ASCEND_DIR}/pkg_inc
         ${ASCEND_DIR}/include/graph
+        ${ASCEND_DIR}/include/external
         ${ASCEND_DIR}/include/exe_graph
         ${ASCEND_DIR}/include/base/context_builder
         ${CMAKE_CURRENT_SOURCE_DIR}/
     )
+
+    target_compile_options(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
+        -fno-access-control
+    )
+
+    target_compile_definitions(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
+        _GLIBCXX_USE_CXX11_ABI=0
+        LOG_CPP
+    )
+
     target_link_libraries(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         c_sec

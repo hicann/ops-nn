@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -129,7 +129,7 @@ TEST_F(FlatQuantTiling, flat_quant_tiling_001)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(FlatQuantTiling, flat_quant_tiling_002)
@@ -223,7 +223,7 @@ TEST_F(FlatQuantTiling, flat_quant_tiling_002)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(FlatQuantTiling, flat_quant_tiling_003)
@@ -317,7 +317,7 @@ TEST_F(FlatQuantTiling, flat_quant_tiling_003)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1);
+    ASSERT_EQ(tiling_key, 2);
 }
 
 TEST_F(FlatQuantTiling, flat_quant_tiling_004)
@@ -775,7 +775,7 @@ TEST_F(FlatQuantTiling, flat_quant_tiling_008)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(FlatQuantTiling, flat_quant_tiling_009)

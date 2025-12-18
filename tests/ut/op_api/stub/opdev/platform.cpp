@@ -1,18 +1,18 @@
 /**
+ * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "platform.h"
 
 namespace op {
 
-SocVersion g_socVersion = SocVersion::ASCEND910B;
+thread_local SocVersion g_socVersion = SocVersion::ASCEND910B;
 PlatformInfo *g_platformInfo = new PlatformInfo();
 
 bool PlatformInfo::CheckSupport(SocSpec socSpec, SocSpecAbility ability) const
@@ -60,7 +60,7 @@ int64_t PlatformInfo::GetBlockSize() const
 
 uint32_t PlatformInfo::GetCubeCoreNum() const
 {
-    return 0;
+    return GetCurrentPlatformInfoMock().coreNum_;
 }
 
 uint32_t PlatformInfo::GetVectorCoreNum() const
@@ -79,6 +79,11 @@ fe::PlatFormInfos* PlatformInfo::GetPlatformInfos() const
 }
 
 const PlatformInfo& GetCurrentPlatformInfo()
+{
+    return *g_platformInfo;
+}
+
+PlatformInfo& GetCurrentPlatformInfoMock()
 {
     return *g_platformInfo;
 }
@@ -107,9 +112,24 @@ ge::AscendString ToString(SocVersion socVersion)
     }
 }
 
-void SetPlatformSocVersion(SocVersion socVersion)
+SocVersionManager::SocVersionManager(SocVersion newVersion) : originalVersion_(GetCurrentPlatformInfo().GetSocVersion())
+{
+    SetPlatformSocVersion(newVersion);
+}
+
+SocVersionManager::~SocVersionManager()
+{
+    SetPlatformSocVersion(originalVersion_);
+}
+
+void SocVersionManager::SetPlatformSocVersion(SocVersion socVersion)
 {
     g_socVersion = socVersion;
+}
+
+void SetCubeCoreNum(uint32_t coreNum)
+{
+    GetCurrentPlatformInfoMock().coreNum_ = coreNum;
 }
 
 } // namespace op

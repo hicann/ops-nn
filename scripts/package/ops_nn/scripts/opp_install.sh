@@ -1,10 +1,10 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -21,7 +21,7 @@ fi
 
 # run package's files info
 _CURR_PATH=$(dirname $(readlink -f $0))
-_VERSION_INFO_FILE="${_CURR_PATH}""/../../version.info"
+_VERSION_INFO_FILE="${_CURR_PATH}""/../version.info"
 _FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
 _COMMON_PARSER_FILE="${_CURR_PATH}""/install_common_parser.sh"
 SCENE_FILE="${_CURR_PATH}""/../scene.info"
@@ -31,8 +31,8 @@ ops_nn_platform_dir=ops_nn
 upper_ops_nn_platform=$(echo "${ops_nn_platform_dir}" | tr 'a-z' 'A-Z')
 
 
-_INSTALL_INFO_SUFFIX="${ops_nn_platform_dir}/ascend_install.info"
-_VERSION_INFO_SUFFIX="${ops_nn_platform_dir}/version.info"
+_INSTALL_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/ascend_install.info"
+_VERSION_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/version.info"
 
 _COMMON_INC_FILE="${_CURR_PATH}/common_func.inc"
 COMMON_FUNC_V2_PATH="${_CURR_PATH}/common_func_v2.inc"
@@ -259,18 +259,6 @@ getinstallpath() {
     return
 }
 
-setenv() {
-    logandprint "[INFO]: Set the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/${ops_nn_platform_dir} ]."
-    if [ "${is_docker_install}" = y ] ; then
-         install_option="--docker-root=${docker_root}"
-    else
-        install_option=""
-    fi
-    if [ "${is_setenv}" = "y" ];then
-        install_option="${install_option} --setenv"
-    fi
-}
-
 # init installation parameters
 _TARGET_INSTALL_PATH="$1"
 _TARGET_USERNAME="$2"
@@ -287,8 +275,6 @@ docker_root="${12}"
 is_install_path="${13}"
 in_feature_new="${14}"
 chip_type_new="${15}"
-#getinstallpath
-#relative_path_val=${relative_path}
 
 logandprint "[INFO]: Command ops_nn_install"
 
@@ -355,6 +341,28 @@ if [ "$?" != 0 ]; then
     exit 1
 fi
 
+
+add_init_py() {
+
+    local target_built_in=${version_install_dir}/opp/built-in
+    local opp_builtin_mod=""
+    local built_in_impl_path=${target_built_in}/op_impl/ai_core/tbe/impl/ops_nn
+    if [ -d ${built_in_impl_path} ]; then
+        opp_builtin_mod=$(stat -c %a ${built_in_impl_path})
+        if [ "$(id -u)" != 0 ] && [ ! -w "${built_in_impl_path}" ]; then
+        chmod u+w -R "${built_in_impl_path}" 2>/dev/null
+        fi
+        touch ${built_in_impl_path}/__init__.py
+    fi
+
+
+    [ -d ${built_in_impl_path}/dynamic ] && touch ${built_in_impl_path}/dynamic/__init__.py
+
+    if [ -n "${opp_builtin_mod}" ]; then
+        chmod ${opp_builtin_mod} -R "${built_in_impl_path}" 2>/dev/null
+    fi
+}
+
 _BUILTIN_PERM="550"
 _CUSTOM_PERM="750"
 _CREATE_DIR_PERM="750"
@@ -392,11 +400,13 @@ for dir in ${subdirs_info}; do
 done
 chmod "${_CUSTOM_PERM}" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
 
+comm_create_dir "${version_install_dir}/share/info/${ops_nn_platform_dir}" "${_CREATE_DIR_PERM}" "${_TARGET_USERNAME}:${_TARGET_USERGROUP}" "${is_for_all}"
+
 logandprint "[INFO]: upgradePercentage:30%"
 
-setenv
-
 logandprint "[INFO]: Update the ops_nn install info."
+
+add_init_py
 
 if [ "${in_feature_new}" = "" ]; then
     in_feature_1="--feature=all"
@@ -413,38 +423,8 @@ fi
 updateinstallinfos "${_TARGET_USERNAME}" "${_TARGET_USERGROUP}" "${install_type}" "${relative_path_val}" "${in_feature_new}" "${chip_type_new}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Update ops_nn install info failed."
 sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --install --username="${_TARGET_USERNAME}" --usergroup="${_TARGET_USERGROUP}" --set-cann-uninstall \
-    --version=$pkg_version --version-dir=$pkg_version_dir $install_option ${in_install_for_all} ${in_feature_1} ${chip_type_1}  "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
+    --use-share-info --version=$pkg_version --version-dir=$pkg_version_dir $install_option ${in_install_for_all} ${in_feature_1} ${chip_type_1}  "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Install ops_nn module files failed."
-
-# # create atvoss softlink
-# atvoss_ops_nn_dir=${_TARGET_INSTALL_PATH}/latest/ops_nn/include/op_common
-# atvoss_dst_dir=${_TARGET_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common
-# if [ ! -d "${atvoss_dst_dir}" ];then
-#     mkdir -p "${atvoss_dst_dir}"
-# fi
-# # require write permission
-# chmod u+w "${atvoss_dst_dir}" 2> /dev/null
-# logandprint "[INFO]: Creating ("${atvoss_dst_dir}""/atvoss") soft link from ("${atvoss_ops_nn_dir}""/atvoss")."
-# createsoftlink "${atvoss_ops_nn_dir}""/atvoss" "${atvoss_dst_dir}""/atvoss"
-# logwitherrorlevel "$?" "warn" "[WARNING]: Create soft link for "${atvoss_dst_dir}""/atvoss". That may \
-# cause some issues for atvoss."
-
-# # create atvoss op_kernel softlink
-# atvoss_op_kernel_src_dir=${_TARGET_INSTALL_PATH}/latest/ops_nn/include/op_common/op_kernel
-# atvoss_op_kernel_dst_dir=${_TARGET_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common/op_kernel
-# if [ ! -d "${atvoss_op_kernel_dst_dir}" ];then
-#     mkdir -p "${atvoss_op_kernel_dst_dir}"
-# fi
-# chmod u+w "${atvoss_op_kernel_dst_dir}" 2> /dev/null
-# op_kernel_files="math_util.h platform_util.h"
-# for file_name in $op_kernel_files;
-# do
-#     logandprint "[INFO]: Creating ("${atvoss_op_kernel_dst_dir}""/${file_name}") soft link from ("${atvoss_op_kernel_src_dir}""/${file_name}")."
-#     createsoftlink "${atvoss_op_kernel_src_dir}""/${file_name}" "${atvoss_op_kernel_dst_dir}""/${file_name}"
-#     logwitherrorlevel "$?" "warn" "[WARNING]: Create soft link for "${atvoss_op_kernel_dst_dir}""/${file_name}". That may \
-#     cause some issues for atvoss."
-# done
-# chmod -R "${_BUILTIN_PERM}" "${atvoss_dst_dir}" 2> /dev/null
 
 #chmod to support copy
 if [ -d "${version_install_dir}/${ops_nn_platform_dir}/vendors" ] && [ "$(id -u)" != "0" ]; then
@@ -464,31 +444,20 @@ else
     chmod "${_BUILTIN_PERM}" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
 fi
 
-chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/${ops_nn_platform_dir}/scene.info" 2> /dev/null
-chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/${ops_nn_platform_dir}/version.info" 2> /dev/null
-chmod 600 "${version_install_dir}""/${ops_nn_platform_dir}/ascend_install.info" 2> /dev/null
+chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/share/info/${ops_nn_platform_dir}/scene.info" 2> /dev/null
+chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/share/info/${ops_nn_platform_dir}/version.info" 2> /dev/null
+chmod 600 "${version_install_dir}""/share/info/${ops_nn_platform_dir}/ascend_install.info" 2> /dev/null
 
 if [ "${is_change_dir_mode}" = "true" ]; then
     chmod u-w "${version_install_dir}" 2> /dev/null
 fi
 
-# change installed folder's owner and group except aicpu
-subdirs=$(ls "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null)
-chown "${_TARGET_USERNAME}":"${_TARGET_USERGROUP}" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Change ops_nn onwership failed.."
-
+rm -fr ${version_install_dir}/${ops_nn_platform_dir}
 logandprint "[INFO]: upgradePercentage:100%"
 
 logandprint "[INFO]: Installation information listed below:"
-logandprint "[INFO]: Install path: (${version_install_dir}/${ops_nn_platform_dir})"
 logandprint "[INFO]: Install log file path: (${_INSTALL_LOG_FILE})"
 logandprint "[INFO]: Operation log file path: (${_OPERATE_LOG_FILE})"
-
-if [ "${is_setenv}" != "y" ];then
-    logandprint "[INFO]: Using requirements: when ops_nn module install finished or \
-before you run the ops_nn module, execute the command \
-[ export ASCEND_OPS_NN_PATH=${_TARGET_INSTALL_PATH}/latest/${ops_nn_platform_dir} ] to set the environment path."
-fi
 
 logandprint "[INFO]: OPS_NN package installed successfully! The new version takes effect immediately."
 exit 0

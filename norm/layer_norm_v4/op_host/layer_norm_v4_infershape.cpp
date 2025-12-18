@@ -183,18 +183,24 @@ static ge::graphStatus InferShapeRange4LayerNormV4(gert::InferShapeRangeContext*
     if (is_need_update_mean_range) {
         mean_shape_range->GetMax()->SetDimNum(output_shape_dim_num);
         mean_shape_range->GetMin()->SetDimNum(output_shape_dim_num);
+        rstd_shape_range->GetMax()->SetDimNum(output_shape_dim_num);
+        rstd_shape_range->GetMin()->SetDimNum(output_shape_dim_num);
         for (size_t i = 0U; i < output_shape_dim_num; i++) {
             mean_shape_range->GetMax()->SetDim(i, x_shape_range->GetMax()->GetDim(i));
             mean_shape_range->GetMin()->SetDim(i, x_shape_range->GetMin()->GetDim(i));
+            rstd_shape_range->GetMax()->SetDim(i, x_shape_range->GetMax()->GetDim(i));
+            rstd_shape_range->GetMin()->SetDim(i, x_shape_range->GetMin()->GetDim(i));
             if (static_cast<int64_t>(i) >= static_cast<int64_t>(output_shape_dim_num) - norm_shape_min_len) {
                 mean_shape_range->GetMax()->SetDim(i, 1);
                 mean_shape_range->GetMin()->SetDim(i, 1);
+                rstd_shape_range->GetMax()->SetDim(i, 1);
+                rstd_shape_range->GetMin()->SetDim(i, 1);
             } else if (static_cast<int64_t>(i) >= static_cast<int64_t>(output_shape_dim_num) - norm_shape_max_len) {
                 mean_shape_range->GetMin()->SetDim(i, 0);
+                rstd_shape_range->GetMin()->SetDim(i, 0);
             }
         }
     }
-    *rstd_shape_range = *mean_shape_range;
     OP_LOGD(context, "InferShapeRange4LayerNormV4 end");
     return ge::GRAPH_SUCCESS;
 }

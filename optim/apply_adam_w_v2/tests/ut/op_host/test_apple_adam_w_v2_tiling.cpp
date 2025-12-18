@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <iostream>
 #include <fstream>
@@ -135,6 +135,10 @@ TEST_F(ApplyAdamWV2Tiling, ApplyAdamWV2_tiling_float) {
                     .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
                                 {"beta1", Ops::NN::AnyValue::CreateFrom(0.01f)},
                                 {"beta2", Ops::NN::AnyValue::CreateFrom(0.09f)},
@@ -240,6 +244,10 @@ TEST_F(ApplyAdamWV2Tiling, ApplyAdamWV2_tiling_diff_dtype) {
                     .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
                                 {"beta1", Ops::NN::AnyValue::CreateFrom(0.01f)},
                                 {"beta2", Ops::NN::AnyValue::CreateFrom(0.09f)},
@@ -345,6 +353,10 @@ TEST_F(ApplyAdamWV2Tiling, ApplyAdamWV2_tiling_float_can_avg_div) {
                     .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                    .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
                                 {"beta1", Ops::NN::AnyValue::CreateFrom(0.01f)},
                                 {"beta2", Ops::NN::AnyValue::CreateFrom(0.09f)},

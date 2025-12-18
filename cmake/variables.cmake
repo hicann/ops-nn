@@ -1,18 +1,19 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
 # 算子类别清单
-set(OP_CATEGORY_LIST "activation" "conv" "foreach" "vfusion" "index" "loss" "matmul" "norm" "optim" "pooling" "quant" "rnn" "control")
+set(OP_CATEGORY_LIST "reliability" "activation" "conv" "foreach" "vfusion" "index" "loss" "matmul" "norm" "optim" "pooling" "quant" "rnn" "control")
 
 set(COMMON_NAME common_${PKG_NAME})
 set(OPHOST_NAME ophost_${PKG_NAME})
+set(OPSTATIC_NAME cann_${PKG_NAME}_static)
 set(OPAPI_NAME opapi_${PKG_NAME})
 set(OPGRAPH_NAME opgraph_${PKG_NAME})
 set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
@@ -54,6 +55,8 @@ get_filename_component(OPS_NN_COMMON_INC_EXTERNAL "${OPS_NN_COMMON_INC}/external
 get_filename_component(OPS_NN_COMMON_INC_HEADERS  "${OPS_NN_COMMON_INC_EXTERNAL}/aclnn_kernels"       REALPATH)
 get_filename_component(OPS_KERNEL_BINARY_SCRIPT     "${OPS_NN_DIR}/scripts/kernel/binary_script"       REALPATH)
 get_filename_component(OPS_KERNEL_BINARY_CONFIG     "${OPS_NN_DIR}/scripts/kernel/binary_config"       REALPATH)
+get_filename_component(OPS_ADV_ACT                  "${OPS_NN_DIR}/common/act"                        REALPATH)
+get_filename_component(OPS_MATMUL_ACT               "${OPS_NN_DIR}/matmul/common/matmul_act"           REALPATH)
 
 # python
 if(NOT DEFINED ASCEND_PYTHON_EXECUTABLE)
@@ -67,36 +70,35 @@ if(ENABLE_CUSTOM)
   set(ACLNN_OP_INC_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/op_api/include/aclnnop)
   set(ACLNN_LIB_INSTALL_DIR           packages/vendors/${VENDOR_PACKAGE_NAME}/op_api/lib)
   set(OPS_INFO_INSTALL_DIR            packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/config)
-  set(IMPL_INSTALL_DIR                packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/${VENDOR_NAME}_impl/ascendc)
-  set(IMPL_DYNAMIC_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/${VENDOR_NAME}_impl/dynamic)
+  set(IMPL_INSTALL_DIR                packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/${VENDOR_PACKAGE_NAME}_impl/ascendc)
+  set(IMPL_DYNAMIC_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/${VENDOR_PACKAGE_NAME}_impl/dynamic)
   set(BIN_KERNEL_INSTALL_DIR          packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/kernel)
   set(BIN_KERNEL_CONFIG_INSTALL_DIR   packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/kernel/config)
   set(OPTILING_INSTALL_DIR            packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/op_tiling/)
   set(OPTILING_LIB_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/ai_core/tbe/op_tiling/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(OPPROTO_INC_INSTALL_DIR         packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/inc)
   set(OPPROTO_LIB_INSTALL_DIR         packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
-  set(CUST_AICPU_KERNEL_IMPL          packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/aicpu_kernel/impl)
-  set(CUST_AICPU_KERNEL_CONFIG        packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/config)
+  set(AICPU_KERNEL_IMPL               packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/aicpu_kernel/impl)
+  set(AICPU_JSON_CONFIG               packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/config)
   set(CUST_AICPU_OP_PROTO             packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto)
   set(VERSION_INFO_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/)
   set(PACK_CUSTOM_NAME                "cann-ops-nn-${VENDOR_NAME}-linux.${ARCH}")
 else()
   # built-in package install path
-  set(ACLNN_INC_INSTALL_DIR           ops_nn/built-in/op_api/include)
-  set(ACLNN_OP_INC_INSTALL_DIR        ops_nn/built-in/op_api/include/aclnnop)
-  set(ACLNN_LIB_INSTALL_DIR           ops_nn/built-in/op_api/lib64/${CMAKE_SYSTEM_PROCESSOR})
-  set(OPS_INFO_INSTALL_DIR            ops_nn/built-in/op_impl/ai_core/tbe/config)
-  set(IMPL_INSTALL_DIR                ops_nn/built-in/op_impl/ai_core/tbe/impl/ascendc)
-  set(IMPL_DYNAMIC_INSTALL_DIR        ops_nn/built-in/op_impl/ai_core/tbe/impl/dynamic)
-  set(BIN_KERNEL_INSTALL_DIR          ops_nn/built-in/op_impl/ai_core/tbe/kernel)
-  set(BIN_KERNEL_CONFIG_INSTALL_DIR   ops_nn/built-in/op_impl/ai_core/tbe/kernel/config)
-  set(OPHOST_INC_INSTALL_PATH         ops_nn/built-in/op_impl/ai_core/tbe/op_host/include)
-  set(OPHOST_LIB_INSTALL_PATH         ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
+  set(ACLNN_INC_INSTALL_DIR           opp/include/aclnnop)
+  set(ACLNN_OP_INC_INSTALL_DIR        opp/include/aclnnop/level2)
+  set(ACLNN_LIB_INSTALL_DIR           opp/built-in/op_impl/ai_core/tbe/op_api/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
+  set(OPS_INFO_INSTALL_DIR            opp/built-in/op_impl/ai_core/tbe/config)
+  set(IMPL_INSTALL_DIR                opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc)
+  set(IMPL_DYNAMIC_INSTALL_DIR        opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/dynamic)
+  set(BIN_KERNEL_INSTALL_DIR          opp/built-in/op_impl/ai_core/tbe/kernel)
+  set(BIN_KERNEL_CONFIG_INSTALL_DIR   opp/built-in/op_impl/ai_core/tbe/kernel/config)
+  set(OPHOST_LIB_INSTALL_PATH         opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
+  set(AICPU_KERNEL_IMPL               opp/built-in/op_impl/aicpu/kernel)
+  set(AICPU_JSON_CONFIG               opp/built-in/op_impl/aicpu/config)
   set(OPTILING_LIB_INSTALL_DIR        ${OPHOST_LIB_INSTALL_PATH})
-  set(OPGRAPH_INC_INSTALL_DIR         ops_nn/built-in/op_graph/inc)
-  set(OPGRAPH_LIB_INSTALL_DIR         ops_nn/built-in/op_graph/lib/${CMAKE_SYSTEM_PROCESSOR})
-  set(COMMON_INC_INSTALL_DIR          ops_nn/include)
-  set(COMMON_LIB_INSTALL_DIR          ops_nn/lib)
+  set(OPGRAPH_INC_INSTALL_DIR         opp/built-in/op_graph/inc)
+  set(OPGRAPH_LIB_INSTALL_DIR         opp/built-in/op_graph/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(VERSION_INFO_INSTALL_DIR        ops_nn)
 endif()
 
@@ -137,6 +139,7 @@ set(OPAPI_INCLUDE
   ${C_SEC_INCLUDE}
   ${PLATFORM_INC_DIRS}
   ${OPBASE_INC_DIRS}
+  ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/profiling # include profiling/prof_common.h
   ${METADEF_INCLUDE_DIRS}
   ${NNOPBASE_INCLUDE_DIRS}
   ${NPURUNTIME_INCLUDE_DIRS}
@@ -159,7 +162,7 @@ set(OP_TILING_INCLUDE
   ${NPURUNTIME_INCLUDE_DIRS}
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/common/inc
-  ${OPS_NN_DIR}/common/stub/op_tiling
+  ${OPS_NN_DIR}/common/inc/op_host
 )
 
 set(OP_PROTO_INCLUDE

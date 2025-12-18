@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file tiling_templates_registry.h
@@ -20,6 +20,7 @@
 #include <memory>
 #include "exe_graph/runtime/tiling_context.h"
 #include "tiling_base/tiling_base.h"
+#include "tiling_base/static_register_symbol.h"
 #include "log/log.h"
 
 namespace Ops {
@@ -324,12 +325,14 @@ private:
 // op_type: 算子名称， class_name: 注册的 tiling 类, soc_version：芯片版本号
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
 #define REGISTER_TILING_TEMPLATE_WITH_SOCVERSION(op_type, class_name, soc_versions, priority)  \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
     static Ops::NN::Optiling::RegisterNew VAR_UNUSED##op_type##class_name##priority_register = \
         Ops::NN::Optiling::RegisterNew(#op_type).tiling<class_name>(priority, soc_versions)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 #define REGISTER_TILING_TEMPLATE(op_type, class_name, priority)                              \
+    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);         \
     static Ops::NN::Optiling::Register VAR_UNUSED##op_type_##class_name##priority_register = \
         Ops::NN::Optiling::Register(op_type).tiling<class_name>(priority)
 
@@ -337,6 +340,7 @@ private:
 // soc_version: soc版本，用于区分不同的soc
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
 #define REGISTER_TILING_TEMPLATE_NEW(op_type, class_name, soc_version, priority)               \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
     static Ops::NN::Optiling::RegisterNew VAR_UNUSED##op_type##class_name##priority_register = \
         Ops::NN::Optiling::RegisterNew(#op_type).tiling<class_name>(priority, soc_version)
 
@@ -344,6 +348,7 @@ private:
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
 #define REGISTER_OPS_TILING_TEMPLATE(op_type, class_name, priority)                       \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
     static Ops::NN::Optiling::Register                                                    \
         __attribute__((unused)) tiling_##op_type##_##class_name##_##priority##_register = \
             Ops::NN::Optiling::Register(#op_type).tiling<class_name>(priority)

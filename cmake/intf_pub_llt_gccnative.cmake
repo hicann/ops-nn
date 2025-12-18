@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 if(TARGET intf_llt_pub)
@@ -26,7 +26,7 @@ target_compile_options(intf_llt_pub INTERFACE
   -fprofile-arcs
   -ftest-coverage
   -w
-  $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>
+  $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>
   -fPIC
 )
 target_link_options(intf_llt_pub INTERFACE
@@ -56,7 +56,7 @@ target_compile_options(intf_llt_pub_asan INTERFACE
   -fprofile-arcs
   -ftest-coverage
   -w
-  $<$<COMPILE_LANGUAGE:CXX>:-std=c++11>
+  $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize-recover=address,all -fno-omit-frame-pointer -g>
   -fPIC
 )

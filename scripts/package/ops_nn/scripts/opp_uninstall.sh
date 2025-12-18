@@ -1,10 +1,10 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -107,11 +107,11 @@ unsetenv() {
     else
         uninstall_option=""
     fi
-    checkfileexist "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/bin/setenv.bash"
+    checkfileexist "${_ABS_INSTALL_PATH}/share/info/${ops_nn_platform_dir}/bin/setenv.bash"
     logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-    checkfileexist "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/bin/setenv.csh"
+    checkfileexist "${_ABS_INSTALL_PATH}/share/info/${ops_nn_platform_dir}/bin/setenv.csh"
     logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-    checkfileexist "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/bin/setenv.fish"
+    checkfileexist "${_ABS_INSTALL_PATH}/share/info/${ops_nn_platform_dir}/bin/setenv.fish"
     logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
 }
 
@@ -142,9 +142,9 @@ ops_nn_platform_dir=ops_nn
 upper_opp_platform=$(echo "${ops_nn_platform_dir}" | tr 'a-z' 'A-Z')
 _FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
 _COMMON_PARSER_FILE="${_CURR_PATH}""/install_common_parser.sh"
-_TARGET_INSTALL_PATH="${_CURR_PATH}""/../.."
-_INSTALL_INFO_SUFFIX="${ops_nn_platform_dir}/ascend_install.info"
-_VERSION_INFO_SUFFIX="${ops_nn_platform_dir}/version.info"
+_TARGET_INSTALL_PATH="${_CURR_PATH}""/../../../../"
+_INSTALL_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/ascend_install.info"
+_VERSION_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/version.info"
 
 # avoid relative path casued errors by delete floders
 _ABS_INSTALL_PATH=$(cd ${_TARGET_INSTALL_PATH}; pwd)
@@ -207,7 +207,7 @@ checkfileexist "${_FILELIST_FILE}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
 checkfileexist "${_COMMON_PARSER_FILE}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-ops_nn_sub_dir="${_ABS_INSTALL_PATH}""/${ops_nn_platform_dir}"
+ops_nn_sub_dir="${_ABS_INSTALL_PATH}""/share/info/${ops_nn_platform_dir}"
 checkdirectoryexist "${ops_nn_sub_dir}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
 
@@ -233,6 +233,16 @@ for dir in ${subdirs}; do
 done
 chmod "${_CUSTOM_PERM}" "${_TARGET_INSTALL_PATH}/${ops_nn_platform_dir}" 2> /dev/null
 
+remove_init_py() {
+  local built_in_impl_path=${_ABS_INSTALL_PATH}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn
+
+  [ -e ${built_in_impl_path}/__init__.py ] && rm ${built_in_impl_path}/__init__.py > /dev/null 2>&1
+
+  [ -e ${built_in_impl_path}/dynamic/__init__.py ] && rm ${built_in_impl_path}/dynamic/__init__.py > /dev/null 2>&1
+}
+
+remove_init_py
+
 get_version "pkg_version" "$_VERSION_INFO_FILE"
 get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
 
@@ -247,7 +257,7 @@ fi
 if [ "${pkg_version_dir}" = "" ]; then
     FINAL_INSTALL_PATH=${_ABS_INSTALL_PATH}
 else
-    TMP_PATH="${_ABS_INSTALL_PATH}/../"
+    TMP_PATH="${_ABS_INSTALL_PATH}/.."
     FINAL_INSTALL_PATH=$(cd ${TMP_PATH}; pwd)
 fi
 
@@ -255,7 +265,7 @@ fi
 chmod +w -R "${_COMMON_PARSER_FILE}"
 
 sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --uninstall --recreate-softlink --username="${target_username}" --usergroup="${target_usergroup}" --version=$pkg_version \
-    --version-dir=$pkg_version_dir ${uninstall_option} "${installed_type}" "${FINAL_INSTALL_PATH}" "${_FILELIST_FILE}" "${_CHIP_TYPE}" --recreate-softlink
+    --use-share-info --version-dir=$pkg_version_dir --remove-install-info ${uninstall_option} "${installed_type}" "${FINAL_INSTALL_PATH}" "${_FILELIST_FILE}" "${_CHIP_TYPE}" --recreate-softlink
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
 
 
@@ -317,32 +327,6 @@ scene_dir="${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/scene.info"
 if [ -f ${scene_dir} ]; then
     rm -f ${scene_dir}
 fi
-
-# remote atvoss relete softlink
-# atvoss_dst_dir=${FINAL_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common
-# chmod u+w "${atvoss_dst_dir}" 2> /dev/null
-# atvoss_soft_link="${atvoss_dst_dir}""/atvoss"
-# if [ -L "${atvoss_soft_link}" ];then
-#     logandprint "[INFO]: Delete the atvoss soft link ("${atvoss_soft_link}")."
-#     rm -rf "${atvoss_soft_link}"
-#     logwitherrorlevel "$?" "warn" "[WARNING]Delete atvoss soft link failed, that may cause \
-# some error to atvoss."
-# fi
-# chmod u-w "${atvoss_dst_dir}" 2> /dev/null
-# atvoss_op_kernel_dst_dir=${FINAL_INSTALL_PATH}/latest/opp/built-in/op_impl/ai_core/tbe/impl/ascendc/common/op_kernel
-# chmod u+w "${atvoss_op_kernel_dst_dir}" 2> /dev/null
-# op_kernel_files="math_util.h platform_util.h"
-# for file_name in $op_kernel_files;
-# do
-#     op_kernel_soft_link="${atvoss_op_kernel_dst_dir}""/${file_name}"
-#     if [ -L "${op_kernel_soft_link}" ];then
-#         logandprint "[INFO]: Delete the op_kernel soft link (${op_kernel_soft_link})."
-#         rm -rf "${op_kernel_soft_link}"
-#         logwitherrorlevel "$?" "warn" "[WARNING]Delete op_kernel atvoss soft link failed, that may cause \
-#     some error to atvoss."
-#     fi
-# done
-# chmod u-w "${atvoss_op_kernel_dst_dir}" 2> /dev/null
 
 # delete the upper folder when it is empty
 dir_existed=$(ls "${_ABS_INSTALL_PATH}" 2> /dev/null)

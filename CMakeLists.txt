@@ -1,16 +1,23 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
 project(${PKG_NAME} VERSION 1.0.0)
+
+set(CCACHE_PROGRAM "")
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
 
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   message(STATUS "compile project with library")
@@ -30,19 +37,32 @@ set(OPS_NN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # 外部传参
 option(ENABLE_ASAN "Enable asan" OFF)
 option(ENABLE_VALGRIND "Enable valgrind" OFF)
-option(ENABLE_DEBUG "Enable debug" OFF)
 option(ENABLE_TEST "Enable test" OFF)
 option(ENABLE_UT_EXEC "Enable exec ut" OFF)
 option(ENABLE_BINARY "Enable build binary" OFF)
 option(ENABLE_CUSTOM "Enable build custom" OFF)
 option(ENABLE_PACKAGE "Enable build package" OFF)
 option(ENABLE_EXPERIMENTAL "Enable experimental module" OFF)
-
+option(ENABLE_COVERAGE "Enable coverage" OFF)
+option(ENABLE_MSSANITIZER "Enable mssanitizer mode" OFF)
+option(ENABLE_OOM "Enable oom mode" OFF)
 option(OP_HOST_UT "Enable ophost ut" OFF)
 option(OP_API_UT "Enable opapi ut" OFF)
 option(OP_GRAPH_UT "Enable graph ut" OFF)
 option(OP_KERNEL_UT "Enable kernel ut" OFF)
+option(OP_KERNEL_AICPU_UT "Enable aicpu kernel ut" OFF)
 option(UT_TEST_ALL "Enable all ut" OFF)
+
+if(ENABLE_TEST)
+    set(DEFAULT_BUILD_TYPE "Debug")
+else()
+    set(DEFAULT_BUILD_TYPE "Release")
+endif()
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE STRING "Choose the build type: Release/Debug" FORCE)
+endif()
+
 set(BUILD_MODE
     ""
     CACHE STRING "build mode -O0/O1/O2")
@@ -50,7 +70,7 @@ set(ASCEND_COMPUTE_UNIT
     "ascend910b"
     CACHE STRING "soc that need to be compiled")
 set(ASCEND_ALL_COMPUTE_UNIT
-    "ascend310p;ascend910;ascend910b;ascend910_93;ascend910_95"
+    "ascend310p;ascend910;ascend910b;ascend910_93;ascend910_95;ascend031;ascend035;ascend310b;ascend910_55;mc62cm12a"
     CACHE STRING "all soc list")
 set(VENDOR_NAME
     "custom"
@@ -64,9 +84,6 @@ else()
   else()
     set(COMPILE_OP_MODE -O2)
   endif()
-endif()
-if(ENABLE_DEBUG OR ENABLE_TEST)
-  set(COMPILE_OP_MODE "-O0 -g")
 endif()
 
 # Cmake Compile配置
@@ -115,15 +132,18 @@ if(ENABLE_TEST)
     include(cmake/gen_ops_info.cmake)
     set(OP_KERNEL_MODULE_NAME ${PKG_NAME}_op_kernel_ut)
   endif()
-  add_subdirectory(tests/ut)
+  add_subdirectory(tests/ut/common)
 endif()
 
-set(UT_DONE ON)
 if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   add_subdirectory(common)
 endif()
 
 add_category_subdirectory()
+
+if(ENABLE_TEST)
+  add_subdirectory(tests/ut)
+endif()
 
 message(STATUS "Ops for this compilation contains: ${COMPILED_OPS}")
 
@@ -138,6 +158,9 @@ if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND NOT ENABLE_TEST)
   else()
     gen_norm_symbol()
   endif()
+  if(ENABLE_STATIC)
+    include(cmake/static.cmake)
+  endif()
 endif()
 
 if(ENABLE_PACKAGE)
@@ -149,3 +172,10 @@ if(ENABLE_PACKAGE)
     pack_built_in()
   endif()
 endif()
+
+install(DIRECTORY ${OPS_ADV_ACT}/
+        DESTINATION ${IMPL_INSTALL_DIR}/common/act
+)
+install(DIRECTORY ${OPS_MATMUL_ACT}/
+        DESTINATION ${IMPL_INSTALL_DIR}/common/matmul_act/
+)

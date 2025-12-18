@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -89,17 +89,17 @@ def generate_operator_json_content(input_json, kernel_output, json_content):
             print(f"ERROR REASON: opc_json_file_name:{kernel_output}{opc_json_file_name}.json generation failed")
             message = (
             "For more detail: please set env:\n"
-            "export ASCEND_GLOBAL_LOG_LEVEL = 0\n"
+            "export ASCEND_GLOBAL_LOG_LEVEL=0\n"
             "export ASCEND_SLOG_PRINT_TO_STDOUT=1\n"
             "and run again, then check kernel log in build/binary/${soc_version}/bin/build_logs\n"
             )
             print(message)
-
+            continue
             failed_json_file_name = opc_json_file_name + "_failed"
             failed_json_file = kernel_output + failed_json_file_name + ".json"
             if os.path.exists(failed_json_file):
                 os.remove(failed_json_file)
-            continue
+            raise FileNotFoundError()
         for opc_json_file_path in opc_json_outputs:
             with open(opc_json_file_path, "r") as file_opc:
                 opc_info_json = json.load(file_opc)

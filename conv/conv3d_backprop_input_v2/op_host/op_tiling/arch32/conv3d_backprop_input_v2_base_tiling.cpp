@@ -25,7 +25,7 @@
 #include "error_util.h"
 #include "conv/common/op_host/op_tiling/math_util.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
-#include "conv/common/op_host/op_tiling/tbe_tiling_api.h"
+#include "tbe_tiling_api.h"
 #include "../common/conv_backprop_input_context_utils.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"

@@ -1,10 +1,10 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -27,7 +27,7 @@ _FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
 _INSTALL_SHELL_FILE="${_CURR_PATH}""/opp_install.sh"
 _UPGRADE_SHELL_FILE="${_CURR_PATH}""/opp_upgrade.sh"
 _RUN_PKG_INFO_FILE="${_CURR_PATH}""/../scene.info"
-_VERSION_INFO_FILE="${_CURR_PATH}""/../../version.info"
+_VERSION_INFO_FILE="${_CURR_PATH}""/../version.info"
 _COMMON_INC_FILE="${_CURR_PATH}""/common_func.inc"
 _VERCHECK_FILE="${_CURR_PATH}""/ver_check.sh"
 _PRE_CHECK_FILE="${_CURR_PATH}""/../bin/prereq_check.bash"
@@ -283,7 +283,7 @@ precleanbeforeinstall() {
         return 1
     fi
     if [ "$pkg_is_multi_version" = "true" ]; then
-        _opp_sub_dir="${_path}/$pkg_version_dir""/${opp_platform_dir}"
+        _opp_sub_dir="${_path}/$pkg_version_dir""/share/info/${opp_platform_dir}"
     else
         _opp_sub_dir="${_path}""/${opp_platform_dir}"
     fi
@@ -382,7 +382,7 @@ path or clean the previous version ops_nn install info (/etc/ascend_install.info
             return 1
         fi
 #        aicpuinfofile "remove"
-        uninstall_file_path="${target_dir}/${opp_platform_dir}/script"
+        uninstall_file_path="${target_dir}/share/info/${opp_platform_dir}/script"
 	keyword=$(cat "${uninstall_file_path}/uninstall.sh" | grep function)
         if [ "${keyword}" != "" ];then
             #uninstall the file before compatible
@@ -668,7 +668,7 @@ check_version_file () {
 check_opp_version_file () {
     if [ -f "${_CURR_PATH}/../../version.info" ];then
         opp_ver_info="${_CURR_PATH}/../../version.info"
-    elif [ -f "${_DEFAULT_INSTALL_PATH}/${opp_platform_dir}/version.info" ];then
+    elif [ -f "${_DEFAULT_INSTALL_PATH}/${opp_platform_dir}/version.info" ];then #TODO:
         opp_ver_info="${_DEFAULT_INSTALL_PATH}/${opp_platform_dir}/version.info"
     else
         logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST}; The [${opp_platform_dir}] version.info not exists."
@@ -953,59 +953,6 @@ versioninfoadd(){
     chmod 440 ${aicpuversioninfo}
 }
 
-repairaicpu(){
-    num_value_param=550
-    if [ "$in_feature" = "All" ];then
-        if [ "$is_for_all" = "y" ];then
-            num_value_param=555
-            chmod 755 $1/${opp_platform_dir}/Ascend310P/aicpu/Ascend310P-aicpu_*kernels.tar.gz  > /dev/null 2>&1
-            chmod 755 $1/${opp_platform_dir}/Ascend310/aicpu/Ascend310-aicpu_*kernels.tar.gz  > /dev/null 2>&1
-            chmod 755 $1/${opp_platform_dir}/Ascend910/aicpu/Ascend910-aicpu_*kernels.tar.gz  > /dev/null 2>&1
-            chmod 755 $1/${opp_platform_dir}/Ascend310RC/aicpu/Ascend310*-aicpu_*kernels.tar.gz  > /dev/null 2>&1
-            if [ -d "$1/${opp_platform_dir}/Ascend/" ]; then
-                chmod 755 $1/${opp_platform_dir}/Ascend/aicpu/Ascend-aicpu_*kernels.tar.gz  > /dev/null 2>&1
-            fi
-        fi
-        if [ $(id -u) -ne 0 ];then
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310P > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend910 > /dev/null 2>&1
-            if [ -d "$1/${opp_platform_dir}/Ascend/" ]; then
-                chmod $num_value_param $1/${opp_platform_dir}/Ascend > /dev/null 2>&1
-            fi
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310 > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310RC > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310P/aicpu > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend910/aicpu > /dev/null 2>&1
-            if [ -d "$1/${opp_platform_dir}/Ascend/" ]; then
-                chmod $num_value_param $1/${opp_platform_dir}/Ascend/aicpu > /dev/null 2>&1
-            fi
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310/aicpu > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/Ascend310RC/aicpu > /dev/null 2>&1
-        fi
-    elif [ "$in_feature" = "exec_mode" ];then
-        if [ "$is_for_all" = "y" ];then
-            num_value_param=555
-            chmod $num_value_param $1/${opp_platform_dir}/built-in/op_proto/libopsproto.so > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/built-in/op_impl/ai_core/tbe/op_tiling/liboptiling.so > /dev/null 2>&1
-        fi
-        if [ $(id -u) -ne 0 ];then
-            chmod $num_value_param $1/${opp_platform_dir}/built-in/op_proto/libopsproto.so > /dev/null 2>&1
-            chmod $num_value_param $1/${opp_platform_dir}/built-in/op_impl/ai_core/tbe/op_tiling/liboptiling.so > /dev/null 2>&1
-        fi
-    else
-        if [ "$is_for_all" = "y" ];then
-            num_value_param=555
-            chmod 755 $1/${opp_platform_dir}/$in_feature/aicpu/*.tar.gz  > /dev/null 2>&1
-            chmod 444 $1/${opp_platform_dir}/$in_feature/aicpu/*.info  > /dev/null 2>&1
-        fi
-#        if [ $(id -u) -ne 0 ];then
-#            chmod $num_value_param $1/${opp_platform_dir}/$in_feature
-#            chmod $num_value_param $1/${opp_platform_dir}/$in_feature/aicpu
-#        fi
-    fi
-
-}
-
 check_dir_permission_for_common_user() {
     current_dir_val="$1"
     parent_dir_val=$(dirname "${current_dir_val}")
@@ -1247,10 +1194,10 @@ if [ "${is_input_path}" = y ]; then
     RET_THE_NUM_LAST_NOT_EXISTDIR=$THE_NUM_LAST_NOT_EXISTDIR
 fi
 
-_UNINSTALL_SHELL_FILE="${target_dir}""/${opp_platform_dir}/script/opp_uninstall.sh"
+_UNINSTALL_SHELL_FILE="${target_dir}""/share/info/${opp_platform_dir}/script/opp_uninstall.sh"
 # adpter for old version's path
 if [ ! -f "${_UNINSTALL_SHELL_FILE}" ]; then
-    _UNINSTALL_SHELL_FILE="${target_dir}""/${opp_platform_dir}/scripts/opp_uninstall.sh"
+    _UNINSTALL_SHELL_FILE="${target_dir}""/share/info/${opp_platform_dir}/scripts/opp_uninstall.sh"
 fi
 
 # init log file path before installation
@@ -1565,8 +1512,6 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
             else
                 chmod 750 "${target_dir}"> /dev/null 2>&1
             fi
-#            aicpuinfofile "add"
-            repairaicpu "${target_dir}"
             # uprate precheck info to ${target_dir}/bin/prereq_check.bash
             logandprint "[INFO]: Set precheck info."
             logoperationretstatus "upgrade" "${install_type}" "$?" "${in_cmd_list}"
@@ -1588,32 +1533,10 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
     if [ "$?" != 0 ]; then
         logoperationretstatus "install" "${in_install_type}" "1" "${in_cmd_list}"
     fi
-#    aicpuinfofile "add"
-    repairaicpu "${target_dir}"
-    if [ $(id -u) -eq 0 ]; then
-        chown -R "root":"root" "${target_dir}/${opp_platform_dir}/script" 2> /dev/null
-        chown "root":"root" "${target_dir}/${opp_platform_dir}" 2> /dev/null
-    else
-        chmod -R 550 "${target_dir}/${opp_platform_dir}/script" 2> /dev/null
-        chmod 440 "${target_dir}/${opp_platform_dir}/script/filelist.csv" 2> /dev/null
-    fi
-    logoperationretstatus "install" "${in_install_type}" "$?" "${in_cmd_list}"
 fi
 
 if [ "${is_upgrade}" = "y" ];then
     # if latest dir has no ops_nn module exit first!
-    if [ "$pkg_is_multi_version" = "true" ]; then
-        get_package_upgrade_version_dir "upgrade_version_dir" "${_TARGET_INSTALL_PATH}" "${opp_platform_dir}"
-        get_package_upgrade_version_dir "upgrade_old_version_dir" "${_TARGET_INSTALL_PATH}" "${opp_old_platform_dir}"
-        if [ -z "${upgrade_version_dir}" ] && [ -z "${upgrade_old_version_dir}" ]; then
-            logandprint "[ERROR]: latest path has no ops_nn module"
-            upgrade_path=$(ls "${_TARGET_INSTALL_PATH}" 2> /dev/null)
-            if [ "${upgrade_path}" = "" ]; then
-                rm -rf "${_TARGET_INSTALL_PATH}"
-            fi
-            exit 1
-        fi
-    fi
     if [ "${is_for_all}" = y ] && [ $(id -u) -ne 0 ]; then
         check_dir_permission_for_common_user "${target_dir}"
     fi
@@ -1632,17 +1555,16 @@ if [ "${is_upgrade}" = "y" ];then
     fi
     sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "${is_input_path}" "${is_upgrade}" "${in_feature_new}" "${chip_type_new}"
     if [ $(id -u) -eq 0 ]; then
-        chown -R "root":"root" "${target_dir}/${opp_platform_dir}/script" 2> /dev/null
-        chown "root":"root" "${target_dir}/${opp_platform_dir}" 2> /dev/null
+        chown -R "root":"root" "${target_dir}/share/info/${opp_platform_dir}/script" 2> /dev/null
+        chown "root":"root" "${target_dir}/share/info/${opp_platform_dir}" 2> /dev/null
     fi
-#    aicpuinfofile "add"
-    repairaicpu "${target_dir}"
+
     if [ $(id -u) -eq 0 ]; then
-        chmod -R 555 "${target_dir}/${opp_platform_dir}/script" 2> /dev/null
-        chmod 444 "${target_dir}/${opp_platform_dir}/script/filelist.csv" 2> /dev/null
+        chmod -R 555 "${target_dir}/share/info/${opp_platform_dir}/script" 2> /dev/null
+        chmod 444 "${target_dir}/share/info/${opp_platform_dir}/script/filelist.csv" 2> /dev/null
     else
-        chmod -R 550 "${target_dir}/${opp_platform_dir}/script" 2> /dev/null
-        chmod 440 "${target_dir}/${opp_platform_dir}/script/filelist.csv" 2> /dev/null
+        chmod -R 550 "${target_dir}/share/info/${opp_platform_dir}/script" 2> /dev/null
+        chmod 440 "${target_dir}/share/info/${opp_platform_dir}/script/filelist.csv" 2> /dev/null
     fi
     # uprate precheck info to ${target_dir}/bin/prereq_check.bash
     logandprint "[INFO]: Set precheck info."

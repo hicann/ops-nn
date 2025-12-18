@@ -4470,11 +4470,13 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
                             "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                            "CORE_NUM": 48}
+                            "CORE_NUM": 48, "socVersion": "Ascend910B"}
                             })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
+
     map<string, string> intrinsics;
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910B" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4498,6 +4500,7 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -4536,7 +4539,15 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_requirement3_quant_
                     .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("static")}})
+                                {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                {"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                })
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();

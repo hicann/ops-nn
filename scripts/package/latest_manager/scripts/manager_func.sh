@@ -1,10 +1,10 @@
 #!/bin/sh
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -147,6 +147,7 @@ package_create_softlink() {
     install_path="$(dirname "$(dirname "$var_path")")"
 
     get_running_package_version "pkg_running_version" "$install_path/$LATEST_DIR" "$package"
+    check_ret_error "$?" "Get $install_path $LATEST_DIR $package running in package create softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "$pkg_running_version" != "" ]; then
@@ -154,21 +155,18 @@ package_create_softlink() {
         __index_list "$version_pair_arr" 0 "last_version" 1 "last_version_dir"
         compat_del_package_softlink_in_latest "$install_path" "$package" "$last_version" "$last_version_dir" \
             "$LATEST_DIR" "$USERNAME" "$docker_root"
-        check_ret_error "$?" "delete $package softlink in latest failed in package create softlink!"
+        check_ret_error "$?" "Delete $package softlink in latest failed in package create softlink!"
         ret="$?" && [ $ret -ne 0 ] && return $ret
     fi
 
     get_install_for_all "install_for_all"
+    check_ret_error "$?" "Get install for all in package create softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     INSTALL_FOR_ALL="$install_for_all"
 
-    # 版本兼容性检查
-    check_compatiable_in_multi_version_install "$install_path" "$USERNAME" "" \
-        "$version" "$version_dir" "$package"
-    ret="$?" && [ $ret -ne 0 ] && return $ret
-
     do_create_package_softlink_to_latest "$install_path" "$package" "$version" "$version_dir" "$LATEST_DIR" \
         "$USERNAME" "$USERGROUP" "$install_for_all" "$docker_root"
+    check_ret_error "$?" "Create $package $version softlink to latest in package create softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     return 0
@@ -200,6 +198,7 @@ package_installed() {
     check_ret_warning "$?" "Create platform.ini in $LATEST_DIR in package installed failed!"
 
     get_install_for_all "config_install_for_all"
+    check_ret_error "$?" "Get install for all in package installed failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "$install_for_all" != "$config_install_for_all" ]; then
@@ -211,6 +210,7 @@ package_installed() {
     fi
 
     package_create_softlink "$var_path" "$version" "$version_dir" "$package" "$docker_root"
+    check_ret_error "$?" "Package $package $version create softlink in package installed failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     add_installed_package_version "$install_path/$LATEST_DIR" "$package" "$version" "$version_dir"
@@ -241,15 +241,18 @@ package_remove_softlink() {
     fi
 
     get_install_for_all "install_for_all"
+    check_ret_error "$?" "Get install for all in package remove softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     INSTALL_FOR_ALL="$install_for_all"
 
     is_package_version_running "is_running" "$install_path/$LATEST_DIR" "$package" "$version" "$version_dir"
+    check_ret_error "$?" "Get $package $version $version_dir is running in package remove softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "$is_running" = "true" ]; then
         do_del_package_softlink_in_latest "$install_path" "$package" "$version" "$version_dir" "$LATEST_DIR" \
             "$USERNAME" "$docker_root"
+        check_ret_error "$?" "Delete $package softlink in latest failed in package remove softlink softlink!"
         ret="$?" && [ $ret -ne 0 ] && return $ret
     fi
 
@@ -332,6 +335,7 @@ create_version_softlink() {
     install_path="$(dirname "$(dirname "$var_path")")"
 
     get_version_by_version_dir "version" "$install_path/$LATEST_DIR" "$version_dir"
+    check_ret_error "$?" "Get version by $version_dir in create version softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     get_installed_packages_by_version_version_dir "packages" "$install_path/$LATEST_DIR" "$version" "$version_dir"
@@ -340,6 +344,7 @@ create_version_softlink() {
     fi
 
     get_install_for_all "install_for_all"
+    check_ret_error "$?" "Get install for all in create version softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     INSTALL_FOR_ALL="$install_for_all"
 
@@ -378,6 +383,7 @@ remove_latest_softlink() {
     install_path="$(dirname "$(dirname "$var_path")")"
 
     get_running_packages "running_packages" "$install_path/$LATEST_DIR"
+    check_ret_error "$?" "Get running packages in $LATEST_DIR in remove latest softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "${running_packages}" = "" ]; then
@@ -385,6 +391,7 @@ remove_latest_softlink() {
     fi
 
     get_install_for_all "install_for_all"
+    check_ret_error "$?" "Get install for all in remove latest softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     INSTALL_FOR_ALL="$install_for_all"
 
@@ -455,15 +462,26 @@ do_create_package_softlink_to_latest() {
     # 创建公共目录到latest目录下的软链接
     create_common_dirs_softlink_to_latest "${install_type}" "${install_path}" "${package}" "${version_dir}" "${latest_dir}" \
         "${filelist_path}" "${feature_param}" "${username}" "${usergroup}" "${install_for_all}"
+    check_ret_error "$?" "Create $package $version_dir $latest_dir common dirs softlink to latest in create package softlink to latest failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
-    # 创建版本包到latest目录下的软链接
-    create_package_dir_softlink_to_latest "${install_path}" "${version_dir}" "${latest_dir}" "${package}" \
-        "${username}" "${usergroup}" "${install_for_all}"
-    ret="$?" && [ $ret -ne 0 ] && return $ret
+    if [ "$USE_SHARE_INFO" != "y" ]; then
+        # 创建版本包到latest目录下的软链接
+        create_package_dir_softlink_to_latest "${install_path}" "${version_dir}" "${latest_dir}" "${package}" \
+            "${username}" "${usergroup}" "${install_for_all}"
+        check_ret_error "$?" "Create $package $version_dir $latest_dir package dirs softlink to latest failed!"
+        ret="$?" && [ $ret -ne 0 ] && return $ret
+    else
+        # 创建share到latest目录下的软链接
+        if [ ! -d "$install_path/$latest_dir/share" ]; then
+            ln -srf "$install_path/$version_dir/share" "$install_path/$latest_dir/share"
+            ret="$?" && [ $ret -ne 0 ] && return $ret
+        fi
+    fi
 
     # latest目录下公共脚本添加条目
     add_latest_common_script "${install_path}/${latest_dir}" "${package}" "${username}" "${usergroup}" "${docker_root}"
+    check_ret_error "$?" "Add $package $latest_dir latest common script in create package softlink to latest failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     # 更新version.cfg中的running配置
@@ -557,16 +575,27 @@ do_del_package_softlink_in_latest() {
 
     # latest目录下公共脚本删除条目
     del_latest_common_script "${install_path}/${latest_dir}" "${package}" "${username}" "${docker_root}"
+    check_ret_error "$?" "Delete $package latest common script in del package softlink in latest failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     # 删除公共目录到latest目录下的软链接
     del_common_dirs_softlink_from_latest "${install_type}" "${install_path}" "${package}" "${version_dir}" "${latest_dir}" \
         "${filelist_path}" "${feature_param}"
+    check_ret_error "$?" "Delete $package common dirs softlink from latest in del package softlink in latest failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
-    # 删除版本包到latest目录下的软链接
-    del_package_dir_softlink_in_latest "${install_path}" "${latest_dir}" "${package}"
-    ret="$?" && [ $ret -ne 0 ] && return $ret
+    if [ "$USE_SHARE_INFO" != "y" ]; then
+        # 删除版本包到latest目录下的软链接
+        del_package_dir_softlink_in_latest "${install_path}" "${latest_dir}" "${package}"
+        check_ret_error "$?" "Delete $package package dir softlink in latest in del package softlink in latest failed!"
+        ret="$?" && [ $ret -ne 0 ] && return $ret
+    else
+        # 删除share到latest目录下的软链接
+        if [ -L "$install_path/$latest_dir/share" ]; then
+            rm -f "$install_path/$latest_dir/share"
+            ret="$?" && [ $ret -ne 0 ] && return $ret
+        fi
+    fi
 
     # 删除latest下tools空目录。toolkit包创建latest软链时，latest下存在软链tools/simulator -> ${arch}-linux/simulator
     # 通过filelist.csv文件，无法删除tools目录
@@ -739,11 +768,13 @@ del_latest_softlink() {
     __set_abs_path "${latest_dirpath}" "${target}" "latest_filepath"
 
     if [ "${softlink}" != "NA" ]; then
-        remove_softlinks "${install_path}" "${softlink}"
+        remove_softlinks "${latest_dirpath}" "${softlink}"
+        check_ret_error "$?" "Remove $latest_dirpath $softlink in del latest softlink failed!"
         ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
     fi
 
     remove_softlink_icp "${latest_filepath}" "NA"
+    check_ret_error "$?" "Remove $latest_filepath softlink icp in del latest softlink failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     return 0
 }
@@ -866,12 +897,15 @@ create_common_dirs_softlink_to_latest() {
     local username="$8"
     local usergroup="$9"
     local install_for_all="${10}"
-    local custom_create_softlink="${install_path}/${version_dir}/${package}/script/${package}_custom_create_softlink.sh"
     local db_info_path="$install_path/$latest_dir/var/ascend_package_db.info"
-    local ret db_info
+    local ret package_dirpath custom_create_softlink db_info
+
+    get_package_dirpath "package_dirpath" $package
+    custom_create_softlink="${install_path}/${version_dir}/${package_dirpath}/script/${package}_custom_create_softlink.sh"
 
     migrate_conf_files_from_latest_to_version "${install_type}" "${install_path}" "${version_dir}" "${latest_dir}" \
         "${filelist_path}" "${feature_param}"
+    check_ret_error "$?" "Migrate conf files $latest_dir $filelist_path in create common dirs softlink to latest failed!"
     ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
 
     ensure_file "$db_info_path" "440" "$username" "$usergroup" "$install_for_all"
@@ -906,6 +940,7 @@ create_common_dirs_softlink_to_latest() {
     # 安装时总是创建全部块的软链接
     create_common_dirs_softlink_by_blocks "$install_type" "$install_path" "$package" "$version_dir" "$latest_dir" \
         "$filelist_path" "$feature_param" "" "$custom_create_softlink"
+    check_ret_error "$?" "Create common dirs softlink $latest_dir $filelist_path $custom_create_softlink in create common dirs softlink to latest failed!"
     ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
 
     with_chmod "$db_info_path" "700" write_text "$db_info" "$db_info_path"
@@ -1000,10 +1035,11 @@ del_common_dirs_softlink_from_latest() {
     local latest_dir="$5"
     local filelist_path="$6"
     local feature_param="$7"
-    local custom_remove_softlink="${install_path}/${version_dir}/${package}/script/${package}_custom_remove_softlink.sh"
     local db_info_path="$install_path/$latest_dir/var/ascend_package_db.info"
-    local ret db_info_origin db_info diff_result blocks_to_remove
+    local ret package_dirpath custom_remove_softlink db_info_origin db_info diff_result blocks_to_remove
 
+    get_package_dirpath "package_dirpath" $package
+    custom_remove_softlink="${install_path}/${version_dir}/${package_dirpath}/script/${package}_custom_remove_softlink.sh"
     if [ -f "$db_info_path" ]; then
         db_info_origin="$(cat "$db_info_path")""\n"
     else
@@ -1025,6 +1061,7 @@ del_common_dirs_softlink_from_latest() {
     # blocks_to_remove可以为空
     del_common_dirs_softlink_by_blocks "$install_type" "$install_path" "$package" "$version_dir" "$latest_dir" \
         "$filelist_path" "$feature_param" "EngineeringCommon $blocks_to_remove" "$custom_remove_softlink"
+    check_ret_error "$?" "Delete common dirs softlink $latest_dir $filelist_path $custom_remove_softlink in del common dirs softlink to latest failed!"
     ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
 
     printf "%s\n" "$diff_result" | show_min_nf "4" | select_fields_3_2_1 | sort_1 | fold_3_keep_2 "" " " \
@@ -1087,6 +1124,11 @@ del_latest_common_script() {
     local username="$3"
     local docker_root="$4"
     local ret
+
+    # bin目录不存在则跳过
+    if [ ! -d "${latest_path}/bin" ]; then
+        return 0
+    fi
 
     # 保存bin目录的权限
     get_file_mod "mod" "-L" "${latest_path}/bin"
@@ -1402,6 +1444,7 @@ recreate_compatiable_softlink_sibling_package() {
     if check_current_package_compatiable "$scope_install_path" "$scope_version" "$scope_version_dir" "$package"; then
         compat_create_package_softlink_to_latest "$scope_install_path" "$package" "$scope_version" "$scope_version_dir" "$scope_latest_dir" \
             "$scope_username" "$scope_usergroup" "$scope_install_for_all" "$scope_docker_root"
+        check_ret_error "$?" "compat_create_package_softlink_to_latest $package in recreate compatiable softlink sibling package failed!"
         ret="$?" && [ $ret -ne 0 ] && return $ret
     fi
 
@@ -1425,6 +1468,7 @@ recreate_compatiable_softlink_in_multi_version_uninstall() {
 
     # 判断是否有本包的running版本包
     get_running_package_version "version_pair" "${scope_install_path}/${scope_latest_dir}" "${package}"
+    check_ret_error "$?" "Get running package $package $scope_install_path $scope_latest_dir version in recreate compatiable softlink in multi version uninstall failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "${version_pair}" != "" ]; then
@@ -1433,9 +1477,11 @@ recreate_compatiable_softlink_in_multi_version_uninstall() {
 
     # 枚举version.cfg中本包installed版本
     get_installed_package_versions "installed_versions" "${scope_install_path}/${scope_latest_dir}" "${package}"
+    check_ret_error "$?" "Get installed package $package versions in recreate compatiable softlink in multi version uninstall failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     get_install_for_all "scope_install_for_all"
+    check_ret_error "$?" "Get install for all in recreate compatiable softlink in multi version uninstall failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
     INSTALL_FOR_ALL="$scope_install_for_all"
 
@@ -1446,6 +1492,7 @@ recreate_compatiable_softlink_in_multi_version_uninstall() {
         if check_current_package_compatiable "$scope_install_path" "$scope_version" "$scope_version_dir" "$package"; then
             compat_create_package_softlink_to_latest "${scope_install_path}" "${package}" "${scope_version}" "${scope_version_dir}" "${scope_latest_dir}" \
                 "${scope_username}" "${scope_usergroup}" "${scope_install_for_all}" "${scope_docker_root}"
+            check_ret_error "$?" "Compat create package softlink to latest in recreate compatiable softlink in multi version uninstall failed!"
             ret="$?" && [ $ret -ne 0 ] && return $ret
 
             # 恢复同版本下可兼容的其他子包软链接
@@ -1458,6 +1505,7 @@ recreate_compatiable_softlink_in_multi_version_uninstall() {
 
             if [ "$package" = "runtime" ]; then
                 deal_with_aicpu_package "${scope_install_path}" "${scope_version_dir}" "${scope_latest_dir}"
+                check_ret_error "$?" "Deal with aicpu package in recreate compatiable softlink in multi version uninstall failed!"
                 ret="$?" && [ $ret -ne 0 ] && return $ret
             fi
 
@@ -1517,6 +1565,7 @@ check_current_package_compatiable() {
         fi
 
         get_running_package_version "version_pair" "$install_path/$LATEST_DIR" "$package"
+        check_ret_error "$?" "Get running package $package $install_path $LATEST_DIR version in check current package compatiable failed!"
         ret="$?" && [ $ret -ne 0 ] && return $ret
 
         unpack_version_pair "version_pair_arr" "$version_pair"
@@ -1549,6 +1598,7 @@ check_compatiable_in_multi_version_install() {
         fi
 
         get_running_package_version "version_pair" "$install_path/$LATEST_DIR" "$package"
+        check_ret_error "$?" "Get running package $package $install_path $LATEST_DIR version in check compatiable in multi version install failed!"
         ret="$?" && [ $ret -ne 0 ] && return $ret
 
         unpack_version_pair "version_pair_arr" "$version_pair"
@@ -1558,6 +1608,7 @@ check_compatiable_in_multi_version_install() {
             "$version" "$version_dir" "$package" "$script_dir"; then
             compat_del_package_softlink_in_latest "$install_path" "$package" "$version" "$version_dir" \
                 "$LATEST_DIR" "$username" "$docker_root"
+            check_ret_error "$?" "Compat del package $package softlink in latest in check compatiable in multi version install failed!"
             ret="$?" && [ $ret -ne 0 ] && return $ret
         fi
     done
@@ -1585,10 +1636,12 @@ create_package_dir_softlink_to_latest() {
 
     if [ ! -d "${install_path}/${latest_dir}/${package_prefix}" ]; then
         make_dir_with_permission "${install_path}/${latest_dir}/${package_prefix}" "750" "${username}" "${usergroup}" "${install_for_all}"
+        check_ret_error "$?" "Make dir with permission $install_path $latest_dir $package_prefix in create package dir softlink to latest failed!"
         ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
     fi
 
     create_softlink_icp "-r" "${install_path}/${version_dir}/${package_dirpath}" "${install_path}/${latest_dir}/${package_dirpath}"
+    check_ret_error "$?" "Create softlink icp $install_path $version_dir $package_dirpath in create package dir softlink to latest failed!"
     ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
 
     return 0
@@ -1605,10 +1658,12 @@ del_package_dir_softlink_in_latest() {
     package_prefix="$(dirname "${package_dirpath}")"
 
     remove_softlink_icp "${install_path}/${latest_dir}/${package_dirpath}"
+    check_ret_error "$?" "Remove softlink icp $install_path $latest_dir $package_dirpath in del package dir softlink in latest failed!"
     ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
 
     if [ "${package_prefix}" != "." ]; then
         remove_dir_if_empty "${install_path}/${latest_dir}/${package_prefix}"
+        check_ret_error "$?" "Remove dir $install_path $latest_dir $package_prefix in del package dir softlink in latest failed!"
         ret="$?" && [ ${ret} -ne 0 ] && return ${ret}
     fi
 
@@ -1672,6 +1727,7 @@ generate_running_packages_db_info() {
     fi
 
     get_running_packages "running_packages" "$install_path/$LATEST_DIR"
+    check_ret_error "$?" "Get running packages $install_path $LATEST_DIR in generate running packages db info failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     if [ "${running_packages}" = "" ]; then
@@ -1685,6 +1741,7 @@ generate_running_packages_db_info() {
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     get_install_for_all "install_for_all"
+    check_ret_error "$?" "Get install for all in generate running packages db info failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     ensure_file "$db_info_path" "440" "$USERNAME" "$USERGROUP" "$install_for_all"
@@ -1713,6 +1770,7 @@ migrate_latest_data() {
     local ret config_path
 
     generate_running_packages_db_info "$var_path"
+    check_ret_error "$?" "Generate running packages db info $var_path in migrate latest data failed!"
     ret="$?" && [ $ret -ne 0 ] && return $ret
 
     get_setenv_filepath "config_path" "$latest_path" "bash"

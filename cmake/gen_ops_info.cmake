@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ endfunction()
 # generate outpath: ${CMAKE_BINARY_DIR}/tbe/op_info_cfg/ai_core/${compute_unit}/
 # install path: packages/vendors/${VENDOR_NAME}/op_impl/ai_core/tbe/config/${compute_unit}
 ###################################################################################################
-function(add_ops_info_target_ops)
+function(add_ops_info_target_v1)
   set(oneValueArgs TARGET OPS_INFO_DIR COMPUTE_UNIT OUTPUT INSTALL_DIR)
   cmake_parse_arguments(OPINFO "" "${oneValueArgs}" "" ${ARGN})
   get_filename_component(opinfo_file_path "${OPINFO_OUTPUT}" DIRECTORY)
@@ -136,13 +136,21 @@ function(merge_graph_headers)
   set(oneValueArgs TARGET OUT_DIR)
   cmake_parse_arguments(MGPROTO "" "${oneValueArgs}" "" ${ARGN})
   get_target_property(proto_headers ${GRAPH_PLUGIN_NAME}_proto_headers INTERFACE_SOURCES)
-  add_custom_command(OUTPUT ${MGPROTO_OUT_DIR}/nn_ops.h
+  set(proto_headers ${proto_headers} ${CMAKE_SOURCE_DIR}/common/inc/op_graph/op_nn_proto_extend.h)
+  add_custom_command(OUTPUT ${MGPROTO_OUT_DIR}/ops_proto_nn.h
     COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/merge_proto.py
     ${proto_headers}
-    --output-file ${MGPROTO_OUT_DIR}/nn_ops.h
+    --output-file ${MGPROTO_OUT_DIR}/ops_proto_nn.h
+  )
+  add_custom_command(
+    OUTPUT ${MGPROTO_OUT_DIR}/ops_proto_nn.cpp
+    COMMAND ${CMAKE_COMMAND} -E copy
+      ${MGPROTO_OUT_DIR}/ops_proto_nn.h
+      ${MGPROTO_OUT_DIR}/ops_proto_nn.cpp
+    DEPENDS ${MGPROTO_OUT_DIR}/ops_proto_nn.h
   )
   add_custom_target(${MGPROTO_TARGET} ALL
-    DEPENDS ${MGPROTO_OUT_DIR}/nn_ops.h
+    DEPENDS ${MGPROTO_OUT_DIR}/ops_proto_nn.h ${MGPROTO_OUT_DIR}/ops_proto_nn.cpp
   )
 endfunction()
 
@@ -215,6 +223,7 @@ function(compile_from_config)
   if(${CMAKE_CXX_COMPILER_LAUNCHER} MATCHES "ccache$")
     list(APPEND _ASCENDC_ENV_VAR export ASCENDC_CCACHE_EXECUTABLE=${CMAKE_CXX_COMPILER_LAUNCHER} &&)
   endif()
+
   if(EXISTS ${CONFCMP_BINARY_JSON})
     # copy binary config file to tbe/config
     binary_config_copy(
@@ -236,7 +245,7 @@ function(compile_from_config)
     COMMAND ${_ASCENDC_ENV_VAR} bash ${OPS_KERNEL_BINARY_SCRIPT}/build_binary_single_op.sh
             ${CONFCMP_OP_TYPE}
             ${CONFCMP_COMPUTE_UNIT}
-            ${CONFCMP_OUT_DIR}/bin
+            ${CONFCMP_OUT_DIR}/bin ${CMAKE_BUILD_TYPE} ${ENABLE_OOM}
     WORKING_DIRECTORY ${OPS_KERNEL_BINARY_SCRIPT}
     DEPENDS ${ASCEND_KERNEL_CONF_DST}/aic-${CONFCMP_COMPUTE_UNIT}-ops-info.ini
             ascendc_kernel_src_copy
@@ -253,12 +262,16 @@ function(compile_from_config)
   add_dependencies(binary config_compile_${CONFCMP_COMPUTE_UNIT}_${CONFCMP_OP_NAME} ${CONFCMP_TARGET})
 
   if(ENABLE_PACKAGE)
+    set(subDir "ops_nn")
+    if(ENABLE_CUSTOM)
+      set(subDir "")
+    endif()
     install(DIRECTORY ${CONFCMP_OUT_DIR}/bin/${CONFCMP_COMPUTE_UNIT}/${CONFCMP_OP_NAME}
-      DESTINATION ${BIN_KERNEL_INSTALL_DIR}/${CONFCMP_COMPUTE_UNIT} OPTIONAL
+      DESTINATION ${BIN_KERNEL_INSTALL_DIR}/${CONFCMP_COMPUTE_UNIT}/${subDir} OPTIONAL
     )
     file(GLOB CONFCMP_OP_NAME_JSON ${CONFCMP_OUT_DIR}/bin/config/${CONFCMP_COMPUTE_UNIT}/${CONFCMP_OP_NAME}*.json)
     install(FILES ${CONFCMP_OP_NAME_JSON}
-      DESTINATION ${BIN_KERNEL_CONFIG_INSTALL_DIR}/${CONFCMP_COMPUTE_UNIT} OPTIONAL
+      DESTINATION ${BIN_KERNEL_CONFIG_INSTALL_DIR}/${CONFCMP_COMPUTE_UNIT}/${subDir} OPTIONAL
     )
   endif()
 endfunction()
@@ -293,9 +306,13 @@ function(gen_binary_info_config_json)
   add_dependencies(gen_bin_info_config ${GENBIN_INFOCFG_TARGET})
 
   if(ENABLE_PACKAGE)
+    set(subDir "ops_nn")
+    if(ENABLE_CUSTOM)
+      set(subDir "")
+    endif()
     install(
       FILES ${GENBIN_INFOCFG_BIN_DIR}/bin/config/${GENBIN_INFOCFG_COMPUTE_UNIT}/binary_info_config.json
-      DESTINATION ${BIN_KERNEL_CONFIG_INSTALL_DIR}/${GENBIN_INFOCFG_COMPUTE_UNIT} OPTIONAL
+      DESTINATION ${BIN_KERNEL_CONFIG_INSTALL_DIR}/${GENBIN_INFOCFG_COMPUTE_UNIT}/${subDir} OPTIONAL
     )
   endif()
 endfunction()
@@ -359,7 +376,31 @@ function(gen_ops_info_and_python)
   if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
     return()
   endif()
-  
+
+  add_custom_target(common_copy
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
+    COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
+    COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/matmul_act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
+    COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
+  )
+
+  if(ENABLE_PACKAGE)
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/act
+    )
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/matmul_act
+    )
+    install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/inc/
+      DESTINATION ${IMPL_INSTALL_DIR}/inc
+    )
+  endif()
+
   add_ops_impl_target(
     TARGET ascendc_impl_gen
     OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
@@ -368,12 +409,7 @@ function(gen_ops_info_and_python)
     INSTALL_DIR ${IMPL_DYNAMIC_INSTALL_DIR}
   )
 
-  merge_graph_headers(
-    TARGET merge_ops_proto ALL
-    OUT_DIR ${ASCEND_GRAPH_CONF_DST}
-  )
-
-  set(ascendc_impl_gen_depends ascendc_kernel_src_copy opbuild_custom_gen_aclnn_all)
+  set(ascendc_impl_gen_depends ascendc_kernel_src_copy opbuild_custom_gen_aclnn_all common_copy)
   foreach(compute_unit ${ASCEND_ALL_COMPUTE_UNIT})
     # generate aic-${compute_unit}-ops-info.json, operator infos
     if(ENABLE_CUSTOM)
@@ -381,7 +417,7 @@ function(gen_ops_info_and_python)
     else()
       set(ops_info_suffix "ops-info-nn.json")
     endif()
-    add_ops_info_target_ops(
+    add_ops_info_target_v1(
       TARGET ops_info_gen_${compute_unit}
       OUTPUT ${CMAKE_BINARY_DIR}/tbe/op_info_cfg/ai_core/${compute_unit}/aic-${compute_unit}-${ops_info_suffix}
       OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}
@@ -423,7 +459,14 @@ function(gen_ops_info_and_python)
           endif()
         endif()
 
+        list(FIND ASCEND_OP_NAME ${op_name} INDEX)
+        if(NOT "${ASCEND_OP_NAME}" STREQUAL "" AND INDEX EQUAL -1 AND NO_FORCE)
+          # 非指定算子，只编译kernel
+          continue()
+        endif()
+
         set(HAS_OP_COMPILE_OF_COMPUTE_UNIT TRUE)
+
         # generate opc shell scripts for autogen binary config ops
         generate_bin_scripts(
           TARGET gen_bin_scripts
@@ -433,6 +476,7 @@ function(gen_ops_info_and_python)
           COMPUTE_UNIT ${compute_unit}
           OUT_DIR ${CMAKE_BINARY_DIR}/binary/${compute_unit}
         )
+
         # binary compile from binary json config
         compile_from_config(
           TARGET ascendc_bin_${compute_unit}_${op_name}
@@ -450,6 +494,7 @@ function(gen_ops_info_and_python)
 
         add_dependencies(ascendc_bin_${compute_unit}_${op_name} merge_ini_${compute_unit} ascendc_impl_gen)
       endforeach()
+
       if(HAS_OP_COMPILE_OF_COMPUTE_UNIT)
         # generate binary_info_config.json
         gen_binary_info_config_json(

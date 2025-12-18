@@ -1,32 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <block name="OpsNNInfO" copy_type="delivery" src_path="lib/" dst_path="" install_path="" install_own="$username:$usergroup" install_mod="550" install_type="all">
-    <file_info value="op_host" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)" install_path="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)">
-        <file value="libophost_nn.so" file_type="shared"/>
+    
+    <file_info value="aclnn_api" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_impl/ai_core/tbe/op_api/lib/linux/$(ARCH)" install_path="$(TARGET_ENV)/lib64">
+        <file value="libopapi_nn.so" install_mod="555"/>
     </file_info>
 
-    <file_info value="op_graph" copy_type="delivery" src_path="" dst_path="built-in/op_graph/inc" install_path="ops_nn/built-in/op_graph/inc" install_type="devel">
-        <file value="nn_ops.h"/>
+    <file_info value="aclnn_inc" copy_type="delivery" src_path="built-in/op_api" dst_path="include" install_path="$(TARGET_ENV)/include">
+        <file value="aclnnop" install_mod="555"/>
     </file_info>
 
-    <file_info value="aclnn_api" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_api/lib64/$(ARCH)" install_path="ops_nn/built-in/op_api/lib64/$(ARCH)">
-        <file value="libopapi_nn.so"/>
+    <file_info value="op_graph" copy_type="delivery" src_path="" dst_path="built-in/op_graph/inc" install_path="opp/built-in/op_graph/inc" install_type="all">
+        <file value="ops_proto_nn.h" install_mod="555"/>
     </file_info>
 
-    <file_info value="aclnn_inc" copy_type="delivery" src_path="built-in/op_api" dst_path="built-in/op_api/include" install_path="ops_nn/built-in/op_api/include">
-        <file value="aclnnop" entity="true"/>
+    <file_info value="ops_info" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe" install_path="opp/built-in/op_impl/ai_core/tbe">
+        <file value="config" install_mod="555"/>
+    </file_info>
+
+    <file_info value="rtkb" copy_type="source" src_path="" dst_path="built-in/data" install_path="opp/built-in/data">
+        <file value="op" optional="true" install_mod="555"/>
+    </file_info>
+
+    <file_info value="op_graph" src_path="op_host" dst_path="built-in/op_graph/lib/linux/$(ARCH)" install_path="opp/built-in/op_graph/lib/linux/$(ARCH)">
+        <file value="libopgraph_nn.so" file_type="shared" install_mod="555"/>
+    </file_info>
+
+    <file_info value="op_host" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)" install_path="opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)">
+        <file value="libophost_nn.so" file_type="shared" install_mod="555"/>
+    </file_info>
+
+    <file_info value="kernel_src" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe/impl" install_path="opp/built-in/op_impl/ai_core/tbe/impl">
+        <file value="ops_nn" entity="true" install_mod="555"/>
+    </file_info>
+
+    <file_info value="kernel" src_path="op_host" dst_path="built-in/op_impl/ai_core/tbe" install_path="opp/built-in/op_impl/ai_core/tbe">
+        <file value="kernel" optional="true" install_mod="555"/>
+    </file_info>
+
+    <file_info value="aicpu_config" src_path="op_host" dst_path="built-in/op_impl/aicpu/config" install_path="opp/built-in/op_impl/aicpu/config">
+        <file value="aicpu_nn.json" entity="true" optional="true" install_mod="555"/>
+    </file_info>
+
+    <file_info value="aicpu_kernel" src_path="op_host" dst_path="built-in/op_impl/aicpu/kernel" install_path="opp/built-in/op_impl/aicpu/kernel">
+        <file value="libnn_aicpu_kernels.so" entity="true" optional="true" install_mod="555"/>
     </file_info>
 
     <dir_info value="OpsNNInfo" install_mod="750" install_type="all">
-        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host"/>
-        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib"/>
-        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux"/>
-        <path value="ops_nn/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)"/>
-        <path value="ops_nn/built-in/op_graph"/>
-        <path value="ops_nn/built-in/op_graph/inc"/>
-        <path value="ops_nn/built-in/op_api"/>
-        <path value="ops_nn/built-in/op_api/lib64"/>
-        <path value="ops_nn/built-in/op_api/lib64/$(ARCH)"/>
-        <path value="ops_nn/built-in/op_api/include"/>
-        <path value="ops_nn/built-in/op_api/include/aclnnop"/>
+        <path value="opp" install_mod="550"/>
+        <path value="opp/built-in" install_mod="550"/>
+        <path value="opp/built-in/op_graph" install_mod="550"/>
+        <path value="opp/built-in/op_graph/inc" install_mod="550"/>
+        <path value="opp/built-in/op_graph/lib" install_mod="550"/>
+        <path value="opp/built-in/op_graph/lib/linux" install_mod="550"/>
+        <path value="opp/built-in/op_graph/lib/linux/$(ARCH)" install_mod="550"/>
+        <path value="opp/built-in/data" install_mod="550"/>
+        <path value="opp/built-in/data/op" install_mod="550"/>
+        <path value="opp/built-in/op_impl" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/impl" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/op_host" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux" install_mod="550"/>
+        <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)" install_mod="550"/>
+    </dir_info>
+    <dir_info value="OpsNNAiCpuKernel" install_mod="755" install_type="all">
+        <path value="opp/built-in/op_impl/aicpu" install_mod="550"/>
+        <path value="opp/built-in/op_impl/aicpu/kernel" install_mod="550"/>
+        <path value="opp/built-in/op_impl/aicpu/config" install_mod="550"/>
     </dir_info>
 </block>

@@ -1,25 +1,13 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 #### custom to kernel build #####
-
-function(map_compute_unit compute_unit compute_unit_long)
-    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend910_95")
-    set(compute_unit_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend910_9599")
-    list(FIND compute_unit_keys ${compute_unit} index)
-    if(NOT index EQUAL -1)
-        list(GET compute_unit_values ${index} mapped_value)
-        set(${compute_unit_long} ${mapped_value} PARENT_SCOPE)
-    else()
-        set(${compute_unit_long} ${compute_unit} PARENT_SCOPE)
-    endif()
-endfunction()
 
 function(add_custom_kernel_library ascendc_kernels)
     unset(op_def_list)
@@ -61,7 +49,7 @@ function(add_custom_kernel_library ascendc_kernels)
         npu_op_kernel_library(ascendc_kernels_lib
             SRC_BASE ${ASCEND_KERNEL_SRC_DST}
             TILING_LIBRARY cust_opmaster)
-        
+
         npu_op_kernel_options(ascendc_kernels_lib ALL OPTIONS --save-temp-files)
         foreach(i RANGE ${last_index})
             list(GET op_name_list ${i} op_name_tmp)
@@ -72,7 +60,7 @@ function(add_custom_kernel_library ascendc_kernels)
                     OP_TYPE ${op_type_tmp}
                     KERNEL_DIR ./${op_name_tmp}
                     COMPUTE_UNIT ${compute_unit_long}
-                    KERNEL_FILE ${op_name_tmp}.cpp    
+                    KERNEL_FILE ${op_name_tmp}.cpp
                 )
             endforeach()
         endforeach()

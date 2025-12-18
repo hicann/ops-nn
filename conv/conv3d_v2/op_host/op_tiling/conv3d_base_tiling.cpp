@@ -1235,7 +1235,7 @@ bool Conv3dBaseTiling::GetTilingFromRepo()
     GetTilingInputArgs(inputArgs, inputArgsSize);
 
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
-    uint32_t ret = RuntimeKb::QueryBank(
+    uint32_t ret = Ops::NN::QueryBank(
         inputArgs.get(), inputArgsSize, "Conv3D", opRunInfo_.socVersion, opRunInfo_.aicoreNum, tuningTiling);
     if (ret != VALID_VALUE || tuningTiling == nullptr) {
         return false;

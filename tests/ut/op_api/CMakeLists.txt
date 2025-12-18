@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
+# This program is free software, you can redistribute it and/or modify.
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
-# CANN Open Software License Agreement Version 2.0 (the "License").
+# This file is a part of the CANN Open Software.
+# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -22,18 +22,17 @@ if(UT_TEST_ALL OR OP_API_UT)
       add_subdirectory(${SUBDIR})
     endif()
   endforeach()
+  gen_aclnn_with_opdef()
 
   ## add opapi so
   add_library(${OPHOST_NAME}_opapi SHARED
           $<$<TARGET_EXISTS:${OPHOST_NAME}_opapi_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_opapi_obj>>
+          $<$<TARGET_EXISTS:opbuild_gen_aclnn_all>:$<TARGET_OBJECTS:opbuild_gen_aclnn_all>>
           )
   target_sources(${OPHOST_NAME}_opapi PRIVATE empty_runtime.cpp)
-  add_library(opapi_lib SHARED IMPORTED)
-  set_target_properties(opapi_lib PROPERTIES IMPORTED_LOCATION ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64/libopapi.so)
   target_link_libraries(${OPHOST_NAME}_opapi PRIVATE
           $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
           opapi_stub
-          opapi_lib
           )
 
   ## make ophost ut exe

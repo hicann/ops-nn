@@ -527,6 +527,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case01) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {4, 1, 7};
+    gert::Shape target_shape_max = {5, -1, 7};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case02) {
@@ -551,6 +557,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case02) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {1, 1, 7};
+    gert::Shape target_shape_max = {8, -1, 7};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case03) {
@@ -575,6 +587,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case03) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {2, 1, 7};
+    gert::Shape target_shape_max = {5, -1, 7};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case04) {
@@ -599,6 +617,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case04) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {2, 1, 7};
+    gert::Shape target_shape_max = {5, -1, 7};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case05) {
@@ -623,6 +647,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case05) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {8, 16, 16};
+    gert::Shape target_shape_max = {-1, 16, 16};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case06) {
@@ -673,6 +703,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case07) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {2048, 0, 64};
+    gert::Shape target_shape_max = {2048, -1, 64};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case08) {
@@ -697,6 +733,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case08) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {1, 2, 1, 3};
+    gert::Shape target_shape_max = {-1, 3, 2, 4};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Case09) {
@@ -721,6 +763,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case09) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {1024, 8, 1, 64};
+    gert::Shape target_shape_max = {1024, 8, 536870912, 64};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2) {
@@ -745,6 +793,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {0, 4096};
+    gert::Shape target_shape_max = {-1, 4096};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01) {
@@ -772,6 +826,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {4, 7, 8};
+    gert::Shape target_shape_max = {9, 7, 8};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02) {
@@ -799,6 +859,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {2, 3, 1, 5};
+    gert::Shape target_shape_max = {80, 3, 5, 5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch) {
@@ -826,6 +892,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {2, 3, 3, 5};
+    gert::Shape target_shape_max = {2, 3, 3, 5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim) {
@@ -853,6 +925,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {5};
+    gert::Shape target_shape_max = {5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim) {
@@ -877,6 +955,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {3};
+    gert::Shape target_shape_max = {3};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic) {
@@ -901,6 +985,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {0, 3, 5};
+    gert::Shape target_shape_max = {-1, 3, 5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic) {
@@ -928,6 +1018,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {0, 3, 5};
+    gert::Shape target_shape_max = {-1, 3, 5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2) {
@@ -955,6 +1051,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {1, 0, 3, 5};
+    gert::Shape target_shape_max = {1, -1, 3, 5};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn) {
@@ -984,6 +1086,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {0, 1664};
+    gert::Shape target_shape_max = {-1, 1664};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasLen0) {
@@ -1013,6 +1121,12 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasLen0) {
         .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .Build();
+
+    EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape target_shape_min = {0, 1664};
+    gert::Shape target_shape_max = {-1, 1664};
+    gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 } // namespace

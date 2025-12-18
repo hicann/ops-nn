@@ -26,6 +26,7 @@ class l2_dynamic_quant_v2_test : public testing::Test
 protected:
     static void SetUpTestCase()
     {
+        unsetenv("FOR_FAULT_INJECTION");
         cout << "l2_dynamic_quant_v2_test SetUp" << endl;
     }
 
