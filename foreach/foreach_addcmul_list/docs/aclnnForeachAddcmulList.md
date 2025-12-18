@@ -243,6 +243,7 @@ aclnnStatus aclnnForeachAddcmulList(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_addcmul_list.h"
 

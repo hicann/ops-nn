@@ -284,10 +284,10 @@ aclnnStatus aclnnGroupNorm(
     </tr>
     <tr>
       <td>beta不为1维且元素数量不等于C。</td>
-    </tr>   
+    </tr>
     <tr>
       <td>self和out的格式不同时。</td>
-    </tr>                                                
+    </tr>
   </tbody></table>
 
 ## aclnnGroupNorm

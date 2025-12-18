@@ -13,13 +13,13 @@
 - 算子功能：对输入x进行反量化操作。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
-    
+
     $$
     y = float16((x+offset) * scale)
     $$
 
   - sqrtMode为true时，计算公式为：
-    
+
     $$
     y = float16((x+offset) * scale * scale)
     $$
@@ -39,6 +39,7 @@ aclnnStatus aclnnAscendAntiQuantGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAscendAntiQuant(
   void          *workspace,
