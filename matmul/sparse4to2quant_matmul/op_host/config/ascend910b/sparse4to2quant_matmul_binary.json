@@ -1,0 +1,96 @@
+{
+    "op_type": "Sparse4to2QuantMatmul",
+    "op_list": [
+        {
+            "bin_filename": "Sparse4to2QuantMatmul_ND_NZ_int8_int8_fp32_fp16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "sparse_weight",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "FRACTAL_NZ",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "index",
+                    "index": 2,
+                    "dtype": "uint8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "x_scale",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "sparse_weight_scale",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                },
+                {
+                    "name": "bias",
+                    "index": 5,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatDefault"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": 27
+                }
+            ]
+        }
+   ]
+}
