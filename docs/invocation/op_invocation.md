@@ -160,7 +160,7 @@ int main()
    if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
        set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
    else()
-       set(ASCEND_PATH "/usr/local/Ascend/ascend-toolkit/latest")
+       set(ASCEND_PATH "/usr/local/Ascend/cann")
    endif()
 
    # 设置头文件路径
@@ -193,7 +193,7 @@ int main()
     elif [ -n "$ASCEND_HOME_PATH" ]; then
         _ASCEND_INSTALL_PATH=$ASCEND_HOME_PATH
     else
-        _ASCEND_INSTALL_PATH="/usr/local/Ascend/latest"
+        _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
     fi
 
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
@@ -298,7 +298,7 @@ int main() {
    elseif(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
        set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
    else()
-       set(ASCEND_PATH "/usr/local/Ascend/latest")
+       set(ASCEND_PATH "/usr/local/Ascend/cann")
    endif()
 
    set(FWK_INCLUDE_DIR "${ASCEND_PATH}/compiler/include")
@@ -343,7 +343,7 @@ int main() {
     elif [ -n "$ASCEND_HOME_PATH" ]; then
         _ASCEND_INSTALL_PATH=$ASCEND_HOME_PATH
     else
-        _ASCEND_INSTALL_PATH="/usr/local/Ascend/latest"
+        _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
     fi
 
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
