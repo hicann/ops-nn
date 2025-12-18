@@ -39,10 +39,10 @@ message(STATUS "$ENV{ASCEND_HOME_PATH}")
 if(DEFINED ENV{ASCEND_HOME_PATH})
     set(ASCEND_HOME "$ENV{ASCEND_HOME_PATH}" CACHE PATH "Ascend installation path" FORCE)
 else()
-    set(ASCEND_HOME "/usr/local/Ascend/latest" CACHE PATH "Ascend installation path")
+    set(ASCEND_HOME "/usr/local/Ascend/cann" CACHE PATH "Ascend installation path")
 endif()
 
-set(BISHENG "${ASCEND_HOME}/compiler/ccec_compiler/bin/bisheng" CACHE FILEPATH "Path to Bisheng compiler")
+set(BISHENG "${ASCEND_HOME}/tools/ccec_compiler/bin/bisheng" CACHE FILEPATH "Path to Bisheng compiler")
 message(STATUS "ASCEND_HOME = ${ASCEND_HOME}")
 message(STATUS "BISHENG     = ${BISHENG}")
 # 设置编译器为 bisheng
@@ -91,15 +91,17 @@ set(COMMON_INCLUDE_DIRS
     ${Python3_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_NPU_INCLUDE_PATH}
-    ${ASCEND_HOME}/include
-    ${ASCEND_HOME}/compiler/tikcpp/tikcfw
-    ${ASCEND_HOME}/compiler/ascendc/include/basic_api/impl
-    ${ASCEND_HOME}/compiler/ascendc/include/basic_api/interface
-    ${ASCEND_HOME}/compiler/ascendc/include/highlevel_api
-    ${ASCEND_HOME}/compiler/ascendc/impl/aicore/basic_api
     ${CMAKE_CURRENT_SOURCE_DIR}/../..
     ${CMAKE_CURRENT_SOURCE_DIR}/../../common/inc
-    ${ASCEND_HOME}/include/op_common
+    ${ASCEND_HOME}/include
+    ${ASCEND_HOME}/${CMAKE_SYSTEM_PROCESSOR}-linux/ascendc/include/basic_api/impl
+    ${ASCEND_HOME}/${CMAKE_SYSTEM_PROCESSOR}-linux/ascendc/include/basic_api
+    ${ASCEND_HOME}/include/ascendc
+    ${ASCEND_HOME}/include/ascendc/basic_api/interface
+    ${ASCEND_HOME}/include/ascendc/basic_api
+    ${ASCEND_HOME}/pkg_inc/op_common
+    ${ASCEND_HOME}/pkg_inc/base
+    ${ASCEND_HOME}/pkg_inc
 )
 
 set(COMMON_LINK_DIRS
