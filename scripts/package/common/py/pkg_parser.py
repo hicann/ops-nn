@@ -1031,7 +1031,7 @@ def read_version_info() -> Tuple[str, str]:
         line2 = file.readline().strip()
     version = line1.split("=")[1]
     version_dir = line2.split("=")[1]
-    m = re.match(r'[.a-zA-Z0-9]+$', version)
+    m = re.match(r'[.a-zA-Z0-9]+$', version) or re.match(r'[-a-zA-Z.0-9]+$', version)
     if not m:
         raise VersionFormatNotMatch()
 
