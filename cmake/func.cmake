@@ -254,6 +254,10 @@ macro(add_category_subdirectory)
       endforeach()
     endif()
   endforeach()
+
+  if("${ASCEND_OP_NAME}" STREQUAL "add_example" OR "${ASCEND_OP_NAME}" STREQUAL "add_example_aicpu")
+    add_subdirectory(examples)
+  endif()
 endmacro()
 
 function(concat_op_names)

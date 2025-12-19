@@ -49,7 +49,7 @@ class OpDependenciesParser:
     def __init__(self, build_path):
         self.all_ops_dependency = {}
         self.all_ops_reverse_dependency = {}
-        self.all_ops = []
+        self.all_ops = ["add_example", "add_example_aicpu"]
         self.all_category_ops = {}
         self.parse_dependency(build_path)
         pass
