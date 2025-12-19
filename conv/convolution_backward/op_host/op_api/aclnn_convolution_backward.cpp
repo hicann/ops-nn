@@ -47,6 +47,9 @@ using namespace Ops::NN;
 extern "C" {
 #endif
 
+constexpr int CHECK_GRAD_RESHAPE_ND_DIM_0 = 512;
+constexpr int CHECK_GRAD_RESHAPE_ND_DIM_2 = 128;
+
 const std::vector<DataType> REDUCESUM_SUPPORTED_DTYPES = {
   DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16
 };
@@ -779,6 +782,28 @@ static const aclTensor *CalculateConv2DBackpropInput(ConvolutionBackwardInputTen
   return dxGradInputNC1HWC0Res;
 }
 
+static const aclTensor *CalculateReducesumResult(const aclTensor *gradReshapeND, aclIntArray *pdim, aclOpExecutor *executor){
+  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  const aclTensor* gradBiasResult;
+  const aclTensor* gradBiasTemp;
+  const int64_t ASCEND_CORE_NUM = GetCurrentPlatformInfo().GetCubeCoreNum();
+  // CHECK_GRAD_RESHAPE_ND_DIM_0 and CHECK_GRAD_RESHAPE_ND_DIM_2 is the situation gradReshapeND needs to check
+  // 2 : 表示在第2维进行reduce求和
+  if ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) &&
+      (gradReshapeND->GetDataType() == DataType::DT_FLOAT16 || gradReshapeND->GetDataType() == DataType::DT_BF16)&&
+      (gradReshapeND->GetViewShape().GetDim(0) < CHECK_GRAD_RESHAPE_ND_DIM_0 || gradReshapeND->GetViewShape().GetDim(2) > CHECK_GRAD_RESHAPE_ND_DIM_2) &&  // index = 2: get gradReshapeND dim 2
+      (gradReshapeND->GetViewShape().GetDim(1) < ASCEND_CORE_NUM))
+  {
+      FVector<int64_t> reduceDims = {0};
+      gradBiasTemp = l0op::ReduceSumOp(gradReshapeND, executor->AllocIntArray(reduceDims.data(), reduceDims.size()), false, executor);
+      reduceDims[0] = 1;
+      gradBiasResult = l0op::ReduceSumOp(gradBiasTemp, executor->AllocIntArray(reduceDims.data(), reduceDims.size()), false, executor);
+  } else {
+      gradBiasResult = l0op::ReduceSumOp(gradReshapeND, pdim, false, executor);
+  }
+  return gradBiasResult;
+}
+
 static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor,
                                      ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
                                      aclOpExecutor *executor) {
@@ -830,7 +855,7 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
     // 2: dim 分配的空间大小
     aclIntArray *pdim = executor->AllocIntArray(dim, 2);
     CHECK_RET(pdim != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gradBiasResult = l0op::ReduceSumOp(gradReshapeND, pdim, false, executor);
+	  const aclTensor *gradBiasResult = CalculateReducesumResult(gradReshapeND, pdim, executor);
     OP_CHECK(gradBiasResult != nullptr,
             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ReduceSumOp with gradOutput failed."),
             return ACLNN_ERR_INNER_NULLPTR);
@@ -1883,7 +1908,7 @@ static const aclTensor *Conv3DBackpropFilterBy1x1Dw(ConvolutionBackwardInputTens
 
 static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &inputTensor,
                                            ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
-                                           aclOpExecutor *executor) {
+                                           aclOpExecutor *executor) {                                           
   // Index 为 2：进行bias grad运算
   aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
   CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);

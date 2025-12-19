@@ -1300,7 +1300,7 @@ main() {
   fi
   assemble_cmake_args
   echo "CMAKE_ARGS: ${CMAKE_ARGS}"
-
+  
   if [[ "$ENABLE_RUN_EXAMPLE" == "TRUE" ]]; then
     build_example
     exit $?

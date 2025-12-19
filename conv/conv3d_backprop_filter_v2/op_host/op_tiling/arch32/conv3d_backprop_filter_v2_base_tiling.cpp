@@ -19,6 +19,7 @@
 #include <util/math_util.h>
 #include <platform/platform_infos_def.h>
 #include <graph/utils/type_utils.h>
+
 #include <log/log.h>
 
 #include "../common/conv_backprop_filter_context_utils.h"
