@@ -43,6 +43,7 @@ aclnnStatus aclnnRmsNormGradGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnRmsNormGrad(
   void          *workspace,
