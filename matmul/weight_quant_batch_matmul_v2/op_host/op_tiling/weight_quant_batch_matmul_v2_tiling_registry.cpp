@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_impl_registry.h"
+#include "weight_quant_batch_matmul_v2_checker_for_mmads8s4.h"
 #include "weight_quant_batch_matmul_v2_tiling_custom.h"
 #include "weight_quant_batch_matmul_v2_tiling_custom_nz_splitk.h"
 #include "weight_quant_batch_matmul_v2_tiling_fixpipe.h"
@@ -21,8 +22,10 @@
 #include "weight_quant_batch_matmul_v2_tiling_splitk.h"
 #include "weight_quant_batch_matmul_v2_weight_nz_tiling.h"
 #include "op_cache_tiling.h"
+#include "platform/platform_infos_def.h"
 
 using Ops::NN::Optiling::TilingRegistry;
+using Ops::NN::TilingPrepareForOpCache;
 
 namespace optiling {
 
@@ -35,6 +38,7 @@ constexpr int32_t FIXPIPE_PRIORITY = 5;
 constexpr int32_t WEIGHT_NZ_PRIORITY = 6;
 constexpr int32_t ADAPTIVE_SPLIT_PRIORITY = 7;
 constexpr int32_t ANTI_REG_PRIORITY = 8;
+constexpr int32_t ASW_PRIORITY = 9;
 
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingSplitK, SPLIT_K_PRIORITY);
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingMsdGroup, MSD_GROUP_PRIORITY);
@@ -47,6 +51,7 @@ REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2Wei
 static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* context)
 {
     platform_ascendc::SocVersion socVersion;
+    bool supportMmadS8S4 = false;
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "WeightQuantBatchMatmulV2", "tilingContext is null");
     auto compileInfoPtr = reinterpret_cast<const WeightQuantBatchMatmulV2CompileInfo*>(context->GetCompileInfo());
     if (compileInfoPtr == nullptr) {
@@ -54,22 +59,38 @@ static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* c
         OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         socVersion = ascendcPlatform.GetSocVersion();
+        std::string mmad;
+        bool res = platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", mmad);
+        supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
     } else {
         socVersion = compileInfoPtr->socVersion;
+        supportMmadS8S4 = compileInfoPtr->supportMmadS8S4;
     }
     if (socVersion != platform_ascendc::SocVersion::ASCEND310P) {
         OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_fix_pipe_l0c2out");
-        OP_TILING_CHECK(
-            CheckPara(context, socVersion) != ge::GRAPH_SUCCESS,
-            VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
-            return ge::GRAPH_FAILED);
-        if (socVersion != platform_ascendc::SocVersion::ASCEND910B) {
-            OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_data_move_l12bt bf16");
-            std::vector<int32_t> registerList = {ADAPTIVE_SPLIT_PRIORITY, ANTI_REG_PRIORITY};
+        if (supportMmadS8S4) {
+            OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_mmad s8s4");
+            WeightQuantBatchMatmulV2Checker4MmadS8S4 wqbmmv2Checker(context);
+            OP_TILING_CHECK(
+                wqbmmv2Checker.Check() != ge::GRAPH_SUCCESS,
+                VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
+                return ge::GRAPH_FAILED);
+            std::vector<int32_t> registerList = {ASW_PRIORITY};
             return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
         } else {
-            OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_data_move_l12bt bf16");
-            return TilingRegistry::GetInstance().DoTilingImpl(context);
+            OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_mmad s8s4");
+            OP_TILING_CHECK(
+                CheckPara(context, socVersion) != ge::GRAPH_SUCCESS,
+                VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
+                return ge::GRAPH_FAILED);
+            if (socVersion != platform_ascendc::SocVersion::ASCEND910B) {
+                OP_LOGI(context->GetNodeName(), "Platform support Intrinsic_data_move_l12bt bf16");
+                std::vector<int32_t> registerList = {ADAPTIVE_SPLIT_PRIORITY, ANTI_REG_PRIORITY};
+                return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
+            } else {
+                OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_data_move_l12bt bf16");
+                return TilingRegistry::GetInstance().DoTilingImpl(context);
+            }
         }
     } else {
         OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_fix_pipe_l0c2out");
@@ -98,6 +119,9 @@ static ge::graphStatus TilingParseForWeightQuantBatchMatmulV2(gert::TilingParseC
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfoPtr->l0bSize);
     compileInfoPtr->workspaceNum = ascendcPlatform.GetLibApiWorkSpaceSize();
     compileInfoPtr->socVersion = ascendcPlatform.GetSocVersion();
+    std::string mmad;
+    bool res = platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", mmad);
+    compileInfoPtr->supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
 
     TilingPrepareForOpCache(context);
     return ge::GRAPH_SUCCESS;

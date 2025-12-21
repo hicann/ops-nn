@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file advance_step_tiling.cpp
  * \brief
@@ -342,8 +342,13 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
     OP_CHECK_IF(
         input1_storage_shape.GetDim(0) != this->numQueries_,
         OP_LOGE(
-            "CheckAdvTiling", "numQueries %ld should equal to sampledTokenIds's first dim %ld ", this->numSeqs_,
+            "CheckAdvTiling", "numQueries %ld should equal to sampledTokenIds's first dim %ld ", this->numQueries_,
             input1_storage_shape.GetDim(0)),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        input1_storage_shape.GetDim(1) != 1,
+        OP_LOGE(
+            "CheckAdvTiling", "sampledTokenIds's last dim should be 1"),
         return ge::GRAPH_FAILED);
     this->blockTablesStride_ = input5_storage_shape.GetShapeSize() / input5_storage_shape.GetDim(0);
 

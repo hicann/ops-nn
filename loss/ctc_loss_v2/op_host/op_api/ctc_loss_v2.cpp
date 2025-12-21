@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -218,7 +218,8 @@ const std::tuple<op::Shape, op::Shape> CtcLossNpuOutputShape(const aclTensor* lo
         inputN = logProbsShape.GetDim(LOG_PROBS_3D_DIM_N);
     }
     int64_t alphaTailSize = 2 * maxLength + 1;
-    int64_t alphaTailSizeAlign = IsregBaseAiCoreSupport(logProbs) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    int64_t alphaTailSizeAlign = (socVersion == SocVersion::ASCEND910_95) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
     op::Shape logAlphaShape = {inputN, inputT, alphaTailSizeAlign};
 
     if (logProbsShape.GetDimNum() == DIM_NUM_THREE) {

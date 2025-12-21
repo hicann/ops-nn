@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file apply_adam_w_v2_tiling.cpp
@@ -73,6 +73,7 @@ static void PrintTilingData(ApplyAdamWV2TilingData& tilingData)
     OP_LOGI("ApplyAdamWV2", "eps: %f", tilingData.get_eps());
     OP_LOGI("ApplyAdamWV2", "amsgrad: %ld", tilingData.get_amsgrad());
     OP_LOGI("ApplyAdamWV2", "maximize: %ld", tilingData.get_maximize());
+    OP_LOGI("ApplyAdamWV2", "tilingKey: %ld", tilingData.get_tilingKey());
 }
 
 static inline bool IsInvalidType(const DataType dtype)
@@ -98,7 +99,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     auto dtypePtr = context->GetInputDesc(INDEX_IN_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
     auto dtype = dtypePtr->GetDataType();
-    OP_CHECK_IF(IsInvalidType(dtype),
+    OP_CHECK_IF(
+        IsInvalidType(dtype),
         OP_LOGE(context, "input var dtype only support fp16, fp32, bf16 currently, please check."),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
@@ -106,7 +108,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtypePtr = context->GetInputDesc(INDEX_IN_M);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
     dtype = dtypePtr->GetDataType();
-    OP_CHECK_IF(IsInvalidType(dtype),
+    OP_CHECK_IF(
+        IsInvalidType(dtype),
         OP_LOGE(context, "input m dtype only support fp16, fp32, bf16 currently, please check."),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
@@ -114,7 +117,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtypePtr = context->GetInputDesc(INDEX_IN_V);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
     dtype = dtypePtr->GetDataType();
-    OP_CHECK_IF(IsInvalidType(dtype),
+    OP_CHECK_IF(
+        IsInvalidType(dtype),
         OP_LOGE(context, "input v dtype only support fp16, fp32, bf16 currently, please check."),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
@@ -122,7 +126,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtypePtr = context->GetInputDesc(INDEX_IN_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
     dtype = dtypePtr->GetDataType();
-    OP_CHECK_IF(IsInvalidType(dtype),
+    OP_CHECK_IF(
+        IsInvalidType(dtype),
         OP_LOGE(context, "input grad dtype only support fp16, fp32, bf16 currently, please check."),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
@@ -133,17 +138,21 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
     dtype = dtypePtr->GetDataType();
     bool isInvalidType = dtype != ge::DT_FLOAT && dtype != ge::DT_INT64;
-    OP_CHECK_IF(isInvalidType,
+    OP_CHECK_IF(
+        isInvalidType,
         OP_LOGE(context, "input step dtype only support fp32 and int64 currently, please check."),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 
     auto inputDesc = context->GetOptionalInputDesc(INDEX_IN_MAX_GRAD_NORM);
-    OP_CHECK_IF(tilingParam.amsgrad == 1 && inputDesc == nullptr,
+    OP_CHECK_IF(
+        tilingParam.amsgrad == 1 && inputDesc == nullptr,
         OP_LOGE(context, "the input max_grad_norm is mandatory when the value of amsgrad is true."),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(inputDesc != nullptr && IsInvalidType(inputDesc->GetDataType()),
-        OP_LOGE(context, "input max_grad_norm dtype only support fp16, fp32, bf16 currently, please check."),
+    OP_CHECK_IF(
+        inputDesc != nullptr && IsInvalidType(inputDesc->GetDataType()),
+        OP_LOGE(
+            context, "input max_grad_norm dtype only support fp16, fp32, bf16 currently, please check."),
         return ge::GRAPH_FAILED);
     if (inputDesc != nullptr) {
         tilingParam.dtypeLst.push_back(inputDesc->GetDataType());
@@ -339,6 +348,12 @@ ge::graphStatus Tiling4ApplyAdamWV2(gert::TilingContext* context)
 
     OP_LOGD(context, "Tiling4ApplyAdamWV2 running begin");
     auto compileInfo = context->GetCompileInfo<ApplyAdamWV2CompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo->isRegbase) {
+        OP_LOGD(context, "Enter ApplyAdamWV2RegbaseTiling");
+        ApplyAdamWV2RegbaseTiling tiling(context);
+        return tiling.RunTiling();
+    }
 
     ApplyAdamWV2TilingParam tilingParam;
     tilingParam.totalCoreNum = compileInfo->totalCoreNum;
@@ -387,6 +402,8 @@ static ge::graphStatus TilingPrepareForApplyAdamWV2(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    auto socVersion = ascendcPlatform.GetSocVersion();
+    compileInfo->isRegbase = (socVersion == platform_ascendc::SocVersion::ASCEND910_95) ? true : false;
     OP_CHECK_IF(
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(context, "TilingPrepareForApplyAdamWV2 fail to get core num."), return ge::GRAPH_FAILED);

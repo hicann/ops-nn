@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
  /*!
  * \file quant_batch_matmul_v4_pergroup.h
@@ -241,7 +241,7 @@ private:
         uint32_t offset = offset_.offsetPertoken + subBlockIdx_ * maxAivM_;
         DataCopyPad(
             X1Scale, x1ScaleGlobal_[offset],
-            {/*blk_count*/ 1, /*blk_len*/ uint32_t(CeilAlign(curAivM, ALIGN_UNIT_8) * sizeof(float)), 0, 0, 0},
+            {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivM * sizeof(float)), 0, 0, 0},
             {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX1Scale_);
     }
@@ -253,7 +253,7 @@ private:
         uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
         DataCopyPad(
             X2Scale, x2ScaleGlobal_[offset],
-            {/*blk_count*/ 1, /*blk_len*/ uint32_t(CeilAlign(curAivN, ALIGN_UNIT_8) * sizeof(float)), 0, 0, 0},
+            {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(float)), 0, 0, 0},
             {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX2Scale_);
     }
@@ -265,18 +265,18 @@ private:
         uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
         DataCopyPad(
             X2OffsetFP16, x2OffsetGlobal_[offset],
-            {/*blk_count*/ 1, /*blk_len*/ uint32_t(CeilAlign(curAivN, ALIGN_UNIT_16) * sizeof(half)), 0, 0, 0},
+            {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(half)), 0, 0, 0},
             {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX2Offset_);
     }
 
-    __aicore__ inline void CopyInX1INT8(uint32_t kidx, uint32_t midx) {
+    __aicore__ inline void CopyInX1INT8(uint32_t kidx, uint32_t midx, uint32_t curAivM) {
         // CopyIn X1
         // Copy INT4 as INT8
         // [m, k]
         uint32_t X1_offset = offset_.offsetA + kidx * groupSizeK_ +
                              (subBlockIdx_ * maxAivM_ + ubCalcM_ * midx) * block_.matmulTilingData_->Ka;
-        uint16_t blockCount = ubCalcM_;
+        uint16_t blockCount = curAivM;
         uint16_t blockLen = groupSizeK_ / 2 / DATA_BLOCK_LEN;
         uint16_t srcGap = (block_.matmulTilingData_->Ka - groupSizeK_) / 2 / DATA_BLOCK_LEN;
         uint16_t dstGap = 0;
@@ -287,7 +287,7 @@ private:
 
     __aicore__ inline void X2OffsetProcess(uint32_t curAivM, uint32_t curAivN, uint32_t kidx, uint32_t midx)
     {
-        CopyInX1INT8(kidx, midx);
+        CopyInX1INT8(kidx, midx, curAivM);
         uint8_t dstRepeatStride = 8UL;
         uint8_t srcRepeatStride1 = 2UL;
         Cast<half, int4b_t, false>(

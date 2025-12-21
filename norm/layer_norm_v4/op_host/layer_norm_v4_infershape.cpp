@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file layer_norm_v4_infershape.cpp
@@ -21,7 +21,7 @@ using namespace ge;
 namespace ops {
 constexpr size_t INPUT_IDX_X = 0;
 constexpr size_t INPUT_IDX_NORM_SHAPE = 1;
-constexpr size_t IPUT_IDX_GAMMA = 2;
+constexpr size_t INPUT_IDX_GAMMA = 2;
 constexpr size_t INPUT_IDX_BETA = 3;
 constexpr size_t OUTPUT_IDX_Y = 0;
 constexpr size_t OUTPUT_IDX_MEAN = 1;
@@ -59,7 +59,7 @@ static graphStatus InferShape4LayerNormV4(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, mean_shape);
     gert::Shape* rstd_shape = context->GetOutputShape(OUTPUT_IDX_RSTD);
     OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape);
-    const gert::Shape* gamma_shape = context->GetInputShape(IPUT_IDX_GAMMA);
+    const gert::Shape* gamma_shape = context->GetInputShape(INPUT_IDX_GAMMA);
     const gert::Shape* beta_shape = context->GetInputShape(INPUT_IDX_BETA);
 
     *y_shape = *x_shape;

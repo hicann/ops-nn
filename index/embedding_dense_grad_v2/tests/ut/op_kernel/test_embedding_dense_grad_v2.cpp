@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <gtest/gtest.h>
@@ -22,7 +22,6 @@
 #include <cstdint>
 
 using namespace std;
-
 extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_ADDR sortIndices,
     GM_ADDR posIdx, GM_ADDR backProps, GM_ADDR workSpace, GM_ADDR tiling);
 
@@ -198,6 +197,64 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_true)
     ICPU_SET_TILING_KEY(11);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(embedding_dense_grad_v2, 1, grad, sortIndice, posIdx, backProps, workspace, tiling);
+
+    AscendC::GmFree(grad);
+    AscendC::GmFree(sortIndice);
+    AscendC::GmFree(posIdx);
+    AscendC::GmFree(backProps);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
+{
+    size_t gradSize = 48 * 256 * sizeof(float);
+    size_t sortIndiceSize = 48 * sizeof(int32_t);
+    size_t posIdxSize = 48 * sizeof(int32_t);
+    size_t backPropsSize = 100 * 256 * sizeof(float);
+    size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
+    size_t workSpaceSize = 16 * 1024 * 1024 + 100 * sizeof(int32_t) + 100 * 256 * sizeof(float);
+
+    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
+    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
+    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
+    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workSpaceSize);
+
+    memset(workspace, 0, workSpaceSize);
+
+    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
+    system("chmod -R 755 ./data/");
+    system("cd ./data/ && rm -rf ./*bin");
+    system("cd ./data/ && python3 gen_data.py 48 256 100 False");
+
+    EmbeddingDenseGradV2TilingData *tilingData = reinterpret_cast<EmbeddingDenseGradV2TilingData*>(tiling);
+    tilingData->params.coreNum = 48;
+    tilingData->params.numWeights = 100;
+    tilingData->params.embeddingDim = 256;
+    tilingData->params.paddingIdx = -2;
+    tilingData->params.scaleGradByFreq = 0;
+    tilingData->params.scaleWorkspaceLength = 0;
+    tilingData->params.outCastedWorkspaceLength = 25600;
+    tilingData->smallDimTiling.maxRowInUb = 81;
+    tilingData->smallDimTiling.partNum = 1;
+    tilingData->smallDimTiling.formerCopyRow = 1;
+    tilingData->smallDimTiling.formerCopyTime = 1;
+    tilingData->smallDimTiling.formerLastRow = 1;
+    tilingData->smallDimTiling.tailCopyRow = 1;
+    tilingData->smallDimTiling.tailCopyTime = 1;
+    tilingData->smallDimTiling.tailLastRow = 1;
+
+    char *path_ = get_current_dir_name();
+    string path(path_);
+    ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
+    ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
+    ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
+
+    ICPU_SET_TILING_KEY(100);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(embedding_dense_grad_v2, 48, grad, sortIndice, posIdx, backProps, workspace, tiling);
 
     AscendC::GmFree(grad);
     AscendC::GmFree(sortIndice);

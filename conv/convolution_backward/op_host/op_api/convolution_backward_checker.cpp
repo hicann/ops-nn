@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "convolution_backward_checker.h"
 
 using namespace op;
@@ -43,22 +43,24 @@ bool CheckParamsValueAllZero(const aclIntArray *params) {
 bool CheckFormatValid(const aclTensor *inputTensor, const string &tensorName) {
     // API在输入Tensor的Format为ND时, 仅支持输入Tensor的维度是3, 并当做NCL格式处理
     op::Format inputFormat = inputTensor->GetStorageFormat();
+    std::string inputFormatStr = g_formatToStrTab[inputFormat];
     auto inputDim = inputTensor->GetViewShape().GetDimNum();
     if (inputDim == CONV1DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_ND || inputFormat == op::Format::FORMAT_NCL,
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 1D scenes, the %s format only supports ND and NCL.",
-                        tensorName.c_str()), return false);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 1D scenes, the %s format only supports ND and NCL, but received %s.",
+              tensorName.c_str(), inputFormatStr.c_str()), return false);
     } else if (inputDim == CONV2DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_NCHW,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 2D scenes, the %s format only supports NCHW.",
-              tensorName.c_str()), return false);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 2D scenes, the %s format only supports NCHW, but received %s.",
+              tensorName.c_str(), inputFormatStr.c_str()), return false);
     } else if (inputDim == CONV3DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_NCDHW,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 3D scenes, the %s format only supports NCDHW.",
-              tensorName.c_str()), return false);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 3D scenes, the %s format only supports NCDHW, but received %s.",
+              tensorName.c_str(), inputFormatStr.c_str()), return false);
     } else {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The %s tensor dimension of this API only supports 3~5 dimensions.",
-                tensorName.c_str());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "The %s tensor dimension of this API only supports 3~5 dimensions.",
+              tensorName.c_str());
         return false;
     }
     return true;
@@ -300,22 +302,24 @@ bool ConvolutionBackwardChecker::InterceptConvFor8bit()
   if (params_.transposed && (*params_.outputMask)[0]) {
     return true;
   }
-
-  if (IsConv8bit(inputTensor_.gradOutput->GetDataType()) || IsConv8bit(inputTensor_.input->GetDataType()) ||
-      IsConv8bit(inputTensor_.weight->GetDataType()) || IsConv8bit(outputTensor_.gradInput->GetDataType()) ||
-      IsConv8bit(outputTensor_.gradWeight->GetDataType())) {
-    OP_LOGE(
-        ACLNN_ERR_PARAM_INVALID,
-        "The dtype of DT_HIFLOAT8 or DT_FLOAT8_E4M3FN is not supported now, "
-        "currently gradOutput is %s, input is %s, weight is %s, gradInput is %s, "
-        "gradWeight is %s. ",
-        op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-        op::ToString(inputTensor_.input->GetDataType()).GetString(),
-        op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-        op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
-        op::ToString(outputTensor_.gradWeight->GetDataType()).GetString());
-    return false;
+  if((outputTensor_.gradInput != nullptr)&& (outputTensor_.gradWeight !=nullptr)){
+      if (IsConv8bit(inputTensor_.gradOutput->GetDataType()) || IsConv8bit(inputTensor_.input->GetDataType()) ||
+        IsConv8bit(inputTensor_.weight->GetDataType()) || IsConv8bit(outputTensor_.gradInput->GetDataType()) ||
+        IsConv8bit(outputTensor_.gradWeight->GetDataType())) {
+      OP_LOGE(
+          ACLNN_ERR_PARAM_INVALID,
+          "The dtype of DT_HIFLOAT8 or DT_FLOAT8_E4M3FN is not supported now, "
+          "currently gradOutput is %s, input is %s, weight is %s, gradInput is %s, "
+          "gradWeight is %s. ",
+          op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+          op::ToString(inputTensor_.input->GetDataType()).GetString(),
+          op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+          op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+          op::ToString(outputTensor_.gradWeight->GetDataType()).GetString());
+      return false;
+    }
   }
+  
   return true;
 }
 
@@ -404,7 +408,11 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
   bool isInputFp8 = inputTensor_.input->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
   bool isWeightFp8 = inputTensor_.weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
   bool isGradWeightFp8 = outputTensor_.gradWeight->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
-  bool isGradBiasFp8 = outputTensor_.gradBias->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
+  bool isGradBiasFp8 = false;
+  if (outputTensor_.gradBias != nullptr) {
+     isGradBiasFp8 = outputTensor_.gradBias->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
+  }
+  
   bool isFp8Flag = isGradOutputFp8 || isInputFp8 || isWeightFp8 || isGradWeightFp8 || isGradBiasFp8;
   OP_CHECK(!isFp8Flag,
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When outputMask[1] = true, not support dataType of all input and output being DT_FLOAT8_E4M3FN now"), return false);

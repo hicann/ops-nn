@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #ifndef OP_API_SRC_LEVEL2_MATMUL_UTIL_H_
 #define OP_API_SRC_LEVEL2_MATMUL_UTIL_H_
 
@@ -58,6 +58,8 @@ struct MmOpInfo {
   // HF32 Flag
   int64_t opImplModeEnum = 0x1;
   bool enableHf32 = false;
+  bool enableForceGrpAccForFp32 = false;
+  bool enableFp16Bf16InFp32Out = false;
   bool supporSplitK = false;
   int64_t aiCoreCnt;
   // mm api shape info
@@ -70,7 +72,7 @@ struct TensorInfo {
   op::Format format;
 };
 
-op::Shape SwapLastTwoDimValue(const op::Shape tensorShape);
+op::Shape SwapLastTwoDimValue(const op::Shape tensorShape, int64_t last = 1UL, int64_t secondLast = 2UL);
 
 bool IsInputSupportFp32();
 
@@ -84,6 +86,12 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor);
 
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& mmOpInfo,
                                       int8_t cubeMathType);
+
+bool IsSliceNonContiguous(const aclTensor* tensor);
+
+bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim);
+
+bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo);
 
 const aclTensor* ExecGemmV3Op(const aclTensor* self, const aclTensor* mat2, const aclTensor* c, MmOpInfo& mmOpInfo,
                               aclOpExecutor* executor);
@@ -101,7 +109,7 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType);
 aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo);
 
 aclnnStatus GetMmInfo(MmOpInfo mmOpInfo);
-MmOpInfo GetMatmulOpInfo(const aclTensor *self, const aclTensor *mat2, int8_t cubeMathType);
+MmOpInfo GetMatmulOpInfo(const aclTensor *self, const aclTensor *mat2, int8_t cubeMathType, bool isSelfSlice = false);
 bool ContiguousAndCast(const aclTensor *&contiguousInput, const aclTensor *&castOut, bool &transposeFlag,
                                      op::DataType dtype, aclOpExecutor *executor);
 
@@ -137,6 +145,10 @@ aclnnStatus IfMEqual1SelfToMK(const aclTensor *&selfInput, const aclTensor *&sel
 aclnnStatus IfNEqual1Mat2ToNK(const aclTensor *&mat2Input, const aclTensor *&mat2ReshapeOutput,
                               const op::Format mat2InputFormat, bool &transX2Flag, aclOpExecutor *executor);
 
+int64_t ProcessSpecialCases(
+    const aclTensor*& selfCastOut, const aclTensor*& mat2CastOut, MmOpInfo& mmOpInfo, const aclTensor*& bias,
+    const aclTensor*& selfReshapeOutput, const aclTensor*& mat2ReshapeOutput, aclOpExecutor* executor, bool& ifKEqual1);
+
 uint64_t TransDequantScaleToM1(const float deqScale);
 
 const aclTensor *ContiguousBias(const aclTensor *self, const aclTensor *bias, aclOpExecutor *executor);
@@ -148,18 +160,19 @@ op::FVector<int64_t> GetShape(const aclTensor *tensor);
 #ifdef __cplusplus
 extern "C" {
 #endif
-const aclTensor *ExecBmmOpWithBias(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
-                                   const aclTensor *out, int8_t cubeMathType, aclOpExecutor *executor);
+const aclTensor* ExecBmmOpWithBias(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    aclOpExecutor* executor, bool isBaddbmm = false);
 
 const aclTensor *ExecBatchMatmulOpWithBiasAndAttrs(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
                                                    const aclTensor *out, bool adjX1, bool adjX2, int8_t cubeMathType,
-                                                   aclOpExecutor *executor);
+                                                   aclOpExecutor *executor, bool isTransposeMat2Contiguous = false, bool isBaddbmm = false);
 
 const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, bool adjX1,
                                    bool adjX2, int8_t cubeMathType, aclOpExecutor *executor);
 
 const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
-                           aclOpExecutor *executor);
+                           aclOpExecutor *executor, bool isBaddbmm = false);
 #ifdef __cplusplus
 }
 #endif

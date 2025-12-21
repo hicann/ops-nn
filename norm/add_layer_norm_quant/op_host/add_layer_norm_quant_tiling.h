@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_layer_norm_quant_tiling.h
@@ -64,6 +64,25 @@ TILING_DATA_FIELD_DEF(uint32_t, scaleOffsetMode);
 TILING_DATA_FIELD_DEF(uint32_t, isPerTensor);
 TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
 END_TILING_DATA_DEF;
+
+
+BEGIN_TILING_DATA_DEF(AddLayerNormQuantEmptyTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(uint64_t, isDyn);
+TILING_DATA_FIELD_DEF(uint64_t, isDualQuant);
+TILING_DATA_FIELD_DEF(uint64_t, rows);
+TILING_DATA_FIELD_DEF(uint64_t, cols);
+TILING_DATA_FIELD_DEF(uint64_t, ubSize);
+TILING_DATA_FIELD_DEF(uint64_t, blockSize);
+TILING_DATA_FIELD_DEF(uint64_t, numBlocks);
+TILING_DATA_FIELD_DEF(uint64_t, lastBlockSize);
+TILING_DATA_FIELD_DEF(uint64_t, numBlocksLastCore);
+TILING_DATA_FIELD_DEF(uint64_t, sizeLastCore);
+TILING_DATA_FIELD_DEF(uint64_t, rowsPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, rowsLastCore);
+TILING_DATA_FIELD_DEF(uint64_t, workspaceSize);
+END_TILING_DATA_DEF;
+REGISTER_TILING_DATA_CLASS(AddLayerNormQuant_9, AddLayerNormQuantEmptyTilingData)
 
 REGISTER_TILING_DATA_CLASS(AddLayerNormQuant, AddLayerNormQuantTilingData)
 
@@ -127,6 +146,57 @@ static auto GetOptionalAttr(const gert::RuntimeAttrs* attrs,
     T outValue = (nullptr == attrPtr) ? defaultValue : (*attrPtr);
     return outValue;
 }
+
+class AddLayerNormQuantEmptyTiling {
+public:
+    explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context)
+    {}
+    // Tiling执行框架
+    //     1、GRAPH_SUCCESS: 成功，并且不需要继续执行后续Tiling类的实现
+    //     2、GRAPH_FAILED: 失败，中止整个Tiling流程
+    //     3、GRAPH_PARAM_INVALID: 本类不支持，需要继续往下执行其他Tiling类的实现
+    ge::graphStatus DoTiling();
+
+protected:
+    ge::graphStatus GetAttrs();
+    ge::graphStatus GetPlatformInfo() ;
+    ge::graphStatus GetShapeAttrsInfo() ;
+
+    ge::graphStatus DoOpTiling() ;
+    uint64_t GetTilingKey() const ;
+    ge::graphStatus GetWorkspaceSize() ;
+    ge::graphStatus PostTiling() ;
+
+private:
+    gert::TilingContext* context_{nullptr};
+    uint32_t isDyn_{0};
+    uint32_t isDualQuant_{0};
+    uint32_t aivCoreNum_{0};
+    int64_t rows_{0};
+    int64_t cols_{0};
+    int64_t usedCoreNum_{0};
+
+    uint32_t ubSize_{0};
+    uint64_t blockSize_{0};
+    uint64_t numBlocks_{0};
+    uint64_t lastBlockSize_{0};
+    uint64_t numBlocksLastCore_{0};
+    uint64_t sizeLastCore_{0};
+    int64_t rowsPerCore_{0};
+    int64_t rowsLastCore_{0};
+
+    uint64_t workspaceSize_{0};
+    uint32_t tilingKey_{0};
+    AddLayerNormQuantEmptyTilingData tilingData_;
+    
+    ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
+    ge::graphStatus CheckInputsShape();
+    void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
+    void CalcUsedCoreNums();
+    ge::graphStatus CalcuTilingData();
+    uint64_t NearestLowerPowerOfTwo(int32_t tmp);
+    void LogTilingResult();
+};
 
 class AddLayerNormQuantRegbaseTiling {
 public:

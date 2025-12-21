@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_avgpool2d.h"
 
@@ -22,10 +22,10 @@
 #include "op_api/op_api_def.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
-#include "level0/pooling.h"
-#include "level0/avgpool_update.h"
+#include "pooling.h"
+#include "avgpool_update.h"
 #include "level0/reduce_mean.h"
-#include "level0/avgpool_v2.h"
+#include "avgpool_v2.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/muls.h"
 #include "aclnn_kernels/cast.h"
@@ -140,9 +140,16 @@ const int64_t kKernelSizeWIdx = 1;
 const int64_t kPaddingUpIdx = 0;
 const int64_t kPaddingLeftIdx = 1;
 
+const int64_t cMaxDims = 65536;
+
 static const int64_t LONG_STRIP_MULTIPLIER = 2;
 
 static const char *FORMAT_NCHW_STR = "NCHW";
+
+static const int64_t BIG_KERNEL_SUM_LIMIT = 10240;
+static const int64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
+static const int64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
+static const int64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
 
 struct AvgPoolUtilInfo {
     vector<int64_t> ksize;
@@ -707,6 +714,27 @@ static aclnnStatus BuildAvgPoolGraph(
     return HandleOut(out, castOut, uniqueExecutor);
 }
 
+static bool CheckBigKernel(const aclIntArray *kernelSize, const aclTensor *avgpoolIn, const aclTensor *out)
+{
+    int64_t sumK = (*kernelSize)[DIM0] * (*kernelSize)[DIM1] * (*kernelSize)[DIM2];
+    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT || 
+                        (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
+
+    auto avgpoolInShape = avgpoolIn->GetViewShape();
+    int64_t channel = avgpoolInShape.GetDim(DIM1);
+
+    auto avgpoolOutShape = out->GetViewShape();
+    auto outDimNum = avgpoolOutShape.GetDimNum();
+    int64_t oH = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM2) : avgpoolOutShape.GetDim(DIM1);
+    int64_t oW = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM3) : avgpoolOutShape.GetDim(DIM2);
+    int64_t windowsCalc = oH *  oW * sumK;
+    // 非全局平均池化下，kernel较大，C通道小于64，且达到一定计算数据量时走Big Kernel分支
+    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && channel < BIG_KERNEL_CHANNEL_LIMIT){
+        return true;
+    }
+    return false;
+}
+
 // 构建averagepool3d计算图, 通过Vector实现
 static aclnnStatus BuildAvgPool2dTo3dGraph(
     UniqueExecutor &uniqueExecutor, const aclTensor *self, const aclIntArray *kernelSize, const aclIntArray *stride,
@@ -717,7 +745,6 @@ static aclnnStatus BuildAvgPool2dTo3dGraph(
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::string dataFormat = "NDHWC";
     const aclTensor* avgpoolIn = selfContiguous;
 
     //Reshape 4D to 5D N,C,H,W->1,NC,1,H,W
@@ -728,27 +755,34 @@ static aclnnStatus BuildAvgPool2dTo3dGraph(
     avgpoolIn = l0op::Reshape(avgpoolIn, shapeArray, uniqueExecutor.get());
     CHECK_RET(avgpoolIn != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    //Transpose 1,NC,D,H,W->1,D,H,W,NC
-    FVector<int64_t> inputDims = { DIM0, DIM2, DIM3, DIM4, DIM1};
-    auto permPre = uniqueExecutor->AllocIntArray(inputDims.data(), inputDims.size());
-    CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    std::string dataFormat = "NCDHW";
+    bool isBigKernelFlag = CheckBigKernel(kernelSize, avgpoolIn, out);
+    if (!isBigKernelFlag){
+        dataFormat = "NDHWC";
+        //Transpose 1,NC,D,H,W->1,D,H,W,NC
+        FVector<int64_t> inputDims = { DIM0, DIM2, DIM3, DIM4, DIM1};
+        auto permPre = uniqueExecutor->AllocIntArray(inputDims.data(), inputDims.size());
+        CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    avgpoolIn = l0op::Transpose(avgpoolIn, permPre, uniqueExecutor.get());
-    CHECK_RET(avgpoolIn != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        avgpoolIn = l0op::Transpose(avgpoolIn, permPre, uniqueExecutor.get());
+        CHECK_RET(avgpoolIn != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     //执行L0算子
     auto avgpoolOut = l0op::AvgPool3D(avgpoolIn, kernelSize, stride, pad, ceilMode,
         countIncludePad, divisorOverride, dataFormat, uniqueExecutor.get());
     CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    //Transpose NDHWC->NCDHW
-    FVector<int64_t> outputDims = { DIM0, DIM4, DIM1, DIM2, DIM3};
-    auto permPost = uniqueExecutor->AllocIntArray(outputDims.data(), outputDims.size());
-    CHECK_RET(permPost != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (!isBigKernelFlag){
+        //Transpose NDHWC->NCDHW
+        FVector<int64_t> outputDims = { DIM0, DIM4, DIM1, DIM2, DIM3};
+        auto permPost = uniqueExecutor->AllocIntArray(outputDims.data(), outputDims.size());
+        CHECK_RET(permPost != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    avgpoolOut = l0op::Transpose(avgpoolOut, permPost, uniqueExecutor.get());
-    CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
+        avgpoolOut = l0op::Transpose(avgpoolOut, permPost, uniqueExecutor.get());
+        CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    
     //Reshape 5D to 4D or 3D NCDHW->NCHW(NCL)
     shape = op::ToShapeVector(out->GetViewShape());
     shapeArray = uniqueExecutor->AllocIntArray(shape.data(), shape.size());
@@ -874,6 +908,7 @@ aclnnStatus aclnnAvgPool2dGetWorkspaceSize(
     bool isSupport2dTo3d = IfSupport2dTo3d();
     OP_LOGD("Current isSupport2dTo3d flag is: %d", isSupport2dTo3d);
 
+    auto cDims = self4d->GetViewShape().GetDim(NCHW_C_IDX);
     // 计算图构建
     if (CheckGlobalPool(avgPoolInfo)) {
         const aclTensor *cast4dTensor = nullptr;
@@ -899,7 +934,7 @@ aclnnStatus aclnnAvgPool2dGetWorkspaceSize(
                 ceilMode, exclusive, divisorOverride, out), ACLNN_ERR_INNER);
         }
     } else {
-        if (!CheckNeedChangeTo3D(avgPoolInfo) && CheckAvgPool(avgPoolInfo) && !ceilMode) {
+        if (!CheckNeedChangeTo3D(avgPoolInfo) && CheckAvgPool(avgPoolInfo) && !ceilMode && cDims < cMaxDims) {
             const aclTensor *cast4dTensor = nullptr;
             ret = ProcessDataTypeConvert(self, cubeMathType, uniqueExecutor, self4d, cast4dTensor);
             CHECK_RET(ret == ACLNN_SUCCESS, ret);

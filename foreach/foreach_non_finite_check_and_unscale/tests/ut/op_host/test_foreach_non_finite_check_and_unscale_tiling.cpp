@@ -1,18 +1,11 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- *
- * @file test_foreach_non_finite_check_and_unscale_tiling.cpp
- *
- * @brief
- *
- * @Version 2.0
- *
  */
 
 #include <iostream>
@@ -121,7 +114,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_float32_1)
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -213,7 +206,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_float16_1)
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -305,7 +298,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_bfloat16_1)
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -399,7 +392,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_float32_regbase)
     auto holder = gert::TilingContextFaker()
                       .SetOpType("ForeachNonFiniteCheckAndUnscale")
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -493,7 +486,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_float32_zero_size)
     auto holder = gert::TilingContextFaker()
                       .SetOpType("ForeachNonFiniteCheckAndUnscale")
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -589,7 +582,7 @@ TEST_F(ForeachNonFiniteCheckAndUnscaleTiling, test_tiling_float32_invalid_shape)
     auto holder = gert::TilingContextFaker()
                       .SetOpType("ForeachNonFiniteCheckAndUnscale")
                       .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
+                      .IrInstanceNum({1, 1, 1}, {1})
                       .InputShapes({&scaledGradsShapes, &foundInfShape, &invScaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

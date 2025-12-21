@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file foreach_pow_scalar_and_tensor_infershape.cpp
@@ -32,9 +32,12 @@ static ge::graphStatus InferShape4ForeachPowScalarAndTensor(gert::InferShapeCont
 
     std::string errMsg = optiling::ConcatString(
         "num of dynamic input1 ", inputInfo->GetInstanceNum(), "not equal num of dynamic output0 ", outputNum);
+    OP_CHECK_IF(
+        inputInfo->GetInstanceNum() != outputNum, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
+        return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < outputNum; i++) {
-        auto xShape = context->GetInputShape(i + 1);
+    for (uint32_t i = 0; i < inputInfo->GetInstanceNum(); i++) {
+        auto xShape = context->GetDynamicInputShape(1, i);
         auto yShape = context->GetOutputShape(i);
         if ((xShape == nullptr) || (yShape == nullptr)) {
             return ge::GRAPH_FAILED;
@@ -54,9 +57,12 @@ static ge::graphStatus InferDataType4ForeachPowScalarAndTensor(gert::InferDataTy
 
     std::string errMsg = optiling::ConcatString(
         "num of dynamic input1 ", inputInfomation->GetInstanceNum(), "not equal num of dynamic output0 ", outputNumber);
+    OP_CHECK_IF(
+        inputInfomation->GetInstanceNum() != outputNumber, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
+        return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < outputNumber; i++) {
-        auto xDtype = context->GetInputDataType(i + 1);
+    for (uint32_t i = 0; i < inputInfomation->GetInstanceNum(); i++) {
+        auto xDtype = context->GetDynamicInputDataType(1, i);
         context->SetOutputDataType(i, xDtype);
     }
     return ge::GRAPH_SUCCESS;

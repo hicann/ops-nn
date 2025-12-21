@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
@@ -784,3 +784,169 @@ TEST_F(group_norm_grad_test, test_case_mode3_bf16)
 
     free(path_);
 }
+
+// TEST_F(group_norm_grad_test, test_case_mode2_fp16)
+// {
+//     uint32_t N = 1;
+//     uint32_t C = 64;
+//     uint32_t HXW = 64 * 64;
+//     uint32_t G = 2;
+//     uint32_t NXG = N * G;
+//     uint32_t C_G = C / G;
+
+//     size_t dy_size = N * C * HXW * sizeof(half);
+//     size_t mean_size = NXG * sizeof(half);
+//     size_t rstd_size = NXG * sizeof(half);
+//     size_t x_size = dy_size;
+//     size_t gamma_size = C * sizeof(half);
+
+//     // outputs
+//     size_t dx_size = N * C * HXW * sizeof(half);
+//     size_t dgamma_size = C * sizeof(half);
+//     size_t dbeta_size = C * sizeof(half);
+//     size_t tiling_data_size = sizeof(GroupNormGradTilingData);
+
+//     uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dy_size);
+//     uint8_t* mean = (uint8_t*)AscendC::GmAlloc(mean_size);
+//     uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstd_size);
+//     uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+//     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+//     uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dx_size);
+//     uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgamma_size);
+//     uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbeta_size);
+
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+//     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+//     uint32_t blockDim = 2;
+
+//     char* path_ = get_current_dir_name();
+//     string path(path_);
+
+//     GroupNormGradTilingData* tilingDatafromBin = reinterpret_cast<GroupNormGradTilingData*>(tiling);
+//     tilingDatafromBin->Tiling_key = 2;               // 0
+//     tilingDatafromBin->N = 1;                        // 1
+//     tilingDatafromBin->C = 64;                       // 2
+//     tilingDatafromBin->HXW = 4096;                   // 3
+//     tilingDatafromBin->G = 2;                        // 4
+//     tilingDatafromBin->NXG = 2;                      // 5
+//     tilingDatafromBin->C_G = 32;                      // 6
+//     tilingDatafromBin->task_num_per_core = 1;        // 7
+//     tilingDatafromBin->task_num_per_tail_core = 1;   // 8
+//     tilingDatafromBin->tail_core = 2;                // 9
+//     tilingDatafromBin->mode1_ub_cap_C_num = 2;       // 10
+//     tilingDatafromBin->mode1_ub_iter_C_num = 16;      // 11
+//     tilingDatafromBin->mode1_ub_tail_C_num = 2;      // 12
+//     tilingDatafromBin->mode2_ub_capacity_ele = 0;    // 13
+//     tilingDatafromBin->mode2_ub_iteration_num = 0;   // 14
+//     tilingDatafromBin->mode2_ub_tail_num = 0;        // 15
+//     tilingDatafromBin->workSpaceSize = 64;            // 16
+//     tilingDatafromBin->stage2CoreUsed = 1;           // 17
+//     tilingDatafromBin->castEleNum = 64;               // 18
+//     tilingDatafromBin->tailCastNum = 64;              // 19
+//     tilingDatafromBin->coreBatchParts = 0;           // 20
+//     tilingDatafromBin->coreBatchPartsTailRepeat = 0; // 21
+//     tilingDatafromBin->repeatTime4Stage2 = 0;        // 22
+//     tilingDatafromBin->dx_is_require = 1;            // 23
+//     tilingDatafromBin->dgamma_is_require = 1;        // 24
+//     tilingDatafromBin->dbeta_is_require = 1;         // 25
+//     AscendC::SetKernelMode(KernelMode::AIV_MODE);
+//     ICPU_SET_TILING_KEY(1);
+//     ICPU_RUN_KF(
+//         group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+//         (uint8_t*)(tilingDatafromBin));
+//     AscendC::GmFree(dy);
+//     AscendC::GmFree(mean);
+//     AscendC::GmFree(rstd);
+//     AscendC::GmFree(x);
+//     AscendC::GmFree(gamma);
+//     AscendC::GmFree(dx);
+//     AscendC::GmFree(dgamma);
+//     AscendC::GmFree(dbeta);
+//     AscendC::GmFree(workspace);
+//     AscendC::GmFree(tiling);
+
+//     free(path_);
+// }
+
+// TEST_F(group_norm_grad_test, test_case_mode5_fp16_deterministic)
+// {
+//     uint32_t N = 32;
+//     uint32_t C = 64;
+//     uint32_t HXW = 1;
+//     uint32_t G = 2;
+//     uint32_t NXG = N * G;
+//     uint32_t C_G = C / G;
+
+//     size_t dy_size = N * C * HXW * sizeof(half);
+//     size_t mean_size = NXG * sizeof(half);
+//     size_t rstd_size = NXG * sizeof(half);
+//     size_t x_size = dy_size;
+//     size_t gamma_size = C * sizeof(half);
+
+//     // outputs
+//     size_t dx_size = N * C * HXW * sizeof(half);
+//     size_t dgamma_size = C * sizeof(half);
+//     size_t dbeta_size = C * sizeof(half);
+//     size_t tiling_data_size = sizeof(GroupNormGradTilingData);
+
+//     uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dy_size);
+//     uint8_t* mean = (uint8_t*)AscendC::GmAlloc(mean_size);
+//     uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstd_size);
+//     uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+//     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+//     uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dx_size);
+//     uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgamma_size);
+//     uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbeta_size);
+
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16 + 1024);
+//     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+//     uint32_t blockDim = 32;
+
+//     char* path_ = get_current_dir_name();
+//     string path(path_);
+
+//     GroupNormGradTilingData* tilingDatafromBin = reinterpret_cast<GroupNormGradTilingData*>(tiling);
+//     tilingDatafromBin->Tiling_key = 5;                // 0
+//     tilingDatafromBin->N = 32;                        // 1
+//     tilingDatafromBin->C = 64;                        // 2
+//     tilingDatafromBin->HXW = 1;                       // 3
+//     tilingDatafromBin->G = 2;                        // 4
+//     tilingDatafromBin->NXG = 64;                    // 5
+//     tilingDatafromBin->C_G = 32;                       // 6
+//     tilingDatafromBin->task_num_per_core = 2;        // 7
+//     tilingDatafromBin->task_num_per_tail_core = 2;   // 8
+//     tilingDatafromBin->tail_core = 32;                // 9
+//     tilingDatafromBin->mode1_ub_cap_C_num = 677;      // 10
+//     tilingDatafromBin->mode1_ub_iter_C_num = 1;       // 11
+//     tilingDatafromBin->mode1_ub_tail_C_num = 32;       // 12
+//     tilingDatafromBin->mode2_ub_capacity_ele = 0;     // 13
+//     tilingDatafromBin->mode2_ub_iteration_num = 0;    // 14
+//     tilingDatafromBin->mode2_ub_tail_num = 0;         // 15
+//     tilingDatafromBin->workSpaceSize = 1024;          // 16
+//     tilingDatafromBin->stage2CoreUsed = 1;            // 17
+//     tilingDatafromBin->castEleNum = 64;               // 18
+//     tilingDatafromBin->tailCastNum = 64;              // 19
+//     tilingDatafromBin->coreBatchParts = 16;           // 20
+//     tilingDatafromBin->coreBatchPartsTailRepeat = 16; // 21
+//     tilingDatafromBin->repeatTime4Stage2 = 1;         // 22
+//     tilingDatafromBin->dx_is_require = 1;             // 23
+//     tilingDatafromBin->dgamma_is_require = 1;         // 24
+//     tilingDatafromBin->dbeta_is_require = 1;          // 25
+//     AscendC::SetKernelMode(KernelMode::AIV_MODE);
+//     ICPU_SET_TILING_KEY(11);
+//     ICPU_RUN_KF(
+//         group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+//         (uint8_t*)(tilingDatafromBin));
+//     AscendC::GmFree(dy);
+//     AscendC::GmFree(mean);
+//     AscendC::GmFree(rstd);
+//     AscendC::GmFree(x);
+//     AscendC::GmFree(gamma);
+//     AscendC::GmFree(dx);
+//     AscendC::GmFree(dgamma);
+//     AscendC::GmFree(dbeta);
+//     AscendC::GmFree(workspace);
+//     AscendC::GmFree(tiling);
+
+//     free(path_);
+// }

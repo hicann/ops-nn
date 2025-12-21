@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <opdev/platform.h>
 #include "aclnn_kernels/cast.h"
@@ -28,20 +28,21 @@
 
 using namespace op;
 
-static const int64_t MAX_SUPPORT_DIM = 8L;
-static const int64_t LIMIT_EMBEDDING_DIM_NUM = 14336L;
-static const int64_t INT32_MAX_LIMIT = 2147483647L;
-static const int64_t INT32_INF = 2139095040L;
-static const uint64_t SINGLE_CORE_SORT_ROW_NUM = 192ULL;
-static const uint64_t CAST_MAX_NUM = 16777216ULL;
+static const int64_t MAX_SUPPORT_DIM = 8;
+static const int64_t LIMIT_EMBEDDING_DIM_NUM = 14336;
+static const uint64_t INT32_MAX_LIMIT = 2147483647;
+static const uint64_t INT32_INF = 2139095040;
+static const uint64_t SINGLE_CORE_SORT_ROW_NUM = 192;
+static const uint64_t CAST_MAX_NUM = 16777216;
 static const int MIN_SORT_CORE_NUM = 1;
 static const int MAX_SORT_CORE_NUM = 4;
 static const int OUT_SHAPE = 2;
 static const int SMALL_DIM_THRESH = 512;
 static const int BLOCK_SIZE = 32;
-static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048L;
-static const uint64_t MULTIPLES = 5ULL;
-static const int64_t GRAD_ROW_LIMIT = 1024L;
+static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048;
+static const uint64_t MULTIPLES = 5;
+static const int64_t GRAD_ROW_LIMIT = 512;
+static const int64_t SCALE_LIMIT_RATIO = 2;
 
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
@@ -182,13 +183,13 @@ static bool CheckIsSmallDimMode(const uint64_t embeddingDim, const uint64_t numW
     return deterministicValue == 0 && embeddingDim <= SMALL_DIM_THRESH && numWeights <= CAST_MAX_NUM;
 }
 
-static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights)
+static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, const bool scaleGradByFreq)
 {
     bool is910BSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool is910DSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
-    if (!is910BSocVersion && !is910DSocVersion) {
+    bool is91095SocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+    if (!is910BSocVersion && !is91095SocVersion) {
         return false;
     }
     int64_t gradRow = 1;
@@ -198,12 +199,16 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights)
     }
     auto embeddingDim = gradShape.GetDim(gradShape.GetDimNum() - 1);
     if (is910BSocVersion) {
-        return (gradRow <= INT32_MAX_LIMIT) && (numWeights <= INT32_MAX_LIMIT);
+        return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) && (numWeights <= INT32_MAX_LIMIT);
     }
 
-    return (gradRow <= INT32_MAX_LIMIT) &&
-           ((gradRow > embeddingDim && gradRow > GRAD_ROW_LIMIT) ||
-            (numWeights > embeddingDim * MULTIPLES && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
+    int64_t gradRowLimit = (grad->GetDataType() == ge::DT_FLOAT) ? \
+                            GRAD_ROW_LIMIT : (GRAD_ROW_LIMIT + GRAD_ROW_LIMIT);
+    
+    return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) &&
+           ((gradRow > embeddingDim && gradRow > gradRowLimit) ||
+            ((numWeights > embeddingDim * MULTIPLES || 
+            (embeddingDim / numWeights < SCALE_LIMIT_RATIO && scaleGradByFreq)) && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
 }
 
 static int64_t ComputeGradRow(const aclTensor* grad)
@@ -245,7 +250,7 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
 
     bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
     // 修改读取的数据类型
-    if (!is910D && gradRow < INT32_INF) {
+    if (!is910D && gradRow < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
         OP_LOGD("aclnnEmbeddingDenseGradV2: indice sort by aicore");
     }
@@ -312,7 +317,17 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
 
     auto gradCasted = gradContiguous;
     bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
-    if (!is910D) {
+    int64_t deterministicValue = 0;
+    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != ACL_ERROR_NONE) {
+        deterministicValue = 0;
+    }
+    bool needCast = scaleGradByFreq || deterministicValue != 0;
+    bool is910BSocVersion =
+        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    needCast = (is910BSocVersion && needCast) || !is910BSocVersion;
+    if (!is910D && needCast) {
         // grad如果是float16/bfloat16，需要cast为float32
         gradCasted = l0op::Cast(gradContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(gradCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -337,7 +352,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     const aclTensor* embeddingDenseBackwardResult = nullptr;
     auto castDtype = indicesContiguous->GetDataType();
     // 判断是走V1还是V2， 芯片为910或者embeddingDim过大时就走V1，否则走V2
-    if (IsComputeByV2(gradCasted, numWeights)) {
+    if (IsComputeByV2(gradCasted, numWeights, scaleGradByFreq)) {
         if (!is910D && castDtype != op::DataType::DT_INT32) {
             // v2只支持int32的数据类型
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());

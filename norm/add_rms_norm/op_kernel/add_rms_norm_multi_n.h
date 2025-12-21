@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_rms_norm_multi_n.h
@@ -27,25 +27,27 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* __restrict__ tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
-        uint32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
         this->numRow = tiling->num_row;
         this->numCol = tiling->num_col;
+        this->numColAlign = tiling->num_col_align;
         this->blockFactor = tiling->block_factor;
         this->rowFactor = tiling->row_factor;
         this->ubFactor = tiling->ub_factor;
         this->epsilon = tiling->epsilon;
-        this->numColAlign = AlignUp(numCol, numPerBlock);
-        this->avgFactor = (numCol != 0) ? (float)1.0 / numCol : 0;
+        this->avgFactor = tiling->avg_factor;
 
         blockIdx_ = GetBlockIdx();
         if (blockIdx_ < GetBlockNum() - 1) {
             this->rowWork = blockFactor;
+            this->rowLoop = tiling->row_loop;
+            this->rowTail = tiling->row_tail;
         } else if (blockIdx_ == GetBlockNum() - 1) {
-            this->rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
-        } else {
+            this->rowWork = tiling->last_block_factor;
+            this->rowLoop = tiling->last_block_row_loop;
+            this->rowTail = tiling->last_block_row_tail;
         }
         // get start index for current core, core parallel
         x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
@@ -71,7 +73,6 @@ public:
         Ppipe->InitBuffer(reduceFp32Buf, NUM_PER_REP_FP32 * sizeof(float));
         Ppipe->InitBuffer(offsetBuf, rowFactor * NUM_PER_BLK_FP32 * sizeof(uint32_t));
     }
-
     __aicore__ inline void Process()
     {
         CopyInGamma();
@@ -80,17 +81,14 @@ public:
         for (uint32_t i = 0; i < rowFactor; i++) {
             Duplicate(offsetLocal[i * NUM_PER_BLK_FP32], i * ONE_BLK_SIZE, NUM_PER_BLK_FP32);
         }
-        uint32_t i_o_max = RmsNorm::CeilDiv(rowWork, rowFactor);
-        uint32_t row_tail = rowWork - (i_o_max - 1) * rowFactor;
-
-        for (uint32_t i_o = 0; i_o < i_o_max - 1; i_o++) {
-            SubProcess(i_o, rowFactor, gammaLocal);
+        for (uint32_t i_o = 0; i_o < rowLoop - 1; i_o++) {
+            SubProcessHalf(i_o, rowFactor, gammaLocal);
         }
-        SubProcess(i_o_max - 1, row_tail, gammaLocal);
+        SubProcessHalf(rowLoop - 1, rowTail, gammaLocal);
         inQueueGamma.FreeTensor(gammaLocal);
     }
 
-    __aicore__ inline void SubProcess(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
+    __aicore__ inline void SubProcessHalf(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
         uint32_t gm_bias = i_o * rowFactor * numCol;
         CopyInX(gm_bias, calc_row_num);
@@ -126,7 +124,18 @@ private:
         LocalTensor<T> x1Local = inQueueX.DeQue<T>();
         LocalTensor<T> x2Local = inQueueX.DeQue<T>();
         LocalTensor<T> xLocal = outQueueY.AllocTensor<T>();
-        Add(xLocal, x1Local, x2Local, calc_num);
+        if constexpr (!is_same<T, bfloat16_t>::value) {
+            Add(xLocal, x1Local, x2Local, calc_num);
+        } else {
+            LocalTensor<float> x1Fp32 = xFp32Buf.Get<float>();
+            LocalTensor<float> x2Fp32 = sqxBuf.Get<float>();
+            Cast(x1Fp32, x1Local, RoundMode::CAST_NONE, calc_num);
+            Cast(x2Fp32, x2Local, RoundMode::CAST_NONE, calc_num);
+            PipeBarrier<PIPE_V>();
+            Add(x1Fp32, x1Fp32, x2Fp32, calc_num);
+            PipeBarrier<PIPE_V>();
+            Cast(xLocal, x1Fp32, RoundMode::CAST_RINT, calc_num);
+        }
         inQueueX.FreeTensor(x1Local);
         inQueueX.FreeTensor(x2Local);
         outQueueY.EnQue(xLocal);
@@ -178,12 +187,10 @@ private:
         int32_t bodyCount = repeatTimes * NUM_PER_REP_FP32;
 
         if (likely(repeatTimes > 0)) {
-            Div(rstdLocal, reduce_buf_local, rstdLocal, NUM_PER_REP_FP32, repeatTimes,
-                {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
+            Div(rstdLocal, reduce_buf_local, rstdLocal, NUM_PER_REP_FP32, repeatTimes, {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
         if (unlikely(tailCount != 0)) {
-            Div(rstdLocal[bodyCount], reduce_buf_local, rstdLocal[bodyCount], tailCount, 1,
-                {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
+            Div(rstdLocal[bodyCount], reduce_buf_local, rstdLocal[bodyCount], tailCount, 1, {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
         PipeBarrier<PIPE_V>();
     }
@@ -211,11 +218,27 @@ private:
         }
         PipeBarrier<PIPE_V>();
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
-        Cast(yLocal, x_fp32, RoundMode::CAST_NONE, calc_row_num * numColAlign);
-        PipeBarrier<PIPE_V>();
+        if constexpr (is_same<T, half>::value) {
+          Cast(yLocal, x_fp32, RoundMode::CAST_NONE, calc_row_num * numColAlign);
+          PipeBarrier<PIPE_V>();
 
-        for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            Mul(yLocal[i_i * numColAlign], gammaLocal, yLocal[i_i * numColAlign], numCol);
+          for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
+              Mul(yLocal[i_i * numColAlign], gammaLocal, yLocal[i_i * numColAlign], numCol);
+          }
+        } else {
+          Cast(yLocal, x_fp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
+          PipeBarrier<PIPE_V>();
+          LocalTensor<float> yfp32 = xFp32Buf.Get<float>();
+          Cast(yfp32, yLocal, RoundMode::CAST_NONE, calc_row_num * numColAlign);
+          PipeBarrier<PIPE_V>();
+          LocalTensor<float> gammaFp32 = sqxBuf.Get<float>();
+          Cast(gammaFp32, gammaLocal, RoundMode::CAST_NONE, numCol);
+          PipeBarrier<PIPE_V>();
+          for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
+              Mul(yfp32[i_i * numColAlign], gammaFp32, yfp32[i_i * numColAlign], numCol);
+          }
+          PipeBarrier<PIPE_V>();
+          Cast(yLocal, yfp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
         }
         PipeBarrier<PIPE_V>();
         outQueueY.EnQue<T>(yLocal);
@@ -274,5 +297,7 @@ private:
     uint32_t numColAlign;
     int32_t blockIdx_;
     uint32_t rowWork = 1;
+    uint32_t rowLoop = 1;
+    uint32_t rowTail = 0;
 };
 #endif // ADD_RMS_NORM_H_

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file transpose_batch_mat_mul_tiling_advanced.cc
@@ -48,7 +48,7 @@ static inline void TBMMGetDtype(const gert::TilingContext &context, MatMulV3Args
     args.cType = context.GetOutputDesc(0)->GetDataType();
     // op_impl_mode_enum: 0x1: default 0x2: high_performance 0x4: high_precision 0x8: super_performance
     // 0x10: support_of_bound_index 0x20: enable_float_32_execution 0x40: enable_hi_float_32_execution
-    if (context.GetAttrs()->GetAttrNum() == HF32_ATTR_NUM) {
+    if (context.GetAttrs()->GetAttrNum() >= HF32_ATTR_NUM) {
         args.isHf32 = *context.GetAttrs()->GetAttrPointer<bool>(HF32_ATTR_INDEX);
     }
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
@@ -139,7 +139,9 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
     const gert::ContinuousVector *yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     if(aPermList != nullptr && aPermList->GetSize() == ALLOW_DIM) {
         const int64_t *aPerm = static_cast<const int64_t *>(aPermList->GetData());
-        bool aPermCheck = (aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L); // aPerm is [1,0,2]
+        bool aPermCheck =
+            ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
+            ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
         OP_TILING_CHECK(!aPermCheck,
             CUBE_INNER_ERR_REPORT(args.opName, "unsupport aPerm value"), return ge::GRAPH_FAILED);
     }
@@ -151,7 +153,7 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
             CUBE_INNER_ERR_REPORT(args.opName, "unsupport bPerm value"), return ge::GRAPH_FAILED);
     }
     if(yPermList != nullptr && yPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *yPerm = reinterpret_cast<const int64_t *>(yPermList->GetData());
+        const int64_t *yPerm = static_cast<const int64_t *>(yPermList->GetData());
         bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
         OP_TILING_CHECK(!yPermCheck,
             CUBE_INNER_ERR_REPORT(args.opName, "unsupport yPerm value"), return ge::GRAPH_FAILED);
@@ -159,6 +161,15 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
 
     OP_TILING_CHECK((TBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
+
+    if (attrs->GetAttrNum() >= ATTR_NUM) {
+        uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
+        bool batchSplitFactorPermCheck =
+            aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] % batchSplitFactor == 0;
+        OP_TILING_CHECK(!batchSplitFactorPermCheck,
+                        CUBE_INNER_ERR_REPORT(args.opName, "batch_split_factor is not supported."),
+                        return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 }
@@ -200,6 +211,9 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
                                     attrs->GetAttrPointer<int32_t>(HF32_ATTR_INDEX - 1)); // 检查倒数第2个属性
         OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(HF32_ATTR_INDEX));
     }
+    if (attrs->GetAttrNum() >= ATTR_NUM) {
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
+    }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
     return ge::GRAPH_SUCCESS;
 }
@@ -222,15 +236,14 @@ ge::graphStatus TransposeBatchMatMulTiling::DoTiling()
     }
     MatMulV3BatchInfo tempBatchInfo;
     OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
-        CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"),
-        return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
-    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), reinterpret_cast<void *>(&args_));
+    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
     platform_ascendc::SocVersion socVersion =
-        reinterpret_cast<const MatmulV3CompileInfo *>(tilingCfg.compileInfo)->socVersion;
-    MMRegisterCfg registerCfg{ "TransposeBatchMatMul", socVersion,
-                               strategy::GetTransposeBatchMatMulPriorities(socVersion) };
+        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->socVersion;
+    MMRegisterCfg registerCfg{"TransposeBatchMatMul", socVersion,
+                              strategy::GetTransposeBatchMatMulPriorities(socVersion)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 

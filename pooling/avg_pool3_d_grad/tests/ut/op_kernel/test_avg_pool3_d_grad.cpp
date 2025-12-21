@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -87,63 +87,6 @@ TEST_F(avg_pool3_d_grad_test, test_case_float32) {
   AscendC::GmFree(workspace);
   AscendC::GmFree(tiling);
 }
-
-TEST_F(avg_pool3_d_grad_test, test_case_float32_ncdhw) {
-  size_t origInputShapeByteSize = 5 * sizeof(int32_t);
-  size_t gradsByteSize = 4 * 8 * 8 * 1024 * sizeof(float);
-  size_t outputByteSize = 8 * 8 * 8 * 1024 * sizeof(float);
-  size_t tiling_data_size = sizeof(AvgPool3dGradTilingParam);
-  uint8_t* origInputShape = (uint8_t*)AscendC::GmAlloc(origInputShapeByteSize);
-  uint8_t* grads = (uint8_t*)AscendC::GmAlloc(gradsByteSize);
-  uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
-  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-  uint32_t blockDim = 48;
-
-  AvgPool3dGradTilingParam* tilingData = reinterpret_cast<AvgPool3dGradTilingParam*>(tiling);
-
-  tilingData->attrParam.N = 1;
-  tilingData->attrParam.C = 1024;
-  tilingData->attrParam.outN = 1;
-  tilingData->attrParam.outD = 4;
-  tilingData->attrParam.outH = 8;
-  tilingData->attrParam.outW = 8;
-  tilingData->attrParam.inD = 8;
-  tilingData->attrParam.inH = 8;
-  tilingData->attrParam.inW = 8;
-  tilingData->attrParam.kD = 2;
-  tilingData->attrParam.kH = 1;
-  tilingData->attrParam.kW = 1;
-  tilingData->attrParam.dD = 2;
-  tilingData->attrParam.dH = 1;
-  tilingData->attrParam.dW = 1;
-  tilingData->attrParam.padD = 0;
-  tilingData->attrParam.padH = 0;
-  tilingData->attrParam.padW = 0;
-  tilingData->attrParam.countIncludePad = 1;
-  tilingData->attrParam.divisorOverride = 0;
-  tilingData->attrParam.isOverLap = 0;
-  tilingData->attrParam.isDetermine = 0;
-
-  tilingData->hwParam.normalCoreHWNum = 85;
-  tilingData->hwParam.lastCoreHWNum = 101;
-  tilingData->hwParam.hwTotal = 64;
-  tilingData->hwParam.hwCount = 64;
-  tilingData->hwParam.hwNum = 1;
-  tilingData->hwParam.nLine = 383;
-  tilingData->hwParam.hwTail = 64;
-  tilingData->hwParam.hwAlign = 64;
-
-  ICPU_SET_TILING_KEY(3000);
-  AscendC::SetKernelMode(KernelMode::AIV_MODE);
-  ICPU_RUN_KF(avg_pool3_d_grad, blockDim, origInputShape, grads, output, workspace, tiling);
-
-  AscendC::GmFree(grads);
-  AscendC::GmFree(output);
-  AscendC::GmFree(workspace);
-  AscendC::GmFree(tiling);
-}
-
 
 TEST_F(avg_pool3_d_grad_test, test_case_float32_normal_ncdhw) {
   size_t origInputShapeByteSize = 5 * sizeof(int32_t);

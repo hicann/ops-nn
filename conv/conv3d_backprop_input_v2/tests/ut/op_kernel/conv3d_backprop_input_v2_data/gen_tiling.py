@@ -49,9 +49,30 @@ params_case_2 = [
     1, 1, 8, 8, 1, 1, 1, 1, 1, 0, 96, 0, 256, 0,
 ]
 
+params_case_group_depthwise_1 = [
+    2, 1, 4, 1, 1, 1, # batchDim, groupDim, mDim, kDim, nDim, dDim
+    8, 0, # coreNum, unknown
+    # conv tiling as belows
+    2, 256, 256, 16, 16, 1, 1, 16, 4, # batch, cin, cout, cout1, cin1, cout1G, cin1G, c0, c0Bits
+    1, 4, 4, # dout, ho, wo
+    1, 8, 8, # di, hi, wi
+    1, 2, 2, # dk, hk, wk
+    16, 1, 2, 2, # group strideD, strideH, strideW
+    0, 0, 0, 0, 0, 0, 1, 0, 1, 1, # pads & bp_pads
+    1, 1, 1, # dilations
+    2, 2, 1, 1, 1, # al0pb, bl0pb, cl0pb, al1pb, bl1pb
+    16, 256, 1, 1, 1, 1, # sGroup, sCout, sCout1, sCin1, sDin, sHo
+    16, 64, 16, 1, 1, 1, # baseM, baseK, baseN, baseD, baseBatch, baseGroup
+    # stepM, stepN, stepKa, stepKb, stepBatch, stepGroup,
+    1, 1, 2, 2, 1, 1,
+    # iterateOrder, hf32Flag, initOutputFlag, outputPadD, outputPadH, reserved, sBatch, sM, sCin
+    1, 0, 0, 0, 0, 0, 1, 0, 16, 0, 256, 0,
+]
+
 params_info = {
     "test_case_1": params_case_1,
     "test_case_2": params_case_2,
+    "test_case_3": params_case_group_depthwise_1,
 }
 
 def main():

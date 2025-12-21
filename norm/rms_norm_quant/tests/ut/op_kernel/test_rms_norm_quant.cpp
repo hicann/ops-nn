@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_rms_norm_quant.cpp
@@ -75,7 +75,6 @@ TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0100000001)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
 
@@ -94,6 +93,7 @@ TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0100000001)
     tilingData->offset = 0;
     tilingData->highPrecisionMode = 0;
     tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(0b0100000001);
     ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
@@ -105,3 +105,482 @@ TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0100000001)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0101000001)
+{
+    // half & slice
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0101000001);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0000000001)
+{
+    // half & FastCompute
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0000000001);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0001000001)
+{
+    // half & slice
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0001000001);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0100011011)
+{
+    // bf16 & FastCompute
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0100011011);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0000011011)
+{
+    // bf16 & FastCompute
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0000011011);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0101011011)
+{
+    // bf16 & slice
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0101011011);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0001011011)
+{
+    // bf16 & slice
+    uint32_t x_shape = 32 * 32 * 512;
+    uint32_t gamma_shape = 1 * 512;
+    uint32_t beta_shape = 1 * 512;
+    uint32_t scale_and_offset_shape = 32;
+
+    uint32_t result_shape = 32 * 32 * 512;
+    // inputs
+    size_t x_size = x_shape * sizeof(uint16_t);
+    size_t gamma_size = gamma_shape * sizeof(uint16_t);
+    size_t beta_size = beta_shape * sizeof(uint16_t);
+    size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+    size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+    size_t result_size = result_shape * sizeof(uint8_t);
+    size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(beta_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+    uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+    tilingData->numCore = 47;
+    tilingData->numCol = 512;
+    tilingData->numRow = 1024;
+    tilingData->avgFactor = static_cast<float>(1.0 / 512);
+    tilingData->epsilon = 0.01;
+
+    tilingData->sliceSize = 8192;
+    tilingData->sliceNum = 1; // MaxSliceSize = 8192
+    tilingData->tailSliceSize = 0;
+
+    tilingData->quantMin = -128;
+    tilingData->scale = 1.0;
+    tilingData->offset = 0;
+    tilingData->highPrecisionMode = 0;
+    tilingData->gemmaMode = 0;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(0b0001011011);
+    ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, beta, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(result);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+// rms_norm_quant
+// TEST_F(rms_norm_atb_test, test_rms_norm_quant_fp16_tilingKey_0b0001000001)
+// {
+//     // half & FastCompute
+//     uint32_t x_shape = 32 * 32 * 16384;
+//     uint32_t gamma_shape = 1 * 16384;
+//     uint32_t scale_and_offset_shape = 32;
+
+//     uint32_t result_shape = 32 * 32 * 16384;
+//     // inputs
+//     size_t x_size = x_shape * sizeof(uint16_t);
+//     size_t gamma_size = gamma_shape * sizeof(uint16_t);
+//     size_t scale_size = scale_and_offset_shape * sizeof(uint16_t);
+//     size_t offset_size = scale_and_offset_shape * sizeof(int8_t);
+
+//     size_t result_size = result_shape * sizeof(uint8_t);
+//     size_t tiling_data_size = sizeof(NormCommonTilingData1);
+
+//     uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+//     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gamma_size);
+//     uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+//     uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+
+//     uint8_t* result = (uint8_t*)AscendC::GmAlloc(result_size);
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024); // 待定，如何计算
+//     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+//     uint32_t blockDim = 1;
+
+//     NormCommonTilingData1* tilingData = reinterpret_cast<NormCommonTilingData1*>(tiling);
+
+//     tilingData->numCore = 47;
+//     tilingData->numCol = 16384;
+//     tilingData->numRow = 1024;
+//     tilingData->avgFactor = static_cast<float>(1.0 / 16384);
+//     tilingData->epsilon = 0.01;
+
+//     tilingData->sliceSize = 8192;
+//     tilingData->sliceNum = 2; // MaxSliceSize = 8192
+//     tilingData->tailSliceSize = 0;
+
+//     tilingData->quantMin = -128;
+//     tilingData->scale = 1.0;
+//     tilingData->offset = 0;
+//     tilingData->highPrecisionMode = 0;
+//     tilingData->gemmaMode = 0;
+//     AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+//     ICPU_SET_TILING_KEY(0b0001000001);
+//     ICPU_RUN_KF(rms_norm_quant, blockDim, x, gamma, nullptr, scale, offset, result, workspace, (uint8_t*)tilingData);
+
+//     AscendC::GmFree(x);
+//     AscendC::GmFree(gamma);
+//     AscendC::GmFree(scale);
+//     AscendC::GmFree(offset);
+//     AscendC::GmFree(result);
+//     AscendC::GmFree(workspace);
+//     AscendC::GmFree(tiling);
+// }

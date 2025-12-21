@@ -8,5 +8,5 @@
 #/
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    
+    AddOpTestCase(dequant_swiglu_quant "ascend910B1" "" )
 endif()

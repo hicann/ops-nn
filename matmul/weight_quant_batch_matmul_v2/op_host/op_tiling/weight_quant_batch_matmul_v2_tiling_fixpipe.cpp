@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -25,19 +25,24 @@ constexpr uint64_t INT8_BLOCK_CUBE_TRANSPOSE = 32UL;
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingFixpipe::PostTiling()
 {
-    OP_LOGD(opName_, "final tiling data size: %zu", tilingData_->GetDataSize());
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2FixpipeTilingData);
+    OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize);
 
     OP_TILING_CHECK(
-        tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingData_->GetDataSize()),
+        tilingDataSize % sizeof(uint64_t) != 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize),
         return ge::GRAPH_FAILED);
 
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     // 计算aic num n方向分核*m方向分核
     context_->SetBlockDim(
-        tilingData_->get_nBlockNum() *
-        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(tilingData_->get_singleCoreM())));
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        tilingData_->nBlockNum *
+        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(tilingData_->singleCoreM)));
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -151,11 +156,12 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingFixpipe::InstantiateTilingData()
     OP_TILING_CHECK(
         tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
         return ge::GRAPH_FAILED);
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2FixpipeTilingData);
     OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingData_->GetDataSize(),
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
         VECTOR_INNER_ERR_REPORT_TILIING(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingData_->GetDataSize()),
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -166,7 +172,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingFixpipe::DoOpTiling()
         InstantiateTilingData() == ge::GRAPH_FAILED,
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
-    tilingData_->set_hasBias(matmulInfoPtr_->hasBias);
+    tilingData_->hasBias = matmulInfoPtr_->hasBias;
     // 保证kernel的数据32对齐，避免为了处理16的尾块而引入其他计算
     uint64_t singleCoreN =
         ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(compileInfoPtr_->aicNum)), 32UL);
@@ -192,15 +198,15 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingFixpipe::DoOpTiling()
     } else {
         aFullLoad_ = 1;
     }
-    tilingData_->set_nBlockNum(nBlkNum);
-    tilingData_->set_baseK(baseK);
-    tilingData_->set_baseM(singleCoreM);
-    tilingData_->set_baseN(baseN);
-    tilingData_->set_singleCoreM(std::min(matmulInfoPtr_->mSize, singleCoreM)); // 核内不切m
-    tilingData_->set_singleCoreN(singleCoreN);
-    tilingData_->set_mSize(matmulInfoPtr_->mSize);
-    tilingData_->set_kSize(matmulInfoPtr_->kSize);
-    tilingData_->set_nSize(matmulInfoPtr_->nSize);
+    tilingData_->nBlockNum = nBlkNum;
+    tilingData_->baseK = baseK;
+    tilingData_->baseM = singleCoreM;
+    tilingData_->baseN = baseN;
+    tilingData_->singleCoreM = std::min(matmulInfoPtr_->mSize, singleCoreM); // 核内不切m
+    tilingData_->singleCoreN = singleCoreN;
+    tilingData_->mSize = matmulInfoPtr_->mSize;
+    tilingData_->kSize = matmulInfoPtr_->kSize;
+    tilingData_->nSize = matmulInfoPtr_->nSize;
     return ge::GRAPH_SUCCESS;
 }
 

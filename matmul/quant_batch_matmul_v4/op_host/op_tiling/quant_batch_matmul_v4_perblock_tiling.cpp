@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v4_perblock_tiling.cpp
@@ -294,8 +294,8 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::SetBasicTilingValue() {
     basicTiling_.stepKa = STEP_KA;
     basicTiling_.stepKb = STEP_KB;
     basicTiling_.dbL0c = DB_L0C;
-    tilingData_->matmulTiling.set_dbL0A(DB_L0A);
-    tilingData_->matmulTiling.set_dbL0B(DB_L0B);
+    tilingData_->matmulTiling.dbL0A = DB_L0A;
+    tilingData_->matmulTiling.dbL0B = DB_L0B;
 
     OP_LOGE_IF(basicTiling_.baseN % ALIGN32 != 0, ge::GRAPH_FAILED, inputParams_.opName, "BaseN aligns with 32.");
 
@@ -310,38 +310,38 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::SetBasicTilingValue() {
 }
 
 void QuantBatchMatmulV4PerblockTiling::SetTilingData() {
-    tilingData_->matmulTiling.set_M(inputParams_.mSize);
-    tilingData_->matmulTiling.set_N(inputParams_.nSize);
-    tilingData_->matmulTiling.set_Ka(inputParams_.kSize);
-    tilingData_->matmulTiling.set_Kb(inputParams_.kSize);
-    tilingData_->matmulTiling.set_usedCoreNum(basicTiling_.usedCoreNum);
-    tilingData_->matmulTiling.set_singleCoreM(basicTiling_.baseM);
-    tilingData_->matmulTiling.set_singleCoreN(basicTiling_.baseN);
-    tilingData_->matmulTiling.set_singleCoreK(basicTiling_.singleCoreK);
-    tilingData_->matmulTiling.set_baseM(basicTiling_.baseM);
-    tilingData_->matmulTiling.set_baseN(basicTiling_.baseN);
-    tilingData_->matmulTiling.set_baseK(basicTiling_.baseK);
-    tilingData_->matmulTiling.set_depthA1(basicTiling_.depthA1);
-    tilingData_->matmulTiling.set_depthB1(basicTiling_.depthB1);
-    tilingData_->matmulTiling.set_stepM(basicTiling_.stepM);
-    tilingData_->matmulTiling.set_stepN(basicTiling_.stepN);
-    tilingData_->matmulTiling.set_stepKa(basicTiling_.stepKa);
-    tilingData_->matmulTiling.set_stepKb(basicTiling_.stepKb);
-    tilingData_->matmulTiling.set_iterateOrder(basicTiling_.iterateOrder);
-    tilingData_->matmulTiling.set_dbL0C(basicTiling_.dbL0c);  // 1: off, 2:on
-    tilingData_->tileL2cacheTiling.set_mTileCntL2(basicTiling_.mTileCntl2);
-    tilingData_->tileL2cacheTiling.set_nTileCntL2(basicTiling_.nTileCntl2);
-    tilingData_->tileL2cacheTiling.set_mTileBlock(basicTiling_.mTileBlock);
-    tilingData_->tileL2cacheTiling.set_nTileBlock(basicTiling_.nTileBlock);
-    tilingData_->tileL2cacheTiling.set_calOrder(basicTiling_.calOrder);
-    tilingData_->tileL2cacheTiling.set_isBasicTiling(1U);
-    tilingData_->set_groupSizeM(inputParams_.groupSizeM);
-    tilingData_->set_groupSizeN(inputParams_.groupSizeN);
-    tilingData_->set_groupSizeK(inputParams_.groupSizeK);
-    tilingData_->set_ubCalcM(basicTiling_.baseM / CV_PARALL_NUM);
-    tilingData_->set_ubCalcN(basicTiling_.baseN);
-    tilingData_->set_transA(inputParams_.transA);
-    tilingData_->set_transB(inputParams_.transB);
+    tilingData_->matmulTiling.M = inputParams_.mSize;
+    tilingData_->matmulTiling.N = inputParams_.nSize;
+    tilingData_->matmulTiling.Ka = inputParams_.kSize;
+    tilingData_->matmulTiling.Kb = inputParams_.kSize;
+    tilingData_->matmulTiling.usedCoreNum = basicTiling_.usedCoreNum;
+    tilingData_->matmulTiling.singleCoreM = basicTiling_.baseM;
+    tilingData_->matmulTiling.singleCoreN = basicTiling_.baseN;
+    tilingData_->matmulTiling.singleCoreK = basicTiling_.singleCoreK;
+    tilingData_->matmulTiling.baseM = basicTiling_.baseM;
+    tilingData_->matmulTiling.baseN = basicTiling_.baseN;
+    tilingData_->matmulTiling.baseK = basicTiling_.baseK;
+    tilingData_->matmulTiling.depthA1 = basicTiling_.depthA1;
+    tilingData_->matmulTiling.depthB1 = basicTiling_.depthB1;
+    tilingData_->matmulTiling.stepM = basicTiling_.stepM;
+    tilingData_->matmulTiling.stepN = basicTiling_.stepN;
+    tilingData_->matmulTiling.stepKa = basicTiling_.stepKa;
+    tilingData_->matmulTiling.stepKb = basicTiling_.stepKb;
+    tilingData_->matmulTiling.iterateOrder = basicTiling_.iterateOrder;
+    tilingData_->matmulTiling.dbL0C = basicTiling_.dbL0c;  // 1: off, 2:on
+    tilingData_->tileL2cacheTiling.mTileCntL2 = basicTiling_.mTileCntl2;
+    tilingData_->tileL2cacheTiling.nTileCntL2 = basicTiling_.nTileCntl2;
+    tilingData_->tileL2cacheTiling.mTileBlock = basicTiling_.mTileBlock;
+    tilingData_->tileL2cacheTiling.nTileBlock = basicTiling_.nTileBlock;
+    tilingData_->tileL2cacheTiling.calOrder = basicTiling_.calOrder;
+    tilingData_->tileL2cacheTiling.isBasicTiling = 1U;
+    tilingData_->groupSizeM = inputParams_.groupSizeM;
+    tilingData_->groupSizeN = inputParams_.groupSizeN;
+    tilingData_->groupSizeK = inputParams_.groupSizeK;
+    tilingData_->ubCalcM = basicTiling_.baseM / CV_PARALL_NUM;
+    tilingData_->ubCalcN = basicTiling_.baseN;
+    tilingData_->transA = inputParams_.transA;
+    tilingData_->transB = inputParams_.transB;
 }
 
 ge::graphStatus QuantBatchMatmulV4PerblockTiling::DoOpTiling()
@@ -375,10 +375,11 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::InstantiateTilingData()
             return ge::GRAPH_FAILED);
         tilingData_ = tilingDataManager_.get();
     }
+    size_t tilingDataSize = sizeof(QuantBatchMatmulV4PerblockTilingData);
     OP_TILING_CHECK(tilingData_ == nullptr,
                     VECTOR_INNER_ERR_REPORT_TILIING(
                         inputParams_.opName, "actual tiling data size %zu > tiling data capacity %zu",
-                        tilingData_->GetDataSize(), context_->GetRawTilingData()->GetCapacity()),
+                        tilingDataSize, context_->GetRawTilingData()->GetCapacity()),
                     return ge::GRAPH_SUCCESS;);
     return ge::GRAPH_SUCCESS;
 }
@@ -403,10 +404,15 @@ const gert::Shape QuantBatchMatmulV4PerblockTiling::GetOptionShape(const size_t 
 
 ge::graphStatus QuantBatchMatmulV4PerblockTiling::DoLibApiTiling()
 {
+    size_t tilingDataSize = sizeof(QuantBatchMatmulV4PerblockTilingData);
     context_->SetBlockDim(compileInfo_.aicNum);
     context_->SetScheduleMode(1);   // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(&tilingData_), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -424,23 +430,23 @@ void QuantBatchMatmulV4PerblockTiling::PrintMatmulTilingData()
     if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
         return;
     }
-    optiling::TCubeTiling &matmulTiling = tilingData_->matmulTiling;
+    auto &matmulTiling = tilingData_->matmulTiling;
     std::stringstream ss;
-    ss << " M: " << matmulTiling.get_M() << " N: " << matmulTiling.get_N() << " Ka: " << matmulTiling.get_Ka()
-       << " Kb: " << matmulTiling.get_Kb() << " singleCoreM: " << matmulTiling.get_singleCoreM()
-       << " singleCoreN: " << matmulTiling.get_singleCoreN() << " singleCoreK: " << matmulTiling.get_singleCoreK()
-       << " baseM: " << matmulTiling.get_baseM() << " baseN: " << matmulTiling.get_baseN()
-       << " baseK: " << matmulTiling.get_baseK() << " depthA1: " << matmulTiling.get_depthA1()
-       << " depthB1: " << matmulTiling.get_depthB1() << " stepM: " << matmulTiling.get_stepM()
-       << " stepN: " << matmulTiling.get_stepN() << " stepka: " << matmulTiling.get_stepKa()
-       << " stepkb: " << matmulTiling.get_stepKb() << " isBias: " << matmulTiling.get_isBias()
-       << " transLength: " << matmulTiling.get_transLength() << " iterateOrder: " << matmulTiling.get_iterateOrder()
-       << " shareMode: " << matmulTiling.get_shareMode() << " dbL0A: " << matmulTiling.get_dbL0A()
-       << " dbL0B: " << matmulTiling.get_dbL0B() << " dbL0C: " << matmulTiling.get_dbL0C()
-       << " usedL1Size: " << matmulTiling.get_shareL1Size() << " usedL0CSize: " << matmulTiling.get_shareL0CSize()
-       << " usedUBSize: " << matmulTiling.get_shareUbSize() << " batchM: " << matmulTiling.get_batchM()
-       << " singleBatchN: " << matmulTiling.get_singleBatchN() << " usedCoreNum: " << matmulTiling.get_usedCoreNum()
-       << " batchN: " << matmulTiling.get_batchN() << " singleBatchM: " << matmulTiling.get_singleBatchM();
+    ss << " M: " << matmulTiling.M << " N: " << matmulTiling.N << " Ka: " << matmulTiling.Ka
+       << " Kb: " << matmulTiling.Kb << " singleCoreM: " << matmulTiling.singleCoreM
+       << " singleCoreN: " << matmulTiling.singleCoreN << " singleCoreK: " << matmulTiling.singleCoreK
+       << " baseM: " << matmulTiling.baseM << " baseN: " << matmulTiling.baseN
+       << " baseK: " << matmulTiling.baseK << " depthA1: " << matmulTiling.depthA1
+       << " depthB1: " << matmulTiling.depthB1 << " stepM: " << matmulTiling.stepM
+       << " stepN: " << matmulTiling.stepN << " stepka: " << matmulTiling.stepKa
+       << " stepkb: " << matmulTiling.stepKb << " isBias: " << matmulTiling.isBias
+       << " transLength: " << matmulTiling.transLength << " iterateOrder: " << matmulTiling.iterateOrder
+       << " shareMode: " << matmulTiling.shareMode << " dbL0A: " << matmulTiling.dbL0A
+       << " dbL0B: " << matmulTiling.dbL0B << " dbL0C: " << matmulTiling.dbL0C
+       << " usedL1Size: " << matmulTiling.shareL1Size << " usedL0CSize: " << matmulTiling.shareL0CSize
+       << " usedUBSize: " << matmulTiling.shareUbSize << " batchM: " << matmulTiling.batchM
+       << " singleBatchN: " << matmulTiling.singleBatchN << " usedCoreNum: " << matmulTiling.usedCoreNum
+       << " batchN: " << matmulTiling.batchN << " singleBatchM: " << matmulTiling.singleBatchM;
     OPS_LOG_D(inputParams_.opName, "matmulTiling: %s", ss.str().c_str());
 }
 

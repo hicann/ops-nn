@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file layer_norm_v4_tiling_base.cpp
@@ -314,8 +314,13 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
 
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    commonParams.eps = *(attrs->GetFloat(0));
-
+    if (attrs->GetFloat(0) != nullptr) {
+        commonParams.eps = *(attrs->GetFloat(0));
+    } else {
+        OP_LOGE(context_->GetNodeName(), "eps is nullptr");
+        return ge::GRAPH_FAILED;
+    }
+    
     uint64_t normalizedShapeLen;
     const gert::Shape xShape = context_->GetInputShape(K_INPUT_IDX_X)->GetStorageShape();
     const gert::Shape normalizedShape = context_->GetInputShape(K_INPUT_IDX_NORM_SHAPE)->GetStorageShape();

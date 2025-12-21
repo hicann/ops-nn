@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 #include "aclnn_quant_matmul_v4.h"
 #include <dlfcn.h>
@@ -725,11 +724,14 @@ static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleTensor optiona
     return ACLNN_SUCCESS;
 }
 
-static bool CheckSpecialCase(const aclTensor *tensor, int64_t firstLastDim, int64_t secondLastDim) {
-    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim)) {
-        OP_LOGD("QuantMatmul special case, no need to set transpose attr value.");
-        return true;
-    }
+static bool CheckSpecialCase(const aclTensor* tensor, int64_t firstLastDim, int64_t secondLastDim)
+{
+    if ((tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim))
+        && (tensor->GetViewShape().GetDim(secondLastDim) == 1))
+        {
+            OP_LOGD("QuantMatmul special case, no need to set transpose attr value.");
+            return true;
+        }
     return false;
 }
 
@@ -737,8 +739,8 @@ static bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose, bool 
     int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
     int64_t dim2 = tensor->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
     // 对于torch的场景，NZ情况两维某一维度为1的场景无法正确判断是否转置，资料呈现不支持非连续，代码默认连续
-    if ((static_cast<ge::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ &&
-        (tensor->GetViewShape().GetDim(dim2) == 1)) || (tensor->GetViewShape().GetDim(dim1) == 1)) {
+    if (static_cast<ge::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ &&
+        (tensor->GetViewShape().GetDim(dim2) == 1 || tensor->GetViewShape().GetDim(dim1) == 1)) {
         return transpose;
     }
     // check if tensor is contiguous layout
@@ -862,6 +864,7 @@ static aclnnStatus SpecialOutputProcess(const aclTensor *x1, const aclTensor *x2
 static aclnnStatus CheckSupportSocVersion(bool isA4W4) {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (isA4W4) {
+        // a4w4 support 910B 910_93，其余暂不支持
         switch (socVersion) {
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:

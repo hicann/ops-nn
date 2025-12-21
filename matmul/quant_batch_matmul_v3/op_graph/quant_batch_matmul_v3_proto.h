@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_proto.h
@@ -111,16 +111,17 @@ namespace ge {
 * @attention Constraints:
 * @li The shape of bias should be 1D when the shape of out is 2D, 4D, 5D or 6D, and the shape of bias should be 1D or 3D
 * when the out shape is 3D.
-* @li The size of the last dimension of x1 or x2 cannot exceed 65535. The last dimension of x1 refers to m when
-* transpose_x1 is true or k when transpose_x1 is false. The last dimension of x2 refers to k when transpose_x2 is true
-* or n when transpose_x2 is false.
+* @li The size of the last dimension of x1 and x2 cannot exceed 65535 only on the following computing platforms:
+* Atlas A2 Training Series Product/Atlas A2 Inference Series Product and
+* Atlas A3 Training Series Product/Atlas A3 Inference Series Product.
+* The last dimension of x1 refers to m when transpose_x1 is true or k when transpose_x1 is false. 
+* The last dimension of x2 refers to k when transpose_x2 is true or n when transpose_x2 is false.
 * @li If input type of x1 and x2 is int4, transpose_x1 should be false, the size of the last dimension of x1 or x2 should
 * be an even number.
 * @li Input does not support tensor with dimension size 0.
 * @li When input type of x1 and x2 is int4, x1 should be ND format.
 * @li When y type is int8, x1 should be ND format.
 * @li When x2 is ND format, x1 should be ND format.
-* @li Inputs and outputs only support ND format on Ascend 910_95 AI Processor.
 * @li The following are the supported data type combinations by platform.
 
 * - Atlas Inference Series Product:

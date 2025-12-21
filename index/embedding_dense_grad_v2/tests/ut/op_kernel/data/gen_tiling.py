@@ -12,11 +12,13 @@ import sys
 
 params_1024_4096_100_false_false = [
     # EmbeddingDenseGradV2TilingParam
+    48, # coreNum
     21, 22, 16, # tailRow, formerRow, formerRowRepTime
     64, 64, 4096, 0, # computeMask, formerComputeRepTime, formerComputeFormerNum, formerComputeTailNum
     100, 4096, -2, 1, # numWeights, embeddingDim, paddingIdx, scaleGradByFreq
     1, 4096, 0, # formerDimRepTime, formerEmbeddingDim, tailEmbeddingDim
     0, 0, 0, # tailComputeRepTime, tailComputeFormerNum, tailComputeTailNum
+    104, 393216, 96, 409600, # scaleWorkspaceLength, outStageWorkspaceLength, outIndexWorkspaceLength, outCastedWorkspaceLength
 
     # EmbeddingDenseGradV2ScaleTiling
     0, 0, 0, # tailCoreRowNum, formerCoreRowNum, formerCoreRowRepTime
@@ -34,11 +36,13 @@ params_1024_4096_100_false_false = [
 
 params_1024_4096_100_false_true = [
     # EmbeddingDenseGradV2TilingParam
+    48, # coreNum
     0, 0, 0, # tailRow, formerRow, formerRowRepTime
     0, 64, 4096, 0, # computeMask, formerComputeRepTime, formerComputeFormerNum, formerComputeTailNum
     100, 4096, -2, 1, # numWeights, embeddingDim, paddingIdx, scaleGradByFreq
     1, 4096, 0, # formerDimRepTime, formerEmbeddingDim, tailEmbeddingDim
     0, 0, 0, # tailComputeRepTime, tailComputeFormerNum, tailComputeTailNum
+    104, 393216, 96, 409600, # scaleWorkspaceLength, outStageWorkspaceLength, outIndexWorkspaceLength, outCastedWorkspaceLength
 
     # EmbeddingDenseGradV2ScaleTiling
     0, 0, 0, # tailCoreRowNum, formerCoreRowNum, formerCoreRowRepTime
@@ -56,11 +60,13 @@ params_1024_4096_100_false_true = [
 
 params_1024_4096_100_true_false = [
     # EmbeddingDenseGradV2TilingParam
+    48, # coreNum
     21, 22, 16, # tailRow, formerRow, formerRowRepTime
     64, 64, 4096, 0, # computeMask, formerComputeRepTime, formerComputeFormerNum, formerComputeTailNum
     100, 4096, -2, 1, # numWeights, embeddingDim, paddingIdx, scaleGradByFreq
     1, 4096, 0, # formerDimRepTime, formerEmbeddingDim, tailEmbeddingDim
     0, 0, 0, # tailComputeRepTime, tailComputeFormerNum, tailComputeTailNum
+    104, 393216, 96, 409600, # scaleWorkspaceLength, outStageWorkspaceLength, outIndexWorkspaceLength, outCastedWorkspaceLength
 
     # EmbeddingDenseGradV2ScaleTiling
     2, 3, 4, # tailCoreRowNum, formerCoreRowNum, formerCoreRowRepTime
@@ -78,11 +84,13 @@ params_1024_4096_100_true_false = [
 
 params_1024_4096_100_true_true = [
     # EmbeddingDenseGradV2TilingParam
+    48, # coreNum
     0, 0, 0, # tailRow, formerRow, formerRowRepTime
     0, 64, 4096, 0, # computeMask, formerComputeRepTime, formerComputeFormerNum, formerComputeTailNum
     100, 4096, -2, 1, # numWeights, embeddingDim, paddingIdx, scaleGradByFreq
     1, 4096, 0, # formerDimRepTime, formerEmbeddingDim, tailEmbeddingDim
     0, 0, 0, # tailComputeRepTime, tailComputeFormerNum, tailComputeTailNum
+    104, 393216, 96, 409600, # scaleWorkspaceLength, outStageWorkspaceLength, outIndexWorkspaceLength, outCastedWorkspaceLength
 
     # EmbeddingDenseGradV2ScaleTiling
     2, 3, 4, # tailCoreRowNum, formerCoreRowNum, formerCoreRowRepTime
@@ -100,11 +108,13 @@ params_1024_4096_100_true_true = [
 
 params_1024_256_100_false_false = [
     # EmbeddingDenseGradV2TilingParam
+    48, # coreNum
     0, 0, 0, # tailRow, formerRow, formerRowRepTime
     0, 0, 0, 0, # computeMask, formerComputeRepTime, formerComputeFormerNum, formerComputeTailNum
     100, 256, -2, 0, # numWeights, embeddingDim, paddingIdx, scaleGradByFreq
     1, 256, 0, # formerDimRepTime, formerEmbeddingDim, tailEmbeddingDim
     0, 0, 0, # tailComputeRepTime, tailComputeFormerNum, tailComputeTailNum
+    104, 24576, 96, 25600, # scaleWorkspaceLength, outStageWorkspaceLength, outIndexWorkspaceLength, outCastedWorkspaceLength
 
     # EmbeddingDenseGradV2ScaleTiling
     0, 0, 0, # tailCoreRowNum, formerCoreRowNum, formerCoreRowRepTime

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_filter_v2_proto.h
@@ -21,7 +21,7 @@ namespace ge {
 /**
 *@brief Computes the gradients of convolution3D with respect to the filter
 *@par Inputs:
- * @li x: A 5D tensor. Must be one of the following types: float16, float32, bfloat16, hifloat8.
+ * @li x: A 5D tensor. Must be one of the following types: float16, float32, bfloat16.
  * The format of the x tensor must be one of the followings:
  * [batch, in_depth, in_height, in_width, in_channels]
  * or [batch, in_channels, in_depth, in_height, in_width]. \n
@@ -32,7 +32,7 @@ namespace ge {
  * The axes sequence that can be entered are as follows:
  * [out_channels, in_channels, filter_depth, filter_height, filter_width]
  * or [out_channels, filter_depth, filter_height, filter_width, in_channels].
- * height (H) and width (W) dimensions must be in [1, 511]. \n
+ * height (H) and width (W) dimensions must be in [1,511]. \n
  * @li out_backprop: A 5D tensor. Must have the same type and format as x.
  * The format of the out_backprop tensor must be one of the followings:
  * [batch, out_depth, out_height, out_width, out_channels] or
@@ -59,12 +59,11 @@ namespace ge {
  * [batch, dilation_depth, dilation_height, dilation_width, channels] or
  * [batch, channels, dilation_depth, dilation_height, dilation_width].
  * The batch(N) and channels dimensions must be 1.
- * The width (W), height (H) and depth(D) dimensions must be in [1, 255]. \n
+ * The width (W), height (H) and depth(D) dimensions must be in [1,255]. \n
  * @li groups: An optional integer within the effective range of [1, 65535]. Default to 1.
  * Number of blocked connections from in_channels to out_channels.
  * Currently in_channels and out_channels must be divisible by groups
- * and x data type must be one of the following types: float16, bfloat16, float32, hifloat8,
- * hifloat8 is supported when the groups value is 1. \n
+ * and x data type must be one of the following types: float16, bfloat16, float32. \n
  * @li data_format: An optional string. The value must be one of ["NDHWC", "NCDHW"]. Defaults to "NDHWC".
  * The correspondence is as follows: batch(N), depth(D), height(H), width(W), channels(C).
  * Specify the data format of the x and out_backprop. \n
@@ -76,9 +75,9 @@ namespace ge {
  * Compatible with Tensorflow's conv3d_backprop_filter
 */
 REG_OP(Conv3DBackpropFilterV2)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_HIFLOAT8}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(filter_size, TensorType({DT_INT32, DT_INT64}))
-    .INPUT(out_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_HIFLOAT8}))
+    .INPUT(out_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT}))
     .REQUIRED_ATTR(strides, ListInt)
     .REQUIRED_ATTR(pads, ListInt)

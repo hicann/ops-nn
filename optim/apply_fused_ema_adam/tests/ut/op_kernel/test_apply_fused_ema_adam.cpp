@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -45,7 +45,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_0_bias_0)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(float);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);
@@ -115,7 +115,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_1_bias_1)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(float);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);
@@ -185,7 +185,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_0_bias_1)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(half);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);
@@ -255,7 +255,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_1_bias_0)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(half);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);
@@ -325,7 +325,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_0_bias_0)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(DT_BF16);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);
@@ -395,7 +395,7 @@ TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_1_bias_1)
         "cp -rf "
         "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
-    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' ");
+    system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputSize = 32 * 64280 * sizeof(DT_BF16);
     size_t inputStepSize = 1 * 8 * sizeof(int64_t);

@@ -1,0 +1,1881 @@
+{
+    "op_type": "BatchNormGradV3",
+    "op_list": [
+        {
+            "bin_filename": "BatchNormGradV3_fp32_01",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_03",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_03",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_fp32_01",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_fp32_01",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_01",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_01",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCDHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp32_02",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_04",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_04",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_fp32_02",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_fp32_02",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_fp16_02",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "BatchNormGradV3_bf16_02",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "weight",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "running_var",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_mean",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "save_rstd",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "dx",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "NCHW",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dweight",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "dbias",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "is_training",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "version",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

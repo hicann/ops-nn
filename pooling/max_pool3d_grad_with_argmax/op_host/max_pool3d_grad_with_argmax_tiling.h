@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file max_pool3d_grad_with_argmax_tiling.h
@@ -91,167 +91,7 @@ TILING_DATA_FIELD_DEF(uint64_t, totalRound);
 TILING_DATA_FIELD_DEF(uint64_t, preCoreNum);
 END_TILING_DATA_DEF;
 
-BEGIN_TILING_DATA_DEF(MaxPool3DGradWithArgmaxNoSplitTilingData)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, inputShapes);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, outShapes);
-TILING_DATA_FIELD_DEF(uint64_t, kD);
-TILING_DATA_FIELD_DEF(uint64_t, kW);
-TILING_DATA_FIELD_DEF(uint64_t, kH);
-TILING_DATA_FIELD_DEF(uint64_t, sD);
-TILING_DATA_FIELD_DEF(uint64_t, sW);
-TILING_DATA_FIELD_DEF(uint64_t, sH);
-TILING_DATA_FIELD_DEF(uint64_t, pD);
-TILING_DATA_FIELD_DEF(uint64_t, pW);
-TILING_DATA_FIELD_DEF(uint64_t, pH);
-TILING_DATA_FIELD_DEF(uint64_t, dD);
-TILING_DATA_FIELD_DEF(uint64_t, dW);
-TILING_DATA_FIELD_DEF(uint64_t, dH);
-TILING_DATA_FIELD_DEF(uint64_t, batchesPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, leftOverBatches);
-TILING_DATA_FIELD_DEF(uint64_t, partD);
-TILING_DATA_FIELD_DEF(uint64_t, partH);
-TILING_DATA_FIELD_DEF(uint64_t, partW);
-TILING_DATA_FIELD_DEF(uint64_t, partOutD);
-TILING_DATA_FIELD_DEF(uint64_t, partOutH);
-TILING_DATA_FIELD_DEF(uint64_t, partOutW);
-TILING_DATA_FIELD_DEF(uint64_t, ceilD);
-TILING_DATA_FIELD_DEF(uint64_t, ceilH);
-TILING_DATA_FIELD_DEF(uint64_t, ceilW);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb1);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb2);
-TILING_DATA_FIELD_DEF(uint64_t, sizeValues);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(MaxPool3DGradWithArgmaxSplitDTilingData)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, inputShapes);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, outShapes);
-TILING_DATA_FIELD_DEF(uint64_t, kD);
-TILING_DATA_FIELD_DEF(uint64_t, kW);
-TILING_DATA_FIELD_DEF(uint64_t, kH);
-TILING_DATA_FIELD_DEF(uint64_t, sD);
-TILING_DATA_FIELD_DEF(uint64_t, sW);
-TILING_DATA_FIELD_DEF(uint64_t, sH);
-TILING_DATA_FIELD_DEF(uint64_t, pD);
-TILING_DATA_FIELD_DEF(uint64_t, pW);
-TILING_DATA_FIELD_DEF(uint64_t, pH);
-TILING_DATA_FIELD_DEF(uint64_t, dD);
-TILING_DATA_FIELD_DEF(uint64_t, dW);
-TILING_DATA_FIELD_DEF(uint64_t, dH);
-TILING_DATA_FIELD_DEF(uint64_t, batchesPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, leftOverBatches);
-TILING_DATA_FIELD_DEF(uint64_t, partD);
-TILING_DATA_FIELD_DEF(uint64_t, partH);
-TILING_DATA_FIELD_DEF(uint64_t, partW);
-TILING_DATA_FIELD_DEF(uint64_t, partOutD);
-TILING_DATA_FIELD_DEF(uint64_t, partOutH);
-TILING_DATA_FIELD_DEF(uint64_t, partOutW);
-TILING_DATA_FIELD_DEF(uint64_t, ceilD);
-TILING_DATA_FIELD_DEF(uint64_t, ceilH);
-TILING_DATA_FIELD_DEF(uint64_t, ceilW);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb1);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb2);
-TILING_DATA_FIELD_DEF(uint64_t, sizeValues);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(MaxPool3DGradWithArgmaxSplitHTilingData)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, inputShapes);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, outShapes);
-TILING_DATA_FIELD_DEF(uint64_t, kD);
-TILING_DATA_FIELD_DEF(uint64_t, kW);
-TILING_DATA_FIELD_DEF(uint64_t, kH);
-TILING_DATA_FIELD_DEF(uint64_t, sD);
-TILING_DATA_FIELD_DEF(uint64_t, sW);
-TILING_DATA_FIELD_DEF(uint64_t, sH);
-TILING_DATA_FIELD_DEF(uint64_t, pD);
-TILING_DATA_FIELD_DEF(uint64_t, pW);
-TILING_DATA_FIELD_DEF(uint64_t, pH);
-TILING_DATA_FIELD_DEF(uint64_t, dD);
-TILING_DATA_FIELD_DEF(uint64_t, dW);
-TILING_DATA_FIELD_DEF(uint64_t, dH);
-TILING_DATA_FIELD_DEF(uint64_t, batchesPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, leftOverBatches);
-TILING_DATA_FIELD_DEF(uint64_t, partD);
-TILING_DATA_FIELD_DEF(uint64_t, partH);
-TILING_DATA_FIELD_DEF(uint64_t, partW);
-TILING_DATA_FIELD_DEF(uint64_t, partOutD);
-TILING_DATA_FIELD_DEF(uint64_t, partOutH);
-TILING_DATA_FIELD_DEF(uint64_t, partOutW);
-TILING_DATA_FIELD_DEF(uint64_t, ceilD);
-TILING_DATA_FIELD_DEF(uint64_t, ceilH);
-TILING_DATA_FIELD_DEF(uint64_t, ceilW);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb1);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb2);
-TILING_DATA_FIELD_DEF(uint64_t, sizeValues);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(MaxPool3DGradWithArgmaxSplitWTilingData)
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, inputShapes);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, DHW_DIMS, outShapes);
-TILING_DATA_FIELD_DEF(uint64_t, kD);
-TILING_DATA_FIELD_DEF(uint64_t, kW);
-TILING_DATA_FIELD_DEF(uint64_t, kH);
-TILING_DATA_FIELD_DEF(uint64_t, sD);
-TILING_DATA_FIELD_DEF(uint64_t, sW);
-TILING_DATA_FIELD_DEF(uint64_t, sH);
-TILING_DATA_FIELD_DEF(uint64_t, pD);
-TILING_DATA_FIELD_DEF(uint64_t, pW);
-TILING_DATA_FIELD_DEF(uint64_t, pH);
-TILING_DATA_FIELD_DEF(uint64_t, dD);
-TILING_DATA_FIELD_DEF(uint64_t, dW);
-TILING_DATA_FIELD_DEF(uint64_t, dH);
-TILING_DATA_FIELD_DEF(uint64_t, batchesPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, leftOverBatches);
-TILING_DATA_FIELD_DEF(uint64_t, partD);
-TILING_DATA_FIELD_DEF(uint64_t, partH);
-TILING_DATA_FIELD_DEF(uint64_t, partW);
-TILING_DATA_FIELD_DEF(uint64_t, partOutD);
-TILING_DATA_FIELD_DEF(uint64_t, partOutH);
-TILING_DATA_FIELD_DEF(uint64_t, partOutW);
-TILING_DATA_FIELD_DEF(uint64_t, ceilD);
-TILING_DATA_FIELD_DEF(uint64_t, ceilH);
-TILING_DATA_FIELD_DEF(uint64_t, ceilW);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb1);
-TILING_DATA_FIELD_DEF(uint64_t, sizeUb2);
-TILING_DATA_FIELD_DEF(uint64_t, sizeValues);
-END_TILING_DATA_DEF;
-
 REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax, MaxPool3DGradWithArgmaxTilingData);
-
-// 1, splitD=0, splitH=0, splitW=0, splitKernel = 0, dtype=float=0
-// no overlap = 1, splitD=0, splitH=0, splitW=0, splitKernel = 0, dtype=half=1
-// overlap = 2, splitD=0, splitH=0, splitW=0, splitKernel = 0, dtype=half=1
-// 1, splitD=0, splitH=0, splitW=0, splitKernel = 0, dtype=bfloat16=2
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_100000, MaxPool3DGradWithArgmaxNoSplitTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_100001, MaxPool3DGradWithArgmaxNoSplitTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_200001, MaxPool3DGradWithArgmaxNoSplitTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_100002, MaxPool3DGradWithArgmaxNoSplitTilingData);
-
-// 1, splitD=1, splitH=0, splitW=0, splitKernel = 0, dtype=float=0
-// no overlap = 1, splitD=1, splitH=0, splitW=0, splitKernel = 0, dtype=half=1
-// overlap = 2, splitD=1, splitH=0, splitW=0, splitKernel = 0, dtype=half=1
-// 1, splitD=1, splitH=0, splitW=0, splitKernel = 0, dtype=bfloat16=2
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_110000, MaxPool3DGradWithArgmaxSplitDTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_110001, MaxPool3DGradWithArgmaxSplitDTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_210001, MaxPool3DGradWithArgmaxSplitDTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_110002, MaxPool3DGradWithArgmaxSplitDTilingData);
-
-// 1, splitD=1, splitH=1, splitW=0, splitKernel = 0, dtype=float=0
-// no overlap = 1, splitD=1, splitH=1, splitW=0, splitKernel = 0, dtype=half=1
-// overlap = 2, splitD=1, splitH=1, splitW=0, splitKernel = 0, dtype=half=1
-// 1, splitD=1, splitH=1, splitW=0, splitKernel = 0, dtype=bfloat16=2
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111000, MaxPool3DGradWithArgmaxSplitHTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111001, MaxPool3DGradWithArgmaxSplitHTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_211001, MaxPool3DGradWithArgmaxSplitHTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111002, MaxPool3DGradWithArgmaxSplitHTilingData);
-
-// 1, splitD=1, splitH=1, splitW=1, splitKernel = 0, dtype=float=0
-// no overlap = 1, splitD=1, splitH=1, splitW=1, splitKernel = 0, dtype=half=1
-// overlap = 2, splitD=1, splitH=1, splitW=1, splitKernel = 0, dtype=half=1
-// 1, splitD=1, splitH=1, splitW=1, splitKernel = 0, dtype=bfloat16=2
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111100, MaxPool3DGradWithArgmaxSplitWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111101, MaxPool3DGradWithArgmaxSplitWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_211101, MaxPool3DGradWithArgmaxSplitWTilingData);
-REGISTER_TILING_DATA_CLASS(MaxPool3DGradWithArgmax_111102, MaxPool3DGradWithArgmaxSplitWTilingData);
 
 struct InputInfo {
     uint64_t batches;
@@ -274,33 +114,6 @@ struct UBBufferSize {
     uint64_t sizeUb1;
     uint64_t sizeUb2;
     uint64_t valSize;
-};
-
-struct SplitDataDGrad {
-    uint64_t batchesPerCore;
-    uint64_t leftOverBatches;
-    uint64_t partD;
-    uint64_t partOutD;
-};
-
-struct SplitDataHGrad {
-    uint64_t batchesPerCore;
-    uint64_t leftOverBatches;
-    uint64_t partD;
-    uint64_t partOutD;
-    uint64_t partH;
-    uint64_t partOutH;
-};
-
-struct SplitDataWGrad {
-    uint64_t batchesPerCore;
-    uint64_t leftOverBatches;
-    uint64_t partD;
-    uint64_t partOutD;
-    uint64_t partH;
-    uint64_t partOutH;
-    uint64_t partW;
-    uint64_t partOutW;
 };
 
 // Index const
@@ -526,131 +339,6 @@ private:
     void SetScatterTilingData();
     void PrintScatterTilingData();
 };
-
-class MaxPool3DGradWithArgmaxBaseSplitTiling : public MaxPool3DGradWithArgmaxTilingBase {
-public:
-    explicit MaxPool3DGradWithArgmaxBaseSplitTiling(gert::TilingContext* context)
-        : MaxPool3DGradWithArgmaxTilingBase(context)
-    {}
-
-    ~MaxPool3DGradWithArgmaxBaseSplitTiling() override
-    {}
-    ge::graphStatus ParamsDefinition();
-
-protected:
-    ge::graphStatus GetPlatformInfo() override;
-    ge::graphStatus GetShapeAttrsInfo() override;
-    ge::graphStatus GetWorkspaceSize() override;
-    uint64_t CalcBufferSizes(
-        const std::array<uint64_t, DHW_DIMS> part, const std::array<uint64_t, DHW_DIMS> partOut,
-        const uint64_t partHwInp, UBBufferSize& ubBufSizes, uint64_t dim);
-    ge::graphStatus FindSplitParts(
-        std::array<uint64_t, DHW_DIMS>& inParts, std::array<uint64_t, DHW_DIMS>& outParts, UBBufferSize& ubBufSizes,
-        uint64_t dim);
-    uint64_t RoundUpBlock(const uint64_t& src, const uint64_t& blockLen);
-    uint64_t RoundDownBlock(const uint64_t& src, const uint64_t& blockLen);
-
-private:
-    ge::graphStatus PadCalc();
-    uint64_t InputCalc(uint64_t dim);
-    ge::graphStatus InputPadCalc(const std::array<int64_t, DHW_DIMS> inpDiff);
-
-public:
-    InputInfo inputData;
-    PadOutputInfo padOutputData;
-    UBBufferSize bufSizes;
-    uint64_t blockLength;
-    uint64_t blockLengthS;
-    uint64_t ubSizeNew;
-    bool isOverlap;
-    ge::DataType dtype = ge::DataType::DT_FLOAT;
-};
-
-class MaxPool3DGradWithArgmaxNoSplitTiling : public MaxPool3DGradWithArgmaxBaseSplitTiling {
-public:
-    explicit MaxPool3DGradWithArgmaxNoSplitTiling(gert::TilingContext* context)
-        : MaxPool3DGradWithArgmaxBaseSplitTiling(context)
-    {}
-
-    ~MaxPool3DGradWithArgmaxNoSplitTiling() override
-    {}
-
-private:
-    void DoUBTiling();
-    void SetTilingData();
-    uint64_t GetTilingKey() const override;
-    bool IsCapable() override;
-    ge::graphStatus DoOpTiling() override;
-    ge::graphStatus PostTiling() override;
-
-    MaxPool3DGradWithArgmaxNoSplitTilingData tiling;
-    uint64_t batchesPerCore;
-    uint64_t leftOverBatches;
-};
-
-class MaxPool3DGradWithArgmaxSplitDTiling : public MaxPool3DGradWithArgmaxBaseSplitTiling {
-public:
-    explicit MaxPool3DGradWithArgmaxSplitDTiling(gert::TilingContext* context)
-        : MaxPool3DGradWithArgmaxBaseSplitTiling(context)
-    {}
-
-    ~MaxPool3DGradWithArgmaxSplitDTiling() override
-    {}
-
-private:
-    void DoUBTiling();
-    void SetTilingData();
-    uint64_t GetTilingKey() const override;
-    bool IsCapable() override;
-    ge::graphStatus DoOpTiling() override;
-    ge::graphStatus PostTiling() override;
-
-    MaxPool3DGradWithArgmaxSplitDTilingData tiling;
-    SplitDataDGrad splitData;
-};
-
-class MaxPool3DGradWithArgmaxSplitHTiling : public MaxPool3DGradWithArgmaxBaseSplitTiling {
-public:
-    explicit MaxPool3DGradWithArgmaxSplitHTiling(gert::TilingContext* context)
-        : MaxPool3DGradWithArgmaxBaseSplitTiling(context)
-    {}
-
-    ~MaxPool3DGradWithArgmaxSplitHTiling() override
-    {}
-
-private:
-    void DoUBTiling();
-    void SetTilingData();
-    uint64_t GetTilingKey() const override;
-    bool IsCapable() override;
-    ge::graphStatus DoOpTiling() override;
-    ge::graphStatus PostTiling() override;
-
-    MaxPool3DGradWithArgmaxSplitHTilingData tiling;
-    SplitDataHGrad splitData;
-};
-
-class MaxPool3DGradWithArgmaxSplitWTiling : public MaxPool3DGradWithArgmaxBaseSplitTiling {
-public:
-    explicit MaxPool3DGradWithArgmaxSplitWTiling(gert::TilingContext* context)
-        : MaxPool3DGradWithArgmaxBaseSplitTiling(context)
-    {}
-
-    ~MaxPool3DGradWithArgmaxSplitWTiling() override
-    {}
-
-private:
-    void DoUBTiling();
-    void SetTilingData();
-    uint64_t GetTilingKey() const override;
-    bool IsCapable() override;
-    ge::graphStatus DoOpTiling() override;
-    ge::graphStatus PostTiling() override;
-
-    MaxPool3DGradWithArgmaxSplitWTilingData tiling;
-    SplitDataWGrad splitData;
-};
-
 } // namespace optiling
 
 #endif

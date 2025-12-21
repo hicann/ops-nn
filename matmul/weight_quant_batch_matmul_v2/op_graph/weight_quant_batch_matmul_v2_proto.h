@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -25,12 +25,12 @@ namespace ge {
 * @li x: A matrix tensor. Shape supports (m,k)/(k,m), Format supports ND.
 * The type support float16, bfloat16. The m value must be in [1, 65535] when
 * transpose_x is true or [1, 2147483647] when transpose_x is false. The k value
-* must be in [1, 65535].
+* must be at least 1.
 * @li weight: A matrix tensor of quantized weight. Shape supports (n,k)/(k,n),
 * Format supports ND/NZ. The type support int8, int4, int32, float8_e5m2, float8_e4m3fn, hifloat8, float4_e2m1, float4_e1m2. \n
 * Format must be ND when the type is float8_e5m2, float8_e4m3fn or hifloat8.
 * For Ascend 910_95 AI Processor, transpose_weight must be false when format is NZ. \n
-* The k, n value must be in [1, 65535].
+* The k, n value must be at least 1.
 * The k value must be even when type is int4/float4_e2m1/float4_e1m2 and transpose_weight
 * is true, and the n value must be even when type is int4/float4_e2m1/float4_e1m2 and transpose_weight
 * is false. When type is int32, the input is int4-packed data,

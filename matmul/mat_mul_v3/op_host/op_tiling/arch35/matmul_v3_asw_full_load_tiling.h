@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /* !
@@ -29,7 +29,10 @@ public:
     ~MatMulV3AswFullLoadTiling() override {};
     bool CheckBL1FullLoadDefault(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t nAlignedValue) const;
     bool CheckBL1FullLoad91095(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t nAlignedValue);
+    bool CheckAL1FullLoadDefault(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue) const;
+    bool CheckAL1FullLoad91095(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue);
     void AdjustTiling91095Basic(uint64_t biasBatchDimAll);
+    void AdjustAL1Tiling91095Basic(uint64_t biasBatchDimAll);
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -37,17 +40,21 @@ protected:
     uint64_t GetTilingKey() const override;
 
     void DoBL1FullLoad(bool isKFullLoad, uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
-    void DoAL1FullLoad(bool isKFullLoad, uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
+    void DoAL1FullLoad(
+        bool isKFullLoad, uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL, bool isBmm = false);
 
 private:
     void FullLoadPre();
     bool CheckABL1FullLoad() const;
     void DoABL1FullLoad();
     void CalcTailBasicBlockBL1Full();
+    void CalcTailBasicBlockAL1Full();
     bool CheckBL1FullLoad(bool &isKFullLoad);
-    bool CheckAL1FullLoad(bool &isKFullLoad) const;
+    bool CheckAL1FullLoad(bool &isKFullLoad);
     void AdjustTilingDefault(uint64_t biasBatchDimAll);
     void AdjustTilingCommon(uint64_t aBatchDimAll);
+    void AdjustAL1TilingDefault(uint64_t biasBatchDimAll);
+    bool CheckAL1FullLoadCond(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue);
     bool ABL1FullLoadExtraCond(uint64_t al1SingleCoreSize, uint64_t bl1SingleCoreSize) const;
     uint64_t GetStepSmallK(bool isBL1FullLoad) const;
 

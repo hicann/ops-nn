@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_fullLoad_tiling.cpp
@@ -31,12 +31,13 @@ namespace Conv {
 bool Conv3DDXV2FullLoadTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95) {
+        platform_ascendc::SocVersion::ASCEND910_95 &&
+        !IsSocVersionFuse(context_)) {
         return false;
     }
 
     // 暂不支持group卷积以及fp16/bfp16以外类型
-    if (runInfo_.groups != 1) {
+    if (runInfo_.groups != 1 || tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
@@ -66,7 +67,7 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     uint64_t bestBaseN =
         runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_256;
     bestBaseN = std::min(bestBaseN, tilingRunInfo_.nValue);
-    if (tilingRunInfo_.kValue * bestBaseN * dtypeByte_ * TWO <= static_cast<uint64_t>(L1_SIZE)) {
+    if (tilingRunInfo_.kValue * bestBaseN * dtypeByte_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
         return true;
     }
     return false;
@@ -82,7 +83,7 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    Conv3DDXV2InnerProductTiling::InitStepMN(l1Params);
+    Conv3DDXV2InnerProductTiling::InitL1Params(l1Params);
 
     // 设置MN和循环轴的核间切分策略
     CoreTilingParams coreParams;
@@ -117,6 +118,9 @@ void Conv3DDXV2FullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
     uint32_t bestBaseM = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseN = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByte_;
+    if (IsSocVersionFuse(context_)) {
+        CloseL0PingPong(l0Params); // 耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
+    }
     if (tilingRunInfo_.kValue > MAX_BASE_MN) {
         bestBaseN = (BASIC_BLOCK_SIZE_64 * TWO_U32) / dtypeByte_;
     } else if (tilingRunInfo_.kValue > BASIC_BLOCK_SIZE_512) {
@@ -133,10 +137,10 @@ void Conv3DDXV2FullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
         }
         bestBaseN = (BASIC_BLOCK_SIZE_512 * TWO_U32) / dtypeByte_;
     }
-    bestBaseM = L0C_SIZE / (bestBaseN * FOUR_U32 * l0Params.cl0Pbuffer); // 4: size of float
-    uint32_t maxL0ABaseM = L0_AB_SIZE / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByte_);
+    bestBaseM = platformInfo_.l0_c_size / (bestBaseN * FOUR_U32 * l0Params.cl0Pbuffer); // 4: size of float
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByte_);
     bestBaseM = std::min(bestBaseM, maxL0ABaseM); // L0A_SIZE的上界保护
-    bestBaseK = L0_AB_SIZE / (bestBaseN * dtypeByte_ * l0Params.bl0Pbuffer);
+    bestBaseK = platformInfo_.l0_ab_size / (bestBaseN * dtypeByte_ * l0Params.bl0Pbuffer);
     l0Params.baseM = bestBaseM;
     l0Params.baseN = bestBaseN;
     l0Params.baseK = bestBaseK;

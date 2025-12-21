@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_index_fill_tensor.cpp
@@ -55,7 +55,8 @@ static bool CheckNotNull(const aclTensor *self, const aclIntArray *index,
   return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclIntArray *index, int64_t dim, const aclTensor *out) {
+static bool CheckShape(const aclTensor *self, const aclIntArray *index,
+                       int64_t dim, const aclTensor *out) {
   if (self->IsEmpty()) {
     return true;
   }
@@ -79,10 +80,10 @@ static bool CheckShape(const aclTensor *self, const aclIntArray *index, int64_t 
 
   int64_t transferDim = dim >= 0 ? dim : (selfDim > 0 ? (dim + selfDim) : 0);
   for (int64_t i = 0; i < static_cast<int64_t>(index->Size()); i++) {
-    auto dimSize = static_cast<int64_t>(selfShape.GetDim(transferDim));
+    auto dimSize = selfDim == 0 ? 1 : static_cast<int64_t>(selfShape.GetDim(transferDim));
     if ((*index)[i] >= dimSize || (*index)[i] < (-dimSize)) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Index value[%ld] is out of range, it should be smaller than [%ld].",
-             (*index)[i], selfShape.GetDim(transferDim));
+            (*index)[i], dimSize);
       return false;
     }
   }
@@ -147,9 +148,9 @@ static const aclTensor *ReshapeTensor(const aclTensor *self, const aclIntArray *
 static const aclTensor *GenerateAssistMatrix(const aclTensor *self, const aclIntArray *index, int64_t dim, bool flag,
     float value, op::DataType type, aclOpExecutor *executor)
 {
-  int blocksize = 0;
-  int blocknum = 1;
-  int n = 1;
+  int64_t blocksize = 0;
+  int64_t blocknum = 1;
+  int64_t n = 1;
   aclIntArray *shapeArray = GenerateShapeArray(self, executor);
   CHECK_RET(shapeArray != nullptr, nullptr);
   auto selfShape = self->GetViewShape();
@@ -160,13 +161,15 @@ static const aclTensor *GenerateAssistMatrix(const aclTensor *self, const aclInt
     }
     n *= selfShape[i];
   }
+  blocknum = blocknum == 0 ? 1 : blocknum;
+  n = n == 0 ? 1 : n;
   blocksize = n / blocknum;
 
   float initVal = flag ? 1 : 0;
   auto assist = executor->AllocHostTensor({n}, op::DataType::DT_FLOAT);
   CHECK_RET(assist != nullptr, nullptr);
   float *addr = static_cast<float*>(assist->GetStorageAddr());
-  for (int i = 0; i < n; i++) {
+  for (int64_t i = 0; i < n; i++) {
     assist->SetData(i, initVal, op::DataType::DT_FLOAT);
   }
 
@@ -174,13 +177,17 @@ static const aclTensor *GenerateAssistMatrix(const aclTensor *self, const aclInt
     uint64_t start = 0, end = 0;
     uint64_t idx = (*index)[i];
     uint64_t k = idx, count = 0;
-    while (k < static_cast<uint64_t>(blocknum)) {
+    while (static_cast<int64_t>(k) < blocknum) {
       start = blocksize * k;
       end = start + blocksize;
       for (uint64_t j = start; j < end; j++) {
         addr[j] = value;
       }
       count++;
+      // Scalar场景，一次循环即可退出，防止shape越界访问
+      if (selfDim == 0){
+        break;
+      }
       k = idx + selfShape[dim] * count;
     }
   }

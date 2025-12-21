@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file add_rms_norm_dynamic_quant_tiling.h
  */
@@ -68,6 +68,22 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_101, AddRmsNormDynamicQuantReg
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_121, AddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_131, AddRmsNormDynamicQuantRegbaseTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_199, AddRmsNormDynamicQuantRegbaseTilingData)
+
+BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantEmptyTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, numM);
+TILING_DATA_FIELD_DEF(uint64_t, hasSmoothScale1);
+TILING_DATA_FIELD_DEF(uint64_t, hasSmoothScale2);
+TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum)
+TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
+TILING_DATA_FIELD_DEF(uint64_t, ubSize);
+TILING_DATA_FIELD_DEF(uint64_t, mPerUB)
+TILING_DATA_FIELD_DEF(uint64_t, coreUbBlockCount);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreBlockCount);
+TILING_DATA_FIELD_DEF(uint64_t, mTailUb);
+TILING_DATA_FIELD_DEF(uint64_t, mlastCoreTailUb);
+END_TILING_DATA_DEF;
+REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_500, AddRmsNormDynamicQuantEmptyTilingData)
 
 constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
@@ -192,6 +208,7 @@ public:
     bool CheckInputShapeDim();
     bool CheckInputShapeValue();
     bool CheckInputDtype();
+    bool CheckOutputDtype();
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
     ge::graphStatus SetTilingParams();
@@ -210,6 +227,63 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
+};
+
+class AddRmsNormDynamicQuantEmptyTiling : public Ops::NN::Optiling::TilingBaseClass {
+public:
+    explicit AddRmsNormDynamicQuantEmptyTiling(gert::TilingContext* tilingContext) : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    {}
+    ~AddRmsNormDynamicQuantEmptyTiling() override
+    {}
+
+    const string nodeName_ = "AddRmsNormDynamicQuantEmpty";
+
+    static inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape);
+    ge::graphStatus CheckDtypeVaild(
+        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    bool CheckShapeNull();
+    bool CheckOptionalInput();
+    bool CheckInputShapeDim();
+    bool CheckInputShapeValue();
+    bool CheckInputDtype();
+    ge::graphStatus SetInputParams();
+    uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
+    ge::graphStatus SetTilingParams();
+    void SetTilingData();
+
+protected:
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus GetPlatformInfo() override;
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+
+private:
+    uint64_t aivCoreNum_{0};
+    uint64_t numN_{0};
+    uint64_t numM_{0};
+    uint64_t usedCoreNum_{0};
+    uint64_t mPerCore_{0};
+    uint64_t mPerUB_{0};
+    uint64_t mTailUb_{0};
+    uint64_t lastCoreBlockCount_{0};
+    uint64_t mlastCoreTailUb_{0};
+    uint64_t coreUbBlockCount_{0};
+    uint64_t mLastCore_{0};
+    uint64_t ubSize_{0};
+    bool hasSmoothScale1_{0};
+    bool hasSmoothScale2_{0};
+
+    uint32_t tilingKey_;
+    AddRmsNormDynamicQuantEmptyTilingData tilingData_;
+
+    ge::graphStatus CalcTilingData();
+    uint64_t NearestLowerPowerOfTwo(int32_t tmp);
+    void CalcUsedCoreNum();
+    void LogTilingResult();
 };
 
 } // namespace optiling

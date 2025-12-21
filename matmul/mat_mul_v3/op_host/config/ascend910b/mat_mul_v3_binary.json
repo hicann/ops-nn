@@ -76,9 +76,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -156,9 +156,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -236,9 +236,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -316,9 +316,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -396,9 +396,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -476,9 +476,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -556,9 +556,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -636,9 +636,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -716,9 +716,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -796,11 +796,171 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
-      }   
+      },
+      {
+        "bin_filename": "MatMulV3_ND_ND_ND_ND_FP16_FP16_FP32_FP32",
+        "simplified_key": "diy,2/2/2/2/1/1/1/0",
+        "inputs": [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset_w",
+            "index": 3,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "transpose_x1",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "transpose_x2",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "offset_x",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "bin_filename": "MatMulV3_ND_ND_ND_ND_BF16_BF16_FP32_FP32",
+        "simplified_key": "diy,2/2/2/2/27/27/27/0",
+        "inputs": [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "offset_w",
+            "index": 3,
+            "dtype": "int8",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "transpose_x1",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "transpose_x2",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "offset_x",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
+          }
+        ]
+      }
     ]
 }

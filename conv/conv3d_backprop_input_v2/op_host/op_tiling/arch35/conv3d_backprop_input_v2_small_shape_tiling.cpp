@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_small_shape_tiling.cpp
@@ -30,12 +30,13 @@ namespace Conv {
 bool Conv3DDXV2SmallShapeTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95) {
+        platform_ascendc::SocVersion::ASCEND910_95 &&
+        !IsSocVersionFuse(context_)) {
         return false;
     }
 
     // 暂不支持group卷积以及fp16/bfp16以外类型
-    if (runInfo_.groups != 1) {
+    if (runInfo_.groups != 1 || tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
@@ -48,7 +49,7 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
     // 小shape的情况下, 负载均衡的矛盾占主导，优先保证分核的均匀性
     uint64_t expectedMaxCnt = Ops::Base::CeilDiv(
                                   tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
-                                  static_cast<uint64_t>(L0C_SIZE)) *
+                                  static_cast<uint64_t>(platformInfo_.l0_c_size)) *
                               runInfo_.batch_n * runInfo_.dedx_d;
     if (expectedMaxCnt < (static_cast<uint64_t>(coreNum_) * 5U / 2U) &&
         expectedMaxCnt % static_cast<uint64_t>(coreNum_) != 0U) {
@@ -66,7 +67,7 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitStepMN(l1Params);
+    InitL1Params(l1Params);
 
     // 设置MN和循环轴的核间切分策略, 允许重写BaseMNK
     CoreTilingParams coreParams;
@@ -127,7 +128,7 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
             }
             uint64_t tmpBaseN = Ops::Base::CeilAlign(
                 Ops::Base::CeilDiv(tilingRunInfo_.nValue, j), static_cast<uint64_t>(tilingRunInfo_.n0));
-            if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > L0C_SIZE) {
+            if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
                 continue;
             }
             uint64_t tmpTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, tmpSingleCoreM) *

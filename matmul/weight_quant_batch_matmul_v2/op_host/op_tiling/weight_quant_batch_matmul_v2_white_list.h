@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -38,38 +38,38 @@ public:
 };
 
 inline void SetMatmulTilingFromCacheData(
-    WeightQuantBatchMatmulCacheTilingData& cacheTilingData, optiling::TCubeTiling& matmulTiling, uint64_t m, uint64_t n,
+    WeightQuantBatchMatmulCacheTilingData& cacheTilingData, AscendC::tiling::TCubeTiling& matmulTiling, uint64_t m, uint64_t n,
     int32_t isBias)
 {
-    matmulTiling.set_M(m);
-    matmulTiling.set_N(n);
-    matmulTiling.set_Ka(cacheTilingData.ka_);
-    matmulTiling.set_Kb(cacheTilingData.kb_);
-    matmulTiling.set_singleCoreM(ops::CeilDiv(m, static_cast<uint64_t>(cacheTilingData.mDim_)));
-    matmulTiling.set_singleCoreN(cacheTilingData.singleCoreN_);
-    matmulTiling.set_singleCoreK(cacheTilingData.singleCoreK_);
-    matmulTiling.set_baseM(cacheTilingData.baseM_);
-    matmulTiling.set_baseN(cacheTilingData.baseN_);
-    matmulTiling.set_baseK(cacheTilingData.baseK_);
-    matmulTiling.set_depthA1(cacheTilingData.depthA1_);
-    matmulTiling.set_depthB1(cacheTilingData.depthB1_);
-    matmulTiling.set_stepM(cacheTilingData.stepM_);
-    matmulTiling.set_stepN(cacheTilingData.stepN_);
-    matmulTiling.set_stepKa(cacheTilingData.stepKa_);
-    matmulTiling.set_stepKb(cacheTilingData.stepKb_);
-    matmulTiling.set_isBias(isBias);
-    matmulTiling.set_transLength(cacheTilingData.transLength_);
-    matmulTiling.set_iterateOrder(cacheTilingData.iterateOrder_);
-    matmulTiling.set_shareL1Size(cacheTilingData.shareL1Size_);
-    matmulTiling.set_shareL0CSize(cacheTilingData.shareL0CSize_);
-    matmulTiling.set_dbL0A(cacheTilingData.dbL0A_);
-    matmulTiling.set_dbL0B(cacheTilingData.dbL0B_);
-    matmulTiling.set_dbL0C(cacheTilingData.dbL0C_);
-    matmulTiling.set_usedCoreNum(1);
-    matmulTiling.set_batchM(1);
-    matmulTiling.set_batchN(1);
-    matmulTiling.set_singleBatchM(1);
-    matmulTiling.set_singleBatchN(1);
+    matmulTiling.M = m;
+    matmulTiling.N = n;
+    matmulTiling.Ka = cacheTilingData.ka_;
+    matmulTiling.Kb = cacheTilingData.kb_;
+    matmulTiling.singleCoreM = ops::CeilDiv(m, static_cast<uint64_t>(cacheTilingData.mDim_));
+    matmulTiling.singleCoreN = cacheTilingData.singleCoreN_;
+    matmulTiling.singleCoreK = cacheTilingData.singleCoreK_;
+    matmulTiling.baseM = cacheTilingData.baseM_;
+    matmulTiling.baseN = cacheTilingData.baseN_;
+    matmulTiling.baseK = cacheTilingData.baseK_;
+    matmulTiling.depthA1 = cacheTilingData.depthA1_;
+    matmulTiling.depthB1 = cacheTilingData.depthB1_;
+    matmulTiling.stepM = cacheTilingData.stepM_;
+    matmulTiling.stepN = cacheTilingData.stepN_;
+    matmulTiling.stepKa = cacheTilingData.stepKa_;
+    matmulTiling.stepKb = cacheTilingData.stepKb_;
+    matmulTiling.isBias = isBias;
+    matmulTiling.transLength = cacheTilingData.transLength_;
+    matmulTiling.iterateOrder = cacheTilingData.iterateOrder_;
+    matmulTiling.shareL1Size = cacheTilingData.shareL1Size_;
+    matmulTiling.shareL0CSize = cacheTilingData.shareL0CSize_;
+    matmulTiling.dbL0A = cacheTilingData.dbL0A_;
+    matmulTiling.dbL0B = cacheTilingData.dbL0B_;
+    matmulTiling.dbL0C = cacheTilingData.dbL0C_;
+    matmulTiling.usedCoreNum = 1;
+    matmulTiling.batchM = 1;
+    matmulTiling.batchN = 1;
+    matmulTiling.singleBatchM = 1;
+    matmulTiling.singleBatchN = 1;
 }
 
 } // namespace optiling

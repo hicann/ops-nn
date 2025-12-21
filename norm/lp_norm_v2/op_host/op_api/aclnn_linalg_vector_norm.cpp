@@ -1,19 +1,19 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <bitset>
 #include <climits>
 #include <cmath>
 #include "level0/zero_op.h"
-#include "level0/lp_norm_reduce_v2.h"
-#include "level0/lp_norm_update_v2.h"
+#include "lp_norm_reduce_v2.h"
+#include "lp_norm_update_v2.h"
 #include "lp_norm_v2.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -224,6 +224,34 @@ static aclnnStatus CheckParams(InputParams& inputParams)
     return ACLNN_SUCCESS;
 }
 
+namespace{
+static aclnnStatus aclnnLinalgVectorA5(const aclTensor* selfContiguous, InputParams& inputParams, aclOpExecutor* executor)
+{
+    auto epsilon = static_cast<float>(0);
+    auto normOut = l0op::LpNormV2(selfContiguous, inputParams.out, inputParams.ord->ToFloat(), inputParams.dims, inputParams.keepDims, epsilon, executor);
+    CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyResult = l0op::ViewCopy(normOut, inputParams.out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputParams& inputParams, aclOpExecutor* executor)
+{
+    auto epsilon = static_cast<float>(0);
+    op::DataType promoteType = op::PromoteType(inputParams.self->GetDataType(), inputParams.out->GetDataType());
+    auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, executor);
+    CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto normOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, CalculateOrdValue(inputParams.ord), inputParams.dims, inputParams.keepDims, epsilon, executor);
+    CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyResult = l0op::ViewCopy(normOut, inputParams.out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+} // namespace
+
 aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
     const aclTensor* self, const aclScalar* ord, const aclIntArray* dims, bool keepDims, const aclDataType dtype,
     aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -260,16 +288,10 @@ aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // On Ascend910B or later chips: self (-> cast) -> LpNormV2 -> out
-    if (IsSocVersionSupportBf16()) {
-        op::DataType promoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
-        auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto normOut = l0op::LpNormV2(selfContiguousCast, p, dims, keepDims, epsilon, uniqueExecutor.get());
-        CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto viewCopyResult = l0op::ViewCopy(normOut, out, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        aclnnLinalgVectorA5(selfContiguous, inputParams, uniqueExecutor.get());
+    } else if (IsSocVersionSupportBf16()) {
+        aclnnLinalgVectorA3(selfContiguous, inputParams, uniqueExecutor.get());
     } else {
         // on Ascend910A and Ascend310P chips: self -> fp32Self -> LpNormReduceV2 -> LpNormUpdateV2 -> Cast
         auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());

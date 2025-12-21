@@ -1,0 +1,628 @@
+{
+  "op_type": "Conv2DV2",
+  "op_list": [
+    {
+      "bin_filename": "Conv2DV2_NCHW_FP16_NCHW_FP16_FP16_NCHW_FP16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NCHW_BF16_NCHW_BF16_BF16_NCHW_BF16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NCHW_FP32_NCHW_FP32_FP32_NCHW_FP32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NCHW_HIF8_NCHW_HIF8_FP32_NCHW_HIF8",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "hifloat8",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NHWC_FP16_HWCN_FP16_FP16_NHWC_FP16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float16",
+          "format": "HWCN",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NHWC_BF16_HWCN_BF16_BF16_NHWC_BF16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "HWCN",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Conv2DV2_NHWC_FP32_HWCN_FP32_FP32_NHWC_FP32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "filter",
+          "index": 1,
+          "dtype": "float32",
+          "format": "HWCN",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 3,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NHWC",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "strides",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "pads",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "dilations",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "groups",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "data_format",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "pad_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "enable_hf32",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_norm_quant_tiling.cpp
@@ -144,10 +144,9 @@ void TilingTest(
                              .TilingData(param.get())
                              .NodeAttrs({
                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)},
-                                 {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(high_precision_mode)},
-                                 {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(gemma_mode)},
-                                 // {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                                 // {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                 {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                 {"dstType", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}
                              })
                              .Workspace(ws_size)
                              .Build();
@@ -183,7 +182,7 @@ TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_float16_success_tilingKey_0
     // PreRmsNorm  RmsNormQuant  PreRmsNormQuant
     TilingTest<int64_t, true, false>(
         "RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_FLOAT16, ge::FORMAT_ND, status,
-        0b1110000001);
+        0b0100000001);
 }
 
 TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_bfloat16_success_tilingKey_0b1_1_1_0_011011)
@@ -198,5 +197,5 @@ TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_bfloat16_success_tilingKey_
 
     TilingTest<int64_t, true, false>(
         "RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_BF16, ge::FORMAT_ND, status,
-        0b1110011011);
+        0b0100011011);
 }

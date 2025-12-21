@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_scatter.cc
@@ -24,7 +24,7 @@
 #include "level0/sort.h"
 #include "level0/arange.h"
 #include "level0/tensor_move.h"
-#include "level0/scatter_update.h"
+#include "index/scatter_update/op_host/op_api/scatter_update.h"
 #include "../../../scatter_add_with_sorted/op_host/op_api/scatter_add_with_sorted.h"
 #include "../../../linear_index/op_host//op_api//linear_index.h"
 #include "aclnn_kernels/cast.h"
@@ -111,10 +111,10 @@ static const std::string& GetReduceStr(int64_t reduce)
 // 除了dim维度以外的每个维度 a <= b 返回true, 否则返回false。 a, b的维度数一样
 static bool CompareTensorShape(const aclTensor* a, const aclTensor* b, int64_t dim = -1)
 {
-    int64_t aDimSize = a->GetViewShape().GetDimNum();
-    int64_t bDimSize = b->GetViewShape().GetDimNum();
+    auto aDimSize = a->GetViewShape().GetDimNum();
+    auto bDimSize = b->GetViewShape().GetDimNum();
     aDimSize = aDimSize < bDimSize ? aDimSize : bDimSize;
-    for (int64_t i = 0; i < aDimSize; i++) {
+    for (int64_t i = 0; i < static_cast<int64_t>(aDimSize); i++) {
         if (i != dim) {
             auto aDim = (a->GetViewShape())[i];
             auto bDim = (b->GetViewShape())[i];
@@ -313,6 +313,15 @@ static const aclTensor* DoSliceIndex(const aclTensor* index, aclOpExecutor* exec
     aclIntArray* sizeArray = executor->AllocIntArray(sizeVector.data(), sizeVector.size());
     CHECK_RET(sizeArray != nullptr, nullptr);
 
+    if (indexViewShape.GetDimNum() == 2) { // 2 is 2维度
+        auto res = const_cast<aclTensor*>(index);
+        op::Shape expandShape;
+        expandShape.AppendDim(indexViewShape.GetDim(0));
+        res->SetViewShape(expandShape);
+        auto resContiguous = l0op::Contiguous(res, executor);
+        return resContiguous;
+    }
+
     auto indexSlice = l0op::Slice(index, offsetArray, sizeArray, executor);
     CHECK_RET(indexSlice != nullptr, nullptr);
     auto indexReshape = l0op::Reshape(indexSlice, reshapeArray, executor);
@@ -353,7 +362,8 @@ static const aclTensor* DoScatterAddWithSorted(
         scatterRes = l0op::ScatterAddWithSorted(self, src, sortIndice, posIdx, reduction, executor);
     }
     CHECK_RET(scatterRes != nullptr, nullptr);
-
+    scatterRes = l0op::Cast(scatterRes, out->GetDataType(), executor);
+    CHECK_RET(scatterRes != nullptr, nullptr);
     auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
     CHECK_RET(viewCopyResult != nullptr, nullptr);
 
@@ -428,7 +438,7 @@ static bool IsRouteToUpdate(const aclTensor *x, const op::Shape &selfShape, cons
         return false;
     }
 
-    for (int64_t i = viewStrides.size() - 1; i >= 0; i--) {
+    for (int i = static_cast<int>(viewStrides.size()) - 1; i >= 0; i--) {
         if (viewStrides[i] != 0) {
             boardCastIdx = i;
             break;
@@ -472,11 +482,13 @@ static aclnnStatus ExecScatterBase(
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool aicoreSupport = true;
     bool flag910b = false;
+    bool flag910_95 = false;
     auto selfType = selfContiguous->GetDataType();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
         socVersion == SocVersion::ASCEND910_95) {
         aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST);
         flag910b = socVersion != SocVersion::ASCEND910_95;
+        flag910_95 = socVersion == SocVersion::ASCEND910_95;
     } else {
         // 转换BF16数据类型为FP32，因算子暂不支持BF16
         if (selfType == op::DataType::DT_BF16 || srcContiguous->GetDataType() == op::DataType::DT_BF16) {
@@ -498,13 +510,22 @@ static aclnnStatus ExecScatterBase(
     auto shape = index->GetStorageShape();
 
     bool aicore910b = aicoreSupport && flag910b;
-    // index的步长为[1,0]或者[x,1,0]，是index expand场景，走scatteraddwithsorted, 超过16777216的FP32无法精准表示整数
+    // index的步长为[1,0]或者[x,1,0] 且x不为0，是index expand场景，走scatteraddwithsorted, 超过16777216的FP32无法精准表示整数
     bool expandFlag =
         aicore910b &&
         ((selfDimNum == TWO_DIM && dimFinal != 1) ||
          (selfDimNum == THREE_DIM && indexShape[0] * indexShape[1] < MAX_EXACT_FLOAT && dimFinal != TWO_DIM)) &&
         strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 && shape.GetDimNum() == 1;
+    if (selfDimNum == THREE_DIM) {
+        expandFlag = expandFlag && (strides[0] != 0);
+    }
     if (expandFlag) {
+        if (selfType == op::DataType::DT_UINT8) {
+            selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_INT32, executor);
+            CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast self failed!");
+            srcContiguous = l0op::Cast(srcContiguous, op::DataType::DT_INT32, executor);
+            CHECK_COND(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast src failed!");
+        }
         auto scatterRes =
             DoScatterAddWithSorted(selfContiguous, index, srcContiguous, out, reduction, dimFinal, executor);
         CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterAddWithSorted failed!");
@@ -568,7 +589,7 @@ static aclnnStatus ExecScatterBase(
         CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
     }
 
-    bool isCopy = aicore910b && self->GetData() != out->GetData();
+    bool isCopy = (flag910_95 || aicore910b) && self->GetData() != out->GetData();
     const aclTensor* scatterRes =
         DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy, reduction, executor);
     CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!");

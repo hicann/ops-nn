@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_quant.cpp
@@ -32,15 +32,15 @@ OP_TYPE_REGISTER(RmsNormQuant);
 
 const aclTensor* RmsNormQuant(
     const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale, const aclTensor* offset,
-    double epsilon, aclOpExecutor* executor)
+    double epsilon, int32_t dstType, aclOpExecutor* executor)
 {
-    L0_DFX(RmsNormQuant, x, gamma, beta, scale, offset, epsilon);
+    L0_DFX(RmsNormQuant, x, gamma, beta, scale, offset, epsilon, dstType);
 
-    auto y = executor->AllocTensor(x->GetViewShape(), DataType::DT_INT8, x->GetViewFormat());
+    auto y = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         RmsNormQuant, OP_INPUT(x, gamma, beta, scale, offset), OP_OUTPUT(y),
-        OP_ATTR(static_cast<float>(epsilon), false, false));
+        OP_ATTR(static_cast<float>(epsilon), false, false, dstType));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RmsNormQuant ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

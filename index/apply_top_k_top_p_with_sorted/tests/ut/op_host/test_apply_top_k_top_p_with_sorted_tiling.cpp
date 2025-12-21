@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_apply_top_k_top_p_with_sorted.cpp
@@ -60,8 +60,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     auto data = tiling_data->GetData();
 
     stringstream ss;
-    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(uint64_t)) {
-        ss << std::to_string((reinterpret_cast<const uint64_t*>(tiling_data->GetData())[i / sizeof(uint64_t)])) << " ";
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(uint32_t)) {
+        ss << std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)])) << " ";
     }
 
     return ss.str();
@@ -170,7 +170,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 151488 18 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 151488 18 0 "},
     {"test_case_float16_succ",
      ge::DT_FLOAT16,
      ge::DT_INT32,
@@ -182,7 +182,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 0 "},
     {"test_case_bfloat16_succ",
      ge::DT_BF16,
      ge::DT_INT32,
@@ -194,7 +194,7 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      ge::GRAPH_SUCCESS,
      40,
      0,
-     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 "},
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 157632 18 0 "},
     {"test_case_sorted_value_one_dim_failed",
      ge::DT_FLOAT,
      ge::DT_INT32,

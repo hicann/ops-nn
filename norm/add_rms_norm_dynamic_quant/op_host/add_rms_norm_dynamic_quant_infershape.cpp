@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_rms_norm_dynamic_quant_infershape.cpp
@@ -26,23 +26,26 @@ static constexpr int Y2_IDX = 1;
 static constexpr int X_IDX = 2;
 static constexpr int OUT_SCALE1_IDX = 3;
 static constexpr int OUT_SCALE2_IDX = 4;
+static constexpr int ATTR_INDEX_OF_DST_TYPE = 2;
 
 using namespace ge;
 
 namespace ops {
-
+static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
+    DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
 static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gammaShape, gert::Shape* reduceShape)
 {
-    size_t xDimNum = xShape->GetDimNum();
     size_t gammaDimNum = gammaShape->GetDimNum();
+    size_t xDimNum = xShape->GetDimNum();
+    if (xDimNum < gammaDimNum) {
+      return false;
+    }
+    int64_t xDimValue1 = 0;
     reduceShape->SetDimNum(xDimNum - gammaDimNum);
-
-    int64_t xDimValue = 0;
-
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
-        xDimValue = xShape->GetDim(i);
-        reduceShape->SetDim(i, xDimValue);
-        OP_LOGI("InferShape4AddRmsNormDynamicQuant", "reduceShape[%zu] = [%zu]", i, reduceShape->GetDim(i));
+        xDimValue1 = xShape->GetDim(i);
+        reduceShape->SetDim(i, xDimValue1);
+        OP_LOGI("InferShape4AddRmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i, reduceShape->GetDim(i));
     }
     return true;
 }
@@ -51,7 +54,7 @@ static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
 {
     OP_CHECK_IF(nullptr == smoothShape, OP_LOGD("CheckOptionalShapeExisting", "Get nullptr smoothShape"), return false);
     int64_t smoothShapeSize = smoothShape->GetShapeSize();
-    OP_CHECK_IF((smoothShapeSize <= 0), OP_LOGD("CheckOptionalShapeExisting", "Get empty smoothShape"), return false);
+    OP_CHECK_IF((smoothShapeSize < 0), OP_LOGD("CheckOptionalShapeExisting", "Get empty smoothShape"), return false);
     return true;
 }
 
@@ -83,6 +86,10 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
     bool smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
     const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
     bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
+    bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
+    OP_CHECK_IF(
+        isOnlyExistSmooth2, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
+        return GRAPH_FAILED);
 
     OP_CHECK_IF(
         smooth1Exist && (*gammaShape != *smooth1Shape), OP_LOGE(context, "GammaShape is not same to smooth1Shape."),
@@ -91,14 +98,13 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
         smooth2Exist && (*gammaShape != *smooth2Shape), OP_LOGE(context, "GammaShape is not same to smooth2Shape."),
         return GRAPH_FAILED);
 
-    bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
+    auto ret = InferReduceShape(x1Shape, gammaShape, outScale1Shape);
     OP_CHECK_IF(
-        isOnlyExistSmooth2, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
+        !ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
         return GRAPH_FAILED);
-    InferReduceShape(x1Shape, gammaShape, outScale1Shape);
     if (smooth2Exist) {
-        *y2Shape = *x1Shape;
         *outScale2Shape = *outScale1Shape;
+        *y2Shape = *x1Shape;
     } else {
         *y2Shape = gert::Shape({1});
         *outScale2Shape = gert::Shape({1});
@@ -109,11 +115,27 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
 
 static graphStatus InferDataType4AddRmsNormDynamicQuant(gert::InferDataTypeContext* context)
 {
-    context->SetOutputDataType(Y1_IDX, DT_INT8);
-    context->SetOutputDataType(Y2_IDX, DT_INT8);
+    OP_LOGD(context, "Begin to do InferDataType4AddRmsNormDynamicQuant");
+    ge::DataType yDtype = ge::DT_INT8;
+    auto* attrs = context->GetAttrs();
+    if (attrs != nullptr) {
+        const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
+        if (pDstDtype != nullptr) {
+            int32_t dstDtype = *pDstDtype;
+            yDtype = static_cast<ge::DataType>(dstDtype);
+            OP_CHECK_IF(
+                std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+                OP_LOGE(context,
+                    "attr dst_type only support 2(int8), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
+                return ge::GRAPH_FAILED);
+        }
+    }
+    context->SetOutputDataType(Y1_IDX, yDtype);
+    context->SetOutputDataType(Y2_IDX, yDtype);
     context->SetOutputDataType(X_IDX, context->GetInputDataType(X1_IDX));
     context->SetOutputDataType(OUT_SCALE1_IDX, DT_FLOAT);
     context->SetOutputDataType(OUT_SCALE2_IDX, DT_FLOAT);
+    OP_LOGD(context, "End to do InferDataType4AddRmsNormDynamicQuant");
     return GRAPH_SUCCESS;
 }
 

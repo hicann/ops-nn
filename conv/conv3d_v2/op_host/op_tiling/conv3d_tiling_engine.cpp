@@ -6,11 +6,6 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
-/*!
- * \file conv3d_tiling_engine.cpp
- * \brief Conv3D Tiling Engine - Decoupled tiling decision and check module
  */
 
 #include "conv3d_tiling_engine.h"
@@ -529,17 +524,6 @@ bool Conv3dTilingEngine::CheckPadLegal()
     OP_LOGD(logTag_.c_str(), "Checking padding legality - head: %u, tail: %u, up: %u, down: %u, left: %u, right: %u",
             static_cast<uint32_t>(attrInfo_.padHead), static_cast<uint32_t>(attrInfo_.padTail), static_cast<uint32_t>(attrInfo_.padTop), static_cast<uint32_t>(attrInfo_.padBottom), static_cast<uint32_t>(attrInfo_.padLeft), static_cast<uint32_t>(attrInfo_.padRight));
 
-    // Check if padding values are non-negative
-    if (attrInfo_.padHead < 0 || attrInfo_.padTail < 0 ||
-        attrInfo_.padTop < 0 || attrInfo_.padBottom < 0 ||
-        attrInfo_.padLeft < 0 || attrInfo_.padRight < 0) {
-        OP_LOGE(logTag_.c_str(),
-                "Padding values must be non-negative: head=%ld, tail=%ld, top=%ld, bottom=%ld, left=%ld, right=%ld",
-                attrInfo_.padHead, attrInfo_.padTail, attrInfo_.padTop,
-                attrInfo_.padBottom, attrInfo_.padLeft, attrInfo_.padRight);
-        return false;
-    }
-
     if (attrInfo_.padTop > LOAD3D_MAX_PAD || attrInfo_.padBottom > LOAD3D_MAX_PAD ||
         attrInfo_.padLeft > LOAD3D_MAX_PAD || attrInfo_.padRight > LOAD3D_MAX_PAD) {
         OP_LOGE(logTag_.c_str(), "Padding values exceed LOAD3D limits (max: %u)", LOAD3D_MAX_PAD);
@@ -780,7 +764,7 @@ bool Conv3dTilingEngine::CheckParamsOverflow()
     return true;
 }
 
-void Conv3dTilingEngine::CheckShapeSizeLimits()
+bool Conv3dTilingEngine::CheckShapeSizeLimits()
 {
     OP_LOGD(logTag_.c_str(), "Checking shape size limits (warnings only)");
 
@@ -790,6 +774,8 @@ void Conv3dTilingEngine::CheckShapeSizeLimits()
     CheckWeightShapeSizeLimits();
     CheckOutputShapeSizeLimits();
     CheckAttrShapeSizeLimits();
+
+    return true; // Always return true (warnings only)
 }
 
 void Conv3dTilingEngine::CheckFmapShapeSizeLimits()
@@ -917,7 +903,10 @@ bool Conv3dTilingEngine::CheckAllParams()
         OP_LOGE(logTag_.c_str(), "CheckAllParams failed: configuration violates LOAD3D hardware limits.");
         return false;
     }
-    CheckShapeSizeLimits();  // Warning-only checks, doesn't fail validation
+    if (!CheckShapeSizeLimits()) {
+        OP_LOGE(logTag_.c_str(), "CheckAllParams failed: shape size exceeds maximum limits.");
+        return false;
+    }
     if (!GetGroupConvOpt()) {
         OP_LOGE(logTag_.c_str(), "CheckAllParams failed: failed to compute optimal group parameters.");
         return false;

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file matmul_v3_common.h
@@ -123,11 +123,19 @@ enum class TilingEnableFixOpti : int32_t // 互斥flag, 对应不同输出优化
     MAX = 10 //模板类别不能超过10个
 };
 
+enum class TilingEnableSpecialOpti : int32_t // 互斥flag, 对应不同的优化方法
+{
+    BASE = 0,
+    ENABLE_K_SHIFT = 1,  // K轴错峰
+    MAX = 10 //模板类别不能超过10个
+};
+
 struct TilingEnable
 {
     TilingEnableSplitCore tilingEnableSplitCore = TilingEnableSplitCore::BASE; //aoetilingenable的个位
     TilingEnableFullLoad tilingEnableFullLoad = TilingEnableFullLoad::BASE; //aoetilingenable的十位
     TilingEnableFixOpti tilingEnableFixOpti = TilingEnableFixOpti::BASE; //aoetilingenable的千位
+    TilingEnableSpecialOpti tilingEnableSpecialOpti = TilingEnableSpecialOpti::BASE;
 };
 
 struct MatmulV3Args
@@ -137,6 +145,7 @@ struct MatmulV3Args
     bool isBTrans = false;
     bool isHf32 = false;
     bool hasBias = false;
+    bool isForceGrpAccForFp32 = false;
     bool nd2nzA = false;
     bool nd2nzB = false;
     bool isNzA = false;

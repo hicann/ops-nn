@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file deep_norm_grad_cut_d.h
@@ -428,9 +428,9 @@ private:
         const LocalTensor<float>& inputRstd, const LocalTensor<float>& inputMean, const LocalTensor<float>& inputGamma,
         const LocalTensor<float>& tmpVarPdLocal, const LocalTensor<float>& tmpMeanPdLocal, const uint32_t processElem)
     {
-        // 1.1. x_sum = alpha * x1 + x2
+        // x_hp = alpha * x1 + x2
         Axpy(inputGx, inputX, alphaVal, processElem);
-        // 1.2. tmpTensor1 = dy * gamma
+        // pd_xl = dy_hp * gamma_hp
         Mul(inputGamma, inputDy, inputGamma, processElem);
         PipeBarrier<PIPE_V>();
 
@@ -442,31 +442,33 @@ private:
         WaitFlag<HardEvent::MTE2_S>(event_mte2_s);
         float inputMeanNum = inputMean.GetValue(0);
         float inputRstdNum = inputRstd.GetValue(0);
+        // rstd_hp_3=torch.pow(rstd_hp, 3)
         float rstdSqrtTmpNum = inputRstdNum * inputRstdNum * inputRstdNum;
         SetFlag<HardEvent::S_V>(event_s_v);
         WaitFlag<HardEvent::S_V>(event_s_v);
 
-        // 3.1. tmpTensor2 = x_sum - mean
+        // x2_tensor = x_hp - mean_hp
         Adds(inputGx, inputGx, inputMeanNum * (-1.0f), processElem);
-        // 3.2. dvar part process: tmpTensor1 * rstd^3
-        Muls(inputX, inputGamma, rstdSqrtTmpNum, processElem);
+        // x2_rstd_3 = x2_tensor * rstd_hp_3
+        Muls(inputX, inputGx, rstdSqrtTmpNum, processElem);
         PipeBarrier<PIPE_V>();
-
-        // 4.1. dvar part process: tmpTensor1 * rstd^3 * tmpTensor2
-        Mul(inputX, inputX, inputGx, processElem);
-        // 4.2. dmean part process: tmpTensor1 * rstd
+        // x2_rstd_3_pd_xl=x2_rstd_3 * pd_xl
+        Mul(inputX, inputX, inputGamma, processElem);
+        // pd_x_first_part = pd_xl * rstd_hp
         Muls(inputGamma, inputGamma, inputRstdNum, processElem); // can't use in d_gx
         PipeBarrier<PIPE_V>();
 
-        // 5.1. dvar part end: reducesum(tmpTensor1 * rstd^3 * tmpTensor2)
-        // 5.2. dmean part end: reducesum(tmpTensor1 * rstd)
+        // sum_pd_var = torch.sum(x2_rstd_3_pd_xl, reduce_axis, keepdims=True)
         auto reduceTmpNum = this->ReduceSumCustom(inputX, processElem);
+        // pd_mean_first_part1 = torch.sum(pd_x_first_part, reduce_axis, keepdims=True)
         auto reduceTmpNum2 = this->ReduceSumCustom(inputGamma, processElem);
+        // pd_var_first_part = sum_pd_var * oneDivD
         reduceTmpNum = reduceTmpNum * oneDivD;
+        // pd_mean_first_part2 = pd_mean_first_part1 * oneDivD
         reduceTmpNum2 = reduceTmpNum2 * oneDivD;
         PipeBarrier<PIPE_V>();
 
-        // 6.1. add to tmp for second cal part
+        // reduceSum的结果存储，直到整行算完
         Adds(tmpVarPdLocal, tmpVarPdLocal, reduceTmpNum, blockElemFp32);
         Adds(tmpMeanPdLocal, tmpMeanPdLocal, reduceTmpNum2, blockElemFp32);
         PipeBarrier<PIPE_V>();
@@ -534,9 +536,9 @@ private:
         const LocalTensor<float>& outputPdX, const LocalTensor<float>& outputPdGx,
         const LocalTensor<float>& tmpVarPdLocal, const LocalTensor<float>& tmpMeanPdLocal, const uint32_t processElem)
     {
-        // 1.1. x_sum = alpha * x1 + x2
+        // x_hp = alpha * x1 + x2
         Axpy(inputGx, inputX, alphaVal, processElem);
-        // 1.2. tmpTensor1 = dy * gamma
+        // pd_xl = dy_hp * gamma_hp
         Mul(inputGamma, inputDy, inputGamma, processElem);
         PipeBarrier<PIPE_V>();
 
@@ -553,23 +555,23 @@ private:
         SetFlag<HardEvent::S_V>(event_s_v);
         WaitFlag<HardEvent::S_V>(event_s_v);
 
-        // 2.1. tmpTensor2 = x - mean
+        // x2_tensor = x_hp - mean_hp
         Adds(inputGx, inputGx, inputMeanNum * (-1.0f), processElem);
-        // 2.2. dgx process: tmpTensor1 * rstd
+        // pd_x_first_part = pd_xl * rstd_hp
         Muls(inputX, inputGamma, inputRstdNum, processElem);
         PipeBarrier<PIPE_V>();
 
-        // 3.1. dgx process: (-1.0/D) * d_var * tmpTensor2
+        // pd_var_second_part = x2_tensor * pd_var_first_part
         Muls(outputPdGx, inputGx, tmpVarPdNum, processElem);
-        // 3.2. dgx process:  (-1.0/D * d_mean) + (tmpTensor1 * rstd)
-        Adds(inputX, inputX, tmpMeanPdNum, processElem);
+        PipeBarrier<PIPE_V>();
+        // pd_var_third_part = pd_var_second_part + pd_mean_first_part2
+        Adds(inputGx, outputPdGx, tmpMeanPdNum, processElem);
+        PipeBarrier<PIPE_V>();
+        // pd_gx = pd_var_third_part + pd_x_first_part
+        Add(outputPdGx, inputGx, inputX, processElem);
         PipeBarrier<PIPE_V>();
 
-        // 4.1. dgx end: (-1.0/D * d_var * tmpTensor1) + (-1.0/D * d_mean) + (tmpTensor1 * rstd)
-        Add(outputPdGx, outputPdGx, inputX, processElem);
-        PipeBarrier<PIPE_V>();
-
-        // 5.1. dx end: dx = alpha * dgx
+        // pd_x = pd_gx * alpha
         Muls(outputPdX, outputPdGx, alphaVal, processElem);
         PipeBarrier<PIPE_V>();
     }
@@ -613,7 +615,7 @@ private:
         LocalTensor<float>& inputRstd, LocalTensor<float>& inputMean, const LocalTensor<float>& outputPdGamma,
         const LocalTensor<float>& outputPdBeta, const uint32_t processElem)
     {
-        // 1.1. x_sum = alpha * x1 + x2
+        // x_hp = alpha * x1 + x2
         Axpy(inputGx, inputX, alphaVal, processElem);
 
         event_t event_mte2_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
@@ -631,14 +633,14 @@ private:
         meanQue.FreeTensor(inputMean);
         PipeBarrier<PIPE_V>();
 
-        // 3.1. tmpTensor2 = x_sum - mean
+        // x2_tensor = x_hp - mean_hp
         Adds(inputGx, inputGx, inputMeanNum * (-1.0f), processElem);
-        // 3.2. dgamma process: rstd * dy
-        Muls(inputX, inputDy, inputRstdNum, processElem);
+        // x2_rstd_1 = x2_tensor * rstd_hp
+        Muls(inputX, inputGx, inputRstdNum, processElem);
         PipeBarrier<PIPE_V>();
 
-        // 4.1. dgamma process: tmpTensor2 * rstd * dy
-        Mul(inputGx, inputGx, inputX, processElem);
+        // x2_rstd_1_dy = x2_rstd_1 * dy_hp
+        Mul(inputGx, inputX, inputDy, processElem);
         PipeBarrier<PIPE_V>();
 
         // 5.1. dgamma end: atomicadd (tmpTensor2 * rstd * dy)

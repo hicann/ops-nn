@@ -1,18 +1,11 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-  
- * The code snippet comes from Huawei's open-source Mindspore project.
- * Copyright 2019 Huawei Technologies Co., Ltd
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
  */
 
 /*!
@@ -65,20 +58,17 @@ namespace ge {
  * The in_channels and out_channels must be divisible by groups.
  * When the groups value differs, the supported data type may vary, specifically as follows: \n
  * \n
- * | groups |        dtype           |   x format  | filter format |    y format    |
- * |--------|------------------------|-------------|---------------|----------------|
- * |  =1    |hifloat8/float8_e4m3fn  |    NCDHW    |      NCDHW    |     NCDHW      |
- * |  =1    |hifloat8/float8_e4m3fn  |    NDHWC    |      NCDHW    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|    NCDHW    |      NCDHW    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|    NCDHW    |      NDHWC    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|    NCDHW    |      DHWCN    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|    NDHWC    |      NDHWC    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|    NDHWC    |      NCDHW    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|    NDHWC    |      DHWCN    |     NDHWC      |
- * |  >1    |hifloat8/float8_e4m3fn  |    NCDHW    |      NCDHW    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|    NCDHW    |      NCDHW    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|    NCDHW    |      NDHWC    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|    NCDHW    |      DHWCN    |     NCDHW      |
+ * | groups  |        dtype           |   x format  | filter format |    y format    |
+ * |---------|------------------------|-------------|---------------|----------------|
+ * |  =1     |hifloat8/float8_e4m3fn  |    NCDHW    |      NCDHW    |     NCDHW      |
+ * |  =1     |hifloat8/float8_e4m3fn  |    NDHWC    |      NCDHW    |     NDHWC      |
+ * |  =1     |float16/bfloat16/float32|    NDHWC    |      NDHWC    |     NDHWC      |
+ * |  =1     |float16/bfloat16/float32|    NDHWC    |      NCDHW    |     NDHWC      |
+ * |  =1     |float16/bfloat16/float32|    NDHWC    |      DHWCN    |     NDHWC      |
+ * |  >=1    |float16/bfloat16/float32|    NCDHW    |      NCDHW    |     NCDHW      |
+ * |  >=1    |float16/bfloat16/float32|    NCDHW    |      NDHWC    |     NCDHW      |
+ * |  >=1    |float16/bfloat16/float32|    NCDHW    |      DHWCN    |     NCDHW      |
+ * |  >1     |hifloat8/float8_e4m3fn  |    NCDHW    |      NCDHW    |     NCDHW      |
  * \n
  * @li data_format:  An optional string. The value must be one of ["NDHWC", "NCDHW"]. Defaults to "NDHWC".
  * The correspondence is as follows: batch(N), depth(D), height(H), width(W), channels(C).

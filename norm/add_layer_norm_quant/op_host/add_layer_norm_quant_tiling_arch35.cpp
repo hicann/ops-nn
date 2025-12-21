@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_layer_norm_quant_tiling_arch35.cpp
@@ -39,6 +39,7 @@ constexpr uint32_t TILING_DYN_MODE = 20;
 
 constexpr int64_t QUANT_OUT_NUMS_SOLE = 1;
 constexpr int64_t QUANT_OUT_NUMS_DUAL = 2;
+constexpr size_t DEFAULT_WORKSPACE_SIZE = 32;
 
 static int64_t inline FindFloorPowerTwo(int64_t num)
 {
@@ -125,11 +126,11 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
         OP_LOGW("GetShapeInfo", "AddLayerNorm NO_BIAS");
     }
 
-    size_t usrSize = 1;
+    size_t usrWorkspaceSize = DEFAULT_WORKSPACE_SIZE;
     if (isDynamicQuant_) {
         tilingKey += TILING_DYN_MODE;
         if (this->ubTilingPolicy_ == UB_TILING_POLICY::WELFORD) {
-            usrSize = this->sysWorkspaceSize_ +
+            usrWorkspaceSize = this->sysWorkspaceSize_ +
                       this->usedCoreNum_ * this->bufferNum_ * this->outQuantNums_ * this->cols_ * sizeof(float);
         }
     } else if (divMode_) {
@@ -139,7 +140,10 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
     // deal with small N case:
     if (1 == rowsPerCore_ && isDynamicQuant_) {
         // every core need 128 Bytes
-        usrSize += static_cast<size_t>(usedCoreNum_* 128U * 2U);
+        usrWorkspaceSize += static_cast<size_t>(usedCoreNum_* 128U * 2U);
+        if (this->ubTilingPolicy_ != UB_TILING_POLICY::WELFORD) {
+            usrWorkspaceSize += this->sysWorkspaceSize_;
+        }
     }
 
     context_->SetTilingKey(tilingKey);
@@ -149,10 +153,10 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
 
     // set workspace
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = usrSize;
+    currentWorkspace[0] = usrWorkspaceSize;
 
     OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrSize);
+        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrWorkspaceSize);
     OP_LOGI(
         "SetTilingData", "blockSize: %u, usedCoreNum:%u, vlFp32:%u, rowsPerCore:%ld, rowsPerTailCore:%ld",
         this->blockSize_, this->usedCoreNum_, this->vlFp32_, this->rowsPerCore_, this->rowsPerTailCore_);

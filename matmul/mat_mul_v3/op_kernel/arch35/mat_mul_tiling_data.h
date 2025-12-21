@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_tiling_data.h
@@ -23,6 +23,14 @@
 
 constexpr uint64_t TILINGDATA_OFFSET = 512;
 constexpr uint64_t TILINGDATA_SPLIT_NUM = 2;
+
+enum class L2CacheMode : std::uint32_t
+{
+    L2_CACHE_DEFAULT = 0x00,
+    A_L2_CACHE_DISABLE = 0x01,
+    B_L2_CACHE_DISABLE = 0x02,
+    ALL_L2_CACHE_DISABLE = 0x03,
+};
 
 #pragma pack(push, 8)
 struct MatMulV3TilingData {
@@ -43,6 +51,7 @@ struct MatMulV3TilingData {
     uint32_t nTailMain = 0;
     uint32_t isHf32 = 0;
     uint32_t aswWindowLen = 0;
+    L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
 };
 #pragma pack(pop)
 
@@ -74,6 +83,7 @@ struct BatchMatMulV3TilingData {
     uint32_t cBatchDim3 = 1;
     uint32_t iterBatch = 1;
     uint32_t batchOutNum = 1;
+    uint32_t batchSplitFactor = 1;
 };
 #pragma pack(pop)
 
@@ -99,7 +109,10 @@ struct MatMulV3BasicTilingData {
     uint8_t isHf32 = 0;
     uint8_t l1BufferNum = 0;
     uint8_t l0cDB = 1; // 默认不开db为1
-    uint8_t ubDB = 1; //ub默认不开db为1
+    uint8_t ubDB = 1; // ub默认不开db为1
+    L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT; // L2Cache默认使能
+    uint32_t sliceM;  // 非连续场景m轴
+    uint32_t srcNdStride; // 非连续场景m轴stride
 };
 #pragma pack(pop)
 
@@ -120,6 +133,47 @@ struct BatchMatMulV3IterBatchBasicTilingData {
     uint32_t iterBatchL1 = 1;
     uint32_t iterBatchL0 = 1;
     uint32_t isHf32 = 0;
+    uint32_t baseM = 16;
+    uint32_t baseN = 16;
+    uint32_t baseK = 16;
+    uint32_t innerBatch = 0; // 非连续场景B2内轴
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct BatchMatMulV3MergeBatchBasicTilingData {
+    uint32_t m = 1;
+    uint32_t n = 1;
+    uint32_t k = 1;
+    uint32_t b = 1;
+    uint32_t batchAL1 = 1;
+    uint32_t batchBL1 = 1;
+    uint32_t batchL0 = 1;
+    uint32_t kL1 = 1;
+    uint32_t baseK = 16;
+    uint32_t isHf32 = 0;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct BatchMatMulToMulBasicTilingData{
+    uint32_t m = 1;
+    uint32_t n = 1;
+    uint32_t b = 1;
+    uint32_t usedCoreNum = 1;
+    uint32_t singleCoreBatch = 1;
+    uint32_t batchNum = 1;
+    uint32_t batchNumLastRound = 1;
+    uint32_t batchNumLastRoundTail = 1;
+    uint32_t lastCoreNum = 1;
+    uint32_t alignNum = 1;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct MatMulV3KEqZeroBasicTilingData {
+    uint64_t totalDataAmount = 1;
+    uint64_t aivNum = 1;
 };
 #pragma pack(pop)
 #endif // __OP_KERNEL_MATMUL_TILING_DATA_H__

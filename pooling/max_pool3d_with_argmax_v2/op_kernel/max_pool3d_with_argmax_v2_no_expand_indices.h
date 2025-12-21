@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file max_pool3d_with_argmax_v2_no_expand_indices.h
@@ -39,7 +39,7 @@ public:
     __aicore__ inline MaxPool3DWithArgmaxV2NoExpandIndices(void){};
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
-        const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict__ tiling);
+        const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling);
     __aicore__ inline void Process(void);
     __aicore__ inline void CalNextIdxData(uint64_t idx);
     __aicore__ inline void CalCurIdxData(uint64_t idx);
@@ -261,7 +261,7 @@ public:
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
-    const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict__ tiling)
+    const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling)
 {
     // variable from tiling
     tilingData = tiling;

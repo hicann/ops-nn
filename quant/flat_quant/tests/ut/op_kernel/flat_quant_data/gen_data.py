@@ -57,6 +57,7 @@ def gen_data_and_golden(x_shape_str, kronecker_p1_shape_str, kronecker_p2_shape_
     quant_scale = do_golden(x_tensor.to(torch.float), kronecker_p1_tensor.to(torch.float), kronecker_p2_tensor.to(torch.float))
 
     tmp_quant_scale_golden = np.array(quant_scale.cpu()).astype(np.float32)
+
     tem_x.astype(np_type).tofile(f"{d_type}_input_x_flat_quant.bin")
     tem_kronecker_p1.tofile(f"{d_type}_input_kronecker_p1_flat_quant.bin")
     tem_kronecker_p2.tofile(f"{d_type}_input_kronecker_p2_flat_quant.bin")

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_convolution.cpp
@@ -43,7 +43,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "level0/unsqueeze.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
-#include "matmul/common/op_host/op_api/matmul_util.h"
+#include "../../../../matmul/common/op_host/op_api/matmul_util.h"
 
 using namespace op;
 using namespace ge;
@@ -597,7 +597,6 @@ constexpr size_t PAD_LEFT_INDEX = 2;
 constexpr size_t PAD_RIGHT_INDEX = 3;
 constexpr size_t CONVTBC_L_INDEX = 2;
 constexpr size_t CONVTBC_C_INDEX = 1;
-
 namespace {
 
 // 本函数的目的是给conv1d制造1维的pad数组，给conv2d制造2维的pad数组，其他类型的conv保留原数组不变
@@ -1481,7 +1480,7 @@ private:
                     OP_LOGE(
                         ACLNN_ERR_PARAM_INVALID,
                         "after pad and dilation, expect input shape[%zu] should be greater than kernerl shape[%zu], "
-                        "(input + pad - dilation * (weight - 1) - 1) should >= 0, actual get: %ld", 
+                        "(input + pad - dilation * (weight - 1) - 1) should >= 0, actual get: %ld",
                         i, i, inputShapeValueAfterPad);
                     return ACLNN_ERR_PARAM_INVALID;
                 }
@@ -1991,8 +1990,12 @@ constexpr int64_t CI_DIM_CO_CI_DHW_INDEX = 1;
 constexpr int64_t D_DIM_NCDHW_INDEX = 2;
 constexpr int64_t H_DIM_NCDHW_INDEX = 3;
 constexpr int64_t W_DIM_NCDHW_INDEX = 4;
+constexpr int64_t N_DIM_NCHW_INDEX = 0;
+constexpr int64_t C_DIM_NCHW_INDEX = 1;
 constexpr int64_t H_DIM_NCHW_INDEX = 2;
 constexpr int64_t W_DIM_NCHW_INDEX = 3;
+constexpr int64_t C_DIM_NCHW_VALUE_TRANSPOSE1D = 768;
+constexpr int64_t W_DIM_NCHW_VALUE_TRANSPOSE1D = 4096;
 
 constexpr int64_t N_DIM_NCL_INDEX = 0;
 constexpr int64_t C_DIM_NCL_INDEX = 1;
@@ -2465,6 +2468,7 @@ constexpr int STRIDEH_DMA = 63;
 constexpr int DILATION_DMA = 255;
 constexpr int PAD_DMA = 255;
 constexpr int weight_DMA = 511;
+constexpr int CONV_2D_DIMS_NUM = 4;
 static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 {
     if (padding->Size() == CONV_2D_PAD_DIM) {
@@ -2706,16 +2710,32 @@ static aclIntArray* ViewConv2dPad2dAs4d(const aclIntArray* intArray, aclOpExecut
     return newArray;
 }
 
-aclIntArray* View1dAs2d(const aclIntArray* intArray, int64_t expendValue, aclOpExecutor* executor)
+aclIntArray* View1dAs2d(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor)
 {
+    //将1维改成2维
     constexpr uint64_t newDimSize = 2;
     int64_t data[newDimSize];
     uint64_t size = intArray->Size();
     if (size != static_cast<uint64_t>(1)) {
         return nullptr;
     }
-    data[0] = expendValue;
+    data[0] = expandValue;
     data[1] = (*intArray)[0];
+    aclIntArray* newArray = executor->AllocIntArray(data, newDimSize);
+    return newArray;
+}
+
+aclIntArray* View1dAs2dw(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor)
+{
+    //将1维改成2维
+    constexpr uint64_t newDimSize = 2;
+    int64_t data[newDimSize];
+    uint64_t size = intArray->Size();
+    if (size != static_cast<uint64_t>(1)) {
+        return nullptr;
+    }
+    data[0] = (*intArray)[0];
+    data[1] = expandValue;
     aclIntArray* newArray = executor->AllocIntArray(data, newDimSize);
     return newArray;
 }
@@ -2768,15 +2788,74 @@ static const aclTensor* View3dAs4d(const aclTensor* input, aclOpExecutor* execut
     return reformatInput;
 }
 
+static const aclTensor* View3dAs4dw(const aclTensor* input, aclOpExecutor* executor)
+{
+    // input NCL->contigious->unsqueeze(2)->reshape->reformat NCHW
+    // 非连续转连续contigious
+    auto contiguousInput = l0op::Contiguous(input, executor);
+    CHECK_RET(contiguousInput != nullptr, nullptr);
+
+    // unsqeeze(2) 扩w维度
+    constexpr int64_t appendDim[] = {2};
+    aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
+    auto unsqueezedInput = l0op::UnsqueezeNd(contiguousInput, dim, executor);
+    CHECK_RET(unsqueezedInput != nullptr, nullptr);
+
+    auto dims = unsqueezedInput->GetViewShape().GetDimNum();
+    CHECK_RET(dims == CONV_2D_DIMS_NUM, nullptr);
+    auto shape = op::ToShapeVector(unsqueezedInput->GetViewShape());
+    FVector<int64_t> newShape = {shape[0], shape[1], shape[3], shape[2]};
+    aclIntArray* shapeArray = executor->AllocIntArray(newShape.data(), newShape.size());
+    CHECK_RET(shapeArray != nullptr, nullptr);
+    unsqueezedInput = l0op::Reshape(unsqueezedInput, shapeArray, executor);
+    CHECK_RET(unsqueezedInput != nullptr, nullptr);
+
+    // reformat
+    auto reformatInput = l0op::ReFormat(unsqueezedInput, op::Format::FORMAT_NCHW);
+    CHECK_RET(reformatInput != nullptr, nullptr);
+
+    return reformatInput;
+}
+
 static const aclTensor* View4dAs3d(const aclTensor* input, aclOpExecutor* executor)
 {
     // input NCL->contigious->unsqueeze(2)->reformat NCHW
     // 非连续转连续contigious
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
-    // unsqeeze(2)
+    // sqeeze(2)
     constexpr int64_t appendDim[] = {2};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
+    CHECK_RET(dim != nullptr, nullptr);
+    auto squeezedInput = l0op::SqueezeNd(contiguousInput, dim, executor);
+    CHECK_RET(squeezedInput != nullptr, nullptr);
+
+    // reformat
+    auto reformatInput = l0op::ReFormat(squeezedInput, op::Format::FORMAT_NCL);
+    CHECK_RET(reformatInput != nullptr, nullptr);
+
+    return reformatInput;
+}
+
+static const aclTensor* View4dAs3dw(const aclTensor* input, aclOpExecutor* executor)
+{
+    // input NCL->contigious->Reshape->unsqueeze(2)->reformat NCHW
+    // 非连续转连续contigious
+    auto contiguousInput = l0op::Contiguous(input, executor);
+    CHECK_RET(contiguousInput != nullptr, nullptr);
+
+    auto dims = input->GetViewShape().GetDimNum();
+    CHECK_RET(dims == CONV_2D_DIMS_NUM, nullptr);
+    auto shape = op::ToShapeVector(contiguousInput->GetViewShape());
+    FVector<int64_t> newShape = {shape[0], shape[1], shape[3], shape[2]};
+    aclIntArray* shapeArray = executor->AllocIntArray(newShape.data(), newShape.size());
+    CHECK_RET(shapeArray != nullptr, nullptr);
+    contiguousInput = l0op::Reshape(contiguousInput, shapeArray, executor);
+    CHECK_RET(contiguousInput != nullptr, nullptr);
+    // sqeeze(3)
+    constexpr int64_t appendDim[] = {2};
+    aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
+    CHECK_RET(dim != nullptr, nullptr);
     auto squeezedInput = l0op::SqueezeNd(contiguousInput, dim, executor);
     CHECK_RET(squeezedInput != nullptr, nullptr);
 
@@ -3528,6 +3607,91 @@ private:
     bool specialConv1d = false;
 };
 
+class Conv3dTo2dImpl : public ConvolutionImpl {
+public:
+    CONV_CONSTRUCTOR(3dTo2d)
+
+    aclnnStatus PreProcess() override
+    {
+        OP_LOGD("Conv3d on 310P entering Conv2d branch (D==1, Kd==1, padD==0).");
+
+        RegisterConv2dL0Functions(l0Functions);
+
+        constexpr uint64_t conv3dAttrDim = 3;
+        constexpr uint64_t conv2dAttrDim = 2;
+        constexpr uint64_t conv2dPadDim = 4;
+
+        CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(stride->Size() == conv3dAttrDim, ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(dilation->Size() == conv3dAttrDim, ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(padding->Size() == conv3dAttrDim, ACLNN_ERR_PARAM_INVALID);
+
+        int64_t stride2d[conv2dAttrDim] = {(*stride)[1], (*stride)[2]};
+        stride = executor->AllocIntArray(stride2d, conv2dAttrDim);
+        CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        int64_t dilation2d[conv2dAttrDim] = {(*dilation)[1], (*dilation)[2]};
+        dilation = executor->AllocIntArray(dilation2d, conv2dAttrDim);
+        CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // conv3d padding: [padD, padH, padW] (symmetric); conv2d padding expects [padTop, padBottom, padLeft, padRight]
+        int64_t padding4d[conv2dPadDim] = {(*padding)[1], (*padding)[1], (*padding)[2], (*padding)[2]};
+        padding = executor->AllocIntArray(padding4d, conv2dPadDim);
+        CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // NCDHW (D==1) -> NCHW for both input and weight.
+        input = View5dAs4dForOutput(input, executor);
+        CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        weight = View5dAs4dForOutput(weight, executor);
+        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        output2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
+        CHECK_RET(output2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
+        GetConvOpInfo(
+            input, weight, bias, output2d, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
+        OP_LOGD(
+            "convolution aclnn op (conv3d->conv2d) inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+
+        bool needChangeFormat = !op::IsSupportND();
+        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+    };
+
+    aclnnStatus Impl() override
+    {
+        return CommonConvImpl(
+            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
+            useHf32, executor, convOut, "conv3d->conv2d raise an unknown error");
+    };
+
+    aclnnStatus PostProcess() override
+    {
+        bool needChangeOutFormat = !op::IsSupportND();
+        auto res = CommonPostProcess(groups, needChangeOutFormat, output2d, convOut, executor);
+        CHECK_RET(res == ACLNN_SUCCESS, res);
+
+        // NCHW -> NCDHW (D==1).
+        convOut = View4dAs5dForInput(convOut, executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto result = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
+        return ACLNN_SUCCESS;
+    };
+
+    ~Conv3dTo2dImpl() override = default;
+
+private:
+    aclTensor* output2d = nullptr;
+    std::map<std::string, L0FUNCTION> l0Functions;
+};
+
 class Conv3dImpl : public ConvolutionImpl {
 public:
     CONV_CONSTRUCTOR(3d)
@@ -3609,29 +3773,49 @@ private:
 class ConvTransposed1dImpl : public ConvolutionImpl {
 public:
     CONV_CONSTRUCTOR(Transposed1d)
-
     aclnnStatus PreProcess() override
     {
         op::Format dataFormat = op::IsSupportND() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
         RegisterTransposedConvL0Functions(l0Functions, dataFormat);
 
-        stride = View1dAs2d(stride, 1, executor);
-        CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        ConvTranspose1dSwapHW = isConvTransposed1dSwitchHW();
+        if (ConvTranspose1dSwapHW) {
+            stride = View1dAs2dw(stride, 1, executor);
+            CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        padding = View1dAs2d(padding, 0, executor);
-        CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            padding = View1dAs2dw(padding, 0, executor);
+            CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        dilation = View1dAs2d(dilation, 1, executor);
-        CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            dilation = View1dAs2dw(dilation, 1, executor);
+            CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        outputPadding = View1dAs2d(outputPadding, 0, executor);
-        CHECK_RET(outputPadding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            outputPadding = View1dAs2dw(outputPadding, 0, executor);
+            CHECK_RET(outputPadding != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        input = View3dAs4d(input, executor);
-        CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            input = View3dAs4dw(input, executor);
+            CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        weight = View3dAs4d(weight, executor);
-        CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            weight = View3dAs4dw(weight, executor);
+            CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        } else {
+            stride = View1dAs2d(stride, 1, executor);
+            CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+            padding = View1dAs2d(padding, 0, executor);
+            CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+            dilation = View1dAs2d(dilation, 1, executor);
+            CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+            outputPadding = View1dAs2d(outputPadding, 0, executor);
+            CHECK_RET(outputPadding != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+            input = View3dAs4d(input, executor);
+            CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+            weight = View3dAs4d(weight, executor);
+            CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
 
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         // 调用静态函数PreProcess
@@ -3678,7 +3862,11 @@ public:
         auto res = CommonPostProcess(groups, needChangeFormat, fakeOutput2d, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
         // 现在Conv1d转为conv2d来做，所以需要转换输出
-        convOut = View4dAs3d(convOut, executor);
+        if(ConvTranspose1dSwapHW) {
+            convOut = View4dAs3dw(convOut, executor);
+        } else {
+            convOut = View4dAs3d(convOut, executor);
+        }
         CHECK_RET(convOut != nullptr, ACLNN_ERR_PARAM_NULLPTR);
         auto result = l0op::ViewCopy(convOut, output, executor);
         CHECK_RET(result != nullptr, ACLNN_ERR_PARAM_NULLPTR);
@@ -3686,11 +3874,23 @@ public:
         return ACLNN_SUCCESS;
     };
     ~ConvTransposed1dImpl() override = default;
+private:
+    bool ConvTranspose1dSwapHW = false;
+    bool isConvTransposed1dSwitchHW()
+    {
+        //针对特定场景进行优化 outW>4096 N=1 inC<=768
+        if(!op::IsSupportND()
+        && output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D
+        && input->GetViewShape().GetDim(N_DIM_NCL_INDEX) == 1
+        && input->GetViewShape().GetDim(C_DIM_NCL_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
+            return true;
+        }
+        return false;
+    }
 };
 class ConvTransposed2dImpl : public ConvolutionImpl {
 public:
     CONV_CONSTRUCTOR(Transposed2d)
-
     aclnnStatus PreProcess() override
     {
         op::Format dataFormat = op::IsSupportND() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
@@ -3704,6 +3904,16 @@ public:
         REG_L0_FUNCTION(
             l0Functions, ConvTranspose2d5HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NHWC, op::DataType::DT_BF16,
             op::Format::FORMAT_NHWC);
+        ConvTransposed2dSwitchHW = isConvTransposed2dSwitchHW();
+        if (ConvTransposed2dSwitchHW)
+        {
+            input = View4DSwapHWForTensor(input, executor);
+            weight = View4DSwapHWForTensor(weight, executor);
+            stride = View2DSwapHWForAttr(stride, executor);
+            padding = View2DSwapHWForAttr(padding, executor);
+            dilation = View2DSwapHWForAttr(dilation, executor);
+            outputPadding = View2DSwapHWForAttr(outputPadding, executor);
+        }
 
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         // 调用静态函数PreProcess
@@ -3750,12 +3960,32 @@ public:
         auto res = CommonPostProcess(groups, needChangeFormat, output, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
 
+        if(ConvTransposed2dSwitchHW){
+            convOut = View4DSwapHWForTensor(convOut, executor);
+        }
+
         auto result = l0op::ViewCopy(convOut, output, executor);
         CHECK_RET(result != nullptr, ACLNN_ERR_PARAM_NULLPTR);
 
         return ACLNN_SUCCESS;
     };
     ~ConvTransposed2dImpl() override = default;
+private:
+    bool ConvTransposed2dSwitchHW = false;
+    bool isConvTransposed2dSwitchHW()
+    {
+        //针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
+        if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 && (*outputPadding)[0] == 0
+        && output->GetViewShape().GetDim(W_DIM_NCHW_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D
+        && input->GetViewShape().GetDim(N_DIM_NCHW_INDEX) == 1
+        && input->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1
+        && weight->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1
+        && input->GetViewShape().GetDim(C_DIM_NCHW_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D)
+        {
+            return true;
+        }
+        return false;
+    }
 };
 class ConvTransposed3dImpl : public ConvolutionImpl {
 public:
@@ -3961,6 +4191,53 @@ public:
     ~ConvTransposed1dTo3dImpl() override = default;
 };
 
+static bool CheckTensorFormatNCDHW(const aclTensor* tensor)
+{
+    return tensor != nullptr &&
+           tensor->GetViewFormat() == op::Format::FORMAT_NCDHW &&
+           tensor->GetStorageFormat() == op::Format::FORMAT_NCDHW;
+}
+
+static bool CheckConv3dTensorShape(const aclTensor* tensor)
+{
+    return tensor != nullptr &&
+           tensor->GetViewShape().GetDimNum() == CONV_3D_DIM_SIZE &&
+           tensor->GetViewShape().GetDim(D_DIM_NCDHW_INDEX) == 1;
+}
+
+static bool CanConv3dToConv2dOn310P(
+    const aclTensor* input, const aclTensor* weight, const aclIntArray* padding, const bool transposed,
+    const aclTensor* output)
+{
+    if (transposed || GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P) {
+        return false;
+    }
+
+    if (input == nullptr || weight == nullptr || padding == nullptr || output == nullptr) {
+        return false;
+    }
+
+    // The conversion relies on "squeeze/unsqueeze D==1" being layout-preserving for NCDHW<->NCHW,
+    // so require storage format to be NCDHW as well.
+    if (!CheckTensorFormatNCDHW(input) || !CheckTensorFormatNCDHW(weight) || !CheckTensorFormatNCDHW(output)) {
+        return false;
+    }
+
+    // Strong constraints for correctness:
+    // - input D == 1
+    // - weight Kd == 1 (NCDHW index 2)
+    // - paddingD == 0 (conv3d padding is symmetric [padD, padH, padW])
+    if (!CheckConv3dTensorShape(input) || !CheckConv3dTensorShape(weight) || !CheckConv3dTensorShape(output)) {
+        return false;
+    }
+
+    if (padding->Size() != DIM_DHW_NUM || (*padding)[0] != 0) {
+        return false;
+    }
+
+    return true;
+}
+
 std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
     const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclIntArray* stride,
     const aclIntArray* padding, const aclIntArray* dilation, const bool transposed, const bool tbc,
@@ -3994,6 +4271,11 @@ std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
                     cubeMathType, executor);
             }
             case CONV_3D_DIM_SIZE: {
+                if (CanConv3dToConv2dOn310P(input, weight, padding, transposed, output)) {
+                    return std::make_shared<Conv3dTo2dImpl>(
+                        input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output,
+                        useHf32, cubeMathType, executor);
+                }
                 return std::make_shared<Conv3dImpl>(
                     input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
                     cubeMathType, executor);

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file avg_pool_3d_grad_tiling.cc
@@ -16,7 +16,7 @@
 #include <string>
 #include <nlohmann/json.hpp>
 #include "error_util.h"
-#include "../../avg_pool3_d/op_host/cube_tiling_runtime.h"
+#include "../../avg_pool3_d/op_host/avg_pool_cube_tiling.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
@@ -31,7 +31,7 @@ constexpr int32_t kAvgPool3DGradDedyInputIdx = 1;
 } // namespace
 
 namespace optiling {
-using namespace avg_pool3_d_tiling_compile_info;
+using namespace avgPool3DTilingCompileInfo;
 // AvgPool3DGrad for vector
 constexpr int64_t GRAD_SHAPE = 5;
 constexpr int64_t ATTR_SIZE = 3;
@@ -68,12 +68,13 @@ constexpr size_t DIM4 = 4;
 constexpr uint64_t DTYPE_LEN_B16 = 2;
 constexpr uint64_t DTYPE_LEN_B32 = 4;
 constexpr uint64_t FRACTOR_TWO = 2;
+constexpr int64_t BATCH_MODE = 1;
 
 struct DHWParam {
-    int n = 0;
-    int d = 0;
-    int h = 0;
-    int w = 0;
+    int64_t n = 0;
+    int64_t d = 0;
+    int64_t h = 0;
+    int64_t w = 0;
 };
 
 template <typename T>
@@ -235,7 +236,7 @@ ge::graphStatus AvgPool3dGradTiling::InitDHW()
     auto shapeDim = inputShape0->GetStorageShape().GetDim(0);
     const gert::Tensor* shapeTensor = tilingContext_->GetInputTensor(ORIG_INPUT_SHAPE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, shapeTensor);
-    const int32_t* shapeValue = shapeTensor->GetData<int32_t>();
+    const uint32_t* shapeValue = shapeTensor->GetData<uint32_t>();
     if (shapeValue == nullptr) {
         return ge::GRAPH_FAILED;
     }
@@ -540,7 +541,7 @@ void AvgPool3dGradTiling::SetTilingKey(const ge::DataType& dtype)
 ge::graphStatus AvgPool3dGradTiling::Init()
 {
     OP_LOGD(tilingContext_->GetNodeName(), "Tiling initing");
-    auto compileInfo = static_cast<const Conv3DBackPropInputCompileInfo*>(tilingContext_->GetCompileInfo());
+    auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(tilingContext_->GetCompileInfo());
     if (compileInfo == nullptr) {
         OP_LOGE(tilingContext_->GetNodeName(), "compile info is nullptr");
         return ge::GRAPH_FAILED;
@@ -713,6 +714,7 @@ ge::graphStatus AvgPool3dGradTiling::SetKernelTiling()
     tilingData_.SaveToBuffer(
         tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    tilingContext_->SetScheduleMode(BATCH_MODE);
     TilingDataPrint();
     return ge::GRAPH_SUCCESS;
 }
@@ -720,23 +722,23 @@ ge::graphStatus AvgPool3dGradTiling::SetKernelTiling()
 void AvgPool3dGradTiling::TilingDataPrint() const
 {
     OP_LOGD(tilingContext_->GetNodeName(), "coreNum:                    %lu", coreNum_);
-    OP_LOGD(tilingContext_->GetNodeName(), "outn:                       %d", outDHW_.n);
-    OP_LOGD(tilingContext_->GetNodeName(), "outd:                       %d", outDHW_.d);
-    OP_LOGD(tilingContext_->GetNodeName(), "outh:                       %d", outDHW_.h);
-    OP_LOGD(tilingContext_->GetNodeName(), "outw:                       %d", outDHW_.w);
-    OP_LOGD(tilingContext_->GetNodeName(), "inn:                        %d", inDHW_.n);
-    OP_LOGD(tilingContext_->GetNodeName(), "ind:                        %d", inDHW_.d);
-    OP_LOGD(tilingContext_->GetNodeName(), "inh:                        %d", inDHW_.h);
-    OP_LOGD(tilingContext_->GetNodeName(), "inw:                        %d", inDHW_.w);
-    OP_LOGD(tilingContext_->GetNodeName(), "kd:                         %d", kDHW_.d);
-    OP_LOGD(tilingContext_->GetNodeName(), "kh:                         %d", kDHW_.h);
-    OP_LOGD(tilingContext_->GetNodeName(), "kw:                         %d", kDHW_.w);
-    OP_LOGD(tilingContext_->GetNodeName(), "sd:                         %d", dDHW_.d);
-    OP_LOGD(tilingContext_->GetNodeName(), "sh:                         %d", dDHW_.h);
-    OP_LOGD(tilingContext_->GetNodeName(), "sw:                         %d", dDHW_.w);
-    OP_LOGD(tilingContext_->GetNodeName(), "padd:                       %d", padDHW_.d);
-    OP_LOGD(tilingContext_->GetNodeName(), "padh:                       %d", padDHW_.h);
-    OP_LOGD(tilingContext_->GetNodeName(), "padw:                       %d", padDHW_.w);
+    OP_LOGD(tilingContext_->GetNodeName(), "outn:                       %ld", outDHW_.n);
+    OP_LOGD(tilingContext_->GetNodeName(), "outd:                       %ld", outDHW_.d);
+    OP_LOGD(tilingContext_->GetNodeName(), "outh:                       %ld", outDHW_.h);
+    OP_LOGD(tilingContext_->GetNodeName(), "outw:                       %ld", outDHW_.w);
+    OP_LOGD(tilingContext_->GetNodeName(), "inn:                        %ld", inDHW_.n);
+    OP_LOGD(tilingContext_->GetNodeName(), "ind:                        %ld", inDHW_.d);
+    OP_LOGD(tilingContext_->GetNodeName(), "inh:                        %ld", inDHW_.h);
+    OP_LOGD(tilingContext_->GetNodeName(), "inw:                        %ld", inDHW_.w);
+    OP_LOGD(tilingContext_->GetNodeName(), "kd:                         %ld", kDHW_.d);
+    OP_LOGD(tilingContext_->GetNodeName(), "kh:                         %ld", kDHW_.h);
+    OP_LOGD(tilingContext_->GetNodeName(), "kw:                         %ld", kDHW_.w);
+    OP_LOGD(tilingContext_->GetNodeName(), "sd:                         %ld", dDHW_.d);
+    OP_LOGD(tilingContext_->GetNodeName(), "sh:                         %ld", dDHW_.h);
+    OP_LOGD(tilingContext_->GetNodeName(), "sw:                         %ld", dDHW_.w);
+    OP_LOGD(tilingContext_->GetNodeName(), "padd:                       %ld", padDHW_.d);
+    OP_LOGD(tilingContext_->GetNodeName(), "padh:                       %ld", padDHW_.h);
+    OP_LOGD(tilingContext_->GetNodeName(), "padw:                       %ld", padDHW_.w);
     OP_LOGD(tilingContext_->GetNodeName(), "countIncludePad:            %lu", countIncludePad_);
     OP_LOGD(tilingContext_->GetNodeName(), "isOverlap:                  %lu", isOverlap_);
     OP_LOGD(tilingContext_->GetNodeName(), "normalCoreCNum:            %lu", normalCoreCNum_);
@@ -804,7 +806,7 @@ ge::graphStatus TilingAvgPool3dGradVec(gert::TilingContext* context)
 ge::graphStatus TilingPrepareForAvgPool3dGradVec(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling Prepare For AvgPool3dGrad start");
-    auto compileInfo = context->GetCompiledInfo<Conv3DBackPropInputCompileInfo>();
+    auto compileInfo = context->GetCompiledInfo<AvgPool3DGradCubeCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -829,12 +831,12 @@ ge::graphStatus TilingForAvgPool3DGrad(gert::TilingContext* context)
 {
     OP_CHECK_IF(
         context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3DGrad", "context is null"), return ge::GRAPH_FAILED);
-    auto compileInfo = static_cast<const Conv3DBackPropInputCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     if (compileInfo->is_ascend_c) {
         return TilingAvgPool3dGradVec(context);
     } else {
-        return TilingForConv3DBpInput(context, kAvgPool3DGradDedyInputIdx, false);
+        return TilingForAvgPool3dGrad(context, kAvgPool3DGradDedyInputIdx);
     }
 }
 
@@ -846,12 +848,12 @@ static ge::graphStatus TilingPrepareForAvgPool3DGrad(gert::TilingParseContext* c
     if (isAscendC) {
         return TilingPrepareForAvgPool3dGradVec(context);
     } else {
-        return ParseCubeCompileInfo<Conv3DBackPropInputCompileInfo, 4>(context); // 4: ndhw
+        return ParseCubeCompileInfo<AvgPool3DGradCubeCompileInfo, 4>(context); // 4: ndhw
     }
 }
 
 IMPL_OP_OPTILING(AvgPool3DGrad)
     .InputsDataDependency({ORIG_INPUT_SHAPE_INDEX})
     .Tiling(TilingForAvgPool3DGrad)
-    .TilingParse<Conv3DBackPropInputCompileInfo>(TilingPrepareForAvgPool3DGrad);
+    .TilingParse<AvgPool3DGradCubeCompileInfo>(TilingPrepareForAvgPool3DGrad);
 } // namespace optiling

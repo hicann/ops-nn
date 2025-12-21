@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file foreach_one_scalar_list_quaternary_implict_output.h
@@ -145,7 +145,7 @@ __aicore__ inline void ForeachOneScalarListQuaternaryImplictOutput<T, op, buffer
     Base::outTensorsPtr = y;
     inScalarGM.SetGlobalBuffer((__gm__ T*)scalar, 1);
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ >= 220
     if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
         uint64_t totalTensorUbSize = Base::Base::inputsTensorUbSize * COPY_SPACE_MULTIPLE;
         Base::Base::pipe.InitBuffer(Base::dataQueue, bufferNum, totalTensorUbSize);
@@ -188,7 +188,7 @@ template <typename T, OneScalarQuaternaryImplictOutputOp<T>* op, int32_t bufferN
 __aicore__ inline void ForeachOneScalarListQuaternaryImplictOutput<T, op, bufferNum, paramsCount>::Process()
 {
     LocalTensor<float> float32Tensor;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ >= 220
     if (std::is_same_v<T, bfloat16_t>) {
         float32Tensor = Base::float32Queue.template DeQue<float>();
     }
@@ -214,7 +214,7 @@ __aicore__ inline void ForeachOneScalarListQuaternaryImplictOutput<T, op, buffer
         Base::outTensorsGM.SetGlobalBuffer(Base::Base::GetTensorAddr(i, Base::outTensorsPtr) + cursorStart);
         Base::SingleTensorProcess(dataCount, float32Tensor);
     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ >= 220
     if (std::is_same_v<T, bfloat16_t>) {
         Base::float32Queue.template FreeTensor(float32Tensor);
     }

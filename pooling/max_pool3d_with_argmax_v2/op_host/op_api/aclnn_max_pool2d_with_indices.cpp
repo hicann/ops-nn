@@ -1,17 +1,17 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_max_pool2d_with_indices.h"
-#include "level0/max_pool_with_argmax_v1.h"
+#include "max_pool_with_argmax_v1.h"
 #include "max_pool3d_with_argmax_v2.h"
-#include "level0/max_pool_with_argmax_v3.h"
+#include "../../../max_pool_with_argmax_v3/op_host/op_api/max_pool_with_argmax_v3.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
@@ -65,6 +65,7 @@ static const int64_t BLOCKSIZE = 16;
 static const int KERNEL_SIZE_32 = 32;
 static const int KERNEL_SIZE_64 = 64;
 
+namespace {
 static bool CheckNotNullPtr(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
@@ -872,6 +873,7 @@ static aclnnStatus ExecMaxPool2dWithIndicesGetWorkspaceSizeV3(
     uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
     return ACLNN_SUCCESS;
 }
+} // namespace
 
 aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
@@ -894,11 +896,11 @@ aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
+    L2_DFX_PHASE_1(
+        aclnnMaxPool2dWithMask, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode),
+        DFX_OUT(out, indices));
     if (!(kH == 1 && kW == 1) && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                   GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) {
-        L2_DFX_PHASE_1(
-            aclnnMaxPool2dWithMask, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode),
-            DFX_OUT(out, indices));
         return ExecMaxPool2dWithIndicesReshape3DGetWorkspaceSize(
             self, kernelSize, stride, padding, dilation, ceilMode, out, indices, false, workspaceSize, executor);
     } else {

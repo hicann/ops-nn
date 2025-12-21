@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -537,6 +537,31 @@ TEST_F(l2_nll_loss2d_backward_test, case_025)
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<int64_t>{0});
 
     auto outDesc = TensorDesc({3, 5, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(
+        aclnnNLLLoss2dBackward,
+        INPUT(gradDesc, selfDesc, targetDesc, weightDesc, reduction, ignoreIndex, totalWeightDesc), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+TEST_F(l2_nll_loss2d_backward_test, case_026)
+{
+    auto gradDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc({30, 150, 5, 6}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({30, 5, 6}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 150);
+    auto weightDesc = TensorDesc({150}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 1);
+    int64_t reduction = 2;
+    int64_t ignoreIndex = -100;
+    auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({30, 150, 5, 6}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
     auto ut = OP_API_UT(
         aclnnNLLLoss2dBackward,

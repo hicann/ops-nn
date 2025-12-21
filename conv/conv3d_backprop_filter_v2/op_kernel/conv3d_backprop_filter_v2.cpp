@@ -1,25 +1,43 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_filter_v2.cpp
  * \brief
  */
+#if __CCE_AICORE__ == 310
+#include "arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
+#if defined(__DAV_C310__)
+#include "arch35/conv3d_backprop_filter_v2_arch35.h"
+#endif
+#else
 #include "./arch32/conv3d_backprop_filter_v2.h"
 #include "./arch32/conv3d_backprop_filter_v2_init_output.h"
 #include "./arch32/conv3d_dw_v2_basic_block.h"
 #include "./arch32/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv3d_backprop_filter_v2_tiling_key.h"
+#endif
 
 using namespace AscendC;
 
+#if __CCE_AICORE__ == 310
+template <uint32_t conv3DDWTemplateId>
+__global__ __aicore__ void conv3d_backprop_filter_v2(
+    GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+{
+#if defined(__DAV_C310__)
+    conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId>(x, filter_size, out_backprop, y, workSpace, tiling);
+    return;
+#endif
+}
+#else
 template <uint32_t conv3DDWTemplateId>
 __global__ __aicore__ void conv3d_backprop_filter_v2(
     GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
@@ -79,3 +97,4 @@ __global__ __aicore__ void conv3d_backprop_filter_v2(
         }
     }
 }
+#endif

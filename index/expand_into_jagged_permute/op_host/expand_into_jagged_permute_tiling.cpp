@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file expand_into_jagged_permute_tiling.cpp
@@ -129,14 +129,14 @@ static ge::graphStatus SetTilingKey(ExpandIntoJaggedPermuteParam& param) {
 static ge::graphStatus SetTilingData(gert::TilingContext *context, const ExpandIntoJaggedPermuteParam& param)
 {
     ExpandIntoJaggedPermuteTilingData tilingData;
-    tilingData.set_offsetLen(param.permute + 1);
-    tilingData.set_inputLen(param.permute);
-    tilingData.set_oneTaskLen(param.oneTaskLen);
-    tilingData.set_oneTaskOffsetLen(param.oneTaskInputOffsetLen);
-    tilingData.set_blockFactor(param.taskNum);
     tilingData.set_outputSize(param.outputSize);
-    tilingData.set_lastTaskLen(param.numTail);
     context->SetBlockDim(param.blockDim);
+    tilingData.set_blockFactor(param.taskNum);
+    tilingData.set_inputLen(param.permute);
+    tilingData.set_offsetLen(param.permute + 1);
+    tilingData.set_lastTaskLen(param.numTail);
+    tilingData.set_oneTaskOffsetLen(param.oneTaskInputOffsetLen); 
+    tilingData.set_oneTaskLen(param.oneTaskLen);
     auto rawTilingData = context->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context, rawTilingData);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
@@ -156,7 +156,6 @@ static inline void PrintTilingData(const gert::TilingContext* context, const Exp
     OP_LOGD("taskNum", " param.taskNum %ld" , param.taskNum);
     OP_LOGD("outputSize", " param.outputSize %ld", param.outputSize);
     OP_LOGD("numTail", " param.numTail %ld", param.numTail);
-    OP_LOGD("tilingKey", " tilingKey: %ld", param.tilingKey);
     OP_LOGD(nodeName, ">>>>>>>>>>>>>>> Print ExpandIntoJaggedPermute tiling data end <<<<<<<<<<<<<<<<");
 }
 

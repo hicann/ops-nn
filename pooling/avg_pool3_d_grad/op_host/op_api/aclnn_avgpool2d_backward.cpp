@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_avgpool2d_backward.cpp
@@ -143,13 +143,13 @@ const int kNCLDIM = 3;
 const int kNCHWDIM = 4;
 const int kAvgpoolMinH = 10;
 const int kAvgpoolMinW = 10;
+const int64_t cMaxDims = 65536;
 
 static const int64_t DIM0 = 0;
 static const int64_t DIM1 = 1;
 static const int64_t DIM2 = 2;
 static const int64_t DIM3 = 3;
 static const int64_t DIM4 = 4;
-
 static const int64_t AVGV2_KERNEL_H_MAX = 255;
 static const int64_t AVGV2_KERNEL_W_MAX = 255;
 static const int64_t AVGV2_KERNEL_SIZE_H_MUL_W = 255;
@@ -1101,7 +1101,12 @@ static aclnnStatus BuildAvgPool2dBackwardGraph(
     OP_LOGD("Current isNoNeedMul flag is: %d", isNoNeedMul);
     bool isSupport2dTo3d = IfSupport2dTo3d();
     OP_LOGD("Current isSupport2dTo3d flag is: %d", isSupport2dTo3d);
-
+    auto cDims = 1;
+    if (gradOutput->GetViewShape().GetDimNum() == kNCHWDIM) {
+        cDims = gradOutput->GetViewShape().GetDim(kCDimNCHWIdx);
+    } else {
+        cDims = gradOutput->GetViewShape().GetDim(kCDimNCLIdx);
+    }
     // 构造计算图 根据芯片不同走不通分支
     if (!isSupport2dTo3d) {
         if (CheckCubeSupport(divisorOverride, kernelSize)) {
@@ -1116,7 +1121,7 @@ static aclnnStatus BuildAvgPool2dBackwardGraph(
         }
     } else {
         if (CheckCubeSupport(divisorOverride, kernelSize) && countIncludePad && !ceilMode &&
-            !CheckNeedChangeTo3D(gradOutput, self)) {
+            !CheckNeedChangeTo3D(gradOutput, self) && cDims < cMaxDims) {
             auto ret = BuildCubeGraph(
                 gradOutput, self, kernelSize, stride, padding, divisorOverride, cubeMathType, gradInput, isNoNeedMul,
                 executor);

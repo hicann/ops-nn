@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,6 +18,9 @@
 #include "op_cache_tiling.h"
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
+#include "platform/platform_infos_def.h"
+
+using Ops::NN::TilingPrepareForOpCache;
 
 namespace optiling {
 
@@ -29,6 +32,14 @@ constexpr uint64_t MAX_SHAPE_DIM = 65535UL;
 constexpr uint64_t MIN_GROUP_SIZE = 32UL;
 constexpr uint64_t MAX_INT32 = 2147483647UL;
 constexpr uint64_t INT4_IN_INT32_NUMS = 8UL;
+constexpr size_t LAST_SECOND_DIM_INDEX = 2;
+constexpr size_t LAST_BATCH_DIM_INDEX = 3;
+constexpr size_t LAST_FIRST_DIM_INDEX = 1;
+constexpr int32_t IDX_K_LOW = 2;
+constexpr int32_t IDX_K_HIGH = 3;
+constexpr int32_t IDX_N_LOW = 4;
+constexpr int32_t IDX_N_HIGH = 5;
+constexpr int32_t IDX_B_LOW = 6;
 static const std::initializer_list<ge::DataType> WEIGHT_DTYPE_LIST = {
     ge::DT_INT32, ge::DT_INT8,        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
     ge::DT_INT4,  ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT};
@@ -77,6 +88,59 @@ void GetAttrs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext*
     matmulInfo.transB = transposeWeight != nullptr && *transposeWeight;
 }
 
+uint64_t GetBatchSize(const gert::Shape &shape)
+{
+    uint64_t batch = 1;
+    auto shapeLen = shape.GetDimNum();
+    for (size_t i = LAST_BATCH_DIM_INDEX; i <= shape.GetDimNum(); i++) {
+        batch = batch * shape.GetDim(shapeLen - i);
+    }
+    return batch;
+}
+
+uint64_t InferOutBatchSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape)
+{
+    uint64_t batchC = 1U;
+    auto x1DimNum = x1Shape.GetDimNum();
+    auto x2DimNum = x2Shape.GetDimNum();
+    auto outDimNum = std::max(x1DimNum, x2DimNum);
+    const gert::Shape &shapeLong = x1DimNum > x2DimNum ? x1Shape : x2Shape;
+    const gert::Shape &shapeShort = x1DimNum > x2DimNum ? x2Shape : x1Shape;
+    size_t validOffset = outDimNum - std::min(x1DimNum, x2DimNum);
+    for (size_t i = 0; i < outDimNum - LAST_SECOND_DIM_INDEX; i++) {
+        auto shortDim = i < validOffset ? 1 : shapeShort.GetDim(i - validOffset);
+        auto longDim = shapeLong.GetDim(i);
+        batchC = batchC * static_cast<uint64_t>(std::max(shortDim, longDim));
+    }
+    return batchC;
+}
+
+
+void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
+{
+    auto oriShapeA = context->GetInputShape(0)->GetOriginShape();
+    auto oriShapeB = context->GetInputShape(1)->GetOriginShape();
+    int32_t numDimA = static_cast<int32_t>(oriShapeA.GetDimNum());
+    int32_t numDimB = static_cast<int32_t>(oriShapeB.GetDimNum());
+    matmulInfo.batchX3 = numDimA > IDX_K_LOW ? oriShapeA.GetDim(numDimA - IDX_K_HIGH) : 1;
+    matmulInfo.batchX2 = numDimA > IDX_K_HIGH ? oriShapeA.GetDim(numDimA - IDX_N_LOW) : 1;
+    matmulInfo.batchX1 = numDimA > IDX_N_LOW ? oriShapeA.GetDim(numDimA - IDX_N_HIGH) : 1;
+    matmulInfo.batchX0 = numDimA > IDX_N_HIGH ? oriShapeA.GetDim(numDimA - IDX_B_LOW) : 1;
+    matmulInfo.batchX = GetBatchSize(oriShapeA);
+    matmulInfo.batchWeight3 = numDimB > IDX_K_LOW ? oriShapeB.GetDim(numDimB - IDX_K_HIGH) : 1;
+    matmulInfo.batchWeight2 = numDimB > IDX_K_HIGH ? oriShapeB.GetDim(numDimB - IDX_N_LOW) : 1;
+    matmulInfo.batchWeight1 = numDimB > IDX_N_LOW ? oriShapeB.GetDim(numDimB - IDX_N_HIGH) : 1;
+    matmulInfo.batchWeight0 = numDimB > IDX_N_HIGH ? oriShapeB.GetDim(numDimB - IDX_B_LOW) : 1;
+    matmulInfo.batchWeight = GetBatchSize(oriShapeB);
+    auto outShape = context->GetOutputShape(0)->GetStorageShape();
+    int32_t numDimC = static_cast<int32_t>(outShape.GetDimNum());
+    matmulInfo.batchY3 = numDimC > IDX_K_LOW ? outShape.GetDim(numDimC - IDX_K_HIGH) : 1UL;
+    matmulInfo.batchY2 = numDimC > IDX_K_HIGH ? outShape.GetDim(numDimC - IDX_N_LOW) : 1UL;
+    matmulInfo.batchY1 = numDimC > IDX_N_LOW ? outShape.GetDim(numDimC - IDX_N_HIGH) : 1UL;
+    matmulInfo.batchY0 = numDimC > IDX_N_HIGH ? outShape.GetDim(numDimC - IDX_B_LOW) : 1UL;
+    matmulInfo.batchY = InferOutBatchSize(oriShapeA, oriShapeB);
+}
+
 void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
 {
     size_t idx = 0;
@@ -87,17 +151,20 @@ void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext
     auto quantScaleShape = context->GetOptionalInputShape(idx++);
     auto biasShape = context->GetOptionalInputShape(BIAS_INDEX);
     matmulInfo.bFormat = GetInputStorageFormat(context, 1);
-    uint64_t weightLastDim = weightShape->GetOriginShape().GetDim(1);
+    auto xShapeLen = xShape->GetOriginShape().GetDimNum();
+    auto weightShapeLen = weightShape->GetOriginShape().GetDimNum();
+    uint64_t weightLastDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_FIRST_DIM_INDEX);
+    uint64_t weightFirstDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_SECOND_DIM_INDEX);
     if (matmulInfo.bDtype == ge::DT_INT32 || matmulInfo.bDtype == ge::DT_FLOAT) {
         weightLastDim *= INT4_IN_INT32_NUMS;
     }
+    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_SECOND_DIM_INDEX);
+    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_FIRST_DIM_INDEX);
     matmulInfo.hasBias = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
-    matmulInfo.mSize = static_cast<uint64_t>(
-        matmulInfo.transA ? xShape->GetOriginShape().GetDim(1) : xShape->GetOriginShape().GetDim(0));
-    matmulInfo.kSize = static_cast<uint64_t>(
-        matmulInfo.transA ? xShape->GetOriginShape().GetDim(0) : xShape->GetOriginShape().GetDim(1));
-    matmulInfo.nSize =
-        static_cast<uint64_t>(matmulInfo.transB ? weightShape->GetOriginShape().GetDim(0) : weightLastDim);
+    matmulInfo.biasWithBatch = matmulInfo.hasBias && biasShape->GetStorageShape().GetDimNum() > 1;
+    matmulInfo.mSize = static_cast<uint64_t>(matmulInfo.transA ? xLastDim : xFirstDim);
+    matmulInfo.kSize = static_cast<uint64_t>(matmulInfo.transA ? xFirstDim : xLastDim);
+    matmulInfo.nSize = static_cast<uint64_t>(matmulInfo.transB ? weightFirstDim : weightLastDim);
 
     if (CheckOptionalInputByShape(antiQuantOffsetShape)) {
         matmulInfo.hasAntiQuantOffset = true;
@@ -138,6 +205,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
     GetDtype(*matmulInfoPtr_, context_);
     GetAttrs(*matmulInfoPtr_, context_);
     GetInputs(*matmulInfoPtr_, context_);
+    GetBatchInfo(*matmulInfoPtr_, context_);
     opName_ = context_->GetNodeName();
     // int4pack输入场景修正dtype为int4
     if (matmulInfoPtr_->bDtype == ge::DT_INT32) {
@@ -183,6 +251,9 @@ void WeightQuantBatchMatmulV2Tiling::InitCompileInfo()
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr_->ubSize);
     compileInfoPtr_->workspaceNum = ascendcPlatform.GetLibApiWorkSpaceSize();
     compileInfoPtr_->socVersion = ascendcPlatform.GetSocVersion();
+    std::string mmad;
+    bool res = platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", mmad);
+    compileInfoPtr_->supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
 
     TilingPrepareForOpCache(context_);
     OP_LOGD(context_->GetNodeName(), "MatmulAllReduce Init Quant Tiling Compile Info Success");
@@ -222,6 +293,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetPlatformInfo()
         compileInfoPtr_->aivNum = compileInfoPtr->aivNum;
         compileInfoPtr_->aicNum = compileInfoPtr->aicNum;
         compileInfoPtr_->socVersion = compileInfoPtr->socVersion;
+        compileInfoPtr_->supportMmadS8S4 = compileInfoPtr->supportMmadS8S4;
     }
 
     aicoreParams_.blockDim = 0;
@@ -486,17 +558,18 @@ bool CheckBiasShape(WeightQuantBatchMatmulInfo* inputParams, const gert::Storage
     return true;
 }
 
-bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams)
+bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
     OP_TILING_CHECK(
-        inputParams->kSize > MAX_SHAPE_DIM || inputParams->nSize > MAX_SHAPE_DIM,
+        socVersion != platform_ascendc::SocVersion::ASCEND910_95 &&
+            (inputParams->kSize > MAX_SHAPE_DIM || inputParams->nSize > MAX_SHAPE_DIM),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName, "Dim of k or n should not more than 65535, but they are [%lu] and [%lu]",
             inputParams->kSize, inputParams->nSize),
         return false);
     uint64_t batchMax = inputParams->transA ? MAX_SHAPE_DIM : MAX_INT32;
     OP_TILING_CHECK(
-        inputParams->mSize > batchMax,
+        socVersion != platform_ascendc::SocVersion::ASCEND910_95 && (inputParams->mSize > batchMax),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName, "Dim of m should not more than [%lu], but is [%lu]", batchMax, inputParams->mSize),
         return false);
@@ -531,7 +604,7 @@ The function is check the shape limit:
     6. nk must <= 65535, m <= 65535(trans_a) or int32_max(not trans_a);
     7. group_size < k, align to 32
 */
-bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams)
+bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
     size_t idx = 0;
     auto xShape = context->GetInputShape(idx++);
@@ -569,7 +642,7 @@ bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputP
         !CheckBiasShape(inputParams, biasShape),
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check bias shape failed"), return false);
     OP_TILING_CHECK(
-        !CheckShapeDims(inputParams), VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check shape dims failed"),
+        !CheckShapeDims(inputParams, socVersion), VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check shape dims failed"),
         return false);
     return true;
 }
@@ -885,7 +958,7 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
         !CheckAttr(context, &inputParams), VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check attr failed"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        !CheckShape(context, &inputParams), VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check shape failed"),
+        !CheckShape(context, &inputParams, socVersion), VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check shape failed"),
         return ge::GRAPH_FAILED);
     if (inputParams.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_TILING_CHECK(

@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -506,11 +506,11 @@ static bool CheckXWeight(const aclTensor* x, const aclTensor* weight, bool trans
         return false;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P &&
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 &&
         (kX > M_K_N_MAX_VALUE || nWeight > M_K_N_MAX_VALUE || (transposeX && (mX > M_K_N_MAX_VALUE)))) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "k,n shouldn't be larger than %ld, "
-            "actual k is %ld, n is %ld. When x is transposed, "
+            "k,n shouldn't be larger than %ld, actual k is %ld, n is %ld. When x is transposed, "
             "m shouldn't be larger than %ld, actual m is %ld.",
             M_K_N_MAX_VALUE, kX, nWeight, M_K_N_MAX_VALUE, mX);
         return false;
@@ -1037,6 +1037,54 @@ static bool CheckQuantScale(const aclTensor* quantScaleOptional, const aclTensor
     return true;
 }
 
+static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiquantScale,
+                                                          const aclTensor* antiquantOffsetOptional,
+                                                          bool transposeWeight) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        if (antiquantScale->GetViewShape().GetDimNum() == ANTIQUANT_DIM_MAX_VALUE &&
+            antiquantScale->GetViewShape().GetDim(0) != 1 && antiquantScale->GetViewShape().GetDim(1) != 1) {
+            OP_CHECK(
+                (transposeWeight && !IsContiguous(antiquantScale)) ||
+                    (!transposeWeight && IsContiguous(antiquantScale)),
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "when weight is contiguous or transpose last two dims, antiquantScale tensor should be "
+                    "consistent with it."),
+                return ACLNN_ERR_PARAM_INVALID);
+        }
+
+        if (antiquantOffsetOptional != nullptr &&
+            antiquantOffsetOptional->GetViewShape().GetDimNum() == ANTIQUANT_DIM_MAX_VALUE &&
+            antiquantOffsetOptional->GetViewShape().GetDim(0) != 1 &&
+            antiquantOffsetOptional->GetViewShape().GetDim(1) != 1) {
+            OP_CHECK(
+                (transposeWeight && !IsContiguous(antiquantOffsetOptional)) ||
+                    (!transposeWeight && IsContiguous(antiquantOffsetOptional)),
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "when weight is contiguous or transpose last two dims, antiquantOffsetOptional tensor should "
+                    "be consistent with it."),
+                return ACLNN_ERR_PARAM_INVALID);
+        }
+    } else {
+        OP_CHECK(
+            transposeWeight || IsContiguous(antiquantScale),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "only support antiquantScale tensor is contiguous or transpose last two dims."),
+            return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK(
+            antiquantOffsetOptional == nullptr || transposeWeight ||
+                (!transposeWeight && IsContiguous(antiquantOffsetOptional)),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "only support antiquantOffsetOptional tensor is contiguous or transpose last two dims."),
+            return ACLNN_ERR_PARAM_INVALID);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus ContiguousCheck(
     const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
     const aclTensor* antiquantOffsetOptional, const aclTensor* y)
@@ -1064,19 +1112,9 @@ static aclnnStatus ContiguousCheck(
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support antiquantOffsetOptional tensor is contiguous."),
             return ACLNN_ERR_PARAM_INVALID);
     } else {
-        OP_CHECK(
-            transposeWeight || IsContiguous(antiquantScale),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "only support antiquantScale tensor is contiguous or transpose last two dims."),
-            return ACLNN_ERR_PARAM_INVALID);
-        OP_CHECK(
-            antiquantOffsetOptional == nullptr || transposeWeight ||
-                (!transposeWeight && IsContiguous(antiquantOffsetOptional)),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "only support antiquantOffsetOptional tensor is contiguous or transpose last two dims."),
-            return ACLNN_ERR_PARAM_INVALID);
+        aclnnStatus antiQuantRes =
+            AntiQuantScaleAndOffsetContiguousCheck(antiquantScale, antiquantOffsetOptional, transposeWeight);
+        CHECK_RET(antiQuantRes == ACLNN_SUCCESS, antiQuantRes);
     }
 
     OP_CHECK(

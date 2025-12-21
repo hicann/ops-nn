@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn_gather_v3.h"
 #include "gather_v2.h"
 #include "aclnn_kernels/cast.h"
@@ -33,7 +33,8 @@ static const int64_t MAX_DIM_LEN = 8;
 static const int64_t HIGH_PRECISION = 0;
 static const int64_t HIGH_PERFORMANCE = 1;
 static const int64_t SUPPORT_OUT_OF_BOUND_INDEX = 2;
-static const int64_t MIN_SELF_SIZE = 61440;
+static const int64_t MIN_SELF_SIZE = 102400;
+static const int64_t MIN_INDEX_SIZE = 48 * 32;
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
   DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_INT16,
@@ -133,11 +134,17 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
 
   auto xsize = ge::GetSizeByDataType(self->GetDataType());
   auto selfDimNum = self->GetViewShape().GetDimNum();
-  for (uint64_t i = 0; i < selfDimNum ; i++) {
+  for (int i = 0; i < static_cast<int>(selfDimNum); i++) {
     xsize *= self->GetViewShape().GetDim(i);
   }
 
-  if (xsize < MIN_SELF_SIZE) {
+  auto indexSize = ge::GetSizeByDataType(index->GetDataType());
+  auto indexDimNum = index->GetViewShape().GetDimNum();
+  for (int i = 0; i < indexDimNum ; i++) {
+    indexSize *= index->GetViewShape().GetDim(i);
+  }
+
+  if (xsize < MIN_SELF_SIZE || indexSize < MIN_INDEX_SIZE) {
     mode = HIGH_PRECISION;
   }
   return ACLNN_SUCCESS;

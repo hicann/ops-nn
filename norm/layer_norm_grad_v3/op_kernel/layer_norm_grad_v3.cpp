@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file layer_norm_grad_v3.cpp
@@ -64,47 +64,47 @@ using namespace LayerNormGradV3;
 #define COMMON_BFLOAT16_BFLOAT16_DETERMINISTIC 414
 #define COMMON_BFLOAT16_FLOAT_DETERMINISTIC 415
 
-#define INVOKE_LAYER_NORM_GRAD_V3_SINGLE_READ_IMPL(Tdy, Tgamma, Isdeterministic)                      \
-    do {                                                                                              \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataSingleRead, tilingData, tiling);         \
-        LayerNormGradV3SingleRead<Tdy, Tgamma, Isdeterministic> op;                                   \
+#define INVOKE_LAYER_NORM_GRAD_V3_SINGLE_READ_IMPL(Tdy, Tgamma, Isdeterministic)               \
+    do {                                                                                       \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataSingleRead, tilingData, tiling);  \
+        LayerNormGradV3SingleRead<Tdy, Tgamma, Isdeterministic> op;                            \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                                      \
+        op.Process(&tilingData);                                                               \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                        \
-    do {                                                                                              \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataWorkspace, tilingData, tiling);          \
-        LayerNormGradV3Workspace<Tdy, Tgamma, Isdeterministic> op;                                    \
+#define INVOKE_LAYER_NORM_GRAD_V3_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                 \
+    do {                                                                                       \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataWorkspace, tilingData, tiling);   \
+        LayerNormGradV3Workspace<Tdy, Tgamma, Isdeterministic> op;                             \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                                      \
+        op.Process(&tilingData);                                                               \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_TRANSPOSE_IMPL(Tdy, Tgamma, Isdeterministic)                        \
-    do {                                                                                              \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataTranspose, tilingData, tiling);          \
-        LayerNormGradV3Transpose<Tdy, Tgamma, Isdeterministic> op;                                    \
+#define INVOKE_LAYER_NORM_GRAD_V3_TRANSPOSE_IMPL(Tdy, Tgamma, Isdeterministic)                 \
+    do {                                                                                       \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataTranspose, tilingData, tiling);   \
+        LayerNormGradV3Transpose<Tdy, Tgamma, Isdeterministic> op;                             \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process();                                                                                 \
+        op.Process();                                                                          \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                           \
-    do {                                                                                              \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataCommon, tilingData, tiling);             \
-        LayerNormGradV3Common<Tdy, Tgamma, Isdeterministic> op;                                       \
+#define INVOKE_LAYER_NORM_GRAD_V3_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                    \
+    do {                                                                                       \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataCommon, tilingData, tiling);      \
+        LayerNormGradV3Common<Tdy, Tgamma, Isdeterministic> op;                                \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                                      \
+        op.Process(&tilingData);                                                               \
     } while (0)
 
 extern "C" __global__ __aicore__ void layer_norm_grad_v3(
     GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
     GM_ADDR workspace, GM_ADDR tiling)
 {
+    TPipe pipe;
     if (g_coreType == AIC) {
         return;
     }
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
-    TPipe pipe;
     if (TILING_KEY_IS(SINGLE_READ_FLOAT_FLOAT)) {
         INVOKE_LAYER_NORM_GRAD_V3_SINGLE_READ_IMPL(float, float, false);
         return;

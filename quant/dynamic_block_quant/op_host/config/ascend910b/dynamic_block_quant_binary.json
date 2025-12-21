@@ -1,0 +1,133 @@
+{
+  "op_type": "DynamicBlockQuant",
+  "op_list": [
+    {
+      "bin_filename": "DynamicBlockQuant_ND_ND_ND_bf16_int8_fp32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "min_scale",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "row_block_size",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "col_block_size",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "DynamicBlockQuant_ND_ND_ND_fp16_int8_fp32",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "min_scale",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": "rint"
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": 2
+        },
+        {
+          "name": "row_block_size",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "col_block_size",
+          "dtype": "int",
+          "value": 128
+        }
+      ]
+    }
+  ]
+}

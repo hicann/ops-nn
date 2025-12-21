@@ -1,23 +1,23 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_index_put_impl.cpp
  * \brief IndexPut Aclnn file
  */
 #include "aclnn_index_put_impl.h"
-#include "level0/index_put.h"
+#include "index/index_put/op_host/op_api/index_put.h"
 #include "index_put_v2.h"
 #include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
-#include "level0/index_put_with_sort.h"
-#include "level0/index_put_with_sort_v2.h"
+#include "index/index_put_with_sort_v2/op_host/op_api/index_put_with_sort_v2.h"
+#include "index/index_put_with_sort/op_host/op_api/index_put_with_sort.h"
 #include "level0/sort.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/cast.h"
@@ -64,19 +64,19 @@ static const std::initializer_list<op::DataType> DTYPE_310B_SUPPORT_ATOMIC = {
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BOOL};
 
-static const int64_t MAX_INDICES_NUM = 20000L;
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000L;
-static const int64_t MAX_RESERVE_NUM = 100L;
-static const int64_t MULTI_DTYPE_SUPPORT_NUM = 200L;
-static const int64_t MULTI_DTYPE_SUPPORT_TAIL = 128L;
-static const int64_t MAX_AICORE_TIAL = 70L;
-static const int64_t MAX_AICORE_INDICES = 50L;
-static const int64_t MAX_SHPAE_NUM = 5400000L;
-static const int64_t DIMLIMIT = 8L;
-static const int64_t TAIL_SIZE = 1024L;
-static const int64_t INT32_INF = 2139095040L;
-static const int64_t INT32_MAX_LIMIT = 2147483647L;
-static const int64_t CAST_MAX_NUM = 16777216L;
+static const int64_t MAX_INDICES_NUM = 20000;
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000;
+static const int64_t MAX_RESERVE_NUM = 100;
+static const int64_t MULTI_DTYPE_SUPPORT_NUM = 200;
+static const int64_t MULTI_DTYPE_SUPPORT_TAIL = 128;
+static const int64_t MAX_AICORE_TIAL = 70;
+static const int64_t MAX_AICORE_INDICES = 50;
+static const int64_t MAX_SHPAE_NUM = 5400000;
+static const int64_t DIMLIMIT = 8;
+static const int64_t TAIL_SIZE = 1024;
+static const uint64_t INT32_INF = 2139095040;
+static const uint64_t INT32_MAX_LIMIT = 2147483647;
+static const uint64_t CAST_MAX_NUM = 16777216;
 
 static aclIntArray* GetPerm(int64_t masksNum, int64_t indicesNum, int64_t transposeDimNum, aclOpExecutor* executor) {
   FVector<int64_t, DIMLIMIT> transposeArray;
@@ -153,7 +153,7 @@ static bool IsAiCPUSupportCheckIndices910_95(const aclTensor *selfRef, const FVe
     return true;
   }
   // 索引不为int32/int64类型时走aicpu分支
-  for (size_t i = 0; i < indices.size(); i++) {
+  for (int i = 0; i < static_cast<int>(indices.size()); i++) {
       if (indices[i]->GetDataType() != op::DataType::DT_INT32 && indices[i]->GetDataType() != op::DataType::DT_INT64) {
           return true;
       }
@@ -164,7 +164,7 @@ static bool IsAiCPUSupportCheckIndices910_95(const aclTensor *selfRef, const FVe
     return true;
   }
   // tiling失败走aicpu逻辑
-  for (size_t i = 0; i < indices.size(); i++) {
+  for (int i = 0; i < static_cast<int>(indices.size()); i++) {
     if (indices[i]->GetViewShape().GetDimNum() != 0 && indices[i]->GetViewShape().GetShapeSize() != 0) {  // Find first unscalar/unEmpty tensor
       if (indices[i]->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM) {
         OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
@@ -446,6 +446,27 @@ void ConstructStrideAndValueWithPerm(const FVector<int64_t> &permute, FVector<in
   }
 }
 
+bool CheckIsDisContinueIdx(const aclTensorList* indices, int64_t &headNullNum,
+                           FVector<const aclTensor*> &definedIndices, aclOpExecutor *executor)
+{
+  bool res = false;
+  bool haveMask = false;
+  int64_t indicesSize = static_cast<int64_t>(indices->Size());
+  for (int i = 0; i < indicesSize; i++) {
+    if ((*indices)[i] && (*indices)[i]->GetViewShape().GetShapeSize() != 0) {
+      auto indicesContiguous = l0op::Contiguous((*indices)[i], executor);
+      definedIndices.emplace_back(indicesContiguous);
+      if (!haveMask) {
+        headNullNum = i;
+        haveMask = true;
+      }
+    } else {
+      res = haveMask ? true : false;
+    }
+  }
+  return res;
+}
+
 void GetPermute(const int64_t &selfSize, const int64_t &headNullNum, FVector<int64_t> &permute)
 {
     int32_t cnt = 0;
@@ -533,7 +554,7 @@ static std::pair<const aclTensor*, const aclTensor*> ProcessIndices(const aclTen
       return {nullptr, nullptr};
     }
     int64_t row = linearIndex->GetViewShape().GetDim(0);
-    if (row == 1) {
+    if (row == 1) { // sort在元素为1时走aicpu，耗时达到几百us，避免走sort
       FVector<int32_t> posIdxVec = {0};
       auto posIdx = executor->ConvertToTensor(posIdxVec.data(), posIdxVec.size(), DataType::DT_INT32);
       return std::make_pair(linearIndex, posIdx);
@@ -545,7 +566,7 @@ static std::pair<const aclTensor*, const aclTensor*> ProcessIndices(const aclTen
     }
 
     // 修改读取的数据类型
-    if (row < INT32_INF) {
+    if (row < static_cast<int64_t>(INT32_INF)) {
       ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
       OP_LOGD("aclnnIndexPutImpl: indice sort by aicore");
     }
@@ -599,7 +620,7 @@ static const aclTensor* valuesToBroadcast910_95(const aclTensor* selfCast,
                 updateIndex++;
             }
             // find next 0 index
-            while (selfIndex < static_cast<int64_t>(masks.size()) && masks[selfIndex] == 1) {
+            while (selfIndex < static_cast<int>(masks.size()) && masks[selfIndex] == 1) {
                 selfIndex++;
             }
             while (updateIndex < valueDimNum && selfIndex < selfDimNum) {  // add latter x_shape
@@ -616,7 +637,7 @@ static const aclTensor* valuesToBroadcast910_95(const aclTensor* selfCast,
                 updateIndex++;
             }
             // find next 0 index
-            while (selfIndex < static_cast<int64_t>(masks.size()) && masks[selfIndex] == 1) {
+            while (selfIndex < static_cast<int>(masks.size()) && masks[selfIndex] == 1) {
                 selfIndex++;
             }
             while (updateIndex < valueDimNum && selfIndex < selfDimNum) {  // add latter x_shape
@@ -749,19 +770,92 @@ static const aclTensor* AicpuProcess(const aclTensor* selfRef, const aclTensor* 
     return indexPutOpOut;
 }
 
+namespace {
+static int32_t searchShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, int i, int32_t index)
+{
+    for (int j = 0; j < allIndices[index]->GetViewShape().GetDimNum(); j++) {
+      if (allIndices[index]->GetViewShape()[j] < allIndices[i]->GetViewShape()[j]) {
+        index = i;
+        break;
+      }
+    }
+    return index;
+}
+
+static int32_t computeBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices)
+{
+    int32_t index = 0;
+    for (int i = 1; i < static_cast<int>(allIndices.size()); i++) {
+      if (allIndices[index]->GetViewShape().GetDimNum() < allIndices[i]->GetViewShape().GetDimNum()) {
+        index = i;
+      } else if (allIndices[index]->GetViewShape().GetDimNum() == allIndices[i]->GetViewShape().GetDimNum()) {
+        index = searchShape(allIndices, i, index);
+      }
+    }
+    return index;
+}
+
+static bool isBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, int i, std::vector<int64_t> tensorShape, int32_t tensorShapeDim)
+{
+    bool needBroadcast = false;
+    for (int32_t j = 0; j < tensorShapeDim; j++) {
+        if (tensorShape[j] != allIndices[i]->GetViewShape()[j]) {
+            needBroadcast = true;
+            break;
+        }
+    }
+    return needBroadcast;
+}
+
+static bool IndicesBroadcastUndeter(FVector<const aclTensor*, DIMLIMIT>& allIndices, aclOpExecutor* executor)
+{
+    OP_LOGD("Enter IndicesBroadcast");
+    int32_t index = computeBroadCastShape(allIndices);
+    bool needBroadcast = false;
+    auto tensorShapeDim = allIndices[index]->GetViewShape().GetDimNum();
+    std::vector<int64_t> tensorShape(tensorShapeDim);
+    for (int i = 0; i < static_cast<int>(tensorShapeDim); i++) {
+      tensorShape[i] = allIndices[index]->GetViewShape().GetDim(i);
+    }
+    auto valueShapeBroad = executor->AllocIntArray(tensorShape.data(), tensorShapeDim);
+    auto dstDtype = allIndices[index]->GetDataType(); 
+    for (int i = 0; i < static_cast<int>(allIndices.size()); i++) {
+        needBroadcast = false;
+        if (tensorShapeDim == allIndices[i]->GetViewShape().GetDimNum()) {
+          needBroadcast = isBroadCastShape(allIndices, i, tensorShape, tensorShapeDim);
+        } else {
+          needBroadcast = true;
+        }
+        if (!needBroadcast) {
+          continue;
+        }
+        if (allIndices[i]->GetDataType() != dstDtype) {
+            allIndices[i] = l0op::Cast(allIndices[i], op::DataType::DT_INT32, executor);
+            allIndices[i] = l0op::Cast(allIndices[i], dstDtype, executor);
+        }
+        if (!allIndices[i]->IsEmpty()) {  // scalar tensor need broadcast, empty tensor not
+            OP_LOGD("IndicesBroadcast start, index is %d", i);
+            allIndices[i] = l0op::BroadcastTo(allIndices[i], valueShapeBroad, executor);
+        }
+    }
+    return true;
+}
+} // namespace
+
+
 static bool IndicesBroadcast(FVector<const aclTensor*, DIMLIMIT>& allIndices, aclOpExecutor* executor)
 {
-    for (size_t i = 0; i < allIndices.size(); i++) {
+    for (int i = 0; i < static_cast<int>(allIndices.size()); i++) {
         if (allIndices[i]->GetViewShape().GetDimNum() != 0 &&
             allIndices[i]->GetViewShape().GetShapeSize() != 0) {  // Find first unscalar tensor
             auto tensorShapeDim = allIndices[i]->GetViewShape().GetDimNum();
             std::vector<int64_t> tensorShape(tensorShapeDim);
-            for (size_t j = 0; j < tensorShapeDim; j++) {
+            for (int j = 0; j < static_cast<int>(tensorShapeDim); j++) {
                 tensorShape[j] = allIndices[i]->GetViewShape().GetDim(j);
             }
             auto valueShapeBroad = executor->AllocIntArray(tensorShape.data(), tensorShapeDim);
             auto dstDtype = allIndices[i]->GetDataType();  // sometimes indices dtypes are not same, need cast.
-            for (size_t j = 0; j < allIndices.size(); j++) {
+            for (int j = 0; j < static_cast<int>(allIndices.size()); j++) {
                 if (allIndices[j]->GetDataType() != dstDtype) {
                     allIndices[j] = l0op::Cast(allIndices[j], op::DataType::DT_INT32, executor);
                     allIndices[j] = l0op::Cast(allIndices[j], dstDtype, executor);
@@ -791,7 +885,7 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
     auto maskTensor = executor->ConvertToTensor(maskArray, op::ToOpDataType(ACL_INT64));
 
     // Indices Broadcast
-    auto ret = IndicesBroadcast(definedIndices, executor);
+    auto ret = IndicesBroadcastUndeter(definedIndices, executor);
     CHECK_RET(ret, nullptr);
     auto allIndicesTensorList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
 
@@ -884,7 +978,7 @@ static const aclTensor* IndexPutProcess910_95(aclTensor* selfRef, const aclTenso
         while (masks.size() < selfRef->GetViewShape().GetDimNum()) {
             masks.emplace_back(0);
         }
-        for (size_t i = 0; i < masks.size(); i++) {
+        for (int i = 0; i < static_cast<int>(masks.size()); i++) {
             OP_LOGD("Process910_95 masks %d is %ld.", i, masks[i]);
         }
         if (deterministicValue == 0 && !(accumulate && selfRef->GetDataType() == op::DataType::DT_BOOL)) {
@@ -943,6 +1037,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
   FVector<const aclTensor*, DIMLIMIT> definedIndices;
   ConstructStrideAndValue(selfCast, valueSize, stride);
   int64_t headNullNum = 0;
+  bool isDiscontinueIdx = CheckIsDisContinueIdx(indices, headNullNum, definedIndices, uniqueExecutor.get());
   bool needTranspose = headNullNum;
   const aclTensor* indexPutOpOut;
   FVector<int64_t, DIMLIMIT> masks;
@@ -969,7 +1064,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
   }
   // Print mask
   OP_LOGD("masksNum is %ld.", masksNum);
-  for (size_t i = 0; i < indices->Size(); i++) {
+  for (int i = 0; i < static_cast<int>(indices->Size()); i++) {
       OP_LOGD("masks %d is %ld.", i, masks[i]);
   }
   if (indicesNum == 0) {
@@ -1014,13 +1109,26 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     return ACLNN_SUCCESS;
   }
   bool isSupportAiCpu = IsAiCPUSupport(selfRef, allDefinedIndices, values, accumulate, masks);
-  // 非连续场景暂时走aicpu或IndexPutV2
-  if (true) {
+  int64_t deterministicValue = 0;
+  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  if (retRts != RT_ERROR_NONE) {
+      deterministicValue = 0;
+  }
+  bool useIndexPutWithSortSupport = l0op::IsIndexPutWithSortSupport(selfRef, indices, values,
+                                                                    deterministicValue, accumulate);
+  if (!useIndexPutWithSortSupport){
     if (accumulate && (selfRef->GetDataType() == op::DataType::DT_FLOAT16 ||
         selfRef->GetDataType() == op::DataType::DT_BF16)) {
       OP_LOGD("Begin IndexPutV2 cast fp16 or bf16 to fp32");
       selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
       valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+      CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      CHECK_RET(valuesCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    if (accumulate && (selfRef->GetDataType() == op::DataType::DT_BOOL)) {
+      OP_LOGD("Begin IndexPutV2 cast bool to int8");
+      selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+      valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
       CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
       CHECK_RET(valuesCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -1035,38 +1143,61 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     }
 
     // 调用IndexPut算子kernel
+    bool isSupportAiCpu = IsAiCPUSupport(selfRef, allDefinedIndices, values, accumulate, masks);
     if (isSupportAiCpu) {
       aclTensor* out = const_cast<aclTensor*>(selfCast);
-      indexPutOpOut = l0op::IndexPut(selfCast, indicesTensorList, valuesCast, maskTensor,
+      if(deterministicValue != 0) {
+          indexPutOpOut = l0op::IndexPutV3(selfCast, indicesTensorList, valuesCast, maskTensor,
+                                    accumulate, true, out, uniqueExecutor.get());
+      } else {
+          indexPutOpOut = l0op::IndexPut(selfCast, indicesTensorList, valuesCast, maskTensor,
                                     accumulate, out, uniqueExecutor.get());
+      }
     } else {
       indexPutOpOut = AicoreCompute(selfCast, allDefinedIndices, indicesTensorList, valuesCast,
                                     maskTensor, masks, accumulate, masksNum, indicesNum,
                                     uniqueExecutor.get());
     }
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-  else {
-    if (needTranspose) {
-        FVector<int64_t, DIMLIMIT> valueSizeTrans(selfSize, 0);
-        GetPermute(selfSize, headNullNum, permute);
-        GetPermuteBack(selfSize, headNullNum, permuteBack);
-        ConstructStrideAndValueWithPerm(permute, valueSize, valueSizeTrans, stride);
-        valueSize = valueSizeTrans;
+  } else {
+    // 调用linearIndexV2时，以尾轴为单位，而不是以数为单位
+    int64_t indicesSize = static_cast<int64_t>(indices->Size());
+    int64_t selfTailSize = indicesSize;
+    int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
+    if (selfRefSize > indicesSize) {
+        selfTailSize += 1;
     }
-    int32_t sliceSize = stride[indicesSize - headNullNum - 1];
-    // 2. 将vec转成tensor
-    auto strideTensor = uniqueExecutor.get()->ConvertToTensor(stride.data(), stride.size(), DataType::DT_INT32);
-    auto valueSizeTensor = uniqueExecutor.get()->ConvertToTensor(valueSize.data(), valueSize.size(), DataType::DT_INT32);
-    auto indicesTensorList = uniqueExecutor.get()->AllocTensorList(definedIndices.data(), definedIndices.size());
-    auto perm = uniqueExecutor.get()->AllocIntArray(permute.data(), permute.size());
-    auto permBack = uniqueExecutor.get()->AllocIntArray(permuteBack.data(), permuteBack.size());
+    FVector<int64_t, DIMLIMIT> selfTailShape(selfTailSize, 0);
+    auto selfShape = selfRef->GetViewShape();
+    for (size_t i = 0; i < indicesSize; i++) {
+        selfTailShape[i] = selfShape.GetDim(i);
+    }
+    if (selfRefSize > indicesSize) {
+        selfTailShape[indicesSize] = 1;
+    }
 
-    // 3. values做broadcast操作
+    FVector<int64_t, DIMLIMIT> strideTail(selfTailSize, 1);
+    FVector<int64_t, DIMLIMIT> valueSizeTail(selfTailSize, 0);
+
+    valueSizeTail[selfTailSize - 1] = selfTailShape[selfTailSize - 1];
+    for (int32_t i = selfTailSize - 2; i >= 0; --i) {
+        valueSizeTail[i] = selfTailShape[i];
+        strideTail[i] = strideTail[i + 1] * valueSizeTail[i + 1];
+    }
+
+    int32_t sliceSize = 1;
+    if (selfRefSize > indicesSize) {
+        for (size_t i = indicesSize; i < selfRefSize; i++) {
+            sliceSize *= selfShape.GetDim(i);
+        }
+    }
+    // values做broadcast操作
     auto valueBroadcast = valuesToBroadcast(indicesSize, selfCast, indices, definedIndices, valuesCast, uniqueExecutor.get());
-    CHECK_RET(valueBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 4. 调用linearIndex
+    auto strideTensor = uniqueExecutor.get()->ConvertToTensor(strideTail.data(), strideTail.size(), DataType::DT_INT32);
+    auto valueSizeTensor = uniqueExecutor.get()->ConvertToTensor(valueSizeTail.data(), valueSizeTail.size(), DataType::DT_INT32);
+    auto indicesTensorList = uniqueExecutor.get()->AllocTensorList(definedIndices.data(), definedIndices.size());
+
     auto linearIndex = l0op::LinearIndexV2(indicesTensorList, strideTensor, valueSizeTensor, uniqueExecutor.get());
     CHECK_RET(linearIndex != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -1075,24 +1206,11 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     CHECK_RET(sortIdxInt != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto posIdx = result.second;
     CHECK_RET(posIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (needTranspose) {
-        selfCast = l0op::Transpose(selfCast, perm, uniqueExecutor.get());
-        CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        int64_t selfDimNum = static_cast<int64_t>(selfCast->GetViewShape().GetDimNum());
-        int64_t indicesDimNum= allDefinedIndices[0]->GetViewShape().GetDimNum();
-        int64_t valueDimNum = selfDimNum - indicesNum + indicesDimNum;
-        auto valueperm = GetPerm(masksNum, indicesNum, valueDimNum, uniqueExecutor.get());
-        valueBroadcast = l0op::Transpose(valueBroadcast, valueperm, uniqueExecutor.get());
-        CHECK_RET(valueBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
+    CHECK_RET(valueBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     aclTensor* out = const_cast<aclTensor*>(selfCast);
     indexPutOpOut = l0op::IndexPutWithSort(selfCast, sortIdxInt, posIdx, valueBroadcast,
                                            sliceSize, accumulate, out, uniqueExecutor.get());
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (needTranspose) {
-        indexPutOpOut = l0op::Transpose(indexPutOpOut, permBack, uniqueExecutor.get());
-        CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
   }
 
   // 固定写法，将计算结果转换成输出out的数据类型

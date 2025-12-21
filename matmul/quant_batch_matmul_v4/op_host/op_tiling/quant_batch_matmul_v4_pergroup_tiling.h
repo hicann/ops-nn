@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file quant_batch_matmul_v3_pergroup_tiling.h
  * \brief
@@ -32,7 +32,6 @@ struct QuantBatchMatmulPergroupInfo : public QuantBatchMatmulInfo {
     ge::DataType x2OffsetDtype;
 };
 
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4_1040, QuantBatchMatmulV3TilingData)
 
 class QuantBatchMatmulV4PergroupTiling : public QuantBatchMatmulV3BasicTiling {
 public:
@@ -63,6 +62,7 @@ protected:
     bool CheckFormat();
     ge::graphStatus CalcDequantTiling(uint32_t baseM, uint32_t baseN, uint32_t groupSizeK);
     QuantBatchMatmulPergroupInfo inputParamsPergroup_;
+    bool SetPlatformInfoForTiling() override;
     uint64_t singleCoreM_ = 0;
     uint64_t singleCoreN_ = 0;
 };

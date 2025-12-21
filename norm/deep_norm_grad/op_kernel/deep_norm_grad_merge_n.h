@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file deep_norm_grad_merge_n.h
@@ -386,11 +386,11 @@ private:
         const LocalTensor<float>& outputPdX, const LocalTensor<float>& outputPdGx,
         const LocalTensor<float>& outputPdBeta, const LocalTensor<float>& outputPdGamma, uint32_t process_elem)
     {
-        // 0. x_sum = alpha * x1 + x2
+        // x_hp = alpha * x1 + x2
         Axpy(inputX2, inputX1, alpha_val, process_elem);
         PipeBarrier<PIPE_V>();
 
-        // 1. x1Tensor = dy * gamma
+        // pd_xl = dy_hp * gamma_hp
         Mul(inputX1, inputDy, inputGamma, process_elem);
 
         event_t event_mte2_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
@@ -405,40 +405,44 @@ private:
         SetFlag<HardEvent::S_V>(event_s_v);
         WaitFlag<HardEvent::S_V>(event_s_v);
 
+        // x2_tensor = x_hp - mean_hp
         Adds(inputX2, inputX2, input_mean_num * (-1.0f), process_elem);
         PipeBarrier<PIPE_V>();
 
-        // 3. d_var = sum((-0.5) * x1Tensor * x2Tensor * np.power(inputRstd, 3))
-        // 3.1. tmp = (-0.5) * x1Tensor * x2Tensor * rstd^3
+        // x2_rstd_3 = x2_tensor * rstd_hp_3
         Muls(outputPdGx, inputX2, rstd_sqrt_tmp_num, process_elem);
         PipeBarrier<PIPE_V>();
+        // x2_rstd_3_pd_xl=x2_rstd_3 * pd_xl
         Mul(outputPdGx, outputPdGx, inputX1, process_elem);
         PipeBarrier<PIPE_V>();
-        // 3.2. d_var = sum(tmp)
+        // sum_pd_var = torch.sum(x2_rstd_3_pd_xl, reduce_axis, keepdims=True)
         auto reduce_tmp_num = this->ReduceSumCustom(outputPdGx, process_elem);
+        //  pd_var_first_part = sum_pd_var * oneDivD
         input_mean_num = reduce_tmp_num * one_div_D;
         SetFlag<HardEvent::S_V>(event_s_v);
         WaitFlag<HardEvent::S_V>(event_s_v);
 
-        // other (2 / D * d_var * x2Tensor)
+        // pd_var_second_part = x2_tensor * pd_var_first_part
         Muls(outputPdGx, inputX2, input_mean_num, process_elem);
 
-        // 4. d_mean = np.sum( (-1.0) * x1Tensor * rstd) )
-        // 4.1. tmp1 = (-1.0) * x1Tensor * rstd
+        // pd_x_first_part = pd_xl * rstd_hp
         Muls(outputPdX, inputX1, input_rstd_num, process_elem); // use in d_gx cal
         PipeBarrier<PIPE_V>();
 
-        // other: (x2Tensor * rstd) + (2 / D * d_var * x1Tensor)
-        Add(outputPdGx, outputPdGx, outputPdX, process_elem);
-
-        // 4.2. d_mean = np.sum(tmp1)
-        reduce_tmp_num = this->ReduceSumCustom(outputPdX, process_elem);
+        // pd_x_first_part
+        Muls(inputX1, outputPdX, 1.0f, process_elem); // use in d_gx cal
+        PipeBarrier<PIPE_V>();
+        // pd_mean_first_part1 = torch.sum(pd_x_first_part, reduce_axis, keepdims=True)
+        reduce_tmp_num = this->ReduceSumCustom(inputX1, process_elem);
+        // pd_mean_first_part2 = pd_mean_first_part1 * oneDivD
         input_mean_num = reduce_tmp_num * one_div_D;
         PipeBarrier<PIPE_V>();
-
-        // 5. d_gx = x2Tensor * rstd + d_var * (2.0 / D) * x1Tensor (already)
-        //           + d_mean * (1.0 / D)
+        // pd_var_third_part = pd_var_second_part + pd_mean_first_part2
         Adds(outputPdGx, outputPdGx, input_mean_num, process_elem);
+        PipeBarrier<PIPE_V>();
+
+        // pd_gx = pd_var_third_part + pd_x_first_part
+        Add(outputPdGx, outputPdGx, outputPdX, process_elem);
         PipeBarrier<PIPE_V>();
 
         Muls(outputPdX, outputPdGx, alpha_val, process_elem);

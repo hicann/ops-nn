@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 /*!
  * \file quant_matmul_checker.cpp
@@ -42,7 +41,6 @@ static const size_t NZ_K1_INDEX_TRANS = 4;
 static const int64_t NZ_K0_VALUE_INT8 = 16;
 static const int64_t NZ_K0_VALUE_INT8_TRANS = 32;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
-static const int64_t LAST_AXIS_LIMIT = 65535;
 static const int64_t PERGROUP_GROUP_SIZE = 32;
 static const int64_t PERGROUP_GROUPSIZEK_SIZE = 256;
 static const int64_t MXFP_DIVISOR_SIZE = 64;
@@ -88,6 +86,8 @@ static const std::initializer_list<op::DataType> PERTOKEN_BF16_OUT_BIAS_SUPPORT_
     op::DataType::DT_INT32, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> PERTOKEN_OUT_TYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
                                                                                    op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> BF16_OUT_X2SCALE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_BF16};                                                                              
 static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST = {
@@ -344,17 +344,6 @@ void QuantMatmulChecker::GetX1X2DimValue()
     }
 }
 
-bool QuantMatmulChecker::InputMaxDimCheck(int64_t x1DimNum, int64_t x2DimNum, const op::Shape &x1Shape,
-                                          const op::Shape &x2Shape) const {
-    OP_CHECK(x1Shape[x1DimNum - 1] <= LAST_AXIS_LIMIT && x2Shape[x2DimNum - 1] <= LAST_AXIS_LIMIT,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "The size of x1's last dimension and the size of x2's last dimension cannot be larger than 65535, \
-actual they are %ld and %ld.",
-                     x1Shape[x1DimNum - 1], x2Shape[x2DimNum - 1]),
-             return false);
-    return true;
-}
-
 bool QuantMatmulChecker::CheckShapeForWeightNz() const
 {
     const op::Shape x2Shape = x2_->GetStorageShape();
@@ -567,7 +556,9 @@ bool QuantMatmulChecker::CheckDimValue() const
         }
     }
     if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ && (x2KDim_ == 1 || x2NDim_ == 1)) {
-        OP_LOGW("It is not recommended to convert x2 to private format when the last two dimension of x2 exist 1");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
+                "It is not supported to convert x2 to private format(FRACTAL_NZ) when the last two dimensions of x2 have 1");
+        return false;
     }
 
     const uint64_t groupSizeK = static_cast<uint64_t>(groupSize_ & GROUP_MNK_BIT_SIZE);
@@ -858,8 +849,6 @@ bool QuantMatmulChecker::CheckShape() const
 should be same, but x1's is %ld, x2's is %ld.",
                      x1KDim_, x2KDim_), return false);
 
-    CHECK_RET(InputMaxDimCheck(x1DimNum, x2DimNum, x1Shape, x2Shape), false);
-
     if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
         CHECK_RET(CheckShapeForWeightNz(), false);
     }
@@ -942,11 +931,13 @@ bool QuantMatmulChecker::CheckL0c2outAndL0c2ubPertensorPerchannel() const
 {
     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8), false);
     CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8), false);
-
     if (outType_ == op::DataType::DT_INT32) {
         CHECK_RET(CheckL0c2outPertensorPerchannel(), false);
     } else if (outType_ == op::DataType::DT_BF16) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_BF16), false);
+        CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_,BF16_OUT_X2SCALE_SUPPORT_LIST), false);
+        if (groupSize_ != 0UL) {
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_BF16), false);
+        }
         if (bias_ != nullptr) {
             CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST), false);
         }

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_layer_norm_tiling.h
@@ -28,28 +28,28 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(AddLayerNormTilingData)
-TILING_DATA_FIELD_DEF(uint32_t, numCore);
-TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
-TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
-TILING_DATA_FIELD_DEF(uint32_t, firstDimPerCore);
-TILING_DATA_FIELD_DEF(uint32_t, firstDimPerCoreTail);
-TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTime);
-TILING_DATA_FIELD_DEF(uint32_t, lastDimPerTime);
+TILING_DATA_FIELD_DEF(int64_t, numCore);
+TILING_DATA_FIELD_DEF(int64_t, numLastDim);
+TILING_DATA_FIELD_DEF(int64_t, numFirstDim);
+TILING_DATA_FIELD_DEF(int64_t, firstDimPerCore);
+TILING_DATA_FIELD_DEF(int64_t, firstDimPerCoreTail);
+TILING_DATA_FIELD_DEF(int64_t, firstDimPerTime);
+TILING_DATA_FIELD_DEF(int64_t, lastDimPerTime);
 TILING_DATA_FIELD_DEF(float, eps);
 TILING_DATA_FIELD_DEF(float, aveFactor);
-TILING_DATA_FIELD_DEF(uint32_t, colMoveCnt);
-TILING_DATA_FIELD_DEF(uint32_t, colTail);
-TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
+TILING_DATA_FIELD_DEF(int64_t, colMoveCnt);
+TILING_DATA_FIELD_DEF(int64_t, colTail);
+TILING_DATA_FIELD_DEF(int64_t, workspaceSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddLayerNorm, AddLayerNormTilingData);
 REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm, AddLayerNormTilingData);
 
 BEGIN_TILING_DATA_DEF(AddLayerNormRegbaseTilingData)
-TILING_DATA_FIELD_DEF(uint32_t, blockSize);
-TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(uint32_t, vlFp32);
-TILING_DATA_FIELD_DEF(uint32_t, tailCoreStartIndex);
+TILING_DATA_FIELD_DEF(int64_t, blockSize);
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(int64_t, vlFp32);
+TILING_DATA_FIELD_DEF(int64_t, tailCoreStartIndex);
 TILING_DATA_FIELD_DEF(int64_t, rowsPerCore);
 TILING_DATA_FIELD_DEF(int64_t, rowsPerTailCore);
 TILING_DATA_FIELD_DEF(int64_t, rowsPerLoop);
@@ -61,7 +61,7 @@ TILING_DATA_FIELD_DEF(int64_t, binaryAddNum);
 TILING_DATA_FIELD_DEF(int64_t, binaryAddK);
 TILING_DATA_FIELD_DEF(int64_t, binaryAddLastNum);
 TILING_DATA_FIELD_DEF(float, eps);
-TILING_DATA_FIELD_DEF(uint32_t, outputX);
+TILING_DATA_FIELD_DEF(int64_t, outputX);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8000, AddLayerNormRegbaseTilingData);
@@ -95,13 +95,13 @@ protected:
 
 private:
     uint64_t ubSize_;
-    uint32_t blockSize_;
-    uint32_t vecRegSize_;
-    uint32_t vlFp32_;
-    uint32_t aivCoreNum_;
-    uint32_t tailCoreNum_;
-    uint32_t usedCoreNum_;
-    uint32_t tailCoreStartIndex_;
+    int64_t blockSize_;
+    int64_t vecRegSize_;
+    int64_t vlFp32_;
+    int64_t aivCoreNum_;
+    int64_t tailCoreNum_;
+    int64_t usedCoreNum_;
+    int64_t tailCoreStartIndex_;
     int64_t rows_; // A轴
     int64_t cols_; // R轴
     int64_t rowsPerCore_;
@@ -141,11 +141,11 @@ private:
 };
 
 struct AddLayerNormCompileInfo {
-    uint32_t aivCoreNum_ = 0;
-    uint32_t sysWorkspaceSize_ = 0;
+    int64_t aivCoreNum_ = 0;
+    int64_t sysWorkspaceSize_ = 0;
     uint64_t ubSize_ = 0;
-    uint32_t vecRegSize_ = 0;
-    uint32_t blockSize_ = 0;
+    int64_t vecRegSize_ = 0;
+    int64_t blockSize_ = 0;
     bool isAscend910D_ = false;
 };
 } // namespace optiling

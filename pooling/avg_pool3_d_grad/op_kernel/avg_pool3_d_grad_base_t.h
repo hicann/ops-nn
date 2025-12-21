@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file avg_pool3_d_grad_base_t.h
@@ -27,8 +27,8 @@ public:
     {}
 
 protected:
-    __aicore__ inline int min(int a, int b);
-    __aicore__ inline int max(int a, int b);
+    __aicore__ inline int64_t min(int64_t a, int64_t b);
+    __aicore__ inline int64_t max(int64_t a, int64_t b);
     __aicore__ inline void ParseTilingData(const AvgPool3dGradTilingParam& tilingData);
     __aicore__ inline void GetEventIds();
     __aicore__ inline void CalcIndex(int64_t index);
@@ -64,13 +64,13 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline int KernelAvgPool3DGradBaseT<T>::min(int a, int b)
+__aicore__ inline int64_t KernelAvgPool3DGradBaseT<T>::min(int64_t a, int64_t b)
 {
     return a <= b ? a : b;
 }
 
 template <typename T>
-__aicore__ inline int KernelAvgPool3DGradBaseT<T>::max(int a, int b)
+__aicore__ inline int64_t KernelAvgPool3DGradBaseT<T>::max(int64_t a, int64_t b)
 {
     return a >= b ? a : b;
 }

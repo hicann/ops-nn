@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file transpose_batch_mat_mul_infer.cpp
@@ -16,7 +16,6 @@
 
 #include "error_util.h"
 #include "common/op_host/matmul_common_infershape.h"
-
 using namespace gert;
 namespace {
 #define CHECK(cond, log_func, return_expr) \
@@ -155,21 +154,13 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
         CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to transpose shape of x1"), return ge::GRAPH_FAILED);
   CHECK(!TransposeShape(*shape_x2, *perm_x2, shape_x2_transposed),
         CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to transpose shape of x2"), return ge::GRAPH_FAILED);
-
+  
   const auto perm_x1_attr = perm_x1->GetData();
   auto x1_need_transpose = (*perm_x1_attr == 1 && *(perm_x1_attr + 1) == 0 && *(perm_x1_attr + 2) == 2);
+
   CHECK(
-      x1_need_transpose && shape_x1_transposed.GetDim(0) * shape_x1_transposed.GetDim(2) >= kSupportedInnerAxis,
-      CUBE_INNER_ERR_REPORT(name_op, "batch mul k should be less than 65536."), return ge::GRAPH_FAILED);
-  CHECK(!x1_need_transpose && shape_x1_transposed.GetDim(2) >= kSupportedInnerAxis, CUBE_INNER_ERR_REPORT(name_op,
-        "k should be less than 65536."), return ge::GRAPH_FAILED);
-  CHECK(shape_x1_transposed.GetDim(2) != shape_x2_transposed.GetDim(1), CUBE_INNER_ERR_REPORT(name_op,
-        "The k-axis of the two inputs are different."), return ge::GRAPH_FAILED);
-  CHECK(
-      (shape_x2_transposed.GetDim(1) % kBlockSize != 0 || shape_x2_transposed.GetDim(2) % kBlockSize != 0),
-      CUBE_INNER_ERR_REPORT(name_op, "The shape of the x2 is not supported."), return ge::GRAPH_FAILED);
-  CHECK((shape_x2_transposed.GetDim(2) >= kSupportedInnerAxis || shape_x2->GetDim(0) >= kSupportedInnerAxis),
-        CUBE_INNER_ERR_REPORT(name_op, "batch and n should be less than 65536."), return ge::GRAPH_FAILED);
+      shape_x1_transposed.GetDim(2) != shape_x2_transposed.GetDim(1),
+      CUBE_INNER_ERR_REPORT(name_op, "The k-axis of the two inputs are different."), return ge::GRAPH_FAILED);
 
   CHECK(
       shape_x1_transposed.GetDim(0) != shape_x2_transposed.GetDim(0),
@@ -178,14 +169,17 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
           Ops::Base::ToString(shape_x1_transposed).c_str(), Ops::Base::ToString(shape_x2_transposed).c_str()),
       return ge::GRAPH_FAILED);
 
-  CHECK((*batch_split_factor <= 0 || *batch_split_factor > shape_x1_transposed.GetDim(0) ||
-        shape_x1_transposed.GetDim(0) % *batch_split_factor != 0), CUBE_INNER_ERR_REPORT(name_op,
-        "batch_split_factor is not supported."), return ge::GRAPH_FAILED);
+  CHECK(
+      (*batch_split_factor <= 0 || *batch_split_factor > shape_x1_transposed.GetDim(0) ||
+       shape_x1_transposed.GetDim(0) % *batch_split_factor != 0),
+      CUBE_INNER_ERR_REPORT(name_op, "batch_split_factor is not supported."), return ge::GRAPH_FAILED);
 
   auto *shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
   if (shape_scale != nullptr) {
-    CHECK(*batch_split_factor != 1, CUBE_INNER_ERR_REPORT(name_op,
-         "batchSplitFactor should be 1 when the scale is not null."), return ge::GRAPH_FAILED);
+    CHECK(
+        *batch_split_factor != 1,
+        CUBE_INNER_ERR_REPORT(name_op, "batchSplitFactor should be 1 when the scale is not null."),
+        return ge::GRAPH_FAILED);
     CHECK(
         !CheckIsUnknownDimNum(*shape_scale) &&
             shape_scale->GetDim(0) != shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
@@ -193,8 +187,11 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
             name_op, "The dimension of n mul b [%ld] and scale [%ld] tensors must be the same",
             shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2), shape_scale->GetDim(0)),
         return ge::GRAPH_FAILED);
-    CHECK(shape_scale->GetDim(0) >= kSupportedInnerAxis, CUBE_INNER_ERR_REPORT(name_op,
-          "batch mul n should be less than 65536."), return ge::GRAPH_FAILED);
+
+    CHECK(
+        shape_scale->GetDim(0) >= kSupportedInnerAxis,
+        CUBE_INNER_ERR_REPORT(name_op, "batch mul n should be less than 65536."), return ge::GRAPH_FAILED);
+
     auto tensor_x1 = context->GetInputDesc(0);
     auto tensor_x2 = context->GetInputDesc(1);
     ge::DataType dtype_x1 = tensor_x1->GetDataType();
@@ -217,6 +214,9 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
 }
 
 
-IMPL_OP_INFERSHAPE(TransposeBatchMatMul)
-    .InferShape(InferShapeForTransposeBatchMatMul);
 }  // namespace gert
+
+namespace Ops::NN::MatMul {
+  IMPL_OP_INFERSHAPE(TransposeBatchMatMul)
+    .InferShape(InferShapeForTransposeBatchMatMul);
+}

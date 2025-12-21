@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file foreach_div_scalar_list.cpp
@@ -17,7 +17,7 @@
 
 // op kernel building at build_out directory, it's not fully aligned with source code structure
 // current op_kernel folder is absent in build_out directory, so the relative path to common has just one layer
-#include "foreach_one_scalar_list_binary_level_zero_api.h"
+#include "../foreach_utils/foreach_one_scalar_list_binary_level_zero_api.h"
 
 using namespace AscendC;
 using namespace Common::OpKernel;
@@ -25,6 +25,7 @@ using namespace Common::OpKernel;
 extern "C" __global__ __aicore__ void foreach_div_scalar_list(
     GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
 
     // foreach(vector) not need workspace
@@ -39,7 +40,7 @@ extern "C" __global__ __aicore__ void foreach_div_scalar_list(
         op.Init(x, scalar, y, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ >= 220
     else if (TILING_KEY_IS(4)) {
         ForeachOneScalarListBinaryLevelZeroApi<bfloat16_t, float, Div, 2, 1> op;
         op.Init(x, scalar, y, userWS, &tilingData);

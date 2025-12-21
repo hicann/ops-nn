@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file layer_norm_grad_v3_single_read.h
@@ -319,7 +319,7 @@ private:
         Mul(buffer1, buffer3, buffer0, curRowsNum * tilingData->colAlignV);
         PipeBarrier<PIPE_V>();
         // reduce_3 = reduce mul_4 to buffer8(buffer6[TMP_BUFFER_SIZE_1 * 2])
-        ReduceMeanModeOne(buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], buffer1, curRowsNum, tilingData);
+        ReduceMeanModeOne(buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], buffer1, buffer1, curRowsNum, tilingData);
         queue1.FreeTensor(buffer1);
         // block_broadcast_4 reduce_3 to buffer6
         BlockBroadcast<float>(buffer6, buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], curRowsNum);
@@ -328,7 +328,9 @@ private:
         BinElemWithInlinedLastBrcFP32(buffer2, buffer0, buffer6, curRowsNum, tilingData, Mul);
         queue0.FreeTensor(buffer0);
         // reduce_2 = reduce mul_3 to buffer8(buffer6[TMP_BUFFER_SIZE_1 * 2])
-        ReduceMeanModeOne(buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], buffer3, curRowsNum, tilingData);
+        LocalTensor<float> tmpBuffer = queue1.AllocTensor<float>();
+        ReduceMeanModeOne(buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], buffer3, tmpBuffer, curRowsNum, tilingData);
+        queue1.FreeTensor(tmpBuffer);
         // block_broadcast_3 reduce_2 to buffer6
         BlockBroadcast<float>(buffer6, buffer6[TMP_BUFFER_SIZE_1 * CONSTANT_TWO], curRowsNum);
         // sub_8 = mul_3 - mul_7 to buffer3
@@ -543,11 +545,11 @@ private:
     }
 
     __aicore__ inline void ReduceMeanModeOne(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
+        const LocalTensor<float>& dst, const LocalTensor<float>& src,  const LocalTensor<float>& tmp, const int64_t curRowsNum,
         const LayerNormGradV3TilingDataSingleRead* tilingData)
     {
         for (int64_t i = 0; i < curRowsNum; i++) {
-            ReduceSum(dst[i], src[i * tilingData->colAlignV], src[i * tilingData->colAlignV], tilingData->colAlignV);
+            ReduceSum(dst[i], src[i * tilingData->colAlignV], tmp[i * tilingData->colAlignV], tilingData->colAlignV);
         }
         PipeBarrier<PIPE_V>();
         Muls(dst, dst, coff, curRowsNum);

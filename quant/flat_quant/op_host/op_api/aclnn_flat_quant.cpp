@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_flat_quant.cpp
@@ -52,14 +52,20 @@ static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType> *> SOC_IN_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &IN_DTYPE_SUPPORT_LIST}, {SocVersion::ASCEND910_93, &IN_DTYPE_SUPPORT_LIST}};
+static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
+    {SocVersion::ASCEND910B, &IN_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_93, &IN_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_95, &IN_DTYPE_SUPPORT_LIST}};
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType> *> SOC_OUT_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &OUT_DTYPE_SUPPORT_LIST}, {SocVersion::ASCEND910_93, &OUT_DTYPE_SUPPORT_LIST}};
+static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
+    {SocVersion::ASCEND910B, &OUT_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_93, &OUT_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_95, &OUT_DTYPE_SUPPORT_LIST}};
 
-static const std::map<op::SocVersion, const std::initializer_list<op::DataType> *> SOC_SCALE_SUPPORT_DTYPES = {
-    {SocVersion::ASCEND910B, &SCALE_DTYPE_SUPPORT_LIST}, {SocVersion::ASCEND910_93, &SCALE_DTYPE_SUPPORT_LIST}};
+static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
+    {SocVersion::ASCEND910B, &SCALE_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_93, &SCALE_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_95, &SCALE_DTYPE_SUPPORT_LIST}};
 
 static const std::initializer_list<op::DataType> &GetDtypeSupportList(
     const std::map<op::SocVersion, const std::initializer_list<op::DataType> *> &socSupportDtypes)

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file group_norm_silu_tiling_arch35.cpp
@@ -22,6 +22,8 @@ static const uint64_t INDEX_NUM_GROUPS = 0;
 static const uint64_t INDEX_EPSILON = 1;
 static const uint64_t INDEX_ACTIVATE_SILU = 2;
 static const uint64_t OUTPUT_IDX_Y = 0;
+static const uint64_t OUTPUT_IDX_MEAN = 1;
+static const uint64_t OUTPUT_IDX_RSTD = 2;
 static const uint64_t EMPTY_SHAPE_SIZE = 0;
 static const uint64_t DIM_0 = 0;
 static const uint64_t DIM_1 = 1;
@@ -65,17 +67,17 @@ inline static int64_t RoundUp(int64_t a, int64_t b)
 }
 
 static ge::graphStatus CheckMixRegBase(const gert::TilingContext* context)
-{
-    auto compileInfo = context->GetCompileInfo<GroupNormSiluCompileInfo>();
-    if (compileInfo->isRegbase) {
-        auto out1Ptr = context->GetOutputDesc(INPUT_IDX_GAMMA);
-        OP_CHECK_NULL_WITH_CONTEXT(context, out1Ptr);
-        auto out1Dtype = out1Ptr->GetDataType();
-        auto out2Ptr = context->GetOutputDesc(INPUT_IDX_BETA);
-        OP_CHECK_NULL_WITH_CONTEXT(context, out2Ptr);
-        auto out2Dtype = out2Ptr->GetDataType();
-        if ((out1Dtype == out2Dtype) && (out1Dtype == ge::DT_FLOAT)) {
-            return ge::GRAPH_SUCCESS;
+{	
+    auto compileInfo = context->GetCompileInfo<GroupNormSiluCompileInfo>();	
+    if (compileInfo->isRegbase) {	
+        auto out1Ptr = context->GetOutputDesc(OUTPUT_IDX_MEAN);	
+        OP_CHECK_NULL_WITH_CONTEXT(context, out1Ptr);	
+        auto out1Dtype = out1Ptr->GetDataType();	
+        auto out2Ptr = context->GetOutputDesc(OUTPUT_IDX_RSTD);	
+        OP_CHECK_NULL_WITH_CONTEXT(context, out2Ptr);	
+        auto out2Dtype = out2Ptr->GetDataType();	
+        if ((out1Dtype == out2Dtype) && (out1Dtype == ge::DT_FLOAT)) {	
+            return ge::GRAPH_SUCCESS;	
         }
         return ge::GRAPH_FAILED;
     } else {
@@ -421,7 +423,7 @@ static void SetTilingKey4Regbase(
     uint64_t newUbRemain = ubRemain;
     // 对于Channel轴过大的场景，尝试将gamma大小限制为ShapeD，beta大小限制为shapeD，重新计算最大可全载的R轴
     // 如果此时仍然无法全载，则走channel过大的非全载模板
-    if (isLargeChannel) {
+    if (isLargeChannel || reduceCount <= compileInfo->vectorLength / FLOAT32_BYTES) {
         uint64_t gammaSplitUbSize =
             GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_GAMMA, tilingData.get_shapeD());
         uint64_t betaSplitUbSize =

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file deep_norm_grad_common.h
@@ -41,6 +41,7 @@ constexpr uint32_t FLOAT_BLOCK_ELEM = 8;
 constexpr uint32_t BRCB_ONCE_ELEM = 8;
 constexpr uint32_t MAX_REP_NUM = 255;
 constexpr uint32_t MAX_COPY_LENTH = 2000;
+constexpr uint32_t USE_INT_TOW = 2;
 
 inline volatile __gm__ uint32_t g_FixedOutputSync[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -58,52 +59,52 @@ __aicore__ inline void SafeDataCopy(
     const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal, const int64_t& calCount,
     bool recoverUbTailFormat = false)
 {
-    constexpr int typeSize = sizeof(T);                                // 元素字节数
-    constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize; // 32byte元素数
-    if constexpr (IsDataCopyPadSupport() && sizeof(T) < 8) { // 如果支持DataCopyPad则直接DataCopyPad拷贝
+    constexpr int typeSize = sizeof(T);                                // Ԫ���ֽ���
+    constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize; // 32byteԪ����
+    if constexpr (IsDataCopyPadSupport() && sizeof(T) < 8) { // ���֧��DataCopyPad��ֱ��DataCopyPad����
         AscendC::DataCopyParams copyParams{1, static_cast<uint16_t>(calCount * typeSize), 0, 0};
         DataCopyPad(dstGlobal, srcLocal, copyParams);
     } else {
-        if (likely(!(calCount % numElemsPerBlock))) { // 对齐则直接DataCopy拷贝
+        if (likely(!(calCount % numElemsPerBlock))) { // ������ֱ��DataCopy����
             struct AscendC::DataCopyParams copyParams;
             copyParams.blockLen = calCount / AscendC::AscendCUtils::GetC0Count(typeSize);
             DataCopy(dstGlobal, srcLocal, copyParams);
-        } else { // 如果既不支持DataCopyPad也不对齐则地址回退拷贝
-            const int numAlignedBlocks = calCount / numElemsPerBlock * numElemsPerBlock; // 对齐部分
+        } else { // ����Ȳ�֧��DataCopyPadҲ���������ַ���˿���
+            const int numAlignedBlocks = calCount / numElemsPerBlock * numElemsPerBlock; // ���벿��
             if (calCount * typeSize < AscendC::ONE_BLK_SIZE) {
                 DataCopy(dstGlobal, srcLocal, numElemsPerBlock);
-                return; // 此处依然有内存踩踏
+                return; // �˴���Ȼ���ڴ��̤
             }
             DataCopy(dstGlobal, srcLocal, numAlignedBlocks);
             event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_S));
             AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(eventID);
             AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(eventID);
-            const int rollbackEleCount = calCount - numAlignedBlocks;          // 计算需要回退处理byte数
-            const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock; // 操作回退的block元素索引
-            const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;   // 回退来源元素索引
+            const int rollbackEleCount = calCount - numAlignedBlocks;          // ������Ҫ���˴���byte��
+            const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock; // �������˵�blockԪ������
+            const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;   // ������ԴԪ������
             if constexpr (!forAtomicAdd) {
-                for (int i = 0; i < numElemsPerBlock; ++i) { // 将整个非对齐的尾块以一个block的size复制填充到前一个block中
-                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // 重造local buf
+                for (int i = numElemsPerBlock - 1; i >= 0; --i) { // �������Ƕ����β����һ��block��size������䵽ǰһ��block��
+                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // ����local buf
                 }
             } else {
-                const size_t setZeroEleCount = numElemsPerBlock - rollbackEleCount; // 需要置0的元素量
+                const size_t setZeroEleCount = numElemsPerBlock - rollbackEleCount; // ��Ҫ��0��Ԫ����
                 for (int i = 0; i < setZeroEleCount; ++i) {
-                    srcLocal.SetValue((rollbackDstIdx + i), 0); // Atomic模式下，回退部分置0，使得回退部分不会重复加
+                    srcLocal.SetValue((rollbackDstIdx + i), 0); // Atomicģʽ�£����˲�����0��ʹ�û��˲��ֲ����ظ���
                 }
-                for (int i = setZeroEleCount; i < numElemsPerBlock; ++i) { // 将整个非对齐的尾块复制填充到前一个block中
-                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // 重造local buf
+                for (int i = setZeroEleCount; i < numElemsPerBlock; ++i) { // �������Ƕ����β�鸴����䵽ǰһ��block��
+                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // ����local buf
                 }
                 DataCopy(dstGlobal[calCount - numElemsPerBlock], srcLocal[rollbackDstIdx], numElemsPerBlock);
-                return; // AtomicAdd模式下 暂不支持recoverUbTailFormat，待后续扩展支持
+                return; // AtomicAddģʽ�� �ݲ�֧��recoverUbTailFormat����������չ֧��
             }
             DataCopy(dstGlobal[calCount - numElemsPerBlock], srcLocal[rollbackDstIdx], numElemsPerBlock);
-            if (recoverUbTailFormat) { // 还原回滚现场
+            if (recoverUbTailFormat) { // ��ԭ�ع��ֳ�
                 event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
                 DataCopy(
                     srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
-                    numElemsPerBlock); // 还原用于回退的block内容
+                    numElemsPerBlock); // ��ԭ���ڻ��˵�block����
             }
         }
     }
@@ -302,6 +303,7 @@ public:
             if (tailCount != 0) {
                 Add(dstLocal[elemIndex], srcLocal[elemIndex], dstLocal[elemIndex], tailCount, repeat,
                     {1, 1, 1, 0, repStride, 0});
+                PipeBarrier<PIPE_V>();
             }
         } else {
             uint32_t repTailNum = repeat % MAX_REP_NUM;
@@ -336,6 +338,7 @@ public:
                     index = repElem + elemIndex;
                     Add(dstLocal[elemIndex], srcLocal[index], dstLocal[elemIndex], tailCount, repTailNum,
                         {1, 1, 1, 0, repStride, 0});
+                    PipeBarrier<PIPE_V>();
                 }
             }
         }

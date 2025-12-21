@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv_backprop_filter_context_utils.cc
@@ -366,9 +366,8 @@ void ReCalPaddings(Conv3dBpFilterV2RunInfo &runInfoV2, const char *padding)
     int32_t kernel_d_dilation = (runInfoV2.kd - 1) * runInfoV2.dilation_d + 1;
     int32_t kernel_h_dilation = (runInfoV2.kh - 1) * runInfoV2.dilation_h + 1;
     int32_t kernel_w_dilation = (runInfoV2.kw - 1) * runInfoV2.dilation_w + 1;
-    // if pads is invalid and padding is SAME, calc pads
+    // if pads is invalid and padding is SAME, calc pads ,considerate 2d to 3d ,exclude p_f and p_b
     if (padding != nullptr && padding[0] == 'S'
-        && runInfoV2.pad_f == -1 && runInfoV2.pad_b == -1
         && runInfoV2.pad_u == -1 && runInfoV2.pad_d == -1
         && runInfoV2.pad_l == -1 && runInfoV2.pad_r == -1) {
         int64_t tails_d = runInfoV2.di % runInfoV2.stride_d;
@@ -388,12 +387,12 @@ void ReCalPaddings(Conv3dBpFilterV2RunInfo &runInfoV2, const char *padding)
 
 bool SetConvBackpropFilterAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2)
 {
-    // set strides
-    SetStridesAttr(context, runInfoV2);
-    // set dilation
-    SetDilationsAttr(context, runInfoV2);
-    // set pads
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
+    // set strides
+    OP_CHECK_IF(!SetStridesAttr(context, runInfoV2), OP_LOGE(op_name, "failed to set strides attrs."), return false);
+    // set dilation
+    OP_CHECK_IF(!SetDilationsAttr(context, runInfoV2), OP_LOGE(op_name, "failed to set dilation attrs."), return false);
+    // set pads
     const auto attrs = context->GetAttrs();
     OP_CHECK_IF(attrs == nullptr, OP_LOGE(op_name, "failed to get attrs from context."), return false);
 

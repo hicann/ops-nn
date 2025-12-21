@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file repeat_interleave_grad_int_repeat_tiling.cc
@@ -35,15 +35,15 @@ static constexpr size_t ATTR_AXIS_INDEX = 0;
 static constexpr int64_t MAX_YGRAD_DIM = 8;
 
 static constexpr size_t MERGED_AXES_NUM = 3;
-static const gert::Shape g_vec_1_shape = {1};
 
 using namespace Ops::Base;
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert::Shape& oneShape)
+{
+    if (inShape.IsScalar()) {
+        return oneShape;
+    }
+    return inShape;
 }
 static ge::graphStatus convertCompileInfo(
     const RepeatInterleaveGradCompileInfo* compileInfo, ReduceOpCompileInfo* reduceCompileInfo,
@@ -58,7 +58,7 @@ static ge::graphStatus convertCompileInfo(
     OP_CHECK_IF(
         ubSize <= static_cast<uint64_t>(CACHE_BUF_SIZE),
         OP_LOGE(
-            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.", ubSize,
+            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%ld.", ubSize,
             CACHE_BUF_SIZE),
         return ge::GRAPH_FAILED);
     reduceCompileInfo->ubSize = ubSize;
@@ -118,7 +118,8 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
 {
     auto repeatStorage = context->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShapeRepeat = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShapeRepeat);
     int64_t repeatDimNum = repeatShape.GetDimNum();
 
     OP_CHECK_IF(
@@ -134,7 +135,8 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
     // use input and output shape to get repeat
     auto xStorage = context->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xStorage);
-    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape());
+    auto oneShapeX = gert::Shape{1};
+    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape(), oneShapeX);
     int64_t xDimNum = xShape.GetDimNum();
     OP_CHECK_IF(
         xDimNum > MAX_YGRAD_DIM,
@@ -190,7 +192,8 @@ static ge::graphStatus GetRIGinputParam(gert::TilingContext* context, ReduceOpIn
     // get x_grad output
     auto ytStorage = context->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ytStorage);
-    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape());
+    auto oneShape = gert::Shape{1};
+    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape(), oneShape);
     int64_t yDimNum = yShape.GetDimNum();
 
     OP_LOGI(context, "The output x_grad is: %s", ToString(yShape).c_str());
@@ -256,7 +259,8 @@ bool IsIntRepeat(const gert::TilingContext* context)
 {
     auto repeatStorage = context->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShape = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShape);
 
     int64_t repeatDimNum = repeatShape.GetDimNum();
     int64_t lenRepeat = repeatShape.GetDim(0);

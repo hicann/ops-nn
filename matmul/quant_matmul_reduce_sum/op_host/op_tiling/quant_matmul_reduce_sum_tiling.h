@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_matmul_reduce_sum_tiling.h
@@ -18,31 +18,11 @@
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "tiling_base/tiling_base.h"
+#include "../../op_kernel/quant_matmul_reduce_sum_tiling_data.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
-
-BEGIN_TILING_DATA_DEF(QuantMatmulReduceSumParams)
-    TILING_DATA_FIELD_DEF(uint32_t, batchNum);
-    TILING_DATA_FIELD_DEF(uint32_t, coreNum);
-    TILING_DATA_FIELD_DEF(uint32_t, ubBaseK);
-    TILING_DATA_FIELD_DEF(uint32_t, ubBaseN);
-    TILING_DATA_FIELD_DEF(uint32_t, ubRestBytes);
-    TILING_DATA_FIELD_DEF(uint32_t, ubCalSize);
-    TILING_DATA_FIELD_DEF(uint32_t, isPertoken);
-    TILING_DATA_FIELD_DEF(uint32_t, isDetermine);
-    TILING_DATA_FIELD_DEF(uint64_t, workspaceSize);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(QuantMatmulReduceSumParamsOp, QuantMatmulReduceSumParams)
-
-BEGIN_TILING_DATA_DEF(QuantMatmulReduceSumTilingData)
-    TILING_DATA_FIELD_DEF_STRUCT(QuantMatmulReduceSumParams, qbmmReduceSumParams);
-    TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(QuantMatmulReduceSum, QuantMatmulReduceSumTilingData)
-REGISTER_TILING_DATA_CLASS(QuantMatmulReduceSumTilingDataOp, QuantMatmulReduceSumTilingData)
+using namespace QUANT_MATMUL_REDUCE_SUM;
 
 struct QuantMatmulReduceSumCompileInfo {
     uint64_t ubSize{0};

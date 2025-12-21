@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v4_reg_base_tiling.cpp
@@ -21,6 +21,7 @@
 #include "quant_batch_matmul_v4_tiling.h"
 #include "matmul/common/op_host/math_util.h"
 #include "error_util.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_key.h"
 
 using AscendC::BLOCK_CUBE;    // uint32_t
 using AscendC::ONE_BLK_SIZE;  // uint32_t
@@ -98,11 +99,11 @@ ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
              return ge::GRAPH_FAILED);
     uint64_t weightBlockAlignSize = GetBlockAlignSizeByDataType(inputParams_.bDtype);
     // transB的场景
-    tilingData_->set_kAlign(ops::CeilAlign(inputParams_.kSize, weightBlockAlignSize));
-    tilingData_->set_nAlign(inputParams_.nSize);
-    tilingData_->set_kSize(inputParams_.kSize);
-    tilingData_->set_nSize(inputParams_.nSize);
-    tilingData_->set_mSize(inputParams_.mSize);
+    tilingData_->kAlign = ops::CeilAlign(inputParams_.kSize, weightBlockAlignSize);
+    tilingData_->nAlign = inputParams_.nSize;
+    tilingData_->kSize = inputParams_.kSize;
+    tilingData_->nSize = inputParams_.nSize;
+    tilingData_->mSize = inputParams_.mSize;
 
     PlatformParam platformParam = {aicNum_,
                                    aicNum_,
@@ -135,32 +136,40 @@ ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
 
 uint64_t QuantBatchMatmulV4RegBase::GetTilingKey() const
 {
-    return RecursiveSum(inputParams_.transA, inputParams_.transB, inputParams_.antiQuantType,
-                        inputParams_.hasAntiQuantOffset, inputParams_.weightNz, KernelTemplateType::BASIS);
+    uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    return GET_TPL_TILING_KEY(
+        trans, static_cast<uint64_t>(inputParams_.antiQuantType),
+        static_cast<uint64_t>(inputParams_.hasAntiQuantOffset), static_cast<uint64_t>(inputParams_.weightNz),
+        static_cast<uint64_t>(KernelTemplateType::BASIS));
 }
 
 ge::graphStatus QuantBatchMatmulV4RegBase::GetWorkspaceSize()
 {
     workspaceSize_ = WORKSPACE_SIZE;
-    workspaceSize_ += tilingData_->get_cubeBlockDimN() * tilingData_->get_cubeBlockDimM() * sizeof(uintptr_t);
+    workspaceSize_ += tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimM * sizeof(uintptr_t);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus QuantBatchMatmulV4RegBase::PostTiling()
 {
-    OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingData_->GetDataSize());
+    OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingDataSize_);
 
-    OP_TILING_CHECK(tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
+    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "tiling data size[%zu] not aligned to 8",
-                                                    tilingData_->GetDataSize()),
+                                                    tilingDataSize_),
                     return ge::GRAPH_FAILED);
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
-    context_->SetBlockDim(tilingData_->get_cubeBlockDimM() * tilingData_->get_cubeBlockDimN());
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
+    context_->SetBlockDim(tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN);
 
     size_t *workspaces = context_->GetWorkspaceSizes(1);  // set workspace
     workspaces[0] = workspaceSize_;
 
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void *>(tilingData_), tilingDataSize_);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     PrintCVTilingData(true);
     return ge::GRAPH_SUCCESS;
 }
@@ -170,57 +179,57 @@ void QuantBatchMatmulV4RegBase::SetBubTiling()
     int64_t nBubSize;
     int64_t kBubSize;
     GetBubTilingA8W4(nBubSize, kBubSize);
-    tilingData_->set_nBubSize(nBubSize);
-    tilingData_->set_kBubSize(kBubSize);
+    tilingData_->nBubSize = nBubSize;
+    tilingData_->kBubSize = kBubSize;
 }
 
 void QuantBatchMatmulV4RegBase::SetMatmulTiling()
 {
     const BasicBlockParam &tilingRes = tilingSolver_.GetTilingResult();
-    tilingData_->set_cubeBlockDimM(static_cast<uint8_t>(tilingRes.mDim));
-    tilingData_->set_cubeBlockDimN(static_cast<uint8_t>(tilingRes.nDim));
+    tilingData_->cubeBlockDimM = static_cast<uint8_t>(tilingRes.mDim);
+    tilingData_->cubeBlockDimN = static_cast<uint8_t>(tilingRes.nDim);
 
-    tilingData_->matmulTiling.set_M(tilingRes.mSize);
-    tilingData_->matmulTiling.set_Ka(tilingRes.kSize);
-    tilingData_->matmulTiling.set_N(tilingRes.nSize);
-    tilingData_->matmulTiling.set_Kb(tilingRes.kSize);
-    tilingData_->matmulTiling.set_singleCoreM(tilingRes.l1Param.stepM * tilingRes.basicBlock.baseM);
-    tilingData_->matmulTiling.set_singleCoreK(tilingRes.l1Param.stepKa * tilingRes.basicBlock.baseK);
-    tilingData_->matmulTiling.set_singleCoreN(tilingRes.l1Param.stepN * tilingRes.basicBlock.baseN);
+    tilingData_->matmulTiling.M = tilingRes.mSize;
+    tilingData_->matmulTiling.Ka = tilingRes.kSize;
+    tilingData_->matmulTiling.N = tilingRes.nSize;
+    tilingData_->matmulTiling.Kb = tilingRes.kSize;
+    tilingData_->matmulTiling.singleCoreM = tilingRes.l1Param.stepM * tilingRes.basicBlock.baseM;
+    tilingData_->matmulTiling.singleCoreK = tilingRes.l1Param.stepKa * tilingRes.basicBlock.baseK;
+    tilingData_->matmulTiling.singleCoreN = tilingRes.l1Param.stepN * tilingRes.basicBlock.baseN;
 
-    tilingData_->matmulTiling.set_baseM(tilingRes.basicBlock.baseM);
-    tilingData_->matmulTiling.set_baseN(tilingRes.basicBlock.baseN);
-    tilingData_->matmulTiling.set_baseK(tilingRes.basicBlock.baseK);
-    tilingData_->matmulTiling.set_dbL0A(DB_BUFFER);
-    tilingData_->matmulTiling.set_dbL0B(DB_BUFFER);
-    tilingData_->matmulTiling.set_dbL0C(1);
+    tilingData_->matmulTiling.baseM = tilingRes.basicBlock.baseM;
+    tilingData_->matmulTiling.baseN = tilingRes.basicBlock.baseN;
+    tilingData_->matmulTiling.baseK = tilingRes.basicBlock.baseK;
+    tilingData_->matmulTiling.dbL0A = DB_BUFFER;
+    tilingData_->matmulTiling.dbL0B = DB_BUFFER;
+    tilingData_->matmulTiling.dbL0C = 1;
 
-    tilingData_->matmulTiling.set_stepM(tilingRes.l1Param.stepM);
-    tilingData_->matmulTiling.set_stepN(tilingRes.l1Param.stepN);
-    tilingData_->matmulTiling.set_stepKa(tilingRes.l1Param.stepKa);
-    tilingData_->matmulTiling.set_stepKb(tilingRes.l1Param.stepKb);
-    tilingData_->matmulTiling.set_depthA1(tilingRes.l1Param.A1BufferNum * tilingRes.l1Param.stepM *
-                                          tilingRes.l1Param.stepKa);
-    tilingData_->matmulTiling.set_depthB1(tilingRes.l1Param.B1BufferNum * tilingRes.l1Param.stepN *
-                                          tilingRes.l1Param.stepKb);
-    tilingData_->matmulTiling.set_iterateOrder(tilingRes.l1Param.iterateOrder);
+    tilingData_->matmulTiling.stepM = tilingRes.l1Param.stepM;
+    tilingData_->matmulTiling.stepN = tilingRes.l1Param.stepN;
+    tilingData_->matmulTiling.stepKa = tilingRes.l1Param.stepKa;
+    tilingData_->matmulTiling.stepKb = tilingRes.l1Param.stepKb;
+    tilingData_->matmulTiling.depthA1 = tilingRes.l1Param.A1BufferNum * tilingRes.l1Param.stepM *
+                                        tilingRes.l1Param.stepKa;
+    tilingData_->matmulTiling.depthB1 = tilingRes.l1Param.B1BufferNum * tilingRes.l1Param.stepN *
+                                        tilingRes.l1Param.stepKb;
+    tilingData_->matmulTiling.iterateOrder = tilingRes.l1Param.iterateOrder;
 
-    tilingData_->matmulTiling.set_isBias(static_cast<int32_t>(inputParams_.hasBias));
-    tilingData_->set_hasX1Scale(static_cast<int32_t>(inputParams_.hasX1Scale));
-    tilingData_->set_hasX2Scale(static_cast<int32_t>(inputParams_.hasX2Scale));
-    tilingData_->matmulTiling.set_shareL1Size(0);
-    tilingData_->matmulTiling.set_shareL0CSize(0);
+    tilingData_->matmulTiling.isBias = static_cast<int32_t>(inputParams_.hasBias);
+    tilingData_->hasX1Scale = static_cast<int32_t>(inputParams_.hasX1Scale);
+    tilingData_->hasX2Scale = static_cast<int32_t>(inputParams_.hasX2Scale);
+    tilingData_->matmulTiling.shareL1Size = 0;
+    tilingData_->matmulTiling.shareL0CSize = 0;
 
     uint32_t scaleFactorA = static_cast<uint32_t>(tilingRes.l1Param.scaleFactor);
     uint32_t scaleFactorB = static_cast<uint32_t>(tilingRes.l1Param.scaleFactor);
-    tilingData_->matmulTiling.set_mxTypePara((scaleFactorB << B8_BITS) + scaleFactorA);
-    tilingData_->set_AL1Pingpong(tilingRes.l1Param.A1BufferNum);
-    tilingData_->set_BL1Pingpong(tilingRes.l1Param.B1BufferNum);
-    tilingData_->set_mAL1Size(tilingRes.l1Param.stepM * tilingRes.basicBlock.baseM);
-    tilingData_->set_kAL1Size(std::min(tilingRes.l1Param.stepKa * tilingRes.basicBlock.baseK, tilingRes.singleK));
-    tilingData_->set_nBL1Size(tilingRes.l1Param.stepN * tilingRes.basicBlock.baseN);
-    tilingData_->set_kBL1Size(std::min(tilingRes.l1Param.stepKb * tilingRes.basicBlock.baseK, tilingRes.singleK));
-    tilingData_->set_groupSize(inputParams_.groupSize);
+    tilingData_->matmulTiling.mxTypePara = (scaleFactorB << B8_BITS) + scaleFactorA;
+    tilingData_->AL1Pingpong = tilingRes.l1Param.A1BufferNum;
+    tilingData_->BL1Pingpong = tilingRes.l1Param.B1BufferNum;
+    tilingData_->mAL1Size = tilingRes.l1Param.stepM * tilingRes.basicBlock.baseM;
+    tilingData_->kAL1Size = std::min(tilingRes.l1Param.stepKa * tilingRes.basicBlock.baseK, tilingRes.singleK);
+    tilingData_->nBL1Size = tilingRes.l1Param.stepN * tilingRes.basicBlock.baseN;
+    tilingData_->kBL1Size = std::min(tilingRes.l1Param.stepKb * tilingRes.basicBlock.baseK, tilingRes.singleK);
+    tilingData_->groupSize = inputParams_.groupSize;
 }
 
 uint64_t QuantBatchMatmulV4RegBase::GetGroupNumBub(uint64_t kDimSzie) const
@@ -347,14 +356,14 @@ void QuantBatchMatmulV4RegBase::PrintCVTilingData(const bool debugLevel) const
     }
 
     std::stringstream ss;
-    ss << "kAlign: " << tilingData_->get_kAlign() << " kSize: " << tilingData_->get_kSize()
-       << " nSize: " << tilingData_->get_nSize() << " mSize: " << tilingData_->get_mSize()
-       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimN())
-       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimM())
-       << " nBubSize: " << tilingData_->get_nBubSize() << " kBubSize: " << tilingData_->get_kBubSize()
-       << " mAL1Size: " << tilingData_->get_mAL1Size() << " kAL1Size: " << tilingData_->get_kAL1Size()
-       << " nBL1Size: " << tilingData_->get_nBL1Size() << " kBL1Size: " << tilingData_->get_kBL1Size()
-       << " AL1Pingpong: " << tilingData_->get_AL1Pingpong() << " BL1Pingpong: " << tilingData_->get_BL1Pingpong();
+    ss << "kAlign: " << tilingData_->kAlign << " kSize: " << tilingData_->kSize
+       << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
+       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
+       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->cubeBlockDimM)
+       << " nBubSize: " << tilingData_->nBubSize << " kBubSize: " << tilingData_->kBubSize
+       << " mAL1Size: " << tilingData_->mAL1Size << " kAL1Size: " << tilingData_->kAL1Size
+       << " nBL1Size: " << tilingData_->nBL1Size << " kBL1Size: " << tilingData_->kBL1Size
+       << " AL1Pingpong: " << tilingData_->AL1Pingpong << " BL1Pingpong: " << tilingData_->BL1Pingpong;
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }else {

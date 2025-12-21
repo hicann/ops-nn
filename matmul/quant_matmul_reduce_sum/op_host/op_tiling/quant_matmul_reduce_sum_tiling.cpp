@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_matmul_reduce_sum_tiling.cpp
@@ -77,7 +77,7 @@ void QuantMatmulReduceSumTiling::InitCompileInfo()
 ge::graphStatus QuantMatmulReduceSumTiling::GetShapeAttrsInfo()
 {
     // 获取输入信息
-    tilingDataSize_ = tilingData_.GetDataSize();
+    tilingDataSize_ = sizeof(QuantMatmulReduceSumTilingData);
     if (inputParams_.initFlag) {
         OP_LOGD(inputParams_.opName, "No need to get shape and attrs from tiling context again");
         return ge::GRAPH_SUCCESS;
@@ -214,27 +214,15 @@ ge::graphStatus QuantMatmulReduceSumTiling::AnalyzeShapes()
 
 void QuantMatmulReduceSumTiling::PrintTilingData()
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
-
-    optiling::TCubeTiling& tiling = tilingData_.matmulTiling;
-    std::stringstream ss;
-    ss << " usedCoreNum: " << tiling.get_usedCoreNum() << " M: " << tiling.get_M() << " N: " << tiling.get_N()
-       << " Ka: " << tiling.get_Ka() << " Kb: " << tiling.get_Kb() << " singleCoreM: " << tiling.get_singleCoreM()
-       << " singleCoreN: " << tiling.get_singleCoreN() << " singleCoreK: " << tiling.get_singleCoreK()
-       << " baseM: " << tiling.get_baseM() << " baseN: " << tiling.get_baseN() << " baseK: " << tiling.get_baseK()
-       << " depthA1: " << tiling.get_depthA1() << " depthB1: " << tiling.get_depthB1()
-       << " stepM: " << tiling.get_stepM() << " stepN: " << tiling.get_stepN() << " stepka: " << tiling.get_stepKa()
-       << " stepkb: " << tiling.get_stepKb() << " transLength: " << tiling.get_transLength()
-       << " iterateOrder: " << ((tiling.get_iterateOrder() == 1) ? "orderM" : "orderN")
-       << " shareMode: " << tiling.get_shareMode() << " dbL0A: " << tiling.get_dbL0A()
-       << " dbL0B: " << tiling.get_dbL0B() << " dbL0C: " << tiling.get_dbL0C()
-       << " usedL1Size: " << tiling.get_shareL1Size() << " usedL0CSize: " << tiling.get_shareL0CSize()
-       << " usedUBSize: " << tiling.get_shareUbSize() << " batchM: " << tiling.get_batchM()
-       << " batchN: " << tiling.get_batchN() << " singleBatchM: " << tiling.get_singleBatchM()
-       << " singleBatchN: " << tiling.get_singleBatchN();
-    OP_LOGD(inputParams_.opName, "api tiling: %s\n", ss.str().c_str());
+    auto& tiling = tilingData_.qbmmReduceSumParams;
+    OP_LOGD(inputParams_.opName, "batchNum: [%u]\n", tiling.batchNum);
+    OP_LOGD(inputParams_.opName, "coreNum: [%u]\n", tiling.coreNum);
+    OP_LOGD(inputParams_.opName, "ubBaseK: [%u]\n", tiling.ubBaseK);
+    OP_LOGD(inputParams_.opName, "ubBaseN: [%u]\n", tiling.ubBaseN);
+    OP_LOGD(inputParams_.opName, "ubRestBytes: [%u]\n", tiling.ubRestBytes);
+    OP_LOGD(inputParams_.opName, "ubCalSize: [%u]\n", tiling.ubCalSize);
+    OP_LOGD(inputParams_.opName, "isPertoken: [%u]\n", tiling.isPertoken);
+    OP_LOGD(inputParams_.opName, "isDetermine: [%u]\n", tiling.isDetermine);
 }
 
 ge::graphStatus QuantMatmulReduceSumTiling::CalUbSize()
@@ -252,16 +240,16 @@ ge::graphStatus QuantMatmulReduceSumTiling::CalUbSize()
         ubCalSize = maxUbCalSize;
     }
     OP_LOGE_IF(ubCalSize <= 0, ge::GRAPH_FAILED, "QuantMatmulReduceSum", "ubCalSize should greater than 0.");
-    tilingData_.qbmmReduceSumParams.set_ubCalSize(ubCalSize);
+    tilingData_.qbmmReduceSumParams.ubCalSize = ubCalSize;
 
     // 计算ubRestBytes
-    tilingData_.qbmmReduceSumParams.set_ubRestBytes(ubCalSize * ubRestCount);
+    tilingData_.qbmmReduceSumParams.ubRestBytes = ubCalSize * ubRestCount;
     return ge::GRAPH_SUCCESS;
 }
 
 bool QuantMatmulReduceSumTiling::SetMatmulTiling()
 {
-    TCubeTiling& mt = tilingData_.matmulTiling;
+    auto& mt = tilingData_.matmulTiling;
     matmul_tiling::MultiCoreMatmulTiling mm;
     mm.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT8, false);
     mm.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ, matmul_tiling::DataType::DT_INT8, false);
@@ -276,42 +264,42 @@ bool QuantMatmulReduceSumTiling::SetMatmulTiling()
     }
 
     // k>=1024时，且baseM=128, baseN=256，baseK=128时，修改tiling提升性能
-    if (mt.get_baseM() == 128 && mt.get_baseN() == 256 && mt.get_baseK() == 128 && inputParams_.kSize >= 1024 &&
+    if (mt.baseM == 128 && mt.baseN == 256 && mt.baseK == 128 && inputParams_.kSize >= 1024 &&
         ge::GetSizeByDataType(inputParams_.aDtype) == 1 && ge::GetSizeByDataType(inputParams_.bDtype) == 1) {
-        mt.set_depthA1(8); // 开启db，4 x 2 = 8
-        mt.set_depthB1(8); // 开启db，4 x 2 = 8
-        mt.set_stepKa(4);  // 左矩阵K方向一次加载4个base块
-        mt.set_stepKb(4);  // 右矩阵K方向一次加载4个base块
-        uint64_t a1Length = mt.get_baseM() * mt.get_baseK() * ge::GetSizeByDataType(inputParams_.aDtype);
-        uint64_t b1Length = mt.get_baseN() * mt.get_baseK() * ge::GetSizeByDataType(inputParams_.bDtype);
-        uint64_t usedL1Size = a1Length * mt.get_depthA1() + b1Length * mt.get_depthB1();
+        mt.depthA1 = 8; // 开启db，4 x 2 = 8
+        mt.depthB1 = 8; // 开启db，4 x 2 = 8
+        mt.stepKa = 4;  // 左矩阵K方向一次加载4个base块
+        mt.stepKb = 4;  // 右矩阵K方向一次加载4个base块
+        uint64_t a1Length = mt.baseM * mt.baseK * ge::GetSizeByDataType(inputParams_.aDtype);
+        uint64_t b1Length = mt.baseN * mt.baseK * ge::GetSizeByDataType(inputParams_.bDtype);
+        uint64_t usedL1Size = a1Length * mt.depthA1 + b1Length * mt.depthB1;
         if (usedL1Size > compileInfo_.l1Size) {
             OP_LOGE(context_->GetNodeName(), "usedL1Size(%lu) exceed l1Size(%lu)!", usedL1Size, compileInfo_.l1Size);
             return false;
         }
-        mt.set_shareL1Size(usedL1Size);
+        mt.shareL1Size = usedL1Size;
     }
     return true;
 }
 
 bool QuantMatmulReduceSumTiling::SetQbmmTiling()
 {
-    tilingData_.qbmmReduceSumParams.set_batchNum(inputParams_.batchNum);
-    tilingData_.qbmmReduceSumParams.set_coreNum(static_cast<uint32_t>(inputParams_.usedCoreNum));
-    tilingData_.qbmmReduceSumParams.set_ubBaseK(static_cast<uint32_t>(inputParams_.baseK));
-    tilingData_.qbmmReduceSumParams.set_ubBaseN(static_cast<uint32_t>(inputParams_.baseN));
-    tilingData_.qbmmReduceSumParams.set_isPertoken(static_cast<uint32_t>(inputParams_.isPertoken));
-    tilingData_.qbmmReduceSumParams.set_isDetermine(static_cast<uint32_t>(context_->GetDeterministic()));
+    tilingData_.qbmmReduceSumParams.batchNum = inputParams_.batchNum;
+    tilingData_.qbmmReduceSumParams.coreNum = static_cast<uint32_t>(inputParams_.usedCoreNum);
+    tilingData_.qbmmReduceSumParams.ubBaseK = static_cast<uint32_t>(inputParams_.baseK);
+    tilingData_.qbmmReduceSumParams.ubBaseN = static_cast<uint32_t>(inputParams_.baseN);
+    tilingData_.qbmmReduceSumParams.isPertoken = static_cast<uint32_t>(inputParams_.isPertoken);
+    tilingData_.qbmmReduceSumParams.isDetermine = static_cast<uint32_t>(context_->GetDeterministic());
     return CalUbSize() == ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus QuantMatmulReduceSumTiling::DoOpTiling()
 {
     OP_LOGE_IF(!SetMatmulTiling(), ge::GRAPH_FAILED, "QuantMatmulReduceSum", "SetMatmulTiling failed.");
-    inputParams_.usedCoreNum = tilingData_.matmulTiling.get_usedCoreNum();
-    inputParams_.baseM = tilingData_.matmulTiling.get_baseM();
-    inputParams_.baseN = tilingData_.matmulTiling.get_baseN();
-    inputParams_.baseK = tilingData_.matmulTiling.get_baseK();
+    inputParams_.usedCoreNum = tilingData_.matmulTiling.usedCoreNum;
+    inputParams_.baseM = tilingData_.matmulTiling.baseM;
+    inputParams_.baseN = tilingData_.matmulTiling.baseN;
+    inputParams_.baseK = tilingData_.matmulTiling.baseK;
     OP_LOGE_IF(!SetQbmmTiling(), ge::GRAPH_FAILED, "QuantMatmulReduceSum", "SetQbmmTiling failed.");
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
@@ -346,9 +334,16 @@ ge::graphStatus QuantMatmulReduceSumTiling::GetWorkspaceSize()
 
 ge::graphStatus QuantMatmulReduceSumTiling::PostTiling()
 {
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
-    context_->SetBlockDim(tilingData_.matmulTiling.get_usedCoreNum());
+    context_->SetBlockDim(tilingData_.matmulTiling.usedCoreNum);
+    context_->SetScheduleMode(1); // 核间同步算子需要设置该模式
+    errno_t ret = memcpy_s(
+        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+        reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     workspaces[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
@@ -356,7 +351,7 @@ ge::graphStatus QuantMatmulReduceSumTiling::PostTiling()
 
 REGISTER_TILING_TEMPLATE("QuantMatmulReduceSum", QuantMatmulReduceSumTiling, 0);
 
-ge::graphStatus QuantMatmulReduceSumTilingFunc(gert::TilingContext* context)
+static ge::graphStatus QuantMatmulReduceSumTilingFunc(gert::TilingContext* context)
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantMatmulReduceSum", "TilingContext is null!");
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);

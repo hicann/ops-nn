@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_index_fill.cpp
@@ -42,7 +42,7 @@ constexpr size_t MAX_DIM = 8;
 // 列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
-static const std::initializer_list<op::DataType> DTYPE_A2_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16};
 
@@ -100,7 +100,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     // 检查self的数据类型是否在算子的支持列表内
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_A2_SUPPORT_LIST, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, NULL_SUPPORT_LIST, return false);
     }

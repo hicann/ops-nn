@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file scatter_elements_v2_tiling.cpp
@@ -17,9 +17,11 @@
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
+#include "scatter_elements_v2_asc_tiling.h"
 #include "scatter_elements_v2_tiling.h"
 
 using namespace std;
+using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
 const int INPUT_TYPE = 100;
@@ -60,6 +62,28 @@ const int VAR_GROUPS = 64;
 } // namespace
 
 namespace optiling {
+static bool IsRegbaseSocVersion4Scatter(platform_ascendc::SocVersion version)
+{
+    const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
+        platform_ascendc::SocVersion::ASCEND910_95
+    };
+
+    return regbaseSocVersions.find(version) != regbaseSocVersions.end();
+}
+
+bool IsRegbaseSocVersion4Scatter(const gert::TilingParseContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto socVersion = ascendcPlatform.GetSocVersion();
+    return IsRegbaseSocVersion4Scatter(socVersion);
+}
+
+bool IsRegbaseSocVersion4Scatter(const gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto socVersion = ascendcPlatform.GetSocVersion();
+    return IsRegbaseSocVersion4Scatter(socVersion);
+}
 struct TilingDataStructScatterElementsV2310P{
   uint64_t M = 0;
   uint64_t varN = 0;
@@ -429,9 +453,6 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         uint32_t need = (inputOneTime + dataAlign - 1) / dataAlign; // 每个核至少处理32个数，每个任务需要多少个核
         eachPiece = coreNum / times;                                // 每个任务可用的核数
         eachPiece = eachPiece > need ? need : eachPiece;
-        if (isDeterministicKey == 1) {
-            eachPiece = 1;
-        }
         eachNum = eachPiece == 1 ? 1 : 0;
         extraTaskCore = 0;
         inputOnePiece = (inputOneTime + eachPiece - 1) / eachPiece; // 每个核需要处理的数量
@@ -563,6 +584,12 @@ void ScatterElementsV2Tiling::TilingDataPrint() const
 
 ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
+    auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    if (compile_info->is_regbase) {
+        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+    }
+
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
@@ -596,6 +623,7 @@ ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* cont
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
+    compileInfo->is_regbase = IsRegbaseSocVersion4Scatter(context);
     OP_LOGD(context, "total_ub_size is %lu.", totalUbSize);
     OP_LOGD(context, "TilingPrepareForScatterElementsV2 end.");
     return ge::GRAPH_SUCCESS;

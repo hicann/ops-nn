@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file deep_norm_grad_large_n_small_d.h
@@ -49,7 +49,7 @@ public:
         uint32_t brcbNFp32 = brcbLineAlignedPer * elemWithoutDInUBFp32 * sizeof(float);
         uint32_t brcbNDFp32 = brcbLineAlignedPer * elemWithDInUB * sizeof(float);
 
-        pipe.InitBuffer(dyQue, BUFFER_NUM, sizeND);
+        pipe.InitBuffer(dyQue, BUFFER_NUM, sizeND); 
         pipe.InitBuffer(xQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(gxQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(meanQue, BUFFER_NUM, brcbNFp32);
@@ -59,11 +59,11 @@ public:
         pipe.InitBuffer(outputPdGxQue, BUFFER_NUM, sizeND);
         pipe.InitBuffer(outputPdBetaQue, BUFFER_NUM, sizeDFp32);
         pipe.InitBuffer(outputPdGammaQue, BUFFER_NUM, sizeDFp32);
-
+        
         // tmp buffer
         pipe.InitBuffer(tmpNDBuf, sizeNDFp32);
         pipe.InitBuffer(brcbNDBuf1, brcbNDFp32);
-        pipe.InitBuffer(brcbNDBuf2, brcbNDFp32);
+        pipe.InitBuffer(brcbNDBuf2, brcbNDFp32 * USE_INT_TOW);
 #if __CCE_AICORE__ == 220
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
@@ -140,7 +140,7 @@ public:
     }
 
     __aicore__ inline void Process()
-    {
+    {   
         CopyInPre(dDimNum);
         LocalTensor<T> gamma = gammaQue.DeQue<T>();
         LocalTensor<float> dbeta = outputPdBetaQue.AllocTensor<float>();
@@ -409,39 +409,51 @@ private:
         uint32_t processElemND = processNCount * elemWithDInUB;
         uint32_t brcbRepTimes = brcbLineAligned / BRCB_ONCE_ELEM;
         uint8_t brcbBlockStride = elemWithDInUB / FLOAT_BLOCK_ELEM;
-        uint16_t brcbRepStride = brcbBlockStride * BRCB_ONCE_ELEM;
+        uint16_t brcbRepStride = brcbBlockStride * BRCB_ONCE_ELEM; 
 
         // 1.1. x_sum = alpha * x + gx
         Axpy(inputGx, inputX, alphaVal, processElemND);
+        PipeBarrier<PIPE_V>();
         // 1.2. tmpTensor1 = dy * gamma
         this->Level0MulFp32Short(outputDgx, inputDy, inputGamma, elemWithDInUB, processNCount, processElem);
+        PipeBarrier<PIPE_V>();
         // 1.3. brcb mean
-        for (uint32_t elemIndex = 0; elemIndex < elemWithDInUB; elemIndex += FLOAT_BLOCK_ELEM) {
-            Brcb(brcbNDBufLocal1[elemIndex], inputMean, brcbRepTimes, {brcbBlockStride, brcbRepStride});
+        for (uint32_t colIdx1 = 0; colIdx1 < processNCount; colIdx1 ++) {
+            for (uint32_t elemIndex1 = 0; elemIndex1 < elemWithDInUB; elemIndex1 += FLOAT_BLOCK_ELEM) {
+                Brcb(brcbNDBufLocal1[colIdx1 * elemWithDInUB + elemIndex1], inputMean[colIdx1 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+            }
         }
+        PipeBarrier<PIPE_V>();
         // 1.4. brcb rstd
-        for (uint32_t elemIndex = 0; elemIndex < elemWithDInUB; elemIndex += FLOAT_BLOCK_ELEM) {
-            Brcb(brcbNDBufLocal2[elemIndex], inputRstd, brcbRepTimes, {brcbBlockStride, brcbRepStride});
+        for (uint32_t colIdx2 = 0; colIdx2 < processNCount; colIdx2 ++) {
+            for (uint32_t elemIndex2 = 0; elemIndex2 < elemWithDInUB; elemIndex2 += FLOAT_BLOCK_ELEM) {
+                Brcb(brcbNDBufLocal2[colIdx2 * elemWithDInUB + elemIndex2], inputRstd[colIdx2 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+            }
         }
         PipeBarrier<PIPE_V>();
 
         // 2.1. tmpTensor2 = x_sum - mean
         Sub(inputGx, inputGx, brcbNDBufLocal1, processElemND);
+        PipeBarrier<PIPE_V>();
         // 2.2. d_var process: rstd * rstd
-        Mul(inputX, inputRstd, inputRstd, processNCount);
+        Mul(inputX, inputRstd, inputRstd, processNCount * FLOAT_BLOCK_ELEM);
+        PipeBarrier<PIPE_V>();
         // 2.3. d_mean/d_gx process: tmpTensor1 * rstd
         Mul(tmpNDBufLocal, outputDgx, brcbNDBufLocal2, processElemND);
         PipeBarrier<PIPE_V>();
-
+        
         // 3.1. d_gamma process: tmpTensor2 * rstd
         Mul(outputDx, inputGx, brcbNDBufLocal2, processElemND);
+        PipeBarrier<PIPE_V>();
         // 3.2. d_var process: rstd^3
-        Mul(inputRstd, inputRstd, inputX, processNCount);
+        Mul(inputRstd, inputRstd, inputX, processNCount * FLOAT_BLOCK_ELEM);
         PipeBarrier<PIPE_V>();
 
         // 4.1. brcb rstd^3
-        for (uint32_t elemIndex = 0; elemIndex < elemWithDInUB; elemIndex += FLOAT_BLOCK_ELEM) {
-            Brcb(brcbNDBufLocal1[elemIndex], inputRstd, brcbRepTimes, {brcbBlockStride, brcbRepStride});
+        for (uint32_t colIdx3 = 0; colIdx3 < processNCount; colIdx3 ++) {
+            for (uint32_t elemIndex3 = 0; elemIndex3 < elemWithDInUB; elemIndex3 += FLOAT_BLOCK_ELEM) {
+                Brcb(brcbNDBufLocal1[colIdx3 * elemWithDInUB + elemIndex3], inputRstd[colIdx3 * FLOAT_BLOCK_ELEM], brcbRepTimes, {brcbBlockStride, brcbRepStride});
+            }
         }
         PipeBarrier<PIPE_V>();
 
@@ -453,6 +465,7 @@ private:
         this->Level0AddFp32Short(outputDbeta, inputDy, elemWithDInUB, processNCount, processElem);
         // 6.2. d_gamma process: tmpTensor2 * rstd * dy
         Mul(outputDx, outputDx, inputDy, processElemND);
+        PipeBarrier<PIPE_V>();
         // 6.3. d_var process: tmpTensor2 * rstd^3 * tmpTensor1
         Mul(inputX, inputX, outputDgx, processElemND);
         PipeBarrier<PIPE_V>();
@@ -465,6 +478,7 @@ private:
 
         // 8.1. d_gx process: -1/D * d_var
         Muls(inputMean, inputMean, oneDivD, processNCount);
+        PipeBarrier<PIPE_V>();
         Duplicate<float>(inputDy, 0, processNCount * FLOAT_BLOCK_ELEM);
         PipeBarrier<PIPE_V>();
 
@@ -474,17 +488,19 @@ private:
 
         // 10.1. d_gx process: -1/D * d_mean
         Muls(inputRstd, inputRstd, oneDivD, processNCount);
+        PipeBarrier<PIPE_V>();
         // 10.2. vbrcb
-        for (uint32_t elemIndex = 0; elemIndex < elemWithDInUB; elemIndex += FLOAT_BLOCK_ELEM) {
-            Brcb(brcbNDBufLocal1[elemIndex], inputMean, brcbRepTimes, {brcbBlockStride, brcbRepStride});
+        for (uint32_t elemIndex4 = 0; elemIndex4 < elemWithDInUB; elemIndex4 += FLOAT_BLOCK_ELEM) {
+            Brcb(brcbNDBufLocal1[elemIndex4], inputMean, brcbRepTimes, {brcbBlockStride, brcbRepStride});
         }
         PipeBarrier<PIPE_V>();
 
         // 11.1. d_gx process: -1/D * d_var * tmpTensor2
         Mul(outputDgx, inputGx, brcbNDBufLocal1, processElemND);
+        PipeBarrier<PIPE_V>();
         // 11.2. vbrcb
-        for (uint32_t elemIndex = 0; elemIndex < elemWithDInUB; elemIndex += FLOAT_BLOCK_ELEM) {
-            Brcb(brcbNDBufLocal2[elemIndex], inputRstd, brcbRepTimes, {brcbBlockStride, brcbRepStride});
+        for (uint32_t elemIndex5 = 0; elemIndex5 < elemWithDInUB; elemIndex5 += FLOAT_BLOCK_ELEM) {
+            Brcb(brcbNDBufLocal2[elemIndex5], inputRstd, brcbRepTimes, {brcbBlockStride, brcbRepStride});
         }
         PipeBarrier<PIPE_V>();
 
@@ -494,6 +510,7 @@ private:
 
         // 13.1. d_gamma end: add(tmpTensor2 * rstd * dy)
         this->Level0AddFp32Short(outputDgamma, outputDx, elemWithDInUB, processNCount, processElem);
+        PipeBarrier<PIPE_V>();
 
         // 13.2. d_gx process: (-1/D * d_var * tmpTensor1) + (-1/D * d_mean) + (tmpTensor1 * rstd)
         Add(outputDgx, outputDgx, tmpNDBufLocal, processElemND);

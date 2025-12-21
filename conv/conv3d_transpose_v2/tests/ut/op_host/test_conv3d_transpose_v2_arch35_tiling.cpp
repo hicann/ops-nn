@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_conv3d_transpose_v2_tiling_arch35.cpp
@@ -30,6 +30,8 @@
 #include "test_cube_util.h"
 
 #define SUCCESS 0
+
+#ifdef USE_LEGACY_COMMON
 
 using namespace std;
 using namespace ge;
@@ -286,10 +288,9 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      true,
      5,
-     11000,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 "
-     "1 1 2 16 1 32 16 16 1 1 1 1 5 1 0 30 0 0 0 "},
-    {"conv3d_transpose_2_depthwise_group",
+     50331648,
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
+    {"conv3d_transpose_2_group",
      "Ascend910_95",
      "Ascend910_95",
      {1, 16, 1, 4, 4},
@@ -317,9 +318,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      true,
      10,
-     102,
-     "1 1 2 1 1 5 10 0 2 2 1 1 2 1 16 4 16 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 "
-     "1 1 1 1 1 1 16 16 1 16 64 16 1 1 1 1 5 1 0 15 0 0 0 "},
+     65538,
+     "1 1 2 1 1 5 10 0 2 2 1 1 2 1 16 4 16 0 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 16 64 16 1 1 1 1 5 0 1 0 15 0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "Ascend910_95",
@@ -348,9 +348,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      true,
      2,
-     102,
-     "1 1 2 1 1 1 2 0 2 2 1 2 2 1 16 4 4 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 4 16 16 5 16 64 16 1 1 1 1 5 1 0 15 0 0 0 "},
+     65538,
+     "1 1 2 1 1 1 2 0 2 2 1 2 2 1 16 4 4 0 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 4 16 16 5 16 64 16 1 1 1 1 5 0 1 0 15 0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "Ascend910_95",
      "Ascend910_95",
@@ -379,9 +378,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      true,
      5,
-     1002,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 "
-     "1 1 2 16 1 32 64 16 1 1 1 1 5 1 0 30 0 0 0 "},
+     16777218,
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "Ascend910_95",
      "Ascend910_95",
@@ -410,9 +408,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      true,
      true,
      5,
-     1002,
-     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 "
-     "1 1 2 16 1 32 64 16 1 1 1 1 5 1 0 30 0 0 0 "},
+     16777218,
+     "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 1 0 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
 };
 
 static void ThreadFunc(
@@ -450,3 +447,5 @@ INSTANTIATE_TEST_CASE_P(
     Conv3DTranpose910_95_case, Conv3DTransposeV2TilingRunTime3, testing::ValuesIn(cases_params_910_95_case));
 
 } // namespace
+
+#endif

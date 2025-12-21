@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file transpose_batch_mat_mul_common.h
@@ -30,7 +30,7 @@ constexpr size_t KB_IDX = 1;
 constexpr size_t N_IDX = 2;
 constexpr size_t BIAS_IDX = 2;
 constexpr size_t SCALE_IDX = 3;
-
+constexpr size_t ATTR_NUM = 5;
 }
 } // namespace
 #endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_COMMON_H__

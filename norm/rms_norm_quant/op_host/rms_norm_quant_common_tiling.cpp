@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_quant_common_tiling.cpp
@@ -31,6 +31,8 @@ static constexpr uint32_t SLICE_SIZE_WITH_BIAS = 8192; // 用于切分过长的�
 static constexpr uint32_t FP16_PER_BLOCK = 16;
 static constexpr size_t WORKAPCE_RESERVE = 16 * 1024 * 1024;
 static constexpr uint32_t BIT_OFFSET_SIX = 6;
+constexpr uint32_t DST_TYPE_INDEX = 3;
+constexpr uint32_t CONST_ROUR = 8;
 // enum defination
 enum class PrePostType : uint32_t
 {
@@ -189,6 +191,12 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
         enableBeta = context->GetInputShape(static_cast<int>(NormInputIndex::BETA))->GetOriginShape().GetDimNum() != 0;
     }
 
+    auto yDtype = context->GetOutputDesc(static_cast<int>(NormOutputIndex::Y))->GetDataType();
+    if (yDtype == ge::DT_INT4 && numCol % static_cast<int32_t>(CONST_ROUR) != 0) {
+      OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%ld) of x should be divisible by 8.", numCol);
+      return ge::GRAPH_FAILED;
+    }
+
     const uint32_t maxSliceSize = CalcMaxSliceSize<EN_QUANT>(prePostType, enableBeta, compileInfo->ubSize);
     tilingData.set_sliceSize(maxSliceSize);
     OP_CHECK_IF(
@@ -211,6 +219,15 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
     // set gemma mode
     const bool* gemmaMode = attrs->GetBool(static_cast<int>(NormAttrIndex::GEMMA_MODE));
     tilingData.set_gemmaMode(gemmaMode && *gemmaMode);
+
+    // check dst_dtype
+    auto dstType = static_cast<int64_t>(ge::DT_INT8);
+    auto dstTypePtr = attrs->GetInt(static_cast<int>(NormAttrIndex::DST_TYPE));
+    if (dstTypePtr != nullptr) {
+        dstType = static_cast<int64_t>(*dstTypePtr);
+    }
+    OP_CHECK_IF((dstType != ge::DT_INT8 && dstType != ge::DT_INT4), OP_LOGE(opName, "dstType can only be 2 or 29."), return ge::GRAPH_PARAM_INVALID);
+    tilingData.set_dstType(dstType);
 
     if (EN_QUANT) { // if constexpr (EN_QUANT) 会有编译错误
         GetQuantAttrs(context, &tilingData);

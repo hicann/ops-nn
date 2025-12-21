@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file gather_elements.cpp
@@ -113,8 +113,8 @@ static int64_t GetTensorSize(const aclTensor *input) {
 }
 
 static bool IsSameDimValueExceptAxis(const op::Shape x_shape, const op::Shape index_shape, const int64_t axis, const size_t dims) {
-  for (size_t i = 0; i < dims; i++) {
-    if (static_cast<int64_t>(i) != axis && (x_shape[i] != index_shape[i])) {
+  for (int64_t i = 0; i < static_cast<int64_t>(dims); i++) {
+    if ((i != axis) && (x_shape[i] != index_shape[i])) {
       return false;
     }
   }
@@ -133,7 +133,7 @@ static bool IsLastAxisSupport(const aclTensor *self, const aclTensor *index, con
   int64_t x_axis = x_shape[axis];
   int64_t repeat_per_core = LEAST_REPEAT_TIME;
   bool if_same_dim_value_except_axis = IsSameDimValueExceptAxis(x_shape, index_shape, axis, dims);
-  bool is_last_axis = (axis == static_cast<int64_t>(dims - 1));
+  bool is_last_axis = (axis == static_cast<int64_t>(dims) - 1);
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   bool isSupportSoc = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
   int64_t ubSize = isSupportSoc ? SMALL_UB_SIZE : UB_SIZE;

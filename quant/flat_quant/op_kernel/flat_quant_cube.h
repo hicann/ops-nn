@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file flat_quant_cube.h
@@ -15,7 +15,6 @@
 #ifndef FLAT_QUANT_CUBE_H
 #define FLAT_QUANT_CUBE_H
 
-#include <cmath>
 #include "tensor_utils.h"
 
 namespace FlatQuantNS {
@@ -33,7 +32,7 @@ public:
         p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
         p2GM.SetGlobalBuffer((__gm__ T *)p2mtx_);
         outnzGM.SetGlobalBuffer((__gm__ half *)workspace_);
-        doubleP1GM.SetGlobalBuffer((__gm__ T *)(workspace_ + (shape.K + shape.K % 2) * shape.Mceil * shape.N));
+        doubleP1GM.SetGlobalBuffer((__gm__ T *)(workspace_ + (shape.K + shape.K % 2) * shape.Mceil * shape.N * sizeof(T)));
 
         SetFixpipeNz2ndFlag(1, 1, shape.Nceil);
         pipe.InitBuffer(l1Buf, L1_SIZE);
@@ -42,7 +41,7 @@ public:
         yTensor = x2Tensor[shape.calM * shape.Nceil];
         y2Tensor = yTensor[shape.calM * shape.Nceil];
         p1Tensor = y2Tensor[shape.calM * shape.Nceil];
-        p2Tensor = p1Tensor[shape.calM * shape.calM];
+        p2Tensor = p1Tensor[shape.Mceil * shape.Mceil];
 
         pipe.InitBuffer(l0aBuf, DOUBLE * DATA_COUNT * sizeof(T));
         aTensor = l0aBuf.Get<T>();
@@ -70,7 +69,9 @@ public:
         shape.Mceil = shape.fractalM * CEIL_SIZE;
         shape.Nceil = shape.fractalN * CEIL_SIZE;
         shape.calM = shape.Mceil;
-        shape.realM = shape.M;
+        shape.calN = shape.Nceil;
+        shape.calFractalM = shape.fractalM;
+        shape.calFractalN = shape.fractalN;
 
         if constexpr (MM_MODE == MM_SPLIT_MODE) {
             int64_t splitM = (shape.Mceil + BASE_SIZE - 1) / BASE_SIZE;
@@ -80,9 +81,10 @@ public:
             matmulInfo.splitCount1 = matmulInfo.splitCount * splitM;
         }
         if constexpr (MM_MODE == MM_DOUBLE_MODE) {
-            shape.fractalM = DOUBLE * shape.fractalM;
-            shape.calM = DOUBLE * shape.Mceil;
-            shape.realM = shape.Mceil + shape.M;
+            shape.calM = shape.Mceil << 1;
+            shape.calN = shape.Nceil << 1;
+            shape.calFractalM = shape.fractalM << 1;
+            shape.calFractalN = shape.fractalN << 1;
         }
         invalidK = static_cast<int64_t>(static_cast<float>(shape.K * shape.M - shape.Mceil) / static_cast<float>(shape.M));
     }
@@ -92,13 +94,13 @@ public:
         l0empty.setall();
         outempty.setall();
         // set zero for L1
-        int dataCount = shape.calM * shape.calM + shape.Nceil * shape.Nceil + DOUBLE * DOUBLE * shape.calM * shape.Nceil;
+        int dataCount = shape.Mceil * shape.Mceil + shape.Nceil * shape.Nceil + DOUBLE * DOUBLE * shape.calM * shape.Nceil;
         InitConstValue(xTensor, {1, static_cast<uint16_t>(dataCount / CEIL_SIZE), 0, (T)0});
         AscendC::PipeBarrier<PIPE_MTE2>();
         // Preload P1,P2
         CrossCoreWaitFlag(VEC_CUBE_SYNC_ID);
         if constexpr (MM_MODE == MM_DOUBLE_MODE) {
-            CopyGmToL1(p1Tensor, doubleP1GM, shape.calM, shape.calM, shape.calM);
+            CopyGmToL1(p1Tensor, doubleP1GM, shape.Mceil, shape.Mceil, shape.Mceil);
         } else {
             CopyGmToL1(p1Tensor, p1GM, shape.M, shape.M, shape.Mceil);
         }
@@ -151,33 +153,19 @@ public:
             int32_t numM = (shape.Mceil - mIdx < BASE_SIZE) ? shape.Mceil - mIdx : BASE_SIZE;
             for (int32_t nIdx = 0; nIdx < shape.Nceil; nIdx += BASE_SIZE) {
                 int32_t numN = (shape.Nceil - nIdx < BASE_SIZE) ? shape.Nceil - nIdx : BASE_SIZE;
+                outempty.wait();
                 for (int32_t kIdx = 0; kIdx < shape.Nceil; kIdx += BASE_SIZE) {
                     int32_t numK = (shape.Nceil - kIdx < BASE_SIZE) ? shape.Nceil - kIdx : BASE_SIZE;
                     l0empty.wait();
-                    uint16_t baseIdx = mIdx * shape.fractalN / CEIL_SIZE + kIdx / CEIL_SIZE;
-                    for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx ++) {
-                        LoadData(GetATensor(p)[sIdx * numK * CEIL_SIZE], GetXTensor(k), LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
-                        baseIdx += shape.fractalN;
-                    }
-                    baseIdx = kIdx * shape.fractalN / CEIL_SIZE + nIdx / CEIL_SIZE;
-                    for (int32_t sIdx = 0; sIdx < numK / CEIL_SIZE; sIdx ++) {
-                        LoadData(GetBTensor(p)[sIdx * numN * CEIL_SIZE], p2Tensor, LoadData2DParams(baseIdx, numN / CEIL_SIZE, 1, 0, 0, true, 0));
-                        baseIdx += shape.fractalN;
-                    }
+                    LoadDataSplitXP2(numM, mIdx, numN, nIdx, numK, kIdx, p, k);
                     l0ready.set();
-                    if (mIdx + numM == shape.Mceil && nIdx + numN == shape.Nceil && kIdx + numK == shape.Nceil) {
-                        l1empty.set();
-                    }
-
-                    if (kIdx == 0) {
-                        outempty.wait();
-                    }
                     l0ready.wait();
                     CalMatrix(GetCTensor(c), GetATensor(p), GetBTensor(p), numM, numK, numN, kIdx + numK == shape.Nceil ? UFMode3 : UFMode2, false, false, kIdx == 0);
                     PipeBarrier<PIPE_M>();
                     l0empty.set();
                     p ++;
                 }
+
                 QuantMode_t quantMode = F322F16;
                 if constexpr(std::is_same<T, bfloat16_t>::value) {
                     quantMode = F322BF16;
@@ -189,7 +177,49 @@ public:
                 c ++;
             }
         }
+        l1empty.set();
         x2ready.set();
+    }
+
+    aifunc void LoadDataSplitXP2(
+        int32_t numM, int32_t mIdx, int32_t numN, int32_t nIdx, int32_t numK, int32_t kIdx, int64_t p, int64_t k)
+    {
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+        int32_t fractalNumM = numM / CEIL_SIZE;
+        int32_t fractalNumN = numN / CEIL_SIZE;
+        int32_t fractalNumK = numK / CEIL_SIZE;
+        // Zz => Nz
+        for (int32_t sIdx = 0; sIdx < fractalNumM; sIdx++) {
+            LoadData(
+                GetATensor(p)[sIdx * CEIL_SIZE * CEIL_SIZE],
+                GetXTensor(k)[mIdx * shape.Nceil + kIdx * CEIL_SIZE + sIdx * shape.Nceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, fractalNumK, 1, fractalNumM, false, 0));
+        }
+        // Zz => Zn
+        for (int32_t sIdx = 0; sIdx < fractalNumK; sIdx++) {
+            LoadData(
+                GetBTensor(p)[sIdx * numN * CEIL_SIZE],
+                p2Tensor[kIdx * shape.Nceil + nIdx * CEIL_SIZE + sIdx * shape.Nceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, fractalNumN, 1, 1, true, 0));
+        }
+#else
+        uint16_t baseIdx = mIdx * shape.fractalN / CEIL_SIZE + kIdx / CEIL_SIZE;
+        // Zz => Zz
+        for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx++) {
+            LoadData(
+                GetATensor(p)[sIdx * numK * CEIL_SIZE], GetXTensor(k),
+                LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
+            baseIdx += shape.fractalN;
+        }
+        baseIdx = kIdx * shape.fractalN / CEIL_SIZE + nIdx / CEIL_SIZE;
+        // Zz => Zn
+        for (int32_t sIdx = 0; sIdx < numK / CEIL_SIZE; sIdx++) {
+            LoadData(
+                GetBTensor(p)[sIdx * numN * CEIL_SIZE], p2Tensor,
+                LoadData2DParams(baseIdx, numN / CEIL_SIZE, 1, 0, 0, true, 0));
+            baseIdx += shape.fractalN;
+        }
+#endif
     }
 
     aifunc void ProcessSplitP1X(int64_t k){
@@ -208,17 +238,9 @@ public:
                     int32_t numK = (shape.Mceil - kIdx < BASE_SIZE) ? shape.Mceil - kIdx : BASE_SIZE;
                     int32_t realK = (shape.M - kIdx < BASE_SIZE) ? shape.M - kIdx : BASE_SIZE;
                     l0empty.wait();
-                    uint16_t baseIdx = mIdx * shape.fractalM / CEIL_SIZE + kIdx / CEIL_SIZE;
-                    for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx ++) {
-                        LoadData(GetATensor(p)[sIdx * numK * CEIL_SIZE], p1Tensor, LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
-                        baseIdx += shape.fractalM;
-                    }
-                    // NZ2ZN
-                    for (int mblk = 0; mblk < numK / CEIL_SIZE; ++mblk) {
-                        LoadData(GetBTensor(p)[mblk * numN * CEIL_SIZE], GetYTensor(k)[nIdx * shape.Mceil + kIdx * CEIL_SIZE + mblk * CEIL_SIZE * CEIL_SIZE], LoadData2DParams(0, numN / CEIL_SIZE, shape.fractalM, 0, 0, true, 0));
-                    }
-                    x2p1ready.set();
-                    x2p1ready.wait();
+                    LoadDataSplitP1X(numM, mIdx, numN, nIdx, numK, kIdx, p, k);
+                    l0ready.set();
+                    l0ready.wait();
                     CalMatrix(GetCTensor(c), GetATensor(p), GetBTensor(p), realM, realK, realN, kIdx + numK == shape.Mceil ? UFMode3 : UFMode2, false, false, kIdx == 0);
                     PipeBarrier<PIPE_M>();
                     l0empty.set();
@@ -231,6 +253,46 @@ public:
                 c ++;
             }
         }
+    }
+
+    aifunc void LoadDataSplitP1X(
+        int32_t numM, int32_t mIdx, int32_t numN, int32_t nIdx, int32_t numK, int32_t kIdx, int64_t p, int64_t k)
+    {
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+        int32_t fractalNumM = numM / CEIL_SIZE;
+        int32_t fractalNumN = numN / CEIL_SIZE;
+        int32_t fractalNumK = numK / CEIL_SIZE;
+        // Zz => Nz
+        for (int32_t sIdx = 0; sIdx < fractalNumM; sIdx++) {
+            LoadData(
+                GetATensor(p)[sIdx * CEIL_SIZE * CEIL_SIZE],
+                p1Tensor[mIdx * shape.Mceil + kIdx * CEIL_SIZE + sIdx * shape.Mceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, fractalNumK, 1, fractalNumM, false, 0));
+        }
+        // Nz => Zn
+        for (int32_t mblk = 0; mblk < fractalNumK; ++mblk) {
+            LoadData(
+                GetBTensor(p)[mblk * numN * CEIL_SIZE],
+                GetYTensor(k)[nIdx * shape.Mceil + kIdx * CEIL_SIZE + mblk * CEIL_SIZE * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, fractalNumN, shape.fractalM, 1, true, 0));
+        }
+#else
+        uint16_t baseIdx = mIdx * shape.fractalM / CEIL_SIZE + kIdx / CEIL_SIZE;
+        // Zz => Zz
+        for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx++) {
+            LoadData(
+                GetATensor(p)[sIdx * numK * CEIL_SIZE], p1Tensor,
+                LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
+            baseIdx += shape.fractalM;
+        }
+        // Nz => Zn
+        for (int mblk = 0; mblk < numK / CEIL_SIZE; ++mblk) {
+            LoadData(
+                GetBTensor(p)[mblk * numN * CEIL_SIZE],
+                GetYTensor(k)[nIdx * shape.Mceil + kIdx * CEIL_SIZE + mblk * CEIL_SIZE * CEIL_SIZE],
+                LoadData2DParams(0, numN / CEIL_SIZE, shape.fractalM, 0, 0, true, 0));
+        }
+#endif
     }
 
     aifunc void ProcessK(int64_t k){
@@ -278,8 +340,25 @@ public:
     aifunc void ProcessXP2(int64_t p){
         l1ready.wait();
         l0empty.wait();
-        LoadData(GetATensor(p), GetXTensor(p), LoadData2DParams(0, shape.fractalM * shape.fractalN, 1, 0, 0, false, 0));
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+        // Zz => Nz
+        for (int32_t mblk = 0; mblk < shape.calFractalM; ++mblk) {
+            LoadData(
+                GetATensor(p)[mblk * CEIL_SIZE * CEIL_SIZE], GetXTensor(p)[mblk * shape.Nceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, shape.fractalN, 1, shape.calFractalM, false, 0));
+        }
+        // Zz => Zn
+        for (int32_t nblk = 0; nblk < shape.fractalN; ++nblk) {
+            LoadData(
+                GetBTensor(p)[nblk * shape.Nceil * CEIL_SIZE], p2Tensor[nblk * shape.Nceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, shape.fractalN, 1, 1, true, 0));
+        }
+#else
+        // Zz => Zz
+        LoadData(GetATensor(p), GetXTensor(p), LoadData2DParams(0, shape.calFractalM * shape.fractalN, 1, 0, 0, false, 0));
+        // Zz => Zn
         LoadData(GetBTensor(p), p2Tensor, LoadData2DParams(0, shape.fractalN * shape.fractalN, 1, 0, 0, true, 0));
+#endif
         l0ready.set();
         l1empty.set();
 
@@ -299,15 +378,30 @@ public:
 
     aifunc void ProcessP1X(int64_t p, int64_t outOffset){
         x2ready.wait();
-        LoadData(GetATensor(p), p1Tensor, LoadData2DParams(0, shape.fractalM * shape.fractalM, 1, 0, 0, false, 0));
-        // NZ2ZN
-        for (int mblk = 0; mblk < shape.fractalM; ++mblk) {
-            LoadData(GetBTensor(p)[mblk * shape.Nceil * CEIL_SIZE], GetYTensor(p)[mblk * CEIL_SIZE * CEIL_SIZE], LoadData2DParams(0, shape.fractalN, shape.fractalM, 0, 0, true, 0));
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+        // Zz => Nz
+        for (int32_t mblk = 0; mblk < shape.fractalM; ++mblk) {
+            LoadData(
+                GetATensor(p)[mblk * CEIL_SIZE * CEIL_SIZE], p1Tensor[mblk * shape.Mceil * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, shape.fractalM, 1, shape.fractalM, false, 0));
         }
-        x2p1ready.set();
-
-        x2p1ready.wait();
-        CalMatrix(GetCTensor(p), GetATensor(p), GetBTensor(p), shape.realM, shape.realM, shape.N, UFMode3, false, false, true);
+        // Nz => Zn
+        for (int32_t mblk = 0; mblk < shape.fractalM; ++mblk) {
+            LoadData(
+                GetBTensor(p)[mblk * CEIL_SIZE * shape.calN], GetYTensor(p)[mblk * CEIL_SIZE * CEIL_SIZE],
+                LoadData2DParamsV2(0, 0, 1, shape.calFractalN, shape.fractalM, 1, true, 0));
+        }
+#else
+        // Zz => Zz
+        LoadData(GetATensor(p), p1Tensor, LoadData2DParams(0, shape.fractalM * shape.fractalM, 1, 0, 0, false, 0));
+        // Nz => Zn
+        for (int mblk = 0; mblk < shape.fractalM; ++mblk) {
+            LoadData(GetBTensor(p)[mblk * CEIL_SIZE * shape.calN], GetYTensor(p)[mblk * CEIL_SIZE * CEIL_SIZE], LoadData2DParams(0, shape.calFractalN, shape.fractalM, 0, 0, true, 0));
+        }
+#endif
+        l0ready.set();
+        l0ready.wait();
+        CalMatrix(GetCTensor(p), GetATensor(p), GetBTensor(p), shape.M, shape.M, shape.calN, UFMode3, false, false, true);
         l0empty.set();
 
         DataCopyCO12DstParams dataCopyParams(shape.N, shape.calM, shape.N, shape.calM, F322F16, 0, false, true);
@@ -349,7 +443,7 @@ private:
     TBuf<TPosition::A1> l1Buf;
     TBuf<TPosition::A2> l0aBuf;
     TBuf<TPosition::B2> l0bBuf;
-    TBuf<TPosition::C2> l0cBuf;
+    TBuf<TPosition::CO1> l0cBuf;
 
     LocalTensor<T> xTensor;
     LocalTensor<T> x2Tensor;
@@ -369,7 +463,6 @@ private:
     DEvent<PIPE_MTE1, PIPE_M> l0ready{EVENT_ID4, EVENT_ID5};
     DEvent<PIPE_M, PIPE_MTE1> l0empty{EVENT_ID4, EVENT_ID5};
     DEvent<PIPE_FIX, PIPE_MTE1> x2ready{EVENT_ID4, EVENT_ID5};
-    DEvent<PIPE_MTE1, PIPE_M> x2p1ready{EVENT_ID2, EVENT_ID3};
     DEvent<PIPE_FIX, PIPE_M> outempty{EVENT_ID4, EVENT_ID5};
 
     int64_t invalidK = 0; // 从invalidK开始，需要区分尾块/非尾块搬入x

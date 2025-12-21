@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <iostream>
 #include <vector>
@@ -55,7 +55,7 @@ static string to_string(const std::stringstream& tiling_data)
     for(size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
         memcpy(&tmp, data.c_str() + i, sizeof(tmp));
         result += std::to_string(tmp);
-        result += " ";
+        result += "";
     }
 
     return result;
@@ -69,7 +69,7 @@ static string to_string(void *buf, size_t size)
     size_t len = size / sizeof(T);
     for(size_t i = 0; i < len; i++) {
         result += std::to_string(data[i]);
-        result += " ";
+        result += "";
     }
     return result;
 }

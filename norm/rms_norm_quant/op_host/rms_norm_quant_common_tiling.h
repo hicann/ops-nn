@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_quant_common_tiling.h
@@ -39,8 +39,7 @@ enum class NormAttrIndex : int32_t
     EPSILON = 0,
     HIGH_PRECISION_MODE = 1,
     GEMMA_MODE = 2,
-    // SCALE = 3,
-    // OFFSET = 4
+    DST_TYPE = 3
 };
 
 // compile info defination
@@ -65,6 +64,7 @@ TILING_DATA_FIELD_DEF(float, scale);            // 量化缩放
 TILING_DATA_FIELD_DEF(int32_t, offset);         // 量化偏移
 TILING_DATA_FIELD_DEF(bool, highPrecisionMode); // 高精度模式，兼容未模板化
 TILING_DATA_FIELD_DEF(bool, gemmaMode);         // 在gamma上+1，兼容未模板化
+TILING_DATA_FIELD_DEF(int32_t, dstType);        // int8/int4量化
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(RmsNormQuant, NormCommonTilingData1)

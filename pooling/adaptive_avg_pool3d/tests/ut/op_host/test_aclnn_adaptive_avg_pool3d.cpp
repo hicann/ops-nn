@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "gtest/gtest.h"
 #include <array>
 #include <vector>
@@ -128,6 +128,21 @@ TEST_F(l2_adaptive_avg_pool3d_test, adaptive_avg_pool3d_cdhw_common_fp16)
         auto ut = OP_API_UT(aclnnAdaptiveAvgPool3d, INPUT(input_tensor, int_array_desc), OUTPUT(output_tensor));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    }
+}
+
+TEST_F(l2_adaptive_avg_pool3d_test, adaptive_avg_pool3d_cdhw_bf16)
+{
+    vector<aclDataType> dtypes{ACL_BF16};
+    vector<int64_t> output_size = {2, 3, 2};
+    for (auto dtype : dtypes) {
+        auto input_tensor = TensorDesc({2, 2, 4, 3}, dtype, ACL_FORMAT_ND).ValueRange(40, 50);
+        auto int_array_desc = IntArrayDesc(output_size);
+        auto output_tensor = TensorDesc({2, 2, 3, 2}, dtype, ACL_FORMAT_ND).Precision(0.03, 0.03);
+        auto ut = OP_API_UT(aclnnAdaptiveAvgPool3d, INPUT(input_tensor, int_array_desc), OUTPUT(output_tensor));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
     }
 }
 

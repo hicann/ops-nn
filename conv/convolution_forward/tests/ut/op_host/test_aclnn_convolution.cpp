@@ -1,9 +1,9 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -2425,6 +2425,82 @@ TEST_F(convolution_test, ascend910B2_test_conv1D_FP32) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
   // ut.TestPrecision();
+}
+
+TEST_F(convolution_test, ascend910B2_test_conv2DTranspose_NCHW_SwitchHW) {
+  // test conv2dTranspose
+  vector<aclDataType> ValidList = {ACL_FLOAT};
+  int length = ValidList.size();
+
+  bool transposed = true;
+  const int64_t groups = 1;
+  vector<int64_t> inp_dims = {1, 48, 1, 1100};
+  vector<int64_t> weight_dims = {48, 8, 1, 8};
+  vector<int64_t> strides_dims = {1, 4};
+  vector<int64_t> padding_dims = {0, 0};
+  vector<int64_t> dilation_dims = {1, 1};
+  vector<int64_t> output_padding_dims = {0, 0};
+  vector<int64_t> output_dims = {1, 8, 1, 4404};
+
+  for (int i = 0; i < length; i++) {
+    auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto bias_desc = nullptr;
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc = IntArrayDesc(padding_dims);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnConvolution,  // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, strides_desc, padding_desc, dilation_desc, transposed,
+                              output_padding_desc, groups),  // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+  }
+}
+
+TEST_F(convolution_test, ascend910B2_test_conv1DTranspose_NCHW_SwitchHW) {
+  // test conv2dTranspose
+  vector<aclDataType> ValidList = {ACL_FLOAT};
+  int length = ValidList.size();
+
+  bool transposed = true;
+  const int64_t groups = 1;
+  vector<int64_t> inp_dims = {1, 48, 1100};
+  vector<int64_t> weight_dims = {48, 8, 8};
+  vector<int64_t> strides_dims = {4};
+  vector<int64_t> padding_dims = {0};
+  vector<int64_t> dilation_dims = {1};
+  vector<int64_t> output_padding_dims = {0};
+  vector<int64_t> output_dims = {1, 8, 4404};
+
+  for (int i = 0; i < length; i++) {
+    auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+    auto bias_desc = nullptr;
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc = IntArrayDesc(padding_dims);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnConvolution,  // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, strides_desc, padding_desc, dilation_desc, transposed,
+                              output_padding_desc, groups),  // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
+    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+  }
 }
 
 TEST_F(convolution_test, ascend910B2_test_conv2DTranspose_NCHW) {

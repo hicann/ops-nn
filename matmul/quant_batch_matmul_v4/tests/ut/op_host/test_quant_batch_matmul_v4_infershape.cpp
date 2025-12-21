@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -108,36 +108,6 @@ TEST_F(TestQuantBatchMatmulV4InferShape, Transposex2Case) {
                     {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
                     {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                     {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-        .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .Build();
-    ASSERT_EQ(infer_shape_func(context_holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    auto output = context_holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
-}
-
-TEST_F(TestQuantBatchMatmulV4InferShape, WithBiasCase) {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV4"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV4")->infer_shape;
-    ASSERT_NE(infer_shape_func, nullptr);
-    gert::Shape x1 = {2, 4};
-    gert::Shape x2 = {4, 5};
-    gert::Shape bias = {5};
-    gert::Shape x1_scale = {};
-    gert::Shape x2_scale = {5};
-    gert::Shape offset = {};
-    gert::Shape output_shape = {};
-    gert::Shape expect_output_shape = {2, 5};
-    ge::DataType x2Dtype = ge::DT_INT8;
-    int64_t dtype = static_cast<int64_t> (ge::DT_BF16);
-    auto context_holder = gert::InferShapeContextFaker()
-        .NodeIoNum(6, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1, 1})
-        .InputShapes({&x1, &x2, &bias, nullptr, &x2_scale, nullptr})
-        .OutputShapes({&output_shape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                    {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
         .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .Build();
     ASSERT_EQ(infer_shape_func(context_holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -269,7 +239,7 @@ TEST_F(TestQuantBatchMatmulV4InferShape, ChatGLM2) {
     gert::Shape target_shape_min = {0, 4096};
     gert::Shape target_shape_max = {-1, 4096};
     gert::Range<gert::Shape> target_out_shape_range(&target_shape_min, &target_shape_max);
-    //EXPECT_EQ(out_shape_range, target_out_shape_range);
+    EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
 }

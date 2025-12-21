@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3.cpp
@@ -28,6 +28,7 @@
 #endif
 #include "kernel_operator.h"
 #include "quant_batch_matmul_v3_tiling_key.h"
+#include "quant_batch_matmul_v3_kernel_tiling_data.h"
 
 // if run with ttk without bias, can't get DTYPE_BIAS macro
 #undef DTYPE_BIAS
@@ -178,6 +179,7 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     if (user1 == nullptr) {
         return;
     }
+    REGISTER_TILING_DEFAULT(QuantBatchMatmulV3TilingData);
     GET_TILING_DATA(tilingData, tiling);
 
 // 6bit from hight to low: needClean, pertoken, opt, basic, transX1, transX2

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file scaled_masked_softmax_v2_tiling.cpp
@@ -43,8 +43,10 @@ constexpr uint64_t FP16_TILINGKEY = 1;
 constexpr uint64_t BF16_TILINGKEY = 2;
 
 constexpr uint64_t MAX_DIM_NUM = 4096;
+constexpr uint64_t MAX_DIM_NUM_D = 8192;
 constexpr uint64_t SELECT_BUF_SIZE = 16 * 1024;
 constexpr uint64_t SOFTMAX_BUF_SIZE = 32 * 1024;
+constexpr uint64_t SOFTMAX_BUF_SIZE_D = 64 * 1024;
 } // namespace
 
 namespace optiling {
@@ -160,8 +162,15 @@ bool ScaledMaskedSoftmaxV2Tiling::InitInputShape()
     height = xShapeVal.GetDim(DIM_2);
     width = xShapeVal.GetDim(DIM_3);
 
+    auto PlatformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, PlatformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(PlatformInfo);
+    uint64_t maxDimLimit = MAX_DIM_NUM;
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+        maxDimLimit = MAX_DIM_NUM_D;
+    }
     OP_CHECK_IF(
-        width > MAX_DIM_NUM || width <= 0,
+        width > maxDimLimit || width <= 0,
         OP_LOGE(context, "x dim 3 should in (0, 4096]."), return false);
 
     maskBatch = maskShapeVal.GetDim(DIM_0);
@@ -247,7 +256,11 @@ bool ScaledMaskedSoftmaxV2Tiling::SetUbSplitInfo()
     uint64_t maskPaddedWidth = tiling.get_alignedMaskWidth();
     uint64_t maxByteLine = padedWidth * XY_PARAMS * xDtypeSize + padedWidth * FP32_SIZE + maskPaddedWidth * BOOL_SIZE;
     // 高阶api使用tmpBuf复用
-    uint64_t availableLinePerIter = (availableUbSize - SOFTMAX_BUF_SIZE) / maxByteLine;
+    uint64_t softmaxBuffSize = SOFTMAX_BUF_SIZE;
+    if (ascendCPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+        softmaxBuffSize = SOFTMAX_BUF_SIZE_D;
+    }
+    uint64_t availableLinePerIter = (availableUbSize - softmaxBuffSize) / maxByteLine;
 
     uint64_t coreNum = tiling.get_coreNum();
     uint64_t totalLine = batch * channel * height;

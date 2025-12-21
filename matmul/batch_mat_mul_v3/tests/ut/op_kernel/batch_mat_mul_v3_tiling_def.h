@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -12,67 +12,7 @@
 #define _TEST_BATCH_MAT_MUL_V3_TILING_TILING_H_
 
 #include "kernel_tiling/kernel_tiling.h"
-struct L2cacheUseInfo{
-    uint32_t l2CacheFlag;
-};
-
-struct L2cacheTilePara{
-  uint32_t mTileCntL2;
-  uint32_t nTileCntL2;
-  uint32_t mTileBlock;
-  uint32_t nTileBlock;
-  uint32_t calOrder;
-};
-
-
-struct MatMulRunInfo {
-    uint32_t transA;
-    uint32_t transB;
-    uint32_t nd2nzA;
-    uint32_t nd2nzB;
-    uint32_t isHf32;
-};
-
-struct MultiBatchInfo {
-  uint32_t batchUsedCoreNum;
-  uint32_t aBatchDimAll;
-  uint32_t bBatchDimAll;
-  uint32_t cBatchDimAll;
-  uint32_t aBatchDim0;
-  uint32_t bBatchDim0;
-  uint32_t cBatchDim0;
-  uint32_t aBatchDim1;
-  uint32_t bBatchDim1;
-  uint32_t cBatchDim1;
-  uint32_t aBatchDim2;
-  uint32_t bBatchDim2;
-  uint32_t cBatchDim2;
-  uint32_t aBatchDim3;
-  uint32_t bBatchDim3;
-  uint32_t cBatchDim3;
-  uint32_t iterBatch;
-  uint32_t biasWithBatch;
-  uint32_t mOri;
-  uint32_t batchTileBlock;
-  uint32_t aBatch;
-  uint32_t bBatch;
-};
-
-struct MatmulTilingData{
-  TCubeTiling matmulTiling;
-  L2cacheTilePara tileL2cacheTiling;
-  MatMulRunInfo matmulRunInfo;
-  L2cacheUseInfo l2cacheUseInfo;
-  uint32_t baseAN;
-  uint32_t baseAD;
-  uint32_t baseBN;
-  uint32_t baseBD;
-};
-
-struct BatchMatmulTilingData {
-    MatmulTilingData matmulTiling;
-    MultiBatchInfo multiBatchInfo;
-};
+#include "batch_mat_mul_v3_tiling_data.h"
 
 inline void InitMatmulTilingData(uint8_t* tiling, BatchMatmulTilingData* const_data)
 {

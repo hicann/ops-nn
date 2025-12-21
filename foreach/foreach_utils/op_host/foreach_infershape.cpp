@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file foreach_infershape.cpp
@@ -25,14 +25,20 @@ namespace ops {
 static ge::graphStatus InferShape4ForeachCommon(gert::InferShapeContext* context)
 {
     uint32_t outputNumInferShape = context->GetComputeNodeOutputNum();
-    uint32_t inputNumInferShape = context->GetComputeNodeInputNum();
+    const auto inputInfoInferShape = context->GetIrInputInstanceInfo(0);
+    if (inputInfoInferShape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
 
     std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputNumInferShape, "not equal num of dynamic output0 ",
+        "num of dynamic input0 ", inputInfoInferShape->GetInstanceNum(), "not equal num of dynamic output0 ",
         outputNumInferShape);
+    OP_CHECK_IF(
+        inputInfoInferShape->GetInstanceNum() != outputNumInferShape,
+        OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < outputNumInferShape; i++) {
-        auto xShape = context->GetInputShape(i);
+    for (uint32_t i = 0; i < inputInfoInferShape->GetInstanceNum(); i++) {
+        auto xShape = context->GetDynamicInputShape(0, i);
         auto yShape = context->GetOutputShape(i);
         if ((xShape == nullptr) || (yShape == nullptr)) {
             return ge::GRAPH_FAILED;
@@ -45,14 +51,20 @@ static ge::graphStatus InferShape4ForeachCommon(gert::InferShapeContext* context
 static ge::graphStatus InferDataType4ForeachCommon(gert::InferDataTypeContext* context)
 {
     uint32_t outputNumDataType = context->GetComputeNodeOutputNum();
-    uint32_t inputNumInferShape = context->GetComputeNodeInputNum();
+    const auto inputInfoDataType = context->GetIrInputInstanceInfo(0);
+    if (inputInfoDataType == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
 
     std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputNumInferShape, "not equal num of dynamic output0 ",
+        "num of dynamic input0 ", inputInfoDataType->GetInstanceNum(), "not equal num of dynamic output0 ",
         outputNumDataType);
+    OP_CHECK_IF(
+        inputInfoDataType->GetInstanceNum() != outputNumDataType, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
+        return ge::GRAPH_FAILED);
 
-    for (uint32_t i = 0; i < outputNumDataType; i++) {
-        auto xDtype = context->GetInputDataType(i);
+    for (uint32_t i = 0; i < inputInfoDataType->GetInstanceNum(); i++) {
+        auto xDtype = context->GetDynamicInputDataType(0, i);
 
         context->SetOutputDataType(i, xDtype);
     }

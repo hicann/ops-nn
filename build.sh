@@ -10,7 +10,7 @@
 
 set -e
 RELEASE_TARGETS=("ophost" "opapi")
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_55" "ascend910_93" "ascend910_95" "ascend910b" "ascend910" "mc62cm12a")
+SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910")
 TRIGER_UTS=()
 
 # 所有支持的短选项
@@ -124,7 +124,7 @@ export EAGER_LIBRARY_OPP_PATH="${ASCEND_OPP_PATH}/lib64"
 export EAGER_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
 export GRAPH_LIBRARY_STUB_PATH="${ASCEND_HOME_PATH}/lib64/stub"
 export GRAPH_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
-CANN_3RD_LIB_PATH="${BUILD_PATH}/third_party"
+CANN_3RD_LIB_PATH="${BASE_PATH}/third_party"
 # print usage message
 usage() {
   local specific_help="$1"
@@ -1292,6 +1292,9 @@ if [[ -z "$GENOP_NAME" ]] || [[ -z "$GENOP_TYPE" ]]; then
 
 main() {
   checkopts "$@"
+  if [[ "$OP_KERNEL" == "TRUE" ]]; then
+    exit 0
+  fi
   if [[ "$ENABLE_GENOP" == "TRUE" ]]; then
     gen_op
     exit $?

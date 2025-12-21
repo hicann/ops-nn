@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dequant_swiglu_quant_tiling.cpp
@@ -45,7 +45,8 @@ constexpr uint64_t TILING_KEY_HAS_GROUP = 100000000;
 constexpr uint64_t TILING_KEY_NO_GROUP = 200000000;
 // define cut by group
 constexpr uint64_t TILING_KEY_CUT_GROUP = 10000000;
-constexpr int64_t CUT_GROUP_LARGE_THAN = 64;
+constexpr int64_t CUT_GROUP_LARGE_THAN_64 = 64;
+constexpr int64_t CUT_GROUP_LARGE_THAN_32 = 32;
 constexpr int64_t EACH_GROUP_TOKEN_LESS_THAN = 16;
 
 // quant_scale tiling offset
@@ -540,13 +541,23 @@ bool DequantSwigluQuantDskTiling::IsCapable() {
 }
 
 void DequantSwigluQuantDskTiling::CountTilingKey() {
+  auto xPtr = context_->GetInputDesc(X_INDEX);
+  auto xDtype = xPtr->GetDataType();
   tilingKey_ = hasGroupIndex_ ? TILING_KEY_HAS_GROUP : TILING_KEY_NO_GROUP;
   // add quant scale offet to tilingKey_
   tilingKey_ += TILING_KEY_QS_DTYPE * tilingData_.get_quantScaleDtype();
   // add bias offset to tilingKey_
   tilingKey_ += TILING_KEY_BIAS_DTYPE * tilingData_.get_biasDtype();
   // tiling based on groupnum, pre cut num by coreNum_ and total tokens
-  if (speGroupType_ && (groupNum_ >= CUT_GROUP_LARGE_THAN && inDimx_ / groupNum_ <= EACH_GROUP_TOKEN_LESS_THAN)) {
+  bool cond1 = speGroupType_ &&
+               (groupNum_ >= CUT_GROUP_LARGE_THAN_64) &&
+               (inDimx_ / groupNum_ <= EACH_GROUP_TOKEN_LESS_THAN);
+  bool cond2 = !speGroupType_ &&
+               (groupNum_ >= CUT_GROUP_LARGE_THAN_32) &&
+               (inDimx_ / groupNum_ <= EACH_GROUP_TOKEN_LESS_THAN) &&
+               !tilingData_.get_biasDtype() && !tilingData_.get_quantScaleDtype() &&
+               (xDtype == ge::DT_INT32);
+  if (cond1 || cond2) {
     tilingKey_ += TILING_KEY_CUT_GROUP;
     maxPreCore_ = std::min(static_cast<int64_t>(coreNum_), static_cast<int64_t>(inDimx_));
   }

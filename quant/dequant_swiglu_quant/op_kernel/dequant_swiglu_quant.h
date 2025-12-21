@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dequant_swiglu_quant.h
@@ -614,19 +614,16 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::SwiGluGate(
     Gather(tmpUbF32Gate, xLocalF32, xOffsetLocalU32, (uint32_t)4, calEleNum);
     PipeBarrier<PIPE_V>();
 
-    // tmpbuf for Clamp
-    LocalTensor<uint8_t> tmpClampbuf =
-        tmpBuf2_.GetWithOffset<uint8_t>(UbSingleOutSize_, UbSingleOutSize_ * sizeof(uint32_t));
     // tmpUbF32Gate
-    ClampMax(tmpUbF32Gate, tmpUbF32Gate, tmpClampbuf, tl_->clampLimit, calEleNum);
+    Mins(tmpUbF32Gate, tmpUbF32Gate, tl_->clampLimit, calEleNum);
     PipeBarrier<PIPE_V>();
-    ClampMin(tmpUbF32Gate, tmpUbF32Gate, tmpClampbuf, -(tl_->clampLimit), calEleNum);
+    Maxs(tmpUbF32Gate, tmpUbF32Gate, -(tl_->clampLimit), calEleNum);
     PipeBarrier<PIPE_V>();
     Adds(tmpUbF32Gate, tmpUbF32Gate, tl_->gluBias, calEleNum);
     PipeBarrier<PIPE_V>();
 
     // tmpUbF32Act
-    ClampMax(tmpUbF32Act, tmpUbF32Act, tmpClampbuf, tl_->clampLimit, calEleNum);
+    Mins(tmpUbF32Act, tmpUbF32Act, tl_->clampLimit, calEleNum);
     PipeBarrier<PIPE_V>();
     Muls(xLocalF32, tmpUbF32Act, -(tl_->gluAlpha), calEleNum);
     PipeBarrier<PIPE_V>();

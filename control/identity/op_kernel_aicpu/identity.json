@@ -1,0 +1,23 @@
+{
+    "Identity": {
+        "opInfo": {
+            "computeCost": "100",
+            "engine": "DNN_VM_AICPU",
+            "flagAsync": "False",
+            "flagPartial": "False",
+            "functionName": "RunCpuKernel",
+            "kernelSo": "libnn_aicpu_kernels.so",
+            "opKernelLib": "CUSTAICPUKernel",
+            "userDefined": "True",
+            "workspaceSize": "100"
+        },
+        "input0": {
+            "type": "DT_FLOAT,DT_FLOAT16,DT_INT8,DT_INT16,DT_UINT16,DT_UINT8,DT_INT32,DT_INT64,DT_UINT32,DT_UINT64,DT_BOOL,DT_DOUBLE",
+            "name": "x"
+        },
+        "output0": {
+            "type": "DT_FLOAT,DT_FLOAT16,DT_INT8,DT_INT16,DT_UINT16,DT_UINT8,DT_INT32,DT_INT64,DT_UINT32,DT_UINT64,DT_BOOL,DT_DOUBLE",
+            "name": "y"
+        }
+    }
+}

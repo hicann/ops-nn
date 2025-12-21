@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_layer_norm_backward.h"
 #include "aclnn_kernels/cast.h"
@@ -358,8 +358,15 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         CHECK_RET(rstdContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto meanContiguousFp32 = l0op::Cast(meanContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(meanContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // ASCEND910_95 支持更多的输出数据类型，只在不满足信息库条件时cast
+        DataType gradWeightType = DataType::DT_FLOAT;
+        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+            (!(*outputMask)[GRAD_BIAS_INDEX] || (gradBiasOut->GetDataType() == weightContiguous->GetDataType())) && 
+            (!(*outputMask)[GRAD_WEIGHT_INDEX] || (gradWeightOut->GetDataType() == weightContiguous->GetDataType()))) {
+            gradWeightType = weightContiguous->GetDataType();
+        }
         std::array<aclTensor*, GRAD_OUT_NUM> gradRes = l0op::LayerNormGradV3(
-            gradOutContiguous, inputContiguous, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask,
+            gradOutContiguous, inputContiguous, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask, gradWeightType,
             uniqueExecutor.get());
         // 根据mask处理输出
         GenOutWithMask(gradRes[GRAD_INPUT_INDEX], gradInputOut, (*outputMask)[GRAD_INPUT_INDEX], uniqueExecutor.get());

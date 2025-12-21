@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file embedding_dense_grad_v2_tiling.h
@@ -20,6 +20,7 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(EmbeddingDenseGradV2TilingParam)
+TILING_DATA_FIELD_DEF(uint64_t, coreNum)
 TILING_DATA_FIELD_DEF(uint64_t, tailRowNum)
 TILING_DATA_FIELD_DEF(uint64_t, formerRowNum)
 TILING_DATA_FIELD_DEF(uint64_t, formerRowRepTime)
@@ -37,6 +38,10 @@ TILING_DATA_FIELD_DEF(uint64_t, tailEmbeddingDim)
 TILING_DATA_FIELD_DEF(uint64_t, tailComputeRepTime)
 TILING_DATA_FIELD_DEF(uint64_t, tailComputeFormerNum)
 TILING_DATA_FIELD_DEF(uint64_t, tailComputeTailNum)
+TILING_DATA_FIELD_DEF(uint64_t, scaleWorkspaceLength)
+TILING_DATA_FIELD_DEF(uint64_t, outStageWorkspaceLength)
+TILING_DATA_FIELD_DEF(uint64_t, outIndexWorkspaceLength)
+TILING_DATA_FIELD_DEF(uint64_t, outCastedWorkspaceLength)
 END_TILING_DATA_DEF
 
 REGISTER_TILING_DATA_CLASS(EmbeddingDenseGradV2TilingParamOp, EmbeddingDenseGradV2TilingParam)

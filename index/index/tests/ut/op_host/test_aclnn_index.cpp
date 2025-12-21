@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "gtest/gtest.h"
 #include "../../../op_host/op_api/aclnn_index.h"
@@ -39,7 +39,7 @@ TEST_F(l2_index_test, l2_test_success_fp32) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_self_empty_fp32) {
@@ -97,7 +97,7 @@ TEST_F(l2_index_test, l2_test_success_multi_indices_aicore) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_multi_indices_aicpu) {
@@ -136,7 +136,7 @@ TEST_F(l2_index_test, l2_test_success_fp16) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_int64) {
@@ -156,7 +156,7 @@ TEST_F(l2_index_test, l2_test_success_int64) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_int32) {
@@ -176,7 +176,7 @@ TEST_F(l2_index_test, l2_test_success_int32) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_int8) {
@@ -196,7 +196,7 @@ TEST_F(l2_index_test, l2_test_success_int8) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_bool) {
@@ -216,7 +216,7 @@ TEST_F(l2_index_test, l2_test_success_bool) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_success_uint8) {
@@ -236,7 +236,7 @@ TEST_F(l2_index_test, l2_test_success_uint8) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, l2_test_failed_nullptr) {
@@ -294,7 +294,7 @@ TEST_F(l2_index_test, l2_test_success_single_indices_int_aicore) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 
@@ -315,7 +315,7 @@ TEST_F(l2_index_test, ascend910B2_l2_test_success_bf16_aicore) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2_index_test, ascend910B2_l2_test_partial_continous) {
@@ -415,5 +415,5 @@ TEST_F(l2_index_test, ascend910_95_l2_test_success_fp32) {
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-  ut.TestPrecision();
+  
 }

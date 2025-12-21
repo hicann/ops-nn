@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file group_norm_grad.h
@@ -145,6 +145,21 @@ REGISTER_TILING_DATA_CLASS(GroupNormGrad_402, GroupNormGradRegBaseTilingData)
 REGISTER_TILING_DATA_CLASS(GroupNormGrad_403, GroupNormGradRegBaseTilingData)
 REGISTER_TILING_DATA_CLASS(GroupNormGrad_404, GroupNormGradRegBaseTilingData)
 REGISTER_TILING_DATA_CLASS(GroupNormGrad_405, GroupNormGradRegBaseTilingData)
+
+BEGIN_TILING_DATA_DEF(GroupNormGradEmptyTilingData)
+TILING_DATA_FIELD_DEF(uint32_t, usedCoreNumDG);
+TILING_DATA_FIELD_DEF(uint64_t, colsPerCoreDG);
+TILING_DATA_FIELD_DEF(uint64_t, cols);
+TILING_DATA_FIELD_DEF(uint32_t, ubSize);
+TILING_DATA_FIELD_DEF(uint64_t, colsPerUBDG);
+TILING_DATA_FIELD_DEF(uint64_t, coreUbBlockCount);
+TILING_DATA_FIELD_DEF(uint64_t, tailUbCols);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreBlockCount);
+TILING_DATA_FIELD_DEF(uint64_t, lastCoreTailUbCols);
+TILING_DATA_FIELD_DEF(uint64_t, colsLastCoreDG);
+TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
+END_TILING_DATA_DEF;
+REGISTER_TILING_DATA_CLASS(GroupNormGrad_500, GroupNormGradEmptyTilingData)
 
 struct GroupNormGradCompileInfo {
     int32_t totalCoreNum = 0;

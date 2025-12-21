@@ -1,20 +1,20 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "adaptive_avg_pool2d_assist_matrix.h"
 #include "adaptive_avg_pool3d.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "shape_op.h"
 #include "level0/mul.h"
 #include "level0/reduce_mean.h"
-#include "level0/shape_op.h"
 #include "level0/unsqueeze.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transpose.h"
@@ -109,10 +109,10 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
     }
     // nc_dim index offset is 2
     for (uint64_t i = 0; i < outputDimNum - 2; i++) {
-        if (outputShape[i] != inputShape[i]) {
+        if (outputShape.GetDim(i) != inputShape.GetDim(i)) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i, outputShape[i],
-                i, inputShape[i]);
+                ACLNN_ERR_PARAM_INVALID, "Out_shape[%lu]: %ld should equal to input_shape[%lu]: %ld", i, outputShape.GetDim(i),
+                i, inputShape.GetDim(i));
             return false;
         }
     }
@@ -170,8 +170,8 @@ static bool CheckOutputSize(const aclIntArray* outputSize, const aclTensor* out)
     size_t outputDimNum = outputShape.GetDimNum();
     size_t offset = outputDimNum == chwShapeSize ? 1 : 2;
     for (size_t i = 0; i < size; ++i) {
-        if ((*outputSize)[i] != outputShape[i + offset]) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should match the outputShape value.");
+        if ((*outputSize)[i] <= 0 || (*outputSize)[i] != outputShape[i + offset]) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should match the outputShape value and greater than 0.");
             return false;
         }
     }

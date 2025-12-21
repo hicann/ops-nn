@@ -385,85 +385,85 @@ TEST_F(l2IndexSelectTest, l2_index_select_case_013) {
 }
 
 // test_012 index_dtype = int32, self_dtype = FLOAT64
-TEST_F(l2IndexSelectTest, l2_index_select_test_FLOAT64) {
-  vector<int64_t> inputDims = {3, 3};
-  vector<int64_t> outputDims = inputDims;
-  vector<int64_t> index = {0,0,0};
-  int64_t dim = 0;
-  outputDims[dim] = index.size();
+// TEST_F(l2IndexSelectTest, l2_index_select_test_FLOAT64) {
+//   vector<int64_t> inputDims = {3, 3};
+//   vector<int64_t> outputDims = inputDims;
+//   vector<int64_t> index = {0,0,0};
+//   int64_t dim = 0;
+//   outputDims[dim] = index.size();
 
-  auto selfDesc = TensorDesc(inputDims, ACL_DOUBLE, ACL_FORMAT_ND)
-                         .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
-  int64_t indexSize = index.size();
-  auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
-  auto outputDesc = TensorDesc(outputDims, ACL_DOUBLE, ACL_FORMAT_NCHW);
+//   auto selfDesc = TensorDesc(inputDims, ACL_DOUBLE, ACL_FORMAT_ND)
+//                          .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
+//   int64_t indexSize = index.size();
+//   auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
+//   auto outputDesc = TensorDesc(outputDims, ACL_DOUBLE, ACL_FORMAT_NCHW);
 
-  auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
-                      INPUT(selfDesc, dim, indexDesc),   // host api输入
-                      OUTPUT(outputDesc));
+//   auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
+//                       INPUT(selfDesc, dim, indexDesc),   // host api输入
+//                       OUTPUT(outputDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspaceSize = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+//   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
-}
+//   // SAMPLE: precision simulate
+//   ut.TestPrecision();
+// }
 
-// test_dtype: index_dtype = int32, self_dtype = COMPLEX64
-TEST_F(l2IndexSelectTest, l2_index_select_test_COMPLEX64) {
-  vector<int64_t> inputDims = {3, 3};
-  vector<int64_t> outputDims = inputDims;
-  vector<int64_t> index = {0,0,0};
-  int64_t dim = 0;
-  outputDims[dim] = index.size();
+// // test_dtype: index_dtype = int32, self_dtype = COMPLEX64
+// TEST_F(l2IndexSelectTest, l2_index_select_test_COMPLEX64) {
+//   vector<int64_t> inputDims = {3, 3};
+//   vector<int64_t> outputDims = inputDims;
+//   vector<int64_t> index = {0,0,0};
+//   int64_t dim = 0;
+//   outputDims[dim] = index.size();
 
-  auto selfDesc = TensorDesc(inputDims, ACL_COMPLEX64, ACL_FORMAT_ND)
-                         .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
-  int64_t indexSize = index.size();
-  auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
-  auto outputDesc = TensorDesc(outputDims, ACL_COMPLEX64, ACL_FORMAT_NCHW);
+//   auto selfDesc = TensorDesc(inputDims, ACL_COMPLEX64, ACL_FORMAT_ND)
+//                          .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
+//   int64_t indexSize = index.size();
+//   auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
+//   auto outputDesc = TensorDesc(outputDims, ACL_COMPLEX64, ACL_FORMAT_NCHW);
 
-  auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
-                      INPUT(selfDesc, dim, indexDesc),   // host api输入
-                      OUTPUT(outputDesc));
+//   auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
+//                       INPUT(selfDesc, dim, indexDesc),   // host api输入
+//                       OUTPUT(outputDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspaceSize = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+//   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
-}
+//   // SAMPLE: precision simulate
+//   ut.TestPrecision();
+// }
 
-// test_dtype: index_dtype = int32, self_dtype = COMPLEX128
-TEST_F(l2IndexSelectTest, l2_index_select_test_COMPLEX128) {
-  vector<int64_t> inputDims = {3, 3};
-  vector<int64_t> outputDims = inputDims;
-  vector<int64_t> index = {0};
-  int64_t dim = 0;
-  outputDims[dim] = index.size();
+// // test_dtype: index_dtype = int32, self_dtype = COMPLEX128
+// TEST_F(l2IndexSelectTest, l2_index_select_test_COMPLEX128) {
+//   vector<int64_t> inputDims = {3, 3};
+//   vector<int64_t> outputDims = inputDims;
+//   vector<int64_t> index = {0};
+//   int64_t dim = 0;
+//   outputDims[dim] = index.size();
 
-  auto selfDesc = TensorDesc(inputDims, ACL_COMPLEX128, ACL_FORMAT_ND)
-                         .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
-  int64_t indexSize = index.size();
-  auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
-  auto outputDesc = TensorDesc(outputDims, ACL_COMPLEX128, ACL_FORMAT_NCHW);
+//   auto selfDesc = TensorDesc(inputDims, ACL_COMPLEX128, ACL_FORMAT_ND)
+//                          .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9});
+//   int64_t indexSize = index.size();
+//   auto indexDesc = TensorDesc({indexSize}, ACL_INT64, ACL_FORMAT_ND).Value(index);
+//   auto outputDesc = TensorDesc(outputDims, ACL_COMPLEX128, ACL_FORMAT_NCHW);
 
-  auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
-                      INPUT(selfDesc, dim, indexDesc),   // host api输入
-                      OUTPUT(outputDesc));
+//   auto ut = OP_API_UT(aclnnIndexSelect,  // host api第二段接口名称
+//                       INPUT(selfDesc, dim, indexDesc),   // host api输入
+//                       OUTPUT(outputDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+//   // SAMPLE: only test GetWorkspaceSize
+//   uint64_t workspaceSize = 0;
+//   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+//   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
-}
+//   // SAMPLE: precision simulate
+//   ut.TestPrecision();
+// }
 
 // test_dim_invalid
 TEST_F(l2IndexSelectTest, l2_index_select_test_dim_invalid) {

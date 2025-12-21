@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
  /*!
@@ -30,6 +30,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "index/gather_v2/op_host/op_api/gather_v2.h"
 
 /* AdvancedIndex operator's flow as:
  *      self          indexed_sizes     indexed_strides     indices_0                 indices_1   ...
@@ -138,6 +139,20 @@ static bool CheckFormat(const aclTensor *self,
   return true;
 }
 
+static void CheckShape(const aclTensor *self, const aclTensorList* indices)
+{
+  // 索引个数不能大于self维度数量
+  size_t indicesSize = indices->Size();
+  size_t selfDimNum = self->GetViewShape().GetDimNum();
+  if (selfDimNum == 0 && indicesSize > 1) {
+    OP_LOGW("when self dim nums is 0, indices size must be 1 but got %zu", indicesSize);
+  }
+  if (selfDimNum > 0 && indicesSize > selfDimNum) {
+    OP_LOGW("indices size must not greater than self dim nums, bug got indices size %zu and self dim nums %zu",
+            indicesSize, selfDimNum);
+  }
+}
+
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensorList* indices, const aclTensor *out) {
   // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
   // 1. 检查参数是否为空指针
@@ -146,6 +161,8 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensorList* indic
   CHECK_RET(CheckDtypeValid(self, indices, out), ACLNN_ERR_PARAM_INVALID);
   // 3. 检查格式是否支持
   CHECK_RET(CheckFormat(self, indices, out), ACLNN_ERR_PARAM_INVALID);
+  // 4. 检查shape是否支持
+  CheckShape(self, indices);
   return ACLNN_SUCCESS;
 }
 
@@ -226,6 +243,24 @@ bool check_index_aicore(const aclTensor *self, const FVector<const aclTensor*, 8
   return true;
 }
 
+static op::ShapeVector GetTransposedOutputShape(const FVector<const aclTensor*, 8> &allDefinedIndices,
+                                                const aclTensor *self,
+                                                int64_t masksNum,
+                                                int64_t indicesNum) {
+  // construct output shape after transpose
+  op::ShapeVector transposedOutputShape;
+  for (size_t i = 0; i < allDefinedIndices[0]->GetViewShape().GetDimNum(); i++) {
+    transposedOutputShape.emplace_back(allDefinedIndices[0]->GetViewShape().GetDim(i));
+  }
+  for (int64_t i = 0; i < masksNum - indicesNum; i++) {
+    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+  }
+  for (size_t i = masksNum; i < self->GetViewShape().GetDimNum(); i++) {
+    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+  }
+  return transposedOutputShape;
+}
+
 aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
                                        const aclTensorList *indices,
                                        aclTensor *out,
@@ -255,6 +290,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
   int64_t masksNum = 0;
   int64_t permMasksNum = 0;
   int64_t indicesSize = static_cast<int64_t>(indices->Size());
+  int64_t dim = 0;
   // 封装输入输出Tensor
   for (int64_t i = 0; i < indicesSize; i++) {
     if ((*indices)[i]->GetViewShape().GetShapeSize() != 0) {
@@ -262,6 +298,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
         allDefinedIndices.emplace_back(indexContiguous);
         masks.emplace_back(1);
         indicesNum += 1;
+        dim = i;
     } else {
       masks.emplace_back(0);
     }
@@ -283,16 +320,21 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
     }
   }
 
+  bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
   // construct output shape after transpose
   op::ShapeVector transposedOutputShape;
-  for (size_t i = 0; i < allDefinedIndices[0]->GetViewShape().GetDimNum(); i++) {
-    transposedOutputShape.emplace_back(allDefinedIndices[0]->GetViewShape().GetDim(i));
-  }
-  for (int64_t i = 0; i < masksNum - indicesNum; i++) {
-    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
-  }
-  for (size_t i = masksNum; i < self->GetViewShape().GetDimNum(); i++) {
-    transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+  if (!is91095) {
+    for (size_t i = 0; i < allDefinedIndices[0]->GetViewShape().GetDimNum(); i++) {
+      transposedOutputShape.emplace_back(allDefinedIndices[0]->GetViewShape().GetDim(i));
+    }
+    for (int64_t i = 0; i < masksNum - indicesNum; i++) {
+      transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+    }
+    for (size_t i = masksNum; i < self->GetViewShape().GetDimNum(); i++) {
+      transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
+    }
+  } else {
+    transposedOutputShape = GetTransposedOutputShape(allDefinedIndices, self, masksNum, indicesNum);
   }
 
   if (needTranspose == 1) {
@@ -327,8 +369,14 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
       auto permBack = GetPermBack(masksNum - indicesNum, indicesDimNum, outDimNum, uniqueExecutor.get());
       opOut = l0op::Transpose(opOut, permBack, uniqueExecutor.get());
     } else {
-      opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList,
+      if (is91095 && indicesNum == 1) {
+        opOut = l0op::GatherV2(selfContiguous, dim, allDefinedIndices[0], uniqueExecutor.get(), 0, true);
+      } else if((!is91095) && (selfContiguous->GetViewShape().GetDimNum() == 0)) {
+        opOut = selfContiguous;
+      } else {
+        opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList,
                                 uniqueExecutor.get());
+      }
     }
   } else {
     if (selfContiguous->GetViewShape().GetDimNum() == 0) {

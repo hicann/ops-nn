@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /*!
@@ -68,8 +68,11 @@ constexpr size_t FILTER_INDEX = 1;
 constexpr size_t OUT_BACKPROP_INDEX = 2;
 constexpr size_t Y_INDEX = 0;
 constexpr size_t K_OUTPUT_PADDING_CONV3D_TRANSPOSE_IDX = 5;
-constexpr size_t kOriShapeDim = 5;
+constexpr size_t K_ORI_SHAPE_DIM_2D = 4;
+constexpr size_t K_ORI_SHAPE_DIM_3D = 5;
 constexpr size_t K_OFFSET_X_CONV3D_TRANSPOSE_IDX = 6;
+constexpr size_t K_FUSION_MODE_CONV3D_TRANSPOSE_IDX = 7;
+constexpr size_t K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX = 8;
 
 // NDC1HWC0
 constexpr size_t kNDimNDC1HWC0Idx = 0;
@@ -80,13 +83,15 @@ constexpr size_t kCo0FRACTALZ3DIdx = 2;
 constexpr size_t kCin0FRACTALZ3DIdx = 3;
 constexpr size_t kPaddingConv3dBpInputIdx = 5;
 constexpr size_t kPaddingConv3dTransposeIdx = 7;
+constexpr size_t kPaddingExtendConvTransposeIdx = 9;
 
 constexpr int32_t kBlockSize = 16;
+const int32_t BYTE_BLOCK = 32;
 constexpr int32_t kBit8BlockReduce = 32;
 constexpr int32_t kFP32BlockReduce = 8;
 const std::map<int32_t, int32_t> kDtypeBlockReduceMap = {
   {ge::DT_HIFLOAT8, kBit8BlockReduce}, {ge::DT_FLOAT8_E4M3FN, kBit8BlockReduce},
-  {ge::DT_FLOAT16, kBlockSize}, {ge::DT_FLOAT, kFP32BlockReduce}
+  {ge::DT_FLOAT16, kBlockSize}, {ge::DT_FLOAT, kFP32BlockReduce}, {ge::DT_INT8, kBit8BlockReduce}
 };
 constexpr int32_t kNumTwo = 2;
 constexpr int32_t kFilterDimHWUp = 511;
@@ -196,6 +201,7 @@ bool ValidateConvBackpropContext(const gert::TilingContext *context) {
 bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *dilations) {
     const auto op_name = context->GetNodeName();
     auto y_ori_format = context->GetOutputDesc(Y_INDEX)->GetOriginFormat();
+    int32_t kDilationUpTmp = (IsArchAfter35(context) || IsSocVersionFuse(context)) ? kDimUp : kDilationUp;
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
@@ -208,19 +214,19 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
                 dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_d value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUp),
+                dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_h value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUp),
+                dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_w value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUp),
+                dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
         return false);
     } else {
       OP_CHECK_IF(
@@ -234,19 +240,19 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
                 dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_d value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUp),
+                dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_h value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUp),
+                dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUp),
+        !CheckRangeInt64(dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         OP_LOGE(op_name, "dilation_w value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUp),
+                dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
         return false);
     }
 
@@ -256,12 +262,6 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
 bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *strides) {
     const auto op_name = context->GetNodeName();
     auto y_ori_format = context->GetOutputDesc(Y_INDEX)->GetOriginFormat();
-    int32_t kStrideHWUpTmp = kDimUp;
-    int32_t kStrideDUpTmp = kDimUp;
-    if (IsArchAfter35(context)) {
-      kStrideHWUpTmp = kStrideHWUp;
-      kStrideDUpTmp = kStrideDUp;
-    }
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_N_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
@@ -274,19 +274,19 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
                 strides[K_C_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_D_DIM_NCDHW], kDimLow, kStrideDUpTmp),
+        !CheckRangeInt64(strides[K_D_DIM_NCDHW], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_d value [%ld] is invalid, support range [%d, %d]",
-                strides[K_D_DIM_NCDHW], kDimLow, kStrideDUpTmp),
+                strides[K_D_DIM_NCDHW], kDimLow, kDimUp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_H_DIM_NCDHW], kDimLow, kStrideHWUpTmp),
+        !CheckRangeInt64(strides[K_H_DIM_NCDHW], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_h value [%ld] is invalid, support range [%d, %d]",
-                strides[K_H_DIM_NCDHW], kDimLow, kStrideHWUpTmp),
+                strides[K_H_DIM_NCDHW], kDimLow, kDimUp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_W_DIM_NCDHW], kDimLow, kStrideHWUpTmp),
+        !CheckRangeInt64(strides[K_W_DIM_NCDHW], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_w value [%ld] is invalid, support range [%d, %d]",
-                strides[K_W_DIM_NCDHW], kDimLow, kStrideHWUpTmp),
+                strides[K_W_DIM_NCDHW], kDimLow, kDimUp),
         return false);
     } else {
       OP_CHECK_IF(
@@ -300,19 +300,19 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
                 strides[K_C_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_D_DIM_NDHWC], kDimLow, kStrideDUpTmp),
+        !CheckRangeInt64(strides[K_D_DIM_NDHWC], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_d value [%ld] is invalid, support range [%d, %d]",
-                strides[K_D_DIM_NDHWC], kDimLow, kStrideDUpTmp),
+                strides[K_D_DIM_NDHWC], kDimLow, kDimUp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_H_DIM_NDHWC], kDimLow, kStrideHWUpTmp),
+        !CheckRangeInt64(strides[K_H_DIM_NDHWC], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_h value [%ld] is invalid, support range [%d, %d]",
-                strides[K_H_DIM_NDHWC], kDimLow, kStrideHWUpTmp),
+                strides[K_H_DIM_NDHWC], kDimLow, kDimUp),
         return false);
       OP_CHECK_IF(
-        !CheckRangeInt64(strides[K_W_DIM_NDHWC], kDimLow, kStrideHWUpTmp),
+        !CheckRangeInt64(strides[K_W_DIM_NDHWC], kDimLow, kDimUp),
         OP_LOGE(op_name, "stride_w value [%ld] is invalid, support range [%d, %d]",
-                strides[K_W_DIM_NDHWC], kDimLow, kStrideHWUpTmp),
+                strides[K_W_DIM_NDHWC], kDimLow, kDimUp),
         return false);
     }
 
@@ -322,7 +322,7 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
 bool CheckAttrRangePads(const gert::TilingContext *context, const int64_t *pads) {
     const auto op_name = context->GetNodeName();
     int32_t kPadUpTmp = kDimUp;
-    if (IsArchAfter35(context)) {
+    if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
       kPadUpTmp = kPadUp;
     }
     OP_CHECK_IF(
@@ -369,9 +369,17 @@ bool CheckAttrRange(gert::TilingContext *context,
     OP_CHECK_IF(!CheckAttrRangeStrides(context, strides),
       OP_LOGE(op_name, "check strides range failed"),
       return false);
-    OP_CHECK_IF(!CheckAttrRangePads(context, pads),
+    //Exclude (pad_u,pad_d,pad_l,pad_r) =-1 while paddings is "SAME"
+    if (pads[K_CONV3D_PAD_UP_IDX] !=-1 &&
+        pads[K_CONV3D_PAD_DOWN_IDX] !=-1 &&
+        pads[K_CONV3D_PAD_LEFT_IDX] !=-1 &&
+        pads[K_CONV3D_PAD_RIGHT_IDX] != -1
+    ) {
+      OP_CHECK_IF(!CheckAttrRangePads(context, pads),
       OP_LOGE(op_name, "check pads range failed"),
       return false);
+    }
+
     // groups: [1, 2G - 1 ]
     if (groups != nullptr) {
       OP_CHECK_IF(!CheckRangeInt64(*groups, kDimLow, kDimUp),
@@ -387,7 +395,7 @@ bool CheckTransposeAttr(gert::TilingContext *context, OtherParams& otherParams) 
     auto attrs = context->GetAttrs();
     auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(K_OUTPUT_PADDING_CONV3D_TRANSPOSE_IDX);
     OP_CHECK_IF(outputPadding == nullptr, OP_LOGE(context, "failed to get output_padding attrs"), return false);
-    OP_CHECK_IF(outputPadding->GetSize() != kOriShapeDim,
+    OP_CHECK_IF(outputPadding->GetSize() != K_ORI_SHAPE_DIM_3D,
       OP_LOGE(context, "The output_padding should be 5d, actual dim num: %zu", outputPadding->GetSize()), return false);
     const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
     if (yDesc->GetOriginFormat() == ge::FORMAT_NCDHW) {
@@ -407,6 +415,18 @@ bool CheckTransposeAttr(gert::TilingContext *context, OtherParams& otherParams) 
       const auto offsetX = attrs->GetAttrPointer<int64_t>(K_OFFSET_X_CONV3D_TRANSPOSE_IDX);
       OP_CHECK_IF(offsetX == nullptr, OP_LOGE(context, "failed to get offsetX attrs"), return false);
       OP_CHECK_IF(*offsetX != 0, OP_LOGE(context, "offsetX:%ld is invalid, it should be 0", *offsetX), return false);
+    }
+    if (IsSocVersionFuse(context)) {
+      if (attrs->GetAttrNum() > K_FUSION_MODE_CONV3D_TRANSPOSE_IDX) {
+        const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
+        OP_LOGE_IF(fusion_mode == nullptr, false, context, "failed to get fusion_mode attrs");
+        OP_LOGE_IF(*fusion_mode != 0 && *fusion_mode != 1, false, context, "fusion_mode:%d is invalid, it should be 0 or 1", *fusion_mode);
+      }
+      if (attrs->GetAttrNum() > K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX) {
+        const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
+        OP_LOGE_IF(y_quant_mode == nullptr, false, context, "failed to get quant_mode attrs");
+        OP_LOGE_IF(*y_quant_mode != 0, false, context, "quant_mode:%d is invalid, it should be 0", *y_quant_mode);
+      }
     }
     return true;
 }
@@ -486,7 +506,7 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
     otherParams.b_dtype == ge::DT_FLOAT && otherParams.c_dtype == ge::DT_FLOAT;
   bool dtypeSupportFlag = isFp16Flag || isFp32Flag;
   string dtypeCheckLog = "fp16 and fp32";
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     bool isHiF8Flag = otherParams.a_dtype == ge::DT_HIFLOAT8 &&
       otherParams.b_dtype == ge::DT_HIFLOAT8 && otherParams.c_dtype == ge::DT_HIFLOAT8;
     bool isFp8E4M3Flag = otherParams.a_dtype == ge::DT_FLOAT8_E4M3FN &&
@@ -494,6 +514,12 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
       otherParams.c_dtype == ge::DT_FLOAT8_E4M3FN;
     dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag;
     dtypeCheckLog = "hifloat8, float8_e4m3, fp16 and fp32";
+  }
+  if (IsSocVersionFuse(context)) {
+    bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
+      (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
+    dtypeSupportFlag = isFp16Flag || isInt8Flag;
+    dtypeCheckLog = "fp16 and int8";
   }
   OP_CHECK_IF(
     !dtypeSupportFlag,
@@ -533,7 +559,7 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   const std::unordered_set<ge::Format> valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
   bool invalid_tag = valid_out_bp_format.count(out_backprop_format) == 0 || valid_filter_format.count(filter_format) == 0 ||
                      valid_y_format.count(y_format) == 0;
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     OP_CHECK_IF(invalid_tag,
                 OP_LOGE(op_name, "out_backprop format[%s] and y format[%s] should be NCDHW/NDHWC, filter format[%s] should be NCDHW/NDHWC/DHWCN.",
                         ge::TypeUtils::FormatToSerialString(out_backprop_format).c_str(),
@@ -544,9 +570,15 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   return true;
 }
 
-static void UpdateShapeParams(const Conv3dBpInputV2RunInfo &runInfoV2,
+static bool UpdateShapeParams(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2,
                               const Shape &out_backprop_shape_ncdhw, const Shape &filter_shape_ncdhw,
                               const Shape &y_shape_ncdhw, OtherParams& otherParams) {
+  const auto op_name = context->GetNodeName();
+  OP_CHECK_IF(kDtypeBlockReduceMap.find(otherParams.a_dtype) == kDtypeBlockReduceMap.end() ||
+              kDtypeBlockReduceMap.find(otherParams.c_dtype) == kDtypeBlockReduceMap.end() ||
+              kDtypeBlockReduceMap.find(otherParams.b_dtype) == kDtypeBlockReduceMap.end(),
+            OP_LOGE(op_name, "dtype is invalid!"),
+            return false);                         
   // a_shape means out_backprop shape
   otherParams.a_shape.c = out_backprop_shape_ncdhw.c;
   otherParams.a_shape.d = out_backprop_shape_ncdhw.d;
@@ -573,6 +605,8 @@ static void UpdateShapeParams(const Conv3dBpInputV2RunInfo &runInfoV2,
   otherParams.filter_w_dilation = (otherParams.b_shape.w - 1) * runInfoV2.dilation_w + 1;
   otherParams.b_shape.c0 = kDtypeBlockReduceMap.at(otherParams.b_dtype);
   otherParams.b_shape.c1 = Ops::Base::CeilDiv(otherParams.b_shape.c, otherParams.b_shape.c0);
+
+  return true;
 }
 
 static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filter_input_index,
@@ -590,15 +624,21 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   otherParams.filter_gdkci1ghw = filter_shape->GetStorageShape().GetDim(kDkCin1HkWkFRACTALZ3DIdx);
   // NOTE only support shape of filter is (g'*dk*ci1_g'*hk*wk, co1', co0, ci0)
   otherParams.co1g = filter_shape->GetStorageShape().GetDim(kCo1FRACTALZ3DIdx);
-  if (!IsArchAfter35(context)) {
+  if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
+    otherParams.co1g = filter_shape->GetStorageShape().GetDim(kCo1FRACTALZ3DIdx);
     if (context->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_FLOAT && runInfoV2.groups > 1) {
       otherParams.co1g *= 2; // 2: BLOCK_NUM / FP32_C0
     }
+    otherParams.filter_co0 = filter_shape->GetStorageShape().GetDim(kCo0FRACTALZ3DIdx);
+    otherParams.filter_ci0 = filter_shape->GetStorageShape().GetDim(kCin0FRACTALZ3DIdx);
+  } else {
+    otherParams.filter_co0 = BYTE_BLOCK / runInfoV2.b_dtype_bytes;
+    otherParams.co1g = Ops::Base::CeilDiv(
+      otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups,
+      otherParams.c_shape.c0);
+    otherParams.filter_ci0 = kBlockSize;
   }
-
   otherParams.co1g_reduce = otherParams.co1g;
-  otherParams.filter_co0 = filter_shape->GetStorageShape().GetDim(kCo0FRACTALZ3DIdx);
-  otherParams.filter_ci0 = filter_shape->GetStorageShape().GetDim(kCin0FRACTALZ3DIdx);
 
   auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
   auto filter_ori_format = filter_desc->GetOriginFormat();
@@ -608,15 +648,14 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   const auto &filter_ori_shape = filter_shape->GetOriginShape();
   const auto &y_ori_shape = y_shape->GetOriginShape();
   const auto op_name = context->GetNodeName();
-  OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != kOriShapeDim,
+  OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
               OP_LOGE(op_name, "out_backprop ori shape dim nums is invalid."),
               return false);
-  OP_CHECK_IF(filter_ori_shape.GetDimNum() != kOriShapeDim,
+  OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
               OP_LOGE(op_name, "filter ori shape dim nums is invalid."),
               return false);
-  OP_CHECK_IF(y_ori_shape.GetDimNum() != kOriShapeDim,
-              OP_LOGE(op_name, "y ori shape dim nums is invalid."),
-              return false);
+  OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
+              OP_LOGE(op_name, "y ori shape dim nums is invalid."), return false);
 
   Shape out_backprop_shape_ncdhw;
   Shape filter_shape_ncdhw;
@@ -625,7 +664,8 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   GetNCDHWShape(filter_ori_shape, filter_shape_ncdhw, filter_ori_format);
   GetNCDHWShape(y_ori_shape, y_shape_ncdhw, y_ori_format);
 
-  UpdateShapeParams(runInfoV2, out_backprop_shape_ncdhw, filter_shape_ncdhw, y_shape_ncdhw, otherParams);
+  OP_CHECK_IF(!UpdateShapeParams(context, runInfoV2, out_backprop_shape_ncdhw, filter_shape_ncdhw, y_shape_ncdhw, otherParams),
+              OP_LOGE(op_name, "update shape params failed."), return false);
   return true;
 }
 
@@ -663,7 +703,7 @@ static bool GetShapeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo 
               OP_LOGE(op_name, "out_backprop ori format[%s] should be NDHWC or NCDHW.",
                       ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
               return false);
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
                 OP_LOGE(op_name, "filter ori format[%s] should be NDHWC/NCDHW/DHWCN.",
                         ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str()),
@@ -713,7 +753,7 @@ static void ReCalDilation(const gert::TilingContext *context, Conv3dBpInputV2Run
 
 static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Conv3dBpInputV2RunInfo &runInfoV2) {
   if (otherParams.b_shape.c == 0 || otherParams.c_shape.c % otherParams.b_shape.c != 0) {
-    OP_LOGE(context, "fmap_channel(%ld) %% filter_channel(%ld) != 0", otherParams.c_shape.c,
+    OP_LOGE(context, "fmap_channel(%ld) mod filter_channel(%ld) != 0", otherParams.c_shape.c,
             otherParams.b_shape.c);
     return false;
   }
@@ -731,7 +771,7 @@ static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Co
               OP_LOGE(context, "out_backprop's C(%ld) %% groups(%d) != 0", otherParams.a_shape.c, runInfoV2.groups),
               return false);
 
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     bool invalidFilterFormat = runInfoV2.filterFormat != ge::FORMAT_NCDHW &&
       runInfoV2.filterFormat != ge::FORMAT_NDHWC && runInfoV2.filterFormat != ge::FORMAT_DHWCN;
     bool invalidFormat = runInfoV2.outBackpropFormat != ge::FORMAT_NCDHW || invalidFilterFormat ||
@@ -768,7 +808,7 @@ static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
   auto input_size = context->GetInputTensor(INPUT_SIZE_INDEX);
   OP_CHECK_IF(input_size == nullptr, OP_LOGE(context, "get input size fail"), return false);
   size_t input_size_dim_num = static_cast<size_t>(input_size->GetOriginShape().GetShapeSize());
-  OP_CHECK_IF(input_size_dim_num != kOriShapeDim, OP_LOGE(context, "input_size must be 5d"), return false);
+  OP_CHECK_IF(input_size_dim_num != K_ORI_SHAPE_DIM_3D && input_size_dim_num != K_ORI_SHAPE_DIM_2D, OP_LOGE(context, "input_size_dim_num=[%zu], input_size must be 4d or 5d", input_size_dim_num), return false);
   auto dtype = context->GetInputDesc(INPUT_SIZE_INDEX)->GetDataType();
   if (dtype == ge::DT_INT32) {
     auto tensor_data = input_size->GetData<int32_t>();
@@ -845,7 +885,11 @@ static bool CalPads(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInf
   auto attrs = context->GetAttrs();
   size_t padding_attr_idx = kPaddingConv3dBpInputIdx;
   if (op_type == optiling::OpTypeV2::kConv3DTransposeV2) {
-    padding_attr_idx = kPaddingConv3dTransposeIdx;
+    if (IsSocVersionFuse(context)) {
+      padding_attr_idx = kPaddingExtendConvTransposeIdx;
+    } else {
+      padding_attr_idx = kPaddingConv3dTransposeIdx;
+    }
   }
   if (attrs->GetAttrNum() <= padding_attr_idx) {
     OP_LOGD(context, "no padding attr, skip calc and check");
@@ -909,7 +953,7 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
       co1g *= 2; // 2: BLOCK_NUM / FP32_C0
   }
 
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     otherParams.ci1g = Ops::Base::CeilDiv(
         otherParams.multiple_extend * otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
     otherParams.co1g = Ops::Base::CeilDiv(
@@ -928,8 +972,9 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
       kBlockSize * otherParams.b_shape.c0) * runInfoV2.b_dtype_bytes +
       REG_SIZE > context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->ub_size;
 
-    bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN || filter_desc->GetDataType() == ge::DT_HIFLOAT8) ||
-    (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN || out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8);
+    bool nonExtendedDtype = (filter_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN || filter_desc->GetDataType() == ge::DT_HIFLOAT8 ||
+      filter_desc->GetDataType() == ge::DT_INT8) || (out_backprop_desc->GetDataType() == ge::DT_FLOAT8_E4M3FN ||
+      out_backprop_desc->GetDataType() == ge::DT_HIFLOAT8 || out_backprop_desc->GetDataType() == ge::DT_INT8);
     if (disableGroupEnlarge || nonExtendedDtype) {
       otherParams.multiple_extend = 1;
       runInfoV2.real_g = runInfoV2.groups;
@@ -938,7 +983,7 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
     }
   }
 
-  if (!IsArchAfter35(context)) {
+  if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
     int64_t filterGDkCi1gHW = static_cast<int64_t>(runInfoV2.real_g) *
                                otherParams.b_shape.d * otherParams.ci1g *
                                otherParams.b_shape.h * otherParams.b_shape.w;
@@ -1003,20 +1048,21 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
 
   otherParams.pad_left_before = CalBackpropPadBefore(filterShape.w, runInfoV2.dilation_w, runInfoV2.pad_l);
   otherParams.pad_up_before = CalBackpropPadBefore(filterShape.h, runInfoV2.dilation_h, runInfoV2.pad_u);
+  int32_t kPadUpTmp = (IsArchAfter35(context) || IsSocVersionFuse(context)) ? kDimUp : kPadUp;
 
-  OP_CHECK_IF(!CheckRange(otherParams.pad_left_before, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(otherParams.pad_left_before, 0, kPadUpTmp),
               OP_LOGE(context, "backprop_pad_left=((kw - 1) * dilation_w - pad_left)=[%d] is invalid, it should be in [%d, %d]",
-                      otherParams.pad_left_before, 0 , kPadUp),
+                      otherParams.pad_left_before, 0 , kPadUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(otherParams.pad_up_before, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(otherParams.pad_up_before, 0, kPadUpTmp),
               OP_LOGE(context, "backprop_pad_up=((kh - 1) * dilation_h - pad_up)=[%d] is invalid, it should be in [%d, %d]",
-                      otherParams.pad_up_before, 0 , kPadUp),
+                      otherParams.pad_up_before, 0 , kPadUpTmp),
               return false);
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     otherParams.pad_head_before = CalBackpropPadBefore(filterShape.d, runInfoV2.dilation_d, runInfoV2.pad_h);
-    OP_CHECK_IF(!CheckRange(otherParams.pad_head_before, 0, kPadUp),
+    OP_CHECK_IF(!CheckRange(otherParams.pad_head_before, 0, kPadUpTmp),
                 OP_LOGE(context, "backprop_pad_head=((kd - 1) * dilation_d - pad_head)=[%d] is invalid, it should be in [%d, %d]",
-                        otherParams.pad_head_before, 0 , kPadUp),
+                        otherParams.pad_head_before, 0 , kPadUpTmp),
                 return false);
   }
 
@@ -1026,14 +1072,14 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
   int64_t pad_right_after = CalBackpropPadAfter(dedxShape.w, dedyShape.w, runInfoV2.stride_w, runInfoV2.pad_l);
   int64_t pad_down_after = CalBackpropPadAfter(dedxShape.h, dedyShape.h, runInfoV2.stride_h, runInfoV2.pad_u);
 
-  OP_CHECK_IF(IsOverflowInt32(pad_right_after) || !CheckRange(static_cast<int32_t>(pad_right_after), -kPadUp, kPadUp),
+  OP_CHECK_IF(IsOverflowInt32(pad_right_after) || !CheckRange(static_cast<int32_t>(pad_right_after), -kPadUpTmp, kPadUpTmp),
               OP_LOGE(context, "backprop_right_pad = (inputW - outputW * strideW + padLeft)=%ld is invalid, it should be in[%d, %d]",
-                      pad_right_after, -kPadUp, kPadUp),
+                      pad_right_after, -kPadUpTmp, kPadUpTmp),
               return false);
 
-  OP_CHECK_IF(IsOverflowInt32(pad_down_after) || !CheckRange(static_cast<int32_t>(pad_down_after), -kPadUp, kPadUp),
+  OP_CHECK_IF(IsOverflowInt32(pad_down_after) || !CheckRange(static_cast<int32_t>(pad_down_after), -kPadUpTmp, kPadUpTmp),
               OP_LOGE(context, "backprop_down_pad = (inputH - outputH * strideH + padUp)=%ld is invalid, it should be in[%d, %d]",
-                      pad_down_after, -kPadUp, kPadUp),
+                      pad_down_after, -kPadUpTmp, kPadUpTmp),
               return false);
 
   int64_t shape_down_modify = (pad_down_after - abs(pad_down_after)) / kNumTwo;
@@ -1068,7 +1114,7 @@ static inline bool CheckValue(int32_t value, int32_t value_temp) { return value 
 bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo &runInfoV2, const gert::TilingContext *context) {
   const auto op_name = context->GetNodeName();
   int32_t kPadUpTmp = kDimUp;
-  if (IsArchAfter35(context)) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     kPadUpTmp = kPadUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_h, 0, kPadUpTmp),
@@ -1077,38 +1123,38 @@ bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo &runInfoV2, const gert::
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_t, 0, kPadUpTmp),
               OP_LOGE(op_name, "pad_t value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_t, 0, kPadUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.pad_u, 0, kPadUp),
-              OP_LOGE(op_name, "pad_u value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_u, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(runInfoV2.pad_u, 0, kPadUpTmp),
+              OP_LOGE(op_name, "pad_u value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_u, 0, kPadUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.pad_d, 0, kPadUp),
-              OP_LOGE(op_name, "pad_d value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_d, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(runInfoV2.pad_d, 0, kPadUpTmp),
+              OP_LOGE(op_name, "pad_d value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_d, 0, kPadUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.pad_l, 0, kPadUp),
-              OP_LOGE(op_name, "pad_l value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_l, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(runInfoV2.pad_l, 0, kPadUpTmp),
+              OP_LOGE(op_name, "pad_l value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_l, 0, kPadUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.pad_r, 0, kPadUp),
-              OP_LOGE(op_name, "pad_r value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_r, 0, kPadUp),
+  OP_CHECK_IF(!CheckRange(runInfoV2.pad_r, 0, kPadUpTmp),
+              OP_LOGE(op_name, "pad_r value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_r, 0, kPadUpTmp),
               return false);
   return true;
 }
 
 bool CheckParamsWithLog(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context, OtherParams& otherParams) {
   const auto op_name = context->GetNodeName();
-  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUp),
-              OP_LOGE(op_name, "dilation_h value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_h, kDilationLow, kDilationUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUp),
-              OP_LOGE(op_name, "dilation_w value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_w, kDilationLow, kDilationUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUp),
-              OP_LOGE(op_name, "dilation_d value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_d, kDilationLow, kDilationUp),
-              return false);
   int32_t kStrideHWUpTmp = kDimUp;
   int32_t kStrideDUpTmp = kDimUp;
-  if (IsArchAfter35(context)) {
-    kStrideHWUpTmp = kStrideHWUp;
-    kStrideDUpTmp = kStrideDUp;
+  int32_t kDilationUpTmp = kDilationUp;
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+    kDilationUpTmp = kDimUp;
   }
+  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
+              OP_LOGE(op_name, "dilation_h value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
+              return false);
+  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUpTmp),
+              OP_LOGE(op_name, "dilation_w value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_w, kDilationLow, kDilationUpTmp),
+              return false);
+  OP_CHECK_IF(!CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUpTmp),
+              OP_LOGE(op_name, "dilation_d value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_d, kDilationLow, kDilationUpTmp),
+              return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.stride_h, kDimLow, kStrideHWUpTmp),
               OP_LOGE(op_name, "stride_h value [%d] is invalid, support range [%d, %d]", runInfoV2.stride_h, kDimLow, kStrideHWUpTmp),
               return false);
@@ -1179,6 +1225,9 @@ static int64_t GetDfactor(T kd_factor, Conv3dBpInputV2RunInfo &runInfoV2, int32_
 }
 
 static bool CheckL1SizeLimit(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context, OtherParams& otherParams) {
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+    return true;
+  }
   int64_t w_value = otherParams.a_shape.w * runInfoV2.stride_w;
   int64_t h_value_max =
       (otherParams.filter_h_dilation - 1) + kBlockSize / otherParams.c_shape.w + 2;
@@ -1203,7 +1252,7 @@ static bool CheckL1SizeLimit(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingCont
                        runInfoV2.b_dtype_bytes;
   // 在stride_d > k_d，或者d方向需要额外补零时，v1算子需要在l1上预留一块大小为baseM*baseN的buffer，置零之后再写出去
   int64_t fill_zero_size = kBlockSize * kBlockSize * runInfoV2.b_dtype_bytes;
-  if (!IsArchAfter35(context)) {
+  if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
     if (otherParams.b_dtype == ge::DT_FLOAT) {
       // fp32一定走v2，v2算子不需要预留buffer置零
       fill_zero_size = 0;
@@ -1330,6 +1379,18 @@ bool GetInputOutputFormat(const gert::TilingContext* context, Conv3dBpInputV2Run
     return true;
 }
 
+bool CalScale(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams) {
+	if (!IsSocVersionFuse(context)) {
+		return true;
+	}
+    if (otherParams.a_dtype == ge::DT_INT8) {
+        if (static_cast<uint64_t>(runInfoV2.dedx_cin) * ge::GetSizeByDataType(ge::DT_INT64) > FB_BUFFER_SIZE) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Conv3DBackpropInputParseFunc(gert::TilingContext *context, optiling::OpTypeV2 opType,
                                   Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams, bool isV2Impl) {
     const auto op_name = context->GetNodeName();
@@ -1342,6 +1403,30 @@ bool Conv3DBackpropInputParseFunc(gert::TilingContext *context, optiling::OpType
     OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGE(op_name, "Calc pads failed."), return false);
     OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGE(op_name, "Calc real_g failed."), return false);
     OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGE(op_name, "Modify pad failed."), return false);
+    OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGE(op_name, "Sacle size too big, not support."), return false);
+    return true;
+}
+
+bool GetFusionMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
+    const gert::TilingContext* context, optiling::OpTypeV2 opType)
+{
+    if (!IsSocVersionFuse(context) || opType != optiling::OpTypeV2::kConv3DTransposeV2) {
+        return true;
+    }
+    auto attrs = context->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr,
+                OP_LOGE(context, "failed to get runtime attrs"),
+                return false);
+    size_t idx = K_FUSION_MODE_CONV3D_TRANSPOSE_IDX;
+    if (idx < attrs->GetAttrNum()) {
+        const int32_t *fusionMode = attrs->GetAttrPointer<int32_t>(idx);
+        if (fusionMode != nullptr && *fusionMode == 1) {
+            runInfoV2.enRelu = 1;
+        } else {
+            OP_LOGW(opName, "relu flag is not support, so we set 0 as default");
+            runInfoV2.enRelu = 0; // for extendConvTranspose fixpipe fusion pass, default value is 0
+        }
+    }
     return true;
 }
 
@@ -1379,17 +1464,19 @@ bool GetImplMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
 bool CheckShapeValidWithLog(const gert::TilingContext *context, const OtherParams& otherParams, const Conv3dBpInputV2RunInfo &runInfoV2) {
   const auto op_name = context->GetNodeName();
   int32_t kGroupUpTmp = kDimUp;
-  if (IsArchAfter35(context)) {
+  int32_t kFilterDimHWUpTmp = kFilterDimHWUp;
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     kGroupUpTmp = kGroupUp;
+    kFilterDimHWUpTmp = kDimUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.groups, kDimLow, kGroupUpTmp),
               OP_LOGE(op_name, "group value [%d] is invalid, support range [%d, %d]", runInfoV2.groups, kDimLow, kGroupUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUp),
-              OP_LOGE(op_name, "the H dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.h, kDimLow, kFilterDimHWUp),
+  OP_CHECK_IF(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp),
+              OP_LOGE(op_name, "the H dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp),
               return false);
-  OP_CHECK_IF(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUp),
-              OP_LOGE(op_name, "the W dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.w, kDimLow, kFilterDimHWUp),
+  OP_CHECK_IF(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp),
+              OP_LOGE(op_name, "the W dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp),
               return false);
   OP_CHECK_IF(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp),
               OP_LOGE(op_name, "the D dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.d, kDimLow, kDimBatchUp),
@@ -1471,10 +1558,18 @@ bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context
     return false;
   }
 
+  int32_t kFilterDimHWUpTmp = kFilterDimHWUp;
+  int32_t kPadUpTmp = kPadUp;
+  int32_t kDilationUpTmp = kDilationUp;
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+    kFilterDimHWUpTmp = kDimUp;
+    kPadUpTmp = kDimUp;
+    kDilationUpTmp = kDimUp;
+  }
   uint32_t shift = 0;
   uint64_t invalid = (static_cast<uint64_t>(!CheckRange(runInfoV2.groups, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUp)) << shift++);
+  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp)) << shift++);
+  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.batch, kDimLow, kDimBatchUp)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.a_shape.c1, kDimLow)) << shift++);
@@ -1485,9 +1580,9 @@ bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context
   invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.c1, kDimLow)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.c, kDimLow)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.d, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>((!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUp) ||
-                        !CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUp) ||
-                        !CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUp)))
+  invalid = invalid + (static_cast<uint64_t>((!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp) ||
+                        !CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUpTmp) ||
+                        !CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUpTmp)))
                        << shift++);
   invalid = invalid +
             (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.h * runInfoV2.stride_h, kDimLow, kDimUp))
@@ -1536,8 +1631,8 @@ bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context
   invalid = invalid + (static_cast<uint64_t>((filter_size > kDataSizeMax)) << shift++);
   invalid = invalid + (static_cast<uint64_t>(!CheckL1SizeLimit(runInfoV2, context, otherParams)) << shift++);
   invalid = invalid +
-            (static_cast<uint64_t>(otherParams.pad_up_before > kPadUp || otherParams.pad_left_before > kPadUp ||
-                                  otherParams.pad_down_after > kPadUp || otherParams.pad_right_after > kPadUp)
+            (static_cast<uint64_t>(otherParams.pad_up_before > kPadUpTmp || otherParams.pad_left_before > kPadUpTmp ||
+                                  otherParams.pad_down_after > kPadUpTmp || otherParams.pad_right_after > kPadUpTmp)
              << shift++);
   if (invalid != 0) {
     vector<string> error_info = {"groups must be equal 1",
@@ -1679,16 +1774,15 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
         OP_CHECK_IF(outputPadding->GetData() == nullptr,
                     OP_LOGE(opName, "output_padding GetData is null"), return false);
         OP_CHECK_IF(outputPadding->GetSize() != OUTPUT_PADDING_DIM,
-                    OP_LOGE(opName, "the output padding:%zu is invalid, it should be 5d",
-                            outputPadding->GetSize()),
+                    OP_LOGE(opName, "the output padding:%zu is invalid, it should be 5d", outputPadding->GetSize()),
                     return false);
         const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
         bool outputPaddingAllzero = true;
+        bool outputPaddingAllNonNegative = true;
         std::vector<int64_t> outputPaddingValue;
         for (size_t index = 0; index < outputPadding->GetSize(); index++) {
-            if (outputPaddingData[index] != 0) {
-                outputPaddingAllzero = false;
-            }
+            outputPaddingAllzero = outputPaddingData[index] != 0 ? false : outputPaddingAllzero;
+            outputPaddingAllNonNegative = outputPaddingData[index] < 0 ? false : outputPaddingAllNonNegative;
             outputPaddingValue.push_back(outputPaddingData[index]);
         }
         OP_CHECK_IF((!outputPaddingAllzero) &&
@@ -1704,17 +1798,20 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(FILTER_INDEX)->GetDataType()).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType()).c_str()),
                 return false);
+        OP_CHECK_IF(!outputPaddingAllNonNegative && IsArchAfter35(context),
+                CUBE_INNER_ERR_REPORT(opName,
+                "output_padding[%s] contains negative values, op can only support all non-negative inputs.",
+                DebugString(outputPaddingValue).c_str()), return false);
     }
     OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
-                OP_LOGE(opName, "cannot support offset_x attribute parameters"),
-                return false);
-    OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
-                OP_LOGE(opName,"cannot support offset_w input parameters"),
-                return false);
-
-    auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
-    OP_CHECK_IF(biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0,
+                OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
+    if (!IsSocVersionFuse(context)) {
+        OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
+                OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
+        auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
+        OP_CHECK_IF(biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0,
                 OP_LOGE(opName, "cannot support bias"), return false);
+    }
 
     return true;
 }
@@ -1736,6 +1833,22 @@ void SetInitOutput(Conv3dBpInputV2RunInfo &runInfoV2, const optiling::OpTypeV2 o
 }
 }
 
+bool IsSocVersionFuse(const gert::TilingContext *context)
+{
+    const auto op_name = context->GetNodeName();
+    OP_CHECK_IF(context == nullptr, OP_LOGE(op_name, "context is null"), return false);
+    fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(op_name, "platformInfoPtr is null"), return false);
+
+    std::string cube_vec_state_str;
+    platformInfo->GetPlatformRes("SoCInfo", "cube_vector_combine", cube_vec_state_str);
+    OP_CHECK_IF(cube_vec_state_str.empty(), OP_LOGE(op_name, "get cube_vector_combine failed"), return false);
+    if (cube_vec_state_str == "fuse") {
+      return true;
+    }
+    return false;
+}
+
 bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2,
                     optiling::OpTypeV2 opType) {
     OtherParams otherParams;
@@ -1743,8 +1856,13 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
                 OP_LOGE(context->GetNodeName(), "failed to parse params"), return false);
     OP_CHECK_IF(!Conv3DBackpropInputParseFunc(context, opType, runInfoV2, otherParams, true),
                 OP_LOGE(context->GetNodeName(), "failed to parse context"), return false);
-    OP_CHECK_IF(!GetImplMode(runInfoV2, context->GetNodeName(), context, opType),
-                OP_LOGE(context, "failed to get impl mode"), return false);
+    if (IsSocVersionFuse(context)) {
+        OP_CHECK_IF(!GetFusionMode(runInfoV2, context->GetNodeName(), context, opType),
+            OP_LOGE(context, "failed to get enRelu flag"), return false);
+    } else {
+        OP_CHECK_IF(!GetImplMode(runInfoV2, context->GetNodeName(), context, opType),
+            OP_LOGE(context, "failed to get impl mode"), return false);
+    }
 
     if (!CheckCalPads(context, runInfoV2, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
         !CheckAttrs(runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(runInfoV2, context->GetNodeName(), otherParams)) {
@@ -1758,7 +1876,7 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     }
     SetInitOutput(runInfoV2, opType, otherParams);
     // group扩维在单独的transdata算子中完成时，cin1_g和cout1_g为扩以后的属性，否则是常规值
-    if (runInfoV2.real_g == 1 && !IsArchAfter35(context)) {
+    if (runInfoV2.real_g == 1 && !IsArchAfter35(context) && !IsSocVersionFuse(context)) {
         runInfoV2.dedy_cout1_g = otherParams.a_shape.c1;
         runInfoV2.dedx_cin1_g = otherParams.c_shape.c1;
     } else {

@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-
+    AddOpTestCase(conv3d_v2 "ascend910B1" "-DDTYPE_X=half -DDTYPE_FILTER=half -DDTYPE_Y=half")
 endif()

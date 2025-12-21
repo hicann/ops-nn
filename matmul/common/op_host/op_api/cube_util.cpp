@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "cube_util.h"
 #include "aclnn_kernels/contiguous.h"
 #include "opdev/tensor_view_utils.h"
@@ -70,20 +70,26 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) 
             OP_LOGD("The cubeMathType is KEEP_DTYPE.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
         case ALLOW_FP32_DOWN_PRECISION:
-            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉910 + BF16场景
+            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉1980 + BF16场景
             OP_LOGD("The cubeMathType is ALLOW_FP32_DOWN_PRECISION.");
             return CheckSocSupportDtype(cubeTensorDtype, true);
         case USE_FP16:
-            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉910 + BF16场景
+            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉1980 + BF16场景
             OP_LOGD("The cubeMathType is USE_FP16.");
             return CheckSocSupportDtype(cubeTensorDtype, true);
         case USE_HF32:
             OP_LOGD("The cubeMathType is USE_HF32.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
+        case FORCE_GRP_ACC_FOR_FP32:
+            OP_LOGD("The cubeMathType is FORCE_GRP_ACC_FOR_FP32.");
+            return CheckSocSupportDtype(cubeTensorDtype, false);
+        case USE_HIGH_PREC_MODE:
+            OP_LOGD("The cubeMathType is USE_HIGH_PREC_MODE.");
+            return true;
         default:
           OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                   "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
-                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32}, but got %d",
+                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: FORCE_GRP_ACC_FOR_FP32, 5: USE_HIGH_PREC_MODE}, but got %d",
                   cubeMathType);
           return false;
     }
@@ -96,6 +102,9 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     } else if (cubeMathType == USE_HF32 &&
                (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
         OP_LOGW("The cubeMathType is USE_HF32. For input FP16/BF16, it will not be enabled.");
+    } else if (cubeMathType == FORCE_GRP_ACC_FOR_FP32 &&
+               (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
+        OP_LOGW("The cubeMathType is FORCE_GRP_ACC_FOR_FP32. For input FP16/BF16, it will not be enabled.");
     }
 
     if (cubeMathType == -1) {
@@ -209,6 +218,17 @@ DataType CalcKeepDtypePromoteType(const DataType cubeTensorPromoteType) {
     }
 }
 
+DataType CalcForceGrpAccForFp32PromoteType(const DataType cubeTensorPromoteType) {
+    switch (cubeTensorPromoteType) {
+        case DataType::DT_FLOAT:
+            return cubeTensorPromoteType;
+        default:
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP32, but got %s.",
+                op::ToString(cubeTensorPromoteType).GetString());
+            return cubeTensorPromoteType;
+    }
+}
+
 // 根据promote type + cubemathtype的组合算出最终算子应用的dtype
 DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, int8_t cubeMathType) {
     // USE_FP16场景，无论什么dtype + 芯片，均用FP16进行计算
@@ -220,6 +240,8 @@ DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, in
         return CalcAllowFp32DownPrecisionPromoteType(cubeTensorPromoteType);
     } else if (cubeMathType == KEEP_DTYPE) {
         return CalcKeepDtypePromoteType(cubeTensorPromoteType);
+    } else if (cubeMathType == FORCE_GRP_ACC_FOR_FP32) {
+        return CalcForceGrpAccForFp32PromoteType(cubeTensorPromoteType);
     }
     OP_LOGW("The cubeMathType: %d cann't be matched.", static_cast<int32_t>(cubeMathType));
     return cubeTensorPromoteType;

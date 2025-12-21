@@ -8,5 +8,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(conv3d_backprop_filter_v2 "ascend910B1" "-DDTYPE_X=bfloat16_t -DFORMAT_X=FORMAT_NDC1HWC0 -DDTYPE_OUT_BACKPROP=bfloat16_t -DFORMAT_OUT_BACKPROP=FORMAT_NDC1HWC0 -DDTYPE_Y=float -DFORMAT_Y=FORMAT_FRACTAL_Z_3D")
+    AddOpTestCase(conv3d_backprop_filter_v2 "ascend910B1" "-DKFC_L1_RESERVER_SIZE=0 -DDTYPE_X=bfloat16_t -DFORMAT_X=FORMAT_NDC1HWC0 -DDTYPE_OUT_BACKPROP=bfloat16_t -DFORMAT_OUT_BACKPROP=FORMAT_NDC1HWC0 -DDTYPE_Y=float -DFORMAT_Y=FORMAT_FRACTAL_Z_3D")
 endif()

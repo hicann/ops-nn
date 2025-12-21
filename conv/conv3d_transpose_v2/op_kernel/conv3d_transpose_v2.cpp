@@ -1,17 +1,23 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_transpose_v2.cpp
  * \brief
  */
+#if __CCE_AICORE__ == 310
+#include "conv3d_transpose_v2_arch35_tiling_key.h"
+#if defined(__DAV_C310__)
+#include "arch35/conv3d_transpose_v2_arch35.h"
+#endif
+#else
 #ifdef __CCE_KT_TEST__
 #include "../op_kernel/arch32/conv3d_backprop_input_v2.h"
 #include "../op_kernel/arch32/conv3d_backprop_input_v2_init_output.h"
@@ -22,9 +28,23 @@
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_tiling_data.h"
 #endif
 #include "conv3d_transpose_v2_tiling_key.h"
+#endif
 
 using namespace AscendC;
 
+#if __CCE_AICORE__ == 310
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling, uint8_t loadB1Condition>
+__global__ __aicore__ void conv3d_transpose_v2(
+    GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+{
+#if defined(__DAV_C310__)
+    conv3d_transpose_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBasicBlockTiling,
+                               loadB1Condition>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+    return;
+#endif
+}
+#else
 template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock>
 __global__ __aicore__ void conv3d_transpose_v2(
     GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
@@ -61,3 +81,4 @@ __global__ __aicore__ void conv3d_transpose_v2(
         op.Process();
     }
 }
+#endif

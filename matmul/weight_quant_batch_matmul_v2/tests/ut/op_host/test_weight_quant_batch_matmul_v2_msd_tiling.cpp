@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -294,14 +294,14 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingMsd, generalTest)
 //       -1: per channel, 1: per tensor, > 1: per group
 
 static WeightQuantBatchMatmulV2TilingMsdTestParam casesParams2040[] = {
-    {"KeyMsdCase_64_2560_5120_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332066075393},
+    {"KeyMsdCase_64_2560_5120_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332066075393}, //611200UL
     {"KeyMsdCase_1_4320_10240_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332602946305},
     {"KeyMsdCase2_8_10240_8640_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 17, 365332066075393},
     {"msdCase_1_10240_1536_1_0_0_1_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 6, 365332066075393},
 };
 
 static WeightQuantBatchMatmulV2TilingMsdTestParam casesParams2448[] = {
-    {"xf65BCase1_10_8192_3072_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097},
+    {"xf65BCase1_10_8192_3072_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097}, //10611210UL
     {"xf13BCase1_32_14336_5120_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097},
     {"msdInt4fuzzCase_64_65504_10208_0_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356261632017153},
     {"KeyMsdSplitKCase_4_20480_5120_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48", 23, 356536509924097},

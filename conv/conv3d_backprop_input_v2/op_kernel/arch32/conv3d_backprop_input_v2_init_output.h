@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_init_output.h
@@ -21,6 +21,11 @@ namespace AscendC {
 #if __CCE_AICORE__ == 220
 using FixpipeParamsNZ = AscendC::FixpipeParamsV220;
 using FixpipeParamsRowMajor = AscendC::FixpipeParamsV220;
+#elif __CCE_AICORE__ == 310
+#if defined(__DAV_C310__)
+using FixpipeParamsNZ = AscendC::FixpipeParamsC310<CO2Layout::NZ>;
+using FixpipeParamsRowMajor = AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR>;
+#endif
 #endif
 constexpr int32_t L0C_M = TOTAL_L0C_SIZE / 64; // TOTAL_LOC_SIZE / (BLOCK_CUBE * sizeof(float))
 constexpr int32_t L0C_ELEMENTS = L0C_M * BLOCK_CUBE;
@@ -186,6 +191,11 @@ public:
                 rowMajorParams.srcStride = 1;
                 rowMajorParams.dstStride = 1;
                 rowMajorParams.quantPre = quantMode;
+#if __CCE_AICORE__ == 310
+#if defined(__DAV_C310__)
+                rowMajorParams.params.ndNum = 1;
+#endif
+#endif
                 AscendC::Fixpipe<yType, float, CFG_ROW_MAJOR>(yGm_[offset], l0c, rowMajorParams);
             }
         }
@@ -215,6 +225,10 @@ public:
             CrossCoreSetFlag<0, PIPE_FIX>(SYNC_AIC_FLAG);
         }
         CrossCoreWaitFlag(SYNC_AIC_FLAG);
+#elif __CCE_AICORE__ == 310
+#if defined(__DAV_C310__)
+        AscendC::SyncAll();
+#endif
 #endif
     }
 

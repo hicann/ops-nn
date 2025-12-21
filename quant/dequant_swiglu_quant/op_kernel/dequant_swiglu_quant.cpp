@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dequant_swiglu_quant.cpp
@@ -25,6 +25,7 @@
 #include "dequant_swiglu_quant_dynamic_bf16.hpp"
 #include "dequant_swiglu_quant_dynamic_bias_int32.hpp"
 #include "dequant_swiglu_quant_dynamic_bias_float.hpp"
+#include "dequant_swiglu_quant_dynamic_performance.hpp"
 
 using namespace AscendC;
 
@@ -184,20 +185,20 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_FP32_QS_GR)) {
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
-    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<float, float, int64_t, int32_t> op(&pipe);
-    op.Init(xGM, weightSscaleGM, activationScaleGM, nullptr, quantScaleGM, nullptr, groupIndex, yGM, scaleGM, tilingData);
+    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<bfloat16_t, float, int64_t, int32_t> op(&pipe);
+    op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, groupIndex, yGM, scaleGM, tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_FP16_QS_GR)) {
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
-    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<float, half, int64_t, int32_t> op(&pipe);
-    op.Init(xGM, weightSscaleGM, activationScaleGM, nullptr, quantScaleGM, nullptr, groupIndex, yGM, scaleGM, tilingData);
+    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<bfloat16_t, half, int64_t, int32_t> op(&pipe);
+    op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, groupIndex, yGM, scaleGM, tilingData);
     op.Process();
   } else if (TILING_KEY_IS(DEQUANT_SWIGLU_QUANT_WITH_GROUP_BF16_QS_GR)) {
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantBaseTilingData, tilingDataIn, tiling);
     const DequantSwigluQuantBaseTilingData* __restrict__ tilingData = &tilingDataIn;
-    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<float, bfloat16_t, int64_t, int32_t> op(&pipe);
-    op.Init(xGM, weightSscaleGM, activationScaleGM, nullptr, quantScaleGM, nullptr, groupIndex, yGM, scaleGM, tilingData);
+    DequantSwigluQuantGroupOps::DequantSwigluQuantGroup<bfloat16_t, bfloat16_t, int64_t, int32_t> op(&pipe);
+    op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, groupIndex, yGM, scaleGM, tilingData);
     op.Process();
   } else if (TILING_KEY_IS(10004)) {
     // ORIG_DTYPE_BIAS == DT_INT32
@@ -278,6 +279,13 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR xGM, GM_ADDR 
     GET_TILING_DATA_WITH_STRUCT(SwiGluTilingData, tilingDataIn, tiling);
     const SwiGluTilingData* __restrict__ tilingData = &tilingDataIn;
     DequantSwigluQuant::DequantSwigluQuantDynamicBiasFloat<int32_t, float, float, int8_t, 1, 1> op;
+    op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, yGM, scaleGM, userspace,
+            tilingData, &(pipe));
+    op.Process();
+  } else if (TILING_KEY_IS(30013)) {
+    GET_TILING_DATA_WITH_STRUCT(SwiGluTilingData, tilingDataIn, tiling);
+    const SwiGluTilingData* __restrict__ tilingData = &tilingDataIn;
+    DequantSwigluQuant::DequantSwigluQuantDynamicPerformance<int32_t, float, float, int8_t, 1, 0> op;
     op.Init(xGM, weightSscaleGM, activationScaleGM, biasGM, quantScaleGM, quantOffsetGM, yGM, scaleGM, userspace,
             tilingData, &(pipe));
     op.Process();

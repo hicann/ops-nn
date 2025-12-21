@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -211,7 +211,7 @@ TEST_F(l2_batch_matmul_test, case_13)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 910 Fp16 16Aligin Nd
+// 1980 Fp16 16Aligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_14)
 {
     auto tensor_1_desc = TensorDesc({16, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -252,7 +252,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_14)
     // SAMPLE: precision simulate
 }
 
-// 910 Fp16 16notAligin Nd
+// 1980 Fp16 16notAligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_18)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -289,7 +289,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_18)
     // SAMPLE: precision simulate
 }
 
-// 910 Fp32 16notAligin Nd
+// 1980 Fp32 16notAligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_22)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -325,7 +325,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_22)
     // SAMPLE: precision simulate
 }
 
-// 910 Fp32 16Aligin Nd
+// 1980 Fp32 16Aligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_23)
 {
     auto tensor_1_desc = TensorDesc({16, 16, 32}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -363,7 +363,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_23)
     // SAMPLE: precision simulate
 }
 
-// 910B Fp32 Nd
+// 1971 Fp32 Nd
 TEST_F(l2_batch_matmul_test, ascend910B2_case_24)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -398,7 +398,7 @@ TEST_F(l2_batch_matmul_test, ascend910B2_case_24)
     // SAMPLE: precision simulate
 }
 
-// 910B Fp16 Nd  IsNdToNzOnTheFly = true,
+// 1971 Fp16 Nd  IsNdToNzOnTheFly = true,
 TEST_F(l2_batch_matmul_test, ascend910B2_case_28)
 {
     auto tensor_1_desc = TensorDesc({1, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -437,7 +437,7 @@ TEST_F(l2_batch_matmul_test, ascend910B2_case_28)
     // SAMPLE: precision simulate
 }
 
-// 910B Fp16 Nd  IsNdToNzOnTheFly = false,
+// 1971 Fp16 Nd  IsNdToNzOnTheFly = false,
 TEST_F(l2_batch_matmul_test, ascend910B2_case_32)
 {
     auto tensor_1_desc = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -1091,6 +1091,36 @@ TEST_F(l2_batch_matmul_test, ascend910_95_test_bmm2mm)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+TEST_F(l2_batch_matmul_test, ascend910_95_test_bmm2m)
+{
+    auto tensor_1_desc = TensorDesc({2400, 4, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto tensor_2_desc = TensorDesc({2400, 1, 976}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out_tensor_desc =
+        TensorDesc({2400, 4, 976}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 1;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend910_95_test_bmm2m_N1)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({2400, 20, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto tensor_2_desc = TensorDesc({2400, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out_tensor_desc =
+        TensorDesc({2400, 20, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 1;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_batch_matmul_test, ascend910B2_bf16_5)
 {
     auto tensor_1_desc = TensorDesc({8, 10, 1}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);

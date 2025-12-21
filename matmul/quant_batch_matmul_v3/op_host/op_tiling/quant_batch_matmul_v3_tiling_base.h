@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_tiling_base.h
@@ -26,6 +26,18 @@
 namespace optiling {
 
 constexpr uint64_t BASIC_ALIGN_16 = 16;
+
+// QuantBatchMatmulV4 input index
+constexpr uint32_t X1_INDEX_V4 = 0;
+constexpr uint32_t X2_INDEX_V4 = 1;
+constexpr uint32_t BIAS_INDEX_V4 = 2;
+constexpr uint32_t X1_SCALE_INDEX_V4 = 3;
+constexpr uint32_t X2_SCALE_INDEX_V4 = 4;
+constexpr uint32_t Y_SCALE_INDEX_V4 = 5;
+constexpr uint32_t X1_OFFSET_INDEX_V4 = 6;
+constexpr uint32_t X2_OFFSET_INDEX_V4 = 7;
+constexpr uint32_t Y_OFFSET_INDEX_V4 = 8;
+constexpr uint32_t X2_TABLE_INDEX_V4 = 9;
 
 /**
  * QuantBatchMatmulInfo 增改参数规则：
@@ -75,6 +87,7 @@ public:
     ge::DataType biasDtype = ge::DT_INT32;
     ge::DataType scaleDtype = ge::DT_UINT64;
     ge::DataType perTokenScaleDtype = ge::DT_FLOAT;
+    ge::DataType x2TableDtype = ge::DT_INT4;
     bool isPerTensor = false;
     bool isPerChannel = false;
     bool isPertoken = false;
@@ -82,6 +95,7 @@ public:
     bool isMxPerGroup = false;
     bool isPerBlock = false;
     bool isPerBlockPerToken = false;
+    bool isLut = false;
     int64_t outDtype = 0L;
     uint32_t libApiWorkSpaceSize = 0U;
     uint64_t bf16ExtreWorkSpaceSize = 0UL;
@@ -89,10 +103,12 @@ public:
     uint64_t groupSizeM = 0UL;
     uint64_t groupSizeK = 0UL;
     uint64_t groupSizeN = 0UL;
+    uint64_t x2TableKSize = 0UL;
+    uint64_t x2TableNSize = 0UL;
     const char *opName = nullptr;
     ge::Format aFormat = ge::FORMAT_ND;
     ge::Format bFormat = ge::FORMAT_ND;
-    ge::Format cFormat = ge::FORMAT_ND;  // 新增数据成员要修改Reset函数
+    ge::Format cFormat = ge::FORMAT_ND; // 新增数据成员要修改Reset函数
 };
 
 enum class QuantBatchMatmulV3Trans : uint32_t{
@@ -121,6 +137,14 @@ protected:
     bool IsCapable() override;
     void InitCompileInfo();
 
+    // 根据V3/V4原型获取输入index
+    virtual uint32_t GetX1Idx() const;
+    virtual uint32_t GetX2Idx() const;
+    virtual uint32_t GetScaleIdx() const;
+    virtual uint32_t GetOffsetIdx() const;
+    virtual uint32_t GetBiasIdx() const;
+    virtual uint32_t GetPertokenIdx() const;
+
     // mc2使用的直接接口：begin
     virtual const gert::Shape GetX1Shape(const size_t index);
     virtual const gert::Shape GetX2Shape(const size_t index);
@@ -148,8 +172,8 @@ protected:
     std::string QuantModeToString(BasicQuantMode quantMode) const;
     uint64_t GetBatchSize(const gert::Shape &shape) const;
     bool InferOutBatchDim(const gert::Shape &x1Shape, const gert::Shape &x2Shape);
-    int8_t CheckFusionBatchA(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& biasShape,
-                             uint64_t fusedDimValue) const;
+    int8_t CheckFusionBatchA(const gert::Shape& x1Shape, const gert::Shape& x2Shape,
+                             const gert::StorageShape* biasShape, uint64_t fusedDimValue) const;
     bool CheckOutputShapeAvailable() const;
     bool ReCalcGroupSize(uint64_t& groupSize, uint64_t inputSize, uint64_t scaleSize, const char* dimensionName);
     bool AnalyzeGroupInfo(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape);
@@ -157,13 +181,7 @@ protected:
     void DoBatchFusion(uint64_t fusedDimValue);
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
     void SetTransAttr(QuantBatchMatmulV3Trans &trans) const;
-    bool SetPlatformInfoForTiling();
-
-    virtual bool CheckSupportConditionQbmm(
-        QbmmType /*type*/, QuantBatchMatmulRunParas& /*inputParams*/, uint64_t /*aicNum*/, bool /*supportL0c2Out*/)
-    {
-        return false;
-    }
+    virtual bool SetPlatformInfoForTiling();
 
     template<typename T>
     inline bool CheckNumberIsValid(const T &num, const std::string &opName, const std::string &description) const {

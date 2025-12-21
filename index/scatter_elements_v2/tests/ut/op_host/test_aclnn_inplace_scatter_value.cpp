@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_inplace_scatter_value.h
@@ -59,7 +59,7 @@ protected:
         auto ut = OP_API_UT(aclnnInplaceScatterValue, INPUT(self, dim, index, src, reduction), OUTPUT());
         aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
-        // ut.TestPrecision();
+        
 
         reduction = 1;
         auto ut2 = OP_API_UT(aclnnInplaceScatterValue, INPUT(self, dim, index, src, reduction), OUTPUT());
@@ -107,6 +107,7 @@ protected:
         EXPECT_EQ(getWorkspaceResult3, ACLNN_ERR_PARAM_INVALID);
     }
 };
+
 ///////////////////////////////////////
 /////          检查空指针          /////
 ///////////////////////////////////////
@@ -150,4 +151,3 @@ TEST_F(l2_inplace_scatter_value_test, l2_inplace_scatter_value_test_18)
     test_run_invalid(
         {10, 15, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3, 5, 3}, ACL_INT64, ACL_FORMAT_ND, {0, 2}, -12, "int", 0);
 }
-

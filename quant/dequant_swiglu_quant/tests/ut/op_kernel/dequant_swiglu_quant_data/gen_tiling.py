@@ -46,6 +46,7 @@ params_info = {
     "test_dequant_swiglu_quant_6": [128, 2048, 1024, 4, 1024, 32, 32, 1, 0, 0, 4, 8, 1, 0, 1, 0, 0, 0, 0, 0],
     "test_dequant_swiglu_quant_7": [128, 2048, 1024, 4, 1024, 32, 32, 1, 0, 0, 4, 8, 1, 0, 1, 1, 0, 0, 0, 0],
     "test_dequant_swiglu_quant_bias_and_swiglugate": [128, 2048, 1024, 4, 1024, 32, 32, 1, 0, 0, 4, 8, 1, 0, 0, 0, 1, 7.0, 1.702, 1.0],
+    "test_dequant_swiglu_quant_more_expert_fewer_tokens": [128, 2048, 1024, 6, 1024, 48, 48, 32, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0],
 }
 
 def main():

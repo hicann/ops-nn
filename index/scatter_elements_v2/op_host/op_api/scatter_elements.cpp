@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file scatter_elements.cpp
@@ -79,8 +79,8 @@ bool CanCombineAxis(const aclTensor* data, const aclTensor* indices, int64_t axi
 {
     auto size_data = data->GetViewShape().GetDimNum();
     auto size_indices = indices->GetViewShape().GetDimNum();
-    int64_t size = size_data > size_indices ? size_indices : size_data;
-    for (int64_t i = 0; i < size; i++) {
+    auto size = size_data > size_indices ? size_indices : size_data;
+    for (int64_t i = 0; i < static_cast<int64_t>(size); i++) {
         if ((data->GetViewShape())[i] != (indices->GetViewShape())[i]) {
             if (i != axis) {
                 return false;
@@ -98,8 +98,8 @@ bool CanCombineAxisV2(
     auto size_indices = indices->GetViewShape().GetDimNum();
     auto size_updates = updates->GetViewShape().GetDimNum();
     size_indices = size_indices > size_updates ? size_updates : size_indices;
-    int64_t size = size_indices > size_data ? size_data : size_indices;
-    for (int64_t i = 0; i < size; i++) {
+    auto size = size_indices > size_data ? size_data : size_indices;
+    for (int64_t i = 0; i < static_cast<int64_t>(size); i++) {
         if (dataShape[i] != (indices->GetViewShape())[i] || dataShape[i] != (updates->GetViewShape())[i]) {
             if (i != axis && i != 0 && i != dataDimSize - 1) {
                 return false;
@@ -245,6 +245,10 @@ bool UseScatterElementsV2(
     const std::string& reduction)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion == SocVersion::ASCEND910_95) {
+        return CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction));
+    }
+
     OP_CHECK(socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
              socVersion == SocVersion::ASCEND310P,
         OP_LOGD("ScatterElementsV2 do not support this Soc."), return false);
@@ -285,7 +289,7 @@ bool UseScatterElements(
         OP_LOGD("ScatterElements only support Aicore for ASCEND910 and Ascend910_95"), return false);
 
     if (socVersion == SocVersion::ASCEND910_95) {
-        if (AICORE_91095_DTYPE_SUPPORT_LIST.count(reduction) > 0 ||
+        if (AICORE_91095_DTYPE_SUPPORT_LIST.count(reduction) == 0 ||
             !CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction))) {
             return false;
         }

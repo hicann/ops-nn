@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_dynamic_rnn_proto.cpp
@@ -156,6 +156,31 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_3) {
     std::vector<int64_t> expected_output2_shape = {2 * t, batch, outputSize};
     auto output3_desc = rnn_op.GetOutputDesc(3);
     EXPECT_EQ(output3_desc.GetShape().GetDims(), expected_output2_shape);
+}
+
+TEST_F(DynamicRnnTest, dynamic_rnn_test_inferdtype_0) {
+  ge::op::DynamicRNN op;
+
+  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN"), nullptr);
+  auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN")->infer_datatype;
+  ASSERT_NE(data_type_func, nullptr);
+
+  ge::DataType x_datatype1 = ge::DT_FLOAT16;
+  ge::DataType w_datatype1 = ge::DT_FLOAT16;
+  ge::DataType b_datatype1 = ge::DT_FLOAT16;
+  ge::DataType out_datatype = ge::DT_FLOAT16;
+  auto context_holder = gert::InferDataTypeContextFaker()
+                            .IrInputNum(3)
+                            .NodeIoNum(3, 8)
+                            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                            .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                            .InputDataTypes({&x_datatype1, &w_datatype1, &b_datatype1})
+                            .OutputDataTypes({&out_datatype})
+                            .Build();
+  auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+  EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+  ASSERT_NE(context, nullptr);
 }
 
 TEST_F(DynamicRnnTest, dynamic_rnn_test_with_unknowndim) {

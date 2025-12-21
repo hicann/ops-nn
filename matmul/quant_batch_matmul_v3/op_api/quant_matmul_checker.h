@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 #ifndef OP_API_SRC_QUANT_MATMUL_CHECKER_H_
 #define OP_API_SRC_QUANT_MATMUL_CHECKER_H_
@@ -69,7 +68,6 @@ private:
     bool CheckShapeInt4() const;
     bool CheckDtypeValidOnOnlyL0c2outForA4W4() const;
     bool CheckFormatInt4() const;
-    bool InputMaxDimCheck(int64_t x1DimNum, int64_t x2DimNum, const op::Shape &x1Shape, const op::Shape &x2Shape) const;
     bool CheckEmptyTensor() const;
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;

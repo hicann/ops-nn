@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_proto.h
@@ -36,7 +36,7 @@ namespace ge {
  * [out_channels, filter_depth, filter_height, filter_width, in_channels] or
  * [filter_depth, filter_height, filter_width, in_channels, out_channels].
  * In short, the filter tensor support format NCDHW, NDHWC and DHWCN.
- * The NCDHW can be one of the following types: float16, bfloat16, float32, hifloat8, float8_e4m3fn.
+ * The NCDHW can be one of the following types: float16, bfloat16, float32.
  * The DHWCN and NDHWC can be one of the following types: float16, bfloat16, float32.
  * kernel_height (H) and kernel_width (W) must have dimension in [1, 511].
  * @li out_backprop: A 5D tensor.
@@ -70,36 +70,30 @@ namespace ge {
  * The in_channels and out_channels must be divisible by groups.
  * When the groups value differs, the supported data type may vary, specifically as follows: \n
  * \n
- * | groups |        dtype           | out_backprop format | filter format |     y format   |
- * |--------|------------------------|---------------------|---------------|----------------|
- * |  =1    |hifloat8/float8_e4m3fn  |       NCDHW         |      NCDHW    |     NCDHW      |
- * |  =1    |hifloat8/float8_e4m3fn  |       NDHWC         |      NCDHW    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|       NCDHW         |      NCDHW    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|       NCDHW         |      NDHWC    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|       NCDHW         |      DHWCN    |     NCDHW      |
- * |  =1    |float16/bfloat16/float32|       NDHWC         |      NDHWC    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|       NDHWC         |      NCDHW    |     NDHWC      |
- * |  =1    |float16/bfloat16/float32|       NDHWC         |      DHWCN    |     NDHWC      |
- * |  >1    |hifloat8/float8_e4m3fn  |       NCDHW         |      NCDHW    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|       NCDHW         |      NCDHW    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|       NCDHW         |      NDHWC    |     NCDHW      |
- * |  >1    |float16/bfloat16/float32|       NCDHW         |      DHWCN    |     NCDHW      |
+ * | groups  |        dtype           | out_backprop format | filter format |     y format   |
+ * |---------|------------------------|---------------------|---------------|----------------|
+ * |  =1     |float16/bfloat16/float32|       NDHWC         |      NDHWC    |     NDHWC      |
+ * |  =1     |float16/bfloat16/float32|       NDHWC         |      NCDHW    |     NDHWC      |
+ * |  =1     |float16/bfloat16/float32|       NDHWC         |      DHWCN    |     NDHWC      |
+ * |  >=1    |float16/bfloat16/float32|       NCDHW         |      NCDHW    |     NCDHW      |
+ * |  >=1    |float16/bfloat16/float32|       NCDHW         |      NDHWC    |     NCDHW      |
+ * |  >=1    |float16/bfloat16/float32|       NCDHW         |      DHWCN    |     NCDHW      |
  * \n
  * @li data_format: An optional string. The value must be one of ["NDHWC", "NCDHW"]. Defaults to "NDHWC".
  * The correspondence is as follows: batch(N), depth(D), height(H), width(W), channels(C).
  * Specify the data format of the out_backprop and y.
 *@par Outputs:
  * y: A tensor. It has the same format as out_backprop.
- * The type is float16, bfloat16, float32, hifloat8, float8_e4m3fn.
+ * The type is float16, bfloat16, float32.
  * The gradients of feature map.
 *@par Third-party framework compatibility
  * Compatible with Tensorflow's conv3d_backprop_input
 */
 REG_OP(Conv3DBackpropInputV2)
     .INPUT(input_size, TensorType({DT_INT32, DT_INT64}))
-    .INPUT(filter, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_HIFLOAT8, DT_FLOAT8_E4M3FN}))
-    .INPUT(out_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_HIFLOAT8, DT_FLOAT8_E4M3FN}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16, DT_HIFLOAT8, DT_FLOAT8_E4M3FN}))
+    .INPUT(filter, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .INPUT(out_backprop, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .REQUIRED_ATTR(strides, ListInt)
     .REQUIRED_ATTR(pads, ListInt)
     .ATTR(dilations, ListInt, {1, 1, 1, 1, 1})

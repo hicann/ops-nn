@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_unaligned_deterministic_splitk_kernel.h
@@ -21,7 +21,7 @@
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, FIXPIPE_OPT_SELECT FIXPIPE_OPT = FIXPIPE_OPT_SELECT::BASE>
 __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM,
                                                                 const MatmulTilingData& matmulTilingData,
-                                                                GM_ADDR workspaceGM)
+                                                                GM_ADDR workspaceGM, uint8_t enAtomic = 0)
 {
     const TCubeTiling& tiling = matmulTilingData.matmulTiling;
     using A_T = typename A_TYPE::T;
@@ -117,6 +117,9 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         SyncAll();
         NotifyEvent<PIPE_MTE3>(ND2NZ_AIV_SYNC_AIC_FLAG);
         PipeBarrier<PIPE_ALL>();
+        if (enAtomic) {
+            SetAtomicAdd<float>();
+        }
         if (isL2cacheSplit) {
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
                 ReduceKInUbNzL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt, tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling, originM);
@@ -129,6 +132,9 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
             } else {
                 ReduceKInUb<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, cnt, tiling.singleCoreN, tiling.N, tmpBuf, orderFlag, tiling);
             }
+        }
+        if (enAtomic) {
+            SetAtomicNone();
         }
         PipeBarrier<PIPE_ALL>();
         return;

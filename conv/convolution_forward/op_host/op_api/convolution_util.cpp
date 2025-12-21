@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file convolution_util.cpp
@@ -26,12 +26,12 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "aclnn_kernels/transdata.h"
-
+#include "aclnn_kernels/reshape.h"
 #include "convolution_util.h"
 
 using namespace op;
 using namespace ge;
-
+using namespace l0op;
 namespace SplitWInfo {
 constexpr int STRIDEH_MAX = 63;
 constexpr int DILATION_MAX = 255;
@@ -44,7 +44,7 @@ constexpr int LEFT_INDEX_ATTR = 2;
 constexpr int RIGHT_INDEX_ATTR = 3;
 constexpr int W_INDEX_ATTR_CONV3D = 2;
 constexpr int CONV3D_ATTR_NUM = 3;
-
+constexpr size_t CONV_2D_DIM_SIZE = 4;
 constexpr int EXTRA_NUM = 2;
 constexpr int64_t BLK_M = 16;
 constexpr int64_t BLK_N = 16;
@@ -237,6 +237,33 @@ aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expendValue,
     }
     aclIntArray* newArray = executor->AllocIntArray(data, SplitWInfo::CONV3D_ATTR_NUM);
     return newArray;
+}
+
+aclIntArray* View2DSwapHWForAttr(const aclIntArray* intArray, aclOpExecutor* executor)
+{
+    int64_t data[2];
+    uint64_t size = intArray->Size();
+    // 对于非pad的attr需要校验size，pad在前面已经保证了为4维
+    if ((size != static_cast<uint64_t>(SplitWInfo::CONV3D_ATTR_NUM - 1))) {
+        return nullptr;
+    }
+    data[0] = (*intArray)[1];
+    data[1] = (*intArray)[0];
+    aclIntArray* newArray = executor->AllocIntArray(data, 2);
+    return newArray;
+}
+
+const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* executor)
+{   
+    auto dims = input->GetViewShape().GetDimNum();
+    CHECK_RET(dims == SplitWInfo::CONV_2D_DIM_SIZE, nullptr);
+    auto shape = op::ToShapeVector(input->GetViewShape());
+    FVector<int64_t> newShape = {shape[0], shape[1], shape[3], shape[2]};
+    aclIntArray* shapeArray = executor->AllocIntArray(newShape.data(), newShape.size());
+    CHECK_RET(shapeArray != nullptr, nullptr);
+    input = l0op::Reshape(input, shapeArray, executor);
+    CHECK_RET(input != nullptr, nullptr);
+    return input;
 }
 
 const aclTensor* View4dAs5dForInput(const aclTensor* input, aclOpExecutor* executor)

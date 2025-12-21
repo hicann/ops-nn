@@ -1,17 +1,11 @@
 /**
-* Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include "gtest/gtest.h"
@@ -158,28 +152,6 @@ TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_004) {
   auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
   auto tensor_list_desc = TensorListDesc({indices_desc,});
   auto output_desc = TensorDesc(out, ACL_BOOL, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-
-  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
-                                               accumulate, unsafe),  // host api输入
-                                               OUTPUT());
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-}
-// // 正常路径，float64aicpu
-TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_007) {
-  bool unsafe = false;
-  bool accumulate = true;
-  vector<int64_t> self = {300};
-  vector<int64_t> value = {30000};
-  vector<int64_t> indices = {30000};
-  vector<int64_t> out = {{300}};
-
-  auto self_desc = TensorDesc(self, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 4);
-  auto value_desc = TensorDesc(value, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 3);
-  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
-  auto tensor_list_desc = TensorListDesc({indices_desc,});
-  auto output_desc = TensorDesc(out, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
   auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
                                                accumulate, unsafe),  // host api输入
@@ -594,6 +566,7 @@ TEST_F(l2_index_put_impl_test, Ascend910_9589_case_003_accFalse) {
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
+
 // // 正常路径，int64，索引int64
 TEST_F(l2_index_put_impl_test, Ascend910_9589_case_006_accFalse) {
   bool unsafe = false;

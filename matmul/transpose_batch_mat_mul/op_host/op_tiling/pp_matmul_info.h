@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file pp_matmul_info.h
@@ -34,8 +34,8 @@ struct MatMulInfo {
     ge::Format formatA = ge::FORMAT_ND;
     ge::Format formatB = ge::FORMAT_ND;
     ge::Format formatC = ge::FORMAT_ND;
-    uint64_t permA{0};
-    uint64_t permB{0};
+    uint64_t transA{0}; 
+    uint64_t transB{0}; 
     bool biasFlag{0}; // false: 0, true: 1
     bool isInt8{0}; // 是否shi int8融合
     float inDtype{0};

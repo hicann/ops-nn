@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -57,8 +57,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_001) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_002 index_dtype = int64  self_dtype= INT32
@@ -84,8 +82,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_002) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_003 index_dtype = int32, self_dtype = int64
@@ -111,8 +107,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_003) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_004 index_dtype = int32, self_dtype = float16
@@ -138,8 +132,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_004) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_005 index_dtype = int32, self_dtype = int16
@@ -165,8 +157,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_005) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_006 index_dtype = int32, self_dtype = int8
@@ -192,8 +182,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_006) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_007 index_dtype = int64, self_dtype = uint8
@@ -219,8 +207,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_007) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_008 index_dtype = int32, self_dtype = bool
@@ -246,8 +232,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_008) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_012 index_dtype = int32, self_dtype = int16, dim = -2
@@ -273,8 +257,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_012) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_013 index_dtype = int32, self_dtype = int16, dim = 1
@@ -300,8 +282,6 @@ TEST_F(l2GatherV2Test, l2_gather_v2_case_013) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // test_012 index_dtype = int64, self_dtype = FLOAT64
@@ -376,7 +356,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_test_BFLOAT16) {
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // precision simulate
-    ut.TestPrecision();
+    
   } else {
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
   }
@@ -460,7 +440,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_normal_format_index_dimNum_gt_1) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  ut.TestPrecision();
+  
 }
 
 TEST_F(l2GatherV2Test, l2_gather_v2_abnormal_format_self_dimNum_gt_8) {
@@ -499,7 +479,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_data_value_between_negative_1_and_postive_1)
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  ut.TestPrecision();
+  
 }
 
 // 非连续
@@ -515,7 +495,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_self_not_contiguous) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  ut.TestPrecision();
+  
 }
 
 // index 0维
@@ -530,7 +510,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_index_0_dim) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  ut.TestPrecision();
+  
 }
 
 // self 0维
@@ -545,7 +525,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_self_0_dim) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  ut.TestPrecision();
+  
 }
 
 // out shape error

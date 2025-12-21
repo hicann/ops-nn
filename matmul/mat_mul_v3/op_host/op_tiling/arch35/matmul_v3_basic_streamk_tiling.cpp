@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /* !
@@ -22,6 +22,37 @@ using Ops::NN::MathUtil;
 namespace {
 using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
+
+// ------------------------------ CheckStreamKDPSKTiling -------------------------------------------//
+bool CheckStreamKDPSKTilingDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */)
+{
+    return false;
+}
+
+bool CheckStreamKDPSKTiling91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
+{
+    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
+    // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐 或 输入是fp32类型，不走stream-k-dpsk
+    if (args.mValue % BASIC_BLOCK_SIZE_256 != 0UL || args.nValue % BASIC_BLOCK_SIZE_256 != 0UL ||
+        args.kValue <
+            std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_128_BYTE) / args.aDtypeSize ||
+        (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32)) {
+        return false;
+    }
+    // 如果mn用256切分的份数小于核数 或者 取余核数为0或大于一半的核数，则不使用stream-k-dpsk
+    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, BASIC_BLOCK_SIZE_256);
+    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, BASIC_BLOCK_SIZE_256);
+    uint64_t totalMNCnt = mCnt * nCnt;
+    return (totalMNCnt >= compileInfo.aicNum) && (totalMNCnt % compileInfo.aicNum != 0UL) &&
+           (totalMNCnt % compileInfo.aicNum <= compileInfo.aicNum / NUM_TWO);
+}
+
+using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
+
+const static std::map<platform_ascendc::SocVersion, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
+    {platform_ascendc::SocVersion::ASCEND910_95, CheckStreamKDPSKTiling91095},
+};
+
 // ------------------------------ CheckStreamKSKTiling -------------------------------------------//
 bool CheckStreamKSKTilingDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */)
 {
@@ -55,10 +86,6 @@ bool CheckStreamKSKTiling91095(const MatmulV3CompileInfo &compileInfo, const Mat
         OP_LOGD(args.opName, "MatMulV3 tiling unenable state is DoStreamK mCnt[%lu], nCnt[%lu]", mCnt, nCnt);
         return false;
     }
-    if (args.bFormat != ge::FORMAT_ND || args.aFormat != ge::FORMAT_ND) {
-        OP_LOGD(args.opName, "ND is the only supported format for basic api");
-        return false;
-    }
     OP_LOGI(args.opName, "MatMulV3 tiling enable state is DoBasicApiSplitK.");
     return true;
 }
@@ -67,36 +94,6 @@ using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const Mat
 
 const static std::map<platform_ascendc::SocVersion, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
     {platform_ascendc::SocVersion::ASCEND910_95, CheckStreamKSKTiling91095},
-};
-
-// ------------------------------ CheckStreamKDPSKTiling -------------------------------------------//
-bool CheckStreamKDPSKTilingDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */)
-{
-    return false;
-}
-
-bool CheckStreamKDPSKTiling91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args)
-{
-    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
-    // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐 或 输入是fp32类型，不走stream-k-dpsk
-    if (args.mValue % BASIC_BLOCK_SIZE_256 != 0UL || args.nValue % BASIC_BLOCK_SIZE_256 != 0UL ||
-        args.kValue <
-            std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_128_BYTE) / args.aDtypeSize ||
-        (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32)) {
-        return false;
-    }
-    // 如果mn用256切分的份数小于核数 或者 取余核数为0或大于一半的核数，则不使用stream-k-dpsk
-    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, BASIC_BLOCK_SIZE_256);
-    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, BASIC_BLOCK_SIZE_256);
-    uint64_t totalMNCnt = mCnt * nCnt;
-    return (totalMNCnt >= compileInfo.aicNum) && (totalMNCnt % compileInfo.aicNum != 0UL) &&
-           (totalMNCnt % compileInfo.aicNum <= compileInfo.aicNum / NUM_TWO);
-}
-
-using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
-
-const static std::map<platform_ascendc::SocVersion, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, CheckStreamKDPSKTiling91095},
 };
 
 // ------------------------------ GetL0C2OutFlag -------------------------------------------//
@@ -126,6 +123,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicStreamKTiling, ASCEND910_95, BASIC_STREAM_K);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, MatMulV3BasicStreamKTiling, ASCEND910_95, BASIC_STREAM_K);
 
 bool MatMulV3BasicStreamKTiling::CheckStreamKSKTiling() const
 {
@@ -153,6 +151,10 @@ MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
 
 bool MatMulV3BasicStreamKTiling::IsCapable()
 {
+    if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {
+        OP_LOGD(args_.opName, "ND is the only supported format for basic api");
+        return false;
+    }
     return CheckStreamKSKTiling() || CheckStreamKDPSKTiling();
 }
 
@@ -212,8 +214,9 @@ std::vector<size_t> MatMulV3BasicStreamKTiling::GetWorkspaceSize() const
 
 uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
 {
-    return MatMulV3TilingKey()
-        .SetTrans(args_.isATrans, args_.isBTrans)
+    MatMulV3TilingKey tmp = MatMulV3TilingKey();
+    MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
+    return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::STREAM_K)
         .SetL0C2Out(l0C2Out_)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)

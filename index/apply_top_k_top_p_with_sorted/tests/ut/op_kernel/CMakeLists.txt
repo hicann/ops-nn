@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(apply_top_k_top_p_with_sorted "ascend910B1" "-DDTYPE_OUT=float")
+    AddOpTestCase(apply_top_k_top_p_with_sorted "ascend910B1" "-DDTYPE_OUT=half")
 endif()

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file deep_norm_grad_tiling.cc
@@ -49,12 +49,12 @@ constexpr size_t MAX_DIM_X = 8;
 constexpr size_t MIN_DIM_X = 2;
 constexpr size_t MAX_DIM_GAMMA = 7;
 constexpr size_t MIN_DIM_GAMMA = 1;
-constexpr uint32_t CONST_8 = 8;
+constexpr uint32_t CONST_11 = 11;
 constexpr uint32_t CONST_3 = 3;
 constexpr uint32_t CONST_5 = 5;
 constexpr uint32_t CONST_16 = 16;
 constexpr uint32_t CONST_17 = 17;
-constexpr uint32_t CONST_21 = 21;
+constexpr uint32_t CONST_25 = 25;
 constexpr uint32_t CONST_4 = 4;
 
 inline void SetBaseConfig(gert::TilingContext* context, DeepNormGradTilingData& tiling, uint32_t& dDimNum)
@@ -76,9 +76,9 @@ inline void SetBaseConfig(gert::TilingContext* context, DeepNormGradTilingData& 
     uint32_t useCoreNum = Ops::Base::CeilDiv(nDimNum, Ops::Base::CeilDiv(nDimNum, maxCoreNum));
     uint32_t nDealPerCore = Ops::Base::CeilDiv(nDimNum, useCoreNum);
     uint32_t nDealLastCore = nDimNum - nDealPerCore * (useCoreNum - 1);
-    uint32_t fixedOutputFlag = context->GetDeterministic() == 1 ? 1 : 0;
+    uint32_t fixedOutputFlag = 1;
     OP_LOGI(context->GetNodeName(), "[DeepNormGrad] GetDeterministic state: %u", context->GetDeterministic());
-
+    
     tiling.set_useCoreNum(useCoreNum);
     tiling.set_nDimNum(nDimNum);
     tiling.set_dDimNum(dDimNum);
@@ -131,7 +131,7 @@ inline void SetFp32Config(
         // (8*mergeNCount+16+3)*elemWithDInUB+(2*mergeNCount)*elemWithoutDInUB(8)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-2*elemWithoutDInUB)/27
         tensorJustNNum = 2;       // mean\rstd
-        tensorNDNum = CONST_8;          // dy\x\gx\dx\dgx\tmp_ND\brcb_tmp_ND1\brcb_tmp_ND2
+        tensorNDNum = CONST_11;          // dy\x\gx\dx\dgx\tmp_ND\brcb_tmp_ND1\brcb_tmp_ND2
         tensorJustDNum = CONST_3;       // gamma\dbeta\dgamma
         otherTensorJustDNum = CONST_16; // brcb need ailgn brcb_tmp_ND1\brcb_tmp_ND2
 
@@ -231,7 +231,7 @@ inline void SetFp16Bf16Config(
         // (21*mergeNCount+32+5)*elemWithDInUB+(4*mergeNCount)*elemWithoutDInUB(16)=ubElemNum
         // when mergeNCount=1, elemWithDInUB=(ubElemNum-4*elemWithoutDInUB)/58
         tensorJustNNum = 4;       // mean(fp32)\rstd(fp32)
-        tensorNDNum = CONST_21;         // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)\dx_t(fp32)\dgx_t(fp32)
+        tensorNDNum = CONST_25;         // dy\x\gx\dx\dgx\dy_t(fp32)\x_t(fp32)\gx_t(fp32)\dx_t(fp32)\dgx_t(fp32)
                                   // tmp_ND(fp32)\brcb_tmp_ND1(fp32)\brcb_tmp_ND2(fp32)
         tensorJustDNum = CONST_5;       // gamma\dbeta(fp32)\dgamma(fp32)
         otherTensorJustDNum = 32; // brcb need ailgn brcb_tmp_ND1\brcb_tmp_ND2

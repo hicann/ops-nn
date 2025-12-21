@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_scaled_masked_softmax_backward.h"
 #include <dlfcn.h>
@@ -29,6 +29,7 @@ extern "C" {
 namespace {
     constexpr int32_t INPUT_DIM_NUM = 4;
     constexpr int32_t D_LIMIT = 4096;
+    constexpr int32_t D_LIMIT_D = 8192;
 }
 
 extern aclnnStatus aclnnInnerScaledMaskedSoftmaxGradV2GetWorkspaceSize(
@@ -74,7 +75,7 @@ static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, 
         return false;
     }
     if (mask != nullptr) {
-        formatValid = formatValid && mask->GetStorageFormat() == op::Format::FORMAT_ND;
+        formatValid = (formatValid && mask->GetStorageFormat() == op::Format::FORMAT_ND);
     }
     if (!formatValid) {
         OP_LOGE(
@@ -98,7 +99,13 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* y, c
     int64_t channel = gradOutput->GetViewShape().GetDim(DIM_1);
     int64_t seqLength = gradOutput->GetViewShape().GetDim(DIM_2);
     int64_t headDim = gradOutput->GetViewShape().GetDim(DIM_3);
-    bool isInputVaild = (batch >= 0 && channel >= 0 && seqLength >= 0 && headDim >= 0 && headDim <= D_LIMIT);
+
+    int32_t dDimLimit = D_LIMIT;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        dDimLimit = D_LIMIT_D;
+    }
+
+    bool isInputVaild = (batch >= 0 && channel >= 0 && seqLength >= 0 && headDim >= 0 && headDim <= dDimLimit);
     if (!isInputVaild) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "shape of gradOutput is not true, current is %s",
@@ -156,7 +163,9 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* y, 
     CHECK_RET(CheckDtypeValid(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查format是否符合要求
-    CHECK_RET(CheckFormat(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+        CHECK_RET(CheckFormat(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);
+    }
 
     // 4. 检查shape是否符合要求
     CHECK_RET(CheckShape(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);

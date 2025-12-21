@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_tiling_base.cc
@@ -19,6 +19,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
 
+using Ops::NN::TilingPrepareForOpCache;
 
 namespace {
 
@@ -82,6 +83,31 @@ const std::map<ge::DataType, std::vector<BasicQuantMode>> X1_QUANT_MODE_MAP =
 
 };
 
+uint32_t QuantBatchMatmulV3TilingBase::GetX1Idx() const
+{
+    return X1_INDEX;
+}
+uint32_t QuantBatchMatmulV3TilingBase::GetX2Idx() const
+{
+    return X2_INDEX;
+}
+uint32_t QuantBatchMatmulV3TilingBase::GetScaleIdx() const
+{
+    return SCALE_INDEX;
+}
+uint32_t QuantBatchMatmulV3TilingBase::GetOffsetIdx() const
+{
+    return OFFSET_INDEX;
+}
+uint32_t QuantBatchMatmulV3TilingBase::GetBiasIdx() const
+{
+    return BIAS_INDEX;
+}
+uint32_t QuantBatchMatmulV3TilingBase::GetPertokenIdx() const
+{
+    return PERTOKEN_SCALE_INDEX;
+}
+
 QuantBatchMatmulV3TilingBase::QuantBatchMatmulV3TilingBase(gert::TilingContext *context, bool isTilingOut)
     : TilingBaseClass(context), inputParams_(*(g_quantBatchMatmulInfoFactory.Get())), isTilingOut_(isTilingOut)
 {
@@ -116,12 +142,12 @@ ge::graphStatus QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo()
 
 ge::graphStatus QuantBatchMatmulV3TilingBase::CheckContext()
 {
-    auto x1Shape = context_->GetInputShape(X1_INDEX);
-    auto x1Desc = context_->GetInputDesc(X1_INDEX);
-    auto x2Shape = context_->GetInputShape(X2_INDEX);
-    auto x2Desc = context_->GetInputDesc(X2_INDEX);
-    auto scaleShape = context_->GetInputShape(SCALE_INDEX);
-    auto scaleDesc = context_->GetInputDesc(SCALE_INDEX);
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    auto scaleShape = context_->GetInputShape(GetScaleIdx());
+    auto scaleDesc = context_->GetInputDesc(GetScaleIdx());
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();
@@ -151,11 +177,16 @@ ge::graphStatus QuantBatchMatmulV3TilingBase::CheckContext()
 
 bool QuantBatchMatmulV3TilingBase::AnalyzeAttrs()
 {
+    const bool isQuantBatchMatmulV4 = (strcmp(context_->GetNodeType(), "QuantBatchMatmulV4") == 0);
     auto attrs = context_->GetAttrs();
     // if op calls QuantBatchMatmulV3 with attrs, it could rewrite as GetXXXAttr()
     if (attrs) {
         size_t idx = 0;
         auto dtypePtr = attrs->GetAttrPointer<int64_t>(idx++);
+        if (isQuantBatchMatmulV4) {
+            // skip v4 attr "compute_type"
+            idx++;
+        }
         auto transposeX1Ptr = attrs->GetAttrPointer<bool>(idx++);
         auto transposeX2Ptr = attrs->GetAttrPointer<bool>(idx++);
         const int64_t *groupSizePtr = nullptr;
@@ -178,6 +209,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeAttrs()
 
     QuantBatchMatmulV3Trans trans = QuantBatchMatmulV3Trans::NO_TRANS;
     SetTransAttr(trans);
+    // qbmmv4 调用时，需要对compileInfo_初始化
     if (!compileInfo_.supportL0c2Out) {
         OP_TILING_CHECK(
             trans != QuantBatchMatmulV3Trans::B_TRANS,
@@ -192,14 +224,14 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeAttrs()
 
 bool QuantBatchMatmulV3TilingBase::AnalyzeDtype()
 {
-    inputParams_.aDtype = context_->GetInputDesc(X1_INDEX)->GetDataType();
-    auto x2Desc = context_->GetInputDesc(X2_INDEX);
+    inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
     inputParams_.bDtype = x2Desc->GetDataType();
-    inputParams_.scaleDtype = context_->GetInputDesc(SCALE_INDEX)->GetDataType();
-    auto pertokenScaleDesc = context_->GetOptionalInputDesc(PERTOKEN_SCALE_INDEX);
+    inputParams_.scaleDtype = context_->GetInputDesc(GetScaleIdx())->GetDataType();
+    auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
     inputParams_.perTokenScaleDtype =
         pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() : inputParams_.perTokenScaleDtype;
-    auto biasDesc = context_->GetOptionalInputDesc(BIAS_INDEX);
+    auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
     isUbQuant_ = inputParams_.cDtype == ge::DT_BF16 || pertokenScaleDesc != nullptr;
@@ -239,15 +271,18 @@ bool QuantBatchMatmulV3TilingBase::InferOutBatchDim(const gert::Shape &x1Shape, 
     return true;
 }
 
-int8_t QuantBatchMatmulV3TilingBase::CheckFusionBatchA(const gert::Shape &x1Shape, const gert::Shape &x2Shape,
-                                                 const gert::Shape &biasShape, uint64_t fusedDimValue) const {
+int8_t QuantBatchMatmulV3TilingBase::CheckFusionBatchA(const gert::Shape& x1Shape, const gert::Shape& x2Shape,
+                                                       const gert::StorageShape* biasShape,
+                                                       uint64_t fusedDimValue) const
+{
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
     auto x1BatchLen = x1ShapeLen - 2;
     if (inputParams_.isPertoken) { // pertoken dim equals to original m dim, cannot fuse
         return 0;
     }
-    if (inputParams_.hasBias && biasShape.GetDimNum() > 1) { // 3 dim batch need original batch dim value, cannot fuse
+    if (inputParams_.hasBias && biasShape->GetStorageShape().GetDimNum() > 1) {
+        // The bias can only be a 1-D or 3-D tensor. The batch dim can be fused only in the 3-D case.
         return 0;
     }
     if (static_cast<int64_t>(fusedDimValue) > static_cast<int64_t>(INT32_MAX)) { // exceed axis limit, cannot fuse
@@ -266,7 +301,7 @@ int8_t QuantBatchMatmulV3TilingBase::CheckFusionBatchA(const gert::Shape &x1Shap
         if (IsMicroScaling()) {
             return 0;
         }
-        OP_LOGD("QuantBatchMatmulV3", "CheckFusionBatchA success, start fusion batch A to m dimendion.");
+        OP_LOGD(inputParams_.opName, "CheckFusionBatchA success, start fusion batch A to m dimendion.");
         return OUTPUT_INFER_SUCCESS;
     }
     return 0;
@@ -442,12 +477,12 @@ bool QuantBatchMatmulV3TilingBase::SetQuantMode(const gert::Shape& scaleShape, c
 // Notice: 修改此函数可能会影响mc2功能，使用isTilingOut_变量判断是否为mc2场景
 bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
 {
-    auto x1Shape = GetX1Shape(X1_INDEX);
-    auto x2Shape = GetX2Shape(X2_INDEX);
-    auto scaleShape = GetScaleShape(SCALE_INDEX);
-    auto pertokenShape = GetPertokenShape(PERTOKEN_SCALE_INDEX);
+    auto x1Shape = GetX1Shape(GetX1Idx());
+    auto x2Shape = GetX2Shape(GetX2Idx());
+    auto scaleShape = GetScaleShape(GetScaleIdx());
+    auto pertokenShape = GetPertokenShape(GetPertokenIdx());
     inputParams_.isPertoken = pertokenShape != nullptr;
-    auto biasShape = GetBiasShape(BIAS_INDEX);
+    auto biasShape = GetBiasShape(GetBiasIdx());
     inputParams_.hasBias = biasShape != nullptr;
     inputParams_.batchBias = inputParams_.hasBias ? GetBatchSize(biasShape->GetStorageShape()) : 1;
     auto x1ShapeLen = x1Shape.GetDimNum();
@@ -459,6 +494,12 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
+    // int4pack输入场景修正为dtype为int4
+    if (compileInfo_.supportMmadS8S4 && inputParams_.bDtype == ge::DT_INT32) {
+        x2Inner *= 8; // int4类型不支持时，在图模式中用1个int32代表8个int4
+        inputParams_.bDtype = ge::DT_INT4;
+        OP_LOGD(inputParams_.opName, "The conversion of weight from int32 to int4 is completed.");
+    }
     const std::vector<int64_t> dimValueOfMKN = {x1Inner, x1Outer, x2Inner, x2Outer};
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
@@ -483,7 +524,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
                                           "Multiple of output shape dims should be in boundary of INT64_MAX"),
                                           return false);
     uint64_t fusedDimValue = inputParams_.mSize * inputParams_.batchA;
-    int8_t resultCheckFusionBatchA = CheckFusionBatchA(x1Shape, x2Shape, biasShape->GetStorageShape(), fusedDimValue);
+    int8_t resultCheckFusionBatchA = CheckFusionBatchA(x1Shape, x2Shape, biasShape, fusedDimValue);
     OP_TILING_CHECK(resultCheckFusionBatchA == OUTPUT_INFER_FAIL,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                     "The fused M [%lu] exceed INT32_MAX [%d] in a4w4 case",
@@ -493,7 +534,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
     }
     auto isPerTensorStr = inputParams_.isPerTensor ? "true" : "false";
     auto isPertokenStr = inputParams_.isPertoken ? "true" : "false";
-    OP_LOGD("QuantBatchMatmulV3", "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",
+    OP_LOGD(inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",
             inputParams_.batchA, inputParams_.batchB, inputParams_.batchC, isPerTensorStr, isPertokenStr);
     return true;
 }
@@ -624,11 +665,11 @@ void QuantBatchMatmulV3TilingBase::SetFormat()
     inputParams_.aFormat = ge::FORMAT_ND;
     inputParams_.bFormat = ge::FORMAT_ND;
     inputParams_.cFormat = ge::FORMAT_ND;
-    auto x1Desc = context_->GetInputDesc(X1_INDEX);
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x1Desc->GetStorageFormat())) == ge::Format::FORMAT_FRACTAL_NZ) {
         inputParams_.aFormat = ge::FORMAT_FRACTAL_NZ;
     }
-    auto x2Desc = context_->GetInputDesc(X2_INDEX);
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat())) == ge::Format::FORMAT_FRACTAL_NZ) {
         inputParams_.bFormat = ge::FORMAT_FRACTAL_NZ;
     }
@@ -674,6 +715,8 @@ void QuantBatchMatmulV3TilingBase::InitCompileInfo()
     compileInfo_.supportL0c2Out = !platformRes.empty();
     platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_data_move_l12bt", platformRes);
     compileInfo_.supportL12BtBf16 = (platformRes.find("bf16") != std::string::npos);
+    platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", platformRes);
+    compileInfo_.supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
     TilingPrepareForOpCache(context_);
     compileInfoInit_ = true;
 }
@@ -781,6 +824,7 @@ void QuantBatchMatmulInfo::Reset()
     biasDtype = ge::DT_INT32;
     scaleDtype = ge::DT_UINT64;
     perTokenScaleDtype = ge::DT_FLOAT;
+    x2TableDtype = ge::DT_INT4;
     isPerTensor = false;
     isPerChannel = false;
     isPertoken = false;
@@ -788,6 +832,7 @@ void QuantBatchMatmulInfo::Reset()
     isMxPerGroup = false;
     isPerBlock = false;
     isPerBlockPerToken = false;
+    isLut = false;
     outDtype = 0L;
     libApiWorkSpaceSize = 0U;
     bf16ExtreWorkSpaceSize = 0UL;
@@ -795,6 +840,8 @@ void QuantBatchMatmulInfo::Reset()
     groupSizeM = 0UL;
     groupSizeK = 0UL;
     groupSizeN = 0UL;
+    x2TableKSize = 0UL;
+    x2TableNSize = 0UL;
     opName = nullptr;
     aFormat = ge::FORMAT_ND;
     bFormat = ge::FORMAT_ND;

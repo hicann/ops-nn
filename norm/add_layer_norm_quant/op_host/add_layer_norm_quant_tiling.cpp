@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_layer_norm_quant_tiling.cpp
@@ -82,7 +82,8 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
     auto platformInfo = context->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        useRegbase = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95);
+        useRegbase = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
+                      ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A);
     } else {
         auto compileInfo = reinterpret_cast<const AddLayerNormQuantCompileInfo*>(context->GetCompileInfo());
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -425,7 +426,8 @@ static ge::graphStatus TilingPrepare4AddLayerNormQuant(gert::TilingParseContext*
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     compileInfo->isAscend910_95_ =
-        (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) ? true : false;
+        (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
+         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
     uint64_t ubSizePlatform;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSize_ = ubSizePlatform;
@@ -439,6 +441,19 @@ static ge::graphStatus TilingPrepare4AddLayerNormQuant(gert::TilingParseContext*
     return ge::GRAPH_SUCCESS;
 }
 
+static void UpdateShapeInfo(gert::TilingContext* context, uint32_t& tmp_cols, uint32_t& tmp_rows){
+    auto x1Shape = context->GetInputShape(X1_IDX)->GetStorageShape();
+    auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
+    auto x1_dim_num = x1Shape.GetDimNum();
+    auto gamma_dim_num = gammaShape.GetDimNum();
+    for (size_t i = 0; i < x1_dim_num - gamma_dim_num; i++) {
+        tmp_rows *= x1Shape.GetDim(i);
+    }
+    for (size_t i = 0; i < gamma_dim_num; i++) {
+        tmp_cols *= gammaShape.GetDim(i);
+    }
+}
+
 static ge::graphStatus Tiling4AddLayerNormQuant(gert::TilingContext* context)
 {
     OP_CHECK_IF(
@@ -449,6 +464,14 @@ static ge::graphStatus Tiling4AddLayerNormQuant(gert::TilingContext* context)
         CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS,
         OP_LOGE(context, "Check SocInfo Failed"), return ge::GRAPH_FAILED);
     if (useRegbase) {
+        uint32_t tmp_cols = 1;
+        uint32_t tmp_rows = 1;
+        UpdateShapeInfo(context, tmp_cols, tmp_rows);
+        if(tmp_cols == 0 && tmp_rows != 0){
+            OP_LOGW(context, "AddLayerNormQuant Empty Input tiling start");
+            AddLayerNormQuantEmptyTiling addLayerNormEmptyTiling(context);
+            return addLayerNormEmptyTiling.DoTiling();
+        }
         OP_LOGW(context, "AddLayerNormQuant Regbase tiling start");
         AddLayerNormQuantRegbaseTiling addLayerNormQuantRegTiling(context);
         OP_CHECK_IF(

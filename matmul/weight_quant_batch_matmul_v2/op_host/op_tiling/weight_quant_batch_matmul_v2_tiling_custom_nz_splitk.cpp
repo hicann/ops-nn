@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -56,18 +56,24 @@ void WeightQuantBatchMatmulV2CustomNzSplitK::Reset()
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2CustomNzSplitK::PostTiling()
-{
-    OP_LOGD(opName_, "final tiling data size: %zu", tilingData_->GetDataSize());
+{   
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2CustomNzSplitKTilingData);
+    OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize);
 
     OP_TILING_CHECK(
-        tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingData_->GetDataSize()),
+        tilingDataSize % sizeof(uint64_t) != 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize),
         return ge::GRAPH_FAILED);
 
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 
     uint32_t usedAivNum = compileInfoPtr_->aicNum * 2;
     context_->SetBlockDim(CalcTschBlockDim(usedAivNum, compileInfoPtr_->aicNum, compileInfoPtr_->aivNum));
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -109,6 +115,7 @@ bool WeightQuantBatchMatmulV2CustomNzSplitK::IsCapable()
 
 ge::graphStatus WeightQuantBatchMatmulV2CustomNzSplitK::InstantiateTilingData()
 {
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2CustomNzSplitKTilingData);
     if (tilingData_ == nullptr) {
         tilingData_ = std::unique_ptr<WeightQuantBatchMatmulV2CustomNzSplitKTilingData>(
             new (std::nothrow) WeightQuantBatchMatmulV2CustomNzSplitKTilingData());
@@ -117,10 +124,10 @@ ge::graphStatus WeightQuantBatchMatmulV2CustomNzSplitK::InstantiateTilingData()
         tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingData_->GetDataSize(),
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
         VECTOR_INNER_ERR_REPORT_TILIING(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingData_->GetDataSize()),
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -130,37 +137,36 @@ ge::graphStatus WeightQuantBatchMatmulV2CustomNzSplitK::DoOpTiling()
     OP_TILING_CHECK(
         InstantiateTilingData() == ge::GRAPH_FAILED,
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
-    tilingData_->SetDataPtr(context_->GetRawTilingData()->GetData());
-    tilingData_->set_kSize(matmulInfoPtr_->kSize);
-    tilingData_->set_nSize(matmulInfoPtr_->nSize);
-    tilingData_->set_mSize(matmulInfoPtr_->mSize);
-    tilingData_->set_nSizeAlign(ops::CeilAlign(matmulInfoPtr_->nSize, static_cast<uint64_t>(BLOCK_CUBE)));
-    tilingData_->set_kSizeAlign(
-        ops::CeilAlign(matmulInfoPtr_->kSize, GetBlockAlignSizeByDataType(matmulInfoPtr_->bDtype)));
-    tilingData_->set_hasBias(matmulInfoPtr_->hasBias);
+    tilingData_->kSize = matmulInfoPtr_->kSize;
+    tilingData_->nSize = matmulInfoPtr_->nSize;
+    tilingData_->mSize = matmulInfoPtr_->mSize;
+    tilingData_->nSizeAlign = ops::CeilAlign(matmulInfoPtr_->nSize, static_cast<uint64_t>(BLOCK_CUBE));
+    tilingData_->kSizeAlign = 
+        ops::CeilAlign(matmulInfoPtr_->kSize, GetBlockAlignSizeByDataType(matmulInfoPtr_->bDtype));
+    tilingData_->hasBias = matmulInfoPtr_->hasBias;
     GetMatMulTiling();
-    tilingData_->set_vecBlockDimN(tilingData_->get_cubeBlockDimN() * VEC_CUBE_RATIO);
-    tilingData_->set_vecBlockDimK(tilingData_->get_cubeBlockDimK());
-    tilingData_->set_singleK(SINGLE_K);
-    tilingData_->set_vecSingleN(VECTOR_SINGLE_N);
-    tilingData_->set_singleCoreKLoop(
-        ops::CeilDiv(tilingData_->get_singleCoreK(), static_cast<uint64_t>(tilingData_->get_singleK())));
-    tilingData_->set_vectorSingleCoreN(tilingData_->get_cubeSingleCoreN() / VEC_CUBE_RATIO);
-    tilingData_->set_vectorSingleCoreNTail(tilingData_->get_cubeSingleCoreNTail() / VEC_CUBE_RATIO);
-    tilingData_->set_vecSingleCoreNLoop(
-        ops::CeilDiv(tilingData_->get_vectorSingleCoreN(), static_cast<uint64_t>(tilingData_->get_vecSingleN())));
-    tilingData_->set_vecSingleCoreNTailLoop(
-        ops::CeilDiv(tilingData_->get_vectorSingleCoreNTail(), static_cast<uint64_t>(tilingData_->get_vecSingleN())));
-    tilingData_->set_singleCoreKTailLoop(
-        ops::CeilDiv(tilingData_->get_singleCoreKTail(), static_cast<uint64_t>(tilingData_->get_singleK())));
+    tilingData_->vecBlockDimN = tilingData_->cubeBlockDimN * VEC_CUBE_RATIO;
+    tilingData_->vecBlockDimK = tilingData_->cubeBlockDimK;
+    tilingData_->singleK = SINGLE_K;
+    tilingData_->vecSingleN = VECTOR_SINGLE_N;
+    tilingData_->singleCoreKLoop = 
+        ops::CeilDiv(tilingData_->singleCoreK, static_cast<uint64_t>(tilingData_->singleK));
+    tilingData_->vectorSingleCoreN = tilingData_->cubeSingleCoreN / VEC_CUBE_RATIO;
+    tilingData_->vectorSingleCoreNTail = tilingData_->cubeSingleCoreNTail / VEC_CUBE_RATIO;
+    tilingData_->vecSingleCoreNLoop = 
+        ops::CeilDiv(tilingData_->vectorSingleCoreN, static_cast<uint64_t>(tilingData_->vecSingleN));
+    tilingData_->vecSingleCoreNTailLoop = 
+        ops::CeilDiv(tilingData_->vectorSingleCoreNTail, static_cast<uint64_t>(tilingData_->vecSingleN));
+    tilingData_->singleCoreKTailLoop = 
+        ops::CeilDiv(tilingData_->singleCoreKTail, static_cast<uint64_t>(tilingData_->singleK));
     uint64_t usedAivNum = compileInfoPtr_->aivNum;
     uint64_t postSingleCoreN = ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, usedAivNum), SHAPE_ALIGNED_FACTOR);
     uint64_t postSingleN = std::min(1024UL, postSingleCoreN);
     // 160K空间用于类型转换，输入db, 64K, 64K, 32K
     uint32_t postSingleM = std::min(matmulInfoPtr_->mSize, 16 * 1024 / postSingleN);
-    tilingData_->set_postSingleN(postSingleN);
-    tilingData_->set_postSingleM(postSingleM);
-    tilingData_->set_postSingleCoreN(postSingleCoreN);
+    tilingData_->postSingleN = postSingleN;
+    tilingData_->postSingleM = postSingleM;
+    tilingData_->postSingleCoreN = postSingleCoreN;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -218,41 +224,41 @@ void WeightQuantBatchMatmulV2CustomNzSplitK::GetMatMulTiling()
 {
     uint64_t singleCoreK = DEFAULT_SINGLE_CORE_SIZE;
     uint64_t cubeBlockDimK = std::min(
-        ops::CeilDiv(tilingData_->get_kSizeAlign(), singleCoreK), static_cast<uint64_t>(compileInfoPtr_->aicNum));
-    singleCoreK = ops::CeilAlign(ops::CeilDiv(tilingData_->get_kSizeAlign(), cubeBlockDimK), DEFAULT_SINGLE_CORE_SIZE);
-    cubeBlockDimK = ops::CeilDiv(tilingData_->get_kSizeAlign(), singleCoreK);
+        ops::CeilDiv(tilingData_->kSizeAlign, singleCoreK), static_cast<uint64_t>(compileInfoPtr_->aicNum));
+    singleCoreK = ops::CeilAlign(ops::CeilDiv(tilingData_->kSizeAlign, cubeBlockDimK), DEFAULT_SINGLE_CORE_SIZE);
+    cubeBlockDimK = ops::CeilDiv(tilingData_->kSizeAlign, singleCoreK);
     // L1的一半空间256K用来载入A矩阵
     if (matmulInfoPtr_->mSize * singleCoreK * GetSizeByDataType(matmulInfoPtr_->aDtype) <= 256 * 1024) {
         al1FullLoad_ = true;
     }
     uint64_t cubeBlockDimN = compileInfoPtr_->aicNum / cubeBlockDimK;
     uint64_t cubeSingleCoreN =
-        ops::CeilAlign(ops::CeilDiv(tilingData_->get_nSizeAlign(), cubeBlockDimN), SHAPE_ALIGNED_FACTOR);
-    cubeBlockDimN = ops::CeilDiv(tilingData_->get_nSizeAlign(), cubeSingleCoreN);
+        ops::CeilAlign(ops::CeilDiv(tilingData_->nSizeAlign, cubeBlockDimN), SHAPE_ALIGNED_FACTOR);
+    cubeBlockDimN = ops::CeilDiv(tilingData_->nSizeAlign, cubeSingleCoreN);
     if (cubeSingleCoreN < cubeSingleN_) {
         cubeSingleN_ = cubeSingleN_ >> 1;
     }
-    tilingData_->set_cubeSingleCoreN(cubeSingleCoreN);
-    tilingData_->set_singleCoreK(singleCoreK);
-    tilingData_->set_cubeBlockDimK(cubeBlockDimK);
-    tilingData_->set_cubeBlockDimN(cubeBlockDimN);
-    tilingData_->set_cubeSingleM(
-        ops::CeilAlign(std::min(matmulInfoPtr_->mSize, CUBE_BASE_M), static_cast<uint64_t>(AscendC::BLOCK_CUBE)));
-    tilingData_->set_cubeSingleN(cubeSingleN_);
-    tilingData_->set_cubeBaseK(CUBE_BASE_K);
-    tilingData_->set_cubeSingleCoreNLoop(ops::CeilDiv(cubeSingleCoreN, cubeSingleN_));
-    uint64_t usedAicNum = ops::CeilDiv(tilingData_->get_nSizeAlign(), cubeSingleCoreN);
-    uint64_t cubeSingleCoreNTail = tilingData_->get_nSizeAlign() - (usedAicNum - 1) * cubeSingleCoreN;
-    tilingData_->set_cubeSingleCoreNTail(cubeSingleCoreNTail);
-    uint64_t cubeSingleCoreNOriTail = tilingData_->get_nSize() - (usedAicNum - 1) * cubeSingleCoreN;
-    usedAicNum = ops::CeilDiv(tilingData_->get_kSizeAlign(), singleCoreK);
-    uint64_t singleCoreKTail = tilingData_->get_kSizeAlign() - (usedAicNum - 1) * singleCoreK;
-    tilingData_->set_cubeSingleCoreNLoop(ops::CeilDiv(cubeSingleCoreN, cubeSingleN_));
-    tilingData_->set_cubeSingleCoreNOriTail(cubeSingleCoreNOriTail);
-    uint64_t singleCoreKOriTail = tilingData_->get_kSize() - (usedAicNum - 1) * singleCoreK;
-    tilingData_->set_singleCoreKTail(singleCoreKTail);
-    tilingData_->set_singleCoreKOriTail(singleCoreKOriTail);
-    tilingData_->set_cubeSingleCoreNTailLoop(ops::CeilDiv(cubeSingleCoreNTail, static_cast<uint64_t>(cubeSingleN_)));
+    tilingData_->cubeSingleCoreN = cubeSingleCoreN;
+    tilingData_->singleCoreK = singleCoreK;
+    tilingData_->cubeBlockDimK = cubeBlockDimK;
+    tilingData_->cubeBlockDimN = cubeBlockDimN;
+    tilingData_->cubeSingleM = 
+        ops::CeilAlign(std::min(matmulInfoPtr_->mSize, CUBE_BASE_M), static_cast<uint64_t>(AscendC::BLOCK_CUBE));
+    tilingData_->cubeSingleN = cubeSingleN_;
+    tilingData_->cubeBaseK = CUBE_BASE_K;
+    tilingData_->cubeSingleCoreNLoop = ops::CeilDiv(cubeSingleCoreN, cubeSingleN_);
+    uint64_t usedAicNum = ops::CeilDiv(tilingData_->nSizeAlign, cubeSingleCoreN);
+    uint64_t cubeSingleCoreNTail = tilingData_->nSizeAlign - (usedAicNum - 1) * cubeSingleCoreN;
+    tilingData_->cubeSingleCoreNTail = cubeSingleCoreNTail;
+    uint64_t cubeSingleCoreNOriTail = tilingData_->nSize - (usedAicNum - 1) * cubeSingleCoreN;
+    usedAicNum = ops::CeilDiv(tilingData_->kSizeAlign, singleCoreK);
+    uint64_t singleCoreKTail = tilingData_->kSizeAlign - (usedAicNum - 1) * singleCoreK;
+    tilingData_->cubeSingleCoreNLoop = ops::CeilDiv(cubeSingleCoreN, cubeSingleN_);
+    tilingData_->cubeSingleCoreNOriTail = cubeSingleCoreNOriTail;
+    uint64_t singleCoreKOriTail = tilingData_->kSize - (usedAicNum - 1) * singleCoreK;
+    tilingData_->singleCoreKTail = singleCoreKTail;
+    tilingData_->singleCoreKOriTail = singleCoreKOriTail;
+    tilingData_->cubeSingleCoreNTailLoop = ops::CeilDiv(cubeSingleCoreNTail, static_cast<uint64_t>(cubeSingleN_));
 }
 
 } // namespace optiling

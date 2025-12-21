@@ -16,7 +16,7 @@
 namespace l0op {
 
 bool BmmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1,
-                        const bool adjX2, op::Format self_format, op::Format mat2_format);
+                        const bool adjX2, op::Format self_format, op::Format mat2_format, const bool enableFp16Bf16InFp32Out);
 }
 
 #endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_BATCH_MATMUL_V2TOV3_H_

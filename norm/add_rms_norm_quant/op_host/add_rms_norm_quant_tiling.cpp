@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_rms_norm_quant_tiling.cpp
@@ -74,34 +74,37 @@ bool CheckOptionalParamsExisting(const gert::StorageShape* checkShape)
     return true;
 }
 
-static uint32_t CalcTilingKeyWithOptionalInput(gert::TilingContext* context) {
-  uint32_t modeKy = context->GetTilingKey();
-  uint32_t biasKey = 0;
-  uint32_t out2Key = 0;
-  uint32_t out3Key = 0;
-  uint32_t quantTypeKey = 0;
-  int64_t mode = static_cast<int64_t>(-1);
-  if(context->GetOptionalInputDesc(BIAS_INDEX) != nullptr) {
-    biasKey = 1U;
-  }
-  auto attrs = context->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-  if(attrs != nullptr) {
-    mode = *attrs->GetInt(0);
-  }
-  if(mode == 0) {
-    out2Key = 1U;
-  } else if(mode == 1) {
-    out3Key = 1U;
-  }
-  if(context->GetInputDesc(SCALES1_INDEX) != nullptr && context->GetInputShape(SCALES1_INDEX)->GetStorageShape().GetDimNum() == 1
-    && context->GetInputShape(SCALES1_INDEX)->GetStorageShape().GetShapeSize() == 1) {
-    quantTypeKey = 1U;
-  }
-  modeKy = modeKy * MODEKEY_WEIGHT + biasKey * BIAS_WEIGHT + out2Key * OUT_SECOND_WEIGHT + out3Key * OUT_THIRD_WEIGHT + quantTypeKey;
-  OP_LOGD("Tiling4AddRmsNormQuantV2", "tiling_ky value is: %u", modeKy);
-  context->SetTilingKey(modeKy);
-  return ge::GRAPH_SUCCESS;
+static uint32_t CalcTilingKeyWithOptionalInput(gert::TilingContext* context)
+{
+    uint32_t modeKy = context->GetTilingKey();
+    uint32_t biasKey = 0;
+    uint32_t out2Key = 0;
+    uint32_t out3Key = 0;
+    uint32_t quantTypeKey = 0;
+    int64_t mode = static_cast<int64_t>(-1);
+    if (context->GetOptionalInputDesc(BIAS_INDEX) != nullptr) {
+        biasKey = 1U;
+    }
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    if (attrs != nullptr) {
+        mode = *attrs->GetInt(0);
+    }
+    if (mode == 0) {
+        out2Key = 1U;
+    } else if (mode == 1) {
+        out3Key = 1U;
+    }
+    if (context->GetInputDesc(SCALES1_INDEX) != nullptr &&
+        context->GetInputShape(SCALES1_INDEX)->GetStorageShape().GetDimNum() == 1 &&
+        context->GetInputShape(SCALES1_INDEX)->GetStorageShape().GetShapeSize() == 1) {
+        quantTypeKey = 1U;
+    }
+    modeKy = modeKy * MODEKEY_WEIGHT + biasKey * BIAS_WEIGHT + out2Key * OUT_SECOND_WEIGHT +
+             out3Key * OUT_THIRD_WEIGHT + quantTypeKey;
+    OP_LOGD("Tiling4AddRmsNormQuantV2", "tiling_ky value is: %u", modeKy);
+    context->SetTilingKey(modeKy);
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, uint32_t& numRow)
@@ -286,7 +289,9 @@ ge::graphStatus Tiling4AddRmsNormQuant(gert::TilingContext* context)
 
 ge::graphStatus Tiling4AddRmsNormQuantV2(gert::TilingContext* context)
 {
-    Tiling4AddRmsNormQuantNotRegbase(context);
+    OP_CHECK_IF(
+        Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."),
+        return ge::GRAPH_FAILED);
     CalcTilingKeyWithOptionalInput(context);
     return ge::GRAPH_SUCCESS;
 }
@@ -332,6 +337,9 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
     int32_t scales2Dtype = -1;
     int32_t zeroPoints1Dtype = -1;
     int32_t zeroPoints2Dtype = -1;
+
+    int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
+
     OP_CHECK_IF(
         context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input scale2 exist"),
@@ -361,6 +369,8 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
         .append(std::to_string(zeroPoints1Dtype)) // zeroPoints1
         .append("/")
         .append(std::to_string(zeroPoints2Dtype)) // zeroPoints2
+        .append("/")
+        .append(std::to_string(y1Dtype)) // y1Dtype
         .append("/");
     OP_LOGW(context, "SimpleKeyTemp: %s", simpleKeyTemp.c_str());
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());

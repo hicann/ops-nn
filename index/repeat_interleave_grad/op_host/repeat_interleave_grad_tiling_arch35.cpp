@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file repeat_interleave_grad_david_tiling.cc
@@ -42,15 +42,15 @@ static constexpr int32_t nTwo = 2;
 static constexpr int64_t MAX_YGRAD_DIM = 8;
 constexpr size_t WORKSPACE_SIZE_EXT = static_cast<size_t>(64 * 8); // 额外的workspace，用于block切人Repeat时使用
 constexpr int32_t INT32_SIZE = 4;
-static const gert::Shape g_vec_1_shape = {1};
 
 using namespace Ops::Base;
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert::Shape& oneShape)
+{
+    if (inShape.IsScalar()) {
+        return oneShape;
+    }
+    return inShape;
 }
 
 class RIGDavidTilingImpl
@@ -135,15 +135,18 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     // 获取y_grad
     auto xStorage = context_->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xStorage);
-    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape());
+    auto oneShapeX = gert::Shape{1};
+    const gert::Shape& xShape = EnsureNotScalar(xStorage->GetStorageShape(), oneShapeX);
 
     auto repeatStorage = context_->GetInputShape(INPUT_REPEAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, repeatStorage);
-    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape());
+    auto oneShapeRepeat = gert::Shape{1};
+    const gert::Shape& repeatShape = EnsureNotScalar(repeatStorage->GetStorageShape(), oneShapeRepeat);
 
     auto ytStorage = context_->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ytStorage);
-    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape());
+    auto oneShapeY = gert::Shape{1};
+    const gert::Shape& yShape = EnsureNotScalar(ytStorage->GetStorageShape(), oneShapeY);
 
     auto repeatShapeSize = repeatShape.GetShapeSize();
 

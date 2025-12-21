@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(avg_pool3_d "ascend910B1" "")
+    AddOpTestCase(avg_pool3_d "ascend910B1" "-DORIG_DTYPE_X=DT_FLOAT")
 endif()

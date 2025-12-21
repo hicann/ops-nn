@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file avg_pool3_d_tiling.cpp
@@ -22,7 +22,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "log/log.h"
-#include "cube_tiling_runtime.h"
+#include "avg_pool_cube_tiling.h"
 #include "error_util.h"
 
 #include "platform/platform_infos_def.h"
@@ -70,6 +70,7 @@ constexpr int32_t MODE_SPLIT_W = 2;
 constexpr int32_t MODE_MULTI_W = 3;
 constexpr int32_t MODE_REDUCE_D = 4;
 constexpr int32_t MODE_NORMAL = 5;
+constexpr int32_t MODE_BIG_KERNEL = 6;
 
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t MAX_TILE_NUM = 4095;
@@ -77,6 +78,11 @@ constexpr int64_t MAX_TILE_NUM = 4095;
 constexpr uint64_t KERNEL_SIZE_LIMIT = 128;
 constexpr uint64_t BLOCK_LEN = 256;
 constexpr uint64_t KERNEL_W_LIMIT = 16;
+
+constexpr uint64_t BIG_KERNEL_SUM_LIMIT = 10240;
+constexpr uint64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
+constexpr uint64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
+constexpr uint64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
 
 struct TilingParams {
     uint64_t inN = 0;
@@ -162,8 +168,8 @@ static inline uint64_t FindDivisorWindowNum(uint64_t len, uint64_t initWindowNum
 } // namespace
 
 namespace optiling {
-namespace avg_pool3_d {
-using namespace avg_pool3_d_tiling_compile_info;
+namespace avgPool3DTiling {
+using namespace avgPool3DTilingCompileInfo;
 static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
 {
     const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
@@ -296,6 +302,20 @@ static void Tilling4NCDHWNormal(TilingParams& params)
     SetNormalTilingParams(params);
 }
 
+static bool CheckBigKernel(TilingParams& params)
+{
+    uint64_t sumK = params.kD * params.kH * params.kW;
+    bool bigKernel = (params.kD > BIG_KERNEL_SINGLE_LIMIT || params.kH > BIG_KERNEL_SINGLE_LIMIT || 
+                        params.kW > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
+
+    uint64_t windowsCalc = params.outD * params.outH * params.outW * sumK;
+    // 非全局平均池化下，kernel较大，C通道小于64，且达到一定计算数据量时走Big Kernel分支
+    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && params.inC < BIG_KERNEL_CHANNEL_LIMIT){
+        return true;
+    }
+    return false;
+}
+
 static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
     int32_t dataTypeSize = params.dataTypeKey == FP32_DTYPE_KEY ? 4 : 2;
 
@@ -309,6 +329,9 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode) {
         params.tileHW = alignHW > tileLen ? tileLen : alignHW;
         uint64_t tileTailLen = (params.inH * params.inW) % params.tileHW;
         params.atomicAddNum = (tileTailLen < alignNum) && (tileTailLen != 0UL) ? 1UL : 0UL;
+        return;
+    }else if(params.dataFormat == "NCDHW" && (CheckBigKernel(params))){
+        mode = MODE_BIG_KERNEL;
         return;
     } else if (params.dataFormat == "NCDHW") {
         //走Nornal模板
@@ -530,7 +553,7 @@ static ge::graphStatus Tiling4AvgPool3DVec(gert::TilingContext* context)
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "Tiling4AvgPool3D start.");
 
-    auto compileInfo = static_cast<const Conv3DCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo*>(context->GetCompileInfo());
 
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
     OP_CHECK_IF(
@@ -664,7 +687,7 @@ static ge::graphStatus TilingPrepare4AvgPool3DVec(gert::TilingParseContext* cont
 {
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "TilingPrepare4AvgPool3D Vector start.");
-    auto compileInfo = context->GetCompiledInfo<Conv3DCompileInfo>();
+    auto compileInfo = context->GetCompiledInfo<AvgPool3DCubeCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -688,7 +711,7 @@ static ge::graphStatus TilingPrepare4AvgPool3DVec(gert::TilingParseContext* cont
 ge::graphStatus Tiling4AvgPool3D(gert::TilingContext *context)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3D", "context is null"), return ge::GRAPH_FAILED);
-    auto compileInfo = static_cast<const Conv3DCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const AvgPool3DCubeCompileInfo *>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     if (compileInfo->is_regbase) {
         return Tiling4AvgPool3DNNRegBase(context);
@@ -697,7 +720,7 @@ ge::graphStatus Tiling4AvgPool3D(gert::TilingContext *context)
     } else {
         const auto x_shape = context->GetInputShape(0);
         const auto y_shape = context->GetOutputShape(0);
-        return TilingForConv3D(context, x_shape, y_shape, false);
+        return Tiling4AvgPool3DCube(context, x_shape, y_shape);
     }
 }
 
@@ -709,16 +732,16 @@ static ge::graphStatus TilingPrepare4AvgPool3D(gert::TilingParseContext* context
     if (isAscendC) {
         return TilingPrepare4AvgPool3DVec(context);
     } else {
-        return ParseCubeCompileInfo<Conv3DCompileInfo, 4>(context);  // 4: ndhw
+        return ParseCubeCompileInfo<AvgPool3DCubeCompileInfo, 4>(context);  // 4: ndhw
     }
 }
 
 IMPL_OP_OPTILING(AvgPool3D)
     .Tiling(Tiling4AvgPool3D)
-    .TilingParse<Conv3DCompileInfo>(TilingPrepare4AvgPool3D);
+    .TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
 
 IMPL_OP_OPTILING(AvgPool3DV2)
 .Tiling(Tiling4AvgPool3D)
-.TilingParse<Conv3DCompileInfo>(TilingPrepare4AvgPool3D);
-} // namespace avg_pool3_d
+.TilingParse<AvgPool3DCubeCompileInfo>(TilingPrepare4AvgPool3D);
+} // namespace avgPool3DTiling
 } // namespace optiling

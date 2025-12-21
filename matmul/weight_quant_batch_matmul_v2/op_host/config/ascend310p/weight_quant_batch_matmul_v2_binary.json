@@ -94,6 +94,16 @@
                     "name": "antiquant_group_size",
                     "dtype": "int",
                     "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
+                    "dtype": "int",
+                    "value": 0
                 }
             ]
         },
@@ -188,6 +198,16 @@
                 },
                 {
                     "name": "antiquant_group_size",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "dtype",
+                    "dtype": "int",
+                    "value": -1
+                },
+                {
+                    "name": "inner_precise",
                     "dtype": "int",
                     "value": 0
                 }

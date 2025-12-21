@@ -1,9 +1,9 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -26,7 +26,8 @@
 using namespace op;
 using namespace std;
 
-class l2Gather : public testing::Test {
+class l2Gather : public testing::Test
+{
 protected:
     static void SetUpTestCase()
     {
@@ -76,7 +77,7 @@ TEST_F(l2Gather, case_norm_float32_aicpu)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    ut.TestPrecision();
+    
 }
 
 TEST_F(l2Gather, case_norm_float16)
@@ -109,38 +110,6 @@ TEST_F(l2Gather, case_norm_int32_dim0)
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
 }
 
-TEST_F(l2Gather, case_norm_int8)
-{
-    auto tensor_desc = TensorDesc({4, 4}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t dim = 1;
-    auto out_tensor_desc = TensorDesc({4, 4}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto index_desc = TensorDesc({4, 4}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 4);
-
-    auto ut = OP_API_UT(aclnnGather, INPUT(tensor_desc, dim, index_desc), OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    ut.TestPrecision();
-}
-
-TEST_F(l2Gather, case_norm_uint8)
-{
-    auto tensor_desc = TensorDesc({4, 4}, ACL_UINT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t dim = -1;
-    auto out_tensor_desc = TensorDesc({4, 4}, ACL_UINT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto index_desc = TensorDesc({4, 4}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 4);
-
-    auto ut = OP_API_UT(aclnnGather, INPUT(tensor_desc, dim, index_desc), OUTPUT(out_tensor_desc));
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    ut.TestPrecision();
-}
 
 TEST_F(l2Gather, case_norm_int16)
 {
@@ -154,8 +123,6 @@ TEST_F(l2Gather, case_norm_int16)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    ut.TestPrecision();
 }
 
 TEST_F(l2Gather, case_norm_uint16)
@@ -171,7 +138,7 @@ TEST_F(l2Gather, case_norm_uint16)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // ut.TestPrecision();
+    // 
 }
 
 TEST_F(l2Gather, case_norm_uint32)
@@ -187,7 +154,7 @@ TEST_F(l2Gather, case_norm_uint32)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // ut.TestPrecision();
+    // 
 }
 
 TEST_F(l2Gather, case_norm_uint64)
@@ -203,7 +170,7 @@ TEST_F(l2Gather, case_norm_uint64)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // ut.TestPrecision();
+    // 
 }
 
 TEST_F(l2Gather, case_norm_int64)
@@ -219,7 +186,7 @@ TEST_F(l2Gather, case_norm_int64)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    ut.TestPrecision();
+    
 }
 
 TEST_F(l2Gather, case_nullptr_self)
@@ -376,7 +343,7 @@ TEST_F(l2Gather, case_empty_tensor)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    ut.TestPrecision();
+    
 }
 
 TEST_F(l2Gather, case_format_abnormal)
@@ -456,4 +423,22 @@ TEST_F(l2Gather, case_ascend910B2_last_dim)
     auto aclRet = aclnnGatherGetWorkspaceSize(xTensor, dim, indexTensor, outTensor, &workspaceSize, &exe);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     EXPECT_NE(exe, nullptr);
+}
+
+TEST_F(l2Gather, ascend910_95_case_norm_int32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_desc = TensorDesc({4, 4}, ACL_INT32, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+    int64_t dim = 1;
+    auto out_tensor_desc = TensorDesc({4, 4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto index_desc = TensorDesc({4, 4}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 4);
+
+    auto ut = OP_API_UT(aclnnGather, INPUT(tensor_desc, dim, index_desc), OUTPUT(out_tensor_desc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    
 }

@@ -2,10 +2,10 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -24,37 +24,37 @@ from setuptools import Command
 
 class CleanCommand(Command):
     user_options = []
-
+    
     def initialize_options(self):
         pass
-
+    
     def finalize_options(self):
         pass
-
+    
     def run(self):
         # 删除构建目录
         if os.path.exists('build'):
             shutil.rmtree('build')
             print("Removed build/")
-
+        
         # 删除dist目录
         if os.path.exists('dist'):
             shutil.rmtree('dist')
             print("Removed dist/")
-
+        
         # 删除egg-info目录
         egg_info_dir = f"{self.distribution.get_name().replace('-', '_')}.egg-info"
         if os.path.exists(egg_info_dir):
             shutil.rmtree(egg_info_dir)
             print(f"Removed {egg_info_dir}/")
-
+        
         # 删除.pyc文件和__pycache__目录
         for root, dirs, files in os.walk('.'):
             for file in files:
                 if file.endswith('.pyc'):
                     os.remove(os.path.join(root, file))
                     print(f"Removed {os.path.join(root, file)}")
-
+            
             for dir in dirs:
                 if dir == '__pycache__':
                     shutil.rmtree(os.path.join(root, dir))

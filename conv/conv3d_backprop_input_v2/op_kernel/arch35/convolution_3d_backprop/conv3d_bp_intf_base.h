@@ -1,0 +1,201 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file conv3d_bp_intf_base.h
+ * \brief
+ */
+
+#ifndef CONV3D_BP_INTF_ADVANCE_H
+#define CONV3D_BP_INTF_ADVANCE_H
+
+#include "conv3d_bp_config_base.h"
+#include "conv3d_bp_func.h"
+#include "conv3d_bp_util.h"
+#include "kernel_tiling/kernel_tiling.h"
+#include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
+
+namespace Convolution3DBackprop {
+// 用户可见的api原型集合
+template <class Config_, template <typename, class> class Impl>
+struct ConvBpIntf {
+    using Config = Config_;
+    using Ext = Impl<ConvBpIntf, Config>;
+    using SrcT = typename Config::SrcT;
+    using DstT = typename Config::DstT;
+    using L0cT = typename Config::L0cT;
+    using BiasT = typename Config::BiasT;
+    using IndexT = typename AscendC::Conditional<
+        AscendC::IsSameType<SrcT, float>::value, uint32_t, uint16_t>::type;
+    using ContextData = typename Ext::ContextData;
+
+public:
+    ContextData ctx;
+    constexpr static Conv3dConfig conv3dConfig = Config::conv3dConfig_;
+
+public:
+    __aicore__ inline ConvBpIntf() {}
+
+    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling)
+    {
+        using Local = typename Ext::Init;
+        // CheckFun检查impl是否实现了Init的call函数
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling)) {
+            Local::call(this, tiling);
+        }
+    }
+
+    __aicore__ inline void SetFmap(const GlobalTensor<SrcT> &fmap)
+    {
+        using Local = typename Ext::SetFmap;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, fmap)) {
+            Local::call(this, fmap);
+        }
+    }
+
+    __aicore__ inline void SetWeight(const GlobalTensor<SrcT> &weight)
+    {
+        using Local = typename Ext::SetWeight;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, weight)) {
+            Local::call(this, weight);
+        }
+    }
+
+    __aicore__ inline void SetOutBackprop(const GlobalTensor<SrcT> &outBackprop)
+    {
+        using Local = typename Ext::SetOutBackprop;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, outBackprop)) {
+            Local::call(this, outBackprop);
+        }
+    }
+
+#if defined(__DAV_310R6__)
+    __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
+    {
+        using Local = typename Ext::SetBias;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, bias)) {
+            Local::call(this, bias);
+        }
+    }
+#endif
+
+    __aicore__ inline void SetKernelSplitParams(uint32_t kSCoutFullLoad, uint32_t kSUseWorkSpace)
+    {
+        using Local = typename Ext::SetKernelSplitParams;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, kSCoutFullLoad, kSUseWorkSpace)) {
+            Local::call(this, kSCoutFullLoad, kSUseWorkSpace);
+        }
+    }
+
+    __aicore__ inline void SetSingleShapeParams(uint32_t curSplitHk, int32_t curBackpropPadUp)
+    {
+        using Local = typename Ext::SetSingleShapeParams;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, curSplitHk, curBackpropPadUp)) {
+            Local::call(this, curSplitHk, curBackpropPadUp);
+        }
+    }
+
+    __aicore__ inline void SetSingleShape(uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN,
+                                          uint32_t singleShapeD)
+    {
+        using Local = typename Ext::SetSingleShape;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, singleShapeM, singleShapeK, singleShapeN,
+                                singleShapeD)) {
+            Local::call(this, singleShapeM, singleShapeK, singleShapeN, singleShapeD);
+        }
+    }
+
+    __aicore__ inline void SetStartIdx(uint32_t curDinStartIdx, int64_t curMStartIdx,
+        int32_t curCinStartIdx, int32_t curCoutStartIdx)
+    {
+        using Local = typename Ext::SetStartIdx;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, curDinStartIdx, curMStartIdx,
+            curCinStartIdx, curCoutStartIdx)) {
+            Local::call(this, curDinStartIdx, curMStartIdx, curCinStartIdx, curCoutStartIdx);
+        }
+    }
+
+    __aicore__ inline void FreeB1Tensor()
+    {
+        using Local = typename Ext::FreeB1Tensor;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this)) {
+            Local::call(this);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline bool Iterate(bool enPartialSum = false)
+    {
+        using Local = typename Ext::template Iterate<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enPartialSum)) {
+            return Local::call(this, enPartialSum);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void IterateAll(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    {
+        using Local = typename Ext::template IterateAll<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic)) {
+            Local::call(this, output, enAtomic);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void IterateAllForKernelSplit(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    {
+        using Local = typename Ext::template IterateAllForKernelSplit<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic)) {
+            Local::call(this, output, enAtomic);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void GetTensorC(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
+                                      bool enSequentialWrite = false)
+    {
+        using Local = typename Ext::template GetTensorC<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
+            Local::call(this, output, enAtomic, enSequentialWrite);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void VecPreProcess(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
+                                      bool enSequentialWrite = false)
+    {
+        using Local = typename Ext::template VecPreProcess<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
+            Local::call(this, output, enAtomic, enSequentialWrite);
+        }
+    }
+
+    template <bool sync = true>
+    __aicore__ inline void VecPostProcess(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0,
+                                      bool enSequentialWrite = false)
+    {
+        using Local = typename Ext::template VecPostProcess<sync>;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {
+            Local::call(this, output, enAtomic, enSequentialWrite);
+        }
+    }
+
+    __aicore__ inline void End()
+    {
+        using Local = typename Ext::End;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this)) {
+            Local::call(this);
+        }
+    }
+};
+
+}  // namespace Convolution3DBackprop
+
+#endif

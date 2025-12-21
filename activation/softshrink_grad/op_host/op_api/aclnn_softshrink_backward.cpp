@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -97,6 +97,13 @@ static inline aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTens
 
   // 3. 检查是否shape一致
   CHECK_RET(CheckShapeValid(gradOutput, self, gradInput), ACLNN_ERR_PARAM_INVALID);
+
+  // 4. 检查输入的lambd的值是否大于等于0
+  if (lambd->ToFloat() < 0.0f) {
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+            "lambd should be greater or equal to 0, but found to be [%f].", lambd->ToFloat());
+    return ACLNN_ERR_PARAM_INVALID;
+  }
 
   return ACLNN_SUCCESS;
 }

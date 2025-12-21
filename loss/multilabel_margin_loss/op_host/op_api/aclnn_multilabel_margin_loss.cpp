@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -186,12 +186,17 @@ aclnnStatus aclnnMultilabelMarginLossGetWorkspaceSize(const aclTensor* self, con
   // 固定写法，将输入self转换成连续的tensor
   auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
   CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "contiguous self failed!");
+  
+  auto selfCasted = selfContiguous;
+  if (self->GetDataType() == op::DataType::DT_BF16) {
+    selfCasted = l0op::Cast(selfCasted, DataType::DT_FLOAT, uniqueExecutor.get());
+    CHECK_COND(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast self failed!");
+  }
 
   int64_t squeezeDim = 0;
   auto selfReshape =
-    self->GetViewShape().GetDimNum() == 0 ? l0op::UnsqueezeNd(selfContiguous,
-                                                              squeezeDim,
-                                                              uniqueExecutor.get()) : selfContiguous;
+    self->GetViewShape().GetDimNum() == 0 ? l0op::UnsqueezeNd(selfCasted, squeezeDim,
+                                                              uniqueExecutor.get()) : selfCasted;
   CHECK_COND(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR, "unsqueezeNd self failed!");
 
   // 固定写法，将输入target转换成连续的tensor

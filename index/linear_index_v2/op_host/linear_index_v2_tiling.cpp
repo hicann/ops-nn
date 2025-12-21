@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file linear_index_v2_tiling.cpp
@@ -156,7 +156,7 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     // 2. 计算ub内一次最多能存放的数据量
     ubSize_ = compileInfo->ubSizePlatForm - SCALE_SPACE;
     OP_CHECK_IF(
-        (ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %lu is less than 1024", ubSize_),
+        (ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %li is less than 1024", ubSize_),
         return ge::GRAPH_FAILED);
     // 计算连续场景下的参数
     TilingCompute(idxNum, usedCoreNum_);

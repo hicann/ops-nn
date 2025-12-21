@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <gtest/gtest.h>
 #include <stdlib.h>
@@ -32,6 +32,8 @@
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_basic_tiling.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
 #include "platform/platform_infos_def.h"
+
+#ifdef USE_LEGACY_COMMON
 
 using namespace std;
 using namespace ge;
@@ -80,7 +82,6 @@ public:
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
 };
 
-#define GET_API_TILING_VALUE(obj, fieldName) *(int32_t *)(obj.data_ptr_ + obj.fieldName##_offset_)
 
 static string TilingData2Str(const void *tilingData, size_t tilingSize)
 {
@@ -180,6 +181,20 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
                           })";
+    } else if (socVersion.compare("MC62CM12AA") == 0) {
+        compileInfoStr = R"({
+        "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
+                        "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                        "intrinsic_fix_pipe_l0c2out_f322bf16": true,
+                        "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": true,
+                        "Intrinsic_fix_pipe_pre_conv_cast": true,
+                        "Intrinsic_data_move_l12bt": true,
+                        "Intrinsic_mmad": true,
+                        "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 1048576,
+                        "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 16,
+                        "cube_core_cnt": 16, "vector_core_cnt": 16, "core_type_list": "CubeCore,VectorCore",
+                        "lut_type": "MTE2_QTABLE"}
+                        })";
     }
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
     aicoreSpec["cube_freq"] = "1800";
@@ -637,12 +652,14 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
-        QuantBatchMatmulV3TilingData actualTilingData;
-        QuantBatchMatmulV3TilingData expectTilingData;
-        actualTilingData.SetDataPtr(tilingContext->GetRawTilingData()->GetData());
-        expectTilingData.SetDataPtr(tilingDataInt.data());
-        // 这里通过重置预期结果里的部分字段来忽略不关心的api tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
-        expectTilingData.matmulTiling.set_shareL1Size(GET_API_TILING_VALUE(actualTilingData.matmulTiling, shareL1Size));
+        QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
+        QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
+        // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
+        expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
+        // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+        if (biasFlag == false) {
+            expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+        }
         string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
                                                     tilingContext->GetRawTilingData()->GetDataSize());
         string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
@@ -669,6 +686,7 @@ INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::Valu
 INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B4")));
 INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend310P3")));
 INSTANTIATE_TEST_CASE_P(QUANTMM910_95, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910_95")));
+INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("MC62CM12AA")));
 
 static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)
@@ -753,3 +771,5 @@ TEST_F(TestQuantBatchMatmulV3Tiling, multiThread910_95)
     auto casesParams910_95 = GetParams("Ascend910_95");
     TestMultiThread(casesParams910_95.data(), casesParams910_95.size(), 3);
 }
+
+#endif

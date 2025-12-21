@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_unaligned_sc_splitk_kernel_gm_to_l1.h
@@ -58,7 +58,7 @@ public:
         GM_ADDR workspaceGM, const MatmulTilingData *matmulTilingData, TPipe *pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
         GM_ADDR workspaceGM);
-    __aicore__ inline void Process();
+    __aicore__ inline void Process(uint8_t enAtomic = 0);
 
     __aicore__ inline void End()
     {
@@ -316,7 +316,7 @@ MatMulUnAlignedSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
 __aicore__ inline void
-MatMulUnAlignedSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process()
+MatMulUnAlignedSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(uint8_t enAtomic)
 {
     using C_T = typename C_TYPE::T;
     if ASCEND_IS_AIV {
@@ -356,11 +356,11 @@ MatMulUnAlignedSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
         }
 
         if (innerParams_.nd2nzFlag == 2) {
-            mmb_.UnAlignedProcess();
+            mmb_.UnAlignedProcess(enAtomic);
         } else if (innerParams_.nd2nzFlag == 1) {
-            mma_.UnAlignedProcess();
+            mma_.UnAlignedProcess(enAtomic);
         } else if (innerParams_.nd2nzFlag == 3) {
-            mmab_.UnAlignedProcess();
+            mmab_.UnAlignedProcess(enAtomic);
         }
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
         if constexpr (sizeof(C_T) != sizeof(float)) {

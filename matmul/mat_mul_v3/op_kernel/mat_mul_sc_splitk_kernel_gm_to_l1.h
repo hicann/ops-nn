@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_sc_splitk_kernel_gm_to_l1.h
@@ -53,7 +53,7 @@ public:
 
     __aicore__ inline void Process(GM_ADDR cGM, GM_ADDR srcAddr, TBuf<TPosition::VECCALC> &ubBuf);
 
-    __aicore__ inline void UnAlignedProcess();
+    __aicore__ inline void UnAlignedProcess(uint8_t enAtomic = 0);
 
     __aicore__ inline void End()
     {
@@ -734,7 +734,7 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
 template <class A_TYPE, class B_TYPE, class L0C_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class BLOCK_TYPE,
     const MatmulConfig &MM_CFG>
 __aicore__ inline void
-MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UnAlignedProcess()
+MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UnAlignedProcess(uint8_t enAtomic)
 {
     if ASCEND_IS_AIV {
         return;
@@ -773,7 +773,11 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
                 if (kIndex != 0) {
                     SetAtomicAdd<float>();
                 } else {
-                    SetAtomicNone();
+                    if (!enAtomic) {
+                        SetAtomicNone();
+                    } else {
+                        SetAtomicAdd<float>();
+                    }
                 }
                 for (uint64_t innerNIndex = 0; innerNIndex < block_.params_.innerLoopN; ++innerNIndex) {
                     block_.template CalcGMOffset<A_TYPE, B_TYPE, L0C_TYPE, BIAS_TYPE>(innerMIndex, kIndex, innerNIndex, false);
@@ -871,8 +875,8 @@ public:
         GM_ADDR workspaceGM, const MatmulTilingData *matmulTilingData, TPipe *pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
         GM_ADDR workspaceGM);
-    __aicore__ inline void Process();
-    __aicore__ inline void NNot128AlignProcess();
+    __aicore__ inline void Process(uint8_t enAtomic = 0);
+    __aicore__ inline void NNot128AlignProcess(uint8_t enAtomic = 0);
     __aicore__ inline void End()
     {
         mmcBaseKernel_.End();
@@ -1014,10 +1018,10 @@ MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process()
+__aicore__ inline void MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(uint8_t enAtomic)
 {
     if (!innerParams_.n128Align) {
-        NNot128AlignProcess();
+        NNot128AlignProcess(enAtomic);
         return;
     }
     using C_T = typename C_TYPE::T;
@@ -1032,7 +1036,7 @@ __aicore__ inline void MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE
     }
     if constexpr (sizeof(C_T) == sizeof(float)) {
         // fp32不需要vector核
-        mmcBaseKernel_.UnAlignedProcess();
+        mmcBaseKernel_.UnAlignedProcess(enAtomic);
         return;
     }
     if ASCEND_IS_AIC {
@@ -1046,7 +1050,7 @@ __aicore__ inline void MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
 __aicore__ inline void
-MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::NNot128AlignProcess()
+MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::NNot128AlignProcess(uint8_t enAtomic)
 {
     using C_T = typename C_TYPE::T;
     if ASCEND_IS_AIV {
@@ -1073,7 +1077,7 @@ MatMulSingleCoreSplitKKernelGmToL1<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE
     }
     if constexpr (sizeof(C_T) == sizeof(float)) {
         // fp32不需要vector核
-        mmcBaseKernel_.UnAlignedProcess();
+        mmcBaseKernel_.UnAlignedProcess(enAtomic);
         return;
     }
     if ASCEND_IS_AIC {

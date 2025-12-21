@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn_fused_cross_entropy_loss_with_max_sum.h"
 #include "fused_cross_entropy_loss_with_max_sum.h"
 #include "aclnn_kernels/cast.h"
@@ -87,8 +87,8 @@ static inline bool CheckShape(
 
 static aclnnStatus CheckParams(
     const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits, float labelSmoothing,
-    [[maybe_unused]] const aclTensor* inputOptional, [[maybe_unused]] const aclTensor* weightOptional,
-    const aclTensor* vocabParallelLogitsOptional, aclTensor* lossOut, aclTensor* softMaxOutOptional)
+    const aclTensor* inputOptional, const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional,
+    aclTensor* lossOut, aclTensor* softMaxOutOptional)
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针

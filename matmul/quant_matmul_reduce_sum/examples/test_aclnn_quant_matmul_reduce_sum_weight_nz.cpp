@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp
@@ -15,12 +15,9 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <unistd.h>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_permute.h"
 #include "aclnnop/aclnn_trans_matmul_weight.h"
-#include "aclnnop/aclnn_trans_quant_param_v2.h"
 #include "aclnnop/aclnn_quant_matmul_reduce_sum.h"
 
 #define CHECK_RET(cond, return_expr) \
@@ -54,7 +51,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 
 int Init(int32_t deviceId, aclrtStream* stream)
 {
-    // 固定写法，AscendCL初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -151,7 +148,7 @@ int aclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建昇腾亲和数据排布格式的x2 aclTensor
+    // 创建AI处理器亲和数据排布格式的x2 aclTensor
     std::vector<int64_t> x2Shape = {b, k, n};
     void* x2DeviceAddr = nullptr;
     aclTensor* x2 = nullptr;
@@ -237,7 +234,7 @@ int aclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+    // 1. （固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

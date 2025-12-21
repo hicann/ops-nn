@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_tiling.cpp
@@ -65,6 +65,13 @@ constexpr int32_t MOV_2 = 2;
 constexpr int32_t MOV_4 = 4;
 constexpr int32_t MOV_8 = 8;
 constexpr int32_t MOV_16 = 16;
+constexpr int32_t PERFORMANC_DIM_ZERO = 0;
+constexpr int32_t PERFORMANC_DIM_ONE = 1;
+constexpr int32_t PERFORMANC_DIM_TWO = 2;
+constexpr int32_t PERFORMANC_DIM_THREE = 3;
+constexpr int32_t PERFORMANC_DIM_ONE_MAX = 512;
+constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
+constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
 
 RMSNormTilingData tilingData;
 
@@ -338,13 +345,19 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     uint64_t colAlign = 0;
     uint32_t rstdSize{0};
     uint64_t blockFactor;
+    uint64_t latsBlockFactor{0};
     uint64_t ubFactor;
     uint64_t rowFactor;
+    uint64_t rowLoop{0};
+    uint64_t lastBlockRowLoop{0};
+    uint64_t rowTail{0};
+    uint64_t lastBlockRowTail{0};
     uint32_t modeKey = MODE_NORMAL;
     uint64_t ubLoop{0};
     uint64_t colBufferLength{0};
     uint32_t multiNNum = 0;
     uint32_t isNddma = 1;
+    uint8_t isPerformance = 0;
 
     ubSize = ubSize - UB_USED;
 
@@ -357,7 +370,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
 
     numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * dataPerBlock;
 
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+        curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
         SocVersion = SOC_FACTOR_910_95;
         rowFactor = FLOAT_PER_REAPEAT;
 
@@ -475,6 +489,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         blockFactor = CeilDiv(numRow, static_cast<uint64_t>(numCore));
         uint32_t useCoreNum = CeilDiv(numRow, blockFactor);
         context->SetBlockDim(useCoreNum);
+        latsBlockFactor = numRow - blockFactor * (useCoreNum - 1);
 
         RMSNormTilingInfo rmsNormTilingInfo;
         rmsNormTilingInfo.ubSize = ubSize;
@@ -485,6 +500,12 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         OP_TILING_CHECK(
             !res, OP_LOGE(context, "CalMixDtypeTiling run failed."), return ge::GRAPH_FAILED);
     } else {
+        bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) && gammaDimNum == PERFORMANC_DIM_ONE);
+        bool sizeOk = numCol <= PERFORMANC_DIM_THREE_MAX && ((xDimNum == PERFORMANC_DIM_TWO && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) || (xDimNum == PERFORMANC_DIM_THREE && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX && x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
+        bool dtypeOk = (xDtypeKey == DTYPE_KEY_FP16 || xDtypeKey == DTYPE_KEY_BF16) && !isMixDtype;
+        if(dimOK && sizeOk && dtypeOk && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) {
+          isPerformance = 1;
+        }
         ubFactor = (xDtypeKey == DTYPE_KEY_FP32) ? UB_FACTOR_B32 : UB_FACTOR_B16;
         blockFactor = 1ULL;
         uint64_t tileNum = CeilDiv(numRow, numCore * blockFactor);
@@ -492,6 +513,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         uint32_t useCoreNum = CeilDiv(numRow, blockFactor);
 
         context->SetBlockDim(useCoreNum);
+        latsBlockFactor = numRow - blockFactor * (useCoreNum - 1);
 
         rowFactor = FLOAT_PER_REAPEAT;
 
@@ -516,7 +538,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             }
         }
         if (modeKey == MODE_MERGE_N) {
-            uint64_t numColAlignWeight = (xDtypeKey == DTYPE_KEY_FP32) ? 16UL : 14UL;
+            tiling.set_normal_flag(PERFORMANC_DIM_ZERO);
+            uint64_t numColAlignWeight = 16UL;
             rowFactor = ubSize / (numColAlign * numColAlignWeight + 260UL);
             if (curSocVersion == platform_ascendc::SocVersion::ASCEND310P) {
                 rowFactor = rowFactor / FLOAT_BLOCK_ALIGN_NUM * FLOAT_BLOCK_ALIGN_NUM; // BroadCast need 32B Align
@@ -528,6 +551,17 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
         }
     }
+    rowLoop = CeilDiv(blockFactor, rowFactor);
+    lastBlockRowLoop = CeilDiv(latsBlockFactor, rowFactor);
+    rowTail = blockFactor - (rowLoop - 1) * rowFactor;
+    lastBlockRowTail = latsBlockFactor - (lastBlockRowLoop - 1) * rowFactor;
+
+    uint32_t mulLoop = numColAlign / 64;
+    uint32_t mulTail = numColAlign - mulLoop * 64;
+    uint8_t dstRepStride = numColAlign / 8;
+    tiling.set_mul_loop(mulLoop);
+    tiling.set_mul_tail(mulTail);
+    tiling.set_dst_rep_stride(dstRepStride);
 
     uint32_t tilingKey = (modeKey == 0U) ? static_cast<uint32_t>(colAlign) * ALIGN_WEIGHT + SocVersion * SOC_WEIGHT +
                                         static_cast<uint32_t>(modeKey) :
@@ -535,11 +569,13 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     if ((curSocVersion == platform_ascendc::SocVersion::ASCEND910) && (modeKey == 0)) {
         tilingKey = tilingKey + xDtypeKey * DTYPE_WEIGHT;
     }
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+        curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
         tilingKey = SocVersion * SOC_WEIGHT + modeKey;
     }
     context->SetTilingKey(tilingKey);
 
+    tiling.set_is_performance(isPerformance);
     tiling.set_num_row(numRow);
     tiling.set_num_col(numCol);
     tiling.set_num_col_align(numColAlign);
@@ -548,6 +584,12 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     tiling.set_last_reduce_mask(lastMask);
 
     tiling.set_block_factor(blockFactor);
+    tiling.set_last_block_factor(latsBlockFactor);
+    tiling.set_row_loop(rowLoop);
+    tiling.set_last_block_row_loop(lastBlockRowLoop);
+    tiling.set_row_tail(rowTail);
+    tiling.set_last_block_row_tail(lastBlockRowTail);
+
     tiling.set_row_factor(rowFactor);
     tiling.set_ub_factor(ubFactor);
     tiling.set_left_num(leftNum);

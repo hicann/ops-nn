@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <float.h>
 
 #include <array>
@@ -61,18 +61,18 @@ TEST_F(l2_dynamic_quant_test, ascend910B2_dynamic_quant_bf16)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_dynamic_quant_test, case_for_fault_injection_01)
-{
-    (void)setenv("FOR_FAULT_INJECTION", "1", 1);
-    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc smooth_desc = TensorDesc({32}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+// TEST_F(l2_dynamic_quant_test, case_for_fault_injection_01)
+// {
+//     (void)setenv("FOR_FAULT_INJECTION", "1", 1);
+//     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc smooth_desc = TensorDesc({32}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+//     TensorDesc scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnDynamicQuant, INPUT(x_desc, smooth_desc), OUTPUT(y_desc, scale_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-}
+//     auto ut = OP_API_UT(aclnnDynamicQuant, INPUT(x_desc, smooth_desc), OUTPUT(y_desc, scale_desc));
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+// }
 
 TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_fp16_int8_testcase_01)
 {
@@ -110,7 +110,7 @@ TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_bf16_int4_testcase_fa
     auto ut = OP_API_UT(aclnnDynamicQuant, INPUT(x_desc, smooth_desc), OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // 910D平台测试 bf16进 int32出

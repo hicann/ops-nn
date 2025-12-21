@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -20,6 +20,7 @@
 #include "lib/matmul_intf.h"
 #include "tool.h"
 #include "weight_quant_batch_matmul_v2_constant.h"
+#include "weight_quant_batch_matmul_v2_tiling_data.h"
 
 using AscendC::AIC;
 using AscendC::AIV;
@@ -90,21 +91,21 @@ static constexpr int32_t BLOCK_LEN_MAX = 65535;
 // 根据《Ascend C API参考》校验DataCopy参数范围
 __aicore__ inline void CheckDataCopyParams(uint32_t blockCount, uint32_t blockLen)
 {
-    ASCENDC_ASSERT(blockCount >= BLOCK_COUNT_MIN, { KERNEL_LOG(KERNEL_ERROR, "blockCount should >= 1"); });
-    ASCENDC_ASSERT(blockCount <= BLOCK_COUNT_MAX, { KERNEL_LOG(KERNEL_ERROR, "blockCount should <= 65535"); });
-    ASCENDC_ASSERT(blockLen >= BLOCK_LEN_MIN, { KERNEL_LOG(KERNEL_ERROR, "blockLen should >= 1"); });
-    ASCENDC_ASSERT(blockLen <= BLOCK_LEN_MAX, { KERNEL_LOG(KERNEL_ERROR, "blockLen should <= 65535"); });
+    ascendc_assert(blockCount >= BLOCK_COUNT_MIN, "blockCount should >= 1");
+    ascendc_assert(blockCount <= BLOCK_COUNT_MAX, "blockCount should <= 65535");
+    ascendc_assert(blockLen >= BLOCK_LEN_MIN, "blockLen should >= 1");
+    ascendc_assert(blockLen <= BLOCK_LEN_MAX, "blockLen should <= 65535");
 }
 __aicore__ inline void CheckDataCopyNd2nzParams(
     uint32_t nValue, uint32_t dValue, uint32_t srcDValue, uint32_t dstNzC0Stride)
 {
-    ASCENDC_ASSERT(nValue <= NVALUE_MAX, { KERNEL_LOG(KERNEL_ERROR, "nValue should <= 16384"); });
-    ASCENDC_ASSERT(dValue <= DVALUE_MAX, { KERNEL_LOG(KERNEL_ERROR, "dValue should <= 65535"); });
-    ASCENDC_ASSERT(srcDValue >= SRC_DVALUE_MIN, { KERNEL_LOG(KERNEL_ERROR, "srcDValue should >= 1 "); });
-    ASCENDC_ASSERT(srcDValue <= SRC_DVALUE_MAX, { KERNEL_LOG(KERNEL_ERROR, "srcDValue should <= 65535"); });
-    ASCENDC_ASSERT(dstNzC0Stride >= DST_NZ_C0_STRIDE_MIN, { KERNEL_LOG(KERNEL_ERROR, "dstNzC0Stride should >= 1"); });
-    ASCENDC_ASSERT(
-        dstNzC0Stride <= DST_NZ_C0_STRIDE_MAX, { KERNEL_LOG(KERNEL_ERROR, "dstNzC0Stride should <= 16384"); });
+    ascendc_assert(nValue <= NVALUE_MAX, "nValue should <= 16384");
+    ascendc_assert(dValue <= DVALUE_MAX, "dValue should <= 65535");
+    ascendc_assert(srcDValue >= SRC_DVALUE_MIN, "srcDValue should >= 1 ");
+    ascendc_assert(srcDValue <= SRC_DVALUE_MAX, "srcDValue should <= 65535");
+    ascendc_assert(dstNzC0Stride >= DST_NZ_C0_STRIDE_MIN, "dstNzC0Stride should >= 1");
+    ascendc_assert(
+        dstNzC0Stride <= DST_NZ_C0_STRIDE_MAX, "dstNzC0Stride should <= 16384");
 }
 
 __aicore__ inline void SetDataCopyNd2nzParams(

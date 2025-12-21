@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v4_msd_tiling.cpp
@@ -24,6 +24,7 @@
 #include "../../op_kernel/quant_batch_matmul_v4_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
+using Ops::NN::TilingPrepareForOpCache;
 namespace optiling {
 const std::vector<uint64_t> BASEN = {64, 128, 256, 512};    // baseN切分方案
 
@@ -234,15 +235,15 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::DoOpTiling()
     constexpr uint32_t EIGHT = 8;
     uint32_t singleN = 256;
     uint32_t singleM = 128;
-    tilingData_->set_coreNum(compileInfo_.aicNum);
-    tilingData_->set_groupSize(inputParams_.groupSize);
-    tilingData_->set_kSize(inputParams_.kSize);
-    tilingData_->set_nSize(inputParams_.nSize);
-    tilingData_->set_mSize(inputParams_.mSize);
-    tilingData_->set_ubCalSize(UBCALSIZE);
-    tilingData_->set_vBaseM(THIRTY_TWO);
-    tilingData_->set_ubRestBytes(UBRESTBYTES);
-    tilingData_->set_parallNum(cvParallNum);
+    tilingData_->coreNum = compileInfo_.aicNum;
+    tilingData_->groupSize = inputParams_.groupSize;
+    tilingData_->kSize = inputParams_.kSize;
+    tilingData_->nSize = inputParams_.nSize;
+    tilingData_->mSize = inputParams_.mSize;
+    tilingData_->ubCalSize = UBCALSIZE;
+    tilingData_->vBaseM = THIRTY_TWO;
+    tilingData_->ubRestBytes = UBRESTBYTES;
+    tilingData_->parallNum = cvParallNum;
     if(!SetMatmulTiling()) {
         return ge::GRAPH_FAILED;
     }
@@ -281,14 +282,14 @@ bool QuantBatchMatmulV4MsdTiling::SetMatmulTiling()
         return false;
     }
     constexpr uint32_t stepK = 2;    //l0a l0b上开pingpong
-    tilingData_->matmulTiling.set_dbL0C(1);
-    tilingData_->matmulTiling.set_stepKa(stepK);
-    tilingData_->matmulTiling.set_stepKb(stepK);
-    tilingData_->matmulTiling.set_depthA1(1);
-    tilingData_->matmulTiling.set_depthB1(1);
-    tilingData_->matmulTiling.set_stepM(1);
-    tilingData_->matmulTiling.set_stepN(1);
-    tilingData_->matmulTiling.set_baseK(baseK / stepK);   //l0a l0b上开pingpong
+    tilingData_->matmulTiling.dbL0C = 1;
+    tilingData_->matmulTiling.stepKa = stepK;
+    tilingData_->matmulTiling.stepKb = stepK;
+    tilingData_->matmulTiling.depthA1 = 1;
+    tilingData_->matmulTiling.depthB1 = 1;
+    tilingData_->matmulTiling.stepM = 1;
+    tilingData_->matmulTiling.stepN = 1;
+    tilingData_->matmulTiling.baseK = baseK / stepK;   //l0a l0b上开pingpong
     return true;
 }
 
@@ -301,10 +302,11 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::InstantiateTilingData()
                         return ge::GRAPH_FAILED);
         tilingData_ = tilingDataManager_.get();
     }
+    size_t tilingDataSize = sizeof(QuantBatchMatmulV4MsdTilingData);
     OP_TILING_CHECK(tilingData_ == nullptr,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,"tiling data capacity %zu < actual tiling data size %zu",
                                                    context_->GetRawTilingData()->GetCapacity(),
-                                                   tilingData_->GetDataSize()), return ge::GRAPH_SUCCESS;);
+                                                   tilingDataSize), return ge::GRAPH_SUCCESS;);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -364,10 +366,15 @@ const gert::Shape QuantBatchMatmulV4MsdTiling::GetOptionShape(const size_t index
 
 ge::graphStatus QuantBatchMatmulV4MsdTiling::DoLibApiTiling()
 {
+    size_t tilingDataSize = sizeof(QuantBatchMatmulV4MsdTilingData);
     context_->SetBlockDim(compileInfo_.aicNum);
     context_->SetScheduleMode(1);   // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(tilingData_), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -378,11 +385,11 @@ void QuantBatchMatmulV4MsdTiling::PrintTilingData() const
         return;
     }
     std::stringstream ss;
-    ss << " CoreNum: " << tilingData_->get_coreNum() << " vBaseM: " << tilingData_->get_vBaseM()
-       << " ubRestBytes: " << tilingData_->get_ubRestBytes() << " parallNum: " << tilingData_->get_parallNum()
-       << " ubCalSize: " << tilingData_->get_ubCalSize() << " mSize: " << tilingData_->get_mSize()
-       << " kSize: " << tilingData_->get_kSize() << " nSize: " << tilingData_->get_nSize()
-       << " groupSize: " << tilingData_->get_groupSize();
+    ss << " CoreNum: " << tilingData_->coreNum << " vBaseM: " << tilingData_->vBaseM
+       << " ubRestBytes: " << tilingData_->ubRestBytes << " parallNum: " << tilingData_->parallNum
+       << " ubCalSize: " << tilingData_->ubCalSize << " mSize: " << tilingData_->mSize
+       << " kSize: " << tilingData_->kSize << " nSize: " << tilingData_->nSize
+       << " groupSize: " << tilingData_->groupSize;
     OPS_LOG_D(inputParams_.opName, "api tiling: %s", ss.str().c_str());
     PrintMatmulTilingData();
 }
@@ -392,22 +399,22 @@ void QuantBatchMatmulV4MsdTiling::PrintMatmulTilingData() const
     if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
         return;
     }
-    optiling::TCubeTiling &matmulTiling = tilingData_->matmulTiling;
+    auto &matmulTiling = tilingData_->matmulTiling;
     std::stringstream ss;
-    ss << " usedCoreNum: " << matmulTiling.get_usedCoreNum() << " M: " << matmulTiling.get_M() << " N: " << matmulTiling.get_N()
-       << " Ka: " << matmulTiling.get_Ka() << " Kb: " << matmulTiling.get_Kb() << " singleCoreM: " << matmulTiling.get_singleCoreM()
-       << " singleCoreN: " << matmulTiling.get_singleCoreN() << " singleCoreK: " << matmulTiling.get_singleCoreK()
-       << " baseM: " << matmulTiling.get_baseM() << " baseN: " << matmulTiling.get_baseN() << " baseK: " << matmulTiling.get_baseK()
-       << " depthA1: " << matmulTiling.get_depthA1() << " depthB1: " << matmulTiling.get_depthB1()
-       << " stepM: " << matmulTiling.get_stepM() << " stepN: " << matmulTiling.get_stepN() << " stepka: " << matmulTiling.get_stepKa()
-       << " stepkb: " << matmulTiling.get_stepKb() << " isBias: " << matmulTiling.get_isBias()
-       << " transLength: " << matmulTiling.get_transLength() << " iterateOrder: " << matmulTiling.get_iterateOrder()
-       << " shareMode: " << matmulTiling.get_shareMode() << " dbL0A: " << matmulTiling.get_dbL0A()
-       << " dbL0B: " << matmulTiling.get_dbL0B() << " dbL0C: " << matmulTiling.get_dbL0C()
-       << " usedL1Size: " << matmulTiling.get_shareL1Size() << " usedL0CSize: " << matmulTiling.get_shareL0CSize()
-       << " usedUBSize: " << matmulTiling.get_shareUbSize() << " batchM: " << matmulTiling.get_batchM()
-       << " batchN: " << matmulTiling.get_batchN() << " singleBatchM: " << matmulTiling.get_singleBatchM()
-       << " singleBatchN: " << matmulTiling.get_singleBatchN();
+    ss << " usedCoreNum: " << matmulTiling.usedCoreNum << " M: " << matmulTiling.M << " N: " << matmulTiling.N
+       << " Ka: " << matmulTiling.Ka << " Kb: " << matmulTiling.Kb << " singleCoreM: " << matmulTiling.singleCoreM
+       << " singleCoreN: " << matmulTiling.singleCoreN << " singleCoreK: " << matmulTiling.singleCoreK
+       << " baseM: " << matmulTiling.baseM << " baseN: " << matmulTiling.baseN << " baseK: " << matmulTiling.baseK
+       << " depthA1: " << matmulTiling.depthA1 << " depthB1: " << matmulTiling.depthB1
+       << " stepM: " << matmulTiling.stepM << " stepN: " << matmulTiling.stepN << " stepka: " << matmulTiling.stepKa
+       << " stepkb: " << matmulTiling.stepKb << " isBias: " << matmulTiling.isBias
+       << " transLength: " << matmulTiling.transLength << " iterateOrder: " << matmulTiling.iterateOrder
+       << " shareMode: " << matmulTiling.shareMode << " dbL0A: " << matmulTiling.dbL0A
+       << " dbL0B: " << matmulTiling.dbL0B << " dbL0C: " << matmulTiling.dbL0C
+       << " usedL1Size: " << matmulTiling.shareL1Size << " usedL0CSize: " << matmulTiling.shareL0CSize
+       << " usedUBSize: " << matmulTiling.shareUbSize << " batchM: " << matmulTiling.batchM
+       << " batchN: " << matmulTiling.batchN << " singleBatchM: " << matmulTiling.singleBatchM
+       << " singleBatchN: " << matmulTiling.singleBatchN;
     OPS_LOG_D(inputParams_.opName, "matmulTiling: %s", ss.str().c_str());
 }
 

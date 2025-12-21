@@ -1,0 +1,1373 @@
+{
+    "op_type": "EmbeddingBag",
+    "op_list": [
+      {
+          "bin_filename": "EmbeddingBag_bf16_case1",
+          "inputs": [
+              {
+                  "name": "weight",
+                  "index": 0,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "indices",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offsets",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "per_sample_weights",
+                  "index": 3,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "outputs": [
+              {
+                  "name": "y",
+                  "index": 0,
+                  "dtype": "bfloat16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offset2bag",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "bag_size",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "max_indices",
+                  "index": 3,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "attrs": [
+              {
+                  "name": "mode",
+                  "dtype": "string",
+                  "value": "max"
+              },
+              {
+                  "name": "scale_grad_by_freq",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "sparse",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "include_last_offset",
+                  "dtype": "bool",
+                  "value": true
+              },
+              {
+                  "name": "padding_idx",
+                  "dtype": "int",
+                  "value": null
+              }
+          ]
+      },
+      {
+          "bin_filename": "EmbeddingBag_fp16_case1",
+          "inputs": [
+              {
+                  "name": "weight",
+                  "index": 0,
+                  "dtype": "float16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "indices",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offsets",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "per_sample_weights",
+                  "index": 3,
+                  "dtype": "float16",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "outputs": [
+              {
+                  "name": "y",
+                  "index": 0,
+                  "dtype": "float16",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offset2bag",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "bag_size",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "max_indices",
+                  "index": 3,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "attrs": [
+              {
+                  "name": "mode",
+                  "dtype": "string",
+                  "value": "max"
+              },
+              {
+                  "name": "scale_grad_by_freq",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "sparse",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "include_last_offset",
+                  "dtype": "bool",
+                  "value": true
+              },
+              {
+                  "name": "padding_idx",
+                  "dtype": "int",
+                  "value": null
+              }
+          ]
+      },
+      {
+          "bin_filename": "EmbeddingBag_fp32_case1",
+          "inputs": [
+              {
+                  "name": "weight",
+                  "index": 0,
+                  "dtype": "float32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "indices",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offsets",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "per_sample_weights",
+                  "index": 3,
+                  "dtype": "float32",
+                  "format": "ND",
+                  "paramType": "optional",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "outputs": [
+              {
+                  "name": "y",
+                  "index": 0,
+                  "dtype": "float32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "offset2bag",
+                  "index": 1,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "bag_size",
+                  "index": 2,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              },
+              {
+                  "name": "max_indices",
+                  "index": 3,
+                  "dtype": "int32",
+                  "format": "ND",
+                  "paramType": "required",
+                  "shape": [
+                      -2
+                  ]
+              }
+          ],
+          "attrs": [
+              {
+                  "name": "mode",
+                  "dtype": "string",
+                  "value": "max"
+              },
+              {
+                  "name": "scale_grad_by_freq",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "sparse",
+                  "dtype": "bool",
+                  "value": false
+              },
+              {
+                  "name": "include_last_offset",
+                  "dtype": "bool",
+                  "value": true
+              },
+              {
+                  "name": "padding_idx",
+                  "dtype": "int",
+                  "value": null
+              }
+          ]
+      },
+      {
+        "bin_filename": "EmbeddingBag_bf16_case2",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "EmbeddingBag_fp16_case2",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "EmbeddingBag_fp32_case2",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "EmbeddingBag_bf16_case3",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    },
+    {
+        "bin_filename": "EmbeddingBag_fp16_case3",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    },
+    {
+        "bin_filename": "EmbeddingBag_fp32_case3",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    },
+    {
+        "bin_filename": "EmbeddingBag_bf16_case4",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "bfloat16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    },
+    {
+        "bin_filename": "EmbeddingBag_fp16_case3",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    },
+    {
+        "bin_filename": "EmbeddingBag_fp32_case3",
+        "inputs": [
+            {
+                "name": "weight",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "indices",
+                "index": 1,
+                "dtype": "int32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offsets",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "per_sample_weights",
+                "index": 3,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "optional",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "offset2bag",
+                "index": 1,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "bag_size",
+                "index": 2,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            },
+            {
+                "name": "max_indices",
+                "index": 3,
+                "dtype": "int64",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                    -2
+                ]
+            }
+        ],
+        "attrs": [
+            {
+                "name": "mode",
+                "dtype": "string",
+                "value": "max"
+            },
+            {
+                "name": "scale_grad_by_freq",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "sparse",
+                "dtype": "bool",
+                "value": false
+            },
+            {
+                "name": "include_last_offset",
+                "dtype": "bool",
+                "value": true
+            },
+            {
+                "name": "padding_idx",
+                "dtype": "int",
+                "value": null
+            }
+        ]
+    }
+    ]
+  }

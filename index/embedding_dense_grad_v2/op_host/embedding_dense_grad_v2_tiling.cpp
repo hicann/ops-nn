@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file embedding_dense_grad_v2.cc
@@ -25,10 +25,12 @@ namespace optiling {
 constexpr uint64_t VEC_PROCESS_SIZE = 256;
 constexpr uint64_t SIZE_OF_FP32 = 4;
 constexpr uint64_t BLOCK_SIZE = 32;
+constexpr uint64_t BLOCK_SIZE_GRAD = 64;
 constexpr uint64_t RESERVED_UB_SIZE = 20480;
 constexpr uint64_t USE_IDX_NUM_IN_UB = 3;
 constexpr uint64_t USE_GRAD_NUM_IN_UB = 3;
-
+constexpr uint64_t USE_GRAD_NUM_IN_UB_WITH_CACHE = 4;
+constexpr uint64_t DOUBLE_PRE_CORE = 2;
 constexpr uint64_t SMALL_DIM_THRESHOLD = 512;
 constexpr uint64_t CAST_MAX_NUM = 16777216;
 constexpr uint64_t ALIGN_32_NUM_SPCAE = 300;
@@ -37,8 +39,7 @@ constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS = 0;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX = 1;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ = 2;
 
-class EmbeddingDenseGradV2Tiling
-{
+class EmbeddingDenseGradV2Tiling {
 public:
     explicit EmbeddingDenseGradV2Tiling(gert::TilingContext* context) : tilingContext_(context)
     {}
@@ -48,12 +49,14 @@ public:
 
 private:
     inline void SetTilingKeyMode() const;
+    inline void SetDtypeSize();
     inline void BaseTiling(const int64_t gradRow);
     inline void Tiling4Scale();
     inline void Tiling4Deterministic(const int64_t gradRow);
     inline void CalMaxFormerNum(uint64_t ubSizeLeft);
     inline void Tiling4SmallDim(const int64_t gradRow);
     inline bool CheckIsSmallDim(const uint64_t gradLastDim) const;
+    inline size_t CalcWorkSpaceSize();
 
     EmbeddingDenseGradV2TilingData tilingData_;
     gert::TilingContext* tilingContext_ = nullptr;
@@ -62,6 +65,7 @@ private:
     uint64_t embeddingDim_ = 0;
     uint64_t paddingIdx_ = 0;
     uint64_t ubSize_ = 0;
+    uint64_t dataTypeSize_ = 0;
     bool scaleGrad_ = false;
 
 private:
@@ -75,6 +79,10 @@ private:
     uint64_t tailComputeRepTime_ = 0;
     uint64_t tailComputeFormerNum_ = 0;
     uint64_t tailComputeTailNum_ = 0;
+    uint64_t scaleWorkspaceLength_ = 0;
+    uint64_t outStageWorkspaceLength_ = 0;
+    uint64_t outIndexWorkspaceLength_ = 0;
+    uint64_t outCastedWorkspaceLength_ = 0;
 
 private:
     // small dim
@@ -205,12 +213,37 @@ inline void EmbeddingDenseGradV2Tiling::Tiling4Deterministic(const int64_t gradR
 
 inline void EmbeddingDenseGradV2Tiling::CalMaxFormerNum(uint64_t ubSizeLeft)
 {
-    auto const gradDtype = tilingContext_->GetInputDesc(0)->GetDataType();
     uint64_t idxAlignNum = BLOCK_SIZE / sizeof(int);
-    uint64_t gradAlignNum = BLOCK_SIZE / sizeof(gradDtype);
+    uint64_t gradAlignNum = BLOCK_SIZE_GRAD / sizeof(float);
     ubSizeLeft -= RESERVED_UB_SIZE + idxAlignNum * sizeof(int) * USE_IDX_NUM_IN_UB;
     uint64_t availableUbForGrad = ubSizeLeft > 0UL ? ubSizeLeft : 0UL;
-    maxFormerNum = (availableUbForGrad / (gradAlignNum * sizeof(gradDtype) * USE_GRAD_NUM_IN_UB)) * gradAlignNum;
+    uint64_t useGradNum = dataTypeSize_ == sizeof(float) ? USE_GRAD_NUM_IN_UB : USE_GRAD_NUM_IN_UB_WITH_CACHE;
+    maxFormerNum = (availableUbForGrad / (gradAlignNum * sizeof(float) * useGradNum)) * gradAlignNum;
+}
+
+inline size_t EmbeddingDenseGradV2Tiling::CalcWorkSpaceSize()
+{
+    size_t alignNum = BLOCK_SIZE / sizeof(int32_t);
+    uint64_t gradAlignNum = BLOCK_SIZE / sizeof(float);
+    scaleWorkspaceLength_ = scaleGrad_ ? (((numWeights_ + alignNum - 1UL) / alignNum) * alignNum) : 0;
+    outStageWorkspaceLength_ = ((formerEmbeddingDim_ * coreNum_ * DOUBLE_PRE_CORE + gradAlignNum -1UL) / gradAlignNum) * gradAlignNum;
+    outIndexWorkspaceLength_ = coreNum_ * DOUBLE_PRE_CORE;
+    outCastedWorkspaceLength_ = numWeights_ * embeddingDim_;
+    size_t scaleWorkspaceSize = scaleWorkspaceLength_ * sizeof(int32_t);
+    size_t outStageWorkspaceSize = outStageWorkspaceLength_ * sizeof(float);
+    size_t outIndexWorkspaceSize = outIndexWorkspaceLength_ * sizeof(int32_t);
+    size_t outCastedWorkspaceSize = outCastedWorkspaceLength_ * sizeof(float);
+    size_t sysWorkspaceSize = 16UL * 1024UL * 1024UL;
+    size_t baseWorkspaceSize = sysWorkspaceSize + scaleWorkspaceSize;
+    if (dataTypeSize_ == sizeof(float)) {
+        return baseWorkspaceSize;
+    }else if(isDeterministMode_) {
+        return baseWorkspaceSize;
+    }else if(CheckIsSmallDim(embeddingDim_)) {
+        return baseWorkspaceSize + outCastedWorkspaceSize;
+    }else {
+        return baseWorkspaceSize + outStageWorkspaceSize + outIndexWorkspaceSize;
+    }
 }
 
 inline void EmbeddingDenseGradV2Tiling::Tiling4SmallDim(const int64_t gradRow)
@@ -227,6 +260,7 @@ inline void EmbeddingDenseGradV2Tiling::Tiling4SmallDim(const int64_t gradRow)
     uint64_t dataInBlock = BLOCK_SIZE / sizeof(float);
     uint64_t divNum = UB_SORT_PART + (embeddingDim_ + dataInBlock - 1) / dataInBlock * dataInBlock;
     maxRowInUb_ = ((ubSize_ - RESERVED_UB_SIZE) / SIZE_OF_FP32 - embeddingDim_ - VEC_PROCESS_SIZE) / divNum;
+    maxRowInUb_ = dataTypeSize_ == sizeof(float) ? maxRowInUb_ : maxRowInUb_ / 2;
     formerCopyTime_ = (formerCopyRow_ + maxRowInUb_ - 1UL) / maxRowInUb_;
     tailCopyTime_ = (tailCopyRow_ + maxRowInUb_ - 1UL) / maxRowInUb_;
     formerLastRow_ = formerCopyRow_ - maxRowInUb_ * (formerCopyTime_ - 1UL);
@@ -252,12 +286,6 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
     numWeights_ = *(attrs->GetAttrPointer<uint64_t>)(EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS);
     paddingIdx_ = *(attrs->GetAttrPointer<uint64_t>)(EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX);
     scaleGrad_ = *(attrs->GetAttrPointer<bool>)(EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ);
-    size_t alignNum = BLOCK_SIZE / sizeof(int64_t);
-    size_t scaleWorkspaceSize = ((numWeights_ + alignNum - 1UL) / alignNum) * alignNum * sizeof(int64_t);
-    size_t sysWorkspaceSize = 16UL * 1024UL * 1024UL;
-    sysWorkspaceSize = scaleGrad_ ? sysWorkspaceSize + scaleWorkspaceSize : sysWorkspaceSize;
-    size_t* currentWorkSpace = tilingContext_->GetWorkspaceSizes(1);
-    currentWorkSpace[0] = sysWorkspaceSize;
 
     coreNum_ = scaleGrad_ ? std::min(
                                 compileInfo->totalCoreNum,
@@ -268,7 +296,7 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
         OP_LOGE(tilingContext_, "coreNum %lu, embeddingDim %lu", coreNum_, embeddingDim_);
         return ge::GRAPH_FAILED;
     }
-
+    SetDtypeSize();
     CalMaxFormerNum(ubSize_);
     OP_CHECK_IF((maxFormerNum == 0), OP_LOGE(tilingContext_, "Do not have enough ub size."), return ge::GRAPH_FAILED);
     SetTilingKeyMode();
@@ -280,8 +308,29 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
     } else {
         BaseTiling(gradRow);
     }
+
+    size_t* currentWorkSpace = tilingContext_->GetWorkspaceSizes(1);
+    currentWorkSpace[0] = CalcWorkSpaceSize();
     OP_LOGD(tilingContext_, "Tiling inited");
     return ge::GRAPH_SUCCESS;
+}
+
+void EmbeddingDenseGradV2Tiling::SetDtypeSize()
+{
+    auto const gradDtype = tilingContext_->GetInputDesc(0)->GetDataType();
+    switch (gradDtype) {
+        case ge::DT_FLOAT:
+            dataTypeSize_ = 4; // 4 bytes for DT_FLOAT
+            break;
+        case ge::DT_FLOAT16:
+            dataTypeSize_ = 2; // 2 bytes for DT_FLOAT16
+            break;
+        case ge::DT_BF16:
+            dataTypeSize_ = 2; // 2 bytes for DT_BF16
+            break;
+        default:
+            break;
+    }
 }
 
 bool EmbeddingDenseGradV2Tiling::CheckIsSmallDim(const uint64_t gradLastDim) const
@@ -292,6 +341,7 @@ bool EmbeddingDenseGradV2Tiling::CheckIsSmallDim(const uint64_t gradLastDim) con
 ge::graphStatus EmbeddingDenseGradV2Tiling::SetKernelTiling()
 {
     tilingContext_->SetBlockDim(coreNum_);
+    tilingData_.params.set_coreNum(coreNum_);
     tilingData_.params.set_tailRowNum(tailRow_);
     tilingData_.params.set_formerRowNum(formerRow_);
     tilingData_.params.set_formerRowRepTime(formerRowRepTime_);
@@ -309,6 +359,10 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::SetKernelTiling()
     tilingData_.params.set_formerDimRepTime(formerDimRepTime_);
     tilingData_.params.set_formerEmbeddingDim(formerEmbeddingDim_);
     tilingData_.params.set_tailEmbeddingDim(tailEmbeddingDim_);
+    tilingData_.params.set_scaleWorkspaceLength(scaleWorkspaceLength_);
+    tilingData_.params.set_outStageWorkspaceLength(outStageWorkspaceLength_);
+    tilingData_.params.set_outIndexWorkspaceLength(outIndexWorkspaceLength_);
+    tilingData_.params.set_outCastedWorkspaceLength(outCastedWorkspaceLength_);
 
     tilingData_.scaleTiling.set_tailCoreRowNum(tailCoreRowNum_);
     tilingData_.scaleTiling.set_formerCoreRowNum(formerCoreRowNum_);
@@ -361,6 +415,10 @@ void EmbeddingDenseGradV2Tiling::TilingDataPrint() const
     OP_LOGD(tilingContext_, "tailRow:                 %lu", tailRow_);
     OP_LOGD(tilingContext_, "formerRow:               %lu", formerRow_);
     OP_LOGD(tilingContext_, "formerRowRepTime:        %lu", formerRowRepTime_);
+    OP_LOGD(tilingContext_, "scaleWorkspaceLength:    %lu", scaleWorkspaceLength_);
+    OP_LOGD(tilingContext_, "outStageWorkspaceLength: %lu", outStageWorkspaceLength_);
+    OP_LOGD(tilingContext_, "outIndexWorkspaceLength: %lu", outIndexWorkspaceLength_);
+    OP_LOGD(tilingContext_, "outCastedWorkspaceLength: %lu", outCastedWorkspaceLength_);
 
     OP_LOGD(tilingContext_, "formerDimRepTime:        %lu", formerDimRepTime_);
     OP_LOGD(tilingContext_, "formerEmbeddingDim:      %lu", formerEmbeddingDim_);
@@ -433,8 +491,7 @@ ge::graphStatus TilingEmbeddingDenseGradV2(gert::TilingContext* context)
 static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
 {
     const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND910_95
-    };
+        platform_ascendc::SocVersion::ASCEND910_95};
 
     return regbaseSocVersions.find(version) != regbaseSocVersions.end();
 }

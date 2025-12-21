@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_avgpool3d.h"
 
@@ -45,6 +45,10 @@ static const int64_t DIM4 = 4;
 static const int64_t KERNEL_SIZE = 3;
 static const int64_t PAD_SIZE = 3;
 static const int64_t STRIDE_SIZE = 3;
+static const int64_t BIG_KERNEL_SUM_LIMIT = 10240;
+static const int64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
+static const int64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
+static const int64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
 
 static bool CheckNotNullPtr(
     const aclTensor *self, const aclIntArray *kernel, const aclIntArray *stride, const aclIntArray *padding,
@@ -247,9 +251,49 @@ static bool IsDimDDownsamping(const aclIntArray *kernelSize, const aclIntArray *
     return kH == 1 && kW == 1 && sH == 1 && sW == 1;
 }
 
+static bool CheckGlobalPool(const aclIntArray *kernelSize, const aclIntArray *pad, const aclTensor *avgpoolIn)
+{
+    if ((*pad)[DIM0] != 0 || (*pad)[DIM1] != 0 || (*pad)[DIM2] != 0){
+        return false;
+    }
+    auto avgpoolInShape = avgpoolIn->GetViewShape();
+    if ((avgpoolInShape.GetDim(DIM2) == (*kernelSize)[DIM0]) && 
+        (avgpoolInShape.GetDim(DIM3) == (*kernelSize)[DIM1]) && 
+        (avgpoolInShape.GetDim(DIM4) == (*kernelSize)[DIM2])) {
+        return true;
+    }
+    return false;
+}
+
+static bool CheckBigKernel(const aclIntArray *kernelSize, const aclIntArray *pad, const aclTensor *avgpoolIn, const aclTensor *out)
+{
+    if (CheckGlobalPool(kernelSize, pad, avgpoolIn)){
+        return false;
+    }
+
+    int64_t sumK = (*kernelSize)[DIM0] * (*kernelSize)[DIM1] * (*kernelSize)[DIM2];
+    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT || 
+                        (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
+
+    auto avgpoolInShape = avgpoolIn->GetViewShape();
+    int64_t channel = avgpoolInShape.GetDim(DIM1);
+
+    auto avgpoolOutShape = out->GetViewShape();
+    auto outDimNum = avgpoolOutShape.GetDimNum();
+    int64_t oD = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM1) : avgpoolOutShape.GetDim(DIM2);
+    int64_t oH = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM2) : avgpoolOutShape.GetDim(DIM3);
+    int64_t oW = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM3) : avgpoolOutShape.GetDim(DIM4);
+    int64_t windowsCalc = oD * oH *  oW * sumK;
+    // 非全局平均池化下，kernel较大，C通道小于64，且达到一定计算数据量时走Big Kernel分支
+    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && channel < BIG_KERNEL_CHANNEL_LIMIT){
+        return true;
+    }
+    return false;
+}
+
 static bool IsEnableNCDHW(
     const aclIntArray *kernelSize, const int64_t divisorOverride, const aclIntArray *pad, const bool countIncludePad,
-    const bool ceilMode,const aclTensor *avgpoolIn)
+    const bool ceilMode,const aclTensor *avgpoolIn, const aclTensor *out)
 {
     const int64_t kD = (*kernelSize)[0];
     const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
@@ -265,7 +309,8 @@ static bool IsEnableNCDHW(
     auto avgpoolInShapeNC = avgpoolInShape.GetDim(0) * avgpoolInShape.GetDim(1);
     auto enableNC = (avgpoolInShapeNC > 256) && (avgpoolInShapeNC < 960);
     bool is910_95 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
-    return (isCapable && isSamePoolSize && enableNC) || is910_95;
+    bool isBigKernelFlag = CheckBigKernel(kernelSize, pad, avgpoolIn, out);
+    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || is910_95;
 }
 
 // 构建averagepool3d计算图, 通过Vector实现
@@ -296,7 +341,7 @@ static aclnnStatus BuildAvgPool3dGraph(
 
     bool is310pFlag = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
 
-    auto isEnableNCDHW = IsEnableNCDHW(kernelSize, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn);
+    auto isEnableNCDHW = IsEnableNCDHW(kernelSize, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn, out);
     if ((!isDimDDownsamping && !isEnableNCDHW) or is310pFlag) {
         dataFormat = "NDHWC";
         // Transpose N,C,D,H,W -> N,D,H,W,C

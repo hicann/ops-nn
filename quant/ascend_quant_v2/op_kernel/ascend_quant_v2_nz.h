@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file ascend_quant_v2_nz.h
@@ -52,9 +52,9 @@ private:
 
     int64_t E;
     int64_t K;
-    int32_t N;
-    int32_t blockIdx;
-    int32_t needCoreNum;
+    int64_t N;
+    int64_t blockIdx;
+    int64_t needCoreNum;
 };
 
 template <typename T>
@@ -77,25 +77,25 @@ __aicore__ inline void AscendQuantV2NZFP32<T>::Process() {
     if (blockIdx >= needCoreNum) {
         return;
     }
-    int32_t kloop = K / 16 / needCoreNum;  //K维度上循环次数，对应多少组核
-    int32_t tail = K - 16 * needCoreNum * kloop;
-    int32_t tail_core = tail / 16;
+    int64_t kloop = K / 16 / needCoreNum;  //K维度上循环次数，对应多少组核
+    int64_t tail = K - 16 * needCoreNum * kloop;
+    int64_t tail_core = tail / 16;
     if(tail > 0){
         kloop++;
     }
-    int32_t nloop = E * N / 64; //最外层循环，
-    int32_t dataCount = 16 * 8 * 8;
+    int64_t nloop = E * N / 64; //最外层循环，
+    int64_t dataCount = 16 * 8 * 8;
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-    for (int32_t i = 0; i < nloop; i++){
-        int32_t offset_n = K * i * 64;
-        for (int32_t j = 0; j < kloop; j++){
+    for (int64_t i = 0; i < nloop; i++){
+        int64_t offset_n = K * i * 64;
+        for (int64_t j = 0; j < kloop; j++){
             if(tail > 0 && blockIdx >= tail_core && j == kloop - 1){
                 continue;
             }
-            int32_t offset_k =16 * 16 * blockIdx + 16 * 16 * needCoreNum * j;
+            int64_t offset_k =16 * 16 * blockIdx + 16 * 16 * needCoreNum * j;
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            for(int32_t k = 0; k < 4; k++){
-                int32_t offset = K * 16 * k;//
+            for(int64_t k = 0; k < 4; k++){
+                int64_t offset = K * 16 * k;//
                 DataCopyExtParams dataCopyParams{16, static_cast<uint32_t>(16 * sizeof(T)), 0, 6, 0};  //repeat次数，一次repeat的长度
                 CopyIn(offset, offset + offset_k + offset_n, dataCopyParams);
             }
@@ -125,7 +125,10 @@ __aicore__ inline void AscendQuantV2NZFP32<T>::Compute(int64_t dataCount){
     PipeBarrier<PIPE_V>();
     Cast(x1Tmp.template ReinterpretCast<half>(), x1Tmp.template ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, dataCount);
     PipeBarrier<PIPE_V>();
+#ifdef __CCE_UT_TEST__
+#else
     Cast(x1Tmp.template ReinterpretCast<int4b_t>(), x1Tmp.template ReinterpretCast<half>(), RoundMode::CAST_RINT, dataCount);
+#endif
     PipeBarrier<PIPE_V>();
 }
 

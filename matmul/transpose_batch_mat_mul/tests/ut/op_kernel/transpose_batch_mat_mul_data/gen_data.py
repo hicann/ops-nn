@@ -20,7 +20,19 @@ def gen_matmul_v3_data(B, M, K, N):
     shape_b.tofile("shape_b.bin")
     shape_output.tofile("shape_output.bin")
 
+def gen_ppmatmul_data(B, M, K, N):
+    shape_a = np.random.uniform(-1 , 1, [int(M), int(B), int(K)]).astype(np.float16)
+    shape_b = np.random.uniform(-1 , 1, [int(B), int(N), int(K)]).astype(np.float16)
+    shape_output = np.random.uniform(-1 , 1, [int(M), int(B), int(N)]).astype(np.float16)
+
+    shape_a.tofile("shape_a.bin")
+    shape_b.tofile("shape_b.bin")
+    shape_output.tofile("shape_output.bin")
+
 if __name__ == "__main__":
     os.system("rm -rf *.bin")
-    B, M, K, N = [int(p) for p in sys.argv[1:]]
-    gen_matmul_v3_data(B, M, K, N)
+    B, M, K, N, Mode = [int(p) for p in sys.argv[1:]]
+    if Mode == 0:
+        gen_matmul_v3_data(B, M, K, N)
+    elif Mode == 1:
+        gen_ppmatmul_data(B, M, K, N)

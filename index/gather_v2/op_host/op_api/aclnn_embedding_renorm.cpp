@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_embedding_renorm.h"
 #include "level0/arange.h"
@@ -186,6 +186,10 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
   // 调用l0算子GatherV2进行计算，mid_input-> firstGatherV2
   auto firstGatherV2 = l0op::GatherV2(selfRefContiguous, GATHERV2_DEFAULT_AXIS, indicesReshape, uniqueExecutor.get());
   CHECK_RET(firstGatherV2 != nullptr, ACLNN_ERR_PARAM_NULLPTR);
+
+  if (std::isnan(maxNorm)) {
+      maxNorm = std::numeric_limits<float>::infinity();
+  }
 
   // 调用l0算子Renorm进行计算，mid_output-> embeddingRenormRenorm
   auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,

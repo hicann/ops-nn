@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -16,39 +16,14 @@
 #include "batch_matmul_v3_iterbatch_tiling.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
+#include "batch_matmul_v3_tiling_key.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchTiling, ASCEND910_95, ITER_BATCH);
-
-bool BatchMatMulV3IterBatchTiling::IsCapable()
-{
-    bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
-                           batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
-    if (isNotEqualBatch)  {
-        return false;
-    }
-    // get align m,k,n value
-    uint64_t alignMValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignKValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignNValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignBiasSize = 0;
-    if (args_.hasBias) {
-        alignBiasSize = alignNValue * GetSizeByDataType(args_.biasType);
-    }
-    inputSizeOneBatch_ = (alignMValue * alignKValue + alignKValue * alignNValue) * args_.aDtypeSize + alignBiasSize;
-    iterBatch_ = ops::FloorDiv(compileInfo_.l1Size, inputSizeOneBatch_);
-    if (iterBatch_ > 1UL) {
-        preCoreBatch_ = ops::CeilDiv(batchInfo_->batchC, compileInfo_.aicNum);
-        // if preCoreBatch_ < iterBatch, use preCoreBatch_ for batch
-        iterBatch_ = std::max(std::min(iterBatch_, preCoreBatch_), 1UL);
-    }
-    if (iterBatch_ <= 1UL) {
-        return false;
-    }
-    return true;
-}
+//supportMmadS8S4平台
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchTiling, RESERVED_VERSION, ITER_BATCH);
 
 ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
 {
@@ -89,15 +64,62 @@ ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
     runInfo_.bmmRunInfo.iterBatch = iterBatch_;
     runInfo_.bmmRunInfo.batchOutNum = batchOutNum_;
     iterBatchBiasModel_ = (args_.hasBias && (args_.batchInfo->batchBias == 1UL)) ?
-                          MatMulV3Model::ITER_BATCH_SINGLE_BIAS : MatMulV3Model::ITER_BATCH_BATCH_BIAS;
+                              MatMulV3BatchModel::SINGLE_BIAS_MODEL :
+                              MatMulV3BatchModel::MULTI_BATCH_MODEL;
     return ge::GRAPH_SUCCESS;
+}
+
+bool BatchMatMulV3IterBatchTiling::IsCapable()
+{
+    bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
+                           batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
+    if (isNotEqualBatch)  {
+        return false;
+    }
+    // get align m,k,n value
+    uint64_t alignMValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignKValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignNValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignBiasSize = 0;
+    if (args_.hasBias) {
+        alignBiasSize = alignNValue * GetSizeByDataType(args_.biasType);
+    }
+    inputSizeOneBatch_ = (alignMValue * alignKValue + alignKValue * alignNValue) * args_.aDtypeSize + alignBiasSize;
+    iterBatch_ = ops::FloorDiv(compileInfo_.l1Size, inputSizeOneBatch_);
+    if (iterBatch_ > 1UL) {
+        preCoreBatch_ = ops::CeilDiv(batchInfo_->batchC, compileInfo_.aicNum);
+        // if preCoreBatch_ < iterBatch, use preCoreBatch_ for batch
+        iterBatch_ = std::max(std::min(iterBatch_, preCoreBatch_), 1UL);
+    }
+    if (iterBatch_ <= 1UL) {
+        return false;
+    }
+
+    uint64_t iterBatchL0A = ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE, alignMValue * alignKValue * args_.aDtypeSize);
+    uint64_t iterBatchL0B = ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE, alignKValue * alignNValue * args_.aDtypeSize);
+    uint64_t iterBatchL0C = ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE, alignMValue * alignNValue * DATA_SIZE_FP32);
+    uint64_t iterBatchL1 = ops::FloorDiv(compileInfo_.l1Size / DB_SIZE, (alignMValue * alignKValue + alignKValue *
+                                         alignNValue) * args_.aDtypeSize);
+    constexpr static double defaultBalanceOfBatch = 0.8;
+    if (std::min({iterBatchL0A, iterBatchL0B, iterBatchL0C}) < 1UL) {
+        // if l0 can not load multi part of batch, calculate to avoid formulate unbalance issue.
+        double avgIterBatch = static_cast<double>(batchInfo_->batchC) / static_cast<double>(compileInfo_.aicNum);
+        double actualMaxIterBatch = static_cast<double>(ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1),
+                                    compileInfo_.aicNum) * iterBatchL1);
+        double formulateBalanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
+        if (formulateBalanceRateOfBatch < defaultBalanceOfBatch) {
+            OP_LOGI(args_.opName, "FormulteBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
+            return false;
+        }
+    }
+    return true;
 }
 
 uint64_t BatchMatMulV3IterBatchTiling::GetTilingKey() const
 {
-    return MatMulV3TilingKey()
+    return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(iterBatchBiasModel_)
+        .SetBatchModel(iterBatchBiasModel_)
         .GetTilingKey();
 }
 
@@ -105,5 +127,5 @@ uint64_t BatchMatMulV3IterBatchTiling::GetBlockDim() const
 {
     return compileInfo_.aicNum;
 }
-}
-}
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

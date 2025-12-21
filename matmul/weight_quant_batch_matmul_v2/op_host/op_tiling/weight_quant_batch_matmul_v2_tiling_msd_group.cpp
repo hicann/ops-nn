@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -32,18 +32,24 @@ const std::set<WhiteListShape> MSD_GROUP_WHITE_LIST = {
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::PostTiling()
 {
-    OP_LOGD(opName_, "final tiling data size: %zu", tilingData_->GetDataSize());
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2MsdGroupTilingData);
+    OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize);
 
     OP_TILING_CHECK(
-        tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingData_->GetDataSize()),
+        tilingDataSize % sizeof(uint64_t) != 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize),
         return ge::GRAPH_FAILED);
 
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
-    uint32_t usedAicNum = tilingData_->get_cubeBlockDimN() * tilingData_->get_cubeBlockDimK();
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    uint32_t usedAicNum = tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimK;
     uint32_t usedAivNum = std::max(static_cast<uint32_t>(matmulInfoPtr_->mSize), usedAicNum * 2);
     context_->SetBlockDim(CalcTschBlockDim(usedAivNum, compileInfoPtr_->aicNum, compileInfoPtr_->aivNum));
-
+    
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_.get(), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -137,11 +143,12 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::InstantiateTilingData()
     OP_TILING_CHECK(
         tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
         return ge::GRAPH_FAILED);
+    size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2MsdGroupTilingData);
     OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingData_->GetDataSize(),
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
         VECTOR_INNER_ERR_REPORT_TILIING(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingData_->GetDataSize()),
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -152,33 +159,32 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingMsdGroup::DoOpTiling()
         InstantiateTilingData() == ge::GRAPH_FAILED,
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
-    tilingData_->SetDataPtr(context_->GetRawTilingData()->GetData());
-    tilingData_->set_groupSize(matmulInfoPtr_->groupSize);
-    tilingData_->set_kSize(matmulInfoPtr_->kSize);
-    tilingData_->set_nSize(matmulInfoPtr_->nSize);
-    tilingData_->set_mSize(matmulInfoPtr_->mSize);
-    tilingData_->set_hasBias(matmulInfoPtr_->hasBias);
+    tilingData_->groupSize = matmulInfoPtr_->groupSize;
+    tilingData_->kSize = matmulInfoPtr_->kSize;
+    tilingData_->nSize = matmulInfoPtr_->nSize;
+    tilingData_->mSize = matmulInfoPtr_->mSize;
+    tilingData_->hasBias = matmulInfoPtr_->hasBias;
 
     // n方向，cube默认切分基本块为2048
-    tilingData_->set_cubeBlockDimN(
-        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_CUBE_BASE_BLOCK)));
+    tilingData_->cubeBlockDimN = 
+        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_CUBE_BASE_BLOCK));
     // n方向，vector默认切分基本块为1024
-    tilingData_->set_vecSingleCoreN(1024);
-    tilingData_->set_vecBlockDimN(
-        ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_VEC_BASE_BLOCK)), 2UL));
+    tilingData_->vecSingleCoreN = 1024;
+    tilingData_->vecBlockDimN = 
+        ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(MSD_GROUP_VEC_BASE_BLOCK)), 2UL);
 
-    tilingData_->set_singleCoreK(
+    tilingData_->singleCoreK = 
         ops::CeilAlign(
             ops::CeilDiv(
                 matmulInfoPtr_->kSize,
-                compileInfoPtr_->aicNum / static_cast<uint64_t>(tilingData_->get_cubeBlockDimN())),
-            matmulInfoPtr_->groupSize));
-    tilingData_->set_cubeBlockDimK(
-        ops::CeilDiv(matmulInfoPtr_->kSize, static_cast<uint64_t>(tilingData_->get_singleCoreK())));
-    tilingData_->set_singleCoreGroup(
-        ops::CeilDiv(static_cast<uint64_t>(tilingData_->get_singleCoreK()), matmulInfoPtr_->groupSize));
-    tilingData_->set_vec1SingleCoreM(
-        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(compileInfoPtr_->aivNum)));
+                compileInfoPtr_->aicNum / static_cast<uint64_t>(tilingData_->cubeBlockDimN)),
+            matmulInfoPtr_->groupSize);
+    tilingData_->cubeBlockDimK = 
+        ops::CeilDiv(matmulInfoPtr_->kSize, static_cast<uint64_t>(tilingData_->singleCoreK));
+    tilingData_->singleCoreGroup = 
+        ops::CeilDiv(static_cast<uint64_t>(tilingData_->singleCoreK), matmulInfoPtr_->groupSize);
+    tilingData_->vec1SingleCoreM = 
+        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(compileInfoPtr_->aivNum));
     OP_TILING_CHECK(
         !GetMatMulTiling(),
         VECTOR_INNER_ERR_REPORT_TILIING(
@@ -225,14 +231,14 @@ bool WeightQuantBatchMatmulV2TilingMsdGroup::GetMatMulTiling()
         mmTiling.GetTiling(tilingData_->matmulTiling) == -1,
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get matmul tiling"), return false);
 
-    tilingData_->matmulTiling.set_shareL1Size(0);
-    tilingData_->matmulTiling.set_dbL0C(
+    tilingData_->matmulTiling.shareL1Size = 0;
+    tilingData_->matmulTiling.dbL0C = 
         std::min(
             DOUBLE_BUFFER_FACTOR,
             ops::CeilDiv(
-                aicoreParams_.l0cSize, static_cast<uint64_t>(tilingData_->matmulTiling.get_shareL0CSize()) *
-                                           tilingData_->matmulTiling.get_stepM() *
-                                           tilingData_->matmulTiling.get_stepN())));
+                aicoreParams_.l0cSize, static_cast<uint64_t>(tilingData_->matmulTiling.shareL0CSize) *
+                                           tilingData_->matmulTiling.stepM *
+                                           tilingData_->matmulTiling.stepN));
     return true;
 }
 

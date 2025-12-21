@@ -1,0 +1,197 @@
+{
+    "op_type": "ClippedSwiglu",
+    "op_list": [
+      {
+        "bin_filename": "ClippedSwiglu_fp16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": 1.702
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": 7.0
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "ClippedSwiglu_fp32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": 1.702
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": 7.0
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "ClippedSwiglu_bf16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": 1.702
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": 7.0
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      }
+    ]
+}

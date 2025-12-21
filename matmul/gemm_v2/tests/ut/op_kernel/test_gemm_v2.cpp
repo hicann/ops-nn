@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -144,7 +144,7 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
 
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR alpha, GM_ADDR beta, GM_ADDR ref_c,
                         GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
-        ::gemm_v2<0, 0, 0, 1>(aGM, bGM, alpha, beta, ref_c, cGM, workspaceGM, tilingGM);
+        ::gemm_v2<0, 0, 0, 1, 0>(aGM, bGM, alpha, beta, ref_c, cGM, workspaceGM, tilingGM);
     };
     ICPU_RUN_KF(wrapper, 1, aGM, bGM, alphaGM, betaGM, ref_c, output, workspace, tiling);
     AscendC::GmFree((void*)workspace);
@@ -154,4 +154,3 @@ TEST_F(gemm_v2_test, gemm_v2_test_1) {
     AscendC::GmFree((void*)output);
     free(path_);
 }
-

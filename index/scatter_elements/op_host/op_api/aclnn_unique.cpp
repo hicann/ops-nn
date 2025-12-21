@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file aclnn_unique.cpp
  * \brief
@@ -14,7 +14,6 @@
 #include "aclnn_unique.h"
 #include "level0/unique_with_counts_and_sorting.h"
 #include "index/unique_consecutive/op_host/op_api/unique_consecutive.h"
-#include "level0/adjacent_difference.h"
 #include "level0/cumsum.h"
 #include "level0/sort.h"
 #include "index/scatter_elements_v2/op_host/op_api/scatter_elements.h"
@@ -51,7 +50,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut) {
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut) {
   if (SocVersion::ASCEND910_95 == GetCurrentPlatformInfo().GetSocVersion()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);
   } else {
@@ -64,7 +63,7 @@ static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut) {
   return true;
 }
 
-static bool CheckShapeValid(const aclTensor* self, bool returnInverse, aclTensor* inverseOut) {
+static bool CheckShapeValid(const aclTensor* self, bool returnInverse, const aclTensor* inverseOut) {
   // self的数据维度不能超过8
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
   // self与inverseOut的shape必须保持一致
@@ -102,54 +101,6 @@ bool SupportAicore4Unique(const aclTensor* self) {
     return true;
 }
 
-aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut, aclOpExecutor* executor) {
-    constexpr int64_t NONE_N = 1000;
-    constexpr bool RET_INV_UC = false;
-    constexpr bool RET_CNT_UC = false;
-
-    // sort
-    auto indicesType = inverseOut->GetDataType();
-    auto sortRes = l0op::Sort(selfContiguous, 0, false, true, indicesType, executor);
-
-    auto sortedValues = std::get<0>(sortRes);
-    OP_CHECK_NULL(sortedValues, return ACLNN_ERR_INNER_NULLPTR);
-    auto sortedIndices = std::get<1>(sortRes);
-    OP_CHECK_NULL(sortedIndices, return ACLNN_ERR_INNER_NULLPTR);
-
-    // uniqueCons for valueOut
-    Shape dummyShape{1};
-    aclTensor* dummyInverseOut = nullptr;
-    aclTensor* dummyCountsOut = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);
-    } else {
-        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
-    }
-    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, RET_INV_UC, RET_CNT_UC, NONE_N, valueOut, dummyInverseOut, dummyCountsOut, executor);
-    CHECK_RET(uniqueConsRet == ACLNN_SUCCESS, uniqueConsRet);
-
-    //AdjDiff for inverseOut
-    if (returnInverse) {
-        const aclTensor *dimTensor = nullptr;
-        int64_t firstDimOf1DTensor = 0;
-        dimTensor = executor->ConvertToTensor(&firstDimOf1DTensor, 1, DataType::DT_INT64);
-        auto adjDiff = l0op::AdjacentDifference(sortedValues, indicesType, executor);
-        auto sumIdx = l0op::Cumsum(adjDiff, dimTensor, executor);
-        auto inverseIdx = l0op::ScatterElements(sumIdx, sortedIndices, sumIdx, 0, "none", executor);
-        const aclTensor* viewCopyInverseIdx = nullptr;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-            viewCopyInverseIdx = l0op::ViewCopy(inverseIdx, inverseOut, executor);
-        } else {
-            auto inverseIdxInt64 = l0op::Cast(inverseIdx, DataType::DT_INT64, executor);
-            viewCopyInverseIdx = l0op::ViewCopy(inverseIdxInt64, inverseOut, executor);
-        }
-        CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-    return ACLNN_SUCCESS;
-}
-
 aclnnStatus aclnnUniqueGetWorkspaceSize(const aclTensor* self, bool sorted, bool returnInverse, aclTensor* valueOut,
                                          aclTensor* inverseOut, uint64_t* workspaceSize, aclOpExecutor** executor) {
   OP_CHECK_COMM_INPUT(workspaceSize, executor);
@@ -182,14 +133,9 @@ aclnnStatus aclnnUniqueGetWorkspaceSize(const aclTensor* self, bool sorted, bool
     inverseOut->SetOriginalShape(inverseViewShape);
   }
 
-  if (SupportAicore4Unique(selfContiguous)) {
-    auto opRet = ComputeUniqueViaAicore(selfContiguous, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  } else {
-    // 调用UniqueWithCountsAndSorting算子
-    auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  }
+  // 调用UniqueWithCountsAndSorting算子
+  auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
+  CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
   *workspaceSize = uniqueExecutor->GetWorkspaceSize();
   uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor
   return ACLNN_SUCCESS;

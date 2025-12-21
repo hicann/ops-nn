@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file aclnn_unique2.cpp
  * \brief
@@ -14,7 +14,6 @@
 #include "aclnn_unique2.h"
 #include "level0/unique_with_counts_and_sorting.h"
 #include "index/unique_consecutive/op_host/op_api/unique_consecutive.h"
-#include "level0/adjacent_difference.h"
 #include "level0/cumsum.h"
 #include "level0/sort.h"
 #include "index/scatter_elements_v2/op_host/op_api/scatter_elements.h"
@@ -52,7 +51,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut, aclTensor* countsOut) {
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut, const aclTensor* countsOut) {
   if (SocVersion::ASCEND910_95 == GetCurrentPlatformInfo().GetSocVersion()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);
   } else {
@@ -70,8 +69,8 @@ static bool CheckDtypeValid(const aclTensor* self, aclTensor* inverseOut, aclTen
   return true;
 }
 
-static bool CheckShapeValid(const aclTensor* self, bool returnInverse, bool returnCounts, aclTensor* valueOut,
-                            aclTensor* inverseOut, aclTensor* countsOut) {
+static bool CheckShapeValid(const aclTensor* self, bool returnInverse, bool returnCounts, const aclTensor* valueOut,
+                            const aclTensor* inverseOut, const aclTensor* countsOut) {
   // self的数据维度不能超过8
   OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
 
@@ -120,59 +119,6 @@ bool SupportAicore4Unique2(const aclTensor* self) {
     return true;
 }
 
-aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool returnInverse, bool returnCounts, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor) {
-    constexpr int64_t NONE_N = 1000;
-    constexpr bool RET_INV_UC = false;
-
-    // sort
-    auto indicesType = inverseOut->GetDataType();
-    auto sortRes = l0op::Sort(selfContiguous, 0, false, true, indicesType, executor);
-
-    auto sortedValues = std::get<0>(sortRes);
-    OP_CHECK_NULL(sortedValues, return ACLNN_ERR_INNER_NULLPTR);
-    auto sortedIndices = std::get<1>(sortRes);
-    OP_CHECK_NULL(sortedIndices, return ACLNN_ERR_INNER_NULLPTR);
-
-    // uniqueCons for valueOut
-    Shape dummyShape{1};
-    aclTensor* dummyInverseOut = nullptr;
-    aclTensor* dummyCountsOut = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(countsOut->GetStorageShape(), countsOut->GetDataType(), Format::FORMAT_ND);
-    } else {
-        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(countsOut->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
-    }
-    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, RET_INV_UC, returnCounts, NONE_N, valueOut, dummyInverseOut, dummyCountsOut, executor);
-    CHECK_RET(uniqueConsRet == ACLNN_SUCCESS, uniqueConsRet);
-
-    if (returnCounts) {
-        auto countsOutInt64 = l0op::Cast(dummyCountsOut, DataType::DT_INT64, executor);
-        auto viewCopyCnt = l0op::ViewCopy(countsOutInt64, countsOut, executor);
-        CHECK_RET(viewCopyCnt != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    //AdjDiff for inverseOut
-    if (returnInverse) {
-        const aclTensor *dimTensor = nullptr;
-        int64_t firstDimOf1DTensor = 0;
-        dimTensor = executor->ConvertToTensor(&firstDimOf1DTensor, 1, DataType::DT_INT64);
-        auto adjDiff = l0op::AdjacentDifference(sortedValues, indicesType, executor);
-        auto sumIdx = l0op::Cumsum(adjDiff, dimTensor, executor);
-        auto inverseIdx = l0op::ScatterElements(sumIdx, sortedIndices, sumIdx, 0, "none", executor);
-        [[maybe_unused]] const aclTensor* viewCopyInverseIdx = nullptr;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-            viewCopyInverseIdx = l0op::ViewCopy(inverseIdx, inverseOut, executor);
-        } else {
-            auto inverseIdxInt64 = l0op::Cast(inverseIdx, DataType::DT_INT64, executor);
-            viewCopyInverseIdx = l0op::ViewCopy(inverseIdxInt64, inverseOut, executor);
-        }
-    }
-    return ACLNN_SUCCESS;
-}
-
-
 aclnnStatus aclnnUnique2GetWorkspaceSize(const aclTensor* self, bool sorted, bool returnInverse, bool returnCounts,
                                          aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
                                          uint64_t* workspaceSize, aclOpExecutor** executor) {
@@ -207,15 +153,10 @@ aclnnStatus aclnnUnique2GetWorkspaceSize(const aclTensor* self, bool sorted, boo
     inverseOut->SetOriginalShape(inverseViewShape);
   }
 
-  if (SupportAicore4Unique2(selfContiguous)) {
-    auto opRet = ComputeUnique2ViaAicore(selfContiguous, returnInverse, returnCounts, valueOut, inverseOut, countsOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  } else {
-    // 调用UniqueWithCountsAndSorting算子
-    auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, returnCounts,
-        valueOut, inverseOut, countsOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  }
+  // 调用UniqueWithCountsAndSorting算子
+  auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, returnCounts,
+      valueOut, inverseOut, countsOut, uniqueExecutor.get());
+  CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
 
   *workspaceSize = uniqueExecutor->GetWorkspaceSize();
   uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor

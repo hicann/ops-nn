@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -14,7 +14,7 @@
 
 #include "../../../op_host/op_api/aclnn_matmul.h"
 #include "op_api/op_api_def.h"
-
+#include "opdev/platform.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -701,6 +701,19 @@ TEST_F(l2_matmul_test, cubeMathType_2_fp32_fp32)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_matmul_test, cubeMathType_4_fp32_fp32)
+{
+    auto tensor_1_desc = TensorDesc({256, 2048}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({2048, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({256, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 4;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 // TEST_F(l2_matmul_test, cubeMathType_3_fp32_fp32)
 // {
 //     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -713,3 +726,72 @@ TEST_F(l2_matmul_test, cubeMathType_2_fp32_fp32)
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
+
+TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_invalid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({5,3,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+}
+
+TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_valid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SetCubeCoreNum(32U);
+    auto tensor_1_desc = TensorDesc({5,2,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene1)
+{   
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SetCubeCoreNum(32U);
+    auto tensor_1_desc = TensorDesc({512, 150, 150}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // 原始shape排布k b n 转换后 b k n
+    auto tensor_2_desc =
+        TensorDesc({512, 150, 32}, ACL_BF16, ACL_FORMAT_ND, {32, 16384, 1}, 0, {2457600}).ValueRange(0, 2);
+    auto out_tensor_desc =
+        TensorDesc({512, 150, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.0001, 0.0001);
+
+    int8_t math_type = 1;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false =
+        OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene2)
+{   
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SetCubeCoreNum(32U);
+    auto tensor_1_desc = TensorDesc({512, 150, 150}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // 原始shape排布n b k [32 512 150] 转换后 b k n [512 150 32]
+    auto tensor_2_desc =
+        TensorDesc({512, 150, 32}, ACL_BF16, ACL_FORMAT_ND, {150, 1, 76800}, 0, {2457600}).ValueRange(0, 2);
+    auto out_tensor_desc =
+        TensorDesc({512, 150, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2).Precision(0.0001, 0.0001);
+
+    int8_t math_type = 1;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false =
+        OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

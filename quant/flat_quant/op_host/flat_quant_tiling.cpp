@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file flat_quant_tiling.cpp
@@ -146,7 +146,7 @@ void FlatQuantTiling::GetKernelMode(int64_t aivNum)
         workspaces[0] = useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * Mceil * N * BYTE_LEN_4) + WORK_SPACE_SIZE;
     } else if (mmMode == MM_DOUBLE_MODE) {
         K += (K % FACTOR_TWO);
-        workspaces[0] = (K * Mceil * N + FACTOR_TWO * Mceil * FACTOR_TWO * Mceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+        workspaces[0] = (K * Mceil * N + Mceil * Mceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
     } else {
         workspaces[0] = (K * Mceil * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
     }

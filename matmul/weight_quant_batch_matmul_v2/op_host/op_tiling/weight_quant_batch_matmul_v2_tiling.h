@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,6 +18,7 @@
 #include "weight_quant_batch_matmul_v2_tiling_tool.h"
 #include "weight_quant_batch_matmul_v2_tiling_key.h"
 #include "tiling_base/tiling_base.h"
+#include "../../op_kernel/weight_quant_batch_matmul_v2_tiling_data.h"
 
 using Ops::NN::Optiling::TilingBaseClass;
 
@@ -57,6 +58,17 @@ enum class KernelTemplateTypeExtra
     HIGH_PRECISION = 2,
 };
 
+// 对应6-9位TilingKey v100上nFirst模板自定义组合方式
+enum class Mte2Configuration : uint32_t {
+    MTE2_INNER_SIZE_512_BUF_NUM_2 = 0,
+    MTE2_INNER_SIZE_512_BUF_NUM_4 = 1,
+    MTE2_INNER_SIZE_1024_BUF_NUM_2 = 2,
+    MTE2_INNER_SIZE_256_BUF_NUM_4 = 3,
+    MTE2_INNER_SIZE_512_BUF_NUM_DEFAULT = 4,  // w8 w4在非性能场景下复用一组设置
+    MTE2_INNER_SIZE_256_BUF_NUM_2 = 5,
+    MTE2_INNER_SIZE_1024_BUF_NUM_4 = 6,
+};
+
 struct WeightQuantBatchMatmulInfo {
     bool transA = false;
     bool transB = false;
@@ -92,6 +104,9 @@ struct WeightQuantBatchMatmulInfo {
     uint64_t batchY2 = 1L;
     uint64_t batchY3 = 1L;
     bool biasWithBatch = false;
+    uint64_t batchX = 1L;
+    uint64_t batchWeight = 1L;
+    uint64_t batchY = 1L;
 };
 
 struct WeightQuantBatchMatmulV2CompileInfo {
@@ -104,6 +119,7 @@ struct WeightQuantBatchMatmulV2CompileInfo {
     uint32_t aivNum;
     uint32_t aicNum;
     platform_ascendc::SocVersion socVersion;
+    bool supportMmadS8S4;
 };
 
 class WeightQuantBatchMatmulV2Tiling : public TilingBaseClass
@@ -161,7 +177,7 @@ bool CheckAntiQuantDtype(
 
 bool CheckQuantDtype(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams);
 
-bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams);
+bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion);
 
 bool CheckBiasShape(WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* biasShape);
 
@@ -169,7 +185,8 @@ bool CheckQuantShape(
     WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* quantScaleShape,
     const gert::StorageShape* quantOffsetShape);
 
-bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams);
+bool CheckShape(
+    gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion);
 
 bool CheckAntiQuantShape(
     WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* antiQuantScaleShape,

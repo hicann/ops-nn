@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -94,6 +94,7 @@ bool BatchMatmulV3BaseTiling::GetBatchInfo()
     size_t aDims = aShape.GetDimNum();
     size_t bDims = bShape.GetDimNum();
     size_t cDims = cShape.GetDimNum();
+    
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ) {
         aDims = context_->GetInputShape(0)->GetStorageShape().GetDimNum() - ND_NZ_DIM_DIFF;
     }
@@ -223,15 +224,15 @@ void BatchMatmulV3BaseTiling::CheckandSetDiagonalConflict(uint64_t mCnt, uint64_
     if (transConflict >= rowConflict) {
         return;
     }
-    bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(static_cast<uint32_t>(cBatchDimAll_ * ops::CeilDiv(mCnt, newMcnt)));
-    bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileBlock(newMcnt);
-    bmmTilingData_.matmulTiling.tileL2cacheTiling.set_nTileBlock(nCnt);
-    bmmTilingData_.matmulTiling.tileL2cacheTiling.set_calOrder(0);
+    bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileCntL2 = static_cast<uint32_t>(cBatchDimAll_ * ops::CeilDiv(mCnt, newMcnt));
+    bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileBlock = newMcnt;
+    bmmTilingData_.matmulTiling.tileL2cacheTiling.nTileBlock = nCnt;
+    bmmTilingData_.matmulTiling.tileL2cacheTiling.calOrder = 0;
 }
 
 void BatchMatmulV3BaseTiling::DoL2CacheAndCalOrderTiling()
 {
-    uint64_t usedCoreNum = bmmTilingData_.matmulTiling.matmulTiling.get_usedCoreNum();
+    uint64_t usedCoreNum = bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum;
     args_.l2Ratio = 1.0 * compileInfo_.l2Size / L2_SIZE_2;
     bool isL2Tile = (runInfo_.l2Info.mTile > 1 || runInfo_.l2Info.nTile > 1);
     bool isBigSize = false;
@@ -242,9 +243,9 @@ void BatchMatmulV3BaseTiling::DoL2CacheAndCalOrderTiling()
         isBigSize = totalSize > args_.l2Ratio * 100 * MB_SIZE; // 100 为 MMV3 L2cache暂定值
     }
     uint64_t mCnt = ops::CeilDiv(args_.mValue,
-        static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_singleCoreM()));
+        static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.singleCoreM));
     uint64_t nCnt = ops::CeilDiv(args_.nValue,
-        static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_singleCoreN()));
+        static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.singleCoreN));
     uint64_t transConflict = std::max(ops::CeilDiv(usedCoreNum, mCnt), ops::CeilDiv(usedCoreNum, nCnt));
     uint64_t tmpCnt = mCnt;
     if ((nCnt < usedCoreNum) && (mCnt > usedCoreNum)) {
@@ -272,51 +273,51 @@ void BatchMatmulV3BaseTiling::DoL2CacheAndCalOrderTiling()
         );
     if (!isFullLoad) {
         if (isL2Tile) {
-            bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(
-                static_cast<uint32_t>(runInfo_.l2Info.mTile * cBatchDimAll_));
+            bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileCntL2 =
+                static_cast<uint32_t>(runInfo_.l2Info.mTile * cBatchDimAll_);
             if (isBigSize) {
-                bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(static_cast<uint32_t>(cBatchDimAll_ * ops::CeilDiv(mCnt, newMcnt)));
-                bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileBlock(newMcnt);
-                bmmTilingData_.matmulTiling.tileL2cacheTiling.set_nTileBlock(nCnt);
+                bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileCntL2 = static_cast<uint32_t>(cBatchDimAll_ * ops::CeilDiv(mCnt, newMcnt));
+                bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileBlock = newMcnt;
+                bmmTilingData_.matmulTiling.tileL2cacheTiling.nTileBlock = nCnt;
             }
         } else {
             CheckandSetDiagonalConflict(mCnt, nCnt, cBatchDimAll_, usedCoreNum, transConflict, newMcnt);
         }
     } else {
-        bmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(1);
-        bmmTilingData_.matmulTiling.tileL2cacheTiling.set_nTileCntL2(1);
+        bmmTilingData_.matmulTiling.tileL2cacheTiling.mTileCntL2 = 1;
+        bmmTilingData_.matmulTiling.tileL2cacheTiling.nTileCntL2 = 1;
     }
 }
 
 ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
 {
     auto ret = MatmulV3BaseTiling::DoLibApiTiling();
-    bmmTilingData_.multiBatchInfo.set_batchUsedCoreNum(bmmTilingData_.matmulTiling.matmulTiling.get_usedCoreNum());
-    bmmTilingData_.multiBatchInfo.set_aBatchDim3(static_cast<uint32_t>(batchInfo_.batchA3));
-    bmmTilingData_.multiBatchInfo.set_aBatchDim2(static_cast<uint32_t>(batchInfo_.batchA2));
-    bmmTilingData_.multiBatchInfo.set_aBatchDim1(static_cast<uint32_t>(batchInfo_.batchA1));
-    bmmTilingData_.multiBatchInfo.set_aBatchDim0(static_cast<uint32_t>(batchInfo_.batchA0));
-    bmmTilingData_.multiBatchInfo.set_bBatchDim3(static_cast<uint32_t>(batchInfo_.batchB3));
-    bmmTilingData_.multiBatchInfo.set_bBatchDim2(static_cast<uint32_t>(batchInfo_.batchB2));
-    bmmTilingData_.multiBatchInfo.set_bBatchDim1(static_cast<uint32_t>(batchInfo_.batchB1));
-    bmmTilingData_.multiBatchInfo.set_bBatchDim0(static_cast<uint32_t>(batchInfo_.batchB0));
-    bmmTilingData_.multiBatchInfo.set_cBatchDim3(static_cast<uint32_t>(batchInfo_.batchC3));
-    bmmTilingData_.multiBatchInfo.set_cBatchDim2(static_cast<uint32_t>(batchInfo_.batchC2));
-    bmmTilingData_.multiBatchInfo.set_cBatchDim1(static_cast<uint32_t>(batchInfo_.batchC1));
-    bmmTilingData_.multiBatchInfo.set_cBatchDim0(static_cast<uint32_t>(batchInfo_.batchC0));
+    bmmTilingData_.multiBatchInfo.batchUsedCoreNum = bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum;
+    bmmTilingData_.multiBatchInfo.aBatchDim3 = static_cast<uint32_t>(batchInfo_.batchA3);
+    bmmTilingData_.multiBatchInfo.aBatchDim2 = static_cast<uint32_t>(batchInfo_.batchA2);
+    bmmTilingData_.multiBatchInfo.aBatchDim1 = static_cast<uint32_t>(batchInfo_.batchA1);
+    bmmTilingData_.multiBatchInfo.aBatchDim0 = static_cast<uint32_t>(batchInfo_.batchA0);
+    bmmTilingData_.multiBatchInfo.bBatchDim3 = static_cast<uint32_t>(batchInfo_.batchB3);
+    bmmTilingData_.multiBatchInfo.bBatchDim2 = static_cast<uint32_t>(batchInfo_.batchB2);
+    bmmTilingData_.multiBatchInfo.bBatchDim1 = static_cast<uint32_t>(batchInfo_.batchB1);
+    bmmTilingData_.multiBatchInfo.bBatchDim0 = static_cast<uint32_t>(batchInfo_.batchB0);
+    bmmTilingData_.multiBatchInfo.cBatchDim3 = static_cast<uint32_t>(batchInfo_.batchC3);
+    bmmTilingData_.multiBatchInfo.cBatchDim2 = static_cast<uint32_t>(batchInfo_.batchC2);
+    bmmTilingData_.multiBatchInfo.cBatchDim1 = static_cast<uint32_t>(batchInfo_.batchC1);
+    bmmTilingData_.multiBatchInfo.cBatchDim0 = static_cast<uint32_t>(batchInfo_.batchC0);
 
     aBatchDimAll_ = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3;
     bBatchDimAll_ = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3;
     cBatchDimAll_ = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3;
-    bmmTilingData_.multiBatchInfo.set_aBatchDimAll(static_cast<uint32_t>(aBatchDimAll_));
-    bmmTilingData_.multiBatchInfo.set_bBatchDimAll(static_cast<uint32_t>(bBatchDimAll_));
-    bmmTilingData_.multiBatchInfo.set_cBatchDimAll(static_cast<uint32_t>(cBatchDimAll_));
-    bmmTilingData_.multiBatchInfo.set_batchTileBlock(static_cast<uint32_t>(cBatchDimAll_));
+    bmmTilingData_.multiBatchInfo.aBatchDimAll = static_cast<uint32_t>(aBatchDimAll_);
+    bmmTilingData_.multiBatchInfo.bBatchDimAll = static_cast<uint32_t>(bBatchDimAll_);
+    bmmTilingData_.multiBatchInfo.cBatchDimAll = static_cast<uint32_t>(cBatchDimAll_);
+    bmmTilingData_.multiBatchInfo.batchTileBlock = static_cast<uint32_t>(cBatchDimAll_);
     if (CheckBMMTilingDataIsVaild()) {
         return ge::GRAPH_FAILED;
     }
-    bmmTilingData_.multiBatchInfo.set_biasWithBatch(static_cast<uint32_t>(batchInfo_.biasWithBatch));
-    bmmTilingData_.multiBatchInfo.set_mOri(static_cast<uint32_t>(args_.mOriValue));
+    bmmTilingData_.multiBatchInfo.biasWithBatch = static_cast<uint32_t>(batchInfo_.biasWithBatch);
+    bmmTilingData_.multiBatchInfo.mOri = static_cast<uint32_t>(args_.mOriValue);
 
     uint64_t innerSizeA = args_.isATrans ? args_.mValue : args_.kValue;
     uint64_t innerSizeB = args_.isBTrans ? args_.kValue : args_.nValue;
@@ -471,18 +472,18 @@ void BatchMatmulV3BaseTiling::DoCommonTiling()
         stepKb = stepKb / stepKa * stepKa;
         depthB1 = stepKb * NUM_TWO;
     }
-    bmmTilingData_.matmulTiling.matmulTiling.set_depthA1(depthA1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_depthB1(depthB1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepKa(stepKa);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepKb(stepKb);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepM(1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepN(1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreM(std::min(args_.mValue, baseM));
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreN(std::min(args_.nValue, baseN));
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreK(args_.kValue);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseM(baseM);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseN(baseN);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseK(baseK);
+    bmmTilingData_.matmulTiling.matmulTiling.depthA1 = depthA1;
+    bmmTilingData_.matmulTiling.matmulTiling.depthB1 = depthB1;
+    bmmTilingData_.matmulTiling.matmulTiling.stepKa = stepKa;
+    bmmTilingData_.matmulTiling.matmulTiling.stepKb = stepKb;
+    bmmTilingData_.matmulTiling.matmulTiling.stepM = 1;
+    bmmTilingData_.matmulTiling.matmulTiling.stepN = 1;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreM = std::min(args_.mValue, baseM);
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreN = std::min(args_.nValue, baseN);
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreK = args_.kValue;
+    bmmTilingData_.matmulTiling.matmulTiling.baseM = baseM;
+    bmmTilingData_.matmulTiling.matmulTiling.baseN = baseN;
+    bmmTilingData_.matmulTiling.matmulTiling.baseK = baseK;
 
     tilingEnable_.tilingEnableMultiBatchL1FullLoad = TilingEnableMultiBatchL1FullLoad::IS_FALSE;
     tilingEnable_.tilingEnableMultiBatch = TilingEnableMultiBatch::IS_FALSE;
@@ -498,10 +499,10 @@ void BatchMatmulV3BaseTiling::DoUnAlignCommonTiling()
     tilingEnable_.tilingEnableLoadMode = TilingEnableLoadMode::BASE;
     tilingEnable_.tilingEnableMultiBatchOut = TilingEnableMultiBatchOut::IS_FALSE;
     tilingEnable_.tilingEnableMixNd2Nz = TilingEnableMixNd2Nz::IS_TRUE;
-    uint64_t baseM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_baseM());
-    uint64_t baseN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_baseN());
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreM(std::min(args_.mValue, baseM));
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreN(std::min(args_.nValue, baseN));
+    uint64_t baseM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.baseM);
+    uint64_t baseN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.baseN);
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreM = std::min(args_.mValue, baseM);
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreN = std::min(args_.nValue, baseN);
 }
 
 void BatchMatmulV3BaseTiling::DoMultiBatchTilingImpl()
@@ -542,25 +543,25 @@ void BatchMatmulV3BaseTiling::DoMultiBatchTilingImpl()
     uint64_t validBaseK = (32768UL / aDtypeSize_ / mnMax / BLOCK_CUBE) * BLOCK_CUBE; // L0AB大小限制BaseK <= 32768
     baseK = std::min(validBaseK, baseK);
 
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseM(baseM);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseN(baseN);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseK(baseK);
+    bmmTilingData_.matmulTiling.matmulTiling.baseM = baseM;
+    bmmTilingData_.matmulTiling.matmulTiling.baseN = baseN;
+    bmmTilingData_.matmulTiling.matmulTiling.baseK = baseK;
 }
 
 bool BatchMatmulV3BaseTiling::DoMultiBatchOutTiling()
 {
-    uint64_t singleCoreN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_singleCoreN());
-    uint64_t singleCoreM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_singleCoreM());
-    uint64_t baseN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_baseN());
-    uint64_t baseM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_baseM());
-    uint64_t dbL0C = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_dbL0C());
+    uint64_t singleCoreN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.singleCoreN);
+    uint64_t singleCoreM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.singleCoreM);
+    uint64_t baseN = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.baseN);
+    uint64_t baseM = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.baseM);
+    uint64_t dbL0C = static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.dbL0C);
     uint64_t batchOutCnt = compileInfo_.l0CSize / (baseN * baseM * dbL0C * 4);
     bool isNBatchOut = batchOutCnt > 1UL && batchInfo_.batchC > 1000UL;
 
     // 多batch输出要求batch内无循环
     isNBatchOut = isNBatchOut && singleCoreM <= baseM && singleCoreN <= baseN;
-    uint64_t n = bmmTilingData_.matmulTiling.matmulTiling.get_N();
-    uint64_t m = bmmTilingData_.matmulTiling.matmulTiling.get_M();
+    uint64_t n = bmmTilingData_.matmulTiling.matmulTiling.N;
+    uint64_t m = bmmTilingData_.matmulTiling.matmulTiling.M;
     // 多batch输出适用于双边小矩阵场景，但限制mn不同时为1
     isNBatchOut = isNBatchOut && !(n == 1UL && m == 1UL);
     if (isNBatchOut) {
@@ -576,11 +577,11 @@ void BatchMatmulV3BaseTiling::DoMultiBatchTiling()
     if (!isEqualBatch || (args_.hasBias && !batchInfo_.biasWithBatch)) {  //不支持broadcast\非多batch bias
         return;
     }
-    uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_M()),
+    uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.M),
                                      BLOCK_CUBE);
-    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_N()),
+    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.N),
                                      BLOCK_CUBE);
-    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_Ka()),
+    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.Ka),
                                      BLOCK_CUBE);
     uint64_t biasSize = 0;
     if (args_.hasBias) {
@@ -598,20 +599,20 @@ void BatchMatmulV3BaseTiling::DoMultiBatchTiling()
     }
     iterBatch = ops::FloorAlign(iterBatch, 2UL);
     uint64_t useCoreNum = std::min(ops::CeilDiv(batchInfo_.batchC, iterBatch), compileInfo_.aicNum);
-    bmmTilingData_.multiBatchInfo.set_batchUsedCoreNum(useCoreNum);
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreM(bmmTilingData_.matmulTiling.matmulTiling.get_M());
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreN(bmmTilingData_.matmulTiling.matmulTiling.get_N());
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreK(bmmTilingData_.matmulTiling.matmulTiling.get_Ka());
-    bmmTilingData_.matmulTiling.matmulTiling.set_BatchNum(static_cast<uint32_t>(iterBatch));
-    bmmTilingData_.multiBatchInfo.set_iterBatch(static_cast<uint32_t>(iterBatch));
+    bmmTilingData_.multiBatchInfo.batchUsedCoreNum = useCoreNum;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreM = bmmTilingData_.matmulTiling.matmulTiling.M;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreN = bmmTilingData_.matmulTiling.matmulTiling.N;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreK = bmmTilingData_.matmulTiling.matmulTiling.Ka;
+    bmmTilingData_.matmulTiling.matmulTiling.BatchNum = static_cast<uint32_t>(iterBatch);
+    bmmTilingData_.multiBatchInfo.iterBatch = static_cast<uint32_t>(iterBatch);
     //multiBatch需要
-    bmmTilingData_.matmulTiling.matmulTiling.set_usedCoreNum(useCoreNum);
+    bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum = useCoreNum;
 
     // 更新nd2nz的条件
     UpdateMultiBatchNd2nz();
 
-    bmmTilingData_.matmulTiling.matmulRunInfo.set_nd2nzA(static_cast<uint32_t>(args_.nd2nzA));
-    bmmTilingData_.matmulTiling.matmulRunInfo.set_nd2nzB(static_cast<uint32_t>(args_.nd2nzB));
+    bmmTilingData_.matmulTiling.matmulRunInfo.nd2nzA = static_cast<uint32_t>(args_.nd2nzA);
+    bmmTilingData_.matmulTiling.matmulRunInfo.nd2nzB = static_cast<uint32_t>(args_.nd2nzB);
     DoMultiBatchTilingImpl();
 
     // 多batch输出
@@ -667,21 +668,21 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTilingImpl()
         totalL1Size -= reserveSize * 4; // 1024: 256 * 4, biasTable 空间
         baseN = std::min(reserveSize, baseN); // 带bias， baseN最大值为256
     }
-    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_N()),
+    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.N),
                                      BLOCK_CUBE);
-    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_Ka()),
+    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.Ka),
                                      BLOCK_CUBE);
     // BL1 batch=1
-    uint64_t depthB1 = (shapeN * shapeK * bmmTilingData_.multiBatchInfo.get_bBatch() / (baseN * baseK) / 4) * 4;
+    uint64_t depthB1 = (shapeN * shapeK * bmmTilingData_.multiBatchInfo.bBatch / (baseN * baseK) / 4) * 4;
     depthB1 = std::max(NUM_TWO, depthB1);
     uint64_t stepKb = depthB1 / NUM_TWO;
 
-    bmmTilingData_.matmulTiling.matmulTiling.set_depthB1(depthB1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepKb(stepKb);
-    bmmTilingData_.matmulTiling.matmulTiling.set_stepN(1);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseM(baseM);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseN(baseN);
-    bmmTilingData_.matmulTiling.matmulTiling.set_baseK(baseK);
+    bmmTilingData_.matmulTiling.matmulTiling.depthB1 = depthB1;
+    bmmTilingData_.matmulTiling.matmulTiling.stepKb = stepKb;
+    bmmTilingData_.matmulTiling.matmulTiling.stepN = 1;
+    bmmTilingData_.matmulTiling.matmulTiling.baseM = baseM;
+    bmmTilingData_.matmulTiling.matmulTiling.baseN = baseN;
+    bmmTilingData_.matmulTiling.matmulTiling.baseK = baseK;
 }
 
 void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
@@ -691,11 +692,11 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
     if (!isEqualBatch || args_.hasBias) {  // 暂时不支持bias
         return;
     }
-    uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_M()),
+    uint64_t shapeM = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.M),
                                      BLOCK_CUBE);
-    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_N()),
+    uint64_t shapeN = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.N),
                                      BLOCK_CUBE);
-    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.get_Ka()),
+    uint64_t shapeK = ops::CeilAlign(static_cast<uint64_t>(bmmTilingData_.matmulTiling.matmulTiling.Ka),
                                      BLOCK_CUBE);
     uint64_t biasSize = 0;
     if (args_.hasBias) {
@@ -712,29 +713,29 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
     if (aBatch < 2UL) { // if aBatch < 2, no need use AL1 full load
         return;
     }
-    bmmTilingData_.multiBatchInfo.set_aBatch(static_cast<uint32_t>(aBatch));
-    bmmTilingData_.multiBatchInfo.set_bBatch(static_cast<uint32_t>(bBatch));
+    bmmTilingData_.multiBatchInfo.aBatch = static_cast<uint32_t>(aBatch);
+    bmmTilingData_.multiBatchInfo.bBatch = static_cast<uint32_t>(bBatch);
     uint64_t useCoreNum = std::min(ops::CeilDiv(batchInfo_.batchC, aBatch), compileInfo_.aicNum);
-    bmmTilingData_.multiBatchInfo.set_batchUsedCoreNum(useCoreNum);
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreM(bmmTilingData_.matmulTiling.matmulTiling.get_M());
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreN(bmmTilingData_.matmulTiling.matmulTiling.get_N());
-    bmmTilingData_.matmulTiling.matmulTiling.set_singleCoreK(bmmTilingData_.matmulTiling.matmulTiling.get_Ka());
+    bmmTilingData_.multiBatchInfo.batchUsedCoreNum = useCoreNum;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreM = bmmTilingData_.matmulTiling.matmulTiling.M;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreN = bmmTilingData_.matmulTiling.matmulTiling.N;
+    bmmTilingData_.matmulTiling.matmulTiling.singleCoreK = bmmTilingData_.matmulTiling.matmulTiling.Ka;
     //multiBatch需要
-    bmmTilingData_.matmulTiling.matmulTiling.set_usedCoreNum(useCoreNum);
-    bmmTilingData_.matmulTiling.matmulTiling.set_BatchNum(static_cast<uint32_t>(bBatch));
+    bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum = useCoreNum;
+    bmmTilingData_.matmulTiling.matmulTiling.BatchNum = static_cast<uint32_t>(bBatch);
     // baseM、baseN、baseK
     DoMultiBatchL1FullLoadTilingImpl();
     if (!args_.isATrans && args_.isBTrans) {
         // case ((1500,1,128),(1500,512,128)) tiling调整
-        bmmTilingData_.matmulTiling.matmulTiling.set_depthA1(16); // 设置depthA1为16
-        bmmTilingData_.matmulTiling.matmulTiling.set_depthB1(8); // 设置depthB1为8
-        bmmTilingData_.matmulTiling.matmulTiling.set_stepKa(8); // 设置stepKa为8
-        bmmTilingData_.matmulTiling.matmulTiling.set_stepKb(4); // 设置stepKb为4
-        bmmTilingData_.matmulTiling.matmulTiling.set_stepM(1); // 设置stepM为1
-        bmmTilingData_.matmulTiling.matmulTiling.set_stepN(1); // 设置stepN为1
-        bmmTilingData_.matmulTiling.matmulTiling.set_baseM(16); // 设置baseM为16
-        bmmTilingData_.matmulTiling.matmulTiling.set_baseN(64); // 设置baseN为64
-        bmmTilingData_.matmulTiling.matmulTiling.set_baseK(128); // 设置baseK为128
+        bmmTilingData_.matmulTiling.matmulTiling.depthA1 = 16; // 设置depthA1为16
+        bmmTilingData_.matmulTiling.matmulTiling.depthB1 = 8; // 设置depthB1为8
+        bmmTilingData_.matmulTiling.matmulTiling.stepKa = 8; // 设置stepKa为8
+        bmmTilingData_.matmulTiling.matmulTiling.stepKb = 4; // 设置stepKb为4
+        bmmTilingData_.matmulTiling.matmulTiling.stepM = 1; // 设置stepM为1
+        bmmTilingData_.matmulTiling.matmulTiling.stepN = 1; // 设置stepN为1
+        bmmTilingData_.matmulTiling.matmulTiling.baseM = 16; // 设置baseM为16
+        bmmTilingData_.matmulTiling.matmulTiling.baseN = 64; // 设置baseN为64
+        bmmTilingData_.matmulTiling.matmulTiling.baseK = 128; // 设置baseK为128
     }
     tilingEnable_.tilingEnableMultiBatchL1FullLoad = TilingEnableMultiBatchL1FullLoad::IS_TRUE;
     tilingEnable_.tilingEnableMultiBatch = TilingEnableMultiBatch::IS_FALSE;
@@ -784,8 +785,8 @@ void BatchMatmulV3BaseTiling::CalculateNd2nzWorkspaceSize() {
     //workspace超L2切分batch轴,单个batch取四分之一L2
     if (workspaceSize_ > compileInfo_.l2Size && alignedSize != 0) {
         uint64_t batchTileBlock = compileInfo_.l2Size / 4 / alignedSize;
-        if (batchTileBlock > bmmTilingData_.multiBatchInfo.get_iterBatch()) {
-            bmmTilingData_.multiBatchInfo.set_batchTileBlock(batchTileBlock);
+        if (batchTileBlock > bmmTilingData_.multiBatchInfo.iterBatch) {
+            bmmTilingData_.multiBatchInfo.batchTileBlock = batchTileBlock;
             workspaceSize_ = batchTileBlock * alignedSize * DOUBLE_BUFFER;
         }
     }
@@ -841,24 +842,24 @@ static void TuneDownBaseBlock(bool isTensorA, const matmul_v3::MatmulV3Args &arg
 }
 
 static void AL1FullLoadTiling(const matmul_v3::MatmulV3Args &args, uint64_t l1Size, uint64_t l0CSize,
-                              TCubeTiling &tilingData)
+                              AscendC::tiling::TCubeTiling &tilingData)
 {
-    uint64_t baseK = static_cast<uint64_t>(tilingData.get_baseK());
-    uint64_t baseM = static_cast<uint64_t>(tilingData.get_baseM());
+    uint64_t baseK = static_cast<uint64_t>(tilingData.baseK);
+    uint64_t baseM = static_cast<uint64_t>(tilingData.baseM);
     TuneDownBaseBlock(true, args, l1Size, baseM, baseK);
     const uint64_t stepM = ops::CeilDiv(args.mValue, baseM);
     const uint64_t stepKa = ops::CeilDiv(args.kValue, baseK);
     const uint64_t aSize = stepKa * stepM * baseK * baseM * ge::GetSizeByDataType(args.aType);
-    tilingData.set_baseM(baseM);
-    tilingData.set_baseK(baseK);
-    tilingData.set_stepKa(stepKa);
-    tilingData.set_stepM(stepM);
-    tilingData.set_depthA1(stepKa * stepM);
-    tilingData.set_singleCoreM(args.mValue);
+    tilingData.baseM = baseM;
+    tilingData.baseK = baseK;
+    tilingData.stepKa = stepKa;
+    tilingData.stepM = stepM;
+    tilingData.depthA1 = stepKa * stepM;
+    tilingData.singleCoreM = args.mValue;
 
-    uint64_t baseN = static_cast<uint64_t>(tilingData.get_baseN());
-    uint64_t stepN = static_cast<uint64_t>(tilingData.get_stepN());
-    uint64_t stepKb = static_cast<uint64_t>(tilingData.get_stepKb());
+    uint64_t baseN = static_cast<uint64_t>(tilingData.baseN);
+    uint64_t stepN = static_cast<uint64_t>(tilingData.stepN);
+    uint64_t stepKb = static_cast<uint64_t>(tilingData.stepKb);
     const uint64_t bSizePerStepN = stepKb * baseK * baseN * ge::GetSizeByDataType(args.bType) * NUM_TWO;
     const uint64_t biasSizePerStepN = args.hasBias ? baseN * ge::GetSizeByDataType(args.biasType) * NUM_TWO : 0UL;
     uint64_t loadSize = aSize + (bSizePerStepN + biasSizePerStepN) * stepN;
@@ -872,34 +873,34 @@ static void AL1FullLoadTiling(const matmul_v3::MatmulV3Args &args, uint64_t l1Si
     const uint64_t bSizePerBaseN = (bSizePerStepKb + biasSizePerStepN) / baseN;
     TuneDownParam(l1Size, loadSize, baseN, bSizePerBaseN, BLOCK_CUBE);
     // Last stage: update tiling data
-    tilingData.set_stepN(stepN);
-    tilingData.set_stepKb(stepKb);
-    tilingData.set_baseN(baseN);
-    tilingData.set_depthB1(stepKb * stepN * NUM_TWO);
+    tilingData.stepN = stepN;
+    tilingData.stepKb = stepKb;
+    tilingData.baseN = baseN;
+    tilingData.depthB1 = stepKb * stepN * NUM_TWO;
     const uint64_t singleCoreN = (stepKb * baseK < args.kValue) ? stepN * baseN : stepN * baseN * NUM_TWO;
-    tilingData.set_singleCoreN(std::min(singleCoreN, args.nValue));
-    tilingData.set_dbL0C((baseM * baseN * 4 * NUM_TWO > l0CSize) ? 1 : NUM_TWO);    // 4 is data size within l0c
+    tilingData.singleCoreN = std::min(singleCoreN, args.nValue);
+    tilingData.dbL0C = (baseM * baseN * 4 * NUM_TWO > l0CSize) ? 1 : NUM_TWO;    // 4 is data size within l0c
 }
 
 static void BL1FullLoadTiling(const matmul_v3::MatmulV3Args &args, uint64_t l1Size, uint64_t l0CSize,
-                              TCubeTiling &tilingData)
+                              AscendC::tiling::TCubeTiling &tilingData)
 {
-    uint64_t baseK = static_cast<uint64_t>(tilingData.get_baseK());
-    uint64_t baseN = static_cast<uint64_t>(tilingData.get_baseN());
+    uint64_t baseK = static_cast<uint64_t>(tilingData.baseK);
+    uint64_t baseN = static_cast<uint64_t>(tilingData.baseN);
     TuneDownBaseBlock(false, args, l1Size, baseN, baseK);
     const uint64_t stepN = ops::CeilDiv(args.nValue, baseN);
     const uint64_t stepKb = ops::CeilDiv(args.kValue, baseK);
     const uint64_t bSize = stepKb * stepN * baseK * baseN * ge::GetSizeByDataType(args.bType);
-    tilingData.set_baseN(baseN);
-    tilingData.set_baseK(baseK);
-    tilingData.set_stepKb(stepKb);
-    tilingData.set_stepN(stepN);
-    tilingData.set_depthB1(stepKb * stepN);
-    tilingData.set_singleCoreN(args.nValue);
+    tilingData.baseN = baseN;
+    tilingData.baseK = baseK;
+    tilingData.stepKb = stepKb;
+    tilingData.stepN = stepN;
+    tilingData.depthB1 = stepKb * stepN;
+    tilingData.singleCoreN = args.nValue;
 
-    uint64_t baseM = static_cast<uint64_t>(tilingData.get_baseM());
-    uint64_t stepM = static_cast<uint64_t>(tilingData.get_stepM());
-    uint64_t stepKa = static_cast<uint64_t>(tilingData.get_stepKa());
+    uint64_t baseM = static_cast<uint64_t>(tilingData.baseM);
+    uint64_t stepM = static_cast<uint64_t>(tilingData.stepM);
+    uint64_t stepKa = static_cast<uint64_t>(tilingData.stepKa);
     const uint64_t biasSize = args.hasBias ? baseN * stepN * ge::GetSizeByDataType(args.biasType) * NUM_TWO : 0UL;
     const uint64_t aSizePerStepM = stepKa * baseK * baseM * ge::GetSizeByDataType(args.aType) * NUM_TWO;
     uint64_t loadSize = bSize + biasSize + aSizePerStepM * stepM;
@@ -913,23 +914,23 @@ static void BL1FullLoadTiling(const matmul_v3::MatmulV3Args &args, uint64_t l1Si
     const uint64_t aSizePerBaseM = aSizePerStepKa / baseM;
     TuneDownParam(l1Size, loadSize, baseM, aSizePerBaseM, BLOCK_CUBE);
     // Last stage: update tiling data
-    tilingData.set_stepM(stepM);
-    tilingData.set_stepKa(stepKa);
-    tilingData.set_baseM(baseM);
-    tilingData.set_depthA1(stepKa * stepM * NUM_TWO);
+    tilingData.stepM = stepM;
+    tilingData.stepKa = stepKa;
+    tilingData.baseM = baseM;
+    tilingData.depthA1 = stepKa * stepM * NUM_TWO;
     const uint64_t singleCoreM = (stepKa * baseK < args.kValue) ? stepM * baseM : stepM * baseM * NUM_TWO;
-    tilingData.set_singleCoreM(std::min(singleCoreM, args.mValue));
-    tilingData.set_dbL0C((baseM * baseN * 4 * NUM_TWO > l0CSize) ? 1 : NUM_TWO);    // 4 is data size within l0c
+    tilingData.singleCoreM = std::min(singleCoreM, args.mValue);
+    tilingData.dbL0C = (baseM * baseN * 4 * NUM_TWO > l0CSize) ? 1 : NUM_TWO;    // 4 is data size within l0c
 }
 
 static void UpdateUsedCoreNum(uint64_t batchC, uint64_t aicNum, BatchMatmulTilingData &tilingData)
 {
-    TCubeTiling &matmulTiling = tilingData.matmulTiling.matmulTiling;
-    uint64_t mWideNum = static_cast<uint64_t>(ops::CeilDiv(matmulTiling.get_M(), matmulTiling.get_singleCoreM()));
-    uint64_t nWideNum = static_cast<uint64_t>(ops::CeilDiv(matmulTiling.get_N(), matmulTiling.get_singleCoreN()));
+    auto &matmulTiling = tilingData.matmulTiling.matmulTiling;
+    uint64_t mWideNum = static_cast<uint64_t>(ops::CeilDiv(matmulTiling.M, matmulTiling.singleCoreM));
+    uint64_t nWideNum = static_cast<uint64_t>(ops::CeilDiv(matmulTiling.N, matmulTiling.singleCoreN));
     uint64_t usedCoreNum = std::min(batchC * mWideNum * nWideNum, aicNum);
-    matmulTiling.set_usedCoreNum(usedCoreNum);
-    tilingData.multiBatchInfo.set_batchUsedCoreNum(usedCoreNum);
+    matmulTiling.usedCoreNum = usedCoreNum;
+    tilingData.multiBatchInfo.batchUsedCoreNum = usedCoreNum;
 }
 
 void BatchMatmulV3BaseTiling::DoL1FullLoadTiling()
@@ -995,12 +996,16 @@ void BatchMatmulV3BaseTiling::DoL1FullLoadTiling()
 
 ge::graphStatus BatchMatmulV3BaseTiling::PostTiling()
 {
-    OP_TILING_CHECK(tilingData_.GetDataSize() % sizeof(uint64_t) != 0,
-                    OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingData_.GetDataSize()),
+    size_t tilingDataSize = sizeof(BatchMatmulTilingData);
+    OP_TILING_CHECK(tilingDataSize % sizeof(uint64_t) != 0,
+                    OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingDataSize),
                     return ge::GRAPH_FAILED);
-    bmmTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
-        context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(bmmTilingData_.GetDataSize());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(&bmmTilingData_), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     context_->SetBlockDim(compileInfo_.aicNum);
     if ((tilingEnable_.tilingEnableMultiBatchL1FullLoad == TilingEnableMultiBatchL1FullLoad::IS_FALSE) &&
         (tilingEnable_.tilingEnableMultiBatch == TilingEnableMultiBatch::IS_TRUE) &&

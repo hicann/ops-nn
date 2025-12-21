@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -17,11 +17,38 @@
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "batch_matmul_v3_common_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
+#include "batch_matmul_v3_tiling_key.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, ASCEND910_95, BL1_FULL_LOAD_BASIC);
+
+ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
+{
+    MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
+    MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
+    MatMulV3AswFullLoadTiling::DoBL1FullLoad(isBl1MulCoreLoad_, args_.batchInfo->batchA, args_.batchInfo->batchBias);
+
+    // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
+    uint64_t c0Size = BLOCK_BYTE_SIZE / args_.aDtypeSize;
+    uint64_t alignKbValue = args_.isBTrans ? ops::CeilAlign(args_.kValue, c0Size) :
+                                             ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignNValue = args_.isBTrans ? ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16) :
+                                            ops::CeilAlign(args_.nValue, c0Size);
+    uint64_t bL1TensorSize = alignKbValue * alignNValue * args_.bDtypeSize;
+
+    uint64_t aL1TensorSize = runInfo_.baseM * runInfo_.baseK * runInfo_.stepKa * args_.aDtypeSize;
+    uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
+    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
+    runInfo_.stepN = ops::CeilAlign(args_.nValue, runInfo_.baseN);
+    if (aL1TensorSize * NUM_FOUR + bL1TensorSize <= compileInfo_.l1Size) {
+        runInfo_.l1BufferNum = NUM_FOUR;
+    } else {
+        runInfo_.l1BufferNum = NUM_TWO;
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
 {
@@ -57,40 +84,14 @@ bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
     return true;
 }
 
-ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
-{
-    MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
-    MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
-    MatMulV3AswFullLoadTiling::DoBL1FullLoad(isBl1MulCoreLoad_, args_.batchInfo->batchA, args_.batchInfo->batchBias);
-
-    // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
-    uint64_t c0Size = BLOCK_BYTE_SIZE / args_.aDtypeSize;
-    uint64_t alignKbValue = args_.isBTrans ? ops::CeilAlign(args_.kValue, c0Size) :
-                                             ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignNValue = args_.isBTrans ? ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16) :
-                                            ops::CeilAlign(args_.nValue, c0Size);
-    uint64_t bL1TensorSize = alignKbValue * alignNValue * args_.bDtypeSize;
-
-    uint64_t aL1TensorSize = runInfo_.baseM * runInfo_.baseK * runInfo_.stepKa * args_.aDtypeSize;
-    uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
-    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
-    runInfo_.stepN = ops::CeilAlign(args_.nValue, runInfo_.baseN);
-    if (aL1TensorSize * NUM_FOUR + bL1TensorSize <= compileInfo_.l1Size) {
-        runInfo_.l1BufferNum = NUM_FOUR;
-    } else {
-        runInfo_.l1BufferNum = NUM_TWO;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 uint64_t BatchMatMulV3AswBL1FullLoadBasicTiling::GetTilingKey() const
 {
-    return MatMulV3TilingKey()
+    return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(aswtModel_)
         .SetFullLoad(MatMulV3FullLoad::B_FULL_LOAD)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }
-}
-}
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

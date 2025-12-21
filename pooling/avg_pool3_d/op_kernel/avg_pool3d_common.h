@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file avg_pool3_d_common.h
@@ -40,6 +40,10 @@ __aicore__ inline int64_t Min(int64_t a, int64_t b) {
 
 __aicore__ inline int64_t CeilDiv(uint64_t a, uint64_t b) {
     return b == 0 ? a : (a + b -1) / b;
+}
+
+__aicore__ inline int64_t CeilValue(int64_t a, int64_t b) {
+    return b == 0 ? a : (a + b - 1) / b * b;
 }
 
 struct PoolShape {
@@ -261,6 +265,13 @@ __aicore__ inline void VToMTE3Sync() {
     event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
+}
+
+__aicore__ inline void MTE3ToMTE2Sync()
+{
+    event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
 }
 
 } // namespace AvgPool3d

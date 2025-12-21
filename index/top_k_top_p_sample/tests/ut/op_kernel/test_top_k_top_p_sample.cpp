@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -195,7 +195,7 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
     size_t topPsSize = 8 * sizeof(half);
     size_t qSize = 8 * 64 * sizeof(float);
     size_t logitsSelectIdxSize = 8 * sizeof(int64_t);
-    size_t logitsTopKpSelectSize = 8 * 64 * sizeof(int64_t);
+    size_t logitsTopKpSelectSize = 8 * 64 * sizeof(float);
     size_t tilingSize = sizeof(TopKTopPSampleTilingData);
 
     size_t workspaceSize = 40 * 1024 * 1024 + 128 * 256 * sizeof(float) * 6;

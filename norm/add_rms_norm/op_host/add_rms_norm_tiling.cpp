@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_rms_norm_tiling.cpp
@@ -48,6 +48,35 @@ constexpr size_t FLOAT_PER_REPEAT = 64;
 constexpr size_t USE_SIZE = 256;
 constexpr size_t NUM = 2;
 constexpr int32_t TEN = 10;
+
+constexpr int32_t PERFORMANC_DIM_ZERO = 0;
+constexpr int32_t PERFORMANC_DIM_ONE = 1;
+constexpr int32_t PERFORMANC_DIM_TWO = 2;
+constexpr int32_t PERFORMANC_DIM_THREE = 3;
+constexpr int32_t PERFORMANC_DIM_ONE_MAX = 512;
+constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
+constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
+
+platform_ascendc::SocVersion addRmsNormSocVersion;
+
+uint8_t getPerformanceFlag(uint32_t num_col, gert::Shape x_shape, gert::Shape gamma_shape, uint32_t xDtypeKey)
+{
+    uint8_t isPerformance = 0;
+    if(addRmsNormSocVersion != platform_ascendc::SocVersion::ASCEND910B) {
+        return isPerformance;
+    }
+    size_t xDimNum = x_shape.GetDimNum();
+    size_t gammaDimNum = gamma_shape.GetDimNum();
+    bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) && gammaDimNum == PERFORMANC_DIM_ONE);
+    bool sizeOk = num_col <= PERFORMANC_DIM_THREE_MAX && 
+        ((xDimNum == PERFORMANC_DIM_TWO && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) || 
+         (xDimNum == PERFORMANC_DIM_THREE && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX && x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
+    bool dtypeOk = (xDtypeKey == DTYPE_KEY_FP16 || xDtypeKey == DTYPE_KEY_BF16);
+    if(dimOK && sizeOk && dtypeOk) {
+        isPerformance = 1;
+    }
+    return isPerformance;
+}
 
 static void SetByDtype(ge::DataType dataType, uint32_t& dtypeKey, uint32_t& dataPerBlock)
 {
@@ -166,18 +195,18 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
 }
 
 static void GetCompileParameters(
-    gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize, platform_ascendc::SocVersion& socVersion)
+    gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize)
 {
     auto ptrCompileInfo = reinterpret_cast<const AddRmsNormCompileInfo*>(context->GetCompileInfo());
     if (ptrCompileInfo == nullptr) {
         auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-        socVersion = ascendc_platform.GetSocVersion();
+        addRmsNormSocVersion = ascendc_platform.GetSocVersion();
         numCore = ascendc_platform.GetCoreNumAiv();
         ascendc_platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     } else {
         numCore = ptrCompileInfo->totalCoreNum;
         ubSize = ptrCompileInfo->totalUbSize;
-        socVersion = ptrCompileInfo->socVersion;
+        addRmsNormSocVersion = ptrCompileInfo->socVersion;
     }
     ubSize -= UB_USED;
 }
@@ -208,12 +237,13 @@ static ge::graphStatus GetEpsilonParameter(gert::TilingContext* context, float& 
 }
 
 static void CalculateBlockParameters(
-    uint32_t numRow, uint32_t numCore, uint32_t& blockFactor, uint32_t& useCoreNum)
+    uint32_t numRow, uint32_t numCore, uint32_t& blockFactor, uint32_t& latsBlockFactor, uint32_t& useCoreNum)
 {
     blockFactor = 1U;
     uint32_t tileNum = Ops::Base::CeilDiv(numRow, numCore * blockFactor);
     blockFactor *= tileNum;
     useCoreNum = Ops::Base::CeilDiv(numRow, blockFactor);
+    latsBlockFactor = numRow - blockFactor * (useCoreNum - 1);
 }
 
 static ge::DataType SetDataTypeParameters(gert::TilingContext* context, uint32_t& dtype_key, uint32_t& data_per_block)
@@ -225,26 +255,41 @@ static ge::DataType SetDataTypeParameters(gert::TilingContext* context, uint32_t
 }
 
 static void DetermineModeParameters(
-    uint32_t numCol, uint32_t& ubFactor, uint32_t& rowFactor, uint32_t blockFactor,
-    platform_ascendc::SocVersion socVersion, ge::DataType dataType, uint32_t dtypKey, uint64_t ubSize,
-    uint32_t dataPerBlock, uint32_t& modeKey)
+    AddRMSNormTilingData* tiling, 
+    uint32_t numCol, uint32_t& ubFactor, uint32_t& rowFactor, uint32_t blockFactor, 
+    uint32_t latsBlockFactor, ge::DataType dataType, uint32_t dtypKey, uint64_t ubSize,
+    uint32_t dataPerBlock, uint32_t numColAlign, uint32_t& modeKey, uint32_t isPerformance)
 {
-    const uint32_t numColAlign = Ops::Base::CeilDiv(numCol, dataPerBlock) * dataPerBlock;
-
     if (numCol > ubFactor) {
         modeKey = MODE_SPLIT_D;
         ubFactor = (dataType == ge::DT_FLOAT) ? UB_FACTOR_B32_CUTD : UB_FACTOR_B16_CUTD;
         uint32_t colTileNum = Ops::Base::CeilDiv(numCol, ubFactor);
         ubFactor = Ops::Base::CeilDiv(numCol, colTileNum * dataPerBlock) * dataPerBlock;
-    } else if (blockFactor == 1 && socVersion != platform_ascendc::SocVersion::ASCEND310P) {
+    } else if (blockFactor == 1 && addRmsNormSocVersion != platform_ascendc::SocVersion::ASCEND310P) {
         modeKey = MODE_SINGLE_N;
-    } else if (numColAlign <= SMALL_REDUCE_NUM && socVersion != platform_ascendc::SocVersion::ASCEND310P) {
+    } else if (numColAlign <= SMALL_REDUCE_NUM && addRmsNormSocVersion != platform_ascendc::SocVersion::ASCEND310P) {
         modeKey = MODE_MERGE_N;
         uint64_t numColAlignWeight = (dtypKey == DTYPE_KEY_FP32) ? FP32_WEIGHT : OTHER_WEIGHT;
         rowFactor = static_cast<uint32_t>(ubSize) /
                     (numColAlign * static_cast<uint32_t>(numColAlignWeight) + static_cast<uint32_t>(DIV_FACTOR));
         ubFactor = rowFactor * numColAlign;
-    } else if (dataType == ge::DT_FLOAT16 && numCol == numColAlign) {
+
+        uint32_t mulLoopFp32 = numColAlign / 64;
+        uint32_t mulTailFp32 = numColAlign - mulLoopFp32 * 64;
+        uint8_t dstRepStrideFp32 = numColAlign / 8; 
+
+        uint32_t mulLoopFp16 = numColAlign / 128;
+        uint32_t mulTailFp16 = numColAlign - mulLoopFp16 * 128;
+        uint8_t dstRepStrideFp16 = numColAlign / 16; 
+
+        tiling->set_is_performance(isPerformance);
+        tiling->set_mul_loop_fp32(mulLoopFp32);
+        tiling->set_mul_tail_fp32(mulTailFp32);
+        tiling->set_dst_rep_stride_fp32(dstRepStrideFp32);
+        tiling->set_mul_loop_fp16(mulLoopFp16);
+        tiling->set_mul_tail_fp16(mulTailFp16);
+        tiling->set_dst_rep_stride_fp16(dstRepStrideFp16);
+    } else if ((dataType == ge::DT_FLOAT16) && numCol == numColAlign) {
         modeKey = MODE_MULTI_N;
         rowFactor = (static_cast<uint32_t>(ubSize) - static_cast<uint32_t>(USE_SIZE) -
                      numColAlign * static_cast<uint32_t>(NUM)) /
@@ -256,16 +301,27 @@ static void DetermineModeParameters(
             ubFactor = UB_FACTOR_B16;
         }
     }
+    uint32_t rowLoop = Ops::Base::CeilDiv(blockFactor, rowFactor);
+    uint32_t lastBlockRowLoop = Ops::Base::CeilDiv(latsBlockFactor, rowFactor);
+    uint32_t rowTail = blockFactor - (rowLoop - 1) * rowFactor;
+    uint32_t lastBlockRowTail = latsBlockFactor - (lastBlockRowLoop - 1) * rowFactor;
+    tiling->set_row_loop(rowLoop);
+    tiling->set_last_block_row_loop(lastBlockRowLoop);
+    tiling->set_row_tail(rowTail);
+    tiling->set_last_block_row_tail(lastBlockRowTail);
 }
 
 static void SetTilingParameters(
-    AddRMSNormTilingData* tiling, uint32_t num_row, uint32_t num_col, uint32_t block_factor, uint32_t row_factor,
+    AddRMSNormTilingData* tiling, uint32_t num_row, uint32_t num_col, uint32_t numColAlign, 
+    uint32_t block_factor, uint32_t latsBlockFactor, uint32_t row_factor,
     uint32_t ub_factor, float epsilon)
 {
     const float avg_factor = (num_col == 0) ? 0 : 1.0f / num_col;
     tiling->set_num_row(num_row);
     tiling->set_num_col(num_col);
+    tiling->set_num_col_align(numColAlign);
     tiling->set_block_factor(block_factor);
+    tiling->set_last_block_factor(latsBlockFactor);
     tiling->set_row_factor(row_factor);
     tiling->set_ub_factor(ub_factor);
     tiling->set_epsilon(epsilon);
@@ -313,9 +369,9 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     AddRMSNormTilingData tiling;
     uint32_t num_core;
     uint64_t ub_size;
-    platform_ascendc::SocVersion socVersion;
-    GetCompileParameters(context, num_core, ub_size, socVersion);
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+
+    GetCompileParameters(context, num_core, ub_size);
+    if (addRmsNormSocVersion == platform_ascendc::SocVersion::ASCEND910_95) {
         return optiling::addRmsNormRegbase::TilingAddRmsNormRegbase(context);
     }
 
@@ -330,8 +386,9 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     }
 
     uint32_t block_factor;
+    uint32_t latsBlockFactor;
     uint32_t use_core_num;
-    CalculateBlockParameters(num_row, num_core, block_factor, use_core_num);
+    CalculateBlockParameters(num_row, num_core, block_factor, latsBlockFactor, use_core_num);
     context->SetBlockDim(use_core_num);
 
     uint32_t dtype_key;
@@ -341,11 +398,17 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     uint32_t mode_key = MODE_NORMAL;
     uint32_t row_factor = 64;
     uint32_t ub_factor = (dtype_key == DTYPE_KEY_FP32) ? UB_FACTOR_B32 : UB_FACTOR_B16;
+    uint32_t numColAlign = Ops::Base::CeilDiv(num_col, data_per_block) * data_per_block;
+    const gert::Shape x1_shape = context->GetInputShape(0)->GetStorageShape();
+    const gert::Shape gamma_shape = context->GetInputShape(2)->GetStorageShape();
+    uint8_t isPerformance = getPerformanceFlag(num_col, x1_shape, gamma_shape, dtype_key);
     DetermineModeParameters(
-        num_col, ub_factor, row_factor, block_factor, socVersion, data_type, dtype_key, ub_size, data_per_block,
-        mode_key);
+        &tiling, 
+        num_col, ub_factor, row_factor, block_factor, latsBlockFactor, 
+        data_type, dtype_key, ub_size, data_per_block, 
+        numColAlign, mode_key, isPerformance);
 
-    SetTilingParameters(&tiling, num_row, num_col, block_factor, row_factor, ub_factor, epsilon);
+    SetTilingParameters(&tiling, num_row, num_col, numColAlign, block_factor, latsBlockFactor, row_factor, ub_factor, epsilon);
     SaveTilingData(context, &tiling, dtype_key, mode_key);
 
     SetWorkspaceSize(context);

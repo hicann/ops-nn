@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file adaptive_max_pool3d_small_pool.h
@@ -177,8 +177,8 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::Init(
     pipe->InitBuffer(inputTransBuffer, 32 * 1024); // VL_NUM*diFactor*hiFactor*wiFactorAlign*sizeof(float)
     pipe->InitBuffer(resetIndexBuf, 4 * 1024);     // VL_NUM*diFactor*hiFactor*sizeof(int32)
     pipe->InitBuffer(nextCmpBuffer, 4 * 1024);     // VL_NUM*diFactor*hiFactor*sizeof(int32)
-    pipe->InitBuffer(mulWBuffer, 64 * 1024);       // VL_NUM*diFactor*hiFactor*wiFactor16Align*sizeof(float)
     pipe->InitBuffer(mulWIdxBuffer, 32 * 1024);    // VL_NUM*diFactor*hiFactor*woFactorAlign*sizeof(int32)
+    pipe->InitBuffer(mulWBuffer, 64 * 1024);       // VL_NUM*diFactor*hiFactor*wiFactor16Align*sizeof(float)
 }
 
 template <typename T>

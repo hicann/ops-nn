@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_base_tiling.h
@@ -19,6 +19,8 @@
 #include <tiling/tiling_api.h>
 #include "tiling_base/tiling_base.h"
 #include "../common/conv_backprop_input_context_utils.h"
+#include "conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
+#include "conv3d_backprop_input_v2_common.h"
 
 namespace Ops {
 namespace NN {
@@ -29,12 +31,10 @@ using namespace Ops::NN::Optiling;
 constexpr uint8_t TILING_GROUP_MODE_ORIGIN = 0;
 constexpr uint8_t TILING_GROUP_MODE_ENLARGE = 1;
 
-constexpr int64_t L0_AB_SIZE = 65536;
-constexpr int64_t L0C_SIZE = 256 * 1024;
-constexpr uint64_t L1_SIZE = 512 * 1024;
-constexpr uint64_t UB_SIZE = 248 * 1024;
 constexpr int64_t WORKSIZE = static_cast<int64_t>(16 * 1024 * 1024);
 
+const int32_t PAD_DIM_LOW = 0;
+const int32_t PAD_DIM_UP = 255;
 constexpr uint32_t DB_ON = 2;
 constexpr uint32_t DB_OFF = 1;
 constexpr int32_t BLOCK_CUBE = 16;
@@ -47,98 +47,10 @@ const size_t INPUT_SIZE_INDEX = 0;
 const size_t FILTER_INDEX = 1;
 const size_t OUTPUT_BP_INDEX = 2;
 const size_t BAIS_INDEX = 3;
+const size_t SCALE_INDEX = 4;
 const size_t OFFSET_W_INDEX = 4;
 const size_t OUTPUT_PADDING_INDEX = 5;
 const size_t OFFSET_X_INDEX = 6;
-
-// TConv3DInputV2TilingAdvance对齐到第56行
-// TConv3DInputV2TilingAdvance对齐到第56行
-BEGIN_TILING_DATA_DEF(TConv3DInputV2TilingAdvance)
-    TILING_DATA_FIELD_DEF(uint8_t, al0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint8_t, bl0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint8_t, cl0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint8_t, al1Pbuffer);
-    TILING_DATA_FIELD_DEF(uint8_t, bl1Pbuffer);
-    TILING_DATA_FIELD_DEF(uint8_t, iterateOrder);
-    TILING_DATA_FIELD_DEF(uint8_t, c0);
-    TILING_DATA_FIELD_DEF(uint8_t, c0Bits);
-    TILING_DATA_FIELD_DEF(uint8_t, enlarge);
-    TILING_DATA_FIELD_DEF(uint8_t, hf32Flag);
-    TILING_DATA_FIELD_DEF(uint8_t, initOutputFlag);
-    TILING_DATA_FIELD_DEF(uint8_t, isBiasFullLoad);
-    TILING_DATA_FIELD_DEF(uint32_t, batch);
-    TILING_DATA_FIELD_DEF(uint32_t, cin);
-    TILING_DATA_FIELD_DEF(uint32_t, cout);
-    TILING_DATA_FIELD_DEF(uint32_t, cinG);
-    TILING_DATA_FIELD_DEF(uint32_t, coutG);
-    TILING_DATA_FIELD_DEF(uint32_t, cout1);
-    TILING_DATA_FIELD_DEF(uint32_t, cin1);
-    TILING_DATA_FIELD_DEF(uint32_t, cout1G);
-    TILING_DATA_FIELD_DEF(uint32_t, cin1G);
-    TILING_DATA_FIELD_DEF(uint32_t, dout);
-    TILING_DATA_FIELD_DEF(uint32_t, ho);
-    TILING_DATA_FIELD_DEF(uint32_t, wo);
-    TILING_DATA_FIELD_DEF(uint32_t, di);
-    TILING_DATA_FIELD_DEF(uint32_t, hi);
-    TILING_DATA_FIELD_DEF(uint32_t, wi);
-    TILING_DATA_FIELD_DEF(uint32_t, dk);
-    TILING_DATA_FIELD_DEF(uint32_t, hk);
-    TILING_DATA_FIELD_DEF(uint32_t, wk);
-    TILING_DATA_FIELD_DEF(uint32_t, group);
-    TILING_DATA_FIELD_DEF(uint32_t, oriGroup);
-    TILING_DATA_FIELD_DEF(uint32_t, strideD);
-    TILING_DATA_FIELD_DEF(uint32_t, strideH);
-    TILING_DATA_FIELD_DEF(uint32_t, strideW);
-    TILING_DATA_FIELD_DEF(uint32_t, padFront);
-    TILING_DATA_FIELD_DEF(uint32_t, padBack);
-    TILING_DATA_FIELD_DEF(uint32_t, padUp);
-    TILING_DATA_FIELD_DEF(uint32_t, padDown);
-    TILING_DATA_FIELD_DEF(uint32_t, padLeft);
-    TILING_DATA_FIELD_DEF(uint32_t, padRight);
-    TILING_DATA_FIELD_DEF(uint32_t, backpropPadTail);
-    TILING_DATA_FIELD_DEF(uint32_t, backpropPadUp);
-    TILING_DATA_FIELD_DEF(uint32_t, backpropPadDown);
-    TILING_DATA_FIELD_DEF(uint32_t, backpropPadLeft);
-    TILING_DATA_FIELD_DEF(uint32_t, backpropPadRight);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationD);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationH);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationW);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreGroup);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreCout);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreCin);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreDin);
-    TILING_DATA_FIELD_DEF(uint32_t, baseM);
-    TILING_DATA_FIELD_DEF(uint32_t, baseK);
-    TILING_DATA_FIELD_DEF(uint32_t, baseN);
-    TILING_DATA_FIELD_DEF(uint32_t, stepM);
-    TILING_DATA_FIELD_DEF(uint32_t, stepN);
-    TILING_DATA_FIELD_DEF(uint32_t, stepKa);
-    TILING_DATA_FIELD_DEF(uint32_t, stepKb);
-    TILING_DATA_FIELD_DEF(uint32_t, singleIterateDk);
-    TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
-    TILING_DATA_FIELD_DEF(uint64_t, singleCoreM);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(Conv3DBackpropInputV2ParamsAdvance)
-    TILING_DATA_FIELD_DEF(uint32_t, batchDim);
-    TILING_DATA_FIELD_DEF(uint32_t, groupDim);
-    TILING_DATA_FIELD_DEF(uint32_t, mDim);
-    TILING_DATA_FIELD_DEF(uint32_t, kDim);
-    TILING_DATA_FIELD_DEF(uint32_t, nDim);
-    TILING_DATA_FIELD_DEF(uint32_t, dDim);
-    TILING_DATA_FIELD_DEF(uint64_t, coreNum);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(TConv3DInputV2KSTilingAdvance)
-    TILING_DATA_FIELD_DEF(uint32_t, kSCoutFullLoad);
-    TILING_DATA_FIELD_DEF(uint32_t, kSUseWorkSpace);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(Conv3DBackpropInputV2TilingDataAdvance)
-    TILING_DATA_FIELD_DEF_STRUCT(Conv3DBackpropInputV2ParamsAdvance, params);
-    TILING_DATA_FIELD_DEF_STRUCT(TConv3DInputV2TilingAdvance, conv3DDxTiling);
-    TILING_DATA_FIELD_DEF_STRUCT(TConv3DInputV2KSTilingAdvance, conv3DDxKSTiling);
-END_TILING_DATA_DEF;
 
 struct TilingValueDavid {
     uint64_t coreNum;
@@ -320,7 +232,7 @@ protected:
     void PrintTilingData();
     void PrintTbeTiling();
     int32_t GetDimFactor(const int64_t& value, const std::vector<int32_t>& factorLits) const;
-    int32_t CalFmapH(const int32_t& mL1Size) const;
+    int32_t CalFmapH(const int32_t& mL1Size, bool isL1SplitHk = false) const;
     void GetSubFactors(const std::vector<int32_t>& src, int32_t factor, int32_t base, std::vector<int32_t>& dst);
     bool GetCoreDimForMN(
         int32_t curCoreNum, TilingCoreDimDx& coreDim, const std::vector<int32_t>& coreFactors, int32_t remainFactor);
@@ -335,24 +247,26 @@ protected:
     bool CalBaseBlockTiling(TilingValueDavid& tilingParams, const TilingBestBaseBlock& baseBlock);
     void CalTbeBlockTiling(TilingValueDavid& tilingParams);
     void InitTilingValue(TilingValueDavid& tilingParams, const uint32_t coreNum);
-    void SetRunBaseShapeInfoTiling(TConv3DInputV2TilingAdvance& dxt);
-    void SetRunInfoTiling(TConv3DInputV2TilingAdvance& dxt);
+    void SetRunBaseShapeInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
+    void SetRunInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
     void SetLoadB2Condition(const TilingValueDavid& tilingParams);
-    void SetGroupConvMode(TConv3DInputV2TilingAdvance& dxt);
-    void SetBackpropPadInfo(TConv3DInputV2TilingAdvance& dxt);
-    void SetTilingValue(TConv3DInputV2TilingAdvance& dxt, const TilingValueDavid& tilingParams);
+    void SetGroupConvMode(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
+    void SetBackpropPadInfo(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
+    void SetTilingValue(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt, const TilingValueDavid& tilingParams);
+    ge::graphStatus SetCoreMemSizeInfo();
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;
     bool c0DbFlag_ = false;
     bool enableSplitDk_ = false;
     bool hasBiasFlag_ = false;
+    bool hasScaleFlag_ = false;
     uint8_t loadB2Condition_ = 0;
     uint8_t loadB1Condition_ = 0;
     uint8_t groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     platform_ascendc::SocVersion shortSocVersion_;
     int32_t coreNum_ = 1;
-    int32_t isBiasFullLoad = 0;
+    int32_t isBiasFullLoad_ = 0;
     uint32_t singleIterateDk_ = 1;
 
     int32_t blockSize_ = 16;
@@ -361,11 +275,16 @@ protected:
     const char* opName_ = "";
     uint64_t usrSpaceSizeForSplitDk_ = 0;
     optiling::OpTypeV2 opType_ = optiling::OpTypeV2::kConv3DBackpropInputV2;
-    Conv3DBackpropInputV2TilingDataAdvance tilingData_ = {};
+    conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData tilingData_ = {};
     Conv3dBpInputV2RunInfo runInfo_ = {};
+    PlatformInfo platformInfo_;
 
 private:
     Conv3dBackpropV2TBETilingData tbeTiling_ = {};
+    TilingBestBaseBlock GetBestBaseBlock(uint32_t baseBlockId);
+    bool AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
+        const ge::DataType filterDtype, const ge::DataType yDtype) const;
+    bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t byteSize, uint32_t l0Pbuffer = DB_ON);
 };
 
 } // namespace Conv

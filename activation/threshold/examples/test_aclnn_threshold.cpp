@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -122,23 +122,6 @@ int main()
     ret = aclnnThreshold(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThreshold failed. ERROR: %d\n", ret); return ret);
 
-    // aclnnInplaceThreshold接口调用示例
-    uint64_t inplaceWorkspaceSize = 0;
-    aclOpExecutor* inplaceExecutor;
-    // 调用aclnnInplaceThreshold第一段接口
-    ret = aclnnInplaceThresholdGetWorkspaceSize(self, threshold, value, &inplaceWorkspaceSize, &inplaceExecutor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceThresholdGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
-    // 根据第一段接口计算出的workspaceSize申请device内存
-    void* inplaceWorkspaceAddr = nullptr;
-    if (inplaceWorkspaceSize > 0) {
-        ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-    }
-    // 调用aclnnInplaceThreshold第二段接口
-    ret = aclnnInplaceThreshold(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceThreshold failed. ERROR: %d\n", ret); return ret);
-
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -154,16 +137,6 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
 
-    auto inplaceSize = GetShapeSize(selfShape);
-    std::vector<float> inplaceResultData(inplaceSize, 0);
-    ret = aclrtMemcpy(
-        inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), outDeviceAddr,
-        inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < inplaceSize; i++) {
-        LOG_PRINT("aclnnInplaceThreshold result[%ld] is: %f\n", i, inplaceResultData[i]);
-    }
-
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(self);
     aclDestroyScalar(threshold);
@@ -175,9 +148,6 @@ int main()
     aclrtFree(outDeviceAddr);
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);
-    }
-    if (inplaceWorkspaceSize > 0) {
-        aclrtFree(inplaceWorkspaceAddr);
     }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);

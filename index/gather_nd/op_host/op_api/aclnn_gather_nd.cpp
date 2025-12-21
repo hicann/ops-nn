@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_gather_nd.h"
 #include "gather_nd.h"
@@ -64,6 +64,11 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_910B = {
   DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_INT8,
   DataType::DT_UINT8, DataType::DT_BOOL, DataType::DT_BF16};
 
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_910_95 = {
+  DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_INT8,
+  DataType::DT_UINT8, DataType::DT_BOOL, DataType::DT_BF16, DataType::DT_DOUBLE, DataType::DT_INT16, 
+  DataType::DT_UINT16, DataType::DT_UINT32, DataType::DT_UINT64}; 
+
 static const std::initializer_list<DataType> INDICES_SUPPORT_LIST = {DataType::DT_INT32, DataType::DT_INT64};
 
 static inline bool HasEmptyTensor(const aclTensor *self, const aclTensor *indices) {
@@ -81,7 +86,9 @@ static inline bool CheckNotNull(const aclTensor *self, const aclTensor *indices,
 static const std::initializer_list<DataType>& GetOutDtypeSupportList() {
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   switch (socVersion) {
-    case SocVersion::ASCEND910_95:
+    case SocVersion::ASCEND910_95: {
+      return DTYPE_SUPPORT_LIST_910_95;
+    }
     case SocVersion::ASCEND910_93:
     case SocVersion::ASCEND910B: {
       return DTYPE_SUPPORT_LIST_910B;

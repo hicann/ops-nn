@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "../../../../norm/norm_common/op_host/norm_tensor_util.h"
 #include "aclnn/aclnn_base.h"
@@ -332,34 +332,47 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
     auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
     CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    // 判定设备类型，后续做不同处理
+    bool forwardV4Compute = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+
     // 构造新的weightContiguous
     const aclTensor* weightContiguous = nullptr;
     if (weightOptional) {
         weightContiguous = l0op::Contiguous(weightOptional, uniqueExecutor.get());
+        CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto weightTensor = uniqueExecutor.get()->ConvertToTensor(normalizedShape, DataType::DT_INT64);
-        aclScalar* scalarOne = uniqueExecutor.get()->AllocScalar(1);
-        auto weightOptionalDtype = biasOptional ? biasOptional->GetDataType() : inputContiguous->GetDataType();
-        auto oneTensor = uniqueExecutor.get()->ConvertToTensor(scalarOne, weightOptionalDtype);
-        weightContiguous = l0op::Fill(weightTensor, oneTensor, normalizedShape, uniqueExecutor.get());
+        if (!forwardV4Compute) {
+            // 非目标设备按照原逻辑执行
+            auto weightTensor = uniqueExecutor.get()->ConvertToTensor(normalizedShape, DataType::DT_INT64);
+            aclScalar* scalarOne = uniqueExecutor.get()->AllocScalar(1);
+            auto weightOptionalDtype = biasOptional ? biasOptional->GetDataType() : inputContiguous->GetDataType();
+            auto oneTensor = uniqueExecutor.get()->ConvertToTensor(scalarOne, weightOptionalDtype);
+            weightContiguous = l0op::Fill(weightTensor, oneTensor, normalizedShape, uniqueExecutor.get());
+            CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
     }
-    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 构造新的biasContiguous
     const aclTensor* biasContiguous = nullptr;
     if (biasOptional) {
         biasContiguous = l0op::Contiguous(biasOptional, uniqueExecutor.get());
+        CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto biasTensor = uniqueExecutor.get()->ConvertToTensor(normalizedShape, DataType::DT_INT64);
-        aclScalar* scalarZero = uniqueExecutor.get()->AllocScalar(0);
-        auto biasOptionalDtype = weightOptional ? weightOptional->GetDataType() : inputContiguous->GetDataType();
-        auto zeroTensor = uniqueExecutor.get()->ConvertToTensor(scalarZero, biasOptionalDtype);
-        biasContiguous = l0op::Fill(biasTensor, zeroTensor, normalizedShape, uniqueExecutor.get());
+        if (!forwardV4Compute) {
+            // 非目标设备按照原逻辑执行
+            auto biasTensor = uniqueExecutor.get()->ConvertToTensor(normalizedShape, DataType::DT_INT64);
+            aclScalar* scalarZero = uniqueExecutor.get()->AllocScalar(0);
+            auto biasOptionalDtype = weightOptional ? weightOptional->GetDataType() : inputContiguous->GetDataType();
+            auto zeroTensor = uniqueExecutor.get()->ConvertToTensor(scalarZero, biasOptionalDtype);
+            biasContiguous = l0op::Fill(biasTensor, zeroTensor, normalizedShape, uniqueExecutor.get());
+            CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
     }
-    CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行LayerNorm计算，根据规格决定使用LayerNormV4或LayerNormV3算子
-    bool forwardV4Compute = IsV4SocCheck(inputContiguous, weightContiguous, N);
+    if (!forwardV4Compute) {
+        forwardV4Compute = IsV4SocCheck(inputContiguous, weightContiguous, N);
+    }
     std::array<aclTensor*, LAYER_NORM_OUT_NUM> layerNormOut = {nullptr, nullptr, nullptr};
 
     if (forwardV4Compute) {

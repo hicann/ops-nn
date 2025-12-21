@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_dx_v2_basic_block_tiling.cpp
@@ -30,6 +30,8 @@
 #include "error_util.h"
 #include "tiling_base/tiling_key.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h"
+
+using Ops::NN::GetTbeTiling;
 
 namespace {
 constexpr int32_t BYTE_BLOCK = 32;
@@ -55,6 +57,13 @@ namespace Conv {
 
 ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 {
+    if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
+            platform_ascendc::SocVersion::ASCEND910_95 ||
+        context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
+            platform_ascendc::SocVersion::ASCEND910_55) {
+        return ge::GRAPH_SUCCESS;
+    }
+
     if (Conv3DBackpropInputV2Tiling::GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

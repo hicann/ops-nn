@@ -1,16 +1,28 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
+/**
+ * @brief 编译运行流程说明
+ * 
+ * 参照 docs/zh/context/op_invocation.md 内 [编译与运行] 章节调用
+ * 
+ * 调用流程示例：
+ * 1. 安装nn包: 
+ *  ./cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run --full --install-path=/usr/local/Ascend/ascend-toolkit
+ *  export ASCEND_OPS_NN_PATH=/usr/local/Ascend/ascend-toolkit/latest/ops_nn
+ * 2. 执行example:
+ *  bash build.sh --run_example convolution_backward eager --example_name=conv_backward_1d
+ */
 #include <iostream>
 #include <memory>
 #include <vector>
+
 #include "acl/acl.h"
 #include "aclnnop/aclnn_convolution_backward.h"
 

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -92,8 +92,8 @@ TEST_F(dynamic_quant_v2_test, test_case_fp16_bf16)
     tilingDatafromBin->numTailTimes = 0;
     tilingDatafromBin->numLastTailRow = 0;
     tilingDatafromBin->alignType = 0;
+    tilingDatafromBin->ubSize = 191*1024;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-
     // bf16
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(
@@ -194,6 +194,7 @@ TEST_F(dynamic_quant_v2_test, test_case_310_01)
     tilingDatafromBin->innerLoopTimes = 0;
     tilingDatafromBin->innerLoopTail = 0;
     tilingDatafromBin->alignType = 0;
+    tilingDatafromBin->ubSize = 191*1024;
 
     // bf16
     ICPU_SET_TILING_KEY(10100);
@@ -258,6 +259,7 @@ TEST_F(dynamic_quant_v2_test, test_case_310_02)
     tilingDatafromBin->innerLoopTimes = 0;
     tilingDatafromBin->innerLoopTail = 0;
     tilingDatafromBin->alignType = 1;
+    tilingDatafromBin->ubSize = 191*1024;
 
     // bf16
     ICPU_SET_TILING_KEY(11000);
@@ -322,6 +324,7 @@ TEST_F(dynamic_quant_v2_test, test_case_310_03)
     tilingDatafromBin->innerLoopTimes = 1;
     tilingDatafromBin->innerLoopTail = 3072;
     tilingDatafromBin->alignType = 1;
+    tilingDatafromBin->ubSize = 191*1024;
 
     // bf16
     ICPU_SET_TILING_KEY(11001);

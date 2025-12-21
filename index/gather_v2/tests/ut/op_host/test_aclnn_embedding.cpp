@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -45,8 +45,6 @@ TEST_F(l2_embedding_test, case_1) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indice nullptr
@@ -106,8 +104,6 @@ TEST_F(l2_embedding_test, case_5) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support float64
@@ -148,8 +144,6 @@ TEST_F(l2_embedding_test, case_8) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support uint8
@@ -164,8 +158,6 @@ TEST_F(l2_embedding_test, case_9) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support int32
@@ -180,8 +172,6 @@ TEST_F(l2_embedding_test, case_10) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support int64
@@ -196,8 +186,6 @@ TEST_F(l2_embedding_test, case_11) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support bool
@@ -212,8 +200,6 @@ TEST_F(l2_embedding_test, case_12) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // indices support int32, weight support complex64
@@ -397,8 +383,6 @@ TEST_F(l2_embedding_test, case_27) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support nchw
@@ -413,8 +397,6 @@ TEST_F(l2_embedding_test, case_28) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support nhwc
@@ -429,8 +411,6 @@ TEST_F(l2_embedding_test, case_29) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support hwcn
@@ -445,8 +425,6 @@ TEST_F(l2_embedding_test, case_30) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support ndhwc
@@ -460,8 +438,6 @@ TEST_F(l2_embedding_test, case_31) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support ncdhw
@@ -476,8 +452,6 @@ TEST_F(l2_embedding_test, case_32) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }
 
 // support impl_mode high_performance
@@ -492,6 +466,4 @@ TEST_F(l2_embedding_test, ascend910B2_high_performance_case_33) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
 }

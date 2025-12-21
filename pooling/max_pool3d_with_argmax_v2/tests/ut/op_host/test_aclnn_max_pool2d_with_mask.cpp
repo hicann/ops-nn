@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -158,6 +158,7 @@ TEST_F(l2_max_pool2d_with_mask_test, normal_float16_stride_null)
     // ut.TestPrecision();
 }
 
+// 该ut场景涉及l0op::UnsqueezeNd等打桩场景接口，无法正常运行，待后续工程解决后开放
 // // 正常场景：format是CHW
 // TEST_F(l2_max_pool2d_with_mask_test, ascend910B2_normal_float16_CHW)
 // {
@@ -192,6 +193,7 @@ TEST_F(l2_max_pool2d_with_mask_test, normal_float16_stride_null)
 //         // ut.TestPrecision();
 //     }
 // }
+
 
 // 正常场景：kernel的size是2
 TEST_F(l2_max_pool2d_with_mask_test, ascend910B2_normal_kernel_size2)

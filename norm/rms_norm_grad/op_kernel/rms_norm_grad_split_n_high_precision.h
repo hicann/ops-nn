@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_grad_split_n_high_precision.h
@@ -15,6 +15,9 @@
 #ifndef _RMS_NORM_GRAD_SPLIT_N_HIGH_PRECISION_H_
 #define _RMS_NORM_GRAD_SPLIT_N_HIGH_PRECISION_H_
 #include "rms_norm_grad_common.h"
+
+using namespace RmsNormGrad;
+
 template <typename T_DY, typename T_GAMMA>
 class RmsNormGradSplitNHighPrecision {
 public:
@@ -34,6 +37,7 @@ public:
         InitTmpBuffer();
         if (isDeterministic_ == 1) {
             InitWorkspace(usrWorkspace);
+            workspaceGmOri_.SetGlobalBuffer((__gm__ float*)usrWorkspace);
         } else {
             SyncAll();
         }
@@ -62,7 +66,7 @@ public:
 
     __aicore__ inline void InitWorkspace(GM_ADDR usrWorkspace)
     {
-        workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + GetBlockIdx() * colVal_);
+        workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + GetBlockIdx() * colValAlign_);
     }
 
     __aicore__ inline void InitVar(const RmsNormGradTilingData* tiling)
@@ -183,13 +187,23 @@ public:
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 200)
             LocalTensor<int32_t> workLocal = syncTmpBuf_.Get<int32_t>();
             SyncAll(syncTmpSpaceGm_, workLocal);
+            AddDgamma();
 #else
             SyncAll();
+            doDeter();
 #endif
-            AddDgamma();
         } else {
             CopyDgammaOut();
         }
+    }
+
+    __aicore__ inline void doDeter() {
+        LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
+        LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
+        deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
+        FinalProcessDeterministic(colValAlign_, blockDim_, colVal_, deterministicStruct);
+        inQueX_.FreeTensor(buffer1_);
+        inQueDY_.FreeTensor(buffer2_);
     }
 
     __aicore__ inline void CopyGammaIn()
@@ -517,6 +531,7 @@ public:
     GlobalTensor<T_DY> dyGm_, dxGm_, xGm_;
     GlobalTensor<T_GAMMA> gammaGm_;
     GlobalTensor<float> dgammaGm_, rstdGm_, workspaceGm_;
+    GlobalTensor<float> workspaceGmOri_;
     GlobalTensor<int32_t> syncTmpSpaceGm_;
     TQue<QuePosition::VECIN, 1> inQueDY_, inQueX_, inQueRstd_, inQueGamma_;
     TQue<QuePosition::VECOUT, 1> outQueDX_, outQueDgamma_;

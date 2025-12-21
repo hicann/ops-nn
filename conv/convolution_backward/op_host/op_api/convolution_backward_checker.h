@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #ifndef OP_API_INC_CONVOLUTION_BACKWARD_CHECKER_H_
 #define OP_API_INC_CONVOLUTION_BACKWARD_CHECKER_H_
 
@@ -22,7 +22,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/transdata.h"
 #include "../../../convolution_forward/op_host/op_api/convolution.h"
-#include "level0/dilation.h"
+#include "pooling/avg_pool3_d_grad/op_host/op_api/dilation.h"
 #include "level0/fill.h"
 #include "level0/reduce_sum_op.h"
 #include "level0/squeeze.h"
@@ -93,6 +93,18 @@ const int32_t NCDHW_C_DIM = 1;
 const int32_t NCDHW_D_DIM = 2;
 const int32_t NCDHW_H_DIM = 3;
 const int32_t NCDHW_W_DIM = 4;
+static std::map<ge::Format, std::string> g_formatToStrTab = {
+    {ge::FORMAT_NCHW, "NCHW"},
+    {ge::FORMAT_NHWC, "NHWC"},
+    {ge::FORMAT_HWCN, "HWCN"},
+    {ge::FORMAT_DHWNC, "DHWNC"},
+    {ge::FORMAT_DHWCN, "DHWCN"},
+    {ge::FORMAT_NDHWC, "NDHWC"},
+    {ge::FORMAT_NCDHW, "NCDHW"},
+    {ge::FORMAT_NC1HWC0, "NC1HWC0"},
+    {ge::FORMAT_ND, "ND"},
+    {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
+    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
 }
 
 struct ConvolutionBackwardOutput {

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_quant_infershape.cpp
@@ -90,6 +90,7 @@ constexpr size_t INPUT_BETA = 2;
 
 constexpr size_t OUTPUT_Y = 0;
 constexpr size_t OUTPUT_RES_OUT = 1;
+constexpr size_t ATTR_DST_TYPE = 3;
 
 static ge::graphStatus InferShape4RmsNormQuant(gert::InferShapeContext* context)
 {
@@ -153,12 +154,10 @@ static graphStatus InferDataType4RmsNormQuant(gert::InferDataTypeContext* contex
 {
     bool EN_QUANT = true;
     bool EN_PRE_POST = false;
-    auto y_dtype = context->GetInputDataType(INPUT_X);
-    if (EN_PRE_POST) {
-        context->SetOutputDataType(OUTPUT_RES_OUT, y_dtype);
-    }
-    if (EN_QUANT) {
-        y_dtype = DT_INT8;
+    ge::DataType y_dtype = DT_INT8;
+    auto dstTypePtr = context->GetAttrs()->GetInt(ATTR_DST_TYPE);
+    if (dstTypePtr != nullptr) {
+        y_dtype = static_cast<ge::DataType>(*dstTypePtr);
     }
     context->SetOutputDataType(OUTPUT_Y, y_dtype);
     return ge::GRAPH_SUCCESS;

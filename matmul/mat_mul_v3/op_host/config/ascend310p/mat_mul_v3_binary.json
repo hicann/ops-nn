@@ -76,9 +76,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -156,9 +156,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       },
@@ -236,9 +236,9 @@
             "value": 0
           },
           {
-            "name": "enable_hf32",
-            "dtype": "bool",
-            "value": false
+            "name": "opImplMode",
+            "dtype": "int",
+            "value": 1
           }
         ]
       }

@@ -18,10 +18,10 @@ if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   set(AICPU_INC_DIRS
     ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/experiment
     ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/experiment/msprof
-    ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/aicpu_common/context
-    ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/aicpu_common/context/common
-    ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/aicpu_common/context/cpu_proto
-    ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/aicpu_common/context/utils
+    ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/aicpu_common/context
+    ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/aicpu_common/context/common
+    ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/aicpu_common/context/cpu_proto
+    ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/aicpu_common/context/utils
     ${ASCEND_DIR}/${SYSTEM_PREFIX}/include/experiment/datagw/aicpu/common
   )
 else()
@@ -33,7 +33,7 @@ else()
     ${TOP_DIR}/asl/ops/cann/ops/built-in/aicpu/context/inc
     ${TOP_DIR}/asl/ops/cann/ops/built-in/aicpu/impl/utils
     ${TOP_DIR}/asl/ops/cann/ops/built-in/aicpu/impl
-    ${TOP_DIR}/ops-base/include/aicpu_common/context/common
+    ${TOP_DIR}/ops-base/pkg_inc/aicpu_common/context/common
     ${TOP_DIR}/open_source/eigen
   )
 endif()

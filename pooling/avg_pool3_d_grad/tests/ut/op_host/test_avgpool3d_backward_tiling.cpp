@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_avgpool3d_backward_tiling.cpp
@@ -25,7 +25,7 @@
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
-#include "../../../../avg_pool3_d/op_host/cube_tiling_runtime.h"
+#include "../../../../avg_pool3_d/op_host/avg_pool_cube_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -97,7 +97,7 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_0)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DBackPropInputCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
@@ -183,7 +183,7 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_1)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DBackPropInputCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
@@ -270,7 +270,7 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_3)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DBackPropInputCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
@@ -358,7 +358,7 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_4)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DBackPropInputCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
@@ -445,7 +445,7 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_5)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DBackPropInputCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()

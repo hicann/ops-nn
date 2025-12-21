@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_matmul_reduce_sum_tiling_def.h
@@ -18,25 +18,9 @@
 #include <cstdint>
 #include <cstring>
 #include "kernel_tiling/kernel_tiling.h"
+#include "quant_matmul_reduce_sum_tiling_data.h"
 
 #define __aicore__
-
-struct QuantMatmulReduceSumParams {
-    uint32_t batchNum = 0;
-    uint32_t coreNum = 0;
-    uint32_t ubBaseK = 0;
-    uint32_t ubBaseN = 0;
-    uint32_t ubRestBytes = 0;
-    uint32_t ubCalSize = 0;
-    uint32_t isPertoken = 0;
-    uint32_t isDetermine = 0;
-    uint64_t workspaceSize = 0;
-};
-
-struct QuantMatmulReduceSumTilingData {
-    QuantMatmulReduceSumParams qbmmReduceSumParams;
-    TCubeTiling matmulTiling;
-};
 
 #pragma pack()
 
@@ -44,6 +28,8 @@ struct QuantMatmulReduceSumTilingData {
 #define DTYPE_W int8_t
 #define DTYPE_Y bfloat16_t
 #define DTYPE_SCALE bfloat16_t
+
+using namespace QUANT_MATMUL_REDUCE_SUM;
 
 #if defined(__CCE_KT_TEST__)
 template <class T>

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_filter_v2_basic_block_tiling.h
@@ -23,94 +23,13 @@
 #include "tbe_tiling_api.h"
 #include "conv3d_backprop_filter_v2_common.h"
 #include "../common/conv_backprop_filter_context_utils.h"
+#include "../../../op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 
 namespace Ops {
 namespace NN {
 namespace Conv {
 using namespace Ops::NN::Optiling;
-BEGIN_TILING_DATA_DEF(TConv3DDwTilingAdvance)
-    TILING_DATA_FIELD_DEF(uint32_t, batch);
-    TILING_DATA_FIELD_DEF(uint32_t, cin);
-    TILING_DATA_FIELD_DEF(uint32_t, cout);
-    TILING_DATA_FIELD_DEF(uint32_t, cin1G);
-    TILING_DATA_FIELD_DEF(uint32_t, cout1G);
-    TILING_DATA_FIELD_DEF(uint32_t, dout);
-    TILING_DATA_FIELD_DEF(uint32_t, ho);
-    TILING_DATA_FIELD_DEF(uint32_t, wo);
-    TILING_DATA_FIELD_DEF(uint32_t, di);
-    TILING_DATA_FIELD_DEF(uint32_t, hi);
-    TILING_DATA_FIELD_DEF(uint32_t, wi);
-    TILING_DATA_FIELD_DEF(uint32_t, dk);
-    TILING_DATA_FIELD_DEF(uint32_t, hk);
-    TILING_DATA_FIELD_DEF(uint32_t, wk);
-    TILING_DATA_FIELD_DEF(uint32_t, group);
-    TILING_DATA_FIELD_DEF(uint32_t, realGroup);
-    TILING_DATA_FIELD_DEF(uint32_t, strideD);
-    TILING_DATA_FIELD_DEF(uint32_t, strideH);
-    TILING_DATA_FIELD_DEF(uint32_t, strideW);
-    TILING_DATA_FIELD_DEF(uint32_t, padFront);
-    TILING_DATA_FIELD_DEF(uint32_t, padBack);
-    TILING_DATA_FIELD_DEF(uint32_t, padUp);
-    TILING_DATA_FIELD_DEF(uint32_t, padDown);
-    TILING_DATA_FIELD_DEF(uint32_t, padLeft);
-    TILING_DATA_FIELD_DEF(uint32_t, padRight);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationD);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationH);
-    TILING_DATA_FIELD_DEF(uint32_t, dilationW);
-    TILING_DATA_FIELD_DEF(uint32_t, channelSize);
-    TILING_DATA_FIELD_DEF(uint32_t, al0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint32_t, bl0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint32_t, cl0Pbuffer);
-    TILING_DATA_FIELD_DEF(uint32_t, al1Pbuffer);
-    TILING_DATA_FIELD_DEF(uint32_t, bl1Pbuffer);
-    TILING_DATA_FIELD_DEF(uint32_t, baseM);
-    TILING_DATA_FIELD_DEF(uint32_t, baseK);
-    TILING_DATA_FIELD_DEF(uint32_t, baseN);
-    TILING_DATA_FIELD_DEF(uint32_t, m0);
-    TILING_DATA_FIELD_DEF(uint32_t, k0);
-    TILING_DATA_FIELD_DEF(uint32_t, n0);
-    TILING_DATA_FIELD_DEF(uint32_t, stepM);
-    TILING_DATA_FIELD_DEF(uint32_t, stepN);
-    TILING_DATA_FIELD_DEF(uint32_t, stepKa);
-    TILING_DATA_FIELD_DEF(uint32_t, stepKb);
-    TILING_DATA_FIELD_DEF(uint32_t, iterateOrder);
-    TILING_DATA_FIELD_DEF(uint32_t, bl1Bound);
-    TILING_DATA_FIELD_DEF(uint32_t, al1Bound);
-    TILING_DATA_FIELD_DEF(uint32_t, hf32Flag);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreDk);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreGroup);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreCout);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreHo);
-    TILING_DATA_FIELD_DEF(int32_t, splitWo);
-    TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
-    TILING_DATA_FIELD_DEF(uint64_t, singleCoreCin);
-    TILING_DATA_FIELD_DEF(bool, isSplitKernelHW);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(Conv3DBackpropFilterV2ParamsAdvance)
-    TILING_DATA_FIELD_DEF(uint64_t, batchDim);
-    TILING_DATA_FIELD_DEF(uint32_t, groupDim);
-    TILING_DATA_FIELD_DEF(uint32_t, mDim);
-    TILING_DATA_FIELD_DEF(uint32_t, kDim);
-    TILING_DATA_FIELD_DEF(uint32_t, nDim);
-    TILING_DATA_FIELD_DEF(uint32_t, dkDim);
-    TILING_DATA_FIELD_DEF(uint32_t, totalL1Size);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(TConv3DDwBasicBlockTilingAdvance)
-    TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatchDout);
-    TILING_DATA_FIELD_DEF(uint32_t, streamkType);
-    TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreM);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreN);
-    TILING_DATA_FIELD_DEF(uint32_t, singleCoreK);
-END_TILING_DATA_DEF;
-// TilingData需重命名，否则无法区分910_95的tiling地址
-BEGIN_TILING_DATA_DEF(Conv3DBackpropFilterV2TilingDataAdvance)
-    TILING_DATA_FIELD_DEF_STRUCT(Conv3DBackpropFilterV2ParamsAdvance, params);
-    TILING_DATA_FIELD_DEF_STRUCT(TConv3DDwTilingAdvance, dwTiling);
-    TILING_DATA_FIELD_DEF_STRUCT(TConv3DDwBasicBlockTilingAdvance, basicBlockTiling);
-END_TILING_DATA_DEF;
+using namespace AscendC;
 
 struct TilingValueDwArch35
 {
@@ -220,11 +139,11 @@ protected:
     bool CheckFormat();
     bool GetTbeTilingDavid();
     void PrintTilingData();
-    void SetShapeTiling(TConv3DDwTilingAdvance &dwt);
-    void SetAttrTiling(TConv3DDwTilingAdvance &dwt);
+    void SetShapeTiling(conv_bp_v2_kernel::TConv3DDwTiling &dwt);
+    void SetAttrTiling(conv_bp_v2_kernel::TConv3DDwTiling &dwt);
     void InitTilingValue(TilingValueDwArch35& tilingParams);
     void InitCalTilingValue(TilingValueDwArch35& tilingParams);
-    void SetTilingValue(TConv3DDwTilingAdvance& dwt, const TilingValueDwArch35& tilingParams);
+    void SetTilingValue(conv_bp_v2_kernel::TConv3DDwTiling& dwt, const TilingValueDwArch35& tilingParams);
 
     // Basic Block methods
     void CalcRealGroup();
@@ -267,7 +186,7 @@ protected:
     int32_t dtypeByte_ = 2;
     const char *opName_ = "";
     uint8_t l0cCondition_ = 0;
-    Conv3DBackpropFilterV2TilingDataAdvance tilingData_;
+    conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData tilingData_;
     Conv3dBpFilterV2RunInfo runInfo_;
     bool isDeterSupportDType_ = false;
     bool deterNotSupportFormat_ = false;

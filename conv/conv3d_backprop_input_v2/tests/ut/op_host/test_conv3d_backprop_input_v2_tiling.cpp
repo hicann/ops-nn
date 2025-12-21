@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_conv3d_backprop_input_v2_tiling.cpp
@@ -30,6 +30,8 @@
 #include "test_cube_util.h"
 
 #define SUCCESS 0
+
+#ifdef USE_LEGACY_COMMON
 
 using namespace std;
 using namespace ge;
@@ -1040,3 +1042,4 @@ INSTANTIATE_TEST_CASE_P(
     MilanBinary2, Conv3DBackpropInputV2TilingRunTime2, testing::ValuesIn(general_24_core_num_cases_params));
 
 } // namespace
+#endif

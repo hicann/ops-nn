@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /*!
@@ -21,14 +21,14 @@
 #include <vector>
 
 #include "tiling_base/tiling_templates_registry.h"
-#include "common/op_host/op_tiling/tiling_type.h"
-#include "tiling/tiling_api.h"
+#include "../../../../common/op_host/op_tiling/tiling_type.h"
 #include "op_cache_tiling.h"
-#include "register/tilingdata_base.h"
 
 #include "quant_batch_matmul_v4_basic_block_tiling.h"
-#include "weight_quant_batch_matmul_v2/op_host/op_tiling/weight_quant_batch_matmul_v2_tiling_tool.h"
+#include "../../../../weight_quant_batch_matmul_v2/op_host/op_tiling/weight_quant_batch_matmul_v2_tiling_tool.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data.h"
+
 namespace optiling {
 using matmul_tiling::MatrixTraverse;
 using namespace matmul_v4;
@@ -87,7 +87,6 @@ constexpr int64_t NZ_GROUP_SIZE_32 = 32;
 constexpr int64_t NZ_C0_SIZE = 32;
 constexpr int64_t NZ_GROUP_SIZE_64 = 64;
 constexpr int64_t MIN_SHAPE_SIZE = 1;
-constexpr int64_t MAX_SHAPE_SIZE = 65535;
 constexpr int64_t VALID_BIAS_SHAPE_SIZE = 1;
 
 constexpr double FREQUENCY_v100 = 1.6;
@@ -103,7 +102,9 @@ enum class QuantType : uint32_t {
 };
 
 enum class KernelTemplateType : uint32_t {
-    BASIS = 0
+    BASIS = 0,
+    LUT_ASW = 1,
+    LUT_AL1FULL = 2
 };
 
 enum class WeightFormat : uint32_t {
@@ -141,34 +142,6 @@ struct QuantBatchMatmulInfo {
 };
 }  // namespace matmul_v4
 
-BEGIN_TILING_DATA_DEF(QuantBatchMatmulV4TilingData)
-TILING_DATA_FIELD_DEF(uint8_t, cubeBlockDimN);
-TILING_DATA_FIELD_DEF(uint8_t, cubeBlockDimM);
-TILING_DATA_FIELD_DEF(uint8_t, vecCoreParallel);
-TILING_DATA_FIELD_DEF(uint8_t, reserve1);
-TILING_DATA_FIELD_DEF(uint16_t, AL1Pingpong);
-TILING_DATA_FIELD_DEF(uint16_t, BL1Pingpong);
-
-TILING_DATA_FIELD_DEF(uint64_t, kAlign);
-TILING_DATA_FIELD_DEF(uint64_t, nAlign);
-TILING_DATA_FIELD_DEF(uint64_t, kSize);
-TILING_DATA_FIELD_DEF(uint64_t, nSize);
-TILING_DATA_FIELD_DEF(uint64_t, groupSize);
-TILING_DATA_FIELD_DEF(uint64_t, mSize);
-
-TILING_DATA_FIELD_DEF(uint64_t, nBubSize);
-TILING_DATA_FIELD_DEF(uint64_t, kBubSize);
-TILING_DATA_FIELD_DEF(uint64_t, mAL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, kAL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, nBL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, kBL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, hasX1Scale);
-TILING_DATA_FIELD_DEF(uint64_t, hasX2Scale);
-TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
-END_TILING_DATA_DEF;
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4, QuantBatchMatmulV4TilingData)
-REGISTER_TILING_DATA_CLASS(QuantBatchMatmulV4TilingDataOp, QuantBatchMatmulV4TilingData)
-
 class QuantBatchMatmulV4TilingBase : public TilingBaseClass {
 public:
     explicit QuantBatchMatmulV4TilingBase(gert::TilingContext *context) : TilingBaseClass(context)
@@ -178,7 +151,8 @@ public:
             InitCompileInfo();
         }
     }
-    explicit QuantBatchMatmulV4TilingBase(gert::TilingContext *context, QuantBatchMatmulV4TilingData *out)
+    explicit QuantBatchMatmulV4TilingBase(
+        gert::TilingContext* context, qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* out)
         : TilingBaseClass(context)
     {
         Reset();
@@ -241,7 +215,7 @@ protected:
     MatrixTraverse GetIteratorOrder(const CacheTilingData &tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
                                     int32_t singleCoreK) const;
 
-    QuantBatchMatmulInfo inputParams_;
+    matmul_v4::QuantBatchMatmulInfo inputParams_;
     uint64_t cubeBaseN_;
     int32_t templateId_ = -1;
     ge::Format aFormat;
@@ -255,8 +229,9 @@ protected:
     matmul_tiling::DataType mmScaleBDtype_;
     uint32_t aivNum_;
     uint32_t aicNum_;
-    std::unique_ptr<QuantBatchMatmulV4TilingData> tilingDataManager_;
-    QuantBatchMatmulV4TilingData *tilingData_ = nullptr;
+    std::unique_ptr<qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams> tilingDataManager_;
+    qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tilingData_ = nullptr;
+    size_t tilingDataSize_ = sizeof(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
 

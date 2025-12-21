@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file matmul_v3_tiling_helper.cc
@@ -20,35 +20,6 @@ using Ops::NN::MathUtil;
 namespace {
 using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
-
-// ------------------------------ ResetBase -------------------------------------------//
-void ResetBaseDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
-{
-    runInfo.usedCoreNum = compileInfo.aicNum;
-    runInfo.baseM = BASIC_BLOCK_SIZE_128;
-    runInfo.baseN = BASIC_BLOCK_SIZE_256;  // 256 is better base
-    runInfo.baseK = BASIC_BLOCK_K_128_BYTE / args.aDtypeSize;
-    runInfo.stepM = BASE_STEP;
-    runInfo.stepN = BASE_STEP;
-    runInfo.iterateOrder = ITER_COL_FIRST;
-    runInfo.dbL0C = DB_OFF_SIZE;
-    runInfo.singleCoreK = args.kValue;
-    runInfo.singleCoreM = runInfo.baseM;
-    runInfo.singleCoreN = runInfo.baseN;
-}
-
-void ResetBase91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
-{
-    ResetBaseDefault(compileInfo, args, runInfo);
-    runInfo.baseM = BASIC_BLOCK_SIZE_256;
-    runInfo.singleCoreM = runInfo.baseM;
-}
-
-using ResetBaseFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
-
-const static std::map<platform_ascendc::SocVersion, ResetBaseFunc> ResetBaseFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, ResetBase91095},
-};
 
 // ------------------------------ CalL1Tiling -------------------------------------------//
 void CalL1TilingDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
@@ -69,17 +40,20 @@ void CalL1TilingDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Ar
     }
     runInfo.stepKa = std::max(runInfo.depthA1 / DB_SIZE, 1UL);
     runInfo.stepKb = std::max(runInfo.depthB1 / DB_SIZE, 1UL);
+    // 对齐且基本块为[256, 256]则stepK改为2
     if (runInfo.baseM == BASIC_BLOCK_SIZE_256 && runInfo.baseN == BASIC_BLOCK_SIZE_256 &&
         args.mValue % BASIC_BLOCK_SIZE_16 == 0 && args.nValue % BASIC_BLOCK_SIZE_16 == 0 &&
         args.kValue % BASIC_BLOCK_SIZE_16 == 0 && runInfo.singleCoreK <= BASIC_BLOCK_SIZE_256) {
         runInfo.stepKa = std::min(runInfo.stepKa, 2UL);
         runInfo.stepKb = std::min(runInfo.stepKb, 2UL);
     }
+    // 调整stepKa和stepKb为整数倍关系
     if (runInfo.stepKa >= runInfo.stepKb) {
         runInfo.stepKa = runInfo.stepKa / runInfo.stepKb * runInfo.stepKb;
     } else {
         runInfo.stepKb = runInfo.stepKb / runInfo.stepKa * runInfo.stepKa;
     }
+    // 默认开启double buffer
     runInfo.depthA1 = runInfo.stepKa * DB_SIZE;  // depth % (stepKa * stepM) == 0
     runInfo.depthB1 = runInfo.stepKb * DB_SIZE;  // depth % (stepKb * stepN) == 0
     runInfo.singleCoreM = runInfo.baseM;
@@ -129,6 +103,68 @@ const static std::map<platform_ascendc::SocVersion, CalL1TilingFunc> CalL1Tiling
     {platform_ascendc::SocVersion::ASCEND310P, CalL1Tiling310P},
 };
 
+// ------------------------------ ResetBase -------------------------------------------//
+void ResetBaseDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+{
+    runInfo.usedCoreNum = compileInfo.aicNum;
+    runInfo.baseM = BASIC_BLOCK_SIZE_128;
+    runInfo.baseN = BASIC_BLOCK_SIZE_256;  // 256 is better base
+    runInfo.baseK = BASIC_BLOCK_K_128_BYTE / args.aDtypeSize;
+    runInfo.stepM = BASE_STEP;
+    runInfo.stepN = BASE_STEP;
+    runInfo.iterateOrder = ITER_COL_FIRST;
+    runInfo.dbL0C = DB_OFF_SIZE;
+    runInfo.singleCoreK = args.kValue;
+    runInfo.singleCoreM = runInfo.baseM;
+    runInfo.singleCoreN = runInfo.baseN;
+    runInfo.mBaseTailSplitCnt = INIT_SPLIT_CNT;
+    runInfo.nBaseTailSplitCnt = INIT_SPLIT_CNT;
+    runInfo.tailInfo.mTailMain = INIT_SPLIT_VALUE;
+    runInfo.tailInfo.nTailMain = INIT_SPLIT_VALUE;
+}
+
+void ResetBase91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+{
+    ResetBaseDefault(compileInfo, args, runInfo);
+    runInfo.baseM = BASIC_BLOCK_SIZE_256;
+    runInfo.singleCoreM = runInfo.baseM;
+}
+
+using ResetBaseFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
+
+const static std::map<platform_ascendc::SocVersion, ResetBaseFunc> ResetBaseFuncMap = {
+    {platform_ascendc::SocVersion::ASCEND910_95, ResetBase91095},
+};
+
+// ------------------------------ CheckIfDoubleAswt -------------------------------------------//
+bool CheckIfDoubleAswtDefault(const MatMulV3Args & /* args */, const uint64_t /* batchC */)
+{
+    return false;
+}
+
+bool CheckIfDoubleAswt91095(const MatMulV3Args &args, const uint64_t batchC)
+{
+    constexpr uint64_t halfL2Size = 64UL * 1024UL * 1024UL;  // 64mb
+    constexpr uint64_t cubeBoundRatio = 512UL;
+    if (batchC * args.mValue * args.nValue * args.aDtypeSize < halfL2Size) {  // check matC exceed half L2
+        return false;
+    }
+    if ((args.mValue * args.nValue / (args.mValue + args.nValue)) > cubeBoundRatio) {  // check if cube bound or streamk
+        return false;
+    }
+    if (args.kValue > (args.mValue >> 1) ||
+        args.kValue > (args.nValue >> 1)) {  // check if matA or matb occupies most of L2
+        return false;
+    }
+    return true;
+}
+
+using CheckIfDoubleAswtFunc = bool (*)(const MatMulV3Args &, const uint64_t);
+
+const static std::map<platform_ascendc::SocVersion, CheckIfDoubleAswtFunc> CheckIfDoubleAswtFuncMap = {
+    {platform_ascendc::SocVersion::ASCEND910_95, CheckIfDoubleAswt91095},
+};
+
 // ------------------------------ GetL0C2Out -------------------------------------------//
 MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */,
                               const MatMulV3RunInfo & /* runInfo */)
@@ -161,35 +197,6 @@ using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo &, const Ma
 
 const static std::map<platform_ascendc::SocVersion, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {platform_ascendc::SocVersion::ASCEND910_95, GetL0C2Out91095},
-};
-
-// ------------------------------ CheckIfDoubleAswt -------------------------------------------//
-bool CheckIfDoubleAswtDefault(const MatMulV3Args & /* args */, const uint64_t /* batchC */)
-{
-    return false;
-}
-
-bool CheckIfDoubleAswt91095(const MatMulV3Args &args, const uint64_t batchC)
-{
-    constexpr uint64_t halfL2Size = 64UL * 1024UL * 1024UL;  // 64mb
-    constexpr uint64_t cubeBoundRatio = 512UL;
-    if (batchC * args.mValue * args.nValue * args.aDtypeSize < halfL2Size) {  // check matC exceed half L2
-        return false;
-    }
-    if ((args.mValue * args.nValue / (args.mValue + args.nValue)) > cubeBoundRatio) {  // check if cube bound or streamk
-        return false;
-    }
-    if (args.kValue > (args.mValue >> 1) ||
-        args.kValue > (args.nValue >> 1)) {  // check if matA or matb occupies most of L2
-        return false;
-    }
-    return true;
-}
-
-using CheckIfDoubleAswtFunc = bool (*)(const MatMulV3Args &, const uint64_t);
-
-const static std::map<platform_ascendc::SocVersion, CheckIfDoubleAswtFunc> CheckIfDoubleAswtFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, CheckIfDoubleAswt91095},
 };
 }  // namespace
 

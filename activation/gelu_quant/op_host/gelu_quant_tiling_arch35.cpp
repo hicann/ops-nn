@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file gelu_quant_regbase_tiling.cpp
@@ -25,6 +25,7 @@ namespace optiling {
 namespace geluquantregbase {
 constexpr int64_t QUANT_REGBASE_COEXISTING_QUANTITY = 11;
 constexpr int64_t DYNAMIC_QUANT_COEXISTING_QUANTITY_DB = 13;
+static const gert::Shape g_vec_1_shape = {1};
 // 获取baseInfoOp的vectorCoreNum、ubSize
 ge::graphStatus GeluQuantRegbaseTiling::GetPlatformInfo()
 {
@@ -70,6 +71,14 @@ RoundMode GeluQuantRegbaseTiling::GetRoundMode(std::string& roundMode)
         errorMsg_ = "round_mode only supports 'rint' for int8";
         return RoundMode::MODE_UNDEFINED;
     }
+}
+
+const gert::Shape& GeluQuantRegbaseTiling::EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
 // 获取baseInfoOp的approximate、quantMode。
@@ -139,7 +148,7 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessRequiredInfo()
 
     auto xInputShapePtr = context_->GetInputShape(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputShapePtr);
-    auto xInputShape = xInputShapePtr->GetStorageShape();
+    const gert::Shape& xInputShape = EnsureNotScalar(xInputShapePtr->GetStorageShape());
     baseInfoOp.xDimNum = xInputShape.GetDimNum();
     OP_CHECK_IF(
         (baseInfoOp.xDimNum > INPUT_MAX_DIMENSIONS),
@@ -148,6 +157,12 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessRequiredInfo()
         (baseInfoOp.xDimNum < INPUT_MIN_DIMENSIONS && baseInfoOp.quantMode == DYNAMIC_QUANT_MODE),
         OP_LOGE(nodeName_, "the input of x should be at least 2 dimensions when quant_mode is dynamic."),
         return ge::GRAPH_FAILED);
+    for (int64_t i = 0; i < baseInfoOp.xDimNum; ++i) {
+        if (xInputShape.GetDim(i) == 0) {
+            OP_LOGE("GeluQuant", "[GeluQuant] GeluQuant does not support empty tensor input");
+            return ge::GRAPH_FAILED;
+        }
+    }
 
     baseInfoOp.endAxisLen = xInputShape.GetDim(baseInfoOp.xDimNum - 1);
     baseInfoOp.endAxisLenAligned = AlignToCeil(baseInfoOp.endAxisLen, FP32_BLOCK_NUM);
@@ -160,7 +175,7 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessRequiredInfo()
     // y
     auto yOutputShapePtr = context_->GetOutputShape(Y_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputShapePtr);
-    auto yOutputShape = yOutputShapePtr->GetStorageShape();
+    const gert::Shape& yOutputShape = EnsureNotScalar(yOutputShapePtr->GetStorageShape());
     OP_CHECK_IF(
         (xInputShape != yOutputShape), OP_LOGE(nodeName_, "the shape of y should be same as x."),
         return ge::GRAPH_FAILED);
@@ -189,8 +204,9 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalOffsetInfo()
     OP_CHECK_IF(
         (baseInfoOp.scaleInputDtype != baseInfoOp.offsetInputDtype),
         OP_LOGE(nodeName_, "the dtype of input_scale should be same with input_offset."), return ge::GRAPH_FAILED);
+    const gert::Shape& offsetInputShape = EnsureNotScalar(offsetInputShapePtr->GetStorageShape());
     // 校验offset和scale的shape一致，如果shape是[1]，则将inputOffsetType设置为SCALAR_TENSOR
-    if (offsetInputShapePtr->GetStorageShape().GetShapeSize() == 1) {
+    if (offsetInputShape.GetShapeSize() == 1) {
         baseInfoOp.inputOffsetType = SCALAR_TENSOR;
         OP_CHECK_IF(
             (baseInfoOp.inputScaleType != SCALAR_TENSOR),
@@ -201,12 +217,12 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalOffsetInfo()
         OP_CHECK_IF(
             (baseInfoOp.inputScaleType != NORMAL_TENSOR),
             OP_LOGE(nodeName_, "the shape of input_scale should be same with input_offset."), return ge::GRAPH_FAILED);
-        auto offsetInputDimNum = offsetInputShapePtr->GetStorageShape().GetDimNum();
+        auto offsetInputDimNum = offsetInputShape.GetDimNum();
         OP_CHECK_IF(
             (offsetInputDimNum != 1),
             OP_LOGE(nodeName_, "the shape dim of input_offset should be 1 or 0,but got %zu .", offsetInputDimNum),
             return ge::GRAPH_FAILED);
-        auto offsetInputDim0 = offsetInputShapePtr->GetStorageShape().GetDim(0);
+        auto offsetInputDim0 = offsetInputShape.GetDim(0);
         OP_CHECK_IF(
             (offsetInputDim0 != baseInfoOp.endAxisLen),
             OP_LOGE(
@@ -248,16 +264,17 @@ ge::graphStatus GeluQuantRegbaseTiling::ProcessOptionalScaleInfo()
         OP_LOGE(nodeName_, "the dtype of x should not be bfloat16 when the dtype of scale is half."),
         return ge::GRAPH_FAILED);
 
-    if (scaleInputShapePtr->GetStorageShape().GetShapeSize() == 1) {
+    const gert::Shape& scaleInputShape = EnsureNotScalar(scaleInputShapePtr->GetStorageShape());
+    if (scaleInputShape.GetShapeSize() == 1) {
         baseInfoOp.inputScaleType = SCALAR_TENSOR;
     } else {
         baseInfoOp.inputScaleType = NORMAL_TENSOR;
-        auto scaleInputDimNum = scaleInputShapePtr->GetStorageShape().GetDimNum();
+        auto scaleInputDimNum = scaleInputShape.GetDimNum();
         OP_CHECK_IF(
             (scaleInputDimNum != 1),
             OP_LOGE(nodeName_, "the shape dim of input_scale should be 1 or 0,but got %zu .", scaleInputDimNum),
             return ge::GRAPH_FAILED);
-        auto scaleInputDim0 = scaleInputShapePtr->GetStorageShape().GetDim(0);
+        auto scaleInputDim0 = scaleInputShape.GetDim(0);
         OP_CHECK_IF(
             (scaleInputDim0 != baseInfoOp.endAxisLen),
             OP_LOGE(

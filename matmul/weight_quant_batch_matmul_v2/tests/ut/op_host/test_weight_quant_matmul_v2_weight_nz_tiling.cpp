@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -27,6 +27,8 @@
 using namespace std;
 using namespace ge;
 using namespace optiling;
+
+#ifdef USE_LEGACY_COMMON
 
 namespace {
 struct WeightQuantBatchMatmulV2WeightNzTilingTestParam {
@@ -218,14 +220,14 @@ TEST_P(TestWeightQuantBatchMatmulV2WeightNzTiling, generalTest)
 }
 
 static WeightQuantBatchMatmulV2WeightNzTilingTestParam casesParams[] = {
-    {"Key1_1_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961},
+    {"Key1_1_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961}, //80120
     {"Key1_1_4_4096_2048_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961},
-    {"Key1_1_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13472239190785},
-    {"BATCH_2_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585},
+    {"Key1_1_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13472239190785}, //80130
+    {"BATCH_2_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585}, //180120
     {"BATCH_2_4_4096_2048_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585},
-    {"BATCH_2_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409},
+    {"BATCH_2_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409}, //180130
     {"BATCH_2_4_4097_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409},
-    {"TBETILINGP3_1_21_985_55681_0_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13197361283841}};
+    {"TBETILINGP3_1_21_985_55681_0_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13197361283841}}; //80030
 
 INSTANTIATE_TEST_CASE_P(
     WeightQuantBatchMatmulV2WeightNz, TestWeightQuantBatchMatmulV2WeightNzTiling, testing::ValuesIn(casesParams));
@@ -258,3 +260,5 @@ TEST_F(TestWeightQuantBatchMatmulV2WeightNzTiling, multi_thread)
     TestMultiThread(casesParams, sizeof(casesParams) / sizeof(WeightQuantBatchMatmulV2WeightNzTilingTestParam), 3);
 }
 } // namespace
+
+#endif

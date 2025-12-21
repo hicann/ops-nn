@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <iostream>
 #include <vector>
@@ -343,8 +343,8 @@ static bool TransNdToNz(std::vector<int8_t>& weightArray, const Shape& weightSha
      weightNzSize = g * weightNzSize;   
     }
     std::vector<int8_t> weightNzArray(weightNzSize, 0);
-    for (size_t idxG = 0; idxG < static_cast<size_t>(g); idxG++) {
-     for (size_t idx = 0; idx < static_cast<size_t>(k * n); idx++) {
+    for (size_t idxG = 0; idxG < g; idxG++) {
+     for (size_t idx = 0; idx < k * n; idx++) {
             size_t idxK = idx / n;
             size_t idxN = idx % n;
             size_t idxK0 = idxK % CUBE_BLOCK_SIZE;
@@ -370,10 +370,6 @@ static void TransOriginalShape(aclTensor *weightInt4Pack)
 aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight, aclTensor *weightInt4Pack,
     uint64_t *workspaceSize, aclOpExecutor **executor)
 {
-    (void)weight;
-    (void)weightInt4Pack;
-    (void)workspaceSize;
-    (void)executor;
     auto checkRet = ParamsCheck(weight, weightInt4Pack);
     CHECK_RET(checkRet == ACLNN_SUCCESS, checkRet);
     int64_t weightInt4PackDimNum = weightInt4Pack->GetStorageShape().GetDimNum();
@@ -413,10 +409,6 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight
 aclnnStatus aclnnConvertWeightToINT4Pack(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
     aclrtStream stream)
 {
-    (void)workspace;
-    (void)workspaceSize;
-    (void)executor;
-    (void)stream;
     return ACLNN_SUCCESS;
 }
 }

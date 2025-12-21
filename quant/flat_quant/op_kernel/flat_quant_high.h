@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file flat_quant_high.h
@@ -15,7 +15,6 @@
 #ifndef FLAT_QUANT_HIGH_H
 #define FLAT_QUANT_HIGH_H
 
-#include <cmath>
 #include "tensor_utils.h"
 
 namespace FlatQuantNS {
@@ -44,7 +43,6 @@ public:
         yTensor = qscaleTensor[SCALE_COUNT].template ReinterpretCast<half>();
         outTensor = yTensor.template ReinterpretCast<int4b_t>();
         absTensor = yTensor[DATA_COUNT];
-        maxTensor = absTensor[DATA_COUNT];
 
         eventIdVToS = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_S));
         eventIdVToMte2 = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE2));
@@ -73,7 +71,6 @@ public:
     aifunc void Process(){
         Duplicate<float>(xTensor, (T)0, DATA_COUNT);
         Duplicate<half>(absTensor, (half)0, DATA_COUNT);
-        Duplicate<half>(maxTensor, (half)0, BASE_SIZE);
         Duplicate<float>(qscaleTensor, (float)0, SCALE_COUNT);
         PipeBarrier<PIPE_V>();
         
@@ -116,11 +113,15 @@ public:
             DataCopy(xTensor, x2GM[x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N + rowIdx * shape.N], rowNumCeil * shape.N);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-            Cast(xTensor.template ReinterpretCast<half>(), xTensor, RoundMode::CAST_RINT, realCount);
+            Cast(absTensor, xTensor, RoundMode::CAST_RINT, realCount);
+            PipeBarrier<PIPE_V>();
+            Cast(xTensor, absTensor, RoundMode::CAST_NONE, realCount);
+            PipeBarrier<PIPE_V>();
+            Muls(xTensor, xTensor, maxValueFloat, realCount);
             PipeBarrier<PIPE_V>();
             SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
             WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
-            Muls(yTensor, xTensor.template ReinterpretCast<half>(), static_cast<half>(maxValueFloat), realCount);
+            Cast(yTensor, xTensor, RoundMode::CAST_RINT, realCount);
             PipeBarrier<PIPE_V>();
             SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
             WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
@@ -146,14 +147,9 @@ public:
             SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
             WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
 
-            CalReduceMax(absTensor, maxTensor, rowNumCeil * shape.Nceil, eventIdVToS);
+            CalReduceMax(absTensor, rowNumCeil * shape.Nceil, eventIdVToS);
             float tmpMax = static_cast<float>(absTensor.GetValue(0));
-            if (tmpMax != tmpMax) {
-                // NaN
-                maxValue = tmpMax;
-            } else {
-                maxValue = tmpMax > maxValue ? tmpMax : maxValue;
-            }
+            maxValue = AscendC::Std::max(tmpMax, maxValue);
         }
     }
 
@@ -203,7 +199,6 @@ private:
     LocalTensor<half> yTensor;
     LocalTensor<int4b_t> outTensor;
     LocalTensor<half> absTensor;
-    LocalTensor<half> maxTensor;
 
     event_t eventIdVToS;
     event_t eventIdVToMte2;

@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "aclnn_baddbmm.h"
@@ -265,7 +265,8 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
 
     const aclTensor* castOut = nullptr;
     if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get());
+        bool isBaddbmm = true;
+        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get(), isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // 做bmmOut和alpha的Muls操作
@@ -283,7 +284,8 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
         auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), uniqueExecutor.get());
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get());
+        bool isBaddbmm = true;
+        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get(), isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用

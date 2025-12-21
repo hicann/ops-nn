@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_common.h
@@ -60,6 +60,7 @@ struct L1TilingParams {
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
     uint8_t iterateOrder = 1;
+    uint8_t isBiasFullLoad = 0;
 };
 
 struct CoreTilingParams {
@@ -79,6 +80,14 @@ struct TilingRunInfo {
     uint32_t n0 = 16;
     uint32_t k0 = 16;
     bool enableVecTransFlag = false;
+    uint8_t tilingHkWkMode = 0;
+};
+
+struct PlatformInfo {
+    uint64_t l0_ab_size = 0;
+    uint64_t l0_c_size = 0;
+    uint64_t l1_size = 0;
+    uint64_t ub_size = 0;
 };
 
 } // namespace Conv

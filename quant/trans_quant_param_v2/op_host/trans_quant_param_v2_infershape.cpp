@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file trans_quant_param_v2_infershape.cpp
@@ -15,6 +15,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
+#include "platform/platform_info.h"
 
 static constexpr int INPUT_SCALE_INDEX = 0;
 static constexpr int INPUT_OFFSET_INDEX = 1;
@@ -23,6 +24,24 @@ static constexpr int OUTPUT_Y_INDEX = 0;
 static constexpr int GRID_SAMPLER2D_GRAD_SHAPE_LIMIT = 4;
 using namespace ge;
 namespace ops {
+    
+static std::set<std::string> QbmmDavidSupportSoc = {"Ascend910_95"};
+
+static bool IsDavidSupported()
+{
+    static bool isSupported = []() -> bool {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optionalInfo;
+        auto ret = fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo);
+        if (ret != GRAPH_SUCCESS) {
+            return false;
+        }
+        return QbmmDavidSupportSoc.count(platformInfo.str_info.short_soc_version) > 0;
+    }();
+
+    return isSupported;
+}
+
 static ge::graphStatus InferShape4TransQuantParamV2(gert::InferShapeContext* context)
 {
     // infer shape
@@ -57,7 +76,9 @@ static ge::graphStatus InferShape4TransQuantParamV2(gert::InferShapeContext* con
 
     OP_LOGD(context->GetNodeName(), "now scaleShape: %s", Ops::Base::ToString(*scaleShape).c_str());
 
-    if (offsetShape != nullptr && offsetShape->GetDimNum() > scaleShape->GetDimNum()) {
+    if (offsetShape != nullptr && (offsetShape->GetDimNum() > scaleShape->GetDimNum() ||
+                                   (IsDavidSupported() && offsetShape->GetDimNum() == 1 &&
+                                    scaleShape->GetDimNum() == 1 && offsetShape->GetDim(0) > scaleShape->GetDim(0)))) {
         OP_LOGD(context->GetNodeName(), "offsetShape: %s", Ops::Base::ToString(*offsetShape).c_str());
         *outYShape = *offsetShape;
     }

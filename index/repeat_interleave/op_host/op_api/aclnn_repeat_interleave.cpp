@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn_repeat_interleave.h"
 #include "level0/arange.h"
 #include "level0/broadcast_to.h"
@@ -234,10 +234,18 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
 // 将int64_t 转为为1维tensor
 static const aclTensor* IntToTensor(int64_t repeats, aclOpExecutor* executor)
 {
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion != SocVersion::ASCEND910_95) {
+        auto repeatsScalar = executor->AllocScalar(repeats);
+        auto repeatsTensor = executor->ConvertToTensor(repeatsScalar, op::DataType::DT_INT64);
+        auto baseShape = getBaseShape(executor);
+        repeatsTensor = l0op::BroadcastTo(repeatsTensor, baseShape, executor);
+        return repeatsTensor;
+    }
+
+    FVector<int64_t> tmpVector = {static_cast<int64_t>(repeats)};
     auto repeatsScalar = executor->AllocScalar(repeats);
-    auto repeatsTensor = executor->ConvertToTensor(repeatsScalar, op::DataType::DT_INT64);
-    auto baseShape = getBaseShape(executor);
-    repeatsTensor = l0op::BroadcastTo(repeatsTensor, baseShape, executor);
+    auto repeatsTensor = executor->ConvertToTensor(tmpVector.data(), tmpVector.size(), op::DataType::DT_INT64);
     return repeatsTensor;
 }
 
@@ -410,7 +418,10 @@ aclnnStatus aclnnRepeatInterleaveGetWorkspaceSize(const aclTensor *self, const a
 
     // repeats等于1，直接返回原tensor
     if (outputSize == GetTensorElementsNum(selfContiguous) && GetTensorElementsNum(repeatsContiguous) == 1) {
-        auto viewcopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
+        auto flattenShape = GetFlattenShape(selfContiguous, uniqueExecutor.get());
+        auto flattenSelf = l0op::Reshape(selfContiguous, flattenShape, uniqueExecutor.get());
+        CHECK_RET(flattenSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewcopyResult = l0op::ViewCopy(flattenSelf, out, uniqueExecutor.get());
         CHECK_RET(viewcopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
@@ -520,7 +531,11 @@ aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(const aclTensor *self, int6
     // repeats等于1，直接返回原tensor
     if (repeats == 1) {
         auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-        auto viewcopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto flattenShape = GetFlattenShape(selfContiguous, uniqueExecutor.get());
+        auto flattenSelf = l0op::Reshape(selfContiguous, flattenShape, uniqueExecutor.get());
+        CHECK_RET(flattenSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewcopyResult = l0op::ViewCopy(flattenSelf, out, uniqueExecutor.get());
         CHECK_RET(viewcopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);

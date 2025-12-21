@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_grad_split_d_high_precision.h
@@ -15,6 +15,9 @@
 #ifndef _RMS_NORM_GRAD_SPLIT_D_HIGH_PRECISION_H_
 #define _RMS_NORM_GRAD_SPLIT_D_HIGH_PRECISION_H_
 #include "rms_norm_grad_common.h"
+
+using namespace RmsNormGrad;
+
 template <typename T_DY, typename T_GAMMA>
 class RmsNormGradSplitDHighPrecision {
 public:
@@ -26,10 +29,22 @@ public:
         const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
     {
         InitVar(tiling);
-        InitGmBuffer(dy, x, rstd, gamma, dx, dgamma, usrWorkspace);
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ != 200)
+        dgammaGm_.SetGlobalBuffer((__gm__ float*)dgamma, colVal_);
+        if (isDeterministic_ == 0 && GetBlockIdx() == 0) {
+            InitOutput<float>(dgammaGm_, colVal_, 0);
+        }
+        if (isDeterministic_) {
+            workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + GetBlockIdx() * colValAlign_);
+            InitOutput<float>(workspaceGm_, colVal_, 0);
+            workspaceGmOri_.SetGlobalBuffer((__gm__ float*)usrWorkspace);
+        }
+        SyncAll();
+#endif
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 200)
         InitGammaFor310(gamma, dgamma, usrWorkspace);
 #endif
+        InitGmBuffer(dy, x, rstd, gamma, dx);
         InitUB();
     }
 
@@ -56,7 +71,7 @@ public:
     }
 
     __aicore__ inline void InitGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR usrWorkspace)
+        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx)
     {
         if (GetBlockIdx() < blockDim_ - 1) {
             coreOffset_ = blockFactor_;
@@ -70,17 +85,6 @@ public:
         rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + GetBlockIdx() * blockFactor_, coreOffset_);
         dxGm_.SetGlobalBuffer((__gm__ T_DY*)dx + GetBlockIdx() * coreOffsetStart_, coreOffsetLen_);
         gammaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, colVal_);
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ != 200)
-        dgammaGm_.SetGlobalBuffer((__gm__ float*)dgamma, colVal_);
-        if (isDeterministic_ == 0 && GetBlockIdx() == 0) {
-            InitOutput<float>(dgammaGm_, colVal_, 0);
-        }
-        if (isDeterministic_) {
-            workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + GetBlockIdx() * colVal_);
-            InitOutput<float>(workspaceGm_, colVal_, 0);
-        }
-        SyncAll();
-#endif
     }
 
     __aicore__ inline void InitGammaFor310(GM_ADDR gamma, GM_ADDR dgamma, GM_ADDR usrWorkspace)
@@ -158,9 +162,6 @@ public:
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 200)
             LocalTensor<int32_t> workLocal = syncTmpBuf_.Get<int32_t>();
             SyncAll(syncTmpSpaceGm_, workLocal);
-#else
-            SyncAll();
-#endif
             if (GetBlockIdx() != 0) {
                 return;
             }
@@ -170,6 +171,15 @@ public:
             if (tailCol_ > 0) {
                 AddDgamma(loopMainCol_, tailCol_);
             }
+#else
+            SyncAll();
+            LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
+            LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
+            deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
+            FinalProcessDeterministic(colValAlign_, blockDim_, colVal_, deterministicStruct);
+            inQueX_.FreeTensor(buffer1_);
+            inQueDY_.FreeTensor(buffer2_);
+#endif
         }
     }
 
@@ -520,6 +530,7 @@ public:
     GlobalTensor<T_DY> dxGm_;
     GlobalTensor<T_DY> xGm_;
     GlobalTensor<float> workspaceGm_;
+    GlobalTensor<float> workspaceGmOri_;
     GlobalTensor<float> rstdGm_;
     GlobalTensor<float> dgammaGm_;
     GlobalTensor<int32_t> syncTmpSpaceGm_;

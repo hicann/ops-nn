@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def.h"
 #include "opdev/common_types.h"
@@ -31,6 +31,13 @@ using namespace op;
 extern "C" {
 #endif
 
+constexpr int IDX_INT8 = 2;
+constexpr int IDX_HIFLOAT8 = 34;
+constexpr int IDX_FLOAT8_E5M2 = 35;
+constexpr int IDX_FLOAT8_E4M3FN = 36;
+static std::map<op::DataType, int> dstTypeMap = {{op::DataType::DT_INT8, IDX_INT8}, 
+       {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8}, {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2}, 
+       {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN}};
 namespace AddRmsNormQuantACLNN {
 constexpr int IDX_0 = 0;
 constexpr int IDX_1 = 1;
@@ -42,6 +49,9 @@ static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST
 
 static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_ZEROPOINT = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_Y = {
+    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8, op::DataType::DT_INT8};
 
 static bool CheckNotNull(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1, aclTensor* y1Out,
@@ -76,8 +86,9 @@ static bool CheckDtypeValid(
         OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints2Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
     }
 
-    OP_CHECK_DTYPE_NOT_MATCH(y1Out, op::DataType::DT_INT8, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(y2Out, op::DataType::DT_INT8, return false); // Mandatory output
+    OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
+    OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     return true;
 }
@@ -165,10 +176,12 @@ aclnnStatus ComputeAddRmsNormQuant(
     aclTensor* y2ComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
     bool isDual = (nullptr != scales2Optional);
+    
+    int dstType = dstTypeMap[y1Out->GetDataType()];
 
     auto addRmsNormQuantOuts = l0op::AddRmsNormQuant(
         x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, nullptr, axis, epsilon,
-        divMode, executor);
+        divMode, dstType, executor);
     y1ComputeOut = std::get<AddRmsNormQuantACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormQuantACLNN::IDX_1>(addRmsNormQuantOuts);
     xComputeOut = std::get<AddRmsNormQuantACLNN::IDX_2>(addRmsNormQuantOuts);

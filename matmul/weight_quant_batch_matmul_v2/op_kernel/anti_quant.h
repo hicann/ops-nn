@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -93,11 +93,10 @@ __aicore__ inline void AddMulWithBroadcastPerChannel(
     repeatParams.src1BlkStride = 0;
     repeatParams.src1RepStride = 1;
 #if defined(__CCE_KT_TEST__)
-    ASCENDC_ASSERT(n < 256, { KERNEL_LOG(KERNEL_ERROR, "repeatTimes must < 256, actual is %d", n); });
+    ascendc_assert(n < 256, "repeatTimes must < 256, actual is %d", n);
     int32_t dstRepStride = kAlign / (ONE_BLK_SIZE / sizeof(T));
-    ASCENDC_ASSERT(dstRepStride < 256, {
-        KERNEL_LOG(KERNEL_ERROR, "dstRepStride/src1RepStride(%d) must < 256, actual is %d", dstRepStride);
-    });
+    ascendc_assert(dstRepStride < 256,
+        "dstRepStride/src1RepStride(%d) must < 256, actual is %d", dstRepStride);
 #endif
     AddMulWithBroadcastHelper<T, HasOffset>(dst, src, scale, offset, n, repeatParams, mainLoop, tailElements);
 }
@@ -239,8 +238,8 @@ __aicore__ inline void AddMulWithoutBroadcastPerChannel(
     repeatParams.src1RepStride = 0;
 #if defined(__CCE_KT_TEST__)
     int32_t dstRepStride = n / (ONE_BLK_SIZE / sizeof(T));
-    ASCENDC_ASSERT(
-        dstRepStride < 256, { KERNEL_LOG(KERNEL_ERROR, "dstRepStride/src0RepStride(%d) must < 256", dstRepStride); });
+    ascendc_assert(
+        dstRepStride < 256, "dstRepStride/src0RepStride(%d) must < 256", dstRepStride);
 #endif
     AddMulWithoutBroadcastHelper<T, HasOffset>(dst, src, scale, offset, k, repeatParams, mainLoop, tailElements);
 }
@@ -256,14 +255,12 @@ __aicore__ inline void AntiQuant(
 
 #if defined(__CCE_KT_TEST__)
     if (IsSameType<SrcDataType, float>::value) {
-        ASCENDC_ASSERT((IsSameType<ScaleOffsetDataType, float>::value && IsSameType<DstDataType, float>::value), {
-            KERNEL_LOG(KERNEL_ERROR, "dtype of src, scale, offset, dst must be float");
-        });
+        ascendc_assert((IsSameType<ScaleOffsetDataType, float>::value && IsSameType<DstDataType, float>::value),
+            "dtype of src, scale, offset, dst must be float");
     }
     if (IsSameType<SrcDataType, half>::value) {
-        ASCENDC_ASSERT((IsSameType<ScaleOffsetDataType, half>::value && IsSameType<DstDataType, half>::value), {
-            KERNEL_LOG(KERNEL_ERROR, "dtype of src, scale, offset, dst must be half");
-        });
+        ascendc_assert((IsSameType<ScaleOffsetDataType, half>::value && IsSameType<DstDataType, half>::value),
+            "dtype of src, scale, offset, dst must be half");
     }
 #endif
     uint32_t calCount = src.GetSize();
@@ -278,7 +275,7 @@ __aicore__ inline void AntiQuant(
         PipeBarrier<PIPE_V>();
 #if defined(__CCE_KT_TEST__)
     } else {
-        ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support this scenario"); });
+        ascendc_assert(false, "not support this scenario");
 #endif
     }
 }
@@ -296,7 +293,7 @@ __aicore__ inline void AscendAntiQuantPerGroupWithTranspose(
         PipeBarrier<PIPE_V>();
 #if defined(__CCE_KT_TEST__)
     } else {
-        ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support this scenario"); });
+        ascendc_assert(false, "not support this scenario");
 #endif
     }
 }
@@ -313,7 +310,7 @@ __aicore__ inline void AscendAntiQuantPerChannelWithTranspose(
         PipeBarrier<PIPE_V>();
 #if defined(__CCE_KT_TEST__)
     } else {
-        ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support this scenario"); });
+        ascendc_assert(false, "not support this scenario");
 #endif
     }
 }
@@ -385,7 +382,7 @@ __aicore__ inline void AscendAntiQuantPerGroupWithoutTranspose(
         PipeBarrier<PIPE_V>();
 #if defined(__CCE_KT_TEST__)
     } else {
-        ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support this scenario"); });
+        ascendc_assert(false, "not support this scenario");
 #endif
     }
 }
@@ -402,7 +399,7 @@ __aicore__ inline void AscendAntiQuantPerChannelWithoutTranspose(
         PipeBarrier<PIPE_V>();
 #if defined(__CCE_KT_TEST__)
     } else {
-        ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support this scenario"); });
+        ascendc_assert(false, "not support this scenario");
 #endif
     }
 }
@@ -419,14 +416,12 @@ __aicore__ inline void AntiQuant(
 
 #if defined(__CCE_KT_TEST__)
     if (IsSameType<SrcDataType, float>::value) {
-        ASCENDC_ASSERT((IsSameType<ScaleOffsetDataType, float>::value && IsSameType<DstDataType, float>::value), {
-            KERNEL_LOG(KERNEL_ERROR, "dtype of src, scale, offset, dst must be float");
-        });
+        ascendc_assert((IsSameType<ScaleOffsetDataType, float>::value && IsSameType<DstDataType, float>::value), 
+            "dtype of src, scale, offset, dst must be float");
     }
     if (IsSameType<SrcDataType, half>::value) {
-        ASCENDC_ASSERT((IsSameType<ScaleOffsetDataType, half>::value && IsSameType<DstDataType, half>::value), {
-            KERNEL_LOG(KERNEL_ERROR, "dtype of src, scale, offset, dst must be half");
-        });
+        ascendc_assert((IsSameType<ScaleOffsetDataType, half>::value && IsSameType<DstDataType, half>::value),
+            "dtype of src, scale, offset, dst must be half");
     }
 #endif
 
@@ -449,8 +444,8 @@ __aicore__ inline void AntiQuant(
             //   full load group-count (n, gc, 32B)
             //   not full load group-count (n*gc, 32B)
 #if defined(__CCE_KT_TEST__)
-            ASCENDC_ASSERT(
-                preGroupSize == 0, { KERNEL_LOG(KERNEL_ERROR, "preGroupSize must = 0, actual is %d", preGroupSize); });
+            ascendc_assert(
+                preGroupSize == 0, "preGroupSize must = 0, actual is %d", preGroupSize);
 #endif
             AscendAntiQuantPerGroupWithTranspose<SrcDataType, ScaleOffsetDataType, DstDataType, HasOffset>(
                 dst, src, scale, offset, tensorShape, sharedTmpBuffer, groupSize);

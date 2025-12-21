@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_H_
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_H_
@@ -27,6 +27,19 @@ TILING_DATA_FIELD_DEF(uint32_t, row_factor);
 TILING_DATA_FIELD_DEF(uint32_t, ub_factor);
 TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avg_factor);
+TILING_DATA_FIELD_DEF(uint32_t, num_col_align);
+TILING_DATA_FIELD_DEF(uint32_t, last_block_factor);
+TILING_DATA_FIELD_DEF(uint32_t, row_loop);
+TILING_DATA_FIELD_DEF(uint32_t, last_block_row_loop);
+TILING_DATA_FIELD_DEF(uint32_t, row_tail);
+TILING_DATA_FIELD_DEF(uint32_t, last_block_row_tail);
+TILING_DATA_FIELD_DEF(uint32_t, mul_loop_fp32);
+TILING_DATA_FIELD_DEF(uint32_t, mul_tail_fp32);
+TILING_DATA_FIELD_DEF(uint32_t, dst_rep_stride_fp32);
+TILING_DATA_FIELD_DEF(uint32_t, mul_loop_fp16);
+TILING_DATA_FIELD_DEF(uint32_t, mul_tail_fp16);
+TILING_DATA_FIELD_DEF(uint32_t, dst_rep_stride_fp16);
+TILING_DATA_FIELD_DEF(uint32_t, is_performance);
 END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(AddRMSNormRegbaseTilingData)

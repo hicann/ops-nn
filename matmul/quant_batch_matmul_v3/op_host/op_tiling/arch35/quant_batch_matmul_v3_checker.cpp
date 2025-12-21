@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_checker.cc
@@ -27,14 +27,6 @@ constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t DIM_NUM_TWO = 2;
 constexpr size_t SCALE_THREE_DIM = 3;
 constexpr size_t BIAS_THREE_DIM = 3;
-constexpr int64_t LAST_AXIS_LIMIT = 65535;
-
-// input index
-constexpr uint32_t X1_INDEX = 0;
-constexpr uint32_t X2_INDEX = 1;
-constexpr uint32_t OFFSET_INDEX = 3;
-constexpr uint32_t BIAS_INDEX = 4;
-constexpr uint32_t PERTOKEN_SCALE_INDEX = 5;
 }
 
 namespace optiling {
@@ -81,8 +73,8 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
-    if (context_->GetOptionalInputDesc(PERTOKEN_SCALE_INDEX) == nullptr ||
-        context_->GetOptionalInputShape(PERTOKEN_SCALE_INDEX) == nullptr) {
+    if (context_->GetOptionalInputDesc(GetPertokenIdx()) == nullptr ||
+        context_->GetOptionalInputShape(GetPertokenIdx()) == nullptr) {
         OP_TILING_CHECK(!(inputParams_.aDtype == ge::DT_INT8 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
                             inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_HIFLOAT8) ||
                             !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN ||
@@ -149,8 +141,8 @@ should be FLOAT/BFLOAT16, actual dtype is %s.",
 bool QuantBatchMatmulV3Checker::CheckScalesDtype() const
 {
     bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2;
-    if (context_->GetOptionalInputDesc(PERTOKEN_SCALE_INDEX) != nullptr &&
-        context_->GetOptionalInputShape(PERTOKEN_SCALE_INDEX) != nullptr) {
+    if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
+        context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(!CheckScaleDtypeWithPertoken(),
             CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check scale dtype with pertoken failed"), return false);
     } else {
@@ -189,7 +181,7 @@ dtype should be UINT64/FLOAT/BFLOAT16/INT64, actual dtype is %s.",
 
 bool QuantBatchMatmulV3Checker::CheckBiasDtype() const
 {
-    auto biasDesc = context_->GetOptionalInputDesc(BIAS_INDEX);
+    auto biasDesc = context_->GetOptionalInputDesc(GetBiasIdx());
     OP_TILING_CHECK(
         biasDesc != nullptr && inputParams_.biasDtype != ge::DT_FLOAT && inputParams_.aDtype != ge::DT_INT8,
         CUBE_INNER_ERR_REPORT(
@@ -253,8 +245,8 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
     bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2;
     bool isFp8 = inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
                     inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E8M0;
-    if (context_->GetOptionalInputDesc(PERTOKEN_SCALE_INDEX) != nullptr &&
-        context_->GetOptionalInputShape(PERTOKEN_SCALE_INDEX) != nullptr) {
+    if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
+        context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(
             (isFp8 || isFp4) && !(inputParams_.cDtype == ge::DT_FLOAT || inputParams_.cDtype == ge::DT_FLOAT16 ||
                                     inputParams_.cDtype == ge::DT_BF16),
@@ -307,7 +299,7 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
                                 "Output dtype must be INT8/FLOAT16/BFLOAT16/FLOAT8_E4M3FN/HIFLOAT8/FLOAT, actual is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
-    auto offsetDesc = context_->GetOptionalInputDesc(OFFSET_INDEX);
+    auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK(offsetDesc != nullptr && offsetDesc->GetDataType() != ge::DT_FLOAT,
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dtype should be FLOAT, actual dtype is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(offsetDesc->GetDataType()).c_str()),
@@ -647,16 +639,9 @@ bool QuantBatchMatmulV3Checker::CheckShapeInBoundary(const gert::Shape &shape, u
 {
     int64_t mul = 1;
     int64_t mulBound = 1;
-    const char* dimName = shapeIdx == X1_INDEX ? "x1" : "x2";
+    const char* dimName = shapeIdx == GetX1Idx() ? "x1" : "x2";
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
-
-        OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The last dimension size of %s should not be \
-larger than 65535 but actual is %ld",
-                                              dimName, curDim),
-                        return false);
 
         OP_TILING_CHECK(curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -729,7 +714,7 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
 trans_a false and trans_b true, actual [%s, %s].",
                               inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"),
         return false);
-    OP_TILING_CHECK(!isInt8Input && context_->GetOptionalInputShape(OFFSET_INDEX) != nullptr,
+    OP_TILING_CHECK(!isInt8Input && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Not support offset with input dtype(%s) yet.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
                     return false);
@@ -825,11 +810,11 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape *> &man
     auto &x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
     auto &x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
     auto &scaleShape = *mandtoryShape[2]; // using index 2 to get scaleShape
-    auto offsetShape = context_->GetOptionalInputShape(OFFSET_INDEX);
+    auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     size_t outDimNum = std::max(x1Shape.GetDimNum(), x2Shape.GetDimNum());
     if (!CheckShapeInRangeForOptionalInputs(scaleShape, biasShape, pertokenShape, offsetShape, outDimNum) ||
         !CheckDimValue(scaleShape, biasShape, pertokenShape, offsetShape, dimValueOfMKN) ||
-        !CheckShapeInBoundary(x1Shape, X1_INDEX) || !CheckShapeInBoundary(x2Shape, X2_INDEX)){
+        !CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx())){
         return false;
     }
     if ((!CheckInputValidInPerblockMode(scaleShape, pertokenShape, x1Shape, x2Shape) ||

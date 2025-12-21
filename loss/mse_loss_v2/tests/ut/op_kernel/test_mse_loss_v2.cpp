@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -60,6 +60,10 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     char* path_ = get_current_dir_name();
     string path(path_);
 
+    auto read_file_0 = ReadFile(path + "/gen_data/input_input.bin", inputByteSize, input, inputByteSize);
+    auto read_file_1 = ReadFile(path + "/gen_data/input_target.bin", targetByteSize, target, targetByteSize);
+    cout << read_file_0 << " read_file_0 SetUp\n" << endl;
+    cout << read_file_1 << " read_file_1 SetUp\n" << endl;
     MSELossV2TilingDataTest* tilingDatafromBin = reinterpret_cast<MSELossV2TilingDataTest*>(tiling);
 
     tilingDatafromBin->coreNum = 8;
@@ -74,8 +78,9 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     tilingDatafromBin->tailTileLengthForLastCore = 3840;
 
     ICPU_SET_TILING_KEY(32);
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(mse_loss_v2, blockDim, input, target, output, workspace, (uint8_t*)(tilingDatafromBin));
+
+    WriteFile(path + "/gen_data/out.bin", output, outputByteSize);
 
     AscendC::GmFree(input);
     AscendC::GmFree(target);
@@ -83,5 +88,8 @@ TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     free(path_);
+
+    // int res = system("cd ./gen_data/ && python3 mse_loss_v2_data_compare.py 'float16'");
     system("rm -rf gen_data");
+    // ASSERT_EQ(res, 0);
 }

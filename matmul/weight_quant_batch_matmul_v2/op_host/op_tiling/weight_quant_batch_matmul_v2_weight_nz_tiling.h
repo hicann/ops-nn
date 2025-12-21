@@ -1,22 +1,16 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
  * \file weight_quant_batch_matmul_v2_weight_nz_tiling.h
  * \brief
- * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (29) USING BLANK LINES.
- * 
- * 
- * 
- * 
- * 
  */
 
 #ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_WEIGHT_NZ_TILING_H
@@ -26,68 +20,6 @@
 #include "op_cache_tiling.h"
 
 namespace optiling {
-
-BEGIN_TILING_DATA_DEF(WeightQuantBatchMatmulV2NzTilingData)
-TILING_DATA_FIELD_DEF(uint8_t, cubeBlockDimN);
-TILING_DATA_FIELD_DEF(uint8_t, cubeBlockDimM);
-TILING_DATA_FIELD_DEF(uint16_t, AL1Pingpong);
-TILING_DATA_FIELD_DEF(uint16_t, BL1Pingpong);
-TILING_DATA_FIELD_DEF(uint64_t, kAlign);
-TILING_DATA_FIELD_DEF(uint64_t, nAlign);
-TILING_DATA_FIELD_DEF(uint64_t, mSize);
-TILING_DATA_FIELD_DEF(uint64_t, kSize);
-TILING_DATA_FIELD_DEF(uint64_t, nSize);
-TILING_DATA_FIELD_DEF(uint64_t, mAubSize);
-TILING_DATA_FIELD_DEF(uint64_t, kAubSize);
-TILING_DATA_FIELD_DEF(uint64_t, nBubSize);
-TILING_DATA_FIELD_DEF(uint64_t, kBubSize);
-TILING_DATA_FIELD_DEF(uint64_t, mCubSize);
-TILING_DATA_FIELD_DEF(uint64_t, nCubSize);
-TILING_DATA_FIELD_DEF(uint64_t, mAL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, kAL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, nBL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, kBL1Size);
-TILING_DATA_FIELD_DEF(uint64_t, groupSize);
-TILING_DATA_FIELD_DEF(uint64_t, batchX0);
-TILING_DATA_FIELD_DEF(uint64_t, batchX1);
-TILING_DATA_FIELD_DEF(uint64_t, batchX2);
-TILING_DATA_FIELD_DEF(uint64_t, batchX3);
-TILING_DATA_FIELD_DEF(uint64_t, batchWeight0);
-TILING_DATA_FIELD_DEF(uint64_t, batchWeight1);
-TILING_DATA_FIELD_DEF(uint64_t, batchWeight2);
-TILING_DATA_FIELD_DEF(uint64_t, batchWeight3);
-TILING_DATA_FIELD_DEF(uint64_t, batchY0);
-TILING_DATA_FIELD_DEF(uint64_t, batchY1);
-TILING_DATA_FIELD_DEF(uint64_t, batchY2);
-TILING_DATA_FIELD_DEF(uint64_t, batchY3);
-TILING_DATA_FIELD_DEF(uint32_t, biasWithBatch);
-TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTiling);
-END_TILING_DATA_DEF;
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13195213800193, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13195482235649, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13196287542017, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13196555977473, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13197361283841, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13197629719297, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13470091707137, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13470360142593, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13471165448961, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13471433884417, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13472239190785, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_13472507626241, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139095120642817, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139095389078273, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139096194384641, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139096462820097, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139097268126465, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139097536561921, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139369998549761, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139370266985217, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139371072291585, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139371340727041, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139372146033409, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2_1139372414468865, WeightQuantBatchMatmulV2NzTilingData)
-REGISTER_TILING_DATA_CLASS(WeightQuantBatchMatmulV2NzTilingDataOp, WeightQuantBatchMatmulV2NzTilingData)
 
 class MmTilingInput
 {
@@ -177,8 +109,8 @@ protected:
         const gert::StorageShape* antiQuantScaleShape, const gert::StorageShape* antiQuantOffsetShape);
     bool AnalyzeBiasShape(const gert::StorageShape* outShape);
     bool SetAntiQuantType(const gert::StorageShape* antiQuantScaleShape);
-    void Convert2AscendCTiling(const CacheTilingData& tbeTiling, TCubeTiling& matmulTiling);
-    void SetAscendCTiling(TCubeTiling& matmulTiling);
+    void Convert2AscendCTiling(const CacheTilingData& tbeTiling, AscendC::tiling::TCubeTiling& matmulTiling);
+    void SetAscendCTiling(AscendC::tiling::TCubeTiling& matmulTiling);
     MatrixTraverse GetIteratorOrder(
         const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN, int32_t singleCoreK) const;
     void GetBaseMKNByTrans(matmul_tiling::MatmulApiTiling& mmTiling) const;

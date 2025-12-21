@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "matmul_util.h"
 
 #include "aclnn_kernels/cast.h"
@@ -18,6 +18,7 @@
 #include "level0/fill.h"
 #include "level0/padv3.h"
 #include "level0/mul.h"
+#include "level0/matmul_v2tov3.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
@@ -62,6 +63,7 @@ static const double THRESHOLD = 0.7;
 static const uint64_t CACHELINE = 512;
 static const uint64_t NUM_TWO = 2;
 static const int64_t DIMS_TWO = 2;
+static const int64_t DIMS_THREE = 3;
 static const int64_t HALF_ALIGN_UNIT = 256;
 static const int64_t ALIGN_UNIT = 512;
 static const int64_t M_DIM_SELF_IDX = 0;
@@ -75,9 +77,13 @@ static const int64_t SINGLE_CORE_SPLIT_K = 27392;
 static const int64_t BLOCK_CUBE = 16;
 static const int64_t BLOCK_BYTE_SIZE = 32;
 static const uint64_t MB = 1024UL * 1024UL;
+static const int64_t MAX_DIM_NUM = 4;
+static const int64_t FP32_SPLIT_K_THRESHOLD = 8192;
+using StrideIndexPairs = op::FVector<std::pair<int64_t, std::pair<int64_t, int64_t>>, MAX_DIM_NUM>;
+static const std::set<std::vector<int>> transposeNeed = {{2, 0, 1}, {0, 3, 1, 2}};
+static const std::set<std::vector<int>> transposeNoNeed = {{1, 0, 2}, {0, 2, 1, 3}};
 
 static const std::initializer_list<op::DataType> V100_DTYPE_SUPPORT = {DataType::DT_FLOAT16, DataType::DT_BF16};
-
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
@@ -93,7 +99,8 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 
 static inline bool CheckKEqual1Support(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B;
+    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
 }
 
 static inline bool CheckSocVersionIsSupportBf16(void)
@@ -145,14 +152,22 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2, bool transposeX2 = false)
+static bool CheckShapeValid(
+    const aclTensor* self, const aclTensor* mat2, bool transposeX2 = false, bool isSlice = false)
 {
+    if (isSlice) {
+        OP_CHECK_WRONG_DIMENSION(self, DIMS_THREE, return false);
+    } else {
+        OP_CHECK_WRONG_DIMENSION(self, DIMS_TWO, return false);
+    }
     OP_CHECK_WRONG_DIMENSION(mat2, DIMS_TWO, return false);
-    OP_CHECK_WRONG_DIMENSION(self, DIMS_TWO, return false);
     op::Shape mat2Shape = mat2->GetViewShape();
     op::Shape selfShape = self->GetViewShape();
-    int64_t mat2KDim = transposeX2 ? mat2Shape.GetDim(K_DIM_SELF_IDX) : mat2Shape.GetDim(M_DIM_SELF_IDX);
     int64_t selfKDim = selfShape.GetDim(K_DIM_SELF_IDX); // self固定不转置
+    int64_t mat2KDim = transposeX2 ? mat2Shape.GetDim(K_DIM_SELF_IDX) : mat2Shape.GetDim(M_DIM_SELF_IDX);
+    if (isSlice) {
+        selfKDim = selfShape.GetDim(OUTER_AXIS);
+    }
     if (mat2KDim != selfKDim) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different, self Kdim[%ld], mat2 Kdim[%ld].",
@@ -188,7 +203,7 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
         OP_LOGI("Returning an empty tensor without actually doing calculation");
         return out;
     }
-    FVector<int64_t> fillShape = GetShape(out);
+    op::FVector<int64_t> fillShape = GetShape(out);
     const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
     aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
     const aclScalar* valueScalar = executor->AllocScalar(0);
@@ -211,7 +226,7 @@ static const aclTensor* ProcessEmptyTensorWithTrans(
         OP_LOGI("Returning an empty tensor without actually doing calculation");
         return out;
     }
-    FVector<int64_t> fillShape = GetShape(out);
+    op::FVector<int64_t> fillShape = GetShape(out);
     const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
     aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
     const aclScalar* valueScalar = executor->AllocScalar(0);
@@ -228,7 +243,9 @@ static bool CheckSupportSingleSplitKFp16Bf16(
     // 2. 在K轴非256字节对齐场景下，输入数据大小不超过INT32最大值
     // 3. K轴大于27392
     // 4. M、N中最大不超过K轴的一半
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) {
+    bool supportCurrentSoc = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+    if (!supportCurrentSoc) {
         return false;
     }
     op::Shape selfShape = self->GetViewShape();
@@ -252,7 +269,7 @@ static bool CheckSupportSingleSplitKFp16Bf16(
            kDim >= splitKMultiThres * std::max(selfShape.GetDim(0), mat2Shape.GetDim(1));
 }
 
-// 910/310P 支持fp16进 fp16/fp32出，非对齐case 只能NZ进出，对齐case支持ND进出
+// 1980/1951 支持fp16进 fp16/fp32出，非对齐case 只能NZ进出，对齐case支持ND进出
 static aclnnStatus SetMatmulOpSupportInfo(
     const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo, int8_t cubeMathType)
 {
@@ -319,11 +336,13 @@ static MmOpInfo GetMatmulOpInfoWithTrans(
     mmOpInfo.shapeInfo.transposeX2 = (transMat2 != 0LL) ? true : false;
     mmOpInfo.support_info = mmOpInfo.ori_info;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
-    mmOpInfo.opImplModeEnum = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32) ? 0x40 : 0x1;
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
-        "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d", mmOpInfo.opImplModeEnum, mmOpInfo.enableHf32,
-        cubeMathType);
+        "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d", mmOpInfo.opImplModeEnum,
+        mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType);
 
     SetMatmulOpSupportInfo(self, mat2, mmOpInfo, cubeMathType);
     GetMmInfo(mmOpInfo);
@@ -342,7 +361,9 @@ static inline bool IsSplitKThenForbiddenNd2Nz(const uint64_t mDim, const uint64_
   return kIsEnoughMultiCore && mnIsNotEnoughCore && !(!transposeX1 && transposeX2);
 }
 
-static bool CheckAscendCScenario(const MmOpInfo& mmOpInfo)
+static bool CheckAscendCScenario(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo, const bool transposeX1,
+    const bool transposeX2)
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
@@ -351,7 +372,9 @@ static bool CheckAscendCScenario(const MmOpInfo& mmOpInfo)
         OP_LOGI("Not mat_mul_v3 case for unsupported SOC version or unsupported Format.");
         return false;
     }
-    return true;
+    bool alwaysUseV3 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    return (alwaysUseV3 || l0op::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
+                                                   mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
 
 static bool CheckAscendCScenario2(
@@ -391,19 +414,32 @@ static const aclTensor* GetGemmV3Op(
 
 static const aclTensor* GetMatMulOp(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
-    const bool transposeX2, const bool offsetX, const bool enableHf32, const int64_t opImplModeEnum,
-    aclOpExecutor* executor)
+    const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
 {
-    if (CheckAscendCScenario(mmOpInfo) ||
-        CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2)) {
+    bool enableForceGrpAccForFp32 = opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
+    if (CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
+        CheckAscendCScenario2(x1, x2, mmOpInfo, transposeX1, transposeX2) || enableForceGrpAccForFp32) {
         OP_LOGI("Hit matmul_v3 scenario.");
+        if (mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT &&
+            ((mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16 &&
+              mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16) ||
+             (mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16 &&
+              mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
+            bias == nullptr) {
+            const aclTensor* mmOut =
+                l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            return mmOut;
+        }
         const aclTensor* mmOut =
-            l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, enableHf32, executor);
+            l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
         return mmOut;
     } else if (
         mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT &&
-        mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16 &&
-        mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 && bias == nullptr) {
+        ((mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16 &&
+          mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16) ||
+         (mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16 &&
+          mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
+        bias == nullptr) {
         // This is Split K Mode; Check if MatMul using Nd in Nd Out
         const aclTensor* mmOut =
             (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
@@ -472,7 +508,6 @@ static bool CheckStreamKSKTiling(MmOpInfo& mmOpInfo)
     }
 
     uint64_t alignValue = BASIC_BLOCK_SIZE_256;
-    //
     if (mmOpInfo.shapeInfo.dtypeASize == FP32_HF32_DTYPE_SIZE && !mmOpInfo.enableHf32) {
         alignValue = BASIC_BLOCK_SIZE_32; // 如果是Fp32 基本块判断要用32
     }
@@ -523,34 +558,284 @@ static bool CheckShapeSupport(MmOpInfo& mmOpInfo)
     OP_LOGD("Check shape success in gemmV3.");
     return true;
 }
+
+static const aclTensor* HandleEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor, int8_t cubeMathType)
+{
+    auto emptyOut = ProcessEmptyTensor(self, mat2, executor);
+    CHECK_RET(emptyOut != nullptr, nullptr);
+    // output cast
+    if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
+        cubeMathType == FP16FP32_KEEP_DTYPE) {
+        auto castOut = l0op::Cast(emptyOut, DataType::DT_FLOAT, executor);
+        CHECK_RET(castOut != nullptr, nullptr);
+        return castOut;
+    }
+    return emptyOut;
+}
+
+static bool IsUseNonContiguous(const aclTensor* tensor)
+{
+    // Only support ASCEND910_95
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+        return false;
+    }
+    return !IsContiguous(tensor);
+}
+
+// Transpose场景下原始stride和shape满足：stride[i] = stride[i+1] * shape[i+1]
+// StrideIndexPairs: {stride, {index, viewShape}}
+static bool IsContiguousStride(StrideIndexPairs &strideIndexPairs) {
+    int64_t expectStride = 1;
+    for (auto it = strideIndexPairs.rbegin(); it != strideIndexPairs.rend(); it++) {
+        if (it->first != expectStride) {
+            return false;
+        }
+        expectStride *= it->second.second;
+    }
+    return true;
+}
+
+static bool ValidateSliceParams(
+    const op::Shape& simpleShape, const op::Strides& simpleStrides, int64_t viewOffset, int64_t storageSize)
+{
+    auto dimNum = static_cast<int64_t>(simpleStrides.size());
+    op::FVector<int64_t> srcShape(dimNum, 1);
+    int64_t shapeSize = 1;
+    for (int64_t i = dimNum - 2; i >= 0; i--) {
+        if (simpleStrides[i + 1] == 0) {
+            return false;
+        }
+        srcShape[i + 1] = simpleStrides[i] / simpleStrides[i + 1];
+        shapeSize *= srcShape[i + 1];
+    }
+    if (storageSize % shapeSize != 0) {
+        return false;
+    }
+    srcShape[0] = storageSize / shapeSize;
+
+    op::FVector<int64_t> offset(dimNum, 0);
+    op::FVector<int64_t> size(dimNum, 0);
+    // size即切片后每个维度的值 offset表示跳过的值
+    for (int64_t i = 0; i < dimNum; i++) {
+        offset[i] = viewOffset / simpleStrides[i];
+        size[i] = simpleShape[i];
+        viewOffset = viewOffset % simpleStrides[i];
+    }
+    // 1.切片后各个维度大小+offset不超过原始shape各维度
+    for (int64_t i = 0; i < dimNum; i++) {
+        if (srcShape[i] < offset[i] + size[i]) {
+            return false;
+        }
+    }
+    // 2.限制只支持倒数第二维切片
+    for (int64_t i = dimNum - 1; i >= 0; i--) {
+        if (srcShape[i] != simpleShape[i] && i != (dimNum - DIMS_TWO)) {
+            return false;
+        }
+    }
+    int64_t sliceM = simpleShape[dimNum - 2];
+    // 3.当3D场景倒数第二维切片后维度大小为16的倍数或者因数
+    return 16 % sliceM == 0;
+}
+
+static const aclTensor* SetTensorToNDFormat(const aclTensor* input)
+{
+    OP_LOGD("set tensor to ND format.");
+    auto formatTensor = const_cast<aclTensor*>(input);
+    if (input->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+        input->GetStorageFormat() != op::Format::FORMAT_ND) {
+        formatTensor->SetViewFormat(op::Format::FORMAT_ND);
+        formatTensor->SetOriginalFormat(op::Format::FORMAT_ND);
+        formatTensor->SetStorageFormat(op::Format::FORMAT_ND);
+    }
+    return formatTensor;
+}
+
 } // namespace
 
 namespace Ops {
 namespace NN {
-op::Shape SwapLastTwoDimValue(const op::Shape tensorShape)
+
+// 非连续条件的shape范围限制
+bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
 {
-  op::Shape swapedShape = tensorShape;
-  int64_t dimNum = tensorShape.GetDimNum();
-  if (dimNum >= static_cast<int64_t>(MM_DIM)) {
-      int64_t lastDim = tensorShape.GetDim(dimNum - 1);
-      // dimNum - 1, 这里1指的是取最后一维的dim值。dimNum - 2, 这里2指的是取倒数第二维的dim值
-      swapedShape.SetDim(dimNum - 1, tensorShape.GetDim(dimNum - 2));
-      // dimNum - 2, 这里2指的是取倒数第二维的dim值
-      swapedShape.SetDim(dimNum - 2, lastDim);
-  }
-  else {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimNum is not supported , which is %ld.", dimNum);
-  }
-  return swapedShape;
+    // 判断是否不走stream-k
+    bool isSkTiling = CheckStreamKSKTiling(mmOpInfo) || CheckStreamKDPSKTiling(mmOpInfo);
+    if (isSkTiling) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support this shape in sk or dp-sk tiling.");
+        return false;
+    }
+    // 判断小于一轮
+    uint64_t mCore = MathUtil::CeilDivision(mmOpInfo.shapeInfo.mDim, BASIC_BLOCK_SIZE_256);
+    uint64_t nCore = MathUtil::CeilDivision(mmOpInfo.shapeInfo.nDim, BASIC_BLOCK_SIZE_256);
+    if (mCore * nCore > static_cast<uint64_t>(mmOpInfo.aiCoreCnt)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mCnt[%lu] and nCnt[%lu] is not in matmulv3 basic shape range", mCore, nCore);
+        return false;
+    }
+    // 非FP32大K
+    if (mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT && !mmOpInfo.enableHf32 &&
+        mmOpInfo.shapeInfo.kDim > FP32_SPLIT_K_THRESHOLD) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fp32 big k is not supported.");
+        return false;
+    }
+    OP_LOGI("Check tensor shape success.");
+    return true;
 }
 
-MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
+/*
+   判断Tensor是否满足非连续Slice
+*/
+bool IsSliceNonContiguous(const aclTensor* tensor)
+{
+    if (!IsUseNonContiguous(tensor)) {
+        return false;
+    }
+    int64_t dimNum = tensor->GetViewShape().GetDimNum();
+    if (dimNum != 3) { // only support 2D or 3D
+        return false;
+    }
+    const auto& viewStrides = tensor->GetViewStrides();
+    const auto& viewShape = tensor->GetViewShape();
+    auto viewOffset = tensor->GetViewOffset();
+    auto storageSize = tensor->GetStorageShape().GetShapeSize();
+    // Validate view params
+    if (dimNum != static_cast<int64_t>(viewStrides.size()) || storageSize <= 0) {
+        return false;
+    }
+    // Validate viewStides
+    auto lastStride = viewStrides[0];
+    for (int64_t i = 1; i < dimNum; i++) {
+        int64_t curStride = viewStrides[i];
+        if (curStride == 0  || viewShape[i] == 1) { // Only support slice
+            return false;
+        }
+        // stride严格按照逆序排序且能依次整除
+        if (lastStride < curStride || lastStride % curStride != 0) {
+            return false;
+        }
+        if (lastStride < curStride * (viewShape[i] - 1)) { // Not support overlap
+            return false;
+        }
+        lastStride = curStride;
+    }
+    // Last dim view stride must be 1
+    if (viewStrides[dimNum - 1] != 1) {
+        return false;
+    }
+    // Validate slice params
+    return ValidateSliceParams(viewShape, viewStrides, viewOffset, storageSize);
+}
+
+static inline string PrintIndex(const vector<int> idx)
+{
+    std::ostringstream oss;
+    oss << "[";
+
+    for (size_t i = 0; i < idx.size(); i++) {
+        oss << idx[i];
+        if (i < idx.size() - 1) {
+            oss << ",";
+        }
+    }
+    oss << "]";
+    return oss.str();
+}
+
+/*
+   判断Tensor是否满足非连续Transpose
+*/
+bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim)
+{
+    int64_t dimNum = tensor->GetViewShape().GetDimNum();
+    if (!IsUseNonContiguous(tensor) || dimNum != 3) { // only support 3D && NonContiguous
+        return false;
+    }
+    const auto& viewStrides = tensor->GetViewStrides();
+    const auto& viewShape = tensor->GetViewShape();
+    auto storageSize = tensor->GetStorageShape().GetShapeSize();
+    // Validate view params
+    if (dimNum != static_cast<int64_t>(viewStrides.size()) || storageSize <= 0) {
+        return false;
+    }
+    StrideIndexPairs strideIndexPairs;
+    strideIndexPairs.reserve(dimNum);
+    auto lastStride = INT64_MAX;
+    bool isTranspose = false;
+    for (int64_t i = 0; i < dimNum; i++) {
+        int64_t curStride = viewStrides[i];
+        if (curStride == 0 || viewShape[i] == 1) {
+            return false;
+        }
+        if (lastStride < curStride) {
+            isTranspose = true;
+        }
+        lastStride = curStride;
+        strideIndexPairs.emplace_back(std::make_pair(curStride, std::make_pair(i, viewShape[i])));
+    }
+    if (!isTranspose) {
+        return false;
+    }
+    // strides逆序排序
+    std::sort(strideIndexPairs.rbegin(), strideIndexPairs.rend());
+    if (!IsContiguousStride(strideIndexPairs)) {
+        return false;
+    }
+    std::vector<int> indexs;
+    for (auto it = strideIndexPairs.begin(); it != strideIndexPairs.end(); it++) {
+        indexs.push_back(it->second.first);
+    }
+    // 业务限制：只允许中间2维转置(index = 0,1)
+    // [1,0,2]不需要转置, [2,0,1]需要转置
+    auto isNeedSwap = find(transposeNeed.begin(), transposeNeed.end(), indexs);
+    auto isNoNeedSwap = find(transposeNoNeed.begin(), transposeNoNeed.end(), indexs);
+    if (isNeedSwap == transposeNeed.end() && isNoNeedSwap == transposeNoNeed.end()) {
+        OP_LOGI("Current indexs: %s , which is not supported in our scenario", PrintIndex(indexs).c_str());
+        return false;
+    }
+    if (isNeedSwap != transposeNeed.end()) {
+        isNeedSwapInnerTwoDim = true; // 如果场景2则需要转置
+    }
+    return true;
+}
+
+/*
+   交换原始shape指定的两个维度 last和secondLast, 默认1和2表示交换dim-1和dim-2
+*/
+op::Shape SwapLastTwoDimValue(const op::Shape tensorShape, int64_t last, int64_t secondLast)
+{
+    op::Shape swapedShape = tensorShape;
+    // last < secondLast
+    if (last >= secondLast) {
+        return swapedShape;
+    }
+    int64_t dimNum = tensorShape.GetDimNum();
+    if (dimNum >= secondLast) {
+        int64_t lastDim = tensorShape.GetDim(dimNum - last);
+        swapedShape.SetDim(dimNum - last, tensorShape.GetDim(dimNum - secondLast));
+        swapedShape.SetDim(dimNum - secondLast, lastDim);
+    } else {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimNum is not supported , which is %ld.", dimNum);
+    }
+    return swapedShape;
+}
+
+/*
+    isSlice为true时self可能为2维或者3维
+*/
+MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType, bool isSelfSlice)
 {
     // 获取m、k、n轴的大小
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
+    int64_t selfDimNum = selfShape.GetDimNum();
     int64_t mDim = selfShape.GetDim(M_DIM_SELF_IDX);
     int64_t kDim = selfShape.GetDim(K_DIM_SELF_IDX);
+    if (isSelfSlice && selfDimNum > DIMS_TWO) {
+        mDim *= selfShape.GetDim(INNER_AXIS); // m = batch * sliceM
+        kDim = selfShape.GetDim(OUTER_AXIS);
+    }
+
     int64_t nDim = mat2Shape.GetDim(N_DIM_SELF_IDX);
 
     // Dtype和Format初始化
@@ -578,8 +863,8 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
     mmOpInfo.support_info = mmOpInfo.ori_info;
 
     // 不同芯片能力不同
-    // 910 310P shape是否对齐
-    // fp16 fp32 选择，910 vector支持fp32
+    // 1980 1951 shape是否对齐
+    // fp16 fp32 选择，1980 vector支持fp32
     SetMatmulOpSupportInfo(self, mat2, mmOpInfo, cubeMathType);
 
     // 获取aicore数目
@@ -588,12 +873,13 @@ MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, int8_t cu
     bool inputFp32Flag = mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT &&
                          mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
-    mmOpInfo.opImplModeEnum =
-        (inputFp32Flag && ((cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32))) ? 0x40 : 0x1;
     mmOpInfo.enableHf32 = inputFp32Flag && ((cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32));
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == FORCE_GRP_ACC_FOR_FP32 && (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
     OP_LOGD(
-        "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,
-        mmOpInfo.enableHf32, cubeMathType, inputFp32Flag);
+        "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d", mmOpInfo.opImplModeEnum,
+        mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType, inputFp32Flag);
     // Log mm info
     GetMmInfo(mmOpInfo);
     return mmOpInfo;
@@ -605,8 +891,10 @@ bool ContiguousAndCast(
 {
     auto contiguousOut = contiguousInput;
     if (IsTransposeLastTwoDims(contiguousInput)) {
+        // Swap last two dim value
         contiguousOut = executor->CreateView(
-            contiguousInput, SwapLastTwoDimValue(contiguousInput->GetViewShape()), contiguousInput->GetViewOffset());
+            contiguousInput, SwapLastTwoDimValue(contiguousInput->GetViewShape(), INNER_AXIS, OUTER_AXIS),
+            contiguousInput->GetViewOffset());
         transposeFlag = true;
     } else {
         contiguousOut = l0op::Contiguous(contiguousInput, executor);
@@ -621,17 +909,45 @@ bool ContiguousAndCast(
 
 const aclTensor* ExecMmOp(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType, aclOpExecutor* executor)
 {
-    return ExecMmOpWithBias(self, mat2, nullptr, cubeMathType, executor);
+    return ExecMmOpWithBias(self, mat2, nullptr, cubeMathType, executor, false);
+}
+
+/*
+   注意：虽然申明为const指针引用，但selfReshapeOutput和mat2ReshapeOutput会重新赋值修改指针指向新的const aclTensor
+*/
+int64_t ProcessSpecialCases(
+    const aclTensor*& selfCastOut, const aclTensor*& mat2CastOut, MmOpInfo& mmOpInfo, const aclTensor*& bias,
+    const aclTensor*& selfReshapeOutput, const aclTensor*& mat2ReshapeOutput, aclOpExecutor* executor, bool& ifKEqual1)
+{
+    ifKEqual1 = IfKEqual1(selfCastOut, mmOpInfo, mmOpInfo.shapeInfo.transposeX1, bias);
+    if (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 ||
+        mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16) {
+        ifKEqual1 = ifKEqual1 && checkBF16SizeValid(mat2CastOut, mmOpInfo.shapeInfo.transposeX2) &&
+                    CheckKEqual1Support() && checkBF16MMValid(selfCastOut, mat2CastOut, mmOpInfo.shapeInfo.transposeX2);
+    }
+    if (ifKEqual1) {
+        aclnnStatus kEqual1SelfToMKRes =
+            IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput, mmOpInfo.shapeInfo.transposeX1, executor);
+        CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
+        aclnnStatus kEqual1Mat2ToKNRes =
+            IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput, mmOpInfo.shapeInfo.transposeX2, executor);
+        CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
+        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
+    } else {
+        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(
+            selfCastOut, selfReshapeOutput, mmOpInfo.support_info.self_format, mmOpInfo.shapeInfo.transposeX1,
+            executor);
+        CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
+        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(
+            mat2CastOut, mat2ReshapeOutput, mmOpInfo.support_info.mat2_format, mmOpInfo.shapeInfo.transposeX2,
+            executor);
+        CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
+    }
+    return 0;
 }
 
 /*
 计算MatMul的workSize， 内涵MatMul算子的构图流程
-*/
-const aclTensor* ExecMmOpWithBias(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, int8_t cubeMathType, aclOpExecutor* executor,
-    bool transposeX2)
-{
-    /*
                   self            mat2
                    |               |
               contiguous       contiguous
@@ -651,62 +967,56 @@ const aclTensor* ExecMmOpWithBias(
                           cast
                             |
                          output
-  */
+
+*/
+const aclTensor* ExecMmOpWithBias(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, int8_t cubeMathType, aclOpExecutor* executor,
+    bool transposeX2)
+{
     CHECK_RET(self != nullptr, nullptr);
     CHECK_RET(mat2 != nullptr, nullptr);
     CHECK_RET(CheckDtypeValid(self, mat2, bias, nullptr, cubeMathType), nullptr);
-    CHECK_RET(CheckShapeValid(self, mat2, transposeX2), nullptr);
+    // 左输入矩阵非连续
+    bool isSelfSlice = IsSliceNonContiguous(self);
+    CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), nullptr);
     // 空Tensor处理逻辑
     if (self->IsEmpty() || mat2->IsEmpty()) {
-        auto emptyOut = ProcessEmptyTensor(self, mat2, executor);
-        CHECK_RET(emptyOut != nullptr, nullptr);
-        // output cast
-        if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
-            cubeMathType == FP16FP32_KEEP_DTYPE) {
-            auto castOut = l0op::Cast(emptyOut, DataType::DT_FLOAT, executor);
-            CHECK_RET(castOut != nullptr, nullptr);
-            return castOut;
-        }
-        return emptyOut;
+        return HandleEmptyTensor(self, mat2, executor, cubeMathType);
     }
-    OP_LOGI("Format of self orign  is  [%s].", op::ToString(self->GetStorageShape()).GetString());
-    OP_LOGI("Format of mat2 orign  is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
-    // 内部只处理ND格式，reformat，全部转成ND
-    self = l0op::ReFormat(self, op::Format::FORMAT_ND);
-    CHECK_RET(self != nullptr, nullptr);
+    OP_LOGI(
+        "Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
+        op::ToString(mat2->GetStorageShape()).GetString());
 
-    if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
-        mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
-        CHECK_RET(mat2 != nullptr, nullptr);
-    }
-    OP_LOGI("Format of mat2 is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // 解析当前规格matmulop支持的dtype、format能力
-    MmOpInfo mmOpInfo = GetMatmulOpInfo(self, mat2, cubeMathType);
-
+    MmOpInfo mmOpInfo = GetMatmulOpInfo(self, mat2, cubeMathType, isSelfSlice);
     // weightNZ转置属性刷新
     mmOpInfo.shapeInfo.transposeX2 = mmOpInfo.shapeInfo.transposeX2 || transposeX2;
-
-    // 左输入非连续转连续
-    auto selfCastOut = self;
-    bool selfCastRes = ContiguousAndCast(
-        self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
-    CHECK_RET(selfCastRes, nullptr);
-
-    // 右输入非连续转连续
-    auto mat2CastOut = mat2;
-    auto mat2StorageShape = mat2->GetStorageShape();
-    bool mat2CastRes = ContiguousAndCast(
-        mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2, mmOpInfo.support_info.mat2_dtype, executor);
-    CHECK_RET(mat2CastRes, nullptr);
-    if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGI("mat2 GetStorageFormat FORMAT_FRACTAL_NZ.");
-        aclTensor* mat2ShapeSet = const_cast<aclTensor*>(mat2CastOut);
-        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的stroageShape刷新
+    // 校验非连续Slice场景shape
+    if (isSelfSlice) {
+        // 不支持NZ
+        if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
+            self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+            OP_LOGI("format NZ is not supported for slice.");
+            isSelfSlice = false;
+        }
+        // check shape
+        if (!CheckNonContiguousShapeSupport(mmOpInfo)) {
+            OP_LOGI("shape is not supported for slice.");
+            isSelfSlice = false;
+        }
     }
-    OP_LOGI("Format of mat2StorageShape is  [%s].", op::ToString(mat2StorageShape).GetString());
+    // 非ND转ND
+    if (!isSelfSlice) {
+        self = l0op::ReFormat(self, op::Format::FORMAT_ND);
+        CHECK_RET(self != nullptr, nullptr);
+        if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
+            OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
+            mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
+            CHECK_RET(mat2 != nullptr, nullptr);
+        }
+    }
+    OP_LOGI("mat2 origin storage shape is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // bias非连续转连续以及转换dtype
     auto contiguousBias = bias;
     if (contiguousBias != nullptr) {
@@ -714,58 +1024,75 @@ const aclTensor* ExecMmOpWithBias(
         CHECK_RET(contiguousBias != nullptr, nullptr);
     }
 
+    auto selfCastOut = self;
+    if (isSelfSlice) {
+        // 刷新oriShape
+        selfCastOut = executor->CreateView(
+            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+        CHECK_RET(selfCastOut != nullptr, nullptr);
+        // 非ND修改format为ND
+        selfCastOut = SetTensorToNDFormat(selfCastOut);
+    } else {
+        // 转连续
+        bool selfCastRes = ContiguousAndCast(
+            self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
+        CHECK_RET(selfCastRes, nullptr);
+    }
+
+    auto mat2CastOut = mat2;
+    auto mat2StorageShape = mat2->GetStorageShape();
+    bool mat2CastRes = ContiguousAndCast(
+        mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2, mmOpInfo.support_info.mat2_dtype, executor);
+    CHECK_RET(mat2CastRes, nullptr);
+
+    if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGI("mat2 GetStorageFormat FORMAT_FRACTAL_NZ.");
+        aclTensor* mat2ShapeSet = const_cast<aclTensor*>(mat2CastOut);
+        mat2ShapeSet->SetStorageShape(mat2StorageShape); // 对NZ的场景用原来的stroageShape刷新
+    }
+    OP_LOGI("mat2 storage shape is [%s].", op::ToString(mat2StorageShape).GetString());
+
     // k,m,n=1特殊场景
     auto selfReshapeOutput = selfCastOut;
     auto mat2ReshapeOutput = mat2CastOut;
-    bool ifKEqual1 = IfKEqual1(selfCastOut, mmOpInfo, mmOpInfo.shapeInfo.transposeX1, bias);
-    if (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 ||
-        mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16) {
-        ifKEqual1 = ifKEqual1 && checkBF16SizeValid(mat2CastOut, mmOpInfo.shapeInfo.transposeX2) &&
-                    CheckKEqual1Support() && checkBF16MMValid(selfCastOut, mat2CastOut, mmOpInfo.shapeInfo.transposeX2);
-    }
-    if (ifKEqual1) {
-        aclnnStatus kEqual1SelfToMKRes =
-            IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput, mmOpInfo.shapeInfo.transposeX1, executor);
-        CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, nullptr);
-        aclnnStatus kEqual1Mat2ToKNRes =
-            IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput, mmOpInfo.shapeInfo.transposeX2, executor);
-        CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, nullptr);
-        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
-    } else {
-        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(
-            selfCastOut, selfReshapeOutput, mmOpInfo.support_info.self_format, mmOpInfo.shapeInfo.transposeX1,
-            executor);
-        CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, nullptr);
-        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(
-            mat2CastOut, mat2ReshapeOutput, mmOpInfo.support_info.mat2_format, mmOpInfo.shapeInfo.transposeX2,
-            executor);
-        CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, nullptr);
+    bool ifKEqual1 = false;
+    if (!isSelfSlice) {
+        CHECK_RET(
+            ProcessSpecialCases(
+                selfCastOut, mat2CastOut, mmOpInfo, bias, selfReshapeOutput, mat2ReshapeOutput, executor, ifKEqual1) !=
+                -1,
+            nullptr);
     }
 
-    auto selfTransdataOut = l0op::TransData(selfReshapeOutput, mmOpInfo.support_info.self_format, 0, executor);
-    CHECK_RET(selfTransdataOut != nullptr, nullptr);
+    auto selfTransdataOut = selfReshapeOutput;
+    if (!isSelfSlice) {
+        selfTransdataOut = l0op::TransData(selfReshapeOutput, mmOpInfo.support_info.self_format, 0, executor);
+        CHECK_RET(selfTransdataOut != nullptr, nullptr);
+    }
     OP_LOGI("Format of self is selfTransdataOut [%s].", op::ToString(selfTransdataOut->GetStorageShape()).GetString());
+
     auto mat2TransdataOut = l0op::TransData(mat2ReshapeOutput, mmOpInfo.support_info.mat2_format, 0, executor);
     CHECK_RET(mat2TransdataOut != nullptr, nullptr);
     OP_LOGI("Format of mat2 is mat2TransdataOut [%s].", op::ToString(mat2TransdataOut->GetStorageShape()).GetString());
 
     const aclTensor* mmOut = nullptr;
-    if (ifKEqual1) {
+    if (isSelfSlice) {
+        mmOut = GetMatMulOp(
+            selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
+            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+    } else if (ifKEqual1) {
         mmOut = l0op::Mul(selfTransdataOut, mat2TransdataOut, executor);
     } else {
         mmOut = GetMatMulOp(
             selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.enableHf32, mmOpInfo.opImplModeEnum, executor);
+            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
-
     auto mmTransdataOut = l0op::TransData(mmOut, mmOpInfo.ori_info.output_format, 0, executor);
     CHECK_RET(mmTransdataOut != nullptr, nullptr);
-
     // output cast
     auto castOut = l0op::Cast(mmTransdataOut, mmOpInfo.ori_info.output_dtype, executor);
     CHECK_RET(castOut != nullptr, nullptr);
-
     return castOut;
 }
 
@@ -816,7 +1143,6 @@ const aclTensor* ExecMmOpWithTrans(
         mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16) {
         ifKEqual1 = ifKEqual1 && checkBF16SizeValid(mat2CastOut, mmOpInfo.shapeInfo.transposeX2) &&
                     CheckKEqual1Support() && checkBF16MMValid(selfCastOut, mat2CastOut, mmOpInfo.shapeInfo.transposeX2);
-        ;
     }
     if (ifKEqual1) {
         aclnnStatus kEqual1SelfToMKRes =
@@ -848,7 +1174,7 @@ const aclTensor* ExecMmOpWithTrans(
     } else {
         mmOut = GetMatMulOp(
             selfTransdataOut, mat2TransdataOut, nullptr, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.enableHf32, mmOpInfo.opImplModeEnum, executor);
+            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
 
@@ -881,9 +1207,20 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
         return false;
     }
     // 当前支持平台
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion != SocVersion::ASCEND910_95 && socVersion != SocVersion::ASCEND910B &&
+        socVersion != SocVersion::ASCEND910_93) {
         OP_LOGI("Current SOC version does not support GemmV3.");
         return false;
+    }
+
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+        auto dtype_mat1 = mat1->GetDataType();
+        auto dtype_mat2 = mat2->GetDataType();
+        if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) || 
+              (dtype_mat1 == DataType::DT_BF16 && dtype_mat2 == DataType::DT_BF16))) {
+                return false;
+              }
     }
 
     // 解析当前规格matmulop支持的dtype format能力
@@ -1184,6 +1521,9 @@ aclnnStatus SetMmSupportDType(MmOpInfo &mmOpInfo, int8_t cubeMathType) {
   bool tensorBfloat16 = mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 ||
                         mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16;
 
+  bool lowPrecisionInput =
+      (mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16) ||
+      (mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT16);
   if (!IsInputSupportFp32()) {
     mmOpInfo.support_info.self_dtype = DataType::DT_FLOAT16;
     mmOpInfo.support_info.mat2_dtype = DataType::DT_FLOAT16;
@@ -1196,6 +1536,8 @@ aclnnStatus SetMmSupportDType(MmOpInfo &mmOpInfo, int8_t cubeMathType) {
     // BF16或者存在FP32输入则全部dtype统一到FP32
     mmOpInfo.support_info.self_dtype = DataType::DT_FLOAT;
     mmOpInfo.support_info.mat2_dtype = DataType::DT_FLOAT;
+    mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
+  } else if (IsInputSupportFp32() && cubeMathType == USE_HIGH_PREC_MODE && lowPrecisionInput) {
     mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
   }
   return ACLNN_SUCCESS;

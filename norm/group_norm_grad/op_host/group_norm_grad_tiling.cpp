@@ -1,18 +1,19 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file group_norm_grad.cc
  * \brief
  */
 #include "group_norm_grad_tiling_arch35.h"
+#include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
 
 namespace {
@@ -94,6 +95,12 @@ bool GroupNormGradTiling::CheckCompileInfo()
     OP_TILING_CHECK(
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(tilingContext->GetNodeName(), "core num should be greater than zero."), return false);
+    OP_TILING_CHECK(
+        (static_cast<int32_t>(compileInfo->sysWorkspaceSize) < 0),
+        OP_LOGE(tilingContext->GetNodeName(), "sysWorkspaceSize should be greater than zero."), return false);
+    OP_TILING_CHECK(
+        (static_cast<int64_t>(compileInfo->ubSizePlatForm) <= 0),
+        OP_LOGE(tilingContext->GetNodeName(), "ubSizePlatForm should be greater than zero."), return false);
     return true;
 }
 
@@ -163,7 +170,13 @@ bool GroupNormGradTiling::CheckInputShape()
         return false);
     attrs = tilingContext->GetAttrs();
     OP_TILING_CHECK((attrs == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get attrs Failed."), return false);
-    tilingParams->g = *(attrs->GetAttrPointer<int32_t>(0));
+    if (attrs->GetAttrPointer<int32_t>(0) != nullptr) {
+        tilingParams->g = *(attrs->GetAttrPointer<int32_t>(0));
+    } else {
+        OP_LOGE(tilingContext->GetNodeName(), "group is nullptr");
+        return false;
+    }
+    
     OP_TILING_CHECK(
         meanShape.GetDim(DIM1) != tilingParams->g,
         OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, group_num shuold be same with mean.shape[1]"),
@@ -546,10 +559,37 @@ void GroupNormGradTiling::TilingDataPrint() const
     OP_LOGD(tilingContext->GetNodeName(), "dbetaIsRequire:          %d.", tilingParams->dbetaIsRequire);
 }
 
+bool TilingShapeEmptyJudge(gert::TilingContext* context)
+{
+    const gert::Shape xShape = context->GetInputShape(INPUT_3)->GetStorageShape();
+    const gert::Shape gammaShape = context->GetInputShape(INPUT_4)->GetStorageShape();
+
+    int64_t xShapeDimValue = 1;
+    int64_t gammaShapeDimValue = 1;
+    size_t index;
+
+    for (index = 0; index < xShape.GetDimNum(); index++) {
+        xShapeDimValue *= xShape.GetDim(index);
+    }
+
+    for (index = 0; index < gammaShape.GetDimNum(); index++) {
+        gammaShapeDimValue *= gammaShape.GetDim(index);
+    }
+
+    if ((xShapeDimValue == 0) && (gammaShapeDimValue != 0)) {
+        return true;
+    }
+    return false;
+}
+
 ge::graphStatus TilingGroupNormGrad(gert::TilingContext* context)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormGradCompileInfo>();
     if (compileInfo->isRegBase) {
+        if (TilingShapeEmptyJudge(context)) {
+            GroupNormGradEmptyTiling tilingObj(context);
+            return tilingObj.DoTiling();
+        }
         GroupNormGradRegBaseTiling tilingObj(context);
         return tilingObj.DoTiling();
     }
@@ -571,6 +611,10 @@ ge::graphStatus TilingPrepareForGroupNormGrad(gert::TilingParseContext* context)
         (compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
         return ge::GRAPH_FAILED);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    OP_TILING_CHECK(
+        (compileInfo->sysWorkspaceSize < 0),
+        OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
+        return ge::GRAPH_FAILED);
     compileInfo->isRegBase =
         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
     uint64_t ubSizePlatForm;

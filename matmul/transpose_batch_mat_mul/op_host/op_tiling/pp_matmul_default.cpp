@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file pp_matmul_default.cc
@@ -14,7 +14,6 @@
  */
 #include "pp_matmul_default.h"
 #include "pp_matmul_common_tiling.h"
-#include "pp_matmul_tiling.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_tiling.h"
 #include "tiling_base/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
@@ -62,7 +61,7 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     mLoop = CeilDiv(opShape.m, opShape.m0);
     nLoop = CeilDiv(opShape.n, opShape.n0);
     coreLoop = opShape.batchSize * mLoop * nLoop;
-    if (!isAscend310P && mLoop == 1UL && mmInfo.permB && static_cast<uint64_t>(coreLoop % coreNum) <
+    if (!isAscend310P && mLoop == 1UL && mmInfo.transB && static_cast<uint64_t>(coreLoop % coreNum) <
         static_cast<uint64_t>(coreNum / CONST_4) * CONST_3) {
         mBase = RoundUp(opShape.m, CONST_16);
         opShape.m0 = mBase;
@@ -99,6 +98,7 @@ void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P)
     }
         kLoop = CeilDiv(opShape.k, opShape.k0);
 }
+
 
 void PpMatMulDefault::GetHardwareInfo()
 {
@@ -137,6 +137,7 @@ bool PpMatMulDefault::GetMatMulTilingData()
     return true;
 }
 
+
 void PpMatMulDefault::PrintTiling() {
     OP_LOGD(context_->GetNodeName(), "PpMatMul batchSize: %ld.", ppMatmulDefaultTilingData_.opShape.batchSize);
     OP_LOGD(context_->GetNodeName(), "PpMatMul m: %ld.", ppMatmulDefaultTilingData_.opShape.m);
@@ -156,6 +157,7 @@ void PpMatMulDefault::PrintTiling() {
     OP_LOGD(context_->GetNodeName(), "PpMatMul splitk: %ld.", ppMatmulDefaultTilingData_.splitk);
     OP_LOGD(context_->GetNodeName(), "PpMatMul enShuffleK: %ld.", ppMatmulDefaultTilingData_.enShuffleK);
 }
+
 
 } // namespace pp_matmul
 } // namespace optiling

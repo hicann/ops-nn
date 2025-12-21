@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_grad_tiling.cpp
@@ -193,14 +193,14 @@ static bool CheckInputAndOutputShape(
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     for (uint32_t i = 0; i < xDimNum; i++) {
         OP_CHECK_IF(
-            dyShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Input dy shape can not be 0."), return false);
-        OP_CHECK_IF(
             dyShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
             OP_LOGE(context, "Input dy/x shape invaild, shape is not equal dy first few dim."), return false);
         OP_CHECK_IF(
             dyShape->GetStorageShape().GetDim(i) != dxShape->GetStorageShape().GetDim(i),
             OP_LOGE(context, "Output dx shape invaild, shape is not equal dy first few dim."), return false);
     }
+    OP_CHECK_IF(
+        dyShape->GetStorageShape().GetDim(xDimNum - 1) == 0, OP_LOGE(context, "Input dy last shape can not be 0."), return false);
     return true;
 }
 
@@ -238,7 +238,7 @@ static bool CheckGammaAndDgammaShape(
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
     size_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
-        dyDimNum <= gammaDimNum, OP_LOGE(context, "dy dim num should not be smaller than gamma dim num."),
+        dyDimNum < gammaDimNum, OP_LOGE(context, "dy dim num should not be smaller than gamma dim num."),
         return false);
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
@@ -331,6 +331,10 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
     uint32_t row_val = 1;
     uint32_t rstd_shape = 1;
     UpdateShapeInfo(context, col_val, row_val, rstd_shape);
+    bool isEmptyTensor = false;
+    if (row_val == 0) {
+        isEmptyTensor = true;
+    }
     float avg_factor_val = 1.0f / col_val;
     if (rstd_shape != row_val) {
         return ge::GRAPH_FAILED;
@@ -345,10 +349,17 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
         OP_LOGE(context, "The input shape is not supported on the 910 chip."), return ge::GRAPH_FAILED);
     bool isAscend910_95_ = curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
     if (isAscend910_95_) {
+        if (isEmptyTensor) {
+            OP_LOGD(context, "RmsNormGrad Empty tiling start");
+            RmsNormGradEmptyTiling rmsNormGradTiling(context);
+            return rmsNormGradTiling.DoTiling();
+        }
         OP_LOGD(context, "RmsNormGrad Regbase tiling start");
         RmsNormGradRegbaseTiling rmsNormGradTiling(context);
         return rmsNormGradTiling.DoTiling();
     }
+    OP_CHECK_IF(
+        isEmptyTensor, OP_LOGE(context, "Input dy shape can not be 0."), return ge::GRAPH_FAILED);
     uint32_t core_num = ascendc_platform.GetCoreNumAiv();
     auto data_type = context->GetInputDesc(0)->GetDataType();
     uint32_t buffer_size = BUFFER_SIZE_SPLIT_N_HIGH_PRECISION;

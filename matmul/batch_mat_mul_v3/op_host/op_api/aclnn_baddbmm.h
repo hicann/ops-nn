@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #ifndef OP_API_INC_BADDBMM_H_
@@ -40,7 +40,7 @@ extern "C" {
  * INT8类型的枚举值，用于判断Cube单元应该使用那种计算逻辑进行运算，可通过此开关使能如HFLOAT32等功能
  * @param [in] out: npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16类型，dtype和format均需要与self、batch1@batch2保持一致。
- * 支持非连续的Tensor，数据格式支持ND。shape不做限制，可传入任意shape，不要求与self、batch1@batch2的shape保持一致。
+ * 支持非连续的Tensor，数据格式支持ND。输出的shape要求与batch1@batch2的shape保持一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

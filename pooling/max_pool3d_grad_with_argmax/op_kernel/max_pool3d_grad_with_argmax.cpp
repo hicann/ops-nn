@@ -1,22 +1,18 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file max_pool3d_grad_with_argmax.cpp
  * \brief
  */
 
-#include "max_pool3d_grad_with_argmax_nosplit.h"
-#include "max_pool3d_grad_with_argmax_splitd.h"
-#include "max_pool3d_grad_with_argmax_splith.h"
-#include "max_pool3d_grad_with_argmax_splitw.h"
 #include "max_pool3d_grad_with_argmax_normal.h"
 #include "max_pool3d_grad_with_argmax_scatter.h"
 #include "max_pool3d_grad_with_argmax_scatter_overlap.h"
@@ -57,19 +53,6 @@ extern "C" __global__ __aicore__ void max_pool3d_grad_with_argmax(
         return;
     }
 
-    // 100000 = 1, splitD=0 splitH=0 splitW=0 splitKernel=0 type=float(0)
-    // 100001 = 1, splitD=0 splitH=0 splitW=0 splitKernel=0 type=half(1)
-    // 100002 = 1, splitD=0 splitH=0 splitW=0 splitKernel=0 type=bfloat(2)
-    // 110000 = 1, splitD=1 splitH=0 splitW=0 splitKernel=0 type=float(0)
-    // 110001 = 1, splitD=1 splitH=0 splitW=0 splitKernel=0 type=half(1)
-    // 110002 = 1, splitD=1 splitH=0 splitW=0 splitKernel=0 type=bfloat(2)
-    // 111000 = 1, splitD=1 splitH=1 splitW=0 splitKernel=0 type=float(0)
-    // 111001 = 1, splitD=1 splitH=1 splitW=0 splitKernel=0 type=half(1)
-    // 111002 = 1, splitD=1 splitH=1 splitW=0 splitKernel=0 type=bfloat(2)
-    // 111100 = 1, splitD=1 splitH=1 splitW=1 splitKernel=0 type=float(0)
-    // 111101 = 1, splitD=1 splitH=1 splitW=1 splitKernel=0 type=half(1)
-    // 111102 = 1, splitD=1 splitH=1 splitW=1 splitKernel=0 type=bfloat(2)
-
     TPipe pipe;
     // The percentile determines if overlap occurs
     if (TILING_KEY_IS(0)) { // Normal Kernel
@@ -108,104 +91,6 @@ extern "C" __global__ __aicore__ void max_pool3d_grad_with_argmax(
         GENERAL_OP_IMPL_CUTNC(MaxPool3DGradWithArgmaxCutKDH, DTYPE_X, DTYPE_X, int32_t, DTYPE_X, true);
     } else if (TILING_KEY_IS(171)) {
         GENERAL_OP_IMPL_CUTNC(MaxPool3DGradWithArgmaxCutKDHW, DTYPE_X, DTYPE_X, int32_t, DTYPE_X, true);
-    } else // Russian kernel
-        if (TILING_KEY_IS(100000)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxNoSplit<float, float> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(100001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxNoSplit<half, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(200001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxNoSplit<float, half> op(tilingData);
-            op.Init(grad, x, argmax, y, nullptr);
-            op.Process();
-        } else if (TILING_KEY_IS(100002)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxNoSplitTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxNoSplitTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxNoSplit<float, bfloat16_t> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(110000)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitD<float, float> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(110001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitD<half, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(210001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitD<float, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(110002)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitDTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitDTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitD<float, bfloat16_t> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111000)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitH<float, float> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitH<half, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(211001)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitH<float, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111002)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitHTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitHTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitH<float, bfloat16_t> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111100)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitW<float, float> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111101)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitW<half, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(211101)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitW<float, half> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        } else if (TILING_KEY_IS(111102)) {
-            GET_TILING_DATA_WITH_STRUCT(MaxPool3DGradWithArgmaxSplitWTilingData, tilingDataIn, tiling);
-            const MaxPool3DGradWithArgmaxSplitWTilingData* __restrict__ tilingData = &tilingDataIn;
-            KernelMaxPool3DGradWithArgmaxSplitW<float, bfloat16_t> op(tilingData);
-            op.Init(grad, x, argmax, y, userWS);
-            op.Process();
-        }
-
+    }
     return;
 }

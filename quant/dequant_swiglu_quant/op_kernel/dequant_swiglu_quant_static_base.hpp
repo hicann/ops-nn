@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dequant_swiglu_quant_static_base.hpp
@@ -106,14 +106,22 @@ public:
 
             if (this->biasIsEmpty == 0) {
                 DataCopyPad(biasTensorLocal, biasGm[offset + colNum], paramsBias, padParams1);
-                DataCopyPad(biasTensorLocal[alignColNum], biasGm[offset], paramsBias, padParams1);
+                if constexpr (std::is_same_v<BiasType, int32_t> || std::is_same_v<BiasType, float>) {
+                    DataCopyPad(biasTensorLocal[alignColNum], biasGm[offset], paramsBias, padParams1);
+                } else {
+                    DataCopyPad(biasTensorLocal[biasAlignColNum], biasGm[offset], paramsBias, padParams1);
+                }
             }
         } else {
             DataCopyPad(weightLocal, weightScaleGm[offset], params, padParams);
             DataCopyPad(weightLocal[alignColNum], weightScaleGm[offset + colNum], params, padParams);
             if (this->biasIsEmpty == 0) {
                 DataCopyPad(biasTensorLocal, biasGm[offset], paramsBias, padParams1);
-                DataCopyPad(biasTensorLocal[alignColNum], biasGm[offset + colNum], paramsBias, padParams1);
+                if constexpr (std::is_same_v<BiasType, int32_t> || std::is_same_v<BiasType, float>) {
+                    DataCopyPad(biasTensorLocal[alignColNum], biasGm[offset + colNum], paramsBias, padParams1);
+                } else {
+                    DataCopyPad(biasTensorLocal[biasAlignColNum], biasGm[offset + colNum], paramsBias, padParams1);
+                }
             }
         }
         if (activateScaleIsEmpty == 0) {
@@ -184,12 +192,30 @@ public:
                     Add(this->inputTmpELocal, this->inputTmpELocal, this->biasLocal, tileLen);
                 } else {
                     LocalTensor<CalcType> biasFloatLocal = this->inputBiasTempBuffer.template Get<CalcType>();
-                    Cast(biasFloatLocal, this->biasLocal, RoundMode::CAST_NONE, tileLen);
+                    Cast(biasFloatLocal, this->biasLocal, RoundMode::CAST_NONE, tileLen / NUM2);
+                    PipeBarrier<PIPE_V>();
+                    Cast(biasFloatLocal[tileLen / NUM2], this->biasLocal[biasAlignColNum], RoundMode::CAST_NONE, tileLen / NUM2);
                     PipeBarrier<PIPE_V>();
                     Add(this->inputTmpELocal, this->inputTmpELocal, biasFloatLocal, tileLen);
                 }
                 PipeBarrier<PIPE_V>();
             }
+        }
+    }
+
+    __aicore__ inline void processComputeFree()
+    {
+        if (this->biasIsEmpty == 0) {
+            this->inQueueBias.FreeTensor(this->biasLocal);
+        }
+        this->inQueueWeightScale.FreeTensor(this->weightScaleLocal);
+        if (quantScaleIsEmpty == 0) {
+            if constexpr(quantIsOne == 0) {
+                this->inQueueQuant.FreeTensor(this->quantLocal);
+            }
+        }
+        if (this->activateScaleIsEmpty == 0) {
+            this->inQueueActivationScale.template FreeTensor(this->activateLocal);
         }
     }
 
@@ -207,6 +233,10 @@ public:
             }
             bool isAligned = this->curColNum == this->Align(this->curColNum, sizeof(InType));
             this->alignColNum = isAligned ? this->curColNum : this->Align(this->curColNum, sizeof(int8_t));
+            if constexpr (std::is_same_v<BiasType, bfloat16_t> || std::is_same_v<BiasType, half>) {
+                bool biasIsAligned = this->curColNum == this->Align(this->curColNum, sizeof(BiasType));
+                this->biasAlignColNum = biasIsAligned ? this->curColNum : this->Align(this->curColNum, sizeof(int8_t));
+            }
             this->CopyInWeightAndBias(colLoop * this->baseColLen);
             if (this->biasIsEmpty == 0) {
                 this->biasLocal = this->inQueueBias.template DeQue<BiasType>();
@@ -227,18 +257,7 @@ public:
                 this->swiglu(this->alignColNum, i);
                 this->CopyOut(colLoop, i);
             }
-            if (this->biasIsEmpty == 0) {
-                this->inQueueBias.FreeTensor(this->biasLocal);
-            }
-            this->inQueueWeightScale.FreeTensor(this->weightScaleLocal);
-            if (quantScaleIsEmpty == 0) {
-                if constexpr(quantIsOne == 0) {
-                    this->inQueueQuant.FreeTensor(this->quantLocal);
-                }
-            }
-            if (this->activateScaleIsEmpty == 0) {
-                this->inQueueActivationScale.template FreeTensor(this->activateLocal);
-            }
+            processComputeFree();
         }
     }
 
@@ -314,6 +333,7 @@ protected:
     int64_t curCoreRowNum = 0;
     int64_t inputCopyOffset = 0;
     int64_t alignColNum = 0;
+    int64_t biasAlignColNum = 0;
     int64_t curColNum = 0;
     int64_t activateLeft = 0;
     int64_t blockIdx = 0;

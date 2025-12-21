@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file quant_batch_matmul_v3_pergroup_tiling.cc
  * \brief
@@ -27,6 +27,8 @@ namespace optiling {
 
 constexpr uint64_t GROUP_MKN_BIT_SIZE = 0xFFFF;
 constexpr uint64_t DECODEM = 1024;
+constexpr uint64_t L2_REAL_SIZE = 168;  // B4真实的L2Size大小
+constexpr uint64_t L2_FAKE_SIZE = 96;   // B4被上层修改后的L2Size大小
 
 const gert::Shape QuantBatchMatmulV4PergroupTiling::GetShape(const size_t index)
 {
@@ -83,8 +85,8 @@ ge::graphStatus QuantBatchMatmulV4PergroupTiling::CalcDequantTiling(uint32_t bas
     // 2MN + MK + M + 2MN = ubres
     float_t numGroupSizeK = 1.5;
     uint32_t ubCalcM = elesize / (4 * ubCalcN + numGroupSizeK * groupSizeK);
-    tilingData_.params.set_ubCalcN(ubCalcN);
-    tilingData_.params.set_ubCalcM(ubCalcM);
+    tilingData_.params.ubCalcN = ubCalcN;
+    tilingData_.params.ubCalcM = ubCalcM;
     OP_LOGD(inputParams_.opName, "UbTiling ubCalcM: %u,  ubCalcM: %u", ubCalcM, ubCalcN);
     return ge::GRAPH_SUCCESS;
 }
@@ -115,8 +117,8 @@ ge::graphStatus QuantBatchMatmulV4PergroupTiling::DoOpTiling()
     basicTiling_.stepKa = STEP_KA;
     basicTiling_.stepKb = STEP_KB;
     basicTiling_.dbL0c = DB_L0C;
-    tilingData_.matmulTiling.set_dbL0A(DB_L0A);
-    tilingData_.matmulTiling.set_dbL0B(DB_L0B);
+    tilingData_.matmulTiling.dbL0A = DB_L0A;
+    tilingData_.matmulTiling.dbL0B = DB_L0B;
 
     QuantBatchMatmulV3BasicTiling::DoL2CacheTiling();
     if (basicTiling_.mTileCntl2 == 1UL && basicTiling_.nTileCntl2 == 1UL) {
@@ -124,7 +126,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupTiling::DoOpTiling()
         basicTiling_.nTileBlock = ops::CeilDiv(inputParams_.nSize, basicTiling_.baseN);
     }
     basicTiling_.usedCoreNum = std::min(basicTiling_.usedCoreNum, basicTiling_.mTileBlock * basicTiling_.nTileBlock);
-    tilingData_.params.set_groupSizeK(inputParams_.groupSizeK);
+    tilingData_.params.groupSizeK = inputParams_.groupSizeK;
     return CalcDequantTiling(basicTiling_.baseM, basicTiling_.baseN, inputParams_.groupSizeK);
 }
 
@@ -311,7 +313,7 @@ bool QuantBatchMatmulV4PergroupTiling::CheckInputsShape(
     OP_TILING_CHECK(
         x2ScaleInner != n || x2ScaleOuter != nkgroup,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Input x1Scale's shape should be [%ld, %ld], but actual shape is [%ld, %ld]", nkgroup,
+            inputParams_.opName, "Input x1Scale's shape should be [%zu, %zu], but actual shape is [%zu, %zu]", nkgroup,
             n, x2ScaleOuter, x2ScaleInner),
         return false);
 
@@ -389,6 +391,26 @@ bool QuantBatchMatmulV4PergroupTiling::AnalyzeInputs()
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "There is at least one input with wrong dim."), return false);
     OP_TILING_CHECK(!CheckFormat(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "There is at least one format wrong."), return false);
 
+    return true;
+}
+
+bool QuantBatchMatmulV4PergroupTiling::SetPlatformInfoForTiling()
+{
+    if (!compileInfoInit_) {
+        InitCompileInfo();
+    }
+    OP_LOGE_IF(compileInfo_.aicNum <= 0, false, inputParams_.opName, "coreNum <= 0");
+    aicoreParams_.aicNum = compileInfo_.aicNum;
+    OP_LOGE_IF(compileInfo_.l2Size <= 0, false, inputParams_.opName, "l2Size <= 0");
+    // 纠正L2实际物理大小
+    compileInfo_.l2Size =
+        compileInfo_.l2Size == L2_FAKE_SIZE * MB_SIZE ? L2_REAL_SIZE * MB_SIZE : compileInfo_.l2Size;
+    inputParams_.libApiWorkSpaceSize = compileInfo_.workspaceNum;
+    aicoreParams_.ubSize = compileInfo_.ubSize;
+    aicoreParams_.l1Size = compileInfo_.l1Size;
+    aicoreParams_.l0aSize = compileInfo_.l0aSize;
+    aicoreParams_.l0cSize = compileInfo_.l0cSize;
+    aicoreParams_.blockDim = 0;
     return true;
 }
 

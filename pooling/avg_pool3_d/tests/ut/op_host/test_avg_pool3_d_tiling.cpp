@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <fstream>
 #include <iostream>
@@ -22,7 +22,7 @@
 #include "ut_op_util.h"
 #include "ut_op_common.h"
 #include "platform/platform_infos_def.h"
-#include "../../../op_host/cube_tiling_runtime.h"
+#include "../../../op_host/avg_pool_cube_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -81,7 +81,7 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
     }
 
     fe::PlatFormInfos platform_info;
-    optiling::avg_pool3_d_tiling_compile_info::Conv3DCompileInfo compile_info;
+    optiling::avgPool3DTilingCompileInfo::AvgPool3DCubeCompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
                       .KernelIONum(2, 1)
                       .Inputs({const_cast<char *>(param.compile_info.c_str()), reinterpret_cast<void *>(&platform_info)})
@@ -109,6 +109,7 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
                       .NodeInputTd(0, ge::DT_FLOAT16, param.x_format, param.x_format)
                       .NodeOutputTd(0, ge::DT_FLOAT16, param.y_format, param.y_format)
                       .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
                       .TilingData(tiling_data.get())
                       .Build();
 

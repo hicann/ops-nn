@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -281,7 +281,7 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingMsdGroup, generalTest)
 //       -1: per channel, 1: per tensor, > 1: per group
 
 static WeightQuantBatchMatmulV2TilingMsdGroupTestParam casesParams2448[] = {
-    {"Key11_1_11008_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753},
+    {"Key11_1_11008_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753}, //711300UL
     {"Key12_1_4096_12288_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333139882753},
     {"Key13_1_4096_22016_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753},
     {"Key14_1_4096_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753},

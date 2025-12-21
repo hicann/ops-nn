@@ -132,6 +132,11 @@
             "name": "div_mode",
             "dtype": "bool",
             "value": true
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
           }
         ]
       }

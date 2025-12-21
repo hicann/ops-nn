@@ -1,18 +1,11 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- *
- * @file test_foreach_div_scalar_infershape.cpp
- *
- * @brief
- *
- * @Version 2.0
- *
  */
 
 #include "gtest/gtest.h"
@@ -64,8 +57,7 @@ TEST_F(ForeachDivScalarTest, infer_shape_known_success) {
   output_shape_ref[2] = &y_shape_2;
 
   auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(4, 3)
-                    .IrInstanceNum({3, 1})
+                    .IrInstanceNum({3, 1}, {3})
                     .InputShapes(input_shape_ref)
                     .OutputShapes(output_shape_ref)
                     .Build();
@@ -104,8 +96,7 @@ TEST_F(ForeachDivScalarTest, infer_dtype_test_1) {
   std::vector<void*> output_dtype_ref(3);
 
   auto holder = gert::InferDataTypeContextFaker()
-                    .NodeIoNum(4, 3)
-                    .IrInstanceNum({3, 1})
+                    .IrInstanceNum({3, 1}, {3})
                     .InputDataTypes(input_dtype_ref)
                     .OutputDataTypes(output_dtype_ref)
                     .Build();
@@ -147,8 +138,7 @@ TEST_F(ForeachDivScalarTest, infer_dtype_test_2) {
   std::vector<void*> output_dtype_ref(3);
 
   auto holder = gert::InferDataTypeContextFaker()
-                    .NodeIoNum(4, 3)
-                    .IrInstanceNum({3, 1})
+                    .IrInstanceNum({3, 1}, {3})
                     .InputDataTypes(input_dtype_ref)
                     .OutputDataTypes(output_dtype_ref)
                     .Build();

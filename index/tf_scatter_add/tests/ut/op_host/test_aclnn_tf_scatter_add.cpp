@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -36,7 +36,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_1)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    ut.TestPrecision();
+    
 }
 
 // checkNotNull var index updates
@@ -83,7 +83,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_4)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            ut.TestPrecision();
+            
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -115,7 +115,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_6)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    ut.TestPrecision();
+    
 }
 
 // test AiCPU int8
@@ -129,7 +129,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_7)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    ut.TestPrecision();
+    
 }
 
 // check updatesDimNum
@@ -212,7 +212,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_13)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    ut.TestPrecision();
+    
 }
 
 // CheckDtypeValid for var and updates

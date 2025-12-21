@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_filter_v2_stream_k_tiling.cpp
@@ -126,13 +126,22 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlock()
             (blockBaseK < streamkCoreDim * runInfo_.wo)) {
             continue;
         }
-        OP_LOGD(opName_, "Adjust the block baseM from [%d] to [%ld]", blockTiling_.blockBaseM, singleShapeM);
 
+        if (singleShapeM * blockTiling_.blockBaseN * L0C_DTYPE_BYTE > L0C_SIZE) {
+            OP_LOGD(opName_, "base block after adjust exceed loC size,stop adjust block baseM");
+            break;
+        }
+
+        OP_LOGD(opName_, "Adjust the block baseM from [%d] to [%ld]", blockTiling_.blockBaseM, singleShapeM);
         blockTiling_.blockBaseK = blockBaseK;
         blockTiling_.blockBaseM = singleShapeM;
+
         if (blockTiling_.blockBaseM * blockTiling_.blockBaseN * DB_ON * L0C_DTYPE_BYTE <= L0C_SIZE) {
             blockTiling_.dbL0C = DB_ON;
+        } else {
+            blockTiling_.dbL0C = DB_OFF;
         }
+
         SetStepK4SplitMN();
         if (!IsCurBlockL1Invalid()) {
             break;
@@ -166,7 +175,7 @@ bool Conv3DBackpropFilterV2StreamKTiling::IsSplitBatchDoutBetter()
     uint64_t singleShapeKTail = blockTiling_.singleCoreK % singleShapeK;
     double batchDoutTailRatio = static_cast<double>(batchDoutTail) / static_cast<double>(singleShapeBatchDout);
     double kTailRatio = static_cast<double>(singleShapeKTail) / static_cast<double>(singleShapeK);
-    if (batchDoutTailRatio != 0 && batchDoutTailRatio < kTailRatio) {
+    if (batchDoutTail > 0 && batchDoutTailRatio < kTailRatio) {
         return false;
     }
     // 若尾块比例相同，则选择切BatchDout
@@ -227,33 +236,33 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
     uint64_t streamkCnt = blockTiling_.totalCnt % coreNum_;
     if (streamkCnt == CONST_ZERO) { // 没有尾轮基本块
         blockTiling_.streamkType = NO_STREAMK_CALC;
-        blockTiling_.coreStreamK = 0;
         OP_LOGD(opName_, "The basic block streamk template does not need to process the tail block.");
-        return;
     } else if (streamkCnt > (coreNum_ >> 1)) { // 尾轮的基本块超过一半的核，不做streamk
         blockTiling_.streamkType = NO_STREAMK_CALC;
-        blockTiling_.coreStreamK = 0;
         OP_LOGD(opName_, "The basic block streamk template does not process the tail block.");
-        return;
     } else if (deterNotSupportFormat_) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
-        blockTiling_.coreStreamK = 0;
-        OP_LOGD(opName_, "The basic block streamk template does not process the group > 1.");
-        return;
+        OP_LOGD(opName_, "The basic block streamk template only process the format of NCDHW.");
+    } else {
+        blockTiling_.coreStreamK = coreNum_ / streamkCnt;
+
+        /*
+            StreamK可选择切BatchDout或者HWout，此时优先级为：
+            1. 优先选择切BatchDout或者HWout 分核数多者；
+            2. 若分核数相同，则选择尾块比例大者；
+            3. 若尾块比例相同，则选择切BatchDout，保持HWout连续，对并包、stepk的加载数据量更大。
+            4. 若分核数为1，实际没有分核计算，使能streamkType=0
+        */
+        if (IsSplitBatchDoutBetter()) {
+            DoStreamkByBatchDout();
+        } else {
+            DoStreamkByHWout();
+        }
     }
 
-    blockTiling_.coreStreamK = coreNum_ / streamkCnt;
-
-    /*
-        StreamK可选择切BatchDout或者HWout，此时优先级为：
-        1. 优先选择切BatchDout或者HWout 分核数多者；
-        2. 若分核数相同，则选择尾块比例大者；
-        3. 若尾块比例相同，则选择切BatchDout，保持HWout连续，对并包、stepk的加载数据量更大。
-    */
-    if (IsSplitBatchDoutBetter()) {
-        DoStreamkByBatchDout();
-    } else {
-        DoStreamkByHWout();
+    if (blockTiling_.streamkType == NO_STREAMK_CALC) {
+        blockTiling_.coreStreamK = 0;
+        blockTiling_.coreBindDirection = MN_STREAM_K;
     }
 }
 
@@ -264,14 +273,8 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::GetWorkspaceSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t userWorkSpaceSize = 0;
     if (blockTiling_.streamkType != NO_STREAMK_CALC) {
-        size_t singleSize = 0;
-        if (tilingData_.dwTiling.get_cl0Pbuffer() > 1) {
-            singleSize = L0C_SIZE >> 1;
-        } else {
-            singleSize = L0C_SIZE;
-        }
         constexpr uint64_t WORKSPACE_PIECE_NUM = 2; // 2: 1 space for Cube and 1 space for Vector
-        userWorkSpaceSize = WORKSPACE_PIECE_NUM * DB_ON * blockTiling_.usedCoreNum * singleSize;
+        userWorkSpaceSize = WORKSPACE_PIECE_NUM * blockTiling_.usedCoreNum * L0C_SIZE;
     }
     workspaces[0] = WORKSPACE + userWorkSpaceSize;
     return ge::GRAPH_SUCCESS;

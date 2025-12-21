@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /* !
@@ -44,6 +44,9 @@ constexpr uint64_t ITER_COL_FIRST = 0UL;
 constexpr uint64_t ITER_ROW_FIRST = 1UL;
 constexpr uint64_t BASIC_L1_BUFFER_NUM = 4UL;
 constexpr uint64_t RPC_WORKSIZE = 20UL;
+constexpr uint64_t INIT_SPLIT_CNT = 1UL;
+constexpr uint64_t INIT_SPLIT_VALUE = 0UL;
+constexpr uint64_t ALIGN_128 = 128UL;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;
@@ -89,6 +92,7 @@ struct MatMulV3Args {
     uint64_t nValue = 0UL;
     uint64_t aDtypeSize = 1UL;
     uint64_t bDtypeSize = 1UL;
+    uint64_t fusedOpType = 0UL;
     MatMulV3BatchInfo *batchInfo = nullptr;
 };
 
@@ -102,6 +106,19 @@ struct MatMulV3TailInfo {
 
 struct MatMulV3MixInfo {
     uint64_t ubDB = 1UL;
+};
+
+struct BatchMatMulV3ToMulInfo {
+    uint64_t m = 1UL;
+    uint64_t n = 1UL;
+    uint64_t b = 1UL;
+    uint64_t usedCoreNum = 1UL;
+    uint64_t singleCoreBatch = 1UL;
+    uint64_t batchNum = 1UL;
+    uint64_t batchNumLastRound = 1UL;
+    uint64_t batchNumLastRoundTail = 1UL;
+    uint64_t lastCoreNum = 1UL;
+    uint64_t alignNum = 1UL;
 };
 
 struct MatMulV3RunInfo {
@@ -122,12 +139,20 @@ struct MatMulV3RunInfo {
     uint64_t dbL0C = 0UL;
     uint64_t iterBatchL1 = 1UL;
     uint64_t iterBatchL0 = 1UL;
+    uint64_t innerBatch = 0UL;
     uint64_t l1BufferNum = 2UL;
     uint64_t mBaseTailSplitCnt = 1UL;
     uint64_t nBaseTailSplitCnt = 1UL;
+    double defaultBalance = 0.0;    // 默认负载均衡率
+    double redundantData = 0.0;    // 默认重复搬运量
+    uint64_t totalDataAmount = 1UL;
+    uint64_t mergeBatchAL1 = 1UL;
+    uint64_t mergeBatchBL1 = 1UL;
+    uint64_t mergeBatchL0 = 1UL;
     MatMulV3TailInfo tailInfo;
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;
+    BatchMatMulV3ToMulInfo toMulInfo;
 };
 }
 }

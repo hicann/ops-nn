@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant_base.h
  * \brief
@@ -21,6 +21,7 @@ namespace DynamicQuantNDOpt {
 using namespace AscendC;
 
 constexpr uint32_t BUFFER_NUM = 1;
+constexpr uint32_t DOUBLE = 2;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 constexpr uint32_t FIFTEEN = 15;
 constexpr uint32_t SIXTEEN = 16;
@@ -31,6 +32,8 @@ constexpr uint32_t THIRTY_TWO = 32;
 constexpr uint32_t SIXTY_THREE = 63;
 constexpr uint32_t SIXTY_FOUR = 64;
 constexpr uint32_t MAX_VALUE_NUM = 8;
+constexpr uint32_t MAX_REPEAT = 255;
+constexpr uint32_t UB_RESERVED_LENGTH = 1024;
 constexpr int32_t ELEM_PER_REP_FP32 = 64;  // ONE_REPEAT_BYTE_SIZE / sizeof(float)
 constexpr int32_t ELEM_PER_REP_HALF = 128; // ONE_REPEAT_BYTE_SIZE / sizeof(half)
 constexpr float DYNAMIC_QUANT_INT8_SCALE = 255.0;
@@ -64,6 +67,7 @@ public:
         tilingData_.alignGroupNum = tilingData->alignGroupNum;
         tilingData_.groupNum = tilingData->groupNum;
         tilingData_.hasSmooth = tilingData->hasSmooth;
+        tilingData_.ubSize = tilingData->ubSize;
     }
 
     __aicore__ inline void InitBaseBuffer()
@@ -197,8 +201,16 @@ public:
 
         if (likely(repsFp32 > 1)) {
             // 8 is rep stride
-            Max(src_local, src_local[ELEM_PER_REP_FP32], src_local, ELEM_PER_REP_FP32, repsFp32 - 1,
-                {1, 1, 1, 0, 8, 0});
+            if (repsFp32 - 1 > MAX_REPEAT) {
+                Max(src_local, src_local[ELEM_PER_REP_FP32], src_local, ELEM_PER_REP_FP32, MAX_REPEAT,
+                    {1, 1, 1, 0, 8, 0});
+                PipeBarrier<PIPE_V>();
+                Max(src_local, src_local[ELEM_PER_REP_FP32 * MAX_REPEAT], src_local, ELEM_PER_REP_FP32, repsFp32 - MAX_REPEAT - 1,
+                    {1, 1, 1, 0, 8, 0});
+            } else {
+                Max(src_local, src_local[ELEM_PER_REP_FP32], src_local, ELEM_PER_REP_FP32, repsFp32 - 1,
+                    {1, 1, 1, 0, 8, 0});
+            }
             PipeBarrier<PIPE_V>();
         }
         if (unlikely(remsFp32 > 0) && unlikely(offsetsFp32 > 0)) {
@@ -236,6 +248,11 @@ public:
         return a > b ? a : b;
     }
 
+    template <typename T1, typename T2>
+    __aicore__ inline auto GetMin(T1 a, T2 b)
+    {
+        return a < b ? a : b;
+    };
 protected:
     TPipe* pPipe = nullptr;
     /* tiling data */

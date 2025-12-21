@@ -7,7 +7,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
  # -----------------------------------------------------------------------------
-
+ 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(quant_batch_matmul_v4 "ascend910B1" "-DKFC_L1_RESERVER_SIZE=0 -DDTYPE_X1=int8_t -DDTYPE_X2=int8_t -DDTYPE_BIAS=float32 -DDTYPE_Y=bfloat16_t -DFORMAT_X1=2 -DFORMAT_X2=2" quant_batch_matmul_v3)
 endif()

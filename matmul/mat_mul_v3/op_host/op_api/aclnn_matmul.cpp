@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_matmul.cpp
@@ -79,6 +79,32 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
+static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
+{
+    if (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();        
+        // only support fp16|bf16 weightNZ
+        if (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .",
+                op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
+                op::ToString(mat2->GetDataType()).GetString());
+            return false;
+        }
+        // weightnz暂不支持self,mat2为bfloat16和float16的数据类型推导
+        if ((self->GetDataType() == op::DataType::DT_FLOAT16 && mat2->GetDataType() == op::DataType::DT_BF16) ||
+            (self->GetDataType() == op::DataType::DT_BF16 && mat2->GetDataType() == op::DataType::DT_FLOAT16)) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "The dtypes of self and mat2 must be both DT_BF16 or both DT_FLOAT16, now self's dtype is [%s], mat2's dtype is [%s]",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+            return false;
+        }
+    }
+    return true;
+}
+
 inline static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
@@ -112,8 +138,7 @@ inline static bool CheckDtypeValid(
             ACLNN_ERR_PARAM_INVALID, "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
         return false;
     }
-
-    return true;
+    return CheckWeightNzDtype(self, mat2);
 }
 
 // 获取broadcast shape
@@ -253,15 +278,6 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
             op::ToString(socVersion).GetString());
-        return false;
-    }
-    // only support fp16|bf16 weightNZ
-    if (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .",
-            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
-            op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
 
@@ -509,20 +525,24 @@ static const aclTensor* BuildMatMulGraph(
             mat2Unsqueeze = ContiguousUnsqueezeNd(mat2, dimData, executor);
             CHECK_RET(mat2Unsqueeze != nullptr, nullptr);
         }
-        // Fold the batch into the first dimension
-        auto selfContiguous = l0op::Contiguous(self, executor);
-        CHECK_RET(selfContiguous != nullptr, nullptr);
-        op::Shape shape{-1, selfContiguous->GetViewShape().GetDim(dimTensor1 - 1)};
-        auto selfReshape = l0op::Reshape(selfContiguous, shape, executor);
-        CHECK_RET(selfReshape != nullptr, nullptr);
-        matmulOut = ExecMmOp(selfReshape, mat2Unsqueeze, cubeMathType, executor);
-    } else if ((dimTensor1 == 1 || dimTensor1 == 2) &&  dimTensor2 >= 3) { // dimTensor2 >= 3  && dimTensor1 is 1 or 2
-        // t1:(n, m) * t2:(N, m, p)
-        FVector<int64_t> dimData;
-        if (dimTensor1 == 1) {
-            dimData = FVector<int64_t>{0}; // unsquee dim 0
+        auto selfReshape = self;
+        if (Ops::NN::IsSliceNonContiguous(self)) {
+            // 非连续3D * 2D走MM, 需要适配inferShape和OpTiling
+            matmulOut = ExecMmOp(selfReshape, mat2Unsqueeze, cubeMathType, executor);
         } else {
-            dimData = FVector<int64_t>{0, 1}; //  unsquee dim 0,1
+            // Fold the batch into the first dimension
+            auto selfContiguous = l0op::Contiguous(self, executor);
+            CHECK_RET(selfContiguous != nullptr, nullptr);
+            op::Shape shape{-1, selfContiguous->GetViewShape().GetDim(dimTensor1 - 1)};
+            selfReshape = l0op::Reshape(selfContiguous, shape, executor);
+            CHECK_RET(selfReshape != nullptr, nullptr);
+            matmulOut = ExecMmOp(selfReshape, mat2Unsqueeze, cubeMathType, executor);
+        }
+    } else if ((dimTensor1 == 1 || dimTensor1 == 2) && dimTensor2 >= 3) { // dimTensor2 >= 3  && dimTensor1 is 1 or 2
+        // t1: (n, m) * t2:(N, m, p)
+        FVector<int64_t> dimData;
+        if (dimTensor1 == 1) { // 1D need unsqueeze dim 0 -> (1, m), 2D no need unsqueeze
+            dimData = FVector<int64_t>{0};
         }
         auto selfUnsqueeze = ContiguousUnsqueezeNd(self, dimData, executor);
         CHECK_RET(selfUnsqueeze != nullptr, nullptr);

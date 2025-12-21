@@ -22,6 +22,7 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
             $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
             $<$<TARGET_EXISTS:${COMMON_NAME}_obj>:$<TARGET_OBJECTS:${COMMON_NAME}_obj>>
             )
+    target_sources(${OP_KERNEL_MODULE_NAME}_tiling PRIVATE ../op_api/empty_runtime.cpp)
     target_link_libraries(${OP_KERNEL_MODULE_NAME}_tiling PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
             -Wl,--no-as-needed

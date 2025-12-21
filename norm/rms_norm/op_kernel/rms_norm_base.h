@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef RMS_NORM_BASE_H_
 #define RMS_NORM_BASE_H_
@@ -21,7 +21,11 @@ using namespace AscendC;
  */
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
+#if __CCE_AICORE__ == 310
+    return AscendC::VECTOR_REG_WIDTH;
+#else
     return 256U;
+#endif
 }
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310
@@ -39,6 +43,9 @@ constexpr int32_t BLOCK_SIZE = 32;
 constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr float MINUS_HALF = -0.5f;
 constexpr uint32_t ZERO_UINT = 0;
+constexpr uint32_t ONE_UINT = 1;
+constexpr uint32_t TWO_UINT = 2;
+constexpr uint32_t THREE_UINT = 3;
 constexpr float ONE = 1;
 constexpr int32_t SECOND_LOOP = 2;
 constexpr int32_t HALf_INTERVAL = 2;

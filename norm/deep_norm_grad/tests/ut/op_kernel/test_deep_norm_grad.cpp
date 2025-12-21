@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -150,8 +150,8 @@ TEST_F(deep_norm_grad_test, test_case_1)
     tilingDatafromBin->nDealLastCore = 1;
     tilingDatafromBin->mergeNCount = 1;
     tilingDatafromBin->cutDTime = 2;
-    tilingDatafromBin->cutDPerTime = 6112;
-    tilingDatafromBin->cutDLastTime = 2080;
+    tilingDatafromBin->cutDPerTime = 6104;
+    tilingDatafromBin->cutDLastTime = 2088;
     tilingDatafromBin->alpha = 0;
     tilingDatafromBin->fixedOutputFlag = 0;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -218,9 +218,9 @@ TEST_F(deep_norm_grad_test, test_case_10)
     tilingDatafromBin->dDimNum = D;
     tilingDatafromBin->nDealPerCore = 1;
     tilingDatafromBin->nDealLastCore = 1;
-    tilingDatafromBin->mergeNCount = 15;
+    tilingDatafromBin->mergeNCount = 8;
     tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 4880;
+    tilingDatafromBin->cutDPerTime = 1024;
     tilingDatafromBin->cutDLastTime = 1024;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
@@ -358,7 +358,7 @@ TEST_F(deep_norm_grad_test, test_case_22)
     tilingDatafromBin->dDimNum = D;
     tilingDatafromBin->nDealPerCore = 1;
     tilingDatafromBin->nDealLastCore = 1;
-    tilingDatafromBin->mergeNCount = 30;
+    tilingDatafromBin->mergeNCount = 25;
     tilingDatafromBin->cutDTime = 1;
     tilingDatafromBin->cutDPerTime = 133;
     tilingDatafromBin->cutDLastTime = 133;
@@ -388,8 +388,8 @@ TEST_F(deep_norm_grad_test, test_case_22)
 
 TEST_F(deep_norm_grad_test, test_case_20)
 { // tiling key 20
-    size_t N = 10;
-    size_t D = 19;
+    size_t N = 2;
+    size_t D = 1024;
     size_t dyByteSize = N * D * sizeof(int16_t);
     size_t xByteSize = N * D * sizeof(int16_t);
     size_t gxByteSize = N * D * sizeof(int16_t);
@@ -423,15 +423,15 @@ TEST_F(deep_norm_grad_test, test_case_20)
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 5;
+    tilingDatafromBin->useCoreNum = 2;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
-    tilingDatafromBin->nDealPerCore = 2;
-    tilingDatafromBin->nDealLastCore = 2;
-    tilingDatafromBin->mergeNCount = 312;
+    tilingDatafromBin->nDealPerCore = 1;
+    tilingDatafromBin->nDealLastCore = 1;
+    tilingDatafromBin->mergeNCount = 15;
     tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 19;
-    tilingDatafromBin->cutDLastTime = 19;
+    tilingDatafromBin->cutDPerTime = 1024;
+    tilingDatafromBin->cutDLastTime = 1024;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -458,8 +458,8 @@ TEST_F(deep_norm_grad_test, test_case_20)
 
 TEST_F(deep_norm_grad_test, test_case_21)
 { // tiling key 21
-    size_t N = 10;
-    size_t D = 19;
+    size_t N = 2;
+    size_t D = 8192;
     size_t dyByteSize = N * D * sizeof(int16_t);
     size_t xByteSize = N * D * sizeof(int16_t);
     size_t gxByteSize = N * D * sizeof(int16_t);
@@ -493,15 +493,15 @@ TEST_F(deep_norm_grad_test, test_case_21)
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 5;
+    tilingDatafromBin->useCoreNum = 2;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
-    tilingDatafromBin->nDealPerCore = 2;
-    tilingDatafromBin->nDealLastCore = 2;
-    tilingDatafromBin->mergeNCount = 312;
-    tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 19;
-    tilingDatafromBin->cutDLastTime = 19;
+    tilingDatafromBin->nDealPerCore = 1;
+    tilingDatafromBin->nDealLastCore = 1;
+    tilingDatafromBin->mergeNCount = 1;
+    tilingDatafromBin->cutDTime = 2;
+    tilingDatafromBin->cutDPerTime = 4432;
+    tilingDatafromBin->cutDLastTime = 3760;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -568,7 +568,7 @@ TEST_F(deep_norm_grad_test, test_case_2)
     tilingDatafromBin->dDimNum = D;
     tilingDatafromBin->nDealPerCore = 1;
     tilingDatafromBin->nDealLastCore = 1;
-    tilingDatafromBin->mergeNCount = 338;
+    tilingDatafromBin->mergeNCount = 337;
     tilingDatafromBin->cutDTime = 1;
     tilingDatafromBin->cutDPerTime = 9;
     tilingDatafromBin->cutDLastTime = 9;
@@ -599,7 +599,7 @@ TEST_F(deep_norm_grad_test, test_case_2)
 TEST_F(deep_norm_grad_test, test_case_12)
 { // tiling key 12
     size_t N = 10;
-    size_t D = 19;
+    size_t D = 9;
     size_t dyByteSize = N * D * sizeof(int16_t);
     size_t xByteSize = N * D * sizeof(int16_t);
     size_t gxByteSize = N * D * sizeof(int16_t);
@@ -633,15 +633,15 @@ TEST_F(deep_norm_grad_test, test_case_12)
 
     DeepNormGradTilingData* tilingDatafromBin = reinterpret_cast<DeepNormGradTilingData*>(tiling);
 
-    tilingDatafromBin->useCoreNum = 5;
+    tilingDatafromBin->useCoreNum = 10;
     tilingDatafromBin->nDimNum = N;
     tilingDatafromBin->dDimNum = D;
-    tilingDatafromBin->nDealPerCore = 2;
-    tilingDatafromBin->nDealLastCore = 2;
-    tilingDatafromBin->mergeNCount = 312;
+    tilingDatafromBin->nDealPerCore = 1;
+    tilingDatafromBin->nDealLastCore = 1;
+    tilingDatafromBin->mergeNCount = 209;
     tilingDatafromBin->cutDTime = 1;
-    tilingDatafromBin->cutDPerTime = 19;
-    tilingDatafromBin->cutDLastTime = 19;
+    tilingDatafromBin->cutDPerTime = 9;
+    tilingDatafromBin->cutDLastTime = 9;
     tilingDatafromBin->alpha = 0.3;
     tilingDatafromBin->fixedOutputFlag = 0;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

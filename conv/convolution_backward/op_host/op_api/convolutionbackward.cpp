@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "convolutionbackward.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -38,6 +38,9 @@ constexpr int32_t KERNEL_HW_4 = 4;
 constexpr int32_t KERNEL_HW_9 = 9;
 constexpr int32_t KERNEL_HW_16 = 16;
 constexpr int32_t FORMAT_6HD_DIM = 6;
+constexpr uint64_t DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE = 7;
+constexpr uint64_t DETERMINISTIC_PADDING_COEF = 2;
+constexpr uint64_t DETERMINISTIC_CHANNEL_16 = 16;
 
 const vector<vector<int64_t>> CONV2D_BACKPROP_INPUT_V2_WHITE_LIST =
 {
@@ -1471,6 +1474,56 @@ static bool CheckV2BasicBlockSupport(const ConvBackpropParams &params) {
   return isKernelSupport && isDataTypeSuport;
 }
 
+bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams &params) {
+  const aclTensor &kernel = *(params.weight);
+  const aclTensor &outBackprop = *(params.outBackprop);
+  const aclTensor &input = *(params.input);
+  if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM ||
+      input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
+    return false;
+  }
+  const aclIntArray &padding = *(params.padding);
+  const aclIntArray &dilation = *(params.dilation);
+  if (params.groups > 1) {
+    return false;
+  }
+
+  if ((dilation[DIM_0] != 1) || (dilation[DIM_1] != 1) || (dilation[DIM_2] != 1)) {
+    return false;
+  }
+
+  auto outBackpropShape = outBackprop.GetStorageShape();
+  auto inputShape = input.GetStorageShape();
+
+  uint64_t co = outBackpropShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * outBackpropShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
+  uint64_t ci = inputShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
+  if (((co > DETERMINISTIC_CHANNEL_16) && (co % DETERMINISTIC_CHANNEL_16 > 0)) ||
+      ((ci > DETERMINISTIC_CHANNEL_16) && (ci % DETERMINISTIC_CHANNEL_16 > 0))) {
+    return false;
+  }
+
+  auto kernelShape = kernel.GetViewShape();
+  uint64_t kd = kernelShape.GetDim(D_DIM_NCDHW_INDEX);
+  uint64_t kh = kernelShape.GetDim(H_DIM_NCDHW_INDEX);
+  uint64_t kw = kernelShape.GetDim(W_DIM_NCDHW_INDEX);
+  if ((kd > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE) || (kh > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE) ||
+      (kw > DETERMINISTIC_FILTER_V2_STRIDE_MAX_VALUE)) {
+    return false;
+  }
+  const aclIntArray &stride = *(params.stride);
+  if ((stride[DIM_0] > static_cast<int64_t>(kd)) || (stride[DIM_1] > static_cast<int64_t>(kh)) ||
+      (stride[DIM_2] > static_cast<int64_t>(kw))) {
+    return false;
+  }
+
+  if ((padding[DIM_0] * DETERMINISTIC_PADDING_COEF > kd) || (padding[DIM_1] * DETERMINISTIC_PADDING_COEF > kh) ||
+      (padding[DIM_2] * DETERMINISTIC_PADDING_COEF > kw)) {
+    return false;
+  }
+  
+  return true;
+}
+
 bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (socVersion == SocVersion::ASCEND910_95) {
@@ -1495,6 +1548,15 @@ bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
   if (params.groups > 1 || IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_WHITE_LIST)
     || IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST)) {
     return true;
+  }
+
+  int64_t deterministicValue = 0;
+  rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+  if (retRts != RT_ERROR_NONE) {
+    deterministicValue = 0;
+  }
+  if (static_cast<bool>(deterministicValue)) {
+    return IsConv3DBackpropFilterToV2WithDeterministic(params);
   }
 
   return CheckV2BasicBlockSupport(params);

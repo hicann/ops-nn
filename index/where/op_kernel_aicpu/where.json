@@ -1,0 +1,25 @@
+{
+    "Where": {
+        "opInfo": {
+            "engine": "DNN_VM_AICPU",
+            "flagPartial": "False",
+            "computeCost": "100",
+            "flagAsync": "False",
+            "opKernelLib": "AICPUKernel",
+            "kernelSo": "libnn_aicpu_kernels.so",
+            "functionName": "RunCpuKernel",
+            "userDefined": "False",
+            "formatAgnostic": "True",
+            "opsFlag": "OPS_FLAG_OPEN",
+            "subTypeOfInferShape": "3"
+        },
+        "input0": {
+            "type": "DT_DOUBLE,DT_FLOAT,DT_FLOAT16,DT_INT8,DT_UINT8,DT_QINT8,DT_QUINT8,DT_INT16,DT_UINT16,DT_INT32,DT_UINT32,DT_QINT32,DT_INT64,DT_UINT64,DT_BOOL,DT_COMPLEX64,DT_COMPLEX128",
+            "name": "x"
+        },
+        "output0": {
+            "type": "DT_INT64",
+            "name": "y"
+        }
+    }
+}

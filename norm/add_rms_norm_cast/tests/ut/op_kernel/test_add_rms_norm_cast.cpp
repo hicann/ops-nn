@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -56,6 +56,11 @@ TEST_F(add_rms_norm_cast_test, test_case_10)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 25;
+    // system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/rms_norm/rms_norm_data ./");
+    // system("chmod -R 755 ./rms_norm_data/");
+    // system("cd ./rms_norm_data/ && rm -rf ./*bin");
+    // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
+    // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -70,6 +75,7 @@ TEST_F(add_rms_norm_cast_test, test_case_10)
     tilingDatafromBin->epsilon = 1e-5;
     tilingDatafromBin->avg_factor = 0.5;
 
+    // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(10);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(add_rms_norm_cast, blockDim, x1, x2, gamma, y1, y2, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
@@ -104,6 +110,11 @@ TEST_F(add_rms_norm_cast_test, test_case_11)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 2;
+    // system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/rms_norm/rms_norm_data ./");
+    // system("chmod -R 755 ./rms_norm_data/");
+    // system("cd ./rms_norm_data/ && rm -rf ./*bin");
+    // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
+    // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
     char* path_ = get_current_dir_name();
     string path(path_);
@@ -118,7 +129,116 @@ TEST_F(add_rms_norm_cast_test, test_case_11)
     tilingDatafromBin->epsilon = 1e-5;
     tilingDatafromBin->avg_factor = 0.00004;
 
+    // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(11);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(add_rms_norm_cast, blockDim, x1, x2, gamma, y1, y2, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y1);
+    AscendC::GmFree(y2);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(x);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(add_rms_norm_cast_test, test_case_13)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(AddRMSNormCastTilingData);
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y1 = (uint8_t*)AscendC::GmAlloc(outputByteSize * 2);
+    uint8_t* y2 = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
+    // system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/rms_norm/rms_norm_data ./");
+    // system("chmod -R 755 ./rms_norm_data/");
+    // system("cd ./rms_norm_data/ && rm -rf ./*bin");
+    // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
+    // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    AddRMSNormCastTilingData* tilingDatafromBin = reinterpret_cast<AddRMSNormCastTilingData*>(tiling);
+
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 8704;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->avg_factor = 0.004;
+
+    // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
+    ICPU_SET_TILING_KEY(13);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(add_rms_norm_cast, blockDim, x1, x2, gamma, y1, y2, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(y1);
+    AscendC::GmFree(y2);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(x);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(add_rms_norm_cast_test, test_case_33)
+{
+    size_t inputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t gammaByteSize = 256 * sizeof(int16_t);
+    size_t outputByteSize = 2 * 256 * sizeof(int16_t);
+    size_t rstdByteSize = 2 * sizeof(float);
+    size_t tiling_data_size = sizeof(AddRMSNormCastTilingData);
+
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* y1 = (uint8_t*)AscendC::GmAlloc(outputByteSize * 2);
+    uint8_t* y2 = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 2;
+    // system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/rms_norm/rms_norm_data ./");
+    // system("chmod -R 755 ./rms_norm_data/");
+    // system("cd ./rms_norm_data/ && rm -rf ./*bin");
+    // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
+    // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    AddRMSNormCastTilingData* tilingDatafromBin = reinterpret_cast<AddRMSNormCastTilingData*>(tiling);
+
+    tilingDatafromBin->num_row = 2;
+    tilingDatafromBin->num_col = 256;
+    tilingDatafromBin->block_factor = 1;
+    tilingDatafromBin->row_factor = 64;
+    tilingDatafromBin->ub_factor = 8704;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->avg_factor = 0.004;
+
+    // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
+    ICPU_SET_TILING_KEY(33);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(add_rms_norm_cast, blockDim, x1, x2, gamma, y1, y2, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
 
@@ -166,6 +286,7 @@ TEST_F(add_rms_norm_cast_test, test_case_14)
     tilingDatafromBin->epsilon = 0.01;
     tilingDatafromBin->avg_factor = 0.01;
 
+    // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(14);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(add_rms_norm_cast, blockDim, x1, x2, gamma, y1, y2, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));

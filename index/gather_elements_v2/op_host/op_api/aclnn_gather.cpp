@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_gather.cpp
@@ -16,7 +16,7 @@
 #include "aclnn_kernels/cast.h"
 #include "level0/gather_elements.h"
 #include "gather_elements_v2.h"
-#include "level0/gather_v2.h"
+#include "index/gather_v2/op_host/op_api/gather_v2.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/slice.h"
@@ -30,6 +30,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/tensor_view_utils.h"
 #include "aclnn_gather.h"
 
 using namespace op;
@@ -68,6 +69,7 @@ static const int64_t POST_DIM_LIMIT = 32;
 static const int64_t TRANS_LEN = 16;
 static const int64_t UB_LIMIT = 120000;
 static const int64_t CAHELINE = 512;
+static const size_t NO_CONTIGUOUS_MAX_SUPPORT_DIM = 8;
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclTensor* out)
 {
@@ -176,8 +178,9 @@ static bool SpecialCheck(const aclTensor* selfContiguous, const aclTensor* index
     bool socVersionCheck = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P;
     auto indexShape = indexContiguous->GetViewShape();
     int64_t indexShapeProduct = 1;
+
     for (int64_t i = 0; i < dimSize - 1; i++) {
-        indexShapeProduct *= static_cast<int64_t>(indexShape.GetDim(i));
+        indexShapeProduct *= indexShape.GetDim(static_cast<size_t>(i));
     }
     auto lastDim = indexShape.GetDim(dimSize - 1);
     bool indexShapeCheck = indexShapeProduct >= SHAPE_PRODUCT_LIMIT && lastDim <= UPPER_LIMIT && lastDim >= LOWER_LIMIT;
@@ -252,8 +255,8 @@ static bool IfUseGatherElementsV2(
     int64_t idxPostDim = 1;
     int64_t idxPreDim = 1;
     for (int64_t i = 0; i < dimSize; i++) {
-        int64_t indexDim = indexShape.GetDim(i);
-        int64_t selfDim = selfShape.GetDim(i);
+        int64_t indexDim = indexShape.GetDim(static_cast<size_t>(i));
+        int64_t selfDim = selfShape.GetDim(static_cast<size_t>(i));
         indexShapeProduct *= indexDim;
         selfShapeProduct *= selfDim;
         if (i != dim && selfDim != indexDim) {
@@ -367,24 +370,64 @@ static bool IfMoeUseV2(const int64_t dim, const aclTensor* self, const aclTensor
     return dimCheckFlag && strideCheckFlag && (inferOutputDim == realOutputDim);
 }
 
+static bool IsUseNoContiguous(const aclTensor* self, const aclTensor* index)
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 || self->GetDataType() == DataType::DT_DOUBLE) {
+        return false;
+    }
+    auto selfDimNum = self->GetViewShape().GetDimNum();
+    auto indexDimNum = index->GetViewShape().GetDimNum();
+    if (selfDimNum != indexDimNum || indexDimNum > NO_CONTIGUOUS_MAX_SUPPORT_DIM) {
+        return false;
+    }
+    if (!IsContiguous(self) || !IsContiguous(index)) {
+        return true;
+    }
+    return false;
+}
+
+static const aclTensor* CalNoContiguous(
+    const aclTensor* self, const int64_t dimFinal, const aclTensor* index, 
+    aclOpExecutor* executor)
+{
+    const aclTensor* gatherElementsResult = nullptr;
+    aclTensor *newSelf = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+    aclTensor *newIndex = executor->CreateView(index, index->GetViewShape(), index->GetStorageShape(), index->GetViewStrides(), index->GetViewOffset());
+    gatherElementsResult = l0op::GatherElements(newSelf, dimFinal, newIndex, executor);
+    CHECK_RET(gatherElementsResult != nullptr, nullptr);
+    return gatherElementsResult;
+}
+
 static const aclTensor* CalGatherV2(
-    const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index,
+    const aclTensor* selfContiguous, const int64_t dimFinal, const aclTensor* index, 
     aclOpExecutor* executor)
 {
     // calculation by GatherV2
     const aclTensor* gatherElementsResult = nullptr;
-    FVector<int64_t> offsetVector(SECOND_DIM, 0);
-    aclIntArray* offsetArray = executor->AllocIntArray(offsetVector.data(), offsetVector.size());
-    CHECK_RET(offsetArray != nullptr, nullptr);
-    FVector<int64_t> sizeVector;
-    auto indexShape = index->GetViewShape();
-    sizeVector.emplace_back(indexShape[0]);
-    aclIntArray* sizeArray = executor->AllocIntArray(sizeVector.data(), sizeVector.size());
-    CHECK_RET(sizeArray != nullptr, nullptr);
-    auto indexSlice = l0op::Slice(index, offsetArray, sizeArray, executor);
-    CHECK_RET(indexSlice != nullptr, nullptr);
-    // 调用l0算子GatherV2进行计算
-    gatherElementsResult = l0op::GatherV2(selfContiguous, dimFinal, indexSlice, executor, 0, true);
+
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        op::Shape newViewShape;
+        newViewShape.SetDimNum(1);
+        auto indexShape = index->GetViewShape();
+        newViewShape[0] = indexShape[0];
+        auto indexView = executor->CreateView(index, newViewShape, index->GetViewOffset());
+        CHECK_RET(indexView != nullptr, nullptr);
+        gatherElementsResult = l0op::GatherV2(selfContiguous, dimFinal, indexView, executor, 0, true);
+    } else {
+        FVector<int64_t> offsetVector(SECOND_DIM, 0);
+        aclIntArray* offsetArray = executor->AllocIntArray(offsetVector.data(), offsetVector.size());
+        CHECK_RET(offsetArray != nullptr, nullptr);
+        FVector<int64_t> sizeVector;
+        auto indexShape = index->GetViewShape();
+        sizeVector.emplace_back(indexShape[0]);
+        aclIntArray* sizeArray = executor->AllocIntArray(sizeVector.data(), sizeVector.size());
+        CHECK_RET(sizeArray != nullptr, nullptr);
+        auto indexSlice = l0op::Slice(index, offsetArray, sizeArray, executor);
+        CHECK_RET(indexSlice != nullptr, nullptr);
+        // 调用l0算子GatherV2进行计算
+        gatherElementsResult = l0op::GatherV2(selfContiguous, dimFinal, indexSlice, executor, 0, true);
+    }
+
     CHECK_RET(gatherElementsResult != nullptr, nullptr);
     return gatherElementsResult;
 }
@@ -411,28 +454,31 @@ aclnnStatus aclnnGatherGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    // self如果非连续，需要转连续
-    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
     // process 0_d tensor
-    auto selfReshapeContinuous = GatherAdaptInputZeroDimTensor(selfContiguous, uniqueExecutor.get());
-    CHECK_RET(selfReshapeContinuous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto selfReshape = GatherAdaptInputZeroDimTensor(self, uniqueExecutor.get());
+    CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto indexReshape = GatherAdaptInputZeroDimTensor(index, uniqueExecutor.get());
     CHECK_RET(indexReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    int64_t dimSize = (int64_t)(selfReshapeContinuous->GetViewShape().GetDimNum());
+    int64_t dimSize = static_cast<int64_t>(selfReshape->GetViewShape().GetDimNum());
     int64_t dimFinal = (dim >= 0) ? dim : dim + dimSize;
-
     const aclTensor* gatherElementsResult = nullptr;
-    // 调用l0算子GatherElements进行计算
-    if (IfMoeUseV2(dimFinal, self, indexReshape, dimSize)) {
-        gatherElementsResult =
-            CalGatherV2(selfReshapeContinuous, dimFinal, indexReshape, uniqueExecutor.get());
+    if (IsUseNoContiguous(selfReshape, indexReshape) && !IfMoeUseV2(dimFinal, self, indexReshape, dimSize)) {
+        gatherElementsResult = CalNoContiguous(selfReshape, dimFinal, indexReshape, uniqueExecutor.get());
     } else {
-        gatherElementsResult = CalGather(selfReshapeContinuous, dimFinal, indexReshape, dimSize, uniqueExecutor.get());
-    }
-    CHECK_RET(gatherElementsResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // self如果非连续，需要转连续
+        auto selfReshapeContinuous = l0op::Contiguous(selfReshape, uniqueExecutor.get());
+        CHECK_RET(selfReshapeContinuous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+        // 调用l0算子GatherElements进行计算
+        if (IfMoeUseV2(dimFinal, self, indexReshape, dimSize)) {
+            gatherElementsResult =
+                CalGatherV2(selfReshapeContinuous, dimFinal, indexReshape, uniqueExecutor.get());
+        } else {
+            gatherElementsResult = CalGather(selfReshapeContinuous, dimFinal, indexReshape, dimSize, uniqueExecutor.get());
+        }
+    }
+
+     CHECK_RET(gatherElementsResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
     auto viewCopyRes = l0op::ViewCopy(gatherElementsResult, out, uniqueExecutor.get());
     CHECK_RET(viewCopyRes != nullptr, ACLNN_ERR_INNER_NULLPTR);

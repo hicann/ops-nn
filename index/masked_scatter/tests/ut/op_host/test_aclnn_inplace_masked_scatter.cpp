@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
@@ -16,8 +16,9 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "opdev/platform.h"
 
-
+using namespace op;
 using namespace std;
 
 class l2_masked_scatter_test : public testing::Test {
@@ -277,7 +278,7 @@ TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_2_4_6_8_10_12_uint8_nhw
   aclDataType maskDtype = ACL_BOOL;
   aclFormat maskFormat = ACL_FORMAT_NHWC;
   // source input
-  const vector<int64_t>& sourceShape = {};
+  const vector<int64_t>& sourceShape = {2, 4, 6, 8, 10, 12};
   aclDataType sourceDtype = selfDtype;
   aclFormat sourceFormat = ACL_FORMAT_NHWC;
 
@@ -491,7 +492,7 @@ TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_1_2_float16_nd_and_2_2_
 // EXPECT_EQ(aclRet, ACL_SUCCESS);
 //
 // // SAMPLE: precision simulate
-// ut.TestPrecision();
+
 //}
 
 TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_5_4_float_nd_and_5_4_bool_nd_not_contiguous) {
@@ -730,4 +731,364 @@ TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_large_shape_case) {
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_2)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 3, 4, 5};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {2, 1, 1, 5};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 3, 4, 5};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_3)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 3, 4, 5, 6};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 3, 4, 1, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 3, 4, 5, 6};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_4)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 3, 4, 5, 6};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 3, 4, 5, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 3, 4, 5, 6};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_5)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 3, 4, 5};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {2, 1, 4, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 3, 4, 5};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_6)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 3, 4, 5};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 3, 1, 5};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 3, 4, 5};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_7)
+{
+    // self input
+    const vector<int64_t>& selfShape = {5, 2, 4, 3, 8};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 2, 1, 3, 8};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {5, 2, 4, 3, 8};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_8)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 5, 3, 6};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {2, 1, 3, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 5, 3, 6};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_9)
+{
+    // self input
+    const vector<int64_t>& selfShape = {2, 5, 3, 4};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 5, 1, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {2, 5, 3, 4};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_10)
+{
+    // self input
+    const vector<int64_t>& selfShape = {3, 2, 2, 2, 3};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {3, 1, 1, 1, 3};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {3, 2, 2, 2, 3};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_11)
+{
+    // self input
+    const vector<int64_t>& selfShape = {3, 2, 2, 2, 3};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {3, 1, 1, 1, 3};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {3, 2, 2, 2, 3};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_12)
+{
+    // self input
+    const vector<int64_t>& selfShape = {4, 3};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {4, 1};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {4, 3};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatterWithPosition_shape_case_13)
+{
+    // self input
+    const vector<int64_t>& selfShape = {3, 5};
+    aclDataType selfDtype = ACL_FLOAT16;
+    aclFormat selfFormat = ACL_FORMAT_ND;
+    // mask input
+    const vector<int64_t>& maskShape = {1, 5};
+    aclDataType maskDtype = ACL_BOOL;
+    aclFormat maskFormat = ACL_FORMAT_ND;
+    // source input
+    const vector<int64_t>& sourceShape = {3, 5};
+    aclDataType sourceDtype = selfDtype;
+    aclFormat sourceFormat = ACL_FORMAT_ND;
+
+    auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+    auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+    auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+    auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
+        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    }
 }

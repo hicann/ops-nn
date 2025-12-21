@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -19,6 +19,8 @@
 
 #include "register/op_impl_registry.h"
 #include "matmul/common/op_host/math_util.h"
+#include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
+#include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 using namespace platform_ascendc;
 
@@ -51,17 +53,22 @@ constexpr std::array<int64_t, 4> SUPPORTED_GROUP_SIZE{32L, 64L, 128L, 256L};
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingAS::PostTiling()
 {
-    OP_LOGD(opName_, "final tiling data size: %zu", tilingData_->GetDataSize());
+    OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize_);
 
     OP_TILING_CHECK(
-        tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingData_->GetDataSize()),
+        tilingDataSize_ % sizeof(uint64_t) != 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
 
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     // 计算aic num n方向分核*m方向分核
-    context_->SetBlockDim(tilingData_->get_cubeBlockDimM() * tilingData_->get_cubeBlockDimN());
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    context_->SetBlockDim(tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void *>(tilingData_.get()), tilingDataSize_);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -95,7 +102,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::InstantiateTilingData()
 {
     if (tilingData_ == nullptr) {
         try {
-            tilingData_ = std::make_unique<WeightQuantBatchMatmulV2ASTilingData>();
+            tilingData_ = std::make_unique<wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams>();
         } catch (std::bad_alloc&) {
             tilingData_ = nullptr;
             OP_LOGE(opName_, "tiling data memory allocation failed");
@@ -106,10 +113,10 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::InstantiateTilingData()
         tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingData_->GetDataSize(),
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
         VECTOR_INNER_ERR_REPORT_TILIING(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingData_->GetDataSize()),
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -127,11 +134,11 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::DoOpTiling()
         // 910_55上默认给L1的n轴大小转置情况下为128，非转置情况下为256
         l1NMaxSize_ = matmulInfoPtr_->transB ? 128UL : 256UL;
     }
-    tilingData_->set_mSize(matmulInfoPtr_->mSize);
-    tilingData_->set_kSize(matmulInfoPtr_->kSize);
-    tilingData_->set_nSize(matmulInfoPtr_->nSize);
-    tilingData_->set_hasBias(matmulInfoPtr_->hasBias);
-    tilingData_->set_groupSize(matmulInfoPtr_->groupSize);
+    tilingData_->mSize = matmulInfoPtr_->mSize;
+    tilingData_->kSize = matmulInfoPtr_->kSize;
+    tilingData_->nSize = matmulInfoPtr_->nSize;
+    tilingData_->hasBias = matmulInfoPtr_->hasBias;
+    tilingData_->groupSize = matmulInfoPtr_->groupSize;
     weightMxFp4Flag_ = CheckWeightMicroscalingFp4Scene();
     weightInt4Flag_ = matmulInfoPtr_->bDtype == ge::DT_INT4;
     nzSceneFlag_ = matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ && !matmulInfoPtr_->transB;
@@ -177,65 +184,65 @@ void WeightQuantBatchMatmulV2TilingAS::SetAttrs()
     uint64_t mainBlockCountDefault = ops::CeilDiv(matmulInfoPtr_->nSize, mainBlockL1SizeDefault);
     uint64_t cubeBlockDimMMax =
         ops::CeilDiv(static_cast<uint64_t>(matmulInfoPtr_->mSize), static_cast<uint64_t>(M_MAX_SIZE));
-    tilingData_->set_cubeBlockDimN(
-        static_cast<uint32_t>(std::min(static_cast<uint64_t>(compileInfoPtr_->aicNum), mainBlockCountDefault)));
-    tilingData_->set_cubeBlockDimM(
+    tilingData_->cubeBlockDimN =
+        static_cast<uint32_t>(std::min(static_cast<uint64_t>(compileInfoPtr_->aicNum), mainBlockCountDefault));
+    tilingData_->cubeBlockDimM =
         static_cast<uint32_t>(std::min(
-            cubeBlockDimMMax, static_cast<uint64_t>(compileInfoPtr_->aicNum / tilingData_->get_cubeBlockDimN()))));
+            cubeBlockDimMMax, static_cast<uint64_t>(compileInfoPtr_->aicNum / tilingData_->cubeBlockDimN)));
 }
 
 void WeightQuantBatchMatmulV2TilingAS::SetDefaultMatmulTiling()
 {
-    tilingData_->matmulTiling.set_M(matmulInfoPtr_->mSize);
-    tilingData_->matmulTiling.set_Ka(matmulInfoPtr_->kSize);
-    tilingData_->matmulTiling.set_N(matmulInfoPtr_->nSize);
-    tilingData_->matmulTiling.set_Kb(matmulInfoPtr_->kSize);
+    tilingData_->matmulTiling.M = matmulInfoPtr_->mSize;
+    tilingData_->matmulTiling.Ka = matmulInfoPtr_->kSize;
+    tilingData_->matmulTiling.N = matmulInfoPtr_->nSize;
+    tilingData_->matmulTiling.Kb = matmulInfoPtr_->kSize;
     if (matmulInfoPtr_->hasBias) {
-        tilingData_->matmulTiling.set_singleCoreM(M_MAX_SIZE_WITH_BIAS_QUANT);
+        tilingData_->matmulTiling.singleCoreM = M_MAX_SIZE_WITH_BIAS_QUANT;
     } else {
-        tilingData_->matmulTiling.set_singleCoreM(M_MAX_SIZE);
+        tilingData_->matmulTiling.singleCoreM = M_MAX_SIZE;
     }
-    tilingData_->matmulTiling.set_singleCoreK(matmulInfoPtr_->kSize);
-    tilingData_->matmulTiling.set_singleCoreN(l1NMaxSize_);
+    tilingData_->matmulTiling.singleCoreK = matmulInfoPtr_->kSize;
+    tilingData_->matmulTiling.singleCoreN = l1NMaxSize_;
 
-    tilingData_->matmulTiling.set_baseM(tilingData_->matmulTiling.get_singleCoreM());
-    tilingData_->matmulTiling.set_baseN(tilingData_->matmulTiling.get_singleCoreN());
-    tilingData_->matmulTiling.set_baseK(
+    tilingData_->matmulTiling.baseM = tilingData_->matmulTiling.singleCoreM;
+    tilingData_->matmulTiling.baseN = tilingData_->matmulTiling.singleCoreN;
+    tilingData_->matmulTiling.baseK =
         (compileInfoPtr_->l0aSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-        tilingData_->matmulTiling.get_singleCoreN());
+        tilingData_->matmulTiling.singleCoreN;
     if (compileInfoPtr_->socVersion == SocVersion::ASCEND910_55 && matmulInfoPtr_->transB) {
-        tilingData_->matmulTiling.set_baseK(
+        tilingData_->matmulTiling.baseK =
             (compileInfoPtr_->l0aSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
             // 910_55上转置情况下singleCoreN为128，会导致算出的baseK增大为128，超L0A，故此处baseK除以2缩小为64
-            tilingData_->matmulTiling.get_singleCoreN() / 2);
+            tilingData_->matmulTiling.singleCoreN / 2;
     }
-    tilingData_->matmulTiling.set_dbL0A(DOUBLE_BUFFER_NUM);
-    tilingData_->matmulTiling.set_dbL0B(DOUBLE_BUFFER_NUM);
-    tilingData_->matmulTiling.set_dbL0C(SINGLE_BUFFER_NUM);
+    tilingData_->matmulTiling.dbL0A = DOUBLE_BUFFER_NUM;
+    tilingData_->matmulTiling.dbL0B = DOUBLE_BUFFER_NUM;
+    tilingData_->matmulTiling.dbL0C = SINGLE_BUFFER_NUM;
 
-    tilingData_->matmulTiling.set_stepM(1);
-    tilingData_->matmulTiling.set_stepN(1);
+    tilingData_->matmulTiling.stepM = 1;
+    tilingData_->matmulTiling.stepN = 1;
 
-    tilingData_->matmulTiling.set_stepKa(
-        ops::CeilDiv(K_L1_SIZE, static_cast<uint64_t>(tilingData_->matmulTiling.get_baseK())));
-    tilingData_->matmulTiling.set_depthA1(tilingData_->matmulTiling.get_stepKa() * DOUBLE_BUFFER_NUM);
+    tilingData_->matmulTiling.stepKa =
+        ops::CeilDiv(K_L1_SIZE, static_cast<uint64_t>(tilingData_->matmulTiling.baseK));
+    tilingData_->matmulTiling.depthA1 = tilingData_->matmulTiling.stepKa * DOUBLE_BUFFER_NUM;
 
-    tilingData_->matmulTiling.set_stepKb(tilingData_->matmulTiling.get_stepKa());
-    tilingData_->matmulTiling.set_depthB1(tilingData_->matmulTiling.get_depthA1());
-    tilingData_->matmulTiling.set_iterateOrder(0);
+    tilingData_->matmulTiling.stepKb = tilingData_->matmulTiling.stepKa;
+    tilingData_->matmulTiling.depthB1 = tilingData_->matmulTiling.depthA1;
+    tilingData_->matmulTiling.iterateOrder = 0;
 
-    tilingData_->matmulTiling.set_isBias(static_cast<int32_t>(matmulInfoPtr_->hasBias));
+    tilingData_->matmulTiling.isBias = static_cast<int32_t>(matmulInfoPtr_->hasBias);
     if (matmulInfoPtr_->cDtype == ge::DT_INT8) {
-        tilingData_->matmulTiling.set_shareL1Size(
-            DOUBLE_BUFFER_NUM * tilingData_->matmulTiling.get_baseN() * sizeof(uint64_t));
+        tilingData_->matmulTiling.shareL1Size =
+            DOUBLE_BUFFER_NUM * tilingData_->matmulTiling.baseN * sizeof(uint64_t);
     }
-    tilingData_->matmulTiling.set_shareL0CSize(
-        tilingData_->matmulTiling.get_baseM() * tilingData_->matmulTiling.get_baseN() * sizeof(float));
+    tilingData_->matmulTiling.shareL0CSize =
+        tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.baseN * sizeof(float);
 }
 
 void WeightQuantBatchMatmulV2TilingAS::ComputeCubeSplit(bool highPerfFlag)
 {
-    tilingData_->set_aPreloadSize(0);
+    tilingData_->aPreloadSize = 0;
     if (highPerfFlag) {
         ComputeHighPerfSceneCubeSplit();
         // m方向有切分场景或非cacheline对齐，启用缓存
@@ -243,12 +250,12 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeCubeSplit(bool highPerfFlag)
         if (weightMxFp4Flag_ || weightInt4Flag_) {
             minCacheLine = 256; // 缓存大小128B，对应4bit为256个元素
         }
-        tilingData_->set_weightL2Cacheable(
-            tilingData_->get_cubeBlockDimM() > 1 || tilingData_->get_kSize() % minCacheLine != 0);
+        tilingData_->weightL2Cacheable =
+            tilingData_->cubeBlockDimM > 1 || tilingData_->kSize % minCacheLine != 0;
         return;
     }
 
-    tilingData_->set_weightL2Cacheable(1); // 默认开启l2缓存功能
+    tilingData_->weightL2Cacheable = 1; // 默认开启l2缓存功能
     uint64_t mainBlockL1SizeDefault = l1NMaxSize_;
     uint32_t mainBlockCountDefault = ops::CeilDiv(matmulInfoPtr_->nSize, mainBlockL1SizeDefault);
 
@@ -261,20 +268,20 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeCubeSplit(bool highPerfFlag)
             mainBlockCountDefault = ops::CeilDiv(matmulInfoPtr_->nSize, mainBlockL1SizeDefault);
         }
 
-        tilingData_->set_cubeBlockDimN(std::min(compileInfoPtr_->aicNum, mainBlockCountDefault));
-        if (cubeBlockDimMMax <= (compileInfoPtr_->aicNum / tilingData_->get_cubeBlockDimN()) >> 1) {
+        tilingData_->cubeBlockDimN = std::min(compileInfoPtr_->aicNum, mainBlockCountDefault);
+        if (cubeBlockDimMMax <= (compileInfoPtr_->aicNum / tilingData_->cubeBlockDimN) >> 1) {
             // 分核只够剩下可用核数量一半，尝试切分粒度缩减后再重新切分
-            tilingData_->set_cubeBlockDimM(ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(M_MAX_SIZE) >> 1));
+            tilingData_->cubeBlockDimM = ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(M_MAX_SIZE) >> 1);
         } else {
-            tilingData_->set_cubeBlockDimM(
+            tilingData_->cubeBlockDimM =
                 std::min(
                     cubeBlockDimMMax,
-                    static_cast<uint32_t>(compileInfoPtr_->aicNum) / tilingData_->get_cubeBlockDimN()));
+                    static_cast<uint32_t>(compileInfoPtr_->aicNum) / tilingData_->cubeBlockDimN);
         }
     } else {
-        tilingData_->set_cubeBlockDimN(std::min(compileInfoPtr_->aicNum, mainBlockCountDefault));
-        tilingData_->set_cubeBlockDimM(
-            std::min(cubeBlockDimMMax, compileInfoPtr_->aicNum / tilingData_->get_cubeBlockDimN()));
+        tilingData_->cubeBlockDimN = std::min(compileInfoPtr_->aicNum, mainBlockCountDefault);
+        tilingData_->cubeBlockDimM =
+            std::min(cubeBlockDimMMax, compileInfoPtr_->aicNum / tilingData_->cubeBlockDimN);
     }
 }
 
@@ -294,8 +301,8 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeHighPerfSceneCubeSplit()
                                (matmulInfoPtr_->nSize >= TAIL_L1_SIZE_THRESHOLD * compileInfoPtr_->aicNum &&
                                 matmulInfoPtr_->mSize > TAIL_L1_SIZE_THRESHOLD);
         if (!needPollingFlag) {
-            tilingData_->set_cubeBlockDimM(1);
-            tilingData_->set_cubeBlockDimN(compileInfoPtr_->aicNum);
+            tilingData_->cubeBlockDimM = 1;
+            tilingData_->cubeBlockDimN = compileInfoPtr_->aicNum;
             return;
         }
         // 开始轮询
@@ -326,19 +333,19 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeHighPerfSceneCubeSplit()
             }
         }
         // 根据轮询结果设置cube切分
-        tilingData_->set_cubeBlockDimM(cubeSplitResult.cubeBlockDimM);
-        tilingData_->set_cubeBlockDimN(cubeSplitResult.cubeBlockDimN);
+        tilingData_->cubeBlockDimM = cubeSplitResult.cubeBlockDimM;
+        tilingData_->cubeBlockDimN = cubeSplitResult.cubeBlockDimN;
     } else {
         // 全量尝试4 : 8的切分设置
-        static const uint64_t BLOCK_DIM_M_MAX = std::min(static_cast<uint64_t>(compileInfoPtr_->aicNum), 4UL);
+        uint64_t BLOCK_DIM_M_MAX = std::min(static_cast<uint64_t>(compileInfoPtr_->aicNum), 4UL);
         uint64_t realBlockDimM = matmulInfoPtr_->hasBias ?
                                      ops::CeilDiv(matmulInfoPtr_->mSize, M_MAX_SIZE_WITH_BIAS_QUANT) :
                                      ops::CeilDiv(matmulInfoPtr_->mSize, M_MAX_SIZE);
-        tilingData_->set_cubeBlockDimM(std::min(BLOCK_DIM_M_MAX, realBlockDimM));
-        uint64_t nBlkNumMax = compileInfoPtr_->aicNum / tilingData_->get_cubeBlockDimM();
+        tilingData_->cubeBlockDimM = std::min(BLOCK_DIM_M_MAX, realBlockDimM);
+        uint64_t nBlkNumMax = compileInfoPtr_->aicNum / tilingData_->cubeBlockDimM;
         uint64_t nL1SizeMin =
             ops::CeilAlign(ops::CeilDiv(matmulInfoPtr_->nSize, nBlkNumMax), static_cast<uint64_t>(BLOCK_CUBE));
-        tilingData_->set_cubeBlockDimN(std::min(ops::CeilDiv(matmulInfoPtr_->nSize, nL1SizeMin), nBlkNumMax));
+        tilingData_->cubeBlockDimN = std::min(ops::CeilDiv(matmulInfoPtr_->nSize, nL1SizeMin), nBlkNumMax);
     }
 }
 
@@ -350,17 +357,17 @@ void WeightQuantBatchMatmulV2TilingAS::EnlargeBaseK(uint64_t l0aMaxBaseK)
     }
     // 根据理论需要处理的N推算L0B上K的最大值
     uint64_t l0bMaxBaseK = (compileInfoPtr_->l0bSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                           tilingData_->matmulTiling.get_singleCoreN() / BLOCK_CUBE * BLOCK_CUBE;
+                           tilingData_->matmulTiling.singleCoreN / BLOCK_CUBE * BLOCK_CUBE;
     // l0b上K的取值可以分成三档，即64,128,256，默认设置为64。当前处理的singleCoreN不会超过256,因此暂不考虑baseK=32。
-    static const std::vector<uint64_t> L0_BASE_K_LIST = (weightMxFp4Flag_ && nzSceneFlag_) ?
+    std::vector<uint64_t> L0_BASE_K_LIST = (weightMxFp4Flag_ && nzSceneFlag_) ?
                                                             std::vector<uint64_t>{128UL, 64UL} :
                                                             std::vector<uint64_t>{256UL, 128UL, 64UL};
-    tilingData_->matmulTiling.set_baseK(L0_BASE_K_LIST.back()); // 初始化赋值
+    tilingData_->matmulTiling.baseK = L0_BASE_K_LIST.back(); // 初始化赋值
     if ((matmulInfoPtr_->transB && matmulInfoPtr_->antiQuantType != QuantType::PER_TENSOR) ||
         (weightMxFp4Flag_ && nzSceneFlag_)) { // 小N，非转置场景不做优化，非主要性能场景，避免tilingkey膨胀
         for (size_t listId = 0; listId < L0_BASE_K_LIST.size(); listId++) {
             if (std::min(l0bMaxBaseK, l0aMaxBaseK) >= L0_BASE_K_LIST[listId]) {
-                tilingData_->matmulTiling.set_baseK(L0_BASE_K_LIST[listId]);
+                tilingData_->matmulTiling.baseK = L0_BASE_K_LIST[listId];
                 break;
             }
         }
@@ -371,26 +378,26 @@ void WeightQuantBatchMatmulV2TilingAS::EnlargeBaseKInFullloadA(
     uint64_t maxBaseK, uint64_t minKL1, uint64_t maxL1, const std::vector<uint64_t>& l0BaseKList,
     const std::vector<uint64_t>& l1KList)
 {
-    tilingData_->matmulTiling.set_baseK(l0BaseKList.back()); // 初始化赋值
+    tilingData_->matmulTiling.baseK = l0BaseKList.back(); // 初始化赋值
     for (auto baseK : l0BaseKList) {
         if (maxBaseK < baseK) {
             continue;
         }
         uint64_t stepKa = ops::CeilDiv(minKL1, baseK);
-        uint64_t maxKbL1 = ((maxL1 - baseK * stepKa * tilingData_->matmulTiling.get_baseM()) >> 1) /
-                           tilingData_->matmulTiling.get_baseN();
+        uint64_t maxKbL1 = ((maxL1 - baseK * stepKa * tilingData_->matmulTiling.baseM) >> 1) /
+                           tilingData_->matmulTiling.baseN;
         if (maxKbL1 < baseK) {
             continue;
         }
-        tilingData_->matmulTiling.set_baseK(baseK);
+        tilingData_->matmulTiling.baseK = baseK;
         for (auto kL1 : l1KList) {
             if (maxKbL1 < kL1) {
                 continue;
             }
-            tilingData_->matmulTiling.set_stepKa(stepKa);
-            tilingData_->matmulTiling.set_stepKb(std::min(kL1 / baseK, 4UL));
-            tilingData_->matmulTiling.set_depthA1(tilingData_->matmulTiling.get_stepKa());
-            tilingData_->matmulTiling.set_depthB1(tilingData_->matmulTiling.get_stepKb() << 1);
+            tilingData_->matmulTiling.stepKa = stepKa;
+            tilingData_->matmulTiling.stepKb = std::min(kL1 / baseK, 4UL);
+            tilingData_->matmulTiling.depthA1 = tilingData_->matmulTiling.stepKa;
+            tilingData_->matmulTiling.depthB1 = tilingData_->matmulTiling.stepKb << 1;
             break;
         }
         break;
@@ -400,20 +407,20 @@ void WeightQuantBatchMatmulV2TilingAS::EnlargeBaseKInFullloadA(
 void WeightQuantBatchMatmulV2TilingAS::EnlargeBaseKNotFullloadA(
     uint64_t maxBaseK, uint64_t maxKL1, const std::vector<uint64_t>& l0BaseKList, const std::vector<uint64_t>& l1KList)
 {
-    tilingData_->matmulTiling.set_baseK(l0BaseKList.back()); // 初始化赋值
+    tilingData_->matmulTiling.baseK = l0BaseKList.back(); // 初始化赋值
     for (auto baseK : l0BaseKList) {
         if (maxBaseK < baseK || maxKL1 < baseK) {
             continue;
         }
-        tilingData_->matmulTiling.set_baseK(baseK);
+        tilingData_->matmulTiling.baseK = baseK;
         for (auto kL1 : l1KList) {
             if (maxKL1 < kL1) {
                 continue;
             }
-            tilingData_->matmulTiling.set_stepKa(std::min(kL1 / baseK, 4UL));
-            tilingData_->matmulTiling.set_stepKb(tilingData_->matmulTiling.get_stepKa());
-            tilingData_->matmulTiling.set_depthA1(tilingData_->matmulTiling.get_stepKa() << 1);
-            tilingData_->matmulTiling.set_depthB1(tilingData_->matmulTiling.get_depthA1());
+            tilingData_->matmulTiling.stepKa = std::min(kL1 / baseK, 4UL);
+            tilingData_->matmulTiling.stepKb = tilingData_->matmulTiling.stepKa;
+            tilingData_->matmulTiling.depthA1 = tilingData_->matmulTiling.stepKa << 1;
+            tilingData_->matmulTiling.depthB1 = tilingData_->matmulTiling.depthA1;
             break;
         }
         break;
@@ -423,19 +430,19 @@ void WeightQuantBatchMatmulV2TilingAS::EnlargeBaseKNotFullloadA(
 void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTiling()
 {
     // 修正m方向的实际大小
-    tilingData_->matmulTiling.set_singleCoreM(
-        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(tilingData_->get_cubeBlockDimM())));
+    tilingData_->matmulTiling.singleCoreM =
+        ops::CeilDiv(matmulInfoPtr_->mSize, static_cast<uint64_t>(tilingData_->cubeBlockDimM));
 
-    tilingData_->matmulTiling.set_baseM(
+    tilingData_->matmulTiling.baseM =
         std::min(
-            tilingData_->matmulTiling.get_baseM(),
-            ops::CeilAlign(tilingData_->matmulTiling.get_singleCoreM(), static_cast<int32_t>(BLOCK_CUBE))));
+            tilingData_->matmulTiling.baseM,
+            ops::CeilAlign(tilingData_->matmulTiling.singleCoreM, static_cast<int32_t>(BLOCK_CUBE)));
 
     // 计算N分核后，单core上理论需要处理的最大N，并往16对齐
     uint64_t singleN = ops::CeilAlign(
-        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(tilingData_->get_cubeBlockDimN())), 16UL);
-    tilingData_->matmulTiling.set_singleCoreN(std::min(l1NMaxSize_, singleN));
-    tilingData_->matmulTiling.set_baseN(tilingData_->matmulTiling.get_singleCoreN());
+        ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(tilingData_->cubeBlockDimN)), 16UL);
+    tilingData_->matmulTiling.singleCoreN = std::min(l1NMaxSize_, singleN);
+    tilingData_->matmulTiling.baseN = tilingData_->matmulTiling.singleCoreN;
 
     if (IsWeight4Nz() && weightInt4Flag_ && nzSceneFlag_ && !matmulInfoPtr_->transA && !matmulInfoPtr_->transB &&
         matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP && matmulInfoPtr_->cDtype != ge::DT_INT8) {
@@ -445,17 +452,17 @@ void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTiling()
 
     // 根据M值计算L0A上K的最大值
     uint64_t l0aMaxBaseK = (compileInfoPtr_->l0aSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                           tilingData_->matmulTiling.get_singleCoreM() / BLOCK_CUBE * BLOCK_CUBE;
+                           tilingData_->matmulTiling.singleCoreM / BLOCK_CUBE * BLOCK_CUBE;
     // 根据l1的情况反推L0A上K的最大值
     if (matmulInfoPtr_->hasBias) {
         l0aMaxBaseK = std::min(
             l0aMaxBaseK, (A_L1_MAX_SIZE_WITH_BIAS_QUANT >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                             tilingData_->matmulTiling.get_baseM() / tilingData_->matmulTiling.get_stepKa() /
+                             tilingData_->matmulTiling.baseM / tilingData_->matmulTiling.stepKa /
                              BLOCK_CUBE * BLOCK_CUBE);
     } else {
         l0aMaxBaseK = std::min(
             l0aMaxBaseK, (A_L1_MAX_SIZE >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                             tilingData_->matmulTiling.get_baseM() / tilingData_->matmulTiling.get_stepKa() /
+                             tilingData_->matmulTiling.baseM / tilingData_->matmulTiling.stepKa /
                              BLOCK_CUBE * BLOCK_CUBE);
     }
     EnlargeBaseK(l0aMaxBaseK);
@@ -465,10 +472,10 @@ void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTiling()
                               A_L1_MAX_SIZE_WITH_BIAS_QUANT :
                               A_L1_MAX_SIZE;
     uint64_t kAlign = ops::CeilAlign(matmulInfoPtr_->kSize, static_cast<uint64_t>(BLOCK_CUBE));
-    if (tilingData_->matmulTiling.get_baseM() * kAlign * GetSizeByDataType(matmulInfoPtr_->aDtype) <= aL1MaxSize) {
-        tilingData_->matmulTiling.set_stepKa(
-            ops::CeilDiv(kAlign, static_cast<uint64_t>(tilingData_->matmulTiling.get_baseK())));
-        tilingData_->matmulTiling.set_depthA1(tilingData_->matmulTiling.get_stepKa());
+    if (tilingData_->matmulTiling.baseM * kAlign * GetSizeByDataType(matmulInfoPtr_->aDtype) <= aL1MaxSize) {
+        tilingData_->matmulTiling.stepKa =
+            ops::CeilDiv(kAlign, static_cast<uint64_t>(tilingData_->matmulTiling.baseK));
+        tilingData_->matmulTiling.depthA1 = tilingData_->matmulTiling.stepKa;
     }
 }
 
@@ -479,24 +486,24 @@ void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTilingInA16W4Nz()
 
     // 根据M值计算L0A上K的最大值
     uint64_t l0aMaxBaseK = (compileInfoPtr_->l0aSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                           tilingData_->matmulTiling.get_singleCoreM() / BLOCK_CUBE * BLOCK_CUBE;
+                           tilingData_->matmulTiling.singleCoreM / BLOCK_CUBE * BLOCK_CUBE;
     // 根据理论需要处理的N推算L0B上K的最大值
     uint64_t l0bMaxBaseK = (compileInfoPtr_->l0bSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
-                           tilingData_->matmulTiling.get_singleCoreN() / BLOCK_CUBE * BLOCK_CUBE;
-    uint64_t bL1 = tilingData_->matmulTiling.get_depthB1() * tilingData_->matmulTiling.get_baseK() *
-                   tilingData_->matmulTiling.get_baseN();
+                           tilingData_->matmulTiling.singleCoreN / BLOCK_CUBE * BLOCK_CUBE;
+    uint64_t bL1 = tilingData_->matmulTiling.depthB1 * tilingData_->matmulTiling.baseK *
+                   tilingData_->matmulTiling.baseN;
 
     uint64_t kAlign = ops::CeilAlign(matmulInfoPtr_->kSize, static_cast<uint64_t>(BLOCK_CUBE));
     uint64_t l1Max = ((matmulInfoPtr_->hasBias || matmulInfoPtr_->cDtype == ge::DT_INT8) ? L1_MAX_SIZE_WITH_BIAS_QUANT :
                                                                                            L1_MAX_SIZE) /
                      GetSizeByDataType(matmulInfoPtr_->aDtype);
-    bool fullLoadA = tilingData_->matmulTiling.get_baseM() * kAlign <= (l1Max - bL1);
+    bool fullLoadA = tilingData_->matmulTiling.baseM * kAlign <= (l1Max - bL1);
     // 根据l1的情况反推L0A上K的最大值
     if (fullLoadA) {
         EnlargeBaseKInFullloadA(std::min(l0aMaxBaseK, l0bMaxBaseK), kAlign, l1Max, L0_BASE_K_LIST, L1_K_LIST);
     } else {
         uint64_t l1MaxK =
-            (l1Max / (tilingData_->matmulTiling.get_baseN() + tilingData_->matmulTiling.get_baseM())) >> 1;
+            (l1Max / (tilingData_->matmulTiling.baseN + tilingData_->matmulTiling.baseM)) >> 1;
         EnlargeBaseKNotFullloadA(std::min(l0aMaxBaseK, l0bMaxBaseK), l1MaxK, L0_BASE_K_LIST, L1_K_LIST);
     }
 }
@@ -564,51 +571,51 @@ void WeightQuantBatchMatmulV2TilingAS::ResplitTail()
     uint64_t mainBlockCountDefault = nSize / mainL1SizeDefault;
 
     // 主块数量较多，则匀出一个主块给尾块
-    if (mainBlockCountDefault >= tilingData_->get_cubeBlockDimN() ||
-        nSize % (mainL1SizeDefault * tilingData_->get_cubeBlockDimN()) == 0) {
-        tilingData_->set_mainBlockL1Size(mainL1SizeDefault);
-        if (nSize % (mainL1SizeDefault * tilingData_->get_cubeBlockDimN()) == 0) {
-            tilingData_->set_mainBlockCount(mainBlockCountDefault);
+    if (mainBlockCountDefault >= tilingData_->cubeBlockDimN ||
+        nSize % (mainL1SizeDefault * tilingData_->cubeBlockDimN) == 0) {
+        tilingData_->mainBlockL1Size = mainL1SizeDefault;
+        if (nSize % (mainL1SizeDefault * tilingData_->cubeBlockDimN) == 0) {
+            tilingData_->mainBlockCount = mainBlockCountDefault;
         } else {
             uint64_t blockCountFloorAlign =
-                mainBlockCountDefault / tilingData_->get_cubeBlockDimN() * tilingData_->get_cubeBlockDimN();
-            tilingData_->set_mainBlockCount(blockCountFloorAlign - tilingData_->get_cubeBlockDimN());
+                mainBlockCountDefault / tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimN;
+            tilingData_->mainBlockCount = blockCountFloorAlign - tilingData_->cubeBlockDimN;
         }
     } else {
-        tilingData_->set_mainBlockL1Size(0);
-        tilingData_->set_mainBlockCount(0);
+        tilingData_->mainBlockL1Size = 0;
+        tilingData_->mainBlockCount = 0;
     }
-    uint64_t tailSize = nSize - tilingData_->get_mainBlockCount() * tilingData_->get_mainBlockL1Size();
+    uint64_t tailSize = nSize - tilingData_->mainBlockCount * tilingData_->mainBlockL1Size;
 
     if (IsWeight4Nz()) {
-        tilingData_->set_mainBlockL1Size(tilingData_->get_mainBlockL1Size() * static_cast<uint64_t>(BLOCK_CUBE));
+        tilingData_->mainBlockL1Size = tilingData_->mainBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE);
     }
 
     if (tailSize == 0UL) {
-        tilingData_->set_firstTailBlockL1Size(0);
-        tilingData_->set_firstTailBlockCount(0);
-        tilingData_->set_secondTailBlockL1Size(0);
-        tilingData_->set_secondTailBlockCount(0);
+        tilingData_->firstTailBlockL1Size = 0;
+        tilingData_->firstTailBlockCount = 0;
+        tilingData_->secondTailBlockL1Size = 0;
+        tilingData_->secondTailBlockCount = 0;
         return;
     }
     /* 一个主块+一个尾块，需要多核做2轮才能保证单次不超过基本块的最大规格。
      * 一个尾块，多核做1轮将可以保证单次不超过基本块的最大规格。
      */
-    uint64_t tailBlockCount = mainBlockCountDefault >= tilingData_->get_cubeBlockDimN() ?
-                                  2 * tilingData_->get_cubeBlockDimN() :
-                                  tilingData_->get_cubeBlockDimN();
-    tilingData_->set_firstTailBlockCount(tailBlockCount - tailSize % tailBlockCount);
-    tilingData_->set_firstTailBlockL1Size(tailSize / tailBlockCount);
-    tilingData_->set_secondTailBlockCount(tailSize % tailBlockCount);
-    tilingData_->set_secondTailBlockL1Size(0);
+    uint64_t tailBlockCount = mainBlockCountDefault >= tilingData_->cubeBlockDimN ?
+                                  2 * tilingData_->cubeBlockDimN :
+                                  tilingData_->cubeBlockDimN;
+    tilingData_->firstTailBlockCount = tailBlockCount - tailSize % tailBlockCount;
+    tilingData_->firstTailBlockL1Size = tailSize / tailBlockCount;
+    tilingData_->secondTailBlockCount = tailSize % tailBlockCount;
+    tilingData_->secondTailBlockL1Size = 0;
     if (tailSize % tailBlockCount > 0UL) {
-        tilingData_->set_secondTailBlockL1Size(tilingData_->get_firstTailBlockL1Size() + 1);
+        tilingData_->secondTailBlockL1Size = tilingData_->firstTailBlockL1Size + 1;
     }
     if (IsWeight4Nz()) {
-        tilingData_->set_firstTailBlockL1Size(
-            tilingData_->get_firstTailBlockL1Size() * static_cast<uint64_t>(BLOCK_CUBE));
-        tilingData_->set_secondTailBlockL1Size(
-            tilingData_->get_secondTailBlockL1Size() * static_cast<uint64_t>(BLOCK_CUBE));
+        tilingData_->firstTailBlockL1Size =
+            tilingData_->firstTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE);
+        tilingData_->secondTailBlockL1Size =
+            tilingData_->secondTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE);
     }
 }
 
@@ -617,7 +624,7 @@ void WeightQuantBatchMatmulV2TilingAS::SetInnerSize()
     static constexpr uint64_t MTE2_K_256 = 256UL;
     static constexpr uint64_t MTE2_K_512 = 512UL;
     static constexpr uint64_t MTE2_K_1024 = 1024UL;
-    uint64_t weightL1K = tilingData_->matmulTiling.get_baseK() * tilingData_->matmulTiling.get_stepKb();
+    uint64_t weightL1K = tilingData_->matmulTiling.baseK * tilingData_->matmulTiling.stepKb;
 
     if (IsWeight4Nz()) {
         if (weightInt4Flag_ && matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP) {
@@ -651,8 +658,8 @@ void WeightQuantBatchMatmulV2TilingAS::SetInnerSize()
     }
 
     uint64_t blockL1MaxSize = std::max(
-        tilingData_->get_mainBlockL1Size(),
-        std::max(tilingData_->get_firstTailBlockL1Size(), tilingData_->get_secondTailBlockL1Size()));
+        tilingData_->mainBlockL1Size,
+        std::max(tilingData_->firstTailBlockL1Size, tilingData_->secondTailBlockL1Size));
     if (matmulInfoPtr_->kSize <= MTE2_K_256 * QUARTER_BUFFER_NUM) {
         // k轴较小场景，mte2内轴较大会造成较高的头开销，缩短内轴增加ub上的buffer数量
         mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_256_BUF_NUM_4;
@@ -684,16 +691,16 @@ void WeightQuantBatchMatmulV2TilingAS::RecalculateBaseBlockSize()
         (matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL ||
          matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP)) {
         uint64_t tailSize =
-            matmulInfoPtr_->nSize - tilingData_->get_mainBlockCount() * tilingData_->get_mainBlockL1Size();
+            matmulInfoPtr_->nSize - tilingData_->mainBlockCount * tilingData_->mainBlockL1Size;
 
         if (weightInt4Flag_ && nzSceneFlag_) {
             // A16W4 Nz weight不转置场景，n方向按照n1相对于16的粒度切分
             tailSize = ops::CeilDiv(matmulInfoPtr_->nSize, static_cast<uint64_t>(BLOCK_CUBE)) -
-                       tilingData_->get_mainBlockCount() * tilingData_->get_mainBlockL1Size() /
+                       tilingData_->mainBlockCount * tilingData_->mainBlockL1Size /
                            static_cast<uint64_t>(BLOCK_CUBE);
         }
 
-        uint64_t tailBlockCount = tilingData_->get_cubeBlockDimN();
+        uint64_t tailBlockCount = tilingData_->cubeBlockDimN;
         if (tailBlockCount == 0UL) {
             return;
         }
@@ -725,31 +732,31 @@ void WeightQuantBatchMatmulV2TilingAS::ReSetTilingAfterExtendedBaseN(
     uint64_t extendedBaseN, uint64_t firstTailBlockL1Size, uint64_t firstTailBlockCount, uint64_t secondTailBlockL1Size,
     uint64_t secondTailBlockCount) const
 {
-    tilingData_->matmulTiling.set_baseN(extendedBaseN);
-    tilingData_->matmulTiling.set_singleCoreN(extendedBaseN);
-    tilingData_->matmulTiling.set_baseK(tilingData_->matmulTiling.get_baseK() / NUM_TWO);     // 将 baseK 减半
-    tilingData_->matmulTiling.set_stepKa(tilingData_->matmulTiling.get_stepKa() * NUM_TWO);   // 将 stepKa 翻倍
-    tilingData_->matmulTiling.set_stepKb(tilingData_->matmulTiling.get_stepKb() * NUM_TWO);   // 将 stepKb 翻倍
-    tilingData_->matmulTiling.set_depthA1(tilingData_->matmulTiling.get_depthA1() * NUM_TWO); // 将 depthA1 翻倍
-    tilingData_->matmulTiling.set_depthB1(tilingData_->matmulTiling.get_depthB1() * NUM_TWO); // 将 depthB1 翻倍
-    tilingData_->matmulTiling.set_shareL0CSize(
-        tilingData_->matmulTiling.get_baseM() * tilingData_->matmulTiling.get_baseN() * sizeof(float));
-    tilingData_->set_firstTailBlockL1Size(firstTailBlockL1Size);
-    tilingData_->set_firstTailBlockCount(firstTailBlockCount);
-    tilingData_->set_secondTailBlockL1Size(secondTailBlockL1Size);
-    tilingData_->set_secondTailBlockCount(secondTailBlockCount);
+    tilingData_->matmulTiling.baseN = extendedBaseN;
+    tilingData_->matmulTiling.singleCoreN = extendedBaseN;
+    tilingData_->matmulTiling.baseK = tilingData_->matmulTiling.baseK / NUM_TWO;     // 将 baseK 减半
+    tilingData_->matmulTiling.stepKa = tilingData_->matmulTiling.stepKa * NUM_TWO;   // 将 stepKa 翻倍
+    tilingData_->matmulTiling.stepKb = tilingData_->matmulTiling.stepKb * NUM_TWO;   // 将 stepKb 翻倍
+    tilingData_->matmulTiling.depthA1 = tilingData_->matmulTiling.depthA1 * NUM_TWO; // 将 depthA1 翻倍
+    tilingData_->matmulTiling.depthB1 = tilingData_->matmulTiling.depthB1 * NUM_TWO; // 将 depthB1 翻倍
+    tilingData_->matmulTiling.shareL0CSize =
+        tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.baseN * sizeof(float);
+    tilingData_->firstTailBlockL1Size = firstTailBlockL1Size;
+    tilingData_->firstTailBlockCount = firstTailBlockCount;
+    tilingData_->secondTailBlockL1Size = secondTailBlockL1Size;
+    tilingData_->secondTailBlockCount = secondTailBlockCount;
     if (nzSceneFlag_) {
-        tilingData_->set_firstTailBlockL1Size(firstTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE));
-        tilingData_->set_secondTailBlockL1Size(secondTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE));
+        tilingData_->firstTailBlockL1Size = firstTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE);
+        tilingData_->secondTailBlockL1Size = secondTailBlockL1Size * static_cast<uint64_t>(BLOCK_CUBE);
     }
 }
 
 bool WeightQuantBatchMatmulV2TilingAS::CheckL1SizeAfterExtending(uint64_t extendedBaseN) const
 {
-    uint64_t al1Size = tilingData_->matmulTiling.get_baseM() * tilingData_->matmulTiling.get_depthA1() *
-                       tilingData_->matmulTiling.get_baseK() * GetSizeByDataType(matmulInfoPtr_->aDtype);
-    uint64_t extendedBl1Size = extendedBaseN * tilingData_->matmulTiling.get_depthB1() *
-                               tilingData_->matmulTiling.get_baseK() * GetSizeByDataType(matmulInfoPtr_->aDtype);
+    uint64_t al1Size = tilingData_->matmulTiling.baseM * tilingData_->matmulTiling.depthA1 *
+                       tilingData_->matmulTiling.baseK * GetSizeByDataType(matmulInfoPtr_->aDtype);
+    uint64_t extendedBl1Size = extendedBaseN * tilingData_->matmulTiling.depthB1 *
+                               tilingData_->matmulTiling.baseK * GetSizeByDataType(matmulInfoPtr_->aDtype);
     uint64_t aL1MaxSize = (matmulInfoPtr_->hasBias || matmulInfoPtr_->cDtype == ge::DT_INT8) ?
                               A_L1_MAX_SIZE_WITH_BIAS_QUANT :
                               A_L1_MAX_SIZE;
@@ -761,7 +768,7 @@ bool WeightQuantBatchMatmulV2TilingAS::CheckL1SizeAfterExtending(uint64_t extend
 
 bool WeightQuantBatchMatmulV2TilingAS::CheckL0CSizeAfterExtending(uint64_t extendedBaseN) const
 {
-    return (tilingData_->matmulTiling.get_baseM() * extendedBaseN * sizeof(float) <= compileInfoPtr_->l0cSize);
+    return (tilingData_->matmulTiling.baseM * extendedBaseN * sizeof(float) <= compileInfoPtr_->l0cSize);
 }
 
 bool WeightQuantBatchMatmulV2TilingAS::CheckUbSizeAfterExtending(uint64_t extendedWeightMte2N) const
@@ -795,13 +802,13 @@ void WeightQuantBatchMatmulV2TilingAS::SetPreLoad()
      * m < 512 && a矩阵size < cubeDimM * cubeDimN * aL1MaxSize
      */
     if (matmulInfoPtr_->mSize < 512 &&
-        aSize < tilingData_->get_cubeBlockDimM() * tilingData_->get_cubeBlockDimN() * aL1MaxSize) {
-        tilingData_->set_aPreloadSize(
+        aSize < tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN * aL1MaxSize) {
+        tilingData_->aPreloadSize =
             ops::CeilAlign(
                 ops::CeilDiv(
                     static_cast<uint64_t>(matmulInfoPtr_->mSize * matmulInfoPtr_->kSize),
-                    static_cast<uint64_t>(tilingData_->get_cubeBlockDimN() * tilingData_->get_cubeBlockDimM())),
-                static_cast<uint64_t>(64))); // 64 表示128B的cacheline对齐
+                    static_cast<uint64_t>(tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimM)),
+                static_cast<uint64_t>(64)); // 64 表示128B的cacheline对齐
     }
 }
 
@@ -816,19 +823,19 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeBasicTiling()
         mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_DEFAULT;
     } else {
         // step 1. n方向为内轴，无法做重切分
-        tilingData_->set_mainBlockL1Size(tilingData_->matmulTiling.get_singleCoreN());
-        tilingData_->set_mainBlockCount(
-            matmulInfoPtr_->nSize / tilingData_->matmulTiling.get_singleCoreN() / tilingData_->get_cubeBlockDimN() *
-            tilingData_->get_cubeBlockDimN());
-        tilingData_->set_firstTailBlockL1Size(
-            tilingData_->matmulTiling.get_singleCoreN()); // n为内轴，细粒度切分影响搬运效率，此处暂不考虑
+        tilingData_->mainBlockL1Size = tilingData_->matmulTiling.singleCoreN;
+        tilingData_->mainBlockCount =
+            matmulInfoPtr_->nSize / tilingData_->matmulTiling.singleCoreN / tilingData_->cubeBlockDimN *
+            tilingData_->cubeBlockDimN;
+        tilingData_->firstTailBlockL1Size =
+            tilingData_->matmulTiling.singleCoreN; // n为内轴，细粒度切分影响搬运效率，此处暂不考虑
 
         uint64_t tailSize =
-            matmulInfoPtr_->nSize - tilingData_->get_mainBlockCount() * tilingData_->get_mainBlockL1Size();
-        tilingData_->set_firstTailBlockCount(
-            ops::CeilDiv(tailSize, static_cast<uint64_t>(tilingData_->matmulTiling.get_singleCoreN())));
-        tilingData_->set_secondTailBlockL1Size(0);
-        tilingData_->set_secondTailBlockCount(0);
+            matmulInfoPtr_->nSize - tilingData_->mainBlockCount * tilingData_->mainBlockL1Size;
+        tilingData_->firstTailBlockCount =
+            ops::CeilDiv(tailSize, static_cast<uint64_t>(tilingData_->matmulTiling.singleCoreN));
+        tilingData_->secondTailBlockL1Size = 0;
+        tilingData_->secondTailBlockCount = 0;
 
         // step 2. 判定内轴(k)的核内切分规则
         if (compileInfoPtr_->socVersion != SocVersion::ASCEND910_55) {
@@ -843,35 +850,30 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeBasicTiling()
 // 5、计算TilingKey
 uint64_t WeightQuantBatchMatmulV2TilingAS::GetTilingKey() const
 {
-    TilingKeyConfigure tilingKeyConfigure;
+    uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
     if (compileInfoPtr_->socVersion == SocVersion::ASCEND910_55) {
-        // 平台类型占2位(平台大类， 平台小类)，平台大类在高位，需要乘10
-        tilingKeyConfigure.socVersionType = static_cast<uint8_t>(SocVersion::ASCEND910_55) * 10;
+        socVersionType = WQBMMV2_SOC_ASCEND910_55;
     } else {
-        // 平台类型占2位(平台大类， 平台小类)，平台大类在高位，需要乘10
-        tilingKeyConfigure.socVersionType = static_cast<uint8_t>(SocVersionType::SUPPORT_L1_TO_BT_BF16) * 10;
+        socVersionType = WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16;
     }
-    tilingKeyConfigure.quantizationScenario = static_cast<uint8_t>(QuantizationScenario::DEFAULT);
-    // 算法类型占2位(算法大类，算法小类)，算法大类在高位，需要乘10
-    tilingKeyConfigure.algorithm = static_cast<uint8_t>(OptimizationAlgorithmCategory::VECTOR_ANTIQUANT) * 10 +
-                                   static_cast<uint8_t>(algorithmSubCategory_);
-    tilingKeyConfigure.transposeSituation =
-        (static_cast<uint16_t>(matmulInfoPtr_->transA) << 1) | static_cast<uint16_t>(matmulInfoPtr_->transB);
-    tilingKeyConfigure.antiquantType = static_cast<uint8_t>(matmulInfoPtr_->antiQuantType);
-    tilingKeyConfigure.quantType = static_cast<uint8_t>(matmulInfoPtr_->quantType);
-
-    if (matmulInfoPtr_->biasDtype == ge::DT_FLOAT && matmulInfoPtr_->hasBias) {
-        // 按照tilingKey的定义，bias为float场景在原有tiling key的基础上加4做区分
-        tilingKeyConfigure.optionInputSituation = (static_cast<uint16_t>(matmulInfoPtr_->hasAntiQuantOffset) << 1) + 4;
-    } else {
-        tilingKeyConfigure.optionInputSituation = static_cast<uint16_t>(matmulInfoPtr_->hasAntiQuantOffset) << 1;
-    }
-    tilingKeyConfigure.weightFormat = (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) ?
-                                          static_cast<uint8_t>(WeightFormat::FRACTAL_NZ) :
-                                          static_cast<uint8_t>(WeightFormat::ND);
-    tilingKeyConfigure.templateCustom = static_cast<uint8_t>(mte2Config_);
-    tilingKeyConfigure.apiConstexpr = 0;
-    return tilingKeyConfigure.GenTilingKey();
+    uint64_t subSocVersionType = WQBMMV2_DEFAULT;
+    uint64_t antiquantScenario = WQBMMV2_DEFAULT;
+    uint64_t algorithm = WQBMMV2_ALGO_VECTOR_ANTIQUANT;
+    uint64_t subAlgorithm = static_cast<uint64_t>(algorithmSubCategory_);
+    uint64_t templateCustom = static_cast<uint64_t>(mte2Config_);
+    uint64_t apiConstexpr = 0UL;
+    bool transA = matmulInfoPtr_->transA;
+    bool transB = matmulInfoPtr_->transB;
+    uint64_t antiquantType = static_cast<uint64_t>(matmulInfoPtr_->antiQuantType);
+    uint64_t quantType = static_cast<uint64_t>(matmulInfoPtr_->quantType);
+    bool hasAntiquantOffset = matmulInfoPtr_->hasAntiQuantOffset;
+    bool hasBias = 0;
+    bool isBiasFp32 = matmulInfoPtr_->biasDtype == ge::DT_FLOAT && matmulInfoPtr_->hasBias;
+    bool isWeightNz = matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ;
+    uint64_t tilingKey = GET_TPL_TILING_KEY(
+        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, templateCustom, apiConstexpr,
+        transA, transB, antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz);
+    return tilingKey;
 }
 
 // 6、计算Workspace 大小

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
@@ -90,16 +90,14 @@ static bool CheckMaskNotNull(
     const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
     const aclBoolArray* outputMask)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
-        OP_CHECK_NULL(outputMask, return false);
-        if (outputMask->Size() != SHAPE_DIM) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Expected aclnnGroupNormBackward outputMask len to be 3, but got %zu.",
-                outputMask->Size());
-            return false;
-        }
+    OP_CHECK_NULL(outputMask, return false);
+    if (outputMask->Size() != SHAPE_DIM) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Expected aclnnGroupNormBackward outputMask len to be 3, but got %zu.",
+            outputMask->Size());
+        return false;
     }
+  
     if ((*outputMask)[AXIS_ZERO]) {
         OP_CHECK_NULL(gradInput, return false);
     }
@@ -571,7 +569,7 @@ static aclnnStatus GetDgamma(
         CHECK_RET(meanTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         meanBroadcast = l0op::UnsqueezeNd(meanTmp, AXIS_TWO, executor);
         auto rstdTmp = l0op::Reshape(rstdContiguous, broadcastShape, executor);
-        CHECK_RET(meanTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(rstdTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         rstdBroadcast = l0op::UnsqueezeNd(rstdTmp, AXIS_TWO, executor);
     } else {
         meanBroadcast = l0op::UnsqueezeNd(meanContiguous, AXIS_TWO, executor);
@@ -722,7 +720,7 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
         if ((*outputMask)[AXIS_TWO]) {
             auto dbeta = std::get<2>(GroupNormGradOut);
             CHECK_RET(dbeta != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto dbetaReshape = l0op::Reshape(dbeta, gradGammaOut->GetViewShape(), uniqueExecutor.get());
+            auto dbetaReshape = l0op::Reshape(dbeta, gradBetaOut->GetViewShape(), uniqueExecutor.get());
             CHECK_RET(dbetaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto dbetaViewCopyResult = l0op::ViewCopy(dbetaReshape, gradBetaOut, uniqueExecutor.get());
             CHECK_RET(dbetaViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

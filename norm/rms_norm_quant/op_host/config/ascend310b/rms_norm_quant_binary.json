@@ -82,6 +82,11 @@
           "name": "gemma_mode",
           "dtype": "bool",
           "value": false
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": 2
         }
       ]
     }

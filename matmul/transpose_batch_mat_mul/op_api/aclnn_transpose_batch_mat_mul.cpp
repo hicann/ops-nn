@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_transpose_batch_mat_mul.h"
 
@@ -87,6 +87,29 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
     return true;
 }
 
+namespace {
+static bool CheckDavidLimit(const aclTensor* scale, const aclIntArray* perm_x1, const aclIntArray* perm_x2)
+{
+    auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
+                             ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
+    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) ||
+                             ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+    if (!x1_need_transpose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 for ASCEND910_95 should be [0,1,2] or [1,0,2].");
+        return false;
+    }
+    if (!x2_need_transpose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 for ASCEND910_95 should be [0,1,2] or [0,2,1].");
+        return false;
+    }
+    if (scale != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ASCEND910_95 not support scale.");
+        return false;
+    }
+    return true;
+}
+}
+
 static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
                             const aclIntArray* perm_x1, const aclIntArray* perm_x2)
 {
@@ -111,25 +134,31 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
-
+    
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
-    if (x1_need_transpose && x1->GetViewShape().GetDim(1) * x1KDim >= SUPPORTED_INNER_AXIS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul k should be less than 65536.");
-        return false;
-    }
-    if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K should be less than 65536.");
-        return false;
-    }
-    if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch and n should be less than 65536.");
-        return false;
-    }
-
-    if ((K % BLOCK_SIZE != 0) || (N % BLOCK_SIZE != 0)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The shape of the x2 is not supported, now they are %ld, %ld and %ld", batchNum, K, N);
-        return false;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        if (!CheckDavidLimit(scale, perm_x1, perm_x2)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ASCEND910_95 Limit.");
+            return false;
+        }
+    } else {
+        if (x1_need_transpose && x1->GetViewShape().GetDim(1) * x1KDim >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul k should be less than 65536.");
+            return false;
+        }
+        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K should be less than 65536.");
+            return false;
+        }
+        if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch and n should be less than 65536.");
+            return false;
+        }
+        if ((K % BLOCK_SIZE != 0) || (N % BLOCK_SIZE != 0)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                  "The shape of the x2 is not supported, now they are %ld, %ld and %ld", batchNum, K, N);
+            return false;
+        }
     }
 
     return CheckScaleValid(scale, batchNum * N);
@@ -149,9 +178,14 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2,
                                       int32_t batch_split_factor)
 {
     CHECK_RET(CheckNotNull(x1, x2, out), ACLNN_ERR_PARAM_NULLPTR);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && cubeMathType == -1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for ASCEND910_95",
+            cubeMathType);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     if (scale != nullptr && batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "batchSplitFactor should be 1 when the scale is not null.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSplitFactor should be 1 when the scale is not null.");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (batch_split_factor <= 0) {
@@ -219,15 +253,15 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
 {
     L2_DFX_PHASE_1(aclnnTransposeBatchMatMul,
         DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
-
+    
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
     CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 入参检查
     auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, cubeMathType, batchSplitFactor);
-    CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMul do not support empty tensor!");
@@ -235,7 +269,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     }
 
     if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The bias is not support in TBMM.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not support in TBMM.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -243,7 +277,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     const aclTensor* tbmmOut = nullptr;
     tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, scale, permX1, permX2, permY,
                                              cubeMathType, batchSplitFactor, unique_executor.get());
-    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     if (tbmmOut->IsEmpty()) {
         *workspaceSize = 0;
@@ -252,9 +286,9 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     }
 
     tbmmOut = l0op::Cast(tbmmOut, out->GetDataType(), unique_executor.get());
-    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
     auto viewCopyResult = l0op::ViewCopy(tbmmOut, out, unique_executor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     *workspaceSize = unique_executor->GetWorkspaceSize();
     unique_executor.ReleaseTo(executor);

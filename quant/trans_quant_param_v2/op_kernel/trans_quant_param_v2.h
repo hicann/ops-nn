@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file trans_quant_param_v2.h
@@ -106,7 +106,7 @@ class TransQuantParamV2 {
 public:
     __aicore__ inline TransQuantParamV2(){};
     __aicore__ inline void Init(
-        GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, const TransQuantParamV2TilingData* __restrict__ tilingData,
+        GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, const TransQuantParamV2TilingData* tilingData,
         TPipe* tPipe)
     {
         if ASCEND_IS_AIC {
@@ -133,7 +133,9 @@ public:
             return;
         }
         CalOffsetValueShapeOne();
+        PipeBarrier<PIPE_ALL>();
         CalScaleValueShapeOne();
+        PipeBarrier<PIPE_ALL>();
         uint32_t eachLength = SPLIT_SIZE / sizeof(uint64_t);
         uint32_t loops = Max<uint32_t>(scaleLength_, offsetLength_) / eachLength;
         uint32_t tailLength = Max<uint32_t>(scaleLength_, offsetLength_) - loops * eachLength;
@@ -151,11 +153,11 @@ public:
                 }
             }
             if (offsetLength_ > 1) {
-                CalOffset(eachLength, static_cast<uint64_t>(eachLength) * loopidx, resTensor);
+                CalOffset(eachLength, eachLength * loopidx, resTensor);
             }
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-            DataCopy(yGm_[static_cast<uint64_t>(eachLength) * loopidx], resTensor, ub2GmParams);
+            DataCopy(yGm_[eachLength * loopidx], resTensor, ub2GmParams);
             SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
         }
@@ -166,16 +168,17 @@ public:
                 resTensor.SetValue(idx, resTensor.GetValue(idx) | offetInt9Bit_);
             }
         }
+        PipeBarrier<PIPE_ALL>();
         if (tailLength != 0) {
             if (offsetLength_ > 1) {
-                CalOffset(tailLength, static_cast<uint64_t>(eachLength) * loops, resTensor);
+                CalOffset(tailLength, eachLength * loops, resTensor);
             }
             DataCopyParams ub2GmParams1;
             SetCopyParams(ub2GmParams1);
             ub2GmParams1.blockLen = tailLength * sizeof(uint64_t);
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-            DataCopyGlobal(yGm_[static_cast<uint64_t>(eachLength) * loops], resTensor, ub2GmParams1);
+            DataCopyGlobal(yGm_[eachLength * loops], resTensor, ub2GmParams1);
         }
     }
 
@@ -322,7 +325,7 @@ protected:
         }
     }
 
-    __aicore__ inline void CalOffset(uint32_t length, uint64_t gmOffset, LocalTensor<uint64_t> resTensor)
+    __aicore__ inline void CalOffset(uint32_t length, uint32_t gmOffset, LocalTensor<uint64_t> resTensor)
     {
         uint32_t alignedLength = Align<uint32_t>(length * sizeof(float), UB_ALIGN_SIZE) / sizeof(float);
         LocalTensor<float> offsetFp32_ = offsetUb_.Get<float>(alignedLength);
@@ -330,7 +333,9 @@ protected:
         DataCopyParams gm2UbParams;
         gm2UbParams.blockLen = length * sizeof(float);
         SetCopyParams(gm2UbParams);
+        PipeBarrier<PIPE_ALL>();
         DataCopyLocal(offsetFp32_, offsetGm_[gmOffset], gm2UbParams);
+        PipeBarrier<PIPE_ALL>();
         SetOffsetValue(resTensor, offsetInt32_, offsetFp32_, length);
     }
 

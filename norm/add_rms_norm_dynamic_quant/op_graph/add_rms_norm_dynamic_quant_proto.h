@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_rms_norm_dynamic_quant_proto.h
@@ -50,14 +50,16 @@ namespace ge {
 * @li beta: An optional input tensor. Describing the offset value of dynamic quantization.
 *              Support dtype: float16/bfloat16, support format: ND. Has the same dtype and shape as "gamma".
 * @par Attributes
-* epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
+* @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
 *          The type is float. Defaults to 1e-6.
+* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, 
+*               DT_FLOAT8_E4M3FN. Defaults to DT_INT8.
 
 * @par Outputs
 * @li y1: A tensor. Describing the output of the first dynamic quantization.
-*                   Support dtype: int8, support format: ND.
+*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
 * @li y2: A tensor. Describing the output of the second dynamic quantization.
-*                   Support dtype: int8, support format: ND.
+*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
 * @li x: A tensor. Describing the output of the x1+x2 add operation.
 *                  Support dtype: float16/bfloat16, support format: ND.
 * @li scale1: A tensor. Describing of the factor for the first dynamic quantization.
@@ -65,6 +67,7 @@ namespace ge {
 * @li scale2: A tensor. Describing of the factor for the second dynamic quantization.
 *                  Support dtype: float32, support format: ND.
 */
+
 REG_OP(AddRmsNormDynamicQuant)
     .INPUT(x1, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(x2, TensorType({DT_FLOAT16, DT_BF16}))
@@ -72,13 +75,14 @@ REG_OP(AddRmsNormDynamicQuant)
     .OPTIONAL_INPUT(smooth_scale1, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(smooth_scale2, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y1, TensorType({DT_INT8, DT_INT8}))
-    .OUTPUT(y2, TensorType({DT_INT8, DT_INT8}))
+    .OUTPUT(y1, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
+    .OUTPUT(y2, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
     .OUTPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(scale1, TensorType({DT_FLOAT, DT_FLOAT}))
     .OUTPUT(scale2, TensorType({DT_FLOAT, DT_FLOAT}))
     .ATTR(epsilon, Float, 1e-6)
     .ATTR(output_mask, ListBool, {})
+    .ATTR(dst_type, Int, DT_INT8)
     .OP_END_FACTORY_REG(AddRmsNormDynamicQuant)
 } // namespace ge
 

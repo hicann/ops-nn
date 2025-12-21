@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file layer_norm_grad_v3_workspace.h
@@ -88,8 +88,7 @@ public:
     __aicore__ inline void Process(const LayerNormGradV3TilingDataWorkspace* tilingData)
     {
         if (GetBlockIdx() < tilingData->blockNum) {
-            int64_t rowCount =
-                (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail : tilingData->blockFormer;
+            int64_t rowCount = (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail : tilingData->blockFormer;
             for (int64_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
                 float reduce2 = 0.0f;
                 float reduce3 = 0.0f;
@@ -100,13 +99,21 @@ public:
                 for (int64_t ubIndex = 0; ubIndex < tilingData->ubLoop - 1; ubIndex++) {
                     CopyInPhase0(rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer);
                     ComputePhase0(ubIndex, tilingData->ubFormer, tilingData->ubFormer, meanIn, rstdIn);
-                    reduce2 += ReducePhase0(buffer5, tilingData->ubFormer);
-                    reduce3 += ReducePhase0(buffer4, tilingData->ubFormer);
+                    LocalTensor<float> tmp0 = queIn0.AllocTensor<float>();
+                    LocalTensor<float> tmp1 = queIn1.AllocTensor<float>();
+                    reduce2 += ReducePhase0(buffer5, tmp0, tilingData->ubFormer);
+                    reduce3 += ReducePhase0(buffer4, tmp1, tilingData->ubFormer);
+                    queIn0.FreeTensor(tmp0);
+                    queIn1.FreeTensor(tmp1);
                 }
                 CopyInPhase0(rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail);
                 ComputePhase0(tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, meanIn, rstdIn);
-                reduce2 += ReducePhase0(buffer5, tilingData->ubTail);
-                reduce3 += ReducePhase0(buffer4, tilingData->ubTail);
+                LocalTensor<float> tmp0 = queIn0.AllocTensor<float>();
+                LocalTensor<float> tmp1 = queIn1.AllocTensor<float>();
+                reduce2 += ReducePhase0(buffer5, tmp0, tilingData->ubTail);
+                reduce3 += ReducePhase0(buffer4, tmp1, tilingData->ubTail);
+                queIn0.FreeTensor(tmp0);
+                queIn1.FreeTensor(tmp1);
                 reduce2 = reduce2 / tilingData->col * (-1.0f);
                 reduce3 = reduce3 / tilingData->col;
 
@@ -114,17 +121,19 @@ public:
                 PipeBarrier<PIPE_ALL>();
                 for (int64_t ubIndex = 0; ubIndex < tilingData->ubLoop - 1; ubIndex++) {
                     CopyInPhase1(ubIndex, tilingData->ubFormer, tilingData->ubFormer);
-                    ComputePhase1(
-                        rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3, rstdIn);
+                    ComputePhase1(rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3, rstdIn);
                 }
                 CopyInPhase1(tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail);
-                ComputePhase1(
-                    rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2, reduce3,
-                    rstdIn);
+                ComputePhase1(rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2, reduce3, rstdIn);
             }
         }
 
         // step3. calc pgamma and pbeta form workspace
+        doLastStep(tilingData);
+    }
+
+    __aicore__ inline void doLastStep(const LayerNormGradV3TilingDataWorkspace* tilingData)
+    {
         if constexpr (isDeterministic) {
             pipe.Reset();
             SyncAll();
@@ -246,13 +255,13 @@ public:
         queOut5.FreeTensor(buffer5);
     }
 
-    __aicore__ inline float ReducePhase0(const LocalTensor<float>& src, int64_t reduceNum)
+    __aicore__ inline float ReducePhase0(const LocalTensor<float>& src, const LocalTensor<float>& tmp, int64_t reduceNum)
     {
-        ReduceSum(buffer3, src, buffer3, reduceNum);
+        ReduceSum(tmp, src, tmp, reduceNum);
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventVS);
         WaitFlag<HardEvent::V_S>(eventVS);
-        float value = buffer3.GetValue(0);
+        float value = tmp.GetValue(0);
         return value;
     }
 

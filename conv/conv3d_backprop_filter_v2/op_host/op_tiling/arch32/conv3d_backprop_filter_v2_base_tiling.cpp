@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_filter_v2_base_tiling.cpp
@@ -19,7 +19,6 @@
 #include <util/math_util.h>
 #include <platform/platform_infos_def.h>
 #include <graph/utils/type_utils.h>
-
 #include <log/log.h>
 
 #include "../common/conv_backprop_filter_context_utils.h"
@@ -29,6 +28,8 @@
 #include "conv/common/op_host/op_tiling/platform_util.h"
 #include "error_util.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2_tiling_key.h"
+
+using Ops::NN::GetTbeTiling;
 
 namespace {
 const size_t X_INDEX = 0;
@@ -71,6 +72,10 @@ const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_B2 {
     {"8_20_1_128_128_4_130_130_3_3_3_1_1_1_0_0_0_0_0_0_1_1_1",
     {2, 1, 1, 1, 6, 2, 80, 1, 1, 16, 96, 22, 2, 2, 2, 2, 1, 16, 16, 864, 1, 1, 176, 44, 1, 112320}},
 };
+const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_TMP {
+    {"1_1_1_27_4_1_1_1_336_135_26_53_4_52_151_151_253_253_140_140_1_3_3",
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+};
 
 int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t ori_hi) {
     return static_cast<int32_t>(std::min(
@@ -80,10 +85,7 @@ int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t 
 int32_t CalcHo(int64_t k, int32_t wo, const std::string &op_type) {
   OP_LOGE_IF((k == 0 || wo == 0), 0, op_type, "ho is 0 in CalcHo function.");
   // 完整K是ho*wo，k可能超int32，但是下面除完以后的wo不可能超int32
-  int64_t ho_64 = Ops::Base::CeilDiv(k, static_cast<int64_t>(wo));
-  OP_TILING_CHECK(ho_64 > INT32_MAX,
-                  CUBE_INNER_ERR_REPORT(op_type, "Calculated ho exceeds int32_t max value"), return -1);
-  int32_t ho = static_cast<int32_t>(ho_64);
+  int32_t ho = static_cast<int32_t>(Ops::Base::CeilDiv(k, static_cast<int64_t>(wo)));
   if (k % wo == 0 || wo % k == 0) {
     return ho;
   } else {
@@ -674,6 +676,9 @@ void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
         tilingParams = TILINGDATA_MAP_B3.at(key);
     } else if (coreNum_ == CORE_NUM_910B2 && TILINGDATA_MAP_B2.find(key) != TILINGDATA_MAP_B2.end() && !enableDeterministic_) {
         tilingParams = TILINGDATA_MAP_B2.at(key);
+    } else if (TILINGDATA_MAP_TMP.find(key) != TILINGDATA_MAP_TMP.end() && !enableDeterministic_) {
+        InitTilingValue(tilingParams);
+        tilingParams.stepN = 390U;
     } else {
         InitTilingValue(tilingParams);
     }

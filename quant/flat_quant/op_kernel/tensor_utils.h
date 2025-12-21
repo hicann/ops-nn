@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file tensor_utils.h
@@ -29,10 +29,12 @@ constexpr uint8_t MM_SPLIT_MODE = 3;
 constexpr uint8_t MM_HIGH_MODE = 4;
 
 constexpr uint8_t SYNC_MODE0 = 0;
+constexpr uint8_t SYNC_MODE1 = 1;
 constexpr uint8_t SYNC_MODE2 = 2;
 constexpr uint8_t CUBE_VEC_SYNC_ID = 0;
 constexpr uint8_t VEC_CUBE_SYNC_ID = 4;
 constexpr uint8_t VEC_SYNC_ID = 5;
+constexpr uint8_t TWO_VEC_SYNC_ID = 6;
 
 constexpr int32_t DOUBLE = 2;
 constexpr int32_t CEIL_SIZE = 16;
@@ -40,9 +42,9 @@ constexpr int32_t UB_SIZE = 192 * 1024;
 constexpr int32_t HIGH_UB_SIZE = 148 * 1024;
 constexpr int32_t L1_SIZE = 512 * 1024;
 constexpr int32_t DATA_COUNT = 16384;
-constexpr int32_t CAST_COUNT = 8192;
 constexpr int32_t SCALE_COUNT = 2048;
 constexpr int32_t BASE_SIZE = 128;
+constexpr int32_t LOG2_128 = 7;
 constexpr float NUM_FLOAT_SEVEN = 7.0f;
 constexpr int32_t K_PER_VEC = 4; // batch number. Each loop processes K_PER_VEC*M*N
 constexpr int32_t K_DOUBLE_VEC = DOUBLE * K_PER_VEC;
@@ -58,8 +60,10 @@ struct FlatQuantShapeInfo {
     int64_t Nceil; // ceil shape
     int64_t fractalM;
     int64_t fractalN;
+    int64_t calFractalM;
+    int64_t calFractalN;
     int64_t calM;
-    int64_t realM;
+    int64_t calN;
 };
 
 struct MatmulInfo {
@@ -75,11 +79,6 @@ struct MatmulInfo {
 template <pipe_t p1, pipe_t p2>
 class DEvent {
 public:
-    aifunc DEvent(int e_id1, int e_id2)
-    {
-        id1 = (event_t)e_id1;
-        id2 = (event_t)e_id2;
-    }
     aifunc DEvent(event_t e_id1, event_t e_id2)
     {
         id1 = e_id1;
@@ -163,11 +162,15 @@ __aicore__ inline void CopyXToL1(LocalTensor<T> dst, GlobalTensor<T> src, bool u
 }
 
 template <typename T>
-__aicore__ inline void CalReduceMax(LocalTensor<T> srcTensor, LocalTensor<T> maxTensor, int32_t len, event_t eventIdVToS)
+__aicore__ inline void CalReduceMax(LocalTensor<T> srcTensor, int32_t len, event_t eventIdVToS)
 {
-    WholeReduceMax(maxTensor, srcTensor, BASE_SIZE, len/BASE_SIZE, 1, 1, DEFAULT_REPEAT_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
-    PipeBarrier<PIPE_V>();
-    WholeReduceMax(srcTensor, maxTensor, BASE_SIZE, 1, 1, 1, DEFAULT_REPEAT_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
+    int32_t repeatTimes = len >> LOG2_128;
+    if (repeatTimes > 1) {
+        BinaryRepeatParams repeatParams = {1, 1, 1, 0, DEFAULT_REPEAT_STRIDE, 0};
+        Max(srcTensor, srcTensor[BASE_SIZE], srcTensor, BASE_SIZE, repeatTimes - 1, repeatParams);
+        PipeBarrier<PIPE_V>();
+    }
+    WholeReduceMax(srcTensor, srcTensor, BASE_SIZE, 1, 1, 1, DEFAULT_REPEAT_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
 }

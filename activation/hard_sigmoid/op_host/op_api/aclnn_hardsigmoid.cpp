@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include "aclnn_hardsigmoid.h"
 #include "aclnn_kernels/contiguous.h"
 #include "hardsigmoid.h"
@@ -60,6 +60,17 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
 
+    // 4. 检查输入和输出的类型、数据格式是否一致
+    if (self->GetDataType() != out->GetDataType()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor's dtype[%s] should be same with output's dtype[%s].",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (self->GetStorageFormat() != out->GetStorageFormat()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor's format[%s] and output's format[%s] should be same.",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     return ACLNN_SUCCESS;
 }
 

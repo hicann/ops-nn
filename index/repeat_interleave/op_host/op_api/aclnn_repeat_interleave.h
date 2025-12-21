@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #ifndef OP_API_INC_LEVEL2_ACLNN_REPEAT_INTERLEAVE_H_
 #define OP_API_INC_LEVEL2_ACLNN_REPEAT_INTERLEAVE_H_
 
@@ -65,7 +65,7 @@ ACLNN_API aclnnStatus aclnnRepeatInterleave(void* workspace, uint64_t workspaceS
  * repeats的size必须为1或self的dim维度的size。支持空tensor，支持非连续的tensor。数据格式支持ND。
  * @param [in] dim: 进行重复的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
  * @param [in] outputSize:
- * dim维度在进行重复后的最终大小。数据类型为INT64。如果repeats中有多个值，则outputSize值必须为repeats
+ * dim维度再进行重复后的最终大小。数据类型为INT64。如果repeats中有多个值，则outputSize值必须为repeats
  * 的求和。如果repeats只有一个元素时，则outputSize值必须为repeats * self的dim维度size。
  * @param [in] out: npu
  * device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32类型。数据
@@ -136,7 +136,7 @@ ACLNN_API aclnnStatus aclnnRepeatInterleaveInt(void* workspace, uint64_t workspa
  * 支持空tensor， 支持非连续的tensor。数据格式支持ND。
  * @param [in] repeats: 重复的次数。数据类型为INT64。repeats的值必须为自然数。
  * @param [in] dim: 进行重复的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
- * @param [in] outputSize: dim维度在进行重复后的最终大小。数据类型为INT64。outputSize值必须为repeats *
+ * @param [in] outputSize: dim维度再进行重复后的最终大小。数据类型为INT64。outputSize值必须为repeats *
  * self的dim维度size。
  * @param [in] out: npu device侧的aclTensor，数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32类型。
  * 数据类型需要与self一致。

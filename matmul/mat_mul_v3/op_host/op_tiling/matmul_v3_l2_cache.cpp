@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file matmul_v3_l2_cache.cc
@@ -30,26 +30,26 @@ constexpr uint32_t C_L2_DISABLE_BIT = 4;
 void L2Cache::SetL2CacheFlagBase(bool &aEnableL2Cache, bool &bEnableL2Cache) const
 {
     auto &tileL2cache = tilingData_.tileL2cacheTiling;
-    if (tileL2cache.get_mTileCntL2() > 1 || tileL2cache.get_nTileCntL2() > 1) {
-        bEnableL2Cache = tileL2cache.get_mTileCntL2() > 1;
-        aEnableL2Cache = tileL2cache.get_nTileCntL2() > 1;
+    if (tileL2cache.mTileCntL2 > 1 || tileL2cache.nTileCntL2 > 1) {
+        bEnableL2Cache = tileL2cache.mTileCntL2 > 1;
+        aEnableL2Cache = tileL2cache.nTileCntL2 > 1;
         return;
     }
 
     auto &matmulTiling = tilingData_.matmulTiling;
     // m切多核
-    if (static_cast<uint64_t>(matmulTiling.get_singleCoreM()) < args_.mValue) {
+    if (static_cast<uint64_t>(matmulTiling.singleCoreM) < args_.mValue) {
         bEnableL2Cache = true;
     }
     // n切多核
-    if (static_cast<uint64_t>(matmulTiling.get_singleCoreN()) < args_.nValue) {
+    if (static_cast<uint64_t>(matmulTiling.singleCoreN) < args_.nValue) {
         aEnableL2Cache = true;
     }
     // 判断单核是否可以全载,此场景K可以全载
-    uint64_t mCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.mValue), matmulTiling.get_singleCoreM());
-    uint64_t nCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.nValue), matmulTiling.get_singleCoreN());
+    uint64_t mCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.mValue), matmulTiling.singleCoreM);
+    uint64_t nCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.nValue), matmulTiling.singleCoreN);
     uint64_t totalCnt = mCnt * nCnt;
-    uint64_t round = MathUtil::CeilDivision(totalCnt, matmulTiling.get_usedCoreNum());
+    uint64_t round = MathUtil::CeilDivision(totalCnt, matmulTiling.usedCoreNum);
     bool mFullLoad = (round <= 1UL);
     bool nFullLoad = (round <= 1UL);
     if (!mFullLoad && !nFullLoad) {
@@ -61,13 +61,13 @@ void L2Cache::SetL2CacheFlagSingleCoreSplitK(bool &aEnableL2Cache, bool &bEnable
 {
     auto &matmulTiling = tilingData_.matmulTiling;
     // m切多核
-    bEnableL2Cache = static_cast<uint64_t>(matmulTiling.get_singleCoreM()) < args_.mValue;
+    bEnableL2Cache = static_cast<uint64_t>(matmulTiling.singleCoreM) < args_.mValue;
     // n切多核
-    aEnableL2Cache = static_cast<uint64_t>(matmulTiling.get_singleCoreN()) < args_.nValue;
+    aEnableL2Cache = static_cast<uint64_t>(matmulTiling.singleCoreN) < args_.nValue;
     // 判断单核是否可以全载
-    bool mFullLoad = (matmulTiling.get_singleCoreM() <= matmulTiling.get_baseM() * matmulTiling.get_stepM());
-    bool nFullLoad = (matmulTiling.get_singleCoreN() <= matmulTiling.get_baseN() * matmulTiling.get_stepN());
-    bool kFullLoad = (static_cast<uint64_t>(matmulTiling.get_singleCoreK()) <= args_.kValue);
+    bool mFullLoad = (matmulTiling.singleCoreM <= matmulTiling.baseM * matmulTiling.stepM);
+    bool nFullLoad = (matmulTiling.singleCoreN <= matmulTiling.baseN * matmulTiling.stepN);
+    bool kFullLoad = (static_cast<uint64_t>(matmulTiling.singleCoreK) <= args_.kValue);
     // M是外循环，与算子计算逻辑强相关
     if (!mFullLoad && !nFullLoad) {
         bEnableL2Cache = true;
@@ -79,14 +79,14 @@ void L2Cache::SetL2CacheFlagMultiCoreSplitK(bool &aEnableL2Cache, bool &bEnableL
 {
     auto &matmulTiling = tilingData_.matmulTiling;
     // m切多核
-    bEnableL2Cache = static_cast<uint64_t>(matmulTiling.get_singleCoreM()) < args_.mValue;
+    bEnableL2Cache = static_cast<uint64_t>(matmulTiling.singleCoreM) < args_.mValue;
     // 判断单核是否可以全载
-    uint64_t mCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.mValue), matmulTiling.get_singleCoreM());
-    uint64_t kCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.kValue), matmulTiling.get_singleCoreK());
+    uint64_t mCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.mValue), matmulTiling.singleCoreM);
+    uint64_t kCnt = MathUtil::CeilDivision(static_cast<uint64_t>(args_.kValue), matmulTiling.singleCoreK);
     uint64_t totalCnt = mCnt * kCnt;
-    uint64_t round = MathUtil::CeilDivision(totalCnt, matmulTiling.get_usedCoreNum());
+    uint64_t round = MathUtil::CeilDivision(totalCnt, matmulTiling.usedCoreNum);
     bool mFullLoad = (round <= 1UL);
-    bool nFullLoad = (static_cast<uint64_t>(matmulTiling.get_singleCoreN()) == args_.nValue);
+    bool nFullLoad = (static_cast<uint64_t>(matmulTiling.singleCoreN) == args_.nValue);
     bool kFullLoad = (round <= 1UL);
     // N是外循环，与算子计算逻辑强相关
     if (!mFullLoad && !nFullLoad) {
@@ -137,10 +137,10 @@ void L2Cache::SetL2CacheFlag(TilingEnable tilingEnable, uint64_t l2Size, uint32_
         "stepM: %d stepN: %d stepKa: %d stepKb: %d "
         "depthA1: %d depthB1: %d tilingEnableSplitCore %d tilingEnableFullLoad %d tilingEnableFixOpti %d",
         args_.mValue, args_.nValue, args_.kValue,
-        matmulTiling.get_singleCoreM(), matmulTiling.get_singleCoreN(), matmulTiling.get_singleCoreK(),
-        matmulTiling.get_baseM(), matmulTiling.get_baseN(), matmulTiling.get_baseK(),
-        matmulTiling.get_stepM(), matmulTiling.get_stepN(), matmulTiling.get_stepKa(), matmulTiling.get_stepKb(),
-        matmulTiling.get_depthA1(), matmulTiling.get_depthB1(),
+        matmulTiling.singleCoreM, matmulTiling.singleCoreN, matmulTiling.singleCoreK,
+        matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+        matmulTiling.stepM, matmulTiling.stepN, matmulTiling.stepKa, matmulTiling.stepKb,
+        matmulTiling.depthA1, matmulTiling.depthB1,
         static_cast<int32_t>(tilingEnable.tilingEnableSplitCore),
         static_cast<int32_t>(tilingEnable.tilingEnableFullLoad),
         static_cast<int32_t>(tilingEnable.tilingEnableFixOpti));

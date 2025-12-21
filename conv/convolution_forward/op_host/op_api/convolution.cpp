@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file convolution.cpp
@@ -202,6 +202,11 @@ static bool IsSupportConv2DToConv2DV2()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     return socVersion == SocVersion::ASCEND910_95;
+}
+
+static bool IsA5EnableHF32(bool useHf32, const aclTensor *input) 
+{
+    return IsSupportConv2DToConv2DV2() && useHf32 && input->GetDataType() == op::DataType::DT_FLOAT;
 }
 
 static bool CheckV2Dilation(const Conv3DTransPoseV2Prarams &params)
@@ -477,8 +482,15 @@ static aclnnStatus Conv2dV2InferShapeAndAddLauncher(const aclTensor *input, cons
         output = nullptr;
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
-    ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
-        OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32));
+    if (hf32 && input->GetDataType() == op::DataType::DT_FLOAT) {
+        OP_LOGD("conv2d launch hf32");
+        ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
+           OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32),
+           OP_MODE(static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32)));
+    } else {
+        ADD_TO_LAUNCHER_LIST_AICORE(Conv2DV2, OP_INPUT(input, weight, bias, nullptr), OP_OUTPUT(output),
+           OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, "SPECIFIC", hf32));
+    }
     return ACLNN_SUCCESS;
 }
 
@@ -732,9 +744,18 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor *input, const aclTensor *wei
     if (ResetStorageShape(input, output) != ACLNN_SUCCESS) {
       return ACLNN_ERR_INNER;
     }
-    ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv3DV2, OP_INPUT(input, weight, bias, scale, offset, nullptr), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, 0, "SPECIFIC", useHf32));
+
+    if (IsA5EnableHF32(useHf32, input)) {
+      ADD_TO_LAUNCHER_LIST_AICORE(
+        Conv3DV2, OP_INPUT(input, weight, bias, scale, offset, nullptr), OP_OUTPUT(output),
+        OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, 0, "SPECIFIC", useHf32),
+        OP_MODE(static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32)));
+    } else {
+      ADD_TO_LAUNCHER_LIST_AICORE(
+        Conv3DV2, OP_INPUT(input, weight, bias, scale, offset, nullptr), OP_OUTPUT(output),
+        OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, 0, "SPECIFIC", useHf32));
+    }
+
     return ACLNN_SUCCESS;
 }
 

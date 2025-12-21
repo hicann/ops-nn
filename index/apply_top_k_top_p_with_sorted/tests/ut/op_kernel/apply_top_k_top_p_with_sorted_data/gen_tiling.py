@@ -13,26 +13,26 @@ import sys
 
 params_4_152064_fp32 = [
     # ApplyTopKTopPWithSortedTilingParam
-    4, 152064, 0, # batchSize, vocabSize, batchPerCore
-    4, 40, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
+    4, 152064, 1, # batchSize, vocabSize, batchPerCore
+    0, 4, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
     1024, 1024, # ubFactorElement, ubFactorElementAligned
-    512, 512, 151488, 18 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize, iterateTimes
+    512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
 ]
 
 params_4_152064_fp16 = [
     # ApplyTopKTopPWithSortedTilingParam
-    4, 152064, 0, # batchSize, vocabSize, batchPerCore
-    4, 40, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
+    4, 152064, 1, # batchSize, vocabSize, batchPerCore
+    0, 4, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
     1024, 1024, # ubFactorElement, ubFactorElementAligned
-    512, 512, 151488, 18 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize, iterateTimes
+    512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
 ]
 
 params_4_152064_bf16 = [
     # ApplyTopKTopPWithSortedTilingParam
-    4, 152064, 0, # batchSize, vocabSize, batchPerCore
-    4, 40, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
+    4, 152064, 1, # batchSize, vocabSize, batchPerCore
+    0, 4, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
     1024, 1024, # ubFactorElement, ubFactorElementAligned
-    512, 512, 151488, 18 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize, iterateTimes
+    512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
 ]
 
 params_info = {
@@ -44,7 +44,7 @@ params_info = {
 def main():
     params_list = params_info[sys.argv[1]]   # python gen_tiling.py case0  sys.argv[1]="case0"
 
-    base_params = np.array(params_list[:], dtype=np.uint64)
+    base_params = np.array(params_list[:], dtype=np.int32)
 
     tiling_file = open("tiling.bin", "wb")
     base_params.tofile(tiling_file)

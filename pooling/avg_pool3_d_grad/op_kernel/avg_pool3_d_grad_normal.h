@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file avg_pool3_d_grad_normal.h
@@ -208,7 +208,7 @@ __aicore__ inline void AvgPool3DGradNormal<T>::CalcBlock(uint64_t doBlockIdx, ui
 
     // computer
 
-    for (int w = 0; w < this->baseCalcWo; w++) {
+    for (int64_t w = 0; w < this->baseCalcWo; w++) {
         // calcIndexW
         CalcIndexW(woBlockIdx + w);
         if (w == 0) {
@@ -256,7 +256,7 @@ __aicore__ inline void AvgPool3DGradNormal<T>::Compute(int64_t ubReadIndex, int6
     // ubWrite
     PipeBarrier<PIPE_ALL>();
 
-    for (int k = this->wStart - this->blockWStart; k < this->wEnd - this->blockWStart; k++) {
+    for (int64_t k = this->wStart - this->blockWStart; k < this->wEnd - this->blockWStart; k++) {
         auto ubWriteIndex = k;
         if constexpr (std::is_same<T, float>::value) {
             Add(this->outputGradUb[ubWriteIndex * this->singleCoreNc],

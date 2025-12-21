@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_basic_tiling.cc
@@ -31,6 +31,7 @@
 
 using AscendC::BLOCK_CUBE;    // uint32_t 16
 using AscendC::ONE_BLK_SIZE;  // uint32_t 32
+using Ops::NN::CheckSupportConditionQbmm;
 
 namespace {
 
@@ -116,9 +117,9 @@ ge::graphStatus QuantBatchMatmulV3BasicTiling::DoOpTiling()
         return ge::GRAPH_PARAM_INVALID;
     }
 
-    tilingData_.params.set_isPerTensor(static_cast<uint32_t>(inputParams_.isPerTensor));
-    tilingData_.params.set_isPertoken(static_cast<uint32_t>(inputParams_.isPertoken));
-    tilingData_.params.set_biasDtype(static_cast<uint32_t>(inputParams_.biasDtype));
+    tilingData_.params.isPerTensor = static_cast<uint32_t>(inputParams_.isPerTensor);
+    tilingData_.params.isPertoken = static_cast<uint32_t>(inputParams_.isPertoken);
+    tilingData_.params.biasDtype = static_cast<uint32_t>(inputParams_.biasDtype);
     if (isUbQuant_) {
         return CalcUbTiling();
     }
@@ -166,7 +167,7 @@ bool QuantBatchMatmulV3BasicTiling::CanProcessNetDecode() const
     if (nCnt > coreNum && aFullLoad < fullLoadSize) {
         uint64_t round = ops::CeilDiv(nCnt, coreNum);
         // 8: 经验值，控制A矩阵极小，能容忍极小重复加载下的多轮，尽可能约束确保进该基本块tiling是有收益的。
-        bool isBNZInBasic = (inputParams_.nSize >= 8 * inputParams_.kSize) && (round * aFullLoad <= fullLoadSize);
+        bool isBNZInBasic = (inputParams_.nSize >= 8UL * inputParams_.kSize) && (round * aFullLoad <= fullLoadSize);
         return ((nCnt % coreNum == 0U) || (nCnt % coreNum >= coreNum / HALF_FACTOR) || isBNZInBasic);
     }
     return false;
@@ -179,8 +180,8 @@ bool QuantBatchMatmulV3BasicTiling::IsPertokenBasicSwitchCondition() const
     uint32_t  K_LOWER_1_2 = 1152;
     uint32_t  K_UPPER_1_2 = 1536;
     uint32_t  BASE_BLOCK_1_2 = 682;
-    int baseM = tilingData_.matmulTiling.get_baseM();
-    int baseN = tilingData_.matmulTiling.get_baseN();
+    uint32_t baseM = tilingData_.matmulTiling.baseM;
+    uint32_t baseN = tilingData_.matmulTiling.baseN;
     uint32_t baseBlock = 0;
 
     if (baseM > 0 && baseN > 0) {
@@ -295,7 +296,7 @@ bool QuantBatchMatmulV3BasicTiling::CheckUseBasicTiling()
     if (inputParams_.aFormat == ge::FORMAT_FRACTAL_NZ) {
         return false;
     }
-    if (inputParams_.mSizePerNpu > 0) {
+    if (inputParams_.mSizePerNpu > 0UL) {
         OP_LOGD(inputParams_.opName, "get mSizePerNpu: %lu", inputParams_.mSizePerNpu);
         OP_TILING_CHECK(
             inputParams_.mSizePerNpu > inputParams_.mSize,
@@ -329,7 +330,7 @@ bool QuantBatchMatmulV3BasicTiling::CheckUseBasicTiling()
         return false;
     }
     // 若shape不在已知基本块收益范围内
-    if (!CheckInBasicBenefitsRange(inputParams_.mSize, inputParams_.nSize, inputParams_.kSize) && 
+    if (!CheckInBasicBenefitsRange(inputParams_.mSize, inputParams_.nSize, inputParams_.kSize) &&
         !CheckSupportConditionQbmm(QbmmType::Basic, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out)) {
         // mix场景增量应走增量优化模板（tbe tiling），mix暂不支持L2cache切分，因此当前mix增量和超大shape都不能走基本块模板
         if (!CheckIfUseBasicInMix(inputParams_.mSize, inputParams_.nSize, inputParams_.kSize)) {
@@ -1279,7 +1280,7 @@ bool QuantBatchMatmulV3BasicTiling::DoBasicTiling()
 
     // add to cache
     hashValue.SetTiling(basicTiling_);
-    tilingHashCache.Add(tilingKey, hashValue);
+    tilingHashCache.Add(tilingKey, hashValue.input(), hashValue);
     PrintBasicTiling();
     return true;
 }
@@ -1314,37 +1315,37 @@ bool QuantBatchMatmulV3BasicTiling::IsTilingDataInvalid() const
 
 void QuantBatchMatmulV3BasicTiling::SetMatmulTilingFromBasicTiling()
 {
-    tilingData_.matmulTiling.set_M(inputParams_.GetTotalMatmulApiMSize(basicTiling_.baseM));
-    tilingData_.matmulTiling.set_N(inputParams_.nSize);
-    tilingData_.matmulTiling.set_Ka(inputParams_.kSize);
-    tilingData_.matmulTiling.set_Kb(inputParams_.kSize);
-    tilingData_.matmulTiling.set_usedCoreNum(basicTiling_.usedCoreNum);
-    tilingData_.matmulTiling.set_singleCoreM(basicTiling_.baseM);
-    tilingData_.matmulTiling.set_singleCoreN(basicTiling_.baseN);
-    tilingData_.matmulTiling.set_singleCoreK(basicTiling_.singleCoreK);
-    tilingData_.matmulTiling.set_baseM(basicTiling_.baseM);
-    tilingData_.matmulTiling.set_baseN(basicTiling_.baseN);
-    tilingData_.matmulTiling.set_baseK(basicTiling_.baseK);
-    tilingData_.matmulTiling.set_depthA1(basicTiling_.depthA1);
-    tilingData_.matmulTiling.set_depthB1(basicTiling_.depthB1);
-    tilingData_.matmulTiling.set_stepM(basicTiling_.stepM);
-    tilingData_.matmulTiling.set_stepN(basicTiling_.stepN);
-    tilingData_.matmulTiling.set_stepKa(basicTiling_.stepKa);
-    tilingData_.matmulTiling.set_stepKb(basicTiling_.stepKb);
-    tilingData_.matmulTiling.set_iterateOrder(basicTiling_.iterateOrder);
-    tilingData_.matmulTiling.set_dbL0C(basicTiling_.dbL0c);  // 1: off, 2:on
-    tilingData_.tileL2cacheTiling.set_mTileCntL2(basicTiling_.mTileCntl2);
-    tilingData_.tileL2cacheTiling.set_nTileCntL2(basicTiling_.nTileCntl2);
-    tilingData_.tileL2cacheTiling.set_mTileBlock(basicTiling_.mTileBlock);
-    tilingData_.tileL2cacheTiling.set_nTileBlock(basicTiling_.nTileBlock);
-    tilingData_.tileL2cacheTiling.set_calOrder(basicTiling_.calOrder);
-    tilingData_.tileL2cacheTiling.set_isBasicTiling(1U);
-    tilingData_.params.set_isMClash(basicTiling_.isMclash);  // 判断是不是冲突的标志位
-    tilingData_.params.set_isNClash(basicTiling_.isNclash);
-    tilingData_.params.set_batchA(inputParams_.batchA);
-    tilingData_.params.set_batchB(inputParams_.batchB);
-    tilingData_.params.set_batchC(inputParams_.batchC);
-    tilingData_.params.set_biasThreeDim(static_cast<uint32_t>(inputParams_.batchBias > 1));
+    tilingData_.matmulTiling.M = inputParams_.GetTotalMatmulApiMSize(basicTiling_.baseM);
+    tilingData_.matmulTiling.N = inputParams_.nSize;
+    tilingData_.matmulTiling.Ka = inputParams_.kSize;
+    tilingData_.matmulTiling.Kb = inputParams_.kSize;
+    tilingData_.matmulTiling.usedCoreNum = basicTiling_.usedCoreNum;
+    tilingData_.matmulTiling.singleCoreM = basicTiling_.baseM;
+    tilingData_.matmulTiling.singleCoreN = basicTiling_.baseN;
+    tilingData_.matmulTiling.singleCoreK = basicTiling_.singleCoreK;
+    tilingData_.matmulTiling.baseM = basicTiling_.baseM;
+    tilingData_.matmulTiling.baseN = basicTiling_.baseN;
+    tilingData_.matmulTiling.baseK = basicTiling_.baseK;
+    tilingData_.matmulTiling.depthA1 = basicTiling_.depthA1;
+    tilingData_.matmulTiling.depthB1 = basicTiling_.depthB1;
+    tilingData_.matmulTiling.stepM = basicTiling_.stepM;
+    tilingData_.matmulTiling.stepN = basicTiling_.stepN;
+    tilingData_.matmulTiling.stepKa = basicTiling_.stepKa;
+    tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
+    tilingData_.matmulTiling.iterateOrder = basicTiling_.iterateOrder;
+    tilingData_.matmulTiling.dbL0C = basicTiling_.dbL0c;  // 1: off, 2:on
+    tilingData_.tileL2cacheTiling.mTileCntL2 = basicTiling_.mTileCntl2;
+    tilingData_.tileL2cacheTiling.nTileCntL2 = basicTiling_.nTileCntl2;
+    tilingData_.tileL2cacheTiling.mTileBlock = basicTiling_.mTileBlock;
+    tilingData_.tileL2cacheTiling.nTileBlock = basicTiling_.nTileBlock;
+    tilingData_.tileL2cacheTiling.calOrder = basicTiling_.calOrder;
+    tilingData_.tileL2cacheTiling.isBasicTiling = 1U;
+    tilingData_.params.isMClash = basicTiling_.isMclash;  // 判断是不是冲突的标志位
+    tilingData_.params.isNClash = basicTiling_.isNclash;
+    tilingData_.params.batchA = inputParams_.batchA;
+    tilingData_.params.batchB = inputParams_.batchB;
+    tilingData_.params.batchC = inputParams_.batchC;
+    tilingData_.params.biasThreeDim = static_cast<uint32_t>(inputParams_.batchBias > 1);
 }
 
 ge::graphStatus QuantBatchMatmulV3BasicTiling::DoLibApiTiling()
@@ -1398,8 +1399,8 @@ ge::graphStatus QuantBatchMatmulV3BasicTiling::CalcUbTiling()
 
 bool QuantBatchMatmulV3BasicTiling::GetUbDequantExtreSpace()
 {
-    uint64_t usedWorkSpaceSize = sizeof(int32_t) * static_cast<uint64_t>(tilingData_.matmulTiling.get_baseM()) *
-                                 tilingData_.matmulTiling.get_baseN() * tilingData_.matmulTiling.get_usedCoreNum() *
+    uint64_t usedWorkSpaceSize = sizeof(int32_t) * static_cast<uint64_t>(tilingData_.matmulTiling.baseM) *
+                                 tilingData_.matmulTiling.baseN * tilingData_.matmulTiling.usedCoreNum *
                                  NUM_DB;
     inputParams_.bf16ExtreWorkSpaceSize = usedWorkSpaceSize;
     OP_LOGD(inputParams_.opName,

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_v3_infer.cpp
@@ -21,6 +21,7 @@ using namespace gert;
 namespace {
 constexpr size_t MATMUL_MIN_SHAPE_SIZE = 2;
 constexpr size_t MATMUL_MAX_SHAPE_SIZE = 4;
+constexpr size_t MATMUL_SLICE_SHAPE_SIZE = 3;
 constexpr size_t MATMUL_BIAS_IDX = 2; // input_bias index is different with op_type
 constexpr int64_t BLOCK_SIZE = 16;
 constexpr int64_t UNKNOWN_DIM = -1;
@@ -153,8 +154,10 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
     }
 
     OP_LOGD(op_name, "check the input shape length.");
-    if (shape_x1_new.GetDimNum() != MATMUL_MIN_SHAPE_SIZE && shape_x1_new.GetDimNum() != MATMUL_MAX_SHAPE_SIZE) {
-        CUBE_INNER_ERR_REPORT(op_name, "first input dim num[%zu] is not 2 or 4!", shape_x1_new.GetDimNum());
+    size_t dimNumX1 = shape_x1_new.GetDimNum();
+    // dimX1= 2, 3(slice), 4(NZ)
+    if (dimNumX1 < MATMUL_MIN_SHAPE_SIZE ||  dimNumX1 > MATMUL_MAX_SHAPE_SIZE) {
+        CUBE_INNER_ERR_REPORT(op_name, "first input dim num[%zu] is not between [2, 4]!", shape_x1_new.GetDimNum());
         return ge::GRAPH_FAILED;
     }
 
@@ -162,16 +165,23 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
     size_t idx_k_a = 1;
     size_t idx_k_b = 0;
     size_t idx_n = 1;
+
     if (*trans_a) {
         idx_m = 1;
         idx_k_a = 0;
+    } else if (dimNumX1 == MATMUL_SLICE_SHAPE_SIZE) {
+        idx_k_a = 2;  // k in dim 2
+        idx_m = 1;
     }
 
     if (*trans_b) {
         idx_k_b = 1;
         idx_n = 0;
     }
-
+    // 3d slice: m = batch * sliceM
+    auto m = dimNumX1 == MATMUL_SLICE_SHAPE_SIZE ? shape_x1_new.GetDim(idx_m) * shape_x1_new.GetDim(0) :
+                                                   shape_x1_new.GetDim(idx_m);
+    auto n = shape_x2_new.GetDim(idx_n);
     if (shape_x1_new.GetDim(idx_k_a) != UNKNOWN_DIM && shape_x2_new.GetDim(idx_k_b) != UNKNOWN_DIM) {
         OP_CHECK_IF(
             shape_x1_new.GetDim(idx_k_a) != shape_x2_new.GetDim(idx_k_b),
@@ -182,8 +192,8 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
     }
 
     shape_out->SetDimNum(MATMUL_MIN_SHAPE_SIZE);
-    shape_out->SetDim(0, shape_x1_new.GetDim(idx_m));
-    shape_out->SetDim(1, shape_x2_new.GetDim(idx_n));
+    shape_out->SetDim(0, m);
+    shape_out->SetDim(1, n);
     if (!UpdateOutputShapeByBias(op_name, shape_out, shape_bias)) {
         return ge::GRAPH_FAILED;
     }
@@ -192,5 +202,7 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MatMulV3).InferShape(InferShapeForMatMulV3);
 } // namespace
+namespace ops {
+    IMPL_OP_INFERSHAPE(MatMulV3).InferShape(InferShapeForMatMulV3);
+}

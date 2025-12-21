@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file add_layer_norm_quant_infershape.cpp
@@ -43,6 +43,9 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
     size_t gammaDimNum = gammaShape->GetDimNum();
 
     OP_LOGD("InferShape4AddLayerNormQuant", "xDimNum = %zu, gammaDimNum = %zu", xDimNum, gammaDimNum);
+    if (xDimNum < gammaDimNum) {
+        return false;
+    }
     reduceShape->SetDimNum(xDimNum - gammaDimNum);
 
     int64_t xDimValue = 0;
@@ -126,7 +129,9 @@ static ge::graphStatus InferShape4AddLayerNormQuant(gert::InferShapeContext* con
         OP_CHECK_IF(
             !CheckDynOptInput(scale1Shape, scale2Shape, zeroPoint1Shape, zeroPoint2Shape),
             OP_LOGE(context, "Bad opt inputs."), return GRAPH_FAILED);
-        InferReduceShape(x1Shape, gammaShape, outScale1Shape);
+        OP_CHECK_IF(
+            !InferReduceShape(x1Shape, gammaShape, outScale1Shape),
+            OP_LOGE(context, "Bad opt inputs."), return GRAPH_FAILED);
         if (nullptr != scale2Shape) {
             *y2Shape = *x1Shape;
             *outScale2Shape = *outScale1Shape;

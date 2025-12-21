@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_rms_norm_quant_proto.cpp
@@ -39,7 +39,8 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape)
                       .NodeAttrs(
                           {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
                            {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dst_type",  Ops::NN::AnyValue::CreateFrom<bool>(2)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -68,7 +69,8 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape_failed_in_shape)
                       .NodeAttrs(
                           {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
                            {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dst_type",  Ops::NN::AnyValue::CreateFrom<bool>(2)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -95,7 +97,8 @@ TEST_F(RmsNormAtb, RmsNormQuant_infershape_failed_in_dim)
                       .NodeAttrs(
                           {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
                            {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                           {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                           {"dst_type",  Ops::NN::AnyValue::CreateFrom<bool>(2)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -120,7 +123,8 @@ TEST_F(RmsNormAtb, RmsNormQuant_inferdtype)
                               .NodeAttrs(
                                   {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
                                    {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                   {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                                   {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                   {"dst_type",  Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                               .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                               .InputDataTypes({&dbf16, &dbf16, &dbf16, &dbf16, &dint8}) // &dbf16, &dint8
                               .OutputDataTypes({&dint8})

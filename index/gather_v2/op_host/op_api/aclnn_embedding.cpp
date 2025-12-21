@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_embedding.cpp
@@ -14,6 +14,7 @@
  */
 #include "aclnn_embedding.h"
 #include "gather_v2.h"
+#include "embedding.h"
 #include "aclnn_kernels/contiguous.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
@@ -22,6 +23,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 
 using namespace op;
@@ -37,6 +39,10 @@ static const int64_t BLOCK_SIZE = 32;
 static const int64_t WEIGHT_BYTE_BOUNDS = 98304;     //全缓存模板阈值，小于此阈值的默认DSL实现已是最优性能
 static const int64_t LAST_DIM_BYTE_BOUNDS = 128;
 static const int64_t MAGNIFICATION_BOUNDS = 100;
+static const int64_t SIMT_THRES = 2048;
+static const int64_t RATIO_THRES = 32;
+static const int64_t WEIGHT_DIM_NUM = 2;
+static const size_t NO_CONTIGUOUS_SUPPORT_DIM = 2;
 
 static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 = {
     op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64,
@@ -48,6 +54,11 @@ static const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST_910B = {
     op::DataType::DT_BOOL, op::DataType::DT_COMPLEX128, op::DataType::DT_COMPLEX64, op::DataType::DT_BF16};
 static const std::initializer_list<DataType> INDICES_DTYPE_SUPPORT_LIST =
     {op::DataType::DT_INT32, op::DataType::DT_INT64};
+
+static const std::initializer_list<op::DataType> EMBEDDING_AICORE_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT,  DataType::DT_INT32,     DataType::DT_INT64,      DataType::DT_FLOAT16, DataType::DT_BF16,
+    DataType::DT_INT16,  DataType::DT_UINT16,    DataType::DT_INT8,       DataType::DT_UINT8,   DataType::DT_BOOL,
+    DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_COMPLEX32};
 
 static bool CheckNotNull(const aclTensor *weight, const aclTensor *indices, const aclTensor *out) {
   OP_CHECK_NULL(weight, return false);
@@ -138,6 +149,66 @@ static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices) {
   }
 }
 
+static bool CheckEmbeddingKernel(const aclTensor *weight, const aclTensor *indices) {
+  bool checkResult = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+  if (!checkResult) {
+    return false;
+  }
+  checkResult = CheckType(weight->GetDataType(), EMBEDDING_AICORE_DTYPE_SUPPORT_LIST);
+  if (!checkResult) {
+    return false;
+  }
+  auto weightShape = weight->GetViewShape();
+  if (weightShape.GetDimNum() != WEIGHT_DIM_NUM) {
+    return false;
+  }
+  int64_t innerSize = weightShape.GetDim(1);
+  int64_t innerSizeByte = weightShape.GetDim(1) * op::TypeSize(weight->GetDataType());
+  if (weightShape.GetDim(0) == 0) {
+    return false;
+  }
+  if (innerSizeByte >= SIMT_THRES && indices->GetViewShape().GetShapeSize() >= RATIO_THRES) {
+    return false;
+  }
+  if (weightShape.GetShapeSize() > INT32_MAX || indices->GetViewShape().GetShapeSize() * innerSize > INT32_MAX) {
+    return false;
+  }
+  return true;
+}
+
+static bool IsUseNoContiguous(const aclTensor* weight, const aclTensor* indices, const aclTensor* out)
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+        return false;
+    }
+    bool checkResult = CheckType(weight->GetDataType(), EMBEDDING_AICORE_DTYPE_SUPPORT_LIST);
+    if (!checkResult) {
+        return false;
+    }
+    auto selfDimNum = weight->GetViewShape().GetDimNum();
+    auto indexDimNum = indices->GetViewShape().GetDimNum();
+    if (selfDimNum != indexDimNum || indexDimNum != NO_CONTIGUOUS_SUPPORT_DIM) {
+        return false;
+    }
+    if ((!IsContiguous(weight) || !IsContiguous(indices)) && IsContiguous(out)) {
+        return true;
+    }
+    return false;
+}
+
+static const aclTensor* CalNoContiguous(const aclTensor* weight, const aclTensor* indices, aclOpExecutor* executor)
+{
+    const aclTensor* embeddingResult = nullptr;
+    aclTensor* newWeight = executor->CreateView(
+        weight, weight->GetViewShape(), weight->GetStorageShape(), weight->GetViewStrides(), weight->GetViewOffset());
+    aclTensor* newIndices = executor->CreateView(
+        indices, indices->GetViewShape(), indices->GetStorageShape(), indices->GetViewStrides(),
+        indices->GetViewOffset());
+    embeddingResult = l0op::Embedding(newWeight, newIndices, executor);
+    CHECK_RET(embeddingResult != nullptr, nullptr);
+    return embeddingResult;
+}
+
 aclnnStatus aclnnEmbeddingGetWorkspaceSize(const aclTensor *weight, const aclTensor *indices, const aclTensor *out,
                                            uint64_t *workspaceSize, aclOpExecutor **executor) {
   L2_DFX_PHASE_1(aclnnEmbedding, DFX_IN(weight, indices), DFX_OUT(out));
@@ -156,22 +227,30 @@ aclnnStatus aclnnEmbeddingGetWorkspaceSize(const aclTensor *weight, const aclTen
     return ACLNN_SUCCESS;
   }
 
-  // weight如果非连续，需要转连续
-  auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
-  CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // indices如果非连续，需要转连续
-  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
-  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 调用l0算子GatherV2进行计算
-  const aclTensor* embeddingResult;
-  if (CheckHighperf(weight, indices)) {
-    int64_t implMode = HIGH_PERFORMANCE;
-    embeddingResult = l0op::GatherV2WithImplMode(weightContiguous, EMBEDDING_DIM, indicesContiguous, implMode,
-                                                 uniqueExecutor.get());
+  const aclTensor* embeddingResult = nullptr;
+  if (IsUseNoContiguous(weight, indices, out)) {
+    embeddingResult = CalNoContiguous(weight, indices, uniqueExecutor.get());
   } else {
-    embeddingResult = l0op::GatherV2(weightContiguous, EMBEDDING_DIM, indicesContiguous, uniqueExecutor.get());
+    // weight如果非连续，需要转连续
+    auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
+    CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // indices如果非连续，需要转连续
+    auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+    CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 调用l0算子GatherV2进行计算
+    if (CheckHighperf(weight, indices)) {
+      int64_t implMode = HIGH_PERFORMANCE;
+      embeddingResult = l0op::GatherV2WithImplMode(weightContiguous, EMBEDDING_DIM, indicesContiguous, implMode,
+                                                  uniqueExecutor.get());
+    } else {
+      if (CheckEmbeddingKernel(weight, indices)) {
+        embeddingResult = l0op::Embedding(weightContiguous, indicesContiguous, uniqueExecutor.get());
+      } else {
+        embeddingResult = l0op::GatherV2(weightContiguous, EMBEDDING_DIM, indicesContiguous, uniqueExecutor.get());
+      }
+    }
   }
   CHECK_RET(embeddingResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

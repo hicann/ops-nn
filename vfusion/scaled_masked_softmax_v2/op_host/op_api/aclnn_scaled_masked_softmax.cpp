@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_scaled_masked_softmax.h"
 
@@ -19,6 +19,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/platform.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -28,6 +29,7 @@ extern "C" {
 namespace {
 constexpr int32_t INPUT_DIM_NUM = 4;
 constexpr int32_t D_LIMIT = 4096;
+constexpr int32_t D_LIMIT_D = 8192;
 
 static const std::initializer_list<op::DataType> SOFTMAX_X_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -95,7 +97,12 @@ static bool CheckShape(const aclTensor* x, const aclTensor* mask)
         return false;
     }
 
-    if ((x->GetViewShape().GetDim(DIM_3) <= 0) || (x->GetViewShape().GetDim(DIM_3) > D_LIMIT)) {
+    int32_t dDimLimit = D_LIMIT;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        dDimLimit = D_LIMIT_D;
+    }
+
+    if ((x->GetViewShape().GetDim(DIM_3) <= 0) || (x->GetViewShape().GetDim(DIM_3) > dDimLimit)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected x and mask dim4 in range of (0, 4096].");
         return false;
     }

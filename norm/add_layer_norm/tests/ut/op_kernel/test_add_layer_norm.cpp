@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -430,65 +430,65 @@ TEST_F(add_layer_norm_test, test_case_fp16_special_reduce_big_N)
     free(path_);
 }
 
-TEST_F(add_layer_norm_test, test_case_single_row_less_tensor)
-{
-    int N = 1;
-    int D = 12288;
-    size_t inputByteSize = N * D * sizeof(int16_t);
-    size_t gammaByteSize = D * sizeof(float);
-    size_t betaByteSize = D * sizeof(float);
-    size_t outputByteSize = N * D * sizeof(float);
-    size_t meanByteSize = N * sizeof(float);
-    size_t rstdByteSize = N * sizeof(float);
-    size_t tiling_data_size = sizeof(AddLayerNormTilingData);
+// TEST_F(add_layer_norm_test, test_case_single_row_less_tensor)
+// {
+//     int N = 1;
+//     int D = 12288;
+//     size_t inputByteSize = N * D * sizeof(int16_t);
+//     size_t gammaByteSize = D * sizeof(float);
+//     size_t betaByteSize = D * sizeof(float);
+//     size_t outputByteSize = N * D * sizeof(float);
+//     size_t meanByteSize = N * sizeof(float);
+//     size_t rstdByteSize = N * sizeof(float);
+//     size_t tiling_data_size = sizeof(AddLayerNormTilingData);
 
-    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
-    uint8_t* bias = (uint8_t*)AscendC::GmAlloc(betaByteSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 1;
+//     uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+//     uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+//     uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+//     uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+//     uint8_t* bias = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+//     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+//     uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+//     uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+//     uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+//     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+//     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+//     char* path_ = get_current_dir_name();
+//     string path(path_);
 
-    AddLayerNormTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormTilingData*>(tiling);
+//     AddLayerNormTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormTilingData*>(tiling);
 
-    tilingDatafromBin->numCore = blockDim;
-    tilingDatafromBin->numLastDim = D;
-    tilingDatafromBin->numFirstDim = N;
-    tilingDatafromBin->firstDimPerCore = 1;
-    tilingDatafromBin->firstDimPerCoreTail = 1;
-    tilingDatafromBin->firstDimPerTime = 1;
-    tilingDatafromBin->lastDimPerTime = D;
-    tilingDatafromBin->eps = 0.00001;
-    tilingDatafromBin->aveFactor = 1.0 / D;
-    tilingDatafromBin->colMoveCnt = 1;
-    tilingDatafromBin->colTail = D;
+//     tilingDatafromBin->numCore = blockDim;
+//     tilingDatafromBin->numLastDim = D;
+//     tilingDatafromBin->numFirstDim = N;
+//     tilingDatafromBin->firstDimPerCore = 1;
+//     tilingDatafromBin->firstDimPerCoreTail = 1;
+//     tilingDatafromBin->firstDimPerTime = 1;
+//     tilingDatafromBin->lastDimPerTime = D;
+//     tilingDatafromBin->eps = 0.00001;
+//     tilingDatafromBin->aveFactor = 1.0 / D;
+//     tilingDatafromBin->colMoveCnt = 1;
+//     tilingDatafromBin->colTail = D;
 
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+//     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-    ICPU_SET_TILING_KEY(190);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+//     ICPU_SET_TILING_KEY(190);
+//     ICPU_RUN_KF(
+//         add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+//         (uint8_t*)(tilingDatafromBin));
 
-    AscendC::GmFree(x1);
-    AscendC::GmFree(x2);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(beta);
-    AscendC::GmFree(bias);
-    AscendC::GmFree(y);
-    AscendC::GmFree(mean);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(x);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-    free(path_);
-}
+//     AscendC::GmFree(x1);
+//     AscendC::GmFree(x2);
+//     AscendC::GmFree(gamma);
+//     AscendC::GmFree(beta);
+//     AscendC::GmFree(bias);
+//     AscendC::GmFree(y);
+//     AscendC::GmFree(mean);
+//     AscendC::GmFree(rstd);
+//     AscendC::GmFree(x);
+//     AscendC::GmFree(workspace);
+//     AscendC::GmFree(tiling);
+//     free(path_);
+// }

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <gtest/gtest.h>
 
@@ -26,6 +26,8 @@
 #include "register/op_impl_registry.h"
 #include "test_cube_util.h"
 #include "../../../../common/op_host/op_tiling/platform_util.h"
+
+#ifdef USE_LEGACY_COMMON
 
 using namespace std;
 using namespace ge;
@@ -360,6 +362,12 @@ Conv3DBpFilterV2TilingTestParam milan_binary_params[] = {
      ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0, ge::FORMAT_NCDHW, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0, ge::DT_BF16,
      {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 2, 2, 2}, 1, "NCDHW", "SAME", 0,
      true, true, 24, 1, "8 0 1 1 3 1 1 524288 1 32 16 2 1 32 32 32 32 32 32 1 1 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 512 32 16 16 16 1 1 2 2 0 32768 0 1 1 16 32 4 0 32 0 1 24 16 32 1024 0 "},
+
+    {"conv3d_dilation_kernel2_test", "Ascend910B2", "Ascend910B", R"({"_pattern": "Conv3d_backprop_filter", "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24}, "block_dim": {"CORE_NUM": 24}, "tiling_type": "binary", "max_core_num": 24, "binary_mode": 1})",
+     {1, 1, 34, 1, 1}, {1, 1, 34, 1, 1, 16}, {1, 1, 336, 135, 26}, {1179360, 1, 16, 16}, {1, 1, 1, 27, 4}, {1, 1, 1, 27, 4, 1},
+     ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0, ge::FORMAT_NCDHW, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0, ge::DT_BF16,
+     {1, 1, 53, 4, 52}, {151, 151, 253, 253, 140, 140}, {1, 1, 1, 3, 3}, 1, "NCDHW", "SAME", 0,
+     true, true, 24, 0, "1 0 1 1 1 24 1 524288 1 1 1 1 1 1 27 4 34 1 1 336 135 26 1 53 4 52 151 151 253 253 140 140 1 3 3 16 2 2 2 1 1 16 112 144 16 16 16 1 390 1 1 1 64 0 1 1 16 27 1 0 224 0 0 0 0 0 0 0 "},
 };
 
 static void ThreadFunc(const Conv3DBpFilterV2TilingTestParam *params, size_t testcase_num, size_t thread_idx,
@@ -389,3 +397,5 @@ TEST_F(Conv3DBackpropFilterV2TilingRunTime2, milan_binary_multi_thread)
 
 INSTANTIATE_TEST_CASE_P(MilanBinary, Conv3DBackpropFilterV2TilingRunTime2, testing::ValuesIn(milan_binary_params));
 }
+
+#endif

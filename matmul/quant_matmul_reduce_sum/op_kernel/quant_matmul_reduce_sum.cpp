@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_matmul_reduce_sum.cpp
@@ -15,6 +15,7 @@
 #include "kernel_operator.h"
 #include "quant_matmul_reduce_sum_mixcore.h"
 #include "quant_matmul_reduce_sum_init_output.h"
+#include "quant_matmul_reduce_sum_tiling_data.h"
 
 using namespace AscendC;
 using namespace matmul;
@@ -33,6 +34,7 @@ using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, int32_t>;
 template <bool transA, bool transB, bool sync>
 __aicore__ inline void RunQuantMatmulReduceSum(const QbmmRSComputeInitParams* __restrict initParams)
 {
+    REGISTER_TILING_DEFAULT(QuantMatmulReduceSumTilingData);
     GET_TILING_DATA(tilingData, initParams->tiling);
     TPipe tPipeClear;
     QuantMatmulReduceSumInitOutput<DTYPE_Y> clearOp;

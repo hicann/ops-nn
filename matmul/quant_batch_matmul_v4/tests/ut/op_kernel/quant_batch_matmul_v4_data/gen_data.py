@@ -23,7 +23,7 @@ def quant_batch_matmul_v4(m, k, n, group):
 def quant_batch_matmul_v4_mx(m, k, n, group):
     np.random.random([m, k]).astype(np.int8).tofile("x1.bin")
     np.random.uniform(-1, 1, [n, k // 2]).astype(np.int8).tofile("x2.bin")
-    np.random.random([1, n]).astype(np.float16).tofile("bias.bin")
+    np.random.random([1, n // 2]).astype(np.uint8).tofile("bias.bin")
     np.random.random([m, k // group]).astype(np.float16).tofile("x1_scale.bin")
     np.random.random([n, k // group]).astype(np.float16).tofile("x2_scale.bin")
 
@@ -43,6 +43,18 @@ def quant_batch_matmul_v4_perblock_trans_false_true(m, k, n, groupSize):
     x2Scale = np.random.random([-n // (-groupSizeN), -k // (-groupSizeK)]).astype(np.float32)
     x2Scale.tofile("x2_scale.bin")
 
+def quant_batch_matmul_v4_msd(m, k, n, groupSize):
+    x1 = np.random.random([m, k]).astype(np.int8)
+    x1.tofile("x1.bin")
+    x2 = np.random.random([k, n // 8]).astype(np.int32)
+    x2.tofile("x2.bin")
+    x1Scale = np.random.random([m, 1]).astype(np.float32)
+    x1Scale.tofile("x1_scale.bin")
+    x2Scale = np.random.random([k // groupSize, n]).astype(np.uint64)
+    x2Scale.tofile("x2_scale.bin")
+    yOffset = np.random.random([n]).astype(np.float32)
+    yOffset.tofile("y_offset.bin")
+
 if __name__ == '__main__':
     m, k, n, group, quant_type = [int(p) for p in sys.argv[1:]]
     if quant_type == 3:
@@ -51,3 +63,5 @@ if __name__ == '__main__':
         quant_batch_matmul_v4_mx(m, k, n, group)
     elif quant_type == 5:
         quant_batch_matmul_v4_perblock_trans_false_true(m, k, n, group)
+    elif quant_type == 6:
+        quant_batch_matmul_v4_msd(m, k, n, group)

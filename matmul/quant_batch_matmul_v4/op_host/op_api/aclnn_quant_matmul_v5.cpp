@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 #include <cmath>
 #include <dlfcn.h>
@@ -59,7 +58,6 @@ static const size_t MAX_DIM_NUM_NZ = 8;
 static const size_t MAX_SCALE_DIM = 2;
 static const size_t MX_SCALE_MAX_DIM = 3;
 static const size_t PENULTIMATE_DIM = 2;
-static const int64_t MAX_SHAPE_SIZE = 65535;
 static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static const int64_t MAX_SHAPE_SIZE__A8W4_INT = 18432;
 static const int64_t SUPPORTED_GROUP_SIZE_A8W4_INT = 256;
@@ -497,13 +495,13 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
             return false;
         }
     } else {    // A8W4FLOAT 910_95
-        if (x1KDim <= 0 || x1KDim > MAX_SHAPE_SIZE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE, x1KDim);
+        if (x1KDim <= 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must be at least 1, which is %ld", x1KDim);
             return false;
         }
     }
-    if ((x2NDim <= 0 || x2NDim > MAX_SHAPE_SIZE) && !isA8W4INT) { // A8W4Float
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the n-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE, x2NDim);
+    if (x2NDim <= 0 && !isA8W4INT) { // A8W4Float
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the n-dim must be at least 1,, which is %ld", x2NDim);
         return false;
     }
     if (x2NDim <= 0 && isA8W4INT) { // A8W4Int

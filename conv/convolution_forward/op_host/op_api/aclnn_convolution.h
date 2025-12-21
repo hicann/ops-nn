@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_convolution.h
@@ -28,10 +28,10 @@ extern "C" {
  *
  * @param [in] input: npu，卷积输入。
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
- * 支持非连续的Tensor，数据格式支持NCL、NCHW、NCDHW、NHWC、NDHWC。
+ * 支持非连续的Tensor，数据格式支持NCL、NCHW、NCDHW。
  * @param [in] weight: npu, 卷积权重。
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
- * 支持非连续的Tensor，数据格式支持NCL、NCHW、NCDHW、NHWC、NDHWC。
+ * 支持非连续的Tensor，数据格式支持NCL、NCHW、NCDHW。
  * @param [in] bias: npu，偏差。
  * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT。
  * 支持非连续的Tensor，数据格式支持NCL、NCHW、NCDHW、ND。
@@ -48,7 +48,7 @@ extern "C" {
  * @param [in] groups：表示从输入通道到输出通道的块链接个数。
  * int64_t，数值必须大于0，且满足groups*weight的C维度=input的C维度。
  * @param [out] output: 卷积输出。
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN，数据格式支持NCL、NCHW、NCDHW、NHWC、NDHWC。
+ * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN，数据格式支持NCL、NCHW、NCDHW。
  * @param [in] cubeMathType：用于判断Cube单元应该使用哪种计算逻辑进行运算。
  * int8_t, Cube单元计算逻辑判断参数。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。

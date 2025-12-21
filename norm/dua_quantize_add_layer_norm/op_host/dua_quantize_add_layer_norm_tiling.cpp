@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dua_quantize_add_layer_norm_tiling.cpp
@@ -53,7 +53,7 @@ bool CheckUbLimit(uint64_t ubSize, int32_t numCol, int32_t dtSize)
 
     OP_LOGI("CheckUbLimit", "maxUB: %lu, ubRequired: %u", ubSize, ubRequired);
     OP_CHECK_IF(
-        ubRequired >= ubSize, OP_LOGW("DuaQuantizeAddLayerNorm", "Reduce axis is too large, Tiling is not support."),
+        ubRequired > ubSize, OP_LOGW("DuaQuantizeAddLayerNorm", "Reduce axis is too large, Tiling is not support."),
         return false);
     return true;
 }

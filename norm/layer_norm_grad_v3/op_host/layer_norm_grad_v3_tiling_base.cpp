@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file layer_norm_grad_v3_tiling_base.cc
@@ -64,6 +64,28 @@ bool CheckShapeSame(
     return true;
 }
 
+ge::graphStatus InputDtypeCheck(
+    gert::TilingContext* context_, ge::DataType dyDtype, ge::DataType xDtype, 
+    ge::DataType rstdDtype, ge::DataType meanDtype, ge::DataType gammaDtype)
+{
+    // input check
+    OP_CHECK_IF(
+        (dyDtype != ge::DataType::DT_FLOAT) && (dyDtype != ge::DataType::DT_FLOAT16) && (dyDtype != ge::DataType::DT_BF16),
+        OP_LOGE(context_->GetNodeName(), "dy dtype must be in float32, float16, bfloat16."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        xDtype != dyDtype, OP_LOGE(context_->GetNodeName(), "x dtype must be the same as dy."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (rstdDtype != ge::DataType::DT_FLOAT) || (meanDtype != ge::DataType::DT_FLOAT), OP_LOGE(context_->GetNodeName(), "rstd and mean dtype must be the float32."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (gammaDtype != dyDtype) && (gammaDtype != ge::DataType::DT_FLOAT), 
+        OP_LOGE(context_->GetNodeName(), "when gamma dtype is not same as dy dtype, gamma dtype must be float32."),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus LayerNormGradV3TilingBase::GetShapeAttrsInfo()
 {
     // check dy and x and pdx shape must be the same
@@ -75,22 +97,38 @@ ge::graphStatus LayerNormGradV3TilingBase::GetShapeAttrsInfo()
     CheckShapeSame(context_, INPUT_IDX_FOUR, OUTPUT_IDX_ONE, true, false);
     CheckShapeSame(context_, INPUT_IDX_FOUR, OUTPUT_IDX_TWO, true, false);
 
+    // get input
     auto dyDesc = context_->GetInputDesc(INPUT_IDX_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
     commonParams.dyDtype = dyDesc->GetDataType();
+
+    auto xDesc = context_->GetInputDesc(INPUT_IDX_ONE);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    commonParams.xDtype = xDesc->GetDataType();
+    
+    auto rstdDesc = context_->GetInputDesc(INPUT_IDX_TWO);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
+    commonParams.rstdDtype = rstdDesc->GetDataType();
+    
+    auto meanDesc = context_->GetInputDesc(INPUT_IDX_THREE);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, meanDesc);
+    commonParams.meanDtype = meanDesc->GetDataType();
+
+    auto gammaDesc = context_->GetInputDesc(INPUT_IDX_FOUR);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
+    commonParams.gammaDtype = gammaDesc->GetDataType();
+
+    // get shape
     auto dy = context_->GetInputShape(INPUT_IDX_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dy);
     auto dyShape = dy->GetStorageShape();
     int64_t dyDimNum = dyShape.GetDimNum();
 
-    auto gammaDesc = context_->GetInputDesc(INPUT_IDX_FOUR);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
-    commonParams.gammaDtype = gammaDesc->GetDataType();
     auto gamma = context_->GetInputShape(INPUT_IDX_FOUR);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gamma);
     auto gammaShape = gamma->GetStorageShape();
     int64_t gammaDimNum = gammaShape.GetDimNum();
-
+    
     OP_CHECK_IF(
         (dyDimNum < gammaDimNum),
         OP_LOGE(
@@ -143,6 +181,48 @@ ge::graphStatus LayerNormGradV3TilingBase::GetShapeAttrsInfo()
         commonParams.pdgammaIsRequire = static_cast<bool>(outputMaskData[OUTPUT_IDX_ONE]);
         commonParams.pdbetaIsRequire = static_cast<bool>(outputMaskData[OUTPUT_IDX_TWO]);
     }
+    
+    // check input dtype
+    OP_CHECK_IF(
+        InputDtypeCheck(context_, commonParams.dyDtype, commonParams.xDtype, commonParams.rstdDtype,
+        commonParams.meanDtype,commonParams.gammaDtype) == ge::GRAPH_FAILED,
+        OP_LOGE(context_->GetNodeName(), "input dtype check failed."), 
+        return ge::GRAPH_FAILED);
+
+    // check output dtype
+    if (commonParams.pdxIsRequire) {
+        auto dxDesc = context_->GetOutputDesc(OUTPUT_IDX_ZERO);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
+        commonParams.dxDtype = dxDesc->GetDataType();
+        OP_CHECK_IF(
+            (commonParams.dxDtype != commonParams.dyDtype), OP_LOGE(context_->GetNodeName(),
+            "when dx is Require, dx dtype must be the same as dy."),
+            return ge::GRAPH_FAILED);
+    }
+    if (commonParams.pdgammaIsRequire) {
+        auto dgammaDesc = context_->GetOutputDesc(OUTPUT_IDX_ONE);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, dgammaDesc);
+        commonParams.dgammaDtype = dgammaDesc->GetDataType();
+        OP_CHECK_IF(
+            (commonParams.dgammaDtype != commonParams.gammaDtype) && (commonParams.dgammaDtype != ge::DataType::DT_FLOAT),OP_LOGE(context_->GetNodeName(), 
+            "when dgamma is Require, dgamma dtype must be the same as gamma or be float32."),
+            return ge::GRAPH_FAILED);
+    }
+    if (commonParams.pdbetaIsRequire) {
+        auto dbetaDesc = context_->GetOutputDesc(OUTPUT_IDX_TWO);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, dbetaDesc);
+        commonParams.dbetaDtype = dbetaDesc->GetDataType();
+        OP_CHECK_IF(
+            (commonParams.dbetaDtype != commonParams.gammaDtype) && (commonParams.dbetaDtype != ge::DataType::DT_FLOAT), OP_LOGE(context_->GetNodeName(),
+            "when dbeta is Require, dbeta dtype must be the same as gamma or be float32."),
+            return ge::GRAPH_FAILED);
+    }
+    if (commonParams.pdgammaIsRequire && commonParams.pdbetaIsRequire) {
+        OP_CHECK_IF(
+            (commonParams.dgammaDtype != commonParams.dbetaDtype), OP_LOGE(context_->GetNodeName(),
+            "when dgamma and pdbeta are Require, dbeta dtype must be the same as dgamma."),
+            return ge::GRAPH_FAILED);
+    }
 
     commonParams.colSize = col;
     commonParams.rowSize = row;
@@ -175,6 +255,8 @@ ge::graphStatus LayerNormGradV3TilingBase::GetPlatformInfo()
     commonParams.coreNum = compileInfo->coreNum;
     commonParams.ubSizePlatForm = compileInfo->ubSizePlatForm;
     commonParams.isRegBase = compileInfo->isRegBase;
+    commonParams.blockSize = compileInfo->blockSize;
+    commonParams.vlFp32 = compileInfo->vlFp32;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -210,4 +292,31 @@ uint64_t LayerNormGradV3TilingBase::GetTilingKey() const
 {
     return 0;
 }
+
+constexpr static int64_t CONST_ZERO = 0;
+constexpr static int64_t CONST_ONE = 1;
+constexpr static int64_t CONST_TWO = 2;
+constexpr static int64_t CONST_FOUR = 4;
+constexpr static int64_t CONST_SIXTY_THREE = 63;
+
+int64_t LayerNormGradV3TilingBase::FindNearestPower2(const int64_t value)
+{
+    if (value <= CONST_ONE) {
+        return CONST_ZERO;
+    } else if (value <= CONST_TWO) {
+        return CONST_ONE;
+    } else if (value <= CONST_FOUR) {
+        return CONST_TWO;
+    } else {
+        const int64_t num = value - CONST_ONE;
+        const int64_t pow = CONST_SIXTY_THREE - __builtin_clzl(num);
+        return (CONST_ONE << pow);
+    }
+}
+
+int64_t LayerNormGradV3TilingBase::GetCacheID(const int64_t idx)
+{
+    return __builtin_popcountll(idx ^ (idx + CONST_ONE)) - CONST_ONE;
+}
+
 } // namespace optiling

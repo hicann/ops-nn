@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "../../../norm_common/op_host/norm_tensor_util.h"
 #include "batch_norm_backward_reduce.h"
@@ -438,6 +438,27 @@ static aclnnStatus aclnnBatchNormReduceBackwardNpuImpl(
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus OutputParamFillZeroForEmptyTensor(
+    const aclTensor* input, bool inputG, bool weightG, bool biasG, aclTensor* sumDy,
+    aclTensor* sumDyXmu, aclTensor* gradWeight, aclTensor* gradBias, aclOpExecutor* executor)
+{
+    auto dimC = input->GetViewShape()[1];
+    aclnnStatus outFillRet = ACLNN_SUCCESS;
+
+    // C维不能为空
+    if (dimC != 0 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        // 空Tensor情况下，输出都为0
+        aclTensor* fillZeroTensorTmp = FillScalar(dimC, 0, executor);
+        CHECK_RET(fillZeroTensorTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        outFillRet = OutputParamCastAndViewCopy(
+            fillZeroTensorTmp, fillZeroTensorTmp, fillZeroTensorTmp, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias,
+            executor);
+        CHECK_RET((outFillRet == ACLNN_SUCCESS), outFillRet);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
     const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
     const aclTensor* weight, const bool inputG, const bool weightG, const bool biasG, aclTensor* sumDy,
@@ -459,6 +480,9 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
 
     // 空Tensor处理
     if (gradOut->IsEmpty() || input->IsEmpty() || mean->IsEmpty() || invstd->IsEmpty()) {
+        auto fillZeroRet = OutputParamFillZeroForEmptyTensor(
+            input, inputG, weightG, biasG, sumDy, sumDyXmu, gradWeight, gradBias, uniqueExecutor.get());
+        CHECK_RET(fillZeroRet == ACLNN_SUCCESS, fillZeroRet);
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

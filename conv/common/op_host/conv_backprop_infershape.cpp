@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv_backprop_infershape.cpp
@@ -37,7 +37,7 @@ namespace Conv {
     constexpr size_t kConv2dDimSizeLimit = 4;
     constexpr int32_t extendDimSizeLimit = 5;
     constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
-    constexpr size_t kFromDepthwiseAttrIdx = 6;
+
     ge::graphStatus InferShapeForConvBackprop(
         gert::InferShapeContext* context, size_t const_tensor_idx, const char* const_tensor_name, size_t dim_num)
     {
@@ -97,8 +97,8 @@ namespace Conv {
         }
 
         const auto runtime_attrs = context->GetAttrs();
-        OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs"), return ge::GRAPH_FAILED);
-        const auto from_depthwise = runtime_attrs->GetBool(kFromDepthwiseAttrIdx); // from_depthwise attr idx: 6
+        OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
+        const auto from_depthwise = runtime_attrs->GetBool(6); // from_depthwise attr idx: 6
         if (from_depthwise == nullptr || !*from_depthwise) {
             return ge::GRAPH_SUCCESS;
         }
@@ -195,21 +195,7 @@ namespace Conv {
         }
         return SetOutputShapeDim(context, const_tensor, y_shape);
     }
-namespace {
-template <typename T>
-void SetShapeFromTensorData(gert::Shape* y_shape, const gert::Tensor* const_tensor, int32_t d_index){
-    auto tensor_data = const_tensor->GetData<T>();
-    for (int32_t idx = 0; idx < extendDimSizeLimit; ++idx) {
-        if (idx < d_index) {
-            y_shape->SetDim(idx, tensor_data[idx]);
-        } else if (idx == d_index) {
-            y_shape->SetDim(idx, 1);
-        } else {
-            y_shape->SetDim(idx, tensor_data[idx - 1]);
-        }
-    }
-}
-}
+
     ge::graphStatus SetOutputShapeDim(const gert::InferShapeContext* context, const gert::Tensor* const_tensor, gert::Shape* y_shape)
     {
         const auto y_desc = context->GetOutputDesc(0);
@@ -219,9 +205,27 @@ void SetShapeFromTensorData(gert::Shape* y_shape, const gert::Tensor* const_tens
         OP_CHECK_IF(d_index == -1, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y format is not support"), return ge::GRAPH_FAILED);
         auto dtype = const_tensor->GetDataType();
         if (dtype == ge::DT_INT32) {
-            SetShapeFromTensorData<int32_t>(y_shape, const_tensor, d_index);
+            auto tensor_data = const_tensor->GetData<int32_t>();
+            for (int32_t idx = 0; idx < extendDimSizeLimit; ++idx) {
+                if (idx < d_index) {
+                    y_shape->SetDim(idx, tensor_data[idx]);
+                } else if (idx == d_index) {
+                    y_shape->SetDim(idx, 1);
+                } else {
+                    y_shape->SetDim(idx, tensor_data[idx - 1]);
+                }
+            }
         } else if (dtype == ge::DT_INT64) {
-            SetShapeFromTensorData<int64_t>(y_shape, const_tensor, d_index);
+            auto tensor_data = const_tensor->GetData<int64_t>();
+            for (int32_t idx = 0; idx < extendDimSizeLimit; ++idx) {
+                if (idx < d_index) {
+                    y_shape->SetDim(idx, tensor_data[idx]);
+                } else if (idx == d_index) {
+                    y_shape->SetDim(idx, 1);
+                } else {
+                    y_shape->SetDim(idx, tensor_data[idx - 1]);
+                }
+            }
         } else {
             CUBE_INNER_ERR_REPORT(context->GetNodeName(), "tensor not support dtype %s", ge::TypeUtils::DataTypeToAscendString(dtype).GetString());
             return ge::GRAPH_FAILED;

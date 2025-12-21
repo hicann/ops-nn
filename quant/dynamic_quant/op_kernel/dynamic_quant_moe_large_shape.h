@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant_moe_large_shape.h
  * \brief
@@ -78,10 +78,18 @@ public:
                 smoothBaseOffset = smoothIndex * tilingData_.rowLen;
             }
             LoopProcess(offsetBase, smoothBaseOffset, scale);
-            scaleLocal.SetValue(i, 1 / scale);
+            scaleLocal.SetValue(i % scaleMaxLength, 1 / scale);
+            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+                scaleQueue.EnQue<float>(scaleLocal);
+                if (i == loopCnt - 1) {
+                    CopyScalesOut(loopCnt - scaleIdx * scaleMaxLength, scaleIdx * scaleMaxLength);
+                } else {
+                    CopyScalesOut(scaleMaxLength, scaleIdx * scaleMaxLength);
+                    scaleLocal = scaleQueue.AllocTensor<float>();
+                    scaleIdx++;
+                }
+            }
         }
-        scaleQueue.EnQue<float>(scaleLocal);
-        CopyScalesOut(loopCnt);
         groupQueue.FreeTensor(groupLocal);
     }
 
@@ -108,13 +116,25 @@ public:
                 smoothBaseOffset = smoothIndex * tilingData_.rowLen;
             }
             LoopProcessAsymmetrical(offsetBase, smoothBaseOffset, scale, offset);
-            scaleLocal.SetValue(i, scale);
-            offsetLocal.SetValue(i, offset);
+            scaleLocal.SetValue(i % scaleMaxLength, scale);
+            offsetLocal.SetValue(i % scaleMaxLength, offset);
+
+            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+                offsetQueue.EnQue<float>(offsetLocal);
+                scaleQueue.EnQue<float>(scaleLocal);
+
+                if (i == loopCnt - 1) {
+                    CopyOffsetOut(loopCnt - scaleIdx * scaleMaxLength, scaleIdx * scaleMaxLength);
+                    CopyScalesOut(loopCnt - scaleIdx * scaleMaxLength, scaleIdx * scaleMaxLength);
+                } else {
+                    CopyOffsetOut(scaleMaxLength, scaleIdx * scaleMaxLength);
+                    CopyScalesOut(scaleMaxLength, scaleIdx * scaleMaxLength);
+                    scaleIdx++;
+                    offsetLocal = offsetQueue.AllocTensor<float>();
+                    scaleLocal = scaleQueue.AllocTensor<float>();
+                }
+            }
         }
-        scaleQueue.EnQue<float>(scaleLocal);
-        CopyScalesOut(loopCnt);
-        offsetQueue.EnQue<float>(offsetLocal);
-        CopyOffsetOut(loopCnt);
         groupQueue.FreeTensor(groupLocal);
     }
 
@@ -122,39 +142,47 @@ private:
     __aicore__ inline void InitAndSetBuffer(
         GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_indexs, GM_ADDR y, GM_ADDR scale, GM_ADDR offset)
     {
+        scaleMaxLength = tilingData_.ubSize - UB_RESERVED_LENGTH - THIRTY_TWO - tilingData_.innerLoopEle * sizeof(float) * DOUBLE;
+
         smoothGm.SetGlobalBuffer((__gm__ T2*)smooth_scales);
         pPipe->InitBuffer(smoothQueue, BUFFER_NUM, tilingData_.innerLoopEle * sizeof(T2));
+        scaleMaxLength -= tilingData_.innerLoopEle * sizeof(T2);
         groupGm.SetGlobalBuffer((__gm__ T3*)group_indexs);
         pPipe->InitBuffer(groupQueue, BUFFER_NUM, tilingData_.alignGroupNum * sizeof(T3));
+        scaleMaxLength -= tilingData_.alignGroupNum * sizeof(T3);
         if (blockIdx < tilingData_.headCoreNum) {
-            inGm.SetGlobalBuffer((__gm__ T1*)x + blockIdx * lenHead, lenHead);
+            inGm.SetGlobalBuffer((__gm__ T1*)x + blockIdx * static_cast<int64_t>(lenHead), lenHead);
             baseRow = blockIdx * rowPerHeadCore;
-            outGm.SetGlobalBuffer((__gm__ yDtype*)y + blockIdx * outLenHead, outLenHead);
+            outGm.SetGlobalBuffer((__gm__ yDtype*)y + blockIdx * static_cast<int64_t>(outLenHead), outLenHead);
             scaleGm.SetGlobalBuffer((__gm__ float*)scale + baseRow, rowPerHeadCore);
             if (isAsymmetrical) {
                 offsetGm.SetGlobalBuffer((__gm__ float*)offset + baseRow, rowPerHeadCore);
             }
         } else {
             inGm.SetGlobalBuffer(
-                (__gm__ T1*)x + tilingData_.headCoreNum * lenHead + (blockIdx - tilingData_.headCoreNum) * lenTail,
+                (__gm__ T1*)x + tilingData_.headCoreNum * static_cast<int64_t>(lenHead) + (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(lenTail),
                 lenTail);
             baseRow = tilingData_.headCoreNum * rowPerHeadCore + (blockIdx - tilingData_.headCoreNum) * rowPerTailCore;
             outGm.SetGlobalBuffer(
-                (__gm__ yDtype*)y + tilingData_.headCoreNum * outLenHead +
-                    (blockIdx - tilingData_.headCoreNum) * outLenTail,
+                (__gm__ yDtype*)y + tilingData_.headCoreNum * static_cast<int64_t>(outLenHead) +
+                    (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(outLenTail),
                 outLenTail);
             scaleGm.SetGlobalBuffer((__gm__ float*)scale + baseRow, rowPerTailCore);
             if (isAsymmetrical) {
                 offsetGm.SetGlobalBuffer((__gm__ float*)offset + baseRow, rowPerTailCore);
             }
         }
+        scaleMaxLength -= tilingData_.innerLoopEle * sizeof(T1) + tilingData_.innerLoopEle * sizeof(yDtype);
+        scaleMaxLength = scaleMaxLength / THIRTY_TWO * THIRTY_TWO / sizeof(float);
+
         if (isAsymmetrical) {
-            pPipe->InitBuffer(offsetQueue, BUFFER_NUM, sizeFloatLen * sizeof(float));
+            scaleMaxLength /= DOUBLE;
+            pPipe->InitBuffer(offsetQueue, BUFFER_NUM, GetMin(sizeFloatLen, scaleMaxLength) * sizeof(float));
         }
         // innerLoopEle已经保证了32Bytes对齐
         pPipe->InitBuffer(inQueue, BUFFER_NUM, tilingData_.innerLoopEle * sizeof(T1));
         pPipe->InitBuffer(outQueue, BUFFER_NUM, tilingData_.innerLoopEle * sizeof(yDtype));
-        pPipe->InitBuffer(scaleQueue, BUFFER_NUM, sizeFloatLen * sizeof(float));
+        pPipe->InitBuffer(scaleQueue, BUFFER_NUM, GetMin(sizeFloatLen, scaleMaxLength) * sizeof(float));
     }
 
     __aicore__ inline void LoopProcess(uint32_t offsetBase, uint32_t smoothBaseOffset, float& scale)
@@ -207,7 +235,6 @@ private:
         }
 
         GetScaleAndOffset(maxUpdateValue, minUpdateValue, scale, offset);
-
         // 量化计算
         for (uint32_t innerLoopIndex = 0; innerLoopIndex < tilingData_.innerLoopTimes; innerLoopIndex++) {
             srcOffset = offsetBase + innerLoopIndex * tilingData_.innerLoopEle;
@@ -260,19 +287,19 @@ private:
         smoothQueue.EnQue(smoothLocal);
     }
 
-    __aicore__ inline void CopyScalesOut(uint32_t element)
+    __aicore__ inline void CopyScalesOut(uint32_t element, uint32_t offset)
     {
         LocalTensor<float> scaleLocal = scaleQueue.DeQue<float>();
         DataCopyParams copyParams{1, (uint16_t)(element * sizeof(float)), 0, 0};
-        DataCopyPad(scaleGm, scaleLocal, copyParams);
+        DataCopyPad(scaleGm[offset], scaleLocal, copyParams);
         scaleQueue.FreeTensor(scaleLocal);
     }
 
-    __aicore__ inline void CopyOffsetOut(uint32_t element)
+    __aicore__ inline void CopyOffsetOut(uint32_t element, uint32_t offset)
     {
         LocalTensor<float> offsetLocal = offsetQueue.DeQue<float>();
         DataCopyParams copyParams{1, (uint16_t)(element * sizeof(float)), 0, 0};
-        DataCopyPad(offsetGm, offsetLocal, copyParams);
+        DataCopyPad(offsetGm[offset], offsetLocal, copyParams);
         offsetQueue.FreeTensor(offsetLocal);
     }
 
@@ -463,6 +490,9 @@ private:
 
     /* variable */
     T3 baseRow = 0; // 记录开始处理的行数
+
+    int64_t scaleMaxLength = 0;
+    int64_t scaleIdx = 0;
 };
 #endif
 } // namespace DynamicQuantNDOpt

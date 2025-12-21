@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -22,6 +22,7 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
+using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 class BatchMatMulV3IterBatchBasicApiTiling : public MatMulV3BaseTiling {
 public:
     BatchMatMulV3IterBatchBasicApiTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
@@ -38,12 +39,20 @@ protected:
 
     uint64_t GetBlockDim() const override;
 
+    bool IsMat2Transpose(const gert::Shape& viewShape) const;
+
+    bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
+
 private:
     uint64_t c0Size_{16};
     uint64_t alignMValue_{0};
     uint64_t alignNValue_{0};
-    uint64_t alignKaValue_{0};
-    uint64_t alignKbValue_{0};
+    uint64_t alignKValue_{0};
+    uint64_t iterBatchL0A_{0};
+    uint64_t iterBatchL0B_{0};
+    uint64_t iterBatchL0C_{0};
+    uint64_t iterBatchL1_{0};
+    bool l0CanLoadBatch_{false};
 };
 }
 }

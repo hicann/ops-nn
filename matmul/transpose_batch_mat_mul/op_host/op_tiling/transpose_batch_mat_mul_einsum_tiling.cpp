@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file transpose_batch_mat_mul_einsum_tiling.cpp
@@ -16,14 +16,14 @@
 #include "transpose_batch_mat_mul_tiling.h"
 #include "util/math_util.h"
 #include "log/log.h"
-#include "error_util.h"
 #include "tiling_base/tiling_key.h"
-#include "runtime_kb_api.h"
+#include "error_util.h"
 #include "op_cache_tiling.h"
-#include "platform/platform_infos_def.h"
+#include "runtime_kb_api.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_tuning.h"
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
+#include "platform/platform_infos_def.h"
 #include "../../op_kernel/transpose_batch_mat_mul_tiling_key.h"
 
 #include <tiling/platform/platform_ascendc.h>
@@ -76,8 +76,8 @@ bool TransposeBatchMatMulEinsumTiling::GetMatMulInfo()
 
     const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(bPermList_->GetData());
     // 2 是 permList 的字典序, 2 -> [1,0,2]
-    matMulInfo_.permA = 2;
-    matMulInfo_.permB = PermDecode(perm_x2, bPermList_->GetSize()) == 123L ? 0 : 1;
+    matMulInfo_.transA = 2;
+    matMulInfo_.transB = PermDecode(perm_x2, bPermList_->GetSize()) == 123L ? 0 : 1;
     return true;
 }
 
@@ -88,8 +88,8 @@ bool TransposeBatchMatMulEinsumTiling::GetTilingKey()
     uint64_t tilingKey = GET_TPL_TILING_KEY(
         batchSplitMode,
         ppMatmulMode,
-        matMulInfo_.permA, 
-        matMulInfo_.permB
+        matMulInfo_.transA, 
+        matMulInfo_.transB
     );
     ppMatmulDefaultTilingData_.tilingKey = tilingKey;
     OP_LOGI(context_->GetNodeName(), "tilingKey: %ld.", tilingKey);
@@ -99,25 +99,31 @@ bool TransposeBatchMatMulEinsumTiling::GetTilingKey()
 ge::graphStatus TransposeBatchMatMulEinsumTiling::PostTiling()
 {
     PpMatmulTilingData tilingData;
-    tilingData.set_batch(ppMatmulDefaultTilingData_.opShape.batchSize);
-    tilingData.set_m(ppMatmulDefaultTilingData_.opShape.m);
-    tilingData.set_k(ppMatmulDefaultTilingData_.opShape.k);
-    tilingData.set_n(ppMatmulDefaultTilingData_.opShape.n);
-    tilingData.set_m0(ppMatmulDefaultTilingData_.opShape.m0);
-    tilingData.set_k0(ppMatmulDefaultTilingData_.opShape.k0);
-    tilingData.set_n0(ppMatmulDefaultTilingData_.opShape.n0);
-    tilingData.set_mLoop(ppMatmulDefaultTilingData_.mLoop);
-    tilingData.set_kLoop(ppMatmulDefaultTilingData_.kLoop);
-    tilingData.set_nLoop(ppMatmulDefaultTilingData_.nLoop);
-    tilingData.set_coreLoop(ppMatmulDefaultTilingData_.coreLoop);
-    tilingData.set_swizzlCount(ppMatmulDefaultTilingData_.swizzlCount);
-    tilingData.set_tilingKey(ppMatmulDefaultTilingData_.tilingKey);
-    tilingData.set_blockDim(ppMatmulDefaultTilingData_.blockDim);
-    tilingData.set_swizzlDirect(ppMatmulDefaultTilingData_.swizzlDirect);
-    tilingData.set_splitk(ppMatmulDefaultTilingData_.splitk);
-    tilingData.set_enShuffleK(ppMatmulDefaultTilingData_.enShuffleK);
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    size_t tilingDataSize = sizeof(PpMatmulTilingData);
+    tilingData.batch = ppMatmulDefaultTilingData_.opShape.batchSize;
+    tilingData.m = ppMatmulDefaultTilingData_.opShape.m;
+    tilingData.k = ppMatmulDefaultTilingData_.opShape.k;
+    tilingData.n = ppMatmulDefaultTilingData_.opShape.n;
+    tilingData.m0 = ppMatmulDefaultTilingData_.opShape.m0;
+    tilingData.k0 = ppMatmulDefaultTilingData_.opShape.k0;
+    tilingData.n0 = ppMatmulDefaultTilingData_.opShape.n0;
+    tilingData.mLoop = ppMatmulDefaultTilingData_.mLoop;
+    tilingData.kLoop = ppMatmulDefaultTilingData_.kLoop;
+    tilingData.nLoop = ppMatmulDefaultTilingData_.nLoop;
+    tilingData.coreLoop = ppMatmulDefaultTilingData_.coreLoop;
+    tilingData.swizzlCount = ppMatmulDefaultTilingData_.swizzlCount;
+    tilingData.tilingKey = ppMatmulDefaultTilingData_.tilingKey;
+    tilingData.blockDim = ppMatmulDefaultTilingData_.blockDim;
+    tilingData.swizzlDirect = ppMatmulDefaultTilingData_.swizzlDirect;
+    tilingData.splitk = ppMatmulDefaultTilingData_.splitk;
+    tilingData.enShuffleK = ppMatmulDefaultTilingData_.enShuffleK;
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(&tilingData), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     context_->SetTilingKey(ppMatmulDefaultTilingData_.tilingKey);
     context_->SetBlockDim(ppMatmulDefaultTilingData_.blockDim);
     return ge::GRAPH_SUCCESS;

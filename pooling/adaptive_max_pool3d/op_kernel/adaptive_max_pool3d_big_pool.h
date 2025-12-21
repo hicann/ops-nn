@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file adaptive_max_pool3d_big_pool.h
@@ -24,13 +24,11 @@ constexpr int32_t BUFFER_NUM = 1;
 constexpr int64_t BLOCK_DATA = 32;
 constexpr int64_t REPEAT_DATA = 256;
 
-constexpr uint16_t FLOAT16_NEG_INF = 64512; // -inf 0xFC00
-constexpr uint16_t FLOAT16_INF = 31744;     // inf 0x7C00
-constexpr uint16_t FLOAT16_NAN_END = 32768; // 0x8000
+constexpr uint16_t FP16_EXPONENT_ALL_1_MASK = 0x7C00;  // 指数位全为1的掩码（5位指数位）
+constexpr uint16_t FP16_MANTISSA_NON_ZERO_MASK = 0x03FF;  // 尾数位非0的掩码（10位尾数位）
 
-constexpr int32_t FLOAT32_NEG_INF = -2139095040;  // -inf 0xFF800000
-constexpr int32_t FLOAT32_INF = 2139095040;       // inf 0x7F800000
-constexpr int32_t FLOAT32_NEG_ZERO = -2147483648; // -0
+constexpr uint32_t FP32_EXPONENT_ALL_1_MASK = 0x7F800000;  // 指数位全为1的掩码（8位指数位）
+constexpr uint32_t FP32_MANTISSA_NON_ZERO_MASK = 0x007FFFFF;  // 尾数位非0的掩码（23位尾数位）
 
 template <typename T>
 class InnerComputer
@@ -101,7 +99,7 @@ public:
     __aicore__ inline AdaptiveMaxPool3dBigPool(){};
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const AdaptiveMaxPool3dBigPoolTilingData* __restrict__ tiling, int64_t dataType);
+        const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType);
     __aicore__ inline void Process();
 
 private:
@@ -174,14 +172,10 @@ private:
     {
         if (inputDataTypeKey == 1) { // 输入数据为fp16
             uint16_t nan = *reinterpret_cast<uint16_t*>(&value);
-            if ((nan > FLOAT16_INF && nan < FLOAT16_NAN_END) || nan > FLOAT16_NEG_INF) {
-                return true;
-            }
+            return (nan & FP16_EXPONENT_ALL_1_MASK) == FP16_EXPONENT_ALL_1_MASK && (nan & FP16_MANTISSA_NON_ZERO_MASK) != 0;
         } else { // 输入数据为fp32或bf16
-            int32_t nan = *reinterpret_cast<int32_t*>(&value);
-            if ((nan != FLOAT32_NEG_ZERO) && (nan > FLOAT32_INF || nan < FLOAT32_NEG_INF)) {
-                return true;
-            }
+            uint32_t nan = *reinterpret_cast<uint32_t*>(&value);
+            return (nan & FP32_EXPONENT_ALL_1_MASK) == FP32_EXPONENT_ALL_1_MASK && (nan & FP32_MANTISSA_NON_ZERO_MASK) != 0;
         }
         return false;
     }
@@ -248,7 +242,7 @@ private:
 template <typename T1, typename T2>
 __aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-    const AdaptiveMaxPool3dBigPoolTilingData* __restrict__ tiling, int64_t dataType)
+    const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType)
 {
     pipe = pipe_in;
     tilingData = tiling;
@@ -575,9 +569,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::CopyMaxOut(int64_t curI
     if (inputDataTypeKey == 2) {
         LocalTensor<float> maxfloat32 = maxUB.Get<float>();
         LocalTensor<bfloat16_t> maxbfloat16 = maxUB.Get<bfloat16_t>();
-        event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(eventIDSToV);
-        WaitFlag<HardEvent::S_V>(eventIDSToV);
+        PipeBarrier<PIPE_ALL>();
         Cast(maxbfloat16, maxfloat32, RoundMode::CAST_RINT, 8);
         PipeBarrier<PIPE_V>();
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));

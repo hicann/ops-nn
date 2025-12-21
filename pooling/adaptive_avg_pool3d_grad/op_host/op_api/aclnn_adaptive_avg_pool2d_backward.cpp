@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <numeric>
 #include <vector>
 #include "aclnn/aclnn_base.h"
@@ -19,7 +19,6 @@
 #include "aclnn_kernels/transpose.h"
 #include "level0/fill.h"
 #include "level0/mul.h"
-#include "level0/shape_op.h"
 #include "level0/unsqueeze.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "opdev/common_types.h"
@@ -32,6 +31,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/fast_vector.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "pooling/adaptive_avg_pool3d/op_host/op_api/shape_op.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -92,12 +92,13 @@ static bool CheckInputDims(const aclTensor* gradOutput, const aclTensor* self, c
 }
 
 
-static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
+static bool CheckInputOutputShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     size_t outDimNum = out->GetViewShape().GetDimNum();
     size_t selfDimNum = self->GetViewShape().GetDimNum();
     const op::Shape selfShape = self->GetViewShape();
     const op::Shape outShape = out->GetViewShape();
+    const op::Shape gradOutShape = gradOutput->GetViewShape();
 
     if (outDimNum != chwShapesizes && outDimNum != nchwShapesizes) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out dims %zu should be in 3 or 4.", outDimNum);
@@ -111,9 +112,16 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
     // 2 is dim offset
     if (outDimNum > 2U) {
         for (size_t i = 0; i < outDimNum - 2U; i++) {
-            if (outShape[i] != selfShape[i]) {
+            if (outShape.GetDim(i) != selfShape.GetDim(i)) {
                 OP_LOGE(
                     ACLNN_ERR_PARAM_INVALID, "Out_shape[%zu]: %ld should equal to input_shape[%zu]: %ld", i, outShape[i], i,
+                    selfShape[i]);
+                return false;
+            }
+
+            if (gradOutShape.GetDim(i) != selfShape.GetDim(i)) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "gradOut_Shape[%zu]: %ld should equal to input_shape[%zu]: %ld", i, gradOutShape[i], i,
                     selfShape[i]);
                 return false;
             }
@@ -179,7 +187,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     CHECK_RET(CheckInputDims(gradOutput, self, y), ACLNN_ERR_PARAM_INVALID);
 
     // 检查输入输出参shape
-    CHECK_RET(CheckInputOutputShape(self, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckInputOutputShape(gradOutput, self, y), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(gradOutput, self), ACLNN_ERR_PARAM_INVALID);
 
@@ -288,7 +296,7 @@ static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(
 
         auto resReshapeSize = out->GetViewShape().GetDimNum();
         std::vector<int64_t> resShapeValue(resReshapeSize);
-        for (uint64_t i = 0; i < resReshapeSize; i++) {
+        for (int64_t i = 0; i < static_cast<int64_t>(resReshapeSize); i++) {
             resShapeValue[i] = out->GetViewShape().GetDim(i);
         }
         auto resShape = executor->AllocIntArray(resShapeValue.data(), resReshapeSize);

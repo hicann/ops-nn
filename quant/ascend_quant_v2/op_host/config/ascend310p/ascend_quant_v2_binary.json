@@ -62,6 +62,11 @@
           "name": "dst_type",
           "dtype": "int",
           "value": null
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
         }
       ]
     },
@@ -124,6 +129,11 @@
         },
         {
           "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "axis",
           "dtype": "int",
           "value": null
         }

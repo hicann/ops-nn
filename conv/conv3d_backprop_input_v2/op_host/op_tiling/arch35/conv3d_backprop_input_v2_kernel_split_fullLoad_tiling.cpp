@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_kernel_split_fullLoad_tiling.cpp
@@ -30,7 +30,8 @@ namespace Conv {
 bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95) {
+        platform_ascendc::SocVersion::ASCEND910_95 &&
+        !IsSocVersionFuse(context_)) {
         return false;
     }
 
@@ -55,7 +56,7 @@ ge::graphStatus Conv3DDXV2KernelSplitFullLoadTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    Conv3DDXV2KernelSplitTiling::InitStepMN(l1Params);
+    Conv3DDXV2KernelSplitTiling::InitL1Params(l1Params);
 
     // 设置MN和循环轴的核间切分策略
     CoreTilingParams coreParams;
@@ -84,6 +85,9 @@ void Conv3DDXV2KernelSplitFullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.al0Pbuffer = DB_ON;
     l0Params.bl0Pbuffer = DB_ON;
     l0Params.cl0Pbuffer = DB_OFF;
+    if (IsSocVersionFuse(context_)) {
+        CloseL0PingPong(l0Params);  // 耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
+    }
 
     l0Params.baseM = BASIC_BLOCK_SIZE_256;
     l0Params.baseN = BASIC_BLOCK_SIZE_256;
@@ -98,8 +102,8 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
     uint32_t baseN = l0Params.baseN;
     uint32_t baseK = l0Params.baseK;
     // only support al0Pbuffer = bl0Pbuffer = 2
-    uint32_t l0abMaxNum = L0_AB_SIZE / l0Params.al0Pbuffer / dtypeByte_;
-    uint32_t l0cMaxNum = L0C_SIZE / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByte_;
+    uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
     uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
 
     // K对齐约束大，优先做调整, 从最优基本块往下找到能满足搬运对齐的块
@@ -137,7 +141,7 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
     l0Params.baseM = baseM;
     l0Params.baseN = baseN;
 
-    if (l0Params.baseM * l0Params.baseN * ge::GetSizeByDataType(ge::DT_FLOAT) * DB_ON <= L0C_SIZE) {
+    if (l0Params.baseM * l0Params.baseN * ge::GetSizeByDataType(ge::DT_FLOAT) * DB_ON <= platformInfo_.l0_c_size) {
         l0Params.cl0Pbuffer = DB_ON;
     } else {
         l0Params.cl0Pbuffer = DB_OFF;

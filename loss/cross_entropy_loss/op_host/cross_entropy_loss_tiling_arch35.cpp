@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /* !
@@ -16,6 +16,9 @@
 #include <cstring>
 #include <cmath>
 #include <bitset>
+#include "register/tilingdata_base.h"
+#include "register/op_def_registry.h"
+#include "tiling/tiling_api.h"
 #include "cross_entropy_loss_tiling.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_data.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_key.h"
@@ -88,6 +91,9 @@ int64_t findClosestPowerOfTwo(uint64_t a)
 
 int64_t countOnes(uint64_t num)
 {
+    if (num == static_cast<uint64_t>(0)) {
+        return static_cast<int64_t>(0);
+    }
     int64_t count = 0;
     while (num != 0ULL) {
         count += static_cast<int64_t>(num & 1ULL); // 检查最低位是否为1
@@ -195,27 +201,39 @@ bool CrossEntropyLossRegbaseTiling::IsAllC()
     int64_t arBuf_db2 = DOUBLE_BUFFER_2 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
     int64_t aBuf_db2 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
     int64_t aNum_db2 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) / (arBuf_db2 + aBuf_db2);
+    auto shape = ge::Shape({aNum_db2, cAligned});
+    uint32_t maxValue = 0;
+    uint32_t minValue = 0;
+    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
+        AscendC::ReducePattern::AR, true, false, maxValue, minValue);
+    int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) /
+        (arBuf_db2 + aBuf_db2);
     OP_LOGI(
         context_,
-        "blockNum:%ld, perBlock:%ld, cAligned:%ld, allUbSize:%ld, arBuf_db2:%ld, aBuf_db2:%ld, aNum_db2:%ld", blockNum,
-        perBlock, cAligned, allUbSize, arBuf_db2, aBuf_db2, aNum_db2);
-    if (aNum_db2 < perBlock) {
+        "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db2:%ld, aNum_db2:%ld, maxValue:%u, aNum_res:%ld",
+        blockNum, cAligned, allUbSize, aBuf_db2, aNum_db2, maxValue, aNum_res);
+    if (aNum_res < perBlock) {
         int64_t arBuf_db1 = DOUBLE_BUFFER_1 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
         int64_t aBuf_db1 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
         int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) / (arBuf_db1 + aBuf_db1);
+        shape = ge::Shape({aNum_db1, cAligned});
+        AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
+            AscendC::ReducePattern::AR, true, false, maxValue, minValue);
+        aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * BLOCK_32) /
+            (arBuf_db1 + aBuf_db1);
         OP_LOGI(
             context_,
-            "blockNum:%ld, perBlock:%ld, cAligned:%ld, allUbSize:%ld, arBuf_db1:%ld, aBuf_db1:%ld, aNum_db1:%ld",
-            blockNum, perBlock, cAligned, allUbSize, arBuf_db1, aBuf_db1, aNum_db1);
-        if (aNum_db1 < perBlock) {
+            "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db1:%ld, aNum_db1:%ld, maxValue:%u, aNum_res:%ld",
+            blockNum, cAligned, allUbSize, aBuf_db1, aNum_db1, maxValue, aNum_res);
+        if (aNum_res < perBlock) {
             return false;
         } else {
-            ComputeAllC(aNum_db1, perBlock, blockNum);
+            ComputeAllC(aNum_res, perBlock, blockNum);
             BaseTiling_.db = DOUBLE_BUFFER_1;
             return true;
         }
     } else {
-        ComputeAllC(aNum_db2, perBlock, blockNum);
+        ComputeAllC(aNum_res, perBlock, blockNum);
         BaseTiling_.db = DOUBLE_BUFFER_2;
         return true;
     }

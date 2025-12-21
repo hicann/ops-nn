@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -105,14 +105,14 @@ TEST_F(LayerNormV4Test, LayerNormV4InferDataType)
 
     ge::DataType input_x = ge::DT_FLOAT;
     ge::DataType shape_dtype = ge::DT_INT32;
-    ge::DataType out_datatype = ge::DT_INT32;
+    ge::DataType out_datatype = ge::DT_FLOAT;
     auto context_holder = gert::InferDataTypeContextFaker()
                               .IrInputNum(2)
                               .NodeIoNum(2, 3)
                               .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                               .InputDataTypes({&input_x, &shape_dtype})
-                              .OutputDataTypes({&out_datatype})
+                              .OutputDataTypes({&out_datatype, &out_datatype, &out_datatype})
                               .Build();
     auto context = context_holder.GetContext<gert::InferDataTypeContext>();
     EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_mv.cpp
@@ -14,7 +14,7 @@
  */
 
 #include "aclnn_kernels/contiguous.h"
-#include "level0/shape_op.h"
+#include "pooling/adaptive_avg_pool3d/op_host/op_api/shape_op.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
@@ -224,12 +224,13 @@ aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(
 
         // reshape NCHW/NCL -> NCDHW
         op::Shape inputContiguousShape = inputContiguous->GetViewShape();
-        size_t inputDimNum = inputContiguousShape.GetDimNum();
+        int64_t inputDimNum = static_cast<int64_t>(inputContiguousShape.GetDimNum());
         std::vector<int64_t> valueShape(NCDHW_DIM_NUM);
-        valueShape[0] = inputDimNum == NCHW_DIM_NUM ? inputContiguousShape.GetDim(0) : 1;
-        valueShape[1] = inputDimNum == NCHW_DIM_NUM ? inputContiguousShape.GetDim(1) : inputContiguousShape.GetDim(0);
+        valueShape[0] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(0) : 1;
+        valueShape[1] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(1) :
+                        inputContiguousShape.GetDim(0);
         valueShape[DIM_D] = 1;
-        for (size_t i = inputDimNum - OUTPUT_SIZE_NUM; i < inputDimNum; i++) {
+        for (int64_t i = inputDimNum - static_cast<int64_t>(OUTPUT_SIZE_NUM); i < inputDimNum; i++) {
             valueShape[NCDHW_DIM_NUM - inputDimNum + i] = inputContiguousShape.GetDim(i);
         }
         auto reshapeShape = uniqueExecutor.get()->AllocIntArray(valueShape.data(), NCDHW_DIM_NUM);

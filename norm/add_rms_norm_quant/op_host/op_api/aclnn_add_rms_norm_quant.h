@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #ifndef OP_API_INC_LEVEL2_ADD_RMS_NORM_QUANT_H_
 #define OP_API_INC_LEVEL2_ADD_RMS_NORM_QUANT_H_
 
@@ -54,10 +54,10 @@ extern "C" {
  * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
  * @param [in] divMode: bool 类型，用于指定静态量化计算的算法。当为False时，静态量化计算计算使用乘法，反之亦然。
  * @param [in] y1Out:
- * 公式中的输出`y1`，数据类型支持INT8，shape需要与x1一致。
+ * 公式中的输出`y1`，数据类型支持INT8、HiFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] y2Out:
- * 公式中的输出`y2`，数据类型支持INT8，shape需要与x1一致。
+ * 公式中的输出`y2`，数据类型支持INT8、HiFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] xOut:
  * 公式中的输出`x`，数据类型支持BFLOAT16、FLOAT、FLOAT16且需要与x1一致，shape需要与x1一致。

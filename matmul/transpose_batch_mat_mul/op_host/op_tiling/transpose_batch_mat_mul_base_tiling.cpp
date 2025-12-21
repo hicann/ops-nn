@@ -1,19 +1,18 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file transpose_batch_mat_mul_base_tiling.cc
  * \brief
  */
 #include "transpose_batch_mat_mul_base_tiling.h"
-
 #include "util/math_util.h"
 #include "log/log.h"
 #include "tiling_base/tiling_key.h"
@@ -84,39 +83,39 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShapeAttrsInfo()  // 检查�
 ge::graphStatus TransposeBatchMatMulBaseTiling::DoLibApiTiling()
 {
     auto ret = MatmulV3BaseTiling::DoLibApiTiling();
-    tbmmTilingData_.multiBatchInfo.set_batchUsedCoreNum(tbmmTilingData_.matmulTiling.matmulTiling.get_usedCoreNum());
-    tbmmTilingData_.multiBatchInfo.set_aBatchDim3(static_cast<uint32_t>(batchInfo_.batchA3));
-    tbmmTilingData_.multiBatchInfo.set_aBatchDim2(static_cast<uint32_t>(batchInfo_.batchA2));
-    tbmmTilingData_.multiBatchInfo.set_aBatchDim1(static_cast<uint32_t>(batchInfo_.batchA1));
-    tbmmTilingData_.multiBatchInfo.set_aBatchDim0(static_cast<uint32_t>(batchInfo_.batchA0));
-    tbmmTilingData_.multiBatchInfo.set_bBatchDim3(static_cast<uint32_t>(batchInfo_.batchB3));
-    tbmmTilingData_.multiBatchInfo.set_bBatchDim2(static_cast<uint32_t>(batchInfo_.batchB2));
-    tbmmTilingData_.multiBatchInfo.set_bBatchDim1(static_cast<uint32_t>(batchInfo_.batchB1));
-    tbmmTilingData_.multiBatchInfo.set_bBatchDim0(static_cast<uint32_t>(batchInfo_.batchB0));
-    tbmmTilingData_.multiBatchInfo.set_cBatchDim3(static_cast<uint32_t>(batchInfo_.batchC3));
-    tbmmTilingData_.multiBatchInfo.set_cBatchDim2(static_cast<uint32_t>(batchInfo_.batchC2));
-    tbmmTilingData_.multiBatchInfo.set_cBatchDim1(static_cast<uint32_t>(batchInfo_.batchC1));
-    tbmmTilingData_.multiBatchInfo.set_cBatchDim0(static_cast<uint32_t>(batchInfo_.batchC0));
+    tbmmTilingData_.multiBatchInfo.batchUsedCoreNum = tbmmTilingData_.matmulTiling.matmulTiling.usedCoreNum;
+    tbmmTilingData_.multiBatchInfo.aBatchDim3 = static_cast<uint32_t>(batchInfo_.batchA3);
+    tbmmTilingData_.multiBatchInfo.aBatchDim2 = static_cast<uint32_t>(batchInfo_.batchA2);
+    tbmmTilingData_.multiBatchInfo.aBatchDim1 = static_cast<uint32_t>(batchInfo_.batchA1);
+    tbmmTilingData_.multiBatchInfo.aBatchDim0 = static_cast<uint32_t>(batchInfo_.batchA0);
+    tbmmTilingData_.multiBatchInfo.bBatchDim3 = static_cast<uint32_t>(batchInfo_.batchB3);
+    tbmmTilingData_.multiBatchInfo.bBatchDim2 = static_cast<uint32_t>(batchInfo_.batchB2);
+    tbmmTilingData_.multiBatchInfo.bBatchDim1 = static_cast<uint32_t>(batchInfo_.batchB1);
+    tbmmTilingData_.multiBatchInfo.bBatchDim0 = static_cast<uint32_t>(batchInfo_.batchB0);
+    tbmmTilingData_.multiBatchInfo.cBatchDim3 = static_cast<uint32_t>(batchInfo_.batchC3);
+    tbmmTilingData_.multiBatchInfo.cBatchDim2 = static_cast<uint32_t>(batchInfo_.batchC2);
+    tbmmTilingData_.multiBatchInfo.cBatchDim1 = static_cast<uint32_t>(batchInfo_.batchC1);
+    tbmmTilingData_.multiBatchInfo.cBatchDim0 = static_cast<uint32_t>(batchInfo_.batchC0);
 
     aBatchDimAll_ = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3;
     bBatchDimAll_ = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3;
     cBatchDimAll_ = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3;
-    tbmmTilingData_.multiBatchInfo.set_aBatchDimAll(static_cast<uint32_t>(aBatchDimAll_));
-    tbmmTilingData_.multiBatchInfo.set_bBatchDimAll(static_cast<uint32_t>(bBatchDimAll_));
-    tbmmTilingData_.multiBatchInfo.set_cBatchDimAll(static_cast<uint32_t>(cBatchDimAll_));
-    tbmmTilingData_.multiBatchInfo.set_batchTileBlock(static_cast<uint32_t>(cBatchDimAll_));
+    tbmmTilingData_.multiBatchInfo.aBatchDimAll = static_cast<uint32_t>(aBatchDimAll_);
+    tbmmTilingData_.multiBatchInfo.bBatchDimAll = static_cast<uint32_t>(bBatchDimAll_);
+    tbmmTilingData_.multiBatchInfo.cBatchDimAll = static_cast<uint32_t>(cBatchDimAll_);
+    tbmmTilingData_.multiBatchInfo.batchTileBlock = static_cast<uint32_t>(cBatchDimAll_);
     if (CheckBMMTilingDataIsVaild()) {
         return ge::GRAPH_FAILED;
     }
-    tbmmTilingData_.multiBatchInfo.set_biasWithBatch(static_cast<uint32_t>(batchInfo_.biasWithBatch));
-    tbmmTilingData_.multiBatchInfo.set_mOri(static_cast<uint32_t>(args_.mOriValue));
+    tbmmTilingData_.multiBatchInfo.biasWithBatch = static_cast<uint32_t>(batchInfo_.biasWithBatch);
+    tbmmTilingData_.multiBatchInfo.mOri = static_cast<uint32_t>(args_.mOriValue);
     DoCommonTiling();
-    tbmmTilingData_.matmulTiling.tileL2cacheTiling.set_mTileCntL2(1);
-    tbmmTilingData_.matmulTiling.tileL2cacheTiling.set_nTileCntL2(1);
+    tbmmTilingData_.matmulTiling.tileL2cacheTiling.mTileCntL2 = 1;
+    tbmmTilingData_.matmulTiling.tileL2cacheTiling.nTileCntL2 = 1;
 
-    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transA(permA_);
-    tbmmTilingData_.matmulTiling.matmulRunInfo.set_transB(permB_);
-    tbmmTilingData_.set_batchSplitFactor(batchSplitFactor_);
+    tbmmTilingData_.matmulTiling.matmulRunInfo.transA = transA_;
+    tbmmTilingData_.matmulTiling.matmulRunInfo.transB = transB_;
+    tbmmTilingData_.batchSplitFactor = batchSplitFactor_;
     return ret;
 }
 
@@ -244,8 +243,8 @@ void TransposeBatchMatMulBaseTiling::DoCommonTiling()
     }
     if (args_.hasBias) {
         totalL1Size -= reserveSize * 4; // 1024: 256 * 4, biasTable 空间
-        baseN = std::min(reserveSize, baseN);
-    } // 带bias， baseN最大值为256
+        baseN = std::min(reserveSize, baseN); // 带bias， baseN最大值为256
+    }
     // DB后FP32下，L1可以存65536个数值
     uint64_t depthA1 = (totalL1Size / NUM_TWO / aDtypeSize_ / (baseM * baseK) / uint64_t(4)) * uint64_t(4);
     // DB后FP32下，L1可以存65536个数值
@@ -261,25 +260,31 @@ void TransposeBatchMatMulBaseTiling::DoCommonTiling()
         stepKb = stepKb / stepKa * stepKa;
         depthB1 = stepKb * NUM_TWO;
     }
-    tbmmTilingData_.matmulTiling.matmulTiling.set_depthA1(depthA1);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_depthB1(depthB1);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_stepKa(stepKa);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_stepKb(stepKb);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_stepM(1);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_stepN(1);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_singleCoreM(std::min(args_.mValue, baseM));
-    tbmmTilingData_.matmulTiling.matmulTiling.set_singleCoreN(std::min(args_.nValue, baseN));
-    tbmmTilingData_.matmulTiling.matmulTiling.set_singleCoreK(args_.kValue);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_baseM(baseM);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_baseN(baseN);
-    tbmmTilingData_.matmulTiling.matmulTiling.set_baseK(baseK);
+    tbmmTilingData_.matmulTiling.matmulTiling.depthA1 = depthA1;
+    tbmmTilingData_.matmulTiling.matmulTiling.depthB1 = depthB1;
+    tbmmTilingData_.matmulTiling.matmulTiling.stepKa = stepKa;
+    tbmmTilingData_.matmulTiling.matmulTiling.stepKb = stepKb;
+    tbmmTilingData_.matmulTiling.matmulTiling.stepM = 1;
+    tbmmTilingData_.matmulTiling.matmulTiling.stepN = 1;
+    tbmmTilingData_.matmulTiling.matmulTiling.singleCoreM = std::min(args_.mValue, baseM);
+    tbmmTilingData_.matmulTiling.matmulTiling.singleCoreN = std::min(args_.nValue, baseN);
+    tbmmTilingData_.matmulTiling.matmulTiling.singleCoreK = args_.kValue;
+    tbmmTilingData_.matmulTiling.matmulTiling.baseM = baseM;
+    tbmmTilingData_.matmulTiling.matmulTiling.baseN = baseN;
+    tbmmTilingData_.matmulTiling.matmulTiling.baseK = baseK;
     uint64_t batchSplitMode = batchSplitFactor_ > 1 ? 1 : 0;
     uint64_t ppMatmulMode = 0;
     uint64_t permX1 = 0;
     uint64_t permX2 = 0;
-    if (permA_ == 213UL) {permX1 = 2;} // 2 是 permList 的字典序, 2 -> [1,0,2]
-    else if(permA_ == 123UL) {permX1 = 0;}
-    tilingKey_ = GET_TPL_TILING_KEY(batchSplitMode, ppMatmulMode, permX1, permX2,);
+    if (transA_ == 213UL){
+        // 2 是 permList 的字典序, 2 -> [1,0,2]
+        permX1 = 2;
+    } else if(transA_ == 123UL) {
+        permX1 = 0;
+    }
+    tilingKey_ = GET_TPL_TILING_KEY(
+        batchSplitMode, ppMatmulMode, permX1, permX2,
+    );
 }
 
 bool TransposeBatchMatMulBaseTiling::CheckBMMTilingDataIsVaild() const {
@@ -301,13 +306,18 @@ bool TransposeBatchMatMulBaseTiling::CheckBMMTilingDataIsVaild() const {
 }
 
 ge::graphStatus TransposeBatchMatMulBaseTiling::PostTiling()
-{
-    OP_TILING_CHECK(tilingData_.GetDataSize() % sizeof(uint64_t) != 0,
-                    OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingData_.GetDataSize()),
+{   
+    size_t tilingDataSize = sizeof(TBMMTilingData);
+    OP_TILING_CHECK(tilingDataSize % sizeof(uint64_t) != 0,
+                    OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingDataSize),
                     return ge::GRAPH_FAILED);
-    tbmmTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
-        context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tbmmTilingData_.GetDataSize());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(&tbmmTilingData_), tilingDataSize);
+    if (ret != EOK){
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     context_->SetBlockDim(compileInfo_.aicNum);
     workspaceSize_ = std::max(workspaceSize_, DEFAULT_SIZE);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
@@ -498,18 +508,18 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     OP_TILING_CHECK(GetShapeBias() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(args_.opName,
                     "get bias failed"), return ge::GRAPH_FAILED);
 
-    // 通过permA 传递perm， 将 perm 转成整数， 为避免零出现perm每位加一， 例 {1,0,2}  加一-> {2,1,3} -> 213
+    // 通过transA 传递perm， 将 perm 转成整数， 为避免零出现perm每位加一， 例 {1,0,2}  加一-> {2,1,3} -> 213
     const int64_t* perm_x1 = reinterpret_cast<const int64_t*>(aPermList_->GetData());
-    permA_ = 0UL;
+    transA_ = 0UL;
     for (uint32_t i = 0; i < aPermList_->GetSize(); i++) {
-        permA_ = permA_ * 10 + perm_x1[i] + 1;   // 乘10 移位
+        transA_ = transA_ * 10 + perm_x1[i] + 1;   // 乘10 移位
     }
     const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(bPermList_->GetData());
-    permB_ = 0UL;
+    transB_ = 0UL;
     for (uint32_t i = 0; i < bPermList_->GetSize(); i++) {
-        permB_ = permB_ * 10 + perm_x2[i] + 1; // 乘10 移位
+        transB_ = transB_ * 10 + perm_x2[i] + 1; // 乘10 移位
     }
-    OP_LOGI(args_.opName, "permA_: %lu, permB_: %lu", permA_, permB_);
+    OP_LOGI(args_.opName, "transA: %lu, transB: %lu", transA_, transB_);
 
     uint64_t dtypeSize = GetSizeByDataType(args_.aType);
     uint64_t input_batch = batchInfo_.batchC;
@@ -519,9 +529,9 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     bool support_k_n = (input_k % alignLen == 0UL) && (input_n % alignLen == 0UL);
     bool support_batch_m = true;
 
-    if (permA_ == 213UL) { //213 指的是 {1,0,2} 转置
+    if (transA_ == 213UL) { //213 指的是 {1,0,2} 转置
         support_batch_m = (input_batch * input_k < 65536UL); // 65536 随路ND2NZ转换上限
-    } else if (permA_ == 123UL) { //123 指的是 {0,1,2} 转置
+    } else if (transA_ == 123UL) { //123 指的是 {0,1,2} 转置
         support_batch_m = (input_k < 65536UL); // 65536 随路ND2NZ转换上限
     } else {
         OP_LOGE(args_.opName, "perm is not supported");

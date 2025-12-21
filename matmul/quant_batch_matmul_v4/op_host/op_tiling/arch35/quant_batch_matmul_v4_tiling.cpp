@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 
 /*!
@@ -25,13 +25,13 @@
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "common/inc/error_util.h"
-// #include "op_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "error_util.h"
 #include "matmul/common/op_host/math_util.h"
 #include "platform/platform_infos_def.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data.h"
 
 using AscendC::BLOCK_CUBE;
 using namespace Ops::NN;
@@ -40,9 +40,14 @@ namespace optiling {
 constexpr uint64_t B4_IN_B32_NUMS = 8UL;
 using namespace matmul_v4;
 
-bool IsNotEmptyShape(const gert::StorageShape* storageShape)
+inline bool IsNotEmptyShape(const gert::StorageShape* storageShape)
 {
     return storageShape != nullptr && storageShape->GetStorageShape().GetShapeSize() != 0;
+}
+
+inline bool IsFormatNZ(ge::Format format)
+{
+    return format == ge::FORMAT_FRACTAL_NZ || format == ge::FORMAT_FRACTAL_NZ_C0_4;
 }
 
 void QuantBatchMatmulV4TilingBase::InitCompileInfo()
@@ -73,6 +78,10 @@ void QuantBatchMatmulV4TilingBase::InitCompileInfo()
     std::string dataMoveL12Bt;
     res = platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_data_move_l12bt", dataMoveL12Bt);
     compileInfoPtr_->supportL12BtBf16 = res && dataMoveL12Bt.find("bf16") != string::npos;
+
+    std::string mmad;
+    res = platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", mmad);
+    compileInfoPtr_->supportMmadS8S4 = res && mmad.find("s8s4") != std::string::npos;
 
     compileInfoPtr_->socVersion = ascendcPlatform.GetSocVersion();
 
@@ -131,6 +140,9 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "invalid context"),
         return ge::GRAPH_FAILED);
     inputParams_.bFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat()));
+    if (IsFormatNZ(inputParams_.bFormat)) {
+        inputParams_.bFormat = ge::FORMAT_FRACTAL_NZ;
+    }
     inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
     OP_TILING_CHECK(!AnalyzeQuantType() || !AnalyzeAttrs() || !AnalyzeInputs() || !AnalyzeDtype(),
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Fail to analyze context info"), return ge::GRAPH_FAILED);
@@ -146,10 +158,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     OP_TILING_CHECK(inputParams_.groupSize > inputParams_.kSize || inputParams_.groupSize % MIN_GROUP_SIZE != 0,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
             "Only support group size greater than %lu, less than K and align to %lu, get K[%lu] and group size[%lu]",
-            MIN_GROUP_SIZE,
-            MIN_GROUP_SIZE,
-            inputParams_.kSize,
-            inputParams_.groupSize),
+            MIN_GROUP_SIZE, MIN_GROUP_SIZE, inputParams_.kSize, inputParams_.groupSize),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(inputParams_.supportL0c2Out && !inputParams_.supportL12BtBf16 &&
                         inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
@@ -202,8 +211,8 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckContext() const
             inputParams_.opName,"only support dim num[%zu] for x, but get [%zu]", VALID_INPUT_DIM_NUM, xDimNum),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(inputParams_.supportL0c2Out &&
-            ((weightFormat != ge::FORMAT_FRACTAL_NZ && weigthDimNum != VALID_INPUT_DIM_NUM) ||
-             (weightFormat == ge::FORMAT_FRACTAL_NZ && weigthDimNum != VALID_WEIGHT_NZ_DIM_NUM)),
+            ((!IsFormatNZ(weightFormat) && weigthDimNum != VALID_INPUT_DIM_NUM) ||
+             (IsFormatNZ(weightFormat) && weigthDimNum != VALID_WEIGHT_NZ_DIM_NUM)),
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
             "only support weight dim num[%zu] for ND format and dim num[%zu] for NZ format, but get [%zu] dim for [%s]",
             VALID_INPUT_DIM_NUM,
@@ -488,14 +497,14 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeShapeSize(const gert::StorageShape* x1
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
             "Unsupported value [%lu] for m, m shouldn't be less than %ld.",
             inputParams_.mSize, MIN_SHAPE_SIZE), return false);
-    OP_TILING_CHECK(inputParams_.nSize > MAX_SHAPE_SIZE || inputParams_.nSize < MIN_SHAPE_SIZE,
+    OP_TILING_CHECK(inputParams_.nSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported value [%lu] for n. Only [%ld, %ld] is supported.",
-            inputParams_.nSize, MIN_SHAPE_SIZE, MAX_SHAPE_SIZE), return false);
-    OP_TILING_CHECK(inputParams_.kSize > MAX_SHAPE_SIZE || inputParams_.kSize < MIN_SHAPE_SIZE,
+            "Unsupported value [%lu] for n. Only values greater than or equal to %ld is supported.",
+            inputParams_.nSize, MIN_SHAPE_SIZE), return false);
+    OP_TILING_CHECK(inputParams_.kSize < MIN_SHAPE_SIZE,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Unsupported value [%lu] for k. Only [%ld, %ld] is supported.",
-            inputParams_.kSize, MIN_SHAPE_SIZE, MAX_SHAPE_SIZE), return false);
+            "Unsupported value [%lu] for k. Only values greater than or equal to %ld is supported.",
+            inputParams_.kSize, MIN_SHAPE_SIZE), return false);
     return true;
 }
 
@@ -709,15 +718,15 @@ bool QuantBatchMatmulV4TilingBase::GetTilingFromCache()
 ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
 {
 #ifdef A8W4_TILING
-    OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingData_->GetDataSize());
+    OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingDataSize_);
 
-    OP_TILING_CHECK(tilingData_->GetDataSize() % sizeof(uint64_t) != 0,
+    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingData_->GetDataSize()),
+            inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
-    context_->GetRawTilingData()->SetDataSize(tilingData_->GetDataSize());
-    uint32_t usedAicNum = tilingData_->get_cubeBlockDimM() * tilingData_->get_cubeBlockDimN();
-    uint32_t usedAivNum = tilingData_->get_vecBlockDimK() * tilingData_->get_vecBlockDimN();
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
+    uint32_t usedAicNum = tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN;
+    uint32_t usedAivNum = tilingData_->vecBlockDimK * tilingData_->vecBlockDimN;
     context_->SetBlockDim(std::max(usedAicNum, CalcTschBlockDim(usedAivNum, aicNum_, aivNum_)));
 
     OP_TILING_CHECK(
@@ -727,7 +736,12 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
     size_t *workspaces = context_->GetWorkspaceSizes(1);  // set workspace
     workspaces[0] = workspaceSize_;
 
-    tilingData_->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void*>(tilingData_), tilingDataSize_);
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
     PrintTilingData(true);
 #endif
     return ge::GRAPH_SUCCESS;
@@ -740,11 +754,11 @@ void QuantBatchMatmulV4TilingBase::PrintTilingData(bool debugLevel)
     }
 
     std::stringstream ss;
-    ss << "kAlign: " << tilingData_->get_kAlign() << " nAlign: " << tilingData_->get_nAlign()
-       << " kSize: " << tilingData_->get_kSize() << " nSize: " << tilingData_->get_nSize()
-       << " mSize: " << tilingData_->get_mSize() << " groupSize: " << tilingData_->get_groupSize()
-       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimN())
-       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->get_cubeBlockDimM());
+    ss << "kAlign: " << tilingData_->kAlign << " nAlign: " << tilingData_->nAlign
+       << " kSize: " << tilingData_->kSize << " nSize: " << tilingData_->nSize
+       << " mSize: " << tilingData_->mSize << " groupSize: " << tilingData_->groupSize
+       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
+       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->cubeBlockDimM);
 
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
@@ -758,19 +772,19 @@ void QuantBatchMatmulV4TilingBase::PrintMatMulTiling() const
 {
     std::stringstream ss;
     auto &matmulTiling = tilingData_->matmulTiling;
-    ss << "usedCoreNum " << matmulTiling.get_usedCoreNum() << " M " << matmulTiling.get_M() << " N "
-       << matmulTiling.get_N() << " Ka " << matmulTiling.get_Ka() << " Kb " << matmulTiling.get_Kb() << " singleCoreM "
-       << matmulTiling.get_singleCoreM() << " singleCoreN " << matmulTiling.get_singleCoreN() << " singleCoreK "
-       << matmulTiling.get_singleCoreK() << " baseM " << matmulTiling.get_baseM() << " baseN "
-       << matmulTiling.get_baseN() << " baseK " << matmulTiling.get_baseK() << " depthA1 " << matmulTiling.get_depthA1()
-       << " depthB1 " << matmulTiling.get_depthB1() << " stepM " << matmulTiling.get_stepM() << " stepN "
-       << matmulTiling.get_stepN() << " isBias " << matmulTiling.get_isBias() << " transLength "
-       << matmulTiling.get_transLength() << " iterateOrder " << matmulTiling.get_iterateOrder() << " shareMode "
-       << matmulTiling.get_shareMode() << " shareL1Size " << matmulTiling.get_shareL1Size() << " shareL0CSize "
-       << matmulTiling.get_shareL0CSize() << " shareUbSize " << matmulTiling.get_shareUbSize() << " batchM "
-       << matmulTiling.get_batchM() << " batchN " << matmulTiling.get_batchN() << " stepKa "
-       << matmulTiling.get_stepKa() << " stepKb " << matmulTiling.get_stepKb() << " dbL0A " << matmulTiling.get_dbL0A()
-       << " dbL0B " << matmulTiling.get_dbL0B() << " dbL0C " << matmulTiling.get_dbL0C();
+    ss << "usedCoreNum " << matmulTiling.usedCoreNum << " M " << matmulTiling.M << " N "
+       << matmulTiling.N << " Ka " << matmulTiling.Ka << " Kb " << matmulTiling.Kb << " singleCoreM "
+       << matmulTiling.singleCoreM << " singleCoreN " << matmulTiling.singleCoreN << " singleCoreK "
+       << matmulTiling.singleCoreK << " baseM " << matmulTiling.baseM << " baseN "
+       << matmulTiling.baseN << " baseK " << matmulTiling.baseK << " depthA1 " << matmulTiling.depthA1
+       << " depthB1 " << matmulTiling.depthB1 << " stepM " << matmulTiling.stepM << " stepN "
+       << matmulTiling.stepN << " isBias " << matmulTiling.isBias << " transLength "
+       << matmulTiling.transLength << " iterateOrder " << matmulTiling.iterateOrder << " shareMode "
+       << matmulTiling.shareMode << " shareL1Size " << matmulTiling.shareL1Size << " shareL0CSize "
+       << matmulTiling.shareL0CSize << " shareUbSize " << matmulTiling.shareUbSize << " batchM "
+       << matmulTiling.batchM << " batchN " << matmulTiling.batchN << " stepKa "
+       << matmulTiling.stepKa << " stepKb " << matmulTiling.stepKb << " dbL0A " << matmulTiling.dbL0A
+       << " dbL0B " << matmulTiling.dbL0B << " dbL0C " << matmulTiling.dbL0C;
 
     OPS_LOG_I(inputParams_.opName, "matmul tiling: %s", ss.str().c_str());
 }
@@ -778,7 +792,7 @@ void QuantBatchMatmulV4TilingBase::PrintMatMulTiling() const
 ge::graphStatus QuantBatchMatmulV4TilingBase::InstantiateTilingData()
 {
     if (tilingData_ == nullptr) {
-        tilingDataManager_ = std::make_unique<QuantBatchMatmulV4TilingData>();
+        tilingDataManager_ = std::make_unique<qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams>();
         OP_TILING_CHECK(tilingDataManager_ == nullptr,
                         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "failed to instantiate tilingData"),
                         return ge::GRAPH_FAILED);
@@ -787,11 +801,11 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::InstantiateTilingData()
     OP_TILING_CHECK(tilingData_ == nullptr,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "failed to instantiate tilingData"),
         return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingData_->GetDataSize(),
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
             "tiling data capacity %zu < actual tiling data size %zu",
             context_->GetRawTilingData()->GetCapacity(),
-            tilingData_->GetDataSize()),
+            tilingDataSize_),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

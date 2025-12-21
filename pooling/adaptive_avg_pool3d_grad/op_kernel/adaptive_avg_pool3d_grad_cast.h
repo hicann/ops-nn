@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file adaptive_avg_pool3d_grad_cast.h
@@ -118,7 +118,7 @@ public:
         if (isAtomicAdd == 0) {
             return;
         }
-        Duplicate(inputLocalFloat, (float)0, yNumPerCalc * ncAlign);
+        Duplicate(outputLocalFloat, (float)0, yNumPerCalc * ncAlign);
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         for (uint64_t taskIdx = 0; taskIdx < loopNum; taskIdx++) {
@@ -127,7 +127,7 @@ public:
             if (taskIdx == loopNum - 1) {
                 clearCopyNum = clearTaskNumLastLoop * ncNum * sizeof(float);
             }
-            DataCopyPad(workspaceGm[clearOffset], inputLocalFloat, {1, (uint32_t)(clearCopyNum), 0, 0, 0});
+            DataCopyPad(workspaceGm[clearOffset], outputLocalFloat, {1, (uint32_t)(clearCopyNum), 0, 0, 0});
         }
 
         if ASCEND_IS_AIV {

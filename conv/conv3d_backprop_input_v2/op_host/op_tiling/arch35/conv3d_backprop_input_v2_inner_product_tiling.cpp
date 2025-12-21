@@ -1,18 +1,19 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_backprop_input_v2_inner_product_tiling.cpp
  * \brief
  */
 
+#include "conv3d_backprop_input_v2_inner_product_tiling.h"
 #include <map>
 #include <numeric>
 #include <log/log.h>
@@ -23,13 +24,65 @@
 #include "tiling_base/tiling_key.h"
 #include "error_util.h"
 #include "conv/common/op_host/op_tiling/platform_util.h"
-#include "conv3d_backprop_input_v2_inner_product_tiling.h"
+#include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
+
+namespace {
+constexpr uint8_t NO_TILING_HWK = 0;
+constexpr uint8_t TILING_HK = 1;
+constexpr uint8_t TILING_HK_WK = 2;
+constexpr uint8_t ENABLE_C04 = 1;
+constexpr uint8_t ENABLE_TILING_HK = 2;
+constexpr uint8_t ENABLE_TILING_HK_WK = 3;
+}
 
 namespace Ops {
 namespace NN {
 namespace Conv {
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
+{
+    int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
+        (runInfo_.kernel_w - 1) * runInfo_.dilation_w - runInfo_.backprop_pad_l;
+    uint32_t minBaseN = BLOCK_CUBE;
+    uint32_t minBaseM = MAX_BASE_MN;
+    int32_t curHo = CalFmapH(minBaseM);
+    uint64_t minA1Size = static_cast<uint64_t>(dtypeByte_) * curHo *
+        runInfo_.dedy_w * runInfo_.stride_w * blockSize_;
+    uint64_t minB1Size = static_cast<uint64_t>(dtypeByte_) * tilingRunInfo_.lenHkWkC0 * minBaseN;
+    if ((minA1Size + minB1Size) <= platformInfo_.l1_size &&
+        runInfo_.backprop_pad_l <= PAD_DIM_UP && bpPadRight <= PAD_DIM_UP &&
+        runInfo_.backprop_pad_u <= PAD_DIM_UP && runInfo_.backprop_pad_d <= PAD_DIM_UP &&
+        runInfo_.dilation_h <= PAD_DIM_UP && runInfo_.dilation_w <= PAD_DIM_UP) {
+        tilingRunInfo_.tilingHkWkMode = NO_TILING_HWK;
+        return ge::GRAPH_SUCCESS;
+    }
+
+    if (runInfo_.groups != 1) {
+        return ge::GRAPH_FAILED; // 切hk wk不支持上述规格
+    }
+
+    runInfo_.initOutputFlag = 1; // 存在跳过场景，默认开启清零
+    minB1Size /= runInfo_.kernel_h;
+    curHo = CalFmapH(minBaseM, true);
+    minA1Size = static_cast<uint64_t>(dtypeByte_) * curHo *
+        runInfo_.dedy_w * runInfo_.stride_w * blockSize_;
+    if ((minA1Size + minB1Size) <= platformInfo_.l1_size && runInfo_.dilation_w <= PAD_DIM_UP &&
+        runInfo_.backprop_pad_l <= PAD_DIM_UP && bpPadRight <= PAD_DIM_UP) {
+        tilingRunInfo_.tilingHkWkMode = TILING_HK;
+        tilingRunInfo_.lenHkWkC0 = runInfo_.kernel_w * tilingRunInfo_.k0;
+        // kernel_h是单独的循环，不算在L0的K值上
+        tilingRunInfo_.kValue = runInfo_.kernel_w * runInfo_.dedy_cout1_g * tilingRunInfo_.k0;
+    } else {
+        tilingRunInfo_.tilingHkWkMode = TILING_HK_WK;
+        tilingRunInfo_.lenHkWkC0 = tilingRunInfo_.k0;
+        // kernel_h kernel_w是单独的循环，不算在L0的K值上
+        tilingRunInfo_.kValue = runInfo_.dedy_cout1_g * tilingRunInfo_.k0;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 {
@@ -43,7 +96,9 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     }
 
     auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
+    auto scaleShape = context_->GetOptionalInputShape(SCALE_INDEX);
     hasBiasFlag_ = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
+    hasScaleFlag_ = scaleShape != nullptr && scaleShape->GetStorageShape().GetShapeSize() != 0;
     blockSize_ = BYTE_BLOCK / runInfo_.a_dtype_bytes;
     dtypeByte_ = runInfo_.a_dtype_bytes;
     dtypeByteL0c_ = runInfo_.c_dtype_bytes;
@@ -61,6 +116,11 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 {
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
+        platform_ascendc::SocVersion::ASCEND910_95 && !IsSocVersionFuse(context_)) {
+        return ge::GRAPH_SUCCESS;
+    }
+
     if (GetPublicShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -75,6 +135,9 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
     tilingRunInfo_.kValue = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w * runInfo_.dedy_cout1_g *
                             tilingRunInfo_.k0; // kernel_d是单独的循环，不算在L0的K值上
     tilingRunInfo_.lenHkWkC0 = runInfo_.kernel_h * runInfo_.kernel_w * tilingRunInfo_.k0;
+    if (GetLargeHkWkTilingMode() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     tilingRunInfo_.enableC04Flag = CheckC04Enable();
     if (tilingRunInfo_.enableC04Flag) {
@@ -87,15 +150,24 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+uint64_t Conv3DDXV2InnerProductTiling::GetCVRation()
+{
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context_->GetNodeName(), "platformInfoPtr is null");
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+
+    uint64_t aivCoreCount = ascendcPlatform.GetCoreNumAiv();
+    uint64_t aicCoreCount = static_cast<uint64_t>(context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->core_num);
+    if (aicCoreCount && (aivCoreCount >= aicCoreCount)) {
+        return aivCoreCount / aicCoreCount;
+    }
+    return 2; // v100, v120 C:V=1:2
+}
+
 bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
 {
-    const auto fmap_desc = context_->GetInputDesc(OUTPUT_BP_INDEX);
-    auto fmap_format = static_cast<ge::Format>(ge::GetPrimaryFormat(fmap_desc->GetStorageFormat()));
-    const auto filter_desc = context_->GetInputDesc(FILTER_INDEX);
-    auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
-    const auto output_desc = context_->GetOutputDesc(Y_INDEX);
-    auto output_format = static_cast<ge::Format>(ge::GetPrimaryFormat(output_desc->GetStorageFormat()));
-    if (fmap_format != ge::FORMAT_NCDHW || filter_format != ge::FORMAT_NCDHW || output_format != ge::FORMAT_NCDHW ||
+    if (runInfo_.outBackpropFormat != ge::FORMAT_NCDHW || runInfo_.filterFormat != ge::FORMAT_NCDHW ||
+        runInfo_.yFormat != ge::FORMAT_NCDHW || tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK ||
         static_cast<int32_t>(dtypeByte_) != ge::GetSizeByDataType(ge::DT_BF16) ||
         static_cast<uint32_t>(runInfo_.dedy_cout) > C04_COUT_SIZE ||
         (runInfo_.kernel_h == 1 && runInfo_.kernel_w == 1) || runInfo_.groups != 1 || runInfo_.stride_h != 1 ||
@@ -104,7 +176,7 @@ bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
         return false;
     }
 
-    int64_t c04HalfUbSize = (UB_SIZE - VECTOR_REG_WIDTH - (VECTOR_REG_WIDTH >> 3) - ONE_BLOCK_SIZE) >> 1;
+    int64_t c04HalfUbSize = (platformInfo_.ub_size - VECTOR_REG_WIDTH - (VECTOR_REG_WIDTH >> 3) - ONE_BLOCK_SIZE) >> 1;
     int64_t minNdUbSize = static_cast<int64_t>(C04_COUT_SIZE) * BLOCK_CUBE * runInfo_.kernel_d * runInfo_.kernel_h *
                           runInfo_.kernel_w * dtypeByte_;
     int64_t minNzUbSize = Ops::Base::CeilAlign(
@@ -121,13 +193,8 @@ bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
 bool Conv3DDXV2InnerProductTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95) {
-        return false;
-    }
-
-    // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
-    bool is8bit = static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8);
-    if (is8bit && runInfo_.filterFormat != ge::FORMAT_NDHWC) {
+        platform_ascendc::SocVersion::ASCEND910_95 &&
+        !IsSocVersionFuse(context_)) {
         return false;
     }
 
@@ -162,7 +229,7 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTrans16bitPlus(
     uint64_t cntCoutCin1 =
         static_cast<uint64_t>(runInfo_.dedy_cout) *
         Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_cin), static_cast<uint64_t>(tilingRunInfo_.n0));
-    uint64_t vecLoopTime = Ops::Base::CeilDiv(cntCoutCin1, static_cast<uint64_t>(coreNum_) * TWO);
+    uint64_t vecLoopTime = Ops::Base::CeilDiv(cntCoutCin1, static_cast<uint64_t>(coreNum_) * GetCVRation());
     bool isVecLoopTimeSatisfy = vecLoopTime <= 1U; // 此时前置transpose的开销基本被scalar掩盖
     if (!isVecLoopTimeSatisfy && !(Ops::Base::CeilDiv(filterCubeLoadRepeats, cubeTotalCnt) > 1) &&
         !(l0Params.baseM * NUM_FIVE <=
@@ -179,13 +246,10 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
     if (runInfo_.filterFormat != ge::FORMAT_NCDHW) {
         return false; // 只支持Filter NCDHW
     }
-    if (tilingRunInfo_.enableC04Flag) {
-        return false; // 与C04特性互斥
+    if (tilingRunInfo_.enableC04Flag || tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK) {
+        return false; // 与C04特性及切hkwk互斥
     }
-    if (static_cast<int32_t>(dtypeByte_) != ge::GetSizeByDataType(ge::DT_FLOAT) &&
-        static_cast<int32_t>(dtypeByte_) != ge::GetSizeByDataType(ge::DT_BF16)) {
-        return false; // 当前只支持16bit, 32bit
-    }
+
     if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16)) {
         if (!CheckVecTrans16bitPlus(coreParams, l0Params)) {
             return false;
@@ -203,12 +267,16 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
     if (runInfo_.dedx_cin <= runInfo_.kernel_h * runInfo_.kernel_w) {
         return false; // DN2NZ的效率判定条件
     }
-    // 当前UB vecin、vecout上需要完整加载Cin0*Dk*Hk*Wk, Cin0即n0固定是16
+    // 当前UB vecin、vecout上需要完整加载Cin0*Dk*Hk*Wk, Cin0即n0固定是16, 8bit时则为32
     uint64_t vecUseSize =
         tilingRunInfo_.n0 * runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w * dtypeByte_ * TWO;
-    if (vecUseSize > UB_SIZE) {
+    if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8)) {
+        return vecUseSize * TWO <= platformInfo_.ub_size; // 8bit时cin0会变成32，因此n需要再乘2
+    }
+    if (vecUseSize > platformInfo_.ub_size) {
         return false;
     }
+
     // 核内切K，一轮任务内多次LoadToB1
     bool isMultiLoadToB1 = Ops::Base::CeilDiv(
                                tilingRunInfo_.kValue,
@@ -216,9 +284,8 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
                            (runInfo_.kernel_d > 1 && runInfo_.dedx_d > 1);
     // 正常数据类型，baseM>=512时MMAD基本能掩盖MTE2
     bool isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_512;
-    if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16) &&
-        static_cast<uint32_t>(runInfo_.kernel_h) <= NUM_THREE &&
-        static_cast<uint32_t>(runInfo_.kernel_w) <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
+    if (static_cast<int32_t>(dtypeByte_) == ge::GetSizeByDataType(ge::DT_BF16) && runInfo_.kernel_h <= NUM_THREE &&
+        runInfo_.kernel_w <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
         // 16bit的loadToB1不需要transpose，MTE2带宽压力相对较小，实测baseM>=384时MMAD基本能掩盖MTE2
         isMmadCoverMte2 = l0Params.baseM >= (BASIC_BLOCK_SIZE_256 + BASIC_BLOCK_SIZE_128);
     }
@@ -236,22 +303,25 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
 void Conv3DDXV2InnerProductTiling::SetTilingCondition(
     const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
-    if (runInfo_.filterFormat == ge::FORMAT_DHWCN) {
-        loadB2Condition_ = B2_REVERSE_ONLY; // DHWCN只逆序不转置
-        return;
-    }
     tilingRunInfo_.enableVecTransFlag = CheckVecTransEnable(coreParams, l1Params, l0Params);
     loadB1Condition_ = 0;
     if (tilingRunInfo_.enableC04Flag) {
-        loadB1Condition_ = 1;
-    } else if (tilingRunInfo_.enableVecTransFlag) {
-        loadB1Condition_ = 2; // 2: 表示loadB1时只做DN2NZ不做Transpose
+        loadB1Condition_ = ENABLE_C04;
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
+        loadB1Condition_ = ENABLE_TILING_HK; // 表示load2b1时只加载wk
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        loadB1Condition_ = ENABLE_TILING_HK_WK;   // 表示load2b1时hk wk均不加载，每次只加载hkwk=1的数据
     }
 
     a1DbFlag_ = l1Params.al1Pbuffer == DB_ON;
     b1DbFlag_ = l1Params.bl1Pbuffer == DB_ON;
     if (tilingRunInfo_.enableC04Flag) {
         loadB2Condition_ = B2_NO_TRANSPOSE_NO_REVERSE; // 功能约束, 不转置不逆序
+        return;
+    }
+
+    if (runInfo_.filterFormat == ge::FORMAT_DHWCN) {
+        loadB2Condition_ = B2_REVERSE_ONLY; // DHWCN只逆序不转置
         return;
     }
 
@@ -264,7 +334,7 @@ void Conv3DDXV2InnerProductTiling::SetTilingCondition(
 
     uint32_t kernelHW = runInfo_.kernel_h * runInfo_.kernel_w;
     uint64_t kernelDHW = static_cast<uint64_t>(runInfo_.kernel_d) * kernelHW;
-    if (kernelDHW == ONE_U64) {
+    if (kernelDHW == ONE_U64 && tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK) {
         loadB2Condition_ = B2_TRANSPOSE_ONLY; // kernel为1, 不需要逆序，DHWCN除外
         return;
     }
@@ -281,46 +351,51 @@ void Conv3DDXV2InnerProductTiling::SetTilingCondition(
 void Conv3DDXV2InnerProductTiling::SetCommonTilingData(
     const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
-    TConv3DInputV2TilingAdvance& dxt = tilingData_.conv3DDxTiling;
+    conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt = tilingData_.conv3DDxTiling;
     // singleCore
-    dxt.set_singleCoreBatch(1);
-    dxt.set_singleCoreGroup(1);
-    dxt.set_singleCoreDin(coreParams.singleCoreDin);
+    dxt.singleCoreBatch = 1;
+    dxt.singleCoreGroup = 1;
+    dxt.singleCoreDin = coreParams.singleCoreDin;
 
-    tilingData_.params.set_batchDim(1);
-    tilingData_.params.set_groupDim(1);
-    tilingData_.params.set_mDim(1);
-    tilingData_.params.set_kDim(1);
-    tilingData_.params.set_nDim(1);
-    tilingData_.params.set_dDim(1);
+    tilingData_.params.batchDim = 1;
+    tilingData_.params.groupDim = 1;
+    tilingData_.params.mDim = 1;
+    tilingData_.params.kDim = 1;
+    tilingData_.params.nDim = 1;
+    tilingData_.params.dDim = 1;
 
-    dxt.set_singleCoreM(coreParams.singleCoreM);
-    dxt.set_singleCoreCout(coreParams.singleCoreCout);
-    dxt.set_singleCoreCin(coreParams.singleCoreCin);
-    dxt.set_singleIterateDk(runInfo_.kernel_d);
+    dxt.singleCoreM = coreParams.singleCoreM;
+    dxt.singleCoreCout = coreParams.singleCoreCout;
+    dxt.singleCoreCin = coreParams.singleCoreCin;
+    dxt.singleIterateDk = runInfo_.kernel_d;
 
-    dxt.set_baseM(l0Params.baseM);
-    dxt.set_baseK(l0Params.baseK);
-    dxt.set_baseN(l0Params.baseN);
-    dxt.set_stepM(l1Params.stepM);
-    dxt.set_stepN(l1Params.stepN);
-    dxt.set_stepKa(l1Params.stepKa);
-    dxt.set_stepKb(l1Params.stepKb);
+    dxt.baseM = l0Params.baseM;
+    dxt.baseK = l0Params.baseK;
+    dxt.baseN = l0Params.baseN;
+    dxt.stepM = l1Params.stepM;
+    dxt.stepN = l1Params.stepN;
+    dxt.stepKa = l1Params.stepKa;
+    dxt.stepKb = l1Params.stepKb;
 
-    dxt.set_al0Pbuffer(l0Params.al0Pbuffer); // 默认开
-    dxt.set_bl0Pbuffer(l0Params.bl0Pbuffer); // 默认开
-    dxt.set_cl0Pbuffer(l0Params.cl0Pbuffer);
-    dxt.set_al1Pbuffer(l1Params.al1Pbuffer);
-    dxt.set_bl1Pbuffer(l1Params.bl1Pbuffer);
-    dxt.set_iterateOrder(l1Params.iterateOrder);
+    dxt.al0Pbuffer = l0Params.al0Pbuffer; // 默认开
+    dxt.bl0Pbuffer = l0Params.bl0Pbuffer; // 默认开
+    dxt.cl0Pbuffer = l0Params.cl0Pbuffer;
+    dxt.al1Pbuffer = l1Params.al1Pbuffer;
+    dxt.bl1Pbuffer = l1Params.bl1Pbuffer;
+    dxt.iterateOrder = l1Params.iterateOrder;
+    dxt.enableVecTrans = tilingRunInfo_.enableVecTransFlag;
+    if (tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK) {
+        dxt.initOutputFlag = runInfo_.initOutputFlag;
+    }
+    dxt.isBiasFullLoad = l1Params.isBiasFullLoad;
 }
 
 void Conv3DDXV2InnerProductTiling::SetTilingData(
     const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     SetCommonTilingData(coreParams, l1Params, l0Params);
-    tilingData_.conv3DDxKSTiling.set_kSCoutFullLoad(0);
-    tilingData_.conv3DDxKSTiling.set_kSUseWorkSpace(0);
+    tilingData_.conv3DDxKSTiling.kSCoutFullLoad = 0;
+    tilingData_.conv3DDxKSTiling.kSUseWorkSpace = 0;
 
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t totalCnt = static_cast<uint64_t>(runInfo_.batch_n) *
@@ -331,10 +406,10 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(
         uint64_t cntCoutCin1 =
             static_cast<uint64_t>(runInfo_.dedy_cout) *
             Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedx_cin), static_cast<uint64_t>(tilingRunInfo_.n0));
-        uint64_t tmpCnt = Ops::Base::CeilDiv(cntCoutCin1, TWO); // v100, v120 C:V=1:2
+        uint64_t tmpCnt = Ops::Base::CeilDiv(cntCoutCin1, GetCVRation()); // v100, v120 C:V=1:2
         totalCnt = std::max(totalCnt, tmpCnt); // vector需要的aiCoreNum和cube需要的aiCoreNum不一定一样，取大值
     }
-    tilingData_.params.set_coreNum(std::min(totalCnt, static_cast<uint64_t>(coreNum_)));
+    tilingData_.params.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
 }
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
@@ -347,7 +422,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitStepMN(l1Params);
+    InitL1Params(l1Params);
 
     // 设置MN和循环轴的核间切分策略，只允许调小baseMN
     CoreTilingParams coreParams;
@@ -393,7 +468,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = RecursiveSum(loadB2Condition_, 0, 0, true, loadB1Condition_);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, 0, true, loadB1Condition_);
+    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_ is: [%u, %u]", loadB2Condition_, loadB1Condition_);
     return tilingKey;
 }
 
@@ -435,12 +511,41 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     uint64_t bL1Size = 0;
     CalcBL1Size(l1Params, l0Params, bL1Size);
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
+        kernelHW = runInfo_.kernel_w;
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        kernelHW = ONE_U64;
+    }
+    bool isL1SplitHk = tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK;
     uint64_t coutNum = std::max(l1Params.stepKa * l0Params.baseK / kernelHW, ONE_U64);
-    uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l1Params.stepM * l0Params.baseM)) * runInfo_.dedy_w *
-                          runInfo_.stride_w * coutNum;
+    uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l1Params.stepM * l0Params.baseM, isL1SplitHk)) *
+        runInfo_.dedy_w * runInfo_.stride_w * coutNum;
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        a1PixelNum = BASIC_BLOCK_SIZE_256 * coutNum;    // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256
+    }
     uint64_t aL1Size = a1PixelNum * dtypeByte_ * l1Params.al1Pbuffer;
 
-    return aL1Size + bL1Size <= L1_SIZE;
+    if (IsSocVersionFuse(context_)) {
+        uint64_t biasSize = 0;
+        uint64_t scaleSize = 0;
+        if (hasScaleFlag_) {
+            scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin;
+        }
+        if (hasBiasFlag_) {
+            uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
+    ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
+            biasSize = dtypeByteBtBuffer * runInfo_.dedx_cin;
+        }
+        return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
+    }
+    return aL1Size + bL1Size <= platformInfo_.l1_size;
+}
+
+void Conv3DDXV2InnerProductTiling::CloseL0PingPong(L0TilingParams& l0Params)
+{
+    l0Params.al0Pbuffer = DB_OFF;
+    l0Params.bl0Pbuffer = DB_OFF;
+    l0Params.cl0Pbuffer = DB_OFF;
 }
 
 void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
@@ -448,13 +553,16 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.al0Pbuffer = DB_ON;
     l0Params.bl0Pbuffer = DB_ON;
     l0Params.cl0Pbuffer = DB_OFF;
+    if (IsSocVersionFuse(context_)) {
+        CloseL0PingPong(l0Params); // 耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
+    }
 
     // Kernel大于1时格式转换Bound, baseM大，baseN小, 方便掩盖右矩阵转换
     // Kernel为1时带宽需求高使用计算访存比最高的256*256基本块
     uint32_t bestBaseM = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseN = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByte_;
-    if (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1) {
+    if (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 && tilingRunInfo_.tilingHkWkMode != TILING_HK_WK) {
         bestBaseM = BASIC_BLOCK_SIZE_512;
         bestBaseN = BASIC_BLOCK_SIZE_128;
         bestBaseK = BASIC_BLOCK_SIZE_64 / dtypeByte_;
@@ -471,18 +579,17 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     uint32_t baseM = l0Params.baseM;
     uint32_t baseN = l0Params.baseN;
     uint32_t baseK = l0Params.baseK;
-    uint32_t maxL0ABaseM = L0_AB_SIZE / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByte_);
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByte_);
     baseM = std::min(baseM, maxL0ABaseM); // L0A_SIZE的上界保护
     // only support al0Pbuffer == bl0Pbuffer = 2
-    uint32_t l0abMaxNum = L0_AB_SIZE / l0Params.al0Pbuffer / dtypeByte_;
-    uint32_t l0cMaxNum = L0C_SIZE / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByte_;
+    uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
     uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
 
     // K对齐约束大，优先做调整, 从最优基本块往下找到能满足搬运对齐的块
     baseK = std::min(static_cast<uint64_t>(baseK), tilingRunInfo.kValue);
     baseN = std::min(static_cast<uint64_t>(baseN), tilingRunInfo.nValue);
     baseM = std::min(static_cast<uint64_t>(baseM), alingedMValue);
-
     // N和K方向如果都比较小，M方向优化满足搬运对齐，而且做边界保护
     if (baseN < l0Params.baseN) {
         // 基本块太小时计算无法掩盖scalar, 限制baseM, 避免baseK变成16
@@ -523,18 +630,36 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     l0Params.baseN = baseN;
     l0Params.baseK = baseK;
 
-    if (l0Params.baseM * l0Params.baseN * ge::GetSizeByDataType(ge::DT_FLOAT) * DB_ON <= L0C_SIZE) {
+    if (l0Params.baseM * l0Params.baseN * ge::GetSizeByDataType(ge::DT_FLOAT) * DB_ON <= platformInfo_.l0_c_size) {
         l0Params.cl0Pbuffer = DB_ON;
     } else {
         l0Params.cl0Pbuffer = DB_OFF;
     }
 }
 
-void Conv3DDXV2InnerProductTiling::InitStepMN(L1TilingParams& l1Params)
+void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params)
 {
-    l1Params.iterateOrder = 1; // 默认orderN, 暂无左矩阵全载逻辑
+    if (!IsSocVersionFuse(context_)) {
+        l1Params.isBiasFullLoad = 0U;
+        return;
+    }
+    uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
+        ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
+    if (runInfo_.dedx_cin * dtypeByteBtBuffer > BT_BUFFER_SIZE) {
+        l1Params.isBiasFullLoad = 0U;
+        OP_LOGD(opName_, "Bias too big, disable bias full load");
+    } else {
+        l1Params.isBiasFullLoad = 1U;
+        OP_LOGD(opName_, "Enable bias full load");
+    }
+}
+
+void Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params)
+{
+    l1Params.iterateOrder = 1U; // 默认orderN, 暂无左矩阵全载逻辑
     l1Params.stepM = ONE_U32;
     l1Params.stepN = ONE_U32; // 固定1, 暂不支持其他场景
+    UpdateIsBiasFullLoad(l1Params);
 }
 
 static inline uint32_t GetMaxDivisor(uint32_t a, uint32_t b, uint32_t step)
@@ -586,8 +711,8 @@ void Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNKCore(
     L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize, bool isNeedShrinkStepKa)
 {
     uint64_t baseNHkWkC0Size = tilingRunInfo_.lenHkWkC0 * l0Params.baseN * dtypeByte_;
-    uint64_t l1BSize = L1_SIZE / TWO / l1Params.bl1Pbuffer;
-    uint64_t l1ASize = L1_SIZE / TWO / l1Params.al1Pbuffer;
+    uint64_t l1BSize = platformInfo_.l1_size / TWO / l1Params.bl1Pbuffer;
+    uint64_t l1ASize = platformInfo_.l1_size / TWO / l1Params.al1Pbuffer;
 
     // fp32场景下Cout0为16，c0为8，而tiling中的Cout1是以C0对其，因此需保证加载的cout1要为2的倍数
     uint32_t cout1B1 = std::max(ONE_U64, l1BSize / baseNHkWkC0Size);
@@ -632,9 +757,12 @@ void Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNKCore(
 
 void Conv3DDXV2InnerProductTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
-    uint32_t hoCal = CalFmapH(l0Params.baseM); // 此处默认stepM=1
-    uint64_t curHiWiSize =
-        static_cast<uint64_t>(dtypeByte_) * hoCal * runInfo_.dedy_w * runInfo_.stride_w * tilingRunInfo_.m0;
+    bool isL1SplitHk = tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK;
+    uint32_t hoCal = CalFmapH(l0Params.baseM, isL1SplitHk);  // 此处默认stepM=1
+    uint64_t curHiWiSize = static_cast<uint64_t>(dtypeByte_) * hoCal * runInfo_.dedy_w * runInfo_.stride_w * tilingRunInfo_.m0;
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        curHiWiSize = static_cast<uint64_t>(dtypeByte_) * BASIC_BLOCK_SIZE_256;    // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256
+    }
 
     EqualL1MatchStepMNKCore(l1Params, l0Params, curHiWiSize);
 }
@@ -687,7 +815,7 @@ void Conv3DDXV2InnerProductTiling::LadderMatchStepMNK(L1TilingParams& l1Params, 
         Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.dedy_cout1_g), static_cast<uint64_t>(l1Params.al1Pbuffer)) *
         tilingRunInfo_.lenHkWkC0);
     maxKL1 = std::min(
-        maxKL1, Ops::Base::CeilDiv(static_cast<uint32_t>(L1_SIZE) / dtypeByte_, l0Params.baseN * l1Params.al1Pbuffer));
+        maxKL1, Ops::Base::CeilDiv(static_cast<uint32_t>(platformInfo_.l1_size) / dtypeByte_, l0Params.baseN * l1Params.al1Pbuffer));
     uint32_t stepKa = Ops::Base::CeilDiv(maxKL1, l0Params.baseK);
     uint32_t stepKb = stepKa;
     while (stepKa > ONE_U32 && stepKb > ONE_U32) {
@@ -734,6 +862,7 @@ bool Conv3DDXV2InnerProductTiling::ShrinkBaseMN(L1TilingParams& l1Params, L0Tili
     uint32_t baseNOri = l0Params.baseN;
     uint32_t baseMStart = l0Params.baseM;
     uint32_t baseNStart = l0Params.baseN;
+    l0Params.baseK = tilingRunInfo_.k0; // 先将basek降到最小, 找到能够小于L1 Size的baseM和baseN
 
     uint32_t minBaseM = std::max(static_cast<uint32_t>(runInfo_.dedx_w), static_cast<uint32_t>(tilingRunInfo_.m0));
     while (baseMStart > minBaseM || baseNStart > static_cast<uint32_t>(tilingRunInfo_.m0)) {
@@ -774,10 +903,13 @@ void Conv3DDXV2InnerProductTiling::ShrinkBasicBlock(L1TilingParams& l1Params, L0
 
     if (ShrinkBaseMN(l1Params, l0Params)) {
         // MN合法了，适当回调K
-        uint32_t l0MaxKNum = L0_AB_SIZE / l0Params.al0Pbuffer / dtypeByte_ / std::max(l0Params.baseM, l0Params.baseN);
+        uint32_t l0MaxKNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByte_ / std::max(l0Params.baseM, l0Params.baseN);
         uint32_t maxBaseK = std::min(
             static_cast<uint64_t>(std::max(l0MaxKNum / tilingRunInfo_.k0, ONE_U32) * tilingRunInfo_.k0),
             tilingRunInfo_.kValue);
+        if (maxBaseK == l0Params.baseK) {
+            return; // 当前basek已经最大，无需回调
+        }
         if (ShrinkBaseK(l1Params, l0Params, maxBaseK)) {
             return;
         }
@@ -848,6 +980,11 @@ void Conv3DDXV2InnerProductTiling::SetSingleCoreInfoCore(
         if (alignedWiAl1 * mCnt >= tilingRunInfo_.mValue) {
             coreParams.singleCoreM = alignedWiAl1;
         }
+    }
+
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {  // 超过256时，切hkwk或导致load3d pad上限超过255，超出指令范围
+        coreParams.singleCoreM = runInfo_.dedx_w;
+        l0Params.baseM = std::min(l0Params.baseM, BASIC_BLOCK_SIZE_256);
     }
 
     if (coreParams.singleCoreM < l0Params.baseM) {

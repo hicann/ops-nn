@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv_bp_func.h
@@ -48,67 +48,56 @@ template <class Intf>
 __aicore__ inline void CheckTiling(Intf *self)
 {
 #ifdef __CCE_KT_TEST__
-    ASCENDC_ASSERT((self->ctx.tiling_->batch > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch); });
-    ASCENDC_ASSERT((self->ctx.tiling_->cin > 0), {
-        KERNEL_LOG(KERNEL_ERROR, "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->cout > 0), {
-        KERNEL_LOG(KERNEL_ERROR, "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->cin1G > 0), {
-        KERNEL_LOG(KERNEL_ERROR, "orignal cin1G is %d , which should be larger than 0", self->ctx.tiling_->cin1G);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->cout1G > 0), {
-        KERNEL_LOG(KERNEL_ERROR, "orignal cout1G is %d , which should be larger than 0", self->ctx.tiling_->cout1G);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->dout > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal dout is %d , which should be larger than 0", self->ctx.tiling_->dout); });
-    ASCENDC_ASSERT((self->ctx.tiling_->ho > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho); });
-    ASCENDC_ASSERT((self->ctx.tiling_->wo > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo); });
-    ASCENDC_ASSERT((self->ctx.tiling_->di > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal di is %d , which should be larger than 0", self->ctx.tiling_->di); });
-    ASCENDC_ASSERT((self->ctx.tiling_->hi > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi); });
-    ASCENDC_ASSERT((self->ctx.tiling_->wi > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi); });
-    ASCENDC_ASSERT((self->ctx.tiling_->dk > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal dk is %d , which should be larger than 0", self->ctx.tiling_->dk); });
-    ASCENDC_ASSERT((self->ctx.tiling_->hk > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk); });
-    ASCENDC_ASSERT((self->ctx.tiling_->wk > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk); });
-    ASCENDC_ASSERT((self->ctx.tiling_->singleCoreBatch > 0), {
-        KERNEL_LOG(
-            KERNEL_ERROR, "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->singleCoreCout > 0), {
-        KERNEL_LOG(
-            KERNEL_ERROR, "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->singleCoreHo > 0), {
-        KERNEL_LOG(KERNEL_ERROR, "singleCoreHo is %d , which should be larger than 0", self->ctx.tiling_->singleCoreHo);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->singleCoreCin > 0), {
-        KERNEL_LOG(
-            KERNEL_ERROR, "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
-    });
-    ASCENDC_ASSERT((self->ctx.tiling_->baseM > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM); });
-    ASCENDC_ASSERT((self->ctx.tiling_->baseK > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK); });
-    ASCENDC_ASSERT((self->ctx.tiling_->baseN > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN); });
-    ASCENDC_ASSERT((self->ctx.tiling_->stepM > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM); });
-    ASCENDC_ASSERT((self->ctx.tiling_->stepN > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN); });
-    ASCENDC_ASSERT((self->ctx.tiling_->stepKa > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa); });
-    ASCENDC_ASSERT((self->ctx.tiling_->stepKb > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb); });
+    ascendc_assert((self->ctx.tiling_->batch > 0),
+        "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch);
+    ascendc_assert((self->ctx.tiling_->cin > 0), 
+        "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
+    ascendc_assert((self->ctx.tiling_->cout > 0), 
+    "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
+    ascendc_assert((self->ctx.tiling_->cin1G > 0), 
+        "orignal cin1G is %d , which should be larger than 0", self->ctx.tiling_->cin1G);
+    ascendc_assert((self->ctx.tiling_->cout1G > 0), 
+        "orignal cout1G is %d , which should be larger than 0", self->ctx.tiling_->cout1G);
+    ascendc_assert((self->ctx.tiling_->dout > 0),
+        "orignal dout is %d , which should be larger than 0", self->ctx.tiling_->dout);
+    ascendc_assert((self->ctx.tiling_->ho > 0),
+        "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho);
+    ascendc_assert((self->ctx.tiling_->wo > 0),
+        "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo);
+    ascendc_assert((self->ctx.tiling_->di > 0),
+        "orignal di is %d , which should be larger than 0", self->ctx.tiling_->di);
+    ascendc_assert((self->ctx.tiling_->hi > 0),
+        "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi);
+    ascendc_assert((self->ctx.tiling_->wi > 0),
+        "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi);
+    ascendc_assert((self->ctx.tiling_->dk > 0),
+        "orignal dk is %d , which should be larger than 0", self->ctx.tiling_->dk);
+    ascendc_assert((self->ctx.tiling_->hk > 0),
+        "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
+    ascendc_assert((self->ctx.tiling_->wk > 0),
+        "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
+    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0), 
+        "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
+    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
+        "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
+    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0),
+        "singleCoreHo is %d , which should be larger than 0", self->ctx.tiling_->singleCoreHo);
+    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0), 
+        "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
+    ascendc_assert((self->ctx.tiling_->baseM > 0),
+        "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM);
+    ascendc_assert((self->ctx.tiling_->baseK > 0),
+        "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
+    ascendc_assert((self->ctx.tiling_->baseN > 0),
+        "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
+    ascendc_assert((self->ctx.tiling_->stepM > 0),
+        "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM);
+    ascendc_assert((self->ctx.tiling_->stepN > 0),
+        "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN);
+    ascendc_assert((self->ctx.tiling_->stepKa > 0),
+        "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
+    ascendc_assert((self->ctx.tiling_->stepKb > 0),
+        "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb);
 #endif
 }
 
@@ -118,8 +107,8 @@ __aicore__ inline void InitStepMParams(Intf *self)
     self->ctx.mIter_ = Ceil(self->ctx.singleShapeCout_, self->ctx.tiling_->baseM);
     self->ctx.tailM_ = self->ctx.singleShapeCout_ - self->ctx.tiling_->baseM * (self->ctx.mIter_ - 1);
 #ifdef __CCE_KT_TEST__
-    ASCENDC_ASSERT((self->ctx.mIter_ > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_); });
+    ascendc_assert((self->ctx.mIter_ > 0),
+        "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
 #endif
 }
 
@@ -133,8 +122,8 @@ __aicore__ inline void InitStepKParams(Intf *self)
     self->ctx.stepKaRound = Ceil(kIter, self->ctx.tiling_->stepKa);
     self->ctx.stepKbRound = Ceil(kIter, self->ctx.tiling_->stepKb);
 #ifdef __CCE_KT_TEST__
-    ASCENDC_ASSERT((self->ctx.kIter_ > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_); });
+    ascendc_assert((self->ctx.kIter_ > 0),
+        "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
 #endif
 }
 
@@ -146,8 +135,8 @@ __aicore__ inline void InitStepNParams(Intf *self)
     self->ctx.tailN_ =
         self->ctx.singleShapeCin_ * self->ctx.hwK_ - self->ctx.tiling_->baseN * (self->ctx.nIter_ - 1);
 #ifdef __CCE_KT_TEST__
-    ASCENDC_ASSERT((self->ctx.nIter_ > 0),
-        { KERNEL_LOG(KERNEL_ERROR, "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_); });
+    ascendc_assert((self->ctx.nIter_ > 0),
+        "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
 #endif
 }
 

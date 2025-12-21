@@ -56,16 +56,6 @@ public:
         return params;
     }
 
-    __host_aicore__ static size_t GetWorkspaceSize(int64_t blockNum, int64_t l1M, int64_t l1N)
-    {
-        return 0;
-    }
-
-    __host_aicore__ static Status CanImplement(Arguments const& args)
-    {
-        return Status::success;
-    }
-
     __aicore__ inline void operator()(BlockShape const& blockShape, BlockCoord const& blockCoord,
                                       int64_t dstStartOffset = 0, int64_t srcStartOffset = 0)
     {

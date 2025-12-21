@@ -1,18 +1,18 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <climits>
 #include <cmath>
 #include <bitset>
-#include "level0/lp_norm_reduce_v2.h"
-#include "level0/lp_norm_update_v2.h"
+#include "lp_norm_reduce_v2.h"
+#include "lp_norm_update_v2.h"
 #include "lp_norm_v2.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -261,14 +261,22 @@ aclnnStatus aclnnNormGetWorkspaceSize(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // On 910B or later chips: self (-> cast) -> LpNormV2 -> out
-    if (CheckSocVersionIsSupportBf16()) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        // [LpNormV2] 调用LpNormV2算子kernel function(AI core算子)
+        auto normOut = l0op::LpNormV2(selfContiguous, out, p, dim, keepdim, ops, uniqueExecutor.get());
+        CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // [ViewCopy] 将计算结果拷贝到输出out上，可能是非连续的tensor
+        auto viewCopyResult = l0op::ViewCopy(normOut, out, uniqueExecutor.get());
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if (CheckSocVersionIsSupportBf16()) {
         // [Cast] 将计算结果转化为out的数据类型
         op::DataType promoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
         auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
         CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // [LpNormV2] 调用LpNormV2算子kernel function(AI core算子)
-        auto normOut = l0op::LpNormV2(selfContiguousCast, p, dim, keepdim, ops, uniqueExecutor.get());
+        auto normOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, p, dim, keepdim, ops, uniqueExecutor.get());
         CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // [ViewCopy] 将计算结果拷贝到输出out上，可能是非连续的tensor

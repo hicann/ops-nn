@@ -1,0 +1,2965 @@
+{
+    "op_type": "Conv3DBackpropInputV2",
+    "op_list": [
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_HIF8_HIF8_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_FP8E4M3_FP8E4M3_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_INT64_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_INT64_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_INT64_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_INT64_HIF8_HIF8_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NCDHW_INT64_FP8E4M3_FP8E4M3_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_INT64_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_INT64_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NDHWC_INT64_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_INT64_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_INT64_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_NCDHW_INT64_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_INT64_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_INT64_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_NDHWC_INT64_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_INT64_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_INT64_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_FP32_FP32_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_FP32_FP32_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float32",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_INT64_BF16_BF16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NCDHW_DHWCN_INT64_FP16_FP16_NCDHW",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NCDHW",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_INT64_BF16_BF16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "Conv3DBackpropInputV2_NDHWC_DHWCN_INT64_FP16_FP16_NDHWC",
+        "inputs": [
+          {
+            "name": "input_size",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "filter",
+            "index": 1,
+            "dtype": "float16",
+            "format": "DHWCN",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "out_backprop",
+            "index": 2,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "NDHWC",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "pads",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "dilations",
+            "dtype": "list_int",
+            "value": []
+          },
+          {
+            "name": "groups",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

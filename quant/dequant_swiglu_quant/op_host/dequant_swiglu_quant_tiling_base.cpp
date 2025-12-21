@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file dequant_swiglu_quant_tiling_base.cpp
@@ -56,6 +56,8 @@ static const size_t INDEX_IN_QUANT_SCALE = 4;
 static const size_t INDEX_IN_QUANT_OFFSET = 5;
 static const size_t NUMBER_OF_INPUT_SIZE = 10;
 static const size_t USER_WORKSPACE = 16777216; // 16 * 1024 * 1024
+constexpr uint32_t PERFORMANCE_COL_LEN = 1536;
+const int64_t DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D_PERFORMANCE = 30013;
 
 // Tiling优选参数
 struct GluSingleTilingOptParam {
@@ -142,6 +144,8 @@ private:
     int64_t getTilingKeyDynamic(
         const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
 
+    bool isPerformanceBranch();
+
     int64_t getTilingKeyStatic(
         const int32_t inputDtype, const ge::DataType biasType, const int64_t scaleSize) const;
 
@@ -164,6 +168,8 @@ private:
     uint32_t totalUsedCoreNum = 0;
     uint32_t totalCore = 0;
     ge::DataType xInputDataType;
+
+    bool isPerfBranch = false;
 
     ge::DataType biasDataType = ge::DT_FLOAT;
     uint64_t quantScaleShapeSize = 0;
@@ -543,6 +549,7 @@ ge::graphStatus DequantSwigluQuantTiling::DoOpTiling()
     if (!CalcTiling(totalCore, aicoreParams_.ubSize, curShortSocName_)) {
         return ge::GRAPH_FAILED;
     }
+    isPerfBranch = isPerformanceBranch();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -624,6 +631,9 @@ int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
         if (biasType == ge::DT_INT32) {
             return DYNAMIC_INT_X_INT_BIAS_QUANT_D;
         } else if (biasType == ge::DT_FLOAT) {
+            if(isPerfBranch) {
+                return DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D_PERFORMANCE;
+            }
             return DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D;
         } else if (biasType == ge::DT_FLOAT16) {
             return DYNAMIC_INT_X_FLOAT16_BIAS_QUANT_D;
@@ -631,6 +641,18 @@ int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
             return DYNAMIC_INT_X_BFLOAT16_BIAS_QUANT_D;
         }
     }
+}
+
+bool DequantSwigluQuantTiling::isPerformanceBranch() {
+    if(tilingData.get_is32BAligned() == 1
+    && tilingData.get_colLen() == PERFORMANCE_COL_LEN
+    && tilingData.get_baseRowLen() == 1
+    && tilingData.get_baseColLen() == PERFORMANCE_COL_LEN
+    && tilingData.get_biasIsEmpty() == 1
+    && tilingData.get_activateScaleIsEmpty() == 0) {
+        return true;
+    }
+    return false;
 }
 
 uint64_t DequantSwigluQuantTiling::GetTilingKey() const

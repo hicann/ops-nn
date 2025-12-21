@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_deterministic_splitk_kernel.h
@@ -403,7 +403,12 @@ __aicore__ inline void ReduceKNzInUb(GM_ADDR cGM, GM_ADDR mmGM, uint64_t coreSiz
         uint64_t rowBlockNum = alignedN / 16; // nz base block, 16 x 16, 4  7
         uint64_t colBlockNum = alignedN / 16; // nz base block, 16 x 16, 4  10
         uint64_t currSplitN = 16;
-        uint64_t currOutCOffset = index * tiling.N * tiling.singleCoreM; // 0
+        uint64_t currOutCOffset = 0;
+        if (orderFlag) {
+            currOutCOffset = index * tiling.singleCoreN;
+        } else {
+            currOutCOffset = index * tiling.N * tiling.singleCoreM;
+        }
         // it seems that singleCoreM is less than 384
         uint64_t pIndex = 0;
         auto eventMTE3toMTE2Zero = GetTPipePtr()->AllocEventID<HardEvent::MTE3_MTE2>();
@@ -1284,7 +1289,8 @@ __aicore__ inline void MatMulMultiCoreSplitKDivideL2cache(GM_ADDR aGM, GM_ADDR b
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, FIXPIPE_OPT_SELECT FIXPIPE_OPT = FIXPIPE_OPT_SELECT::BASE>
 __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM,
-                                                       const MatmulTilingData& matmulTilingData, GM_ADDR workspaceGM)
+                                                       const MatmulTilingData& matmulTilingData, GM_ADDR workspaceGM, 
+                                                       uint8_t enAtomic = 0)
 {
     const TCubeTiling& tiling = matmulTilingData.matmulTiling;
     TPipe que;
@@ -1338,6 +1344,9 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
         uint64_t outSize = static_cast<uint64_t>(tiling.M) * static_cast<uint64_t>(tiling.N);
         TBuf<TPosition::VECCALC> tmpBuf;
         que.InitBuffer(tmpBuf, TOTAL_UB_SIZE);
+        if (enAtomic) {
+            SetAtomicAdd<float>();
+        }
         if (isL2cacheSplit) {
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
                 ReduceKInUbNzL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt, tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling, tiling.M);
@@ -1352,6 +1361,9 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
             }
         }
         PipeBarrier<PIPE_ALL>();
+        if (enAtomic) {
+            SetAtomicNone();
+        }
         return;
     }
 

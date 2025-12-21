@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file test_aclnn_apply_top_k_top_p.cpp
@@ -39,7 +39,7 @@ protected:
         auto k = TensorDesc(kDims, kDtype, kFormat).ValueRange(kRange[0], kRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat);
 
-        auto ut = OP_API_UT(aclnnApplyTopKTopP, INPUT(logits, p, k), OUTPUT(out));
+        auto ut = OP_API_UT(aclnnApplyTopKTopP, INPUT(logits_desc, p_desc, k_desc), OUTPUT(output_desc));
         uint64_t workspaceSize = 0;
         aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(getWorkspaceResult, expectedStatus);
@@ -53,6 +53,51 @@ TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_empty_success)
              {4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 1},
              {4}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
              {4, 0}, ACL_FLOAT, ACL_FORMAT_ND, ACLNN_SUCCESS);
+}
+
+// p空tensor
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_p_empty_success)
+{
+    test_run({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, {-1, 1},
+             {0}, ACL_FLOAT, ACL_FORMAT_ND, {0, 1},
+             {4}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
+             {4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, ACLNN_SUCCESS);
+}
+
+// k空tensor
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_k_empty_success)
+{
+    test_run({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, {-1, 1},
+             {4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 1},
+             {0}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
+             {4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, ACLNN_SUCCESS);
+}
+
+// 正常路径，float32
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_fp32_success)
+{
+    test_run({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, {-1, 1},
+             {4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 1},
+             {4}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
+             {4, 1024}, ACL_FLOAT, ACL_FORMAT_ND, ACLNN_SUCCESS);
+}
+
+// 正常路径，float16
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_fp16_success)
+{
+    test_run({4, 1024}, ACL_FLOAT16, ACL_FORMAT_ND, {-1, 1},
+             {4}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 1},
+             {4}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
+             {4, 1024}, ACL_FLOAT16, ACL_FORMAT_ND, ACLNN_SUCCESS);
+}
+
+// 正常路径，bfloat16
+TEST_F(l2_apply_top_k_top_p_test, ascend910B2_l2_apply_top_k_top_p_test_bf16_success)
+{
+    test_run({4, 1024}, ACL_BF16, ACL_FORMAT_ND, {-1, 1},
+             {4}, ACL_BF16, ACL_FORMAT_ND, {0, 1},
+             {4}, ACL_INT32, ACL_FORMAT_ND, {1, 10},
+             {4, 1024}, ACL_BF16, ACL_FORMAT_ND, ACLNN_SUCCESS);
 }
 
 // 正常路径，float16
@@ -124,6 +169,36 @@ TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_logits_nullptr)
     auto logits_desc = nullptr;
     auto p_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.0, 1.0);
     auto k_desc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto output_desc = TensorDesc({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnApplyTopKTopP, INPUT(logits_desc, p_desc, k_desc), OUTPUT(output_desc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+// CheckNotNull
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_p_nullptr)
+{
+    auto logits_desc = TensorDesc({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto p_desc = nullptr;
+    auto k_desc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
+    auto output_desc = TensorDesc({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnApplyTopKTopP, INPUT(logits_desc, p_desc, k_desc), OUTPUT(output_desc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+// CheckNotNull
+TEST_F(l2_apply_top_k_top_p_test, l2_apply_top_k_top_p_test_k_nullptr)
+{
+    auto logits_desc = TensorDesc({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto p_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto k_desc = nullptr;
     auto output_desc = TensorDesc({4, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnApplyTopKTopP, INPUT(logits_desc, p_desc, k_desc), OUTPUT(output_desc));

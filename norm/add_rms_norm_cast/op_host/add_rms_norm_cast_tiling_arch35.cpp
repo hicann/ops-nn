@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /* !
  * \file add_rms_norm_cast_regbase_tiling.cpp
@@ -391,17 +391,7 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::GetWorkspaceSize()
 {
     tilingParams.workspaceSize = 0;
     if (TILING_TYPE_SPILT == tilingParams.tilingType) {
-        const uint64_t workspaceCount = WORKSPACE_COUNT;
-        const uint64_t usedCoreNum = tilingParams.usedCoreNum;
-        const uint64_t numN = tilingParams.numN;
-
-        // check： workspaceCount * usedCoreNum * numN * sizeof(float) < UINT64_MAX 
-        const uint64_t maxAllowed = std::numeric_limits<uint64_t>::max() / workspaceCount / usedCoreNum / sizeof(float);
-        if (numN > maxAllowed) {
-            OP_LOGE(nodeName.c_str(), "Overflow detected: numN is %lu.", numN);
-            return ge::GRAPH_FAILED;
-        }        
-        tilingParams.workspaceSize = WORKSPACE_COUNT * tilingParams.usedCoreNum * tilingParams.numN * sizeof(float);        
+        tilingParams.workspaceSize = WORKSPACE_COUNT * tilingParams.usedCoreNum * tilingParams.numN * sizeof(float);
     } else if (TILING_TYPE_MAGIC_AND_WONDERFUL == tilingParams.tilingType) {
         tilingParams.workspaceSize = tilingParams.usedCoreNum * MIGIC_AND_WONDERFUL_BYTES;
     }

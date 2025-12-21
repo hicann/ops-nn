@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_tiling.h
@@ -46,6 +46,16 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avg_factor);
 TILING_DATA_FIELD_DEF(uint8_t, is_gemma);
 
+TILING_DATA_FIELD_DEF(uint64_t, last_block_factor);
+TILING_DATA_FIELD_DEF(uint64_t, row_loop);
+TILING_DATA_FIELD_DEF(uint64_t, last_block_row_loop);
+TILING_DATA_FIELD_DEF(uint64_t, row_tail);
+TILING_DATA_FIELD_DEF(uint64_t, last_block_row_tail);
+TILING_DATA_FIELD_DEF(uint32_t, mul_loop);
+TILING_DATA_FIELD_DEF(uint32_t, mul_tail);
+TILING_DATA_FIELD_DEF(uint8_t, dst_rep_stride);
+TILING_DATA_FIELD_DEF(uint8_t, is_performance);
+TILING_DATA_FIELD_DEF(uint8_t, normal_flag);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(RmsNorm, RMSNormTilingData)
@@ -71,6 +81,9 @@ public:
     uint64_t ubSize{0};
     uint64_t numCol{0};
     uint64_t numRow{0};
+    uint32_t numCore{0};
+    uint64_t numColAlign{0};
+    uint32_t xDtypeKey{0};
 
     bool isSoc910B{false};
 };

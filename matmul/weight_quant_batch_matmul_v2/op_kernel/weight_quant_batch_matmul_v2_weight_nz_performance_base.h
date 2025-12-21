@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -20,6 +20,7 @@
 #include "kernel_operator_intf.h"
 #include "lib/matmul_intf.h"
 #include "weight_quant_batch_matmul_v2_constant.h"
+#include "weight_quant_batch_matmul_v2_tiling_data.h"
 
 using AscendC::DataCopyParams;
 using AscendC::GetBlockIdx;
@@ -895,9 +896,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2WeightNzBasePerformanceKernel<
             int32_t blockCount = CeilDiv(bubKLen, 32);
             int64_t srcStrideSize = CeilDiv(tiling_->nSize, BLOCK_CUBE) * BLOCK_CUBE - bubNLen;
 #if defined(__CCE_KT_TEST__)
-            ASCENDC_ASSERT(srcStrideSize > 65535, {
-                KERNEL_LOG(KERNEL_ERROR, "srcStride must <= 65535, actual is %ld", srcStrideSize);
-            });
+            ascendc_assert(srcStrideSize > 65535, 
+                "srcStride must <= 65535, actual is %ld", srcStrideSize);
 #endif
             int32_t srcStride = static_cast<int32_t>(srcStrideSize);
             int32_t dstStride = nL0Align - CeilDiv(bubNLen, BLOCK_CUBE) * BLOCK_CUBE;

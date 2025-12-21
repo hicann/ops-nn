@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "gtest/gtest.h"
 #include "../../../op_host/op_api/aclnn_convolution_backward.h"
@@ -1675,6 +1675,7 @@ TEST_F(convolution_backward_test, ascend910_95_test_Conv2DBackwardInput_FP16_Con
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
 TEST_F(convolution_backward_test, ascend910_95_test_Conv3DBackward_DwStrideEqualKernelTransToKernel1x1x1) {
   auto input_tensor_desc = TensorDesc({1, 3, 16, 224, 224}, ACL_BF16, ACL_FORMAT_NCDHW);
   auto weight_tensor_desc = TensorDesc({768, 3, 2, 16, 16}, ACL_BF16, ACL_FORMAT_NCDHW);
@@ -1691,6 +1692,35 @@ TEST_F(convolution_backward_test, ascend910_95_test_Conv3DBackward_DwStrideEqual
   auto gradInput = TensorDesc({1, 3, 16, 224, 224}, ACL_BF16, ACL_FORMAT_NCDHW);
   auto gradWeight = TensorDesc({768, 3, 2, 16, 16}, ACL_BF16, ACL_FORMAT_NCDHW);
   auto gradBias = TensorDesc({768}, ACL_BF16, ACL_FORMAT_ND);
+
+  int8_t cubeMathType = 0;
+  auto ut =
+      OP_API_UT(aclnnConvolutionBackward,
+                INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+                      padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+                OUTPUT(gradInput, gradWeight, gradBias));
+
+  uint64_t workspace_size = 0;
+  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(convolution_backward_test, ascend910_95_test_Conv3DBackpropInputV2_OpenSoraPlan1_0_bfloat16_ID4520_0003_Trans2Mm) {
+  auto input_tensor_desc = TensorDesc({1, 128, 4, 64, 64}, ACL_BF16, ACL_FORMAT_NCDHW);
+  auto weight_tensor_desc = TensorDesc({256, 128, 1, 1, 1}, ACL_BF16, ACL_FORMAT_NCDHW);
+  auto grad_output_tensor_desc = TensorDesc({1, 256, 4, 64, 64}, ACL_BF16, ACL_FORMAT_NCDHW);
+
+  auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{256});
+  auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+  auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+  auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+  bool transposed = false;
+  auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+  int groups = 1;
+  auto output_mask = BoolArrayDesc(vector<bool>{true, false, false});
+  auto gradInput = TensorDesc({1, 128, 4, 64, 64}, ACL_BF16, ACL_FORMAT_NCDHW);
+  auto gradWeight = TensorDesc({256, 128, 1, 1, 1}, ACL_BF16, ACL_FORMAT_NCDHW);
+  auto gradBias = TensorDesc({256}, ACL_BF16, ACL_FORMAT_ND);
 
   int8_t cubeMathType = 0;
   auto ut =

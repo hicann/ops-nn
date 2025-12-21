@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
@@ -286,6 +286,22 @@ TEST_F(l2_adaptive_avg_pool2d_backward_test, adaptive_avg_pool2d_backward_FLOAT_
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_adaptive_avg_pool2d_backward_test, adaptive_avg_pool2d_backward_dtype_not_support)
+{
+    vector<aclDataType> dtypes{ACL_INT64, ACL_UINT64, ACL_BF16};
+    for (auto dtype : dtypes) {
+        auto grad_output_tensor_desc = TensorDesc({1, 1, 16, 16}, dtype, ACL_FORMAT_NCHW).ValueRange(-50, 50);
+        auto input_tensor_desc = TensorDesc({1, 16, 32, 16}, dtype, ACL_FORMAT_NCHW).ValueRange(-50, 50);
+        auto output_tensor = TensorDesc({1, 16, 32, 16}, dtype, ACL_FORMAT_NCHW);
+
+        auto ut = OP_API_UT(
+            aclnnAdaptiveAvgPool2dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    }
 }
 
 TEST_F(l2_adaptive_avg_pool2d_backward_test, ascend910B2_adaptive_avg_pool2d_backward_dtype_not_support)

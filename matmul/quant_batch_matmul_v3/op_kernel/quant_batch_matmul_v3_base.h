@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file quant_batch_matmul_v3_base.h
@@ -20,12 +20,14 @@
 #include "kernel_operator_intf.h"
 #include "kernel_type.h"
 #include "lib/matmul_intf.h"
+#include "quant_batch_matmul_v3_kernel_tiling_data.h"
 
 #define TemplateBasicType typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, \
     int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE
 #define TemplateBasicValue x1Type, x2Type, scaleType, yType, x1Format, x2Format, aTrans, bTrans, UPDATE_TYPE
 
 constexpr uint32_t BMM_BLOCK_NUM = 16;
+constexpr uint32_t K0_INT4 = 64;
 constexpr uint32_t K0_INT8 = 32;
 constexpr uint32_t k0_FLOAT16 = 16;
 constexpr uint32_t k0_FLOAT32 = 8;
@@ -51,6 +53,17 @@ constexpr int32_t MXFP_MULTI_BASE_SIZE = 2;
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr uint16_t DATA_BLOCK = 32;
 const uint32_t FP32_OUTPUT_TIMES = 4;
+const uint64_t INT1_X2_OFFSET_FACTOR_8 = 8;
+
+// iterBatch const
+constexpr uint64_t L0C_SIZE_256K = 256 * 1024UL;
+constexpr uint8_t A_NEED_BROADCAST = 1;
+constexpr uint8_t B_NEED_BROADCAST = 2;
+constexpr MatmulConfigMode configMode = MatmulConfigMode::CONFIG_NORM;
+constexpr MatmulBatchParams batchParams{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::MULTI_BATCH};
+constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams);
+constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
+constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
@@ -97,6 +110,12 @@ struct QBmmBaseBlockArgs {
     uint64_t nCntUse;
     uint64_t mTileAddrOffset;
     uint64_t nTileAddrOffset;
+};
+
+enum class FusedOpType : uint32_t {
+    NONE = 0U,
+    RELU = 1U,
+    SWIGLU = 2U
 };
 
 enum class BasicQuantMode : uint32_t {
@@ -157,15 +176,59 @@ __aicore__ inline constexpr CubeFormat GetFormat(int format)
     return CubeFormat::ND;
 }
 
-template <typename T>
+template <typename T, bool isLut = false>
 __aicore__ inline constexpr uint32_t GetC0Size()
 {
-    if constexpr (sizeof(T) == sizeof(float)) {
+    // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
+    if constexpr (isLut && AscendC::IsSameType<T, AscendC::int4b_t>::value) {
+        return K0_INT8;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    } else if constexpr (isLut && (AscendC::IsSameType<T, AscendC::int2b_t>::value ||
+                                   AscendC::IsSameType<T, AscendC::uint1b_t>::value)) {
+        return K0_INT4;
+#endif
+    } else if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
+        return K0_INT4;
+#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+    } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
+                         AscendC::IsSameType<T, fp4x2_e1m2_t>::value) {
+        return K0_INT4;
+#endif
+    } else if constexpr (sizeof(T) == sizeof(float)) {
         return k0_FLOAT32;
     } else if constexpr (sizeof(T) == sizeof(int8_t)) {
         return K0_INT8;
     } else {
         return k0_FLOAT16;
+    }
+}
+
+template <typename T, bool isLut = false>
+__aicore__ inline constexpr uint64_t GetSizeWithDataType(uint64_t shapeSize)
+{
+    bool is4BitInput = false;
+    bool is8BitInput = false;
+    if constexpr (isLut) {
+        // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        is4BitInput =
+            (AscendC::IsSameType<T, AscendC::int2b_t>::value || AscendC::IsSameType<T, AscendC::uint1b_t>::value);
+#endif
+        is8BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
+    } else {
+#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+        is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value ||
+                       AscendC::IsSameType<T, fp4x2_e1m2_t>::value);
+#else
+        is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
+#endif
+    }
+    if (is4BitInput) {
+        return shapeSize / 2;
+    } else if (is8BitInput) {
+        return shapeSize;
+    } else {
+        return shapeSize * sizeof(T);
     }
 }
 
@@ -190,8 +253,27 @@ __aicore__ inline uint64_t CalcAL1Size(uint64_t mL1, uint64_t kL1)
  */
 __aicore__ inline constexpr uint32_t GetTaskRation()
 {
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+    return 2U; // aiv corenum is 2 in C310 platform
+#else
     return 1U;
+#endif
 }
+
+
+#if (defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+template <typename T>
+__aicore__ inline constexpr bool IsMxType()
+{
+    return AscendC::IsSameType<T, AscendC::fp8_e8m0_t>::value;
+}
+
+template <typename T>
+__aicore__ inline constexpr bool IsFp4()
+{
+    return (AscendC::IsSameType<T, fp4x2_e2m1_t>::value || AscendC::IsSameType<T, fp4x2_e1m2_t>::value);
+}
+#endif
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
 __aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams &dequantParams,

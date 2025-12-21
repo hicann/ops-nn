@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_addmm.h"
 #include "level0/add.h"
@@ -96,7 +96,6 @@ static inline bool CheckDtypeValid(
             op::ToString(out->GetDataType()).GetString());
         return false;
     }
-
     return true;
 }
 
@@ -265,6 +264,13 @@ static const aclTensor* AddMatmulProcess(
     }
 
     // matmul
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    bool isSupportSocVersion = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
+    if (((addmmTensor.mat1->GetDataType() == op::DataType::DT_FLOAT16 && addmmTensor.mat2->GetDataType() == op::DataType::DT_FLOAT16) ||
+         (addmmTensor.mat1->GetDataType() == op::DataType::DT_BF16 && addmmTensor.mat2->GetDataType() == op::DataType::DT_BF16)) &&
+        (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportSocVersion) {
+        cubeMathType = USE_HIGH_PREC_MODE;
+    }
     auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, cubeMathType, uniqueExecutor);
     CHECK_RET(matmulOut != nullptr, nullptr);
 
@@ -333,6 +339,7 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "invalid mat1 dtype [%s] or mat2 dtype [%s] ",
             op::ToString(mat1->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+        return false;
     }
     auto storageShape = mat2->GetStorageShape();
     auto storageShapeDim = storageShape.GetDimNum();

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file embedding_dense_grad_v2_regbase_tiling.cc
@@ -86,7 +86,7 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     OP_CHECK_IF(
         indicesDtypeSize_ <= 0,
         OP_LOGE(
-            opName_, "Get invalid dtype size. indices dtype [%s], size: %u.",
+            opName_, "Get invalid dtype size. indices dtype [%s], size: %d.",
             Ops::Base::ToString(indicesDtype_).c_str(), indicesDtypeSize_),
         return ge::GRAPH_FAILED);
 
@@ -131,7 +131,7 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         gradDtypeSize_ <= 0,
         OP_LOGE(
-            opName_, "Get invalid dtype size. grad dtype [%s], size: %u.", Ops::Base::ToString(gradDType_).c_str(),
+            opName_, "Get invalid dtype size. grad dtype [%s], size: %d.", Ops::Base::ToString(gradDType_).c_str(),
             gradDtypeSize_),
         return ge::GRAPH_FAILED);
 

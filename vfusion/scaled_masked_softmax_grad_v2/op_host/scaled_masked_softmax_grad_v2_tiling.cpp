@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file scaled_masked_softmax_grad_v2_tiling.cpp
@@ -38,6 +38,7 @@ constexpr uint64_t SIZE_2 = 2;
 constexpr uint64_t SIZE_4 = 4;
 constexpr uint64_t SELECT_MAX_SIZE = 18 * 1024;
 constexpr uint64_t LAST_DIM_MAX_SIZE = 4096;
+constexpr uint64_t LAST_DIM_MAX_SIZE_D = 8192;
 constexpr uint64_t MAX_NORM_HEAD_DIM = 1024;
 constexpr uint64_t TILING_KEY_FP16 = 1;
 constexpr uint64_t TILING_KEY_FP32 = 2;
@@ -130,8 +131,17 @@ ge::graphStatus ScaledMaskedSoftmaxGradV2Tiling::CheckInputShape()
         (batch <= 0 || channel <= 0 || seqLength <= 0 || headDim <= 0),
         OP_LOGE(context->GetNodeName(), "The length of yGradDim must be greater than 0."),
         return ge::GRAPH_FAILED);
+
+    auto PlatformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, PlatformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(PlatformInfo);
+    uint64_t lastDimLimit = LAST_DIM_MAX_SIZE;
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+        lastDimLimit = LAST_DIM_MAX_SIZE_D;
+    }
+
     OP_CHECK_IF(
-        (headDim > LAST_DIM_MAX_SIZE),
+        (headDim > lastDimLimit),
         OP_LOGE(
             context->GetNodeName(), "The length yGrad dim 3 must be less than or equal to 4096."),
         return ge::GRAPH_FAILED);

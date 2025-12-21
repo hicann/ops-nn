@@ -1,16 +1,33 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
+/**
+ * @brief 编译运行流程说明
+ * 
+ * 参照 docs/zh/context/op_invocation.md 内 [编译与运行] 章节调用
+ * 
+ * 调用流程示例：
+ * 1. 安装nn包: 
+ *  ./cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run --full --install-path=/usr/local/Ascend/ascend-toolkit
+ *  export ASCEND_OPS_NN_PATH=/usr/local/Ascend/ascend-toolkit/latest/ops_nn
+ * 2. 编译出自定义算子包: 
+ *  bash build.sh --pkg --ops=conv3d_backprop_filter_v2
+ * 3. 安装自定义算子包:
+ *  ./build_out/cann-ops-nn-custom-linux.aarch64.run
+ *  export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/custom_nn/op_api/lib/:${LD_LIBRARY_PATH}
+ * 4. 执行example:
+ *  bash build.sh --run_example conv3d_backprop_filter_v2 eager
+ */
 #include <iostream>
 #include <memory>
 #include <vector>
+
 #include "acl/acl.h"
 #include "aclnnop/aclnn_convolution_backward.h"
 
@@ -142,15 +159,6 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     std::unique_ptr<void, aclError (*)(void *)> weightDeviceAddrPtr(weightDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建gradInput aclTensor
-    std::vector<float> gradInputData(GetShapeSize(inputShape), 1);
-    aclTensor *gradInput = nullptr;
-    void *gradInputDeviceAddr = nullptr;
-    ret = CreateAclTensor(gradInputData, inputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT, &gradInput);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradInputTensorPtr(gradInput, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradInputDeviceAddrPtr(gradInputDeviceAddr, aclrtFree);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
-
     // 创建gradWeight aclTensor
     std::vector<float> gradWeightData(GetShapeSize(weightShape), 1);
     aclTensor *gradWeight = nullptr;
@@ -158,15 +166,6 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     ret = CreateAclTensor(gradWeightData, weightShape, &gradWeightDeviceAddr, aclDataType::ACL_FLOAT, &gradWeight);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradWeightTensorPtr(gradWeight, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void *)> gradWeightDeviceAddrPtr(gradWeightDeviceAddr, aclrtFree);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
-
-    // 创建gradBias aclTensor
-    std::vector<float> gradBiasData(GetShapeSize(biasSize), 1);
-    aclTensor *gradBias = nullptr;
-    void *gradBiasDeviceAddr = nullptr;
-    ret = CreateAclTensor(gradBiasData, biasSize, &gradBiasDeviceAddr, aclDataType::ACL_FLOAT, &gradBias);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> gradBiasTensorPtr(gradBias, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void *)> gradBiasDeviceAddrPtr(gradBiasDeviceAddr, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建biasSizes aclIntArray
@@ -204,8 +203,8 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     aclOpExecutor *executor;
     // 调用aclnnConvolutionBackwardGetWorkspaceSize第一段接口
     ret = aclnnConvolutionBackwardGetWorkspaceSize(gradOutput, input, weight, biasSizes, strides, pads, dilations,
-                                                   transposed, outputPads, groups, outMask, cubeMathType, gradInput,
-                                                   gradWeight, gradBias, &workspaceSize, &executor);
+                                                   transposed, outputPads, groups, outMask, cubeMathType, nullptr,
+                                                   gradWeight, nullptr, &workspaceSize, &executor);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
                    return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -223,17 +222,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     ret = aclrtSynchronizeStream(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(gradInputShape);
-    std::vector<float> gradInputResult(size, 0);
-    ret = aclrtMemcpy(gradInputResult.data(), gradInputResult.size() * sizeof(gradInputResult[0]), gradInputDeviceAddr,
-                      size * sizeof(gradInputResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
-                   return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("gradInputResult[%ld] is: %f\n", i, gradInputResult[i]);
-    }
-
-    size = GetShapeSize(gradWeightShape);
+    int size = GetShapeSize(gradWeightShape);
     std::vector<float> gradWeightResult(size, 0);
     ret = aclrtMemcpy(gradWeightResult.data(), gradWeightResult.size() * sizeof(gradWeightResult[0]), gradWeightDeviceAddr,
                       size * sizeof(gradWeightResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
@@ -241,16 +230,6 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
                    return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("gradWeightResult[%ld] is: %f\n", i, gradWeightResult[i]);
-    }
-
-    size = GetShapeSize(gradBiasShape);
-    std::vector<float> gradBiasResult(size, 0);
-    ret = aclrtMemcpy(gradBiasResult.data(), gradBiasResult.size() * sizeof(gradBiasResult[0]), gradBiasDeviceAddr,
-                      size * sizeof(gradBiasResult[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
-                   return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("gradBiasResult[%ld] is: %f\n", i, gradBiasResult[i]);
     }
     return ACL_SUCCESS;
 }

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file aclnn_index_add_v2.cpp
@@ -63,7 +63,7 @@ static bool IsAICoreSupport(const aclTensor *self, const int64_t dim, const aclT
   if(selfDimNum != MODE_0_SUPPORT_DIM || indexDimNum != 1) {
     return false;
   }
-  if(!(dim == 0 || dim == static_cast<int64_t>(0 - MODE_0_SUPPORT_DIM))) {
+  if(!(dim == 0 || dim == 0 - static_cast<int64_t>(MODE_0_SUPPORT_DIM))) {
     return false;
   }
 

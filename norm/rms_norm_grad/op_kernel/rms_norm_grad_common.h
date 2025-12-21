@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_grad_common.h
@@ -38,10 +38,28 @@ constexpr int32_t DIM_NUM = 2;
 constexpr int32_t DIM_N = 0;
 constexpr int32_t DIM_D = 1;
 
+constexpr int64_t DOUBLE_BUFFER = 2;
+constexpr int64_t ROW_TEMPLATE = 180;
+constexpr int64_t COL_TEMPLATE = 64;  // 按64列进行分核
+constexpr int64_t UB_SIZE = 180 * 1024 + 2 * DOUBLE_BUFFER * COL_TEMPLATE * sizeof(float);
+constexpr int64_t FLOAT_ALIGN = 8;
+constexpr uint64_t B32_REPEAT_STRIDE = 8;
+
 template <typename Tp, Tp v>
 struct integral_constant {
     static constexpr Tp value = v;
 };
+
+namespace RmsNormGrad{
+struct deterministic_struct {
+    LocalTensor<float> buffer1_;
+    LocalTensor<float> buffer2_;
+    GlobalTensor<float> workspaceGmOri_;
+    GlobalTensor<float> dgammaGm_;
+};
+}
+using namespace RmsNormGrad;
+
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
@@ -191,4 +209,109 @@ __aicore__ inline void InitGmZero(
 
     PipeBarrier<PIPE_ALL>();
 }
+
+__aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSize,int64_t colAlignV_, deterministic_struct& deterministicStruct) {
+    uint8_t rightPad = 0;
+    bool isPad = false;
+    int64_t colSizeMod = colSize % FLOAT_ALIGN;
+    // 尾核补齐对齐
+    if (colSizeMod != 0) {
+        rightPad = FLOAT_ALIGN - colSizeMod;
+        isPad = true;
+    } 
+#if __CCE_AICORE__ == 220
+    if ASCEND_IS_AIV {
+#endif
+    DataCopyParams intriParams;
+    intriParams.blockCount = rowSize;
+    intriParams.blockLen   = (colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN;
+    intriParams.srcStride  = (colAlignV_ - colSize) / FLOAT_ALIGN;
+    intriParams.dstStride  = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN;
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
+    SetFlag<HardEvent::V_MTE2>(eventID);
+    WaitFlag<HardEvent::V_MTE2>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
+    int64_t offset = colIndex * COL_TEMPLATE;
+    DataCopy(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], intriParams);
+#if __CCE_AICORE__ == 220
+    }
+#endif
+}
+
+__aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colSize, int64_t rowSize, deterministic_struct& deterministicStruct) {
+    int64_t colSizeMod = colSize % FLOAT_ALIGN;
+    int64_t colSizeAlign = colSize;
+    // 尾核补齐对齐
+    if (colSizeMod != 0) {
+        colSizeAlign += FLOAT_ALIGN - colSizeMod;
+    } 
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
+    SetFlag<HardEvent::MTE2_V>(eventID);
+    WaitFlag<HardEvent::MTE2_V>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventID);
+    TEventID eventID1 = GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>();
+    SetFlag<HardEvent::MTE3_V>(eventID1);
+    WaitFlag<HardEvent::MTE3_V>(eventID1);
+    GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventID1);
+    Duplicate(deterministicStruct.buffer2_, static_cast<float>(0.0), COL_TEMPLATE);
+    PipeBarrier<PIPE_V>();
+    uint64_t mask = colSize;
+    uint8_t repeatTimes = MAX_REPEAT_TIMES;
+    BinaryRepeatParams binaryRepeatParams;
+    binaryRepeatParams.dstBlkStride = 1;
+    binaryRepeatParams.src0BlkStride = 1;
+    binaryRepeatParams.src1BlkStride = 1;
+    binaryRepeatParams.dstRepStride = 0;
+    binaryRepeatParams.src0RepStride = B32_REPEAT_STRIDE;
+    binaryRepeatParams.src1RepStride = 0;
+    int64_t rowRepeatTimes = (rowSize + MAX_REPEAT_TIMES - 1) / MAX_REPEAT_TIMES;
+    for (int64_t i = 0; i < rowRepeatTimes; i++) {
+        if (i == rowRepeatTimes - 1) {
+            repeatTimes = rowSize - (rowRepeatTimes - 1) * MAX_REPEAT_TIMES;
+        }
+        Add(deterministicStruct.buffer2_,deterministicStruct.buffer1_[i * MAX_REPEAT_TIMES],deterministicStruct.buffer2_,mask,repeatTimes,binaryRepeatParams);
+        PipeBarrier<PIPE_V>();
+    }
+}
+
+__aicore__ inline void dCopyOut(int64_t colIndex, int64_t colSize, deterministic_struct& deterministicStruct)
+{
+    DataCopyParams intriParams;
+    intriParams.blockCount = 1;
+    intriParams.blockLen = colSize * sizeof(float);
+    intriParams.srcStride = 0;
+    intriParams.dstStride = 0;
+    TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>();
+    SetFlag<HardEvent::V_MTE3>(eventID);
+    WaitFlag<HardEvent::V_MTE3>(eventID);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE3>(eventID);
+    int64_t offset = colIndex * COL_TEMPLATE;
+    DataCopyPad(deterministicStruct.dgammaGm_[offset], deterministicStruct.buffer2_, intriParams);
+}
+
+__aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tblockNum, int64_t tcol, deterministic_struct& deterministicStruct) {
+    int64_t colAlignV_ = tcolAlignV;
+    int64_t row_ = tblockNum;
+    int64_t col_ = tcol;
+    uint32_t coreNum = tblockNum;
+    int64_t colcycleCount = (colAlignV_ + COL_TEMPLATE - 1) / COL_TEMPLATE;
+    int64_t colcyclePerBlockCount = (colcycleCount + coreNum - 1) / coreNum;
+    int64_t rowcycleCount = (row_ + ROW_TEMPLATE - 1) / ROW_TEMPLATE;
+    int64_t colSize = COL_TEMPLATE;
+    int64_t taskId = 0;
+    for (int64_t blocktaskId = 0; blocktaskId < colcyclePerBlockCount; blocktaskId++) {
+        taskId = blocktaskId * coreNum + GetBlockIdx();
+        if (taskId < colcycleCount) {
+            if (taskId == colcycleCount - 1) {
+                colSize = col_ - COL_TEMPLATE * taskId;
+            }
+            dCopyIn(taskId,colSize,row_,colAlignV_,deterministicStruct);
+            dCompute(taskId,0,colSize,row_,deterministicStruct);
+            dCopyOut(taskId,colSize,deterministicStruct); 
+        } else {
+            break;
+        }
+    }
+}
+
 #endif // RMS_NORM_GRAD_BASE_H

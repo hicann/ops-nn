@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -868,6 +868,132 @@ TEST_F(l2_layer_norm_backward_test, ascend310P_aclnnLayerNormBackward_x_backprop
     auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
     auto gradWeightOutDesc = TensorDesc(norm_shape, x_dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
     auto gradBiasOutDesc = TensorDesc(norm_shape, x_dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc, outputmask),
+        OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradWeight and gradBias need cast
+TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float16_nd)
+{
+    vector<int64_t> input_shape = {9, 2, 2, 2};
+    vector<int64_t> norm_shape = {2, 2};
+    vector<int64_t> mean_shape = {9, 2, 1, 1};
+    aclDataType dtype32 = ACL_FLOAT;
+    aclDataType dtype16 = ACL_FLOAT16;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype32, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+    auto outputmask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype32, in_format).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc, outputmask),
+        OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradWeight and gradBias not need cast
+TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float32_nd)
+{
+    vector<int64_t> input_shape = {9, 2, 2, 2};
+    vector<int64_t> norm_shape = {2, 2};
+    vector<int64_t> mean_shape = {9, 2, 1, 1};
+    aclDataType dtype32 = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype32, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+    auto outputmask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype32, in_format).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc, outputmask),
+        OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradWeight and gradBias all mask
+TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float32_nd_all_mask)
+{
+    vector<int64_t> input_shape = {9, 2, 2, 2};
+    vector<int64_t> norm_shape = {2, 2};
+    vector<int64_t> mean_shape = {9, 2, 1, 1};
+    aclDataType dtype32 = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype32, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+    auto outputmask = BoolArrayDesc(vector<bool>{true, false, false});
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype32, in_format).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype32, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc, outputmask),
+        OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradBias mask and gradWeight not need cast
+TEST_F(l2_layer_norm_backward_test, ascend910D_aclnnLayerNormBackward_float32_nd_float16_nd_all_mask)
+{
+    vector<int64_t> input_shape = {9, 2, 2, 2};
+    vector<int64_t> norm_shape = {2, 2};
+    vector<int64_t> mean_shape = {9, 2, 1, 1};
+    aclDataType dtype32 = ACL_FLOAT;
+    aclDataType dtype16 = ACL_FLOAT16;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype16, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype32, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+    auto outputmask = BoolArrayDesc(vector<bool>{true, true, false});
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype32, in_format).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype16, ACL_FORMAT_ND).Precision(0.01, 0.01);
 
     auto ut = OP_API_UT(
         aclnnLayerNormBackward,

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef __QUANT_BATCH_MATMUL_V4_TILING_DEF_H__
 #define __QUANT_BATCH_MATMUL_V4_TILING_DEF_H__
@@ -15,6 +15,7 @@
 #include <cstring>
 
 #include "kernel_tiling/kernel_tiling.h"
+#include "quant_batch_matmul_v4_tiling_data.h"
 
 #ifdef __CCE_KT_TEST__
 #include "kernel_log.h"
@@ -22,160 +23,6 @@
 #define __aicore__ [aicore]
 #endif
 
-#pragma pack(1)
-struct QuantBatchMatmulV3Params
-{
-    uint32_t batchA = 0;
-    uint32_t batchB = 0;
-    uint32_t batchC = 0;
-    uint32_t batchA1 = 0;
-    uint32_t batchA2 = 0;
-    uint32_t batchA3 = 0;
-    uint32_t batchA4 = 0;
-    uint32_t batchB1 = 0;
-    uint32_t batchB2 = 0;
-    uint32_t batchB3 = 0;
-    uint32_t batchB4 = 0;
-    uint32_t batchC1 = 0;
-    uint32_t batchC2 = 0;
-    uint32_t batchC3 = 0;
-    uint32_t batchC4 = 0;
-    uint32_t singleCoreBatch = 0;
-    uint32_t isPerTensor = 0;
-    uint32_t isPertoken = 0;
-    uint32_t isDoubleScale = 0;
-    uint32_t biasThreeDim = 0;  // 整块的个数
-    uint32_t ubCalcM = 0;
-    uint32_t ubCalcN = 0;
-    uint32_t needUbBuffer = 0;
-    uint32_t realSingleCoreM = 0;
-    uint32_t realSingleCoreN = 0;
-    uint32_t biasDtype = 0;
-    uint32_t ubSize = 0;
-    uint32_t isMClash = 0;
-    uint32_t isNClash = 0;
-    uint32_t groupSizeM = 0;
-    uint32_t groupSizeN = 0;
-    uint32_t groupSizeK = 0;
-};
-#pragma pack()
-#pragma pack(1)
-struct SlidingWindowParam {
-    uint32_t mTailTile = 0;
-    uint32_t nTailTile = 0;
-};
-#pragma pack()
-#pragma pack(1)
-struct L2cacheTileParam {
-    uint32_t mTileCntL2 = 0;
-    uint32_t nTileCntL2 = 0;
-    uint32_t mTileBlock = 0;
-    uint32_t nTileBlock = 0;
-    uint32_t calOrder = 0;
-    uint32_t isBasicTiling = 0;
-};
-#pragma pack()
-#pragma pack(1)
-struct QuantBatchMatmulV3TilingData
-{
-    QuantBatchMatmulV3Params params;
-    TCubeTiling matmulTiling;
-    L2cacheTileParam tileL2cacheTiling;
-    SlidingWindowParam adaptiveSlidingWin;
-};
-#pragma pack()
-#pragma pack(1)
-struct QuantBatchMatmulV4TilingData {
-    uint8_t vecBlockDimN = 0;
-    uint8_t vecBlockDimK = 0;
-    uint8_t cubeBlockDimN = 0;
-    uint8_t cubeBlockDimM = 0;
-    uint8_t cubeBlockDimK = 0;
-    uint8_t kPadSize = 0;
-    uint8_t nPadSize = 0;
-    uint8_t haveBatchA = 0;
-    uint8_t haveBatchB = 0;
-    uint8_t vecCoreParallel = 0;
-    uint8_t reserve1 = 0;
-    uint8_t reserve2 = 0;
-    uint16_t vecSingleKGroupNum = 0;
-    uint16_t vecSingleKTailGroupNum = 0;
-    uint16_t AL1Pingpong = 0;
-    uint16_t BL1Pingpong = 0;
-    uint32_t vecSingleK = 0;
-    uint32_t vecSingleN = 0;
-    uint32_t vec2SingleM = 0;
-    uint32_t vecSingleKTail = 0;
-    uint32_t vecSingleNTail = 0;
-    uint32_t wInQueueSize = 0;
-    uint32_t offsetInQueueSize = 0;
-    uint32_t scaleInQueueSize = 0;
-    uint32_t wOutQueueSize = 0;
-    uint32_t antiQuantTmpBufferSize = 0;
-    uint32_t vecCubeNRatio = 0;
-    uint32_t vecCubeTailNRatio = 0;
-    uint32_t vecCubeKRatio = 0;
-    uint32_t vecCubeTailKRatio = 0;
-    uint32_t cubeTailM = 0;
-    uint32_t cubeTailN = 0;
-    uint32_t cubeSingleNLoop = 0;
-    uint32_t cubeSingleNTailLoop = 0;
-    uint32_t repeatAxisMax = 0;
-    uint64_t vecSingleKLoop = 0;
-    uint64_t vecSingleNLoop = 0;
-    uint64_t vecSingleKTailLoop = 0;
-    uint64_t vecSingleNTailLoop = 0;
-    uint64_t vec2SingleMLoop = 0;
-    uint64_t kAlign = 0;
-    uint64_t nAlign = 0;
-    uint64_t kSize = 0;
-    uint64_t nSize = 0;
-    uint64_t groupSize = 0;
-    uint64_t mSize = 0;
-    uint64_t blockBatch = 0;
-    uint64_t shapeBatch = 0;
-    uint64_t mAubSize = 0;
-    uint64_t kAubSize = 0;
-    uint64_t nBubSize = 0;
-    uint64_t kBubSize = 0;
-    uint64_t mCubSize = 0;
-    uint64_t nCubSize = 0;
-    uint64_t mAL1Size = 0;
-    uint64_t kAL1Size = 0;
-    uint64_t nBL1Size = 0;
-    uint64_t kBL1Size = 0;
-    bool hasX1Scale = false;
-    bool hasX2Scale = false;
-    TCubeTiling matmulTiling;
-}__attribute__((__may_alias__));
-#pragma pack()
-#pragma pack(1)
-struct QuantBatchMatmulV4MsdTilingData {
-    uint8_t coreNum = 0;
-    uint32_t vBaseM = 0;
-    uint32_t ubRestBytes = 0;
-    uint32_t parallNum = 0;
-    uint32_t ubCalSize = 0;
-    uint32_t mSize = 0;
-    uint32_t kSize = 0;
-    uint32_t nSize = 0;
-    uint32_t groupSize = 0;
-    TCubeTiling matmulTiling;
-};
-#pragma pack()
-#pragma pack(1)
-struct QuantBatchMatmulV4PerblockTilingData {
-    uint32_t groupSizeM = 0;
-    uint32_t groupSizeN = 0;
-    uint32_t groupSizeK = 0;
-    uint32_t ubCalcM = 0;
-    uint32_t ubCalcN = 0;
-    bool transA = false;
-    bool transB = true;
-    TCubeTiling matmulTiling;
-    L2cacheTileParam tileL2cacheTiling;
-};
-#pragma pack()
 
 #if defined(__CCE_KT_TEST__)
 template <class T>

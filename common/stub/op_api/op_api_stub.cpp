@@ -412,7 +412,7 @@ __attribute__((weak)) bool MmCheckHitV3Shape(const aclTensor* /*x1*/, const aclT
 
 __attribute__((weak)) bool BmmCheckHitV3Shape(const aclTensor* /*x1*/, const aclTensor* /*x2*/,
                                               const aclTensor* /*bias*/, const bool /*adjX1*/, const bool /*adjX2*/,
-                                              op::Format /*self_format*/, op::Format /*mat2_format*/)
+                                              op::Format /*self_format*/, op::Format /*mat2_format*/, const bool /*enableFp16Bf16InFp32Out*/)
 {
     return false;
 }

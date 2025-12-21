@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -47,6 +47,7 @@ static const std::initializer_list<DataType>& GetXDtypeSupportList()
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
         case SocVersion::ASCEND910_93:
+        case SocVersion::ASCEND910_95:
         case SocVersion::ASCEND910B: {
             return X_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
@@ -64,6 +65,7 @@ static const std::initializer_list<DataType>& GetOutDtypeSupportList()
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
         case SocVersion::ASCEND910_93:
+        case SocVersion::ASCEND910_95:
         case SocVersion::ASCEND910B: {
             return OUT_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
@@ -81,6 +83,7 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
         case SocVersion::ASCEND910B:
+        case SocVersion::ASCEND910_95:
         case SocVersion::ASCEND910_93: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B;
         }

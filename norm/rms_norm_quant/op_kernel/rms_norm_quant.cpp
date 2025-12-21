@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file rms_norm_quant.cpp
@@ -22,13 +22,14 @@ static constexpr uint32_t OFFSET_GAMMA = 0;     // the offset of gamma is 0
 static constexpr uint32_t OFFSET_SQX = 1;       // the offset of sqx is 1
 static constexpr uint32_t OFFSET_SUM = 2;       // the offset of sum is 2
 static constexpr uint32_t OFFSET_WORKSPACE = 3; // the offset of workspace is 3
+static constexpr uint32_t SIZE_INT4 = 2;        // 用于sizeof(int4) / 2
 static constexpr uint32_t DIM_2 = 2;
 static constexpr uint32_t REPEAT_TIME_256 = 256; // 256 default stride
 static constexpr uint32_t REPEAT_TIME_16 = 16;   // 16 default stride
 static constexpr uint32_t REPEAT_TIME_64 = 64;   // 64 default stride
 } // namespace
 
-template <typename T, bool EN_BETA, bool FastComputeMode = false>
+template <typename T, typename yDtype,  bool EN_BETA, bool FastComputeMode = false>
 class RmsNormQuant {
 public:
     __aicore__ inline RmsNormQuant(
@@ -50,22 +51,27 @@ public:
         gm_offset_ = static_cast<uint64_t>(row_work) * num_col_;
         if (num_col_ <= slice_size_) {
             num_col_align_int8 = (num_col_ + REPEAT_TIME_256 - 1) / REPEAT_TIME_256 * REPEAT_TIME_256;
+            num_col_align_int4 = (num_col_ + REPEAT_TIME_256 - 1) / REPEAT_TIME_256 * REPEAT_TIME_256;
             num_col_align_f16 = (num_col_ + REPEAT_TIME_16 - 1) / REPEAT_TIME_16 * REPEAT_TIME_16;
             num_col_align_f32 = (num_col_ + REPEAT_TIME_64 - 1) / REPEAT_TIME_64 * REPEAT_TIME_64;
         } else {
             num_col_align_int8 = slice_size_;
+            num_col_align_int4 = slice_size_;
             num_col_align_f16 = slice_size_;
             num_col_align_f32 = slice_size_;
             num_col_align_f32_long = (num_col_ + REPEAT_TIME_64 - 1) / REPEAT_TIME_64 * REPEAT_TIME_64;
         }
         quantMin_ = tiling_data.quantMin;
+        dstType = tiling_data.dstType;
         gm_x_.SetGlobalBuffer((__gm__ T*)x + AscendC::GetBlockIdx() * gm_offset_);
         gm_g_.SetGlobalBuffer((__gm__ T*)gamma);
         gm_b_.SetGlobalBuffer((__gm__ T*)beta);
         gm_y_.SetGlobalBuffer((__gm__ int8_t*)y + AscendC::GetBlockIdx() * gm_offset_);
+        gm_y_int4.SetGlobalBuffer((__gm__ int4b_t*)y + AscendC::GetBlockIdx() * gm_offset_ / 2);
 
         pipe.InitBuffer(fp16_x_que_, BUFFER_NUM, num_col_align_f16 * sizeof(T));
         pipe.InitBuffer(int8_y_que_, BUFFER_NUM, num_col_align_int8 * sizeof(int8_t)); // quant output
+        pipe.InitBuffer(int4_y_que_, BUFFER_NUM, num_col_align_int4 * sizeof(int8_t) / SIZE_INT4); // quant output
         pipe.InitBuffer(fp32_xy_buf_, num_col_align_f32 * sizeof(float));
         pipe.InitBuffer(fp16_buf_, num_col_align_f16 * sizeof(T));
         pipe.InitBuffer(calc_buf_, BUF_FACTOR * num_col_align_f32 * sizeof(float) + 32); // 32 for sum
@@ -168,7 +174,6 @@ private:
     {
         AscendC::LocalTensor<T> fp16_x = fp16_x_que_.DeQue<T>();
         AscendC::LocalTensor<float> fp32_xy = fp32_xy_buf_.Get<float>();
-        AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.AllocTensor<int8_t>();
         AscendC::LocalTensor<float> buf = calc_buf_.Get<float>();
         AscendC::LocalTensor<float> g = buf[OFFSET_GAMMA * num_col_align_f32];       // 0
         AscendC::LocalTensor<float> sqx = buf[OFFSET_SQX * num_col_align_f32];       // 1
@@ -209,8 +214,15 @@ private:
         AscendC::LocalTensor<half> tmpfp16 =
             tmpfp16Buf[OFFSET_SUM * num_col_align_f32 * DIM_2]; // 2：work,float偏移到half
         CastFrom32To16(tmpfp16, fp32_xy, num_col_);
-        CastFromF16ToI8(int8_y, tmpfp16, quantMin_, num_col_);
-        int8_y_que_.EnQue(int8_y);
+        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+            AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.AllocTensor<int4b_t>();
+            Cast(int4_y, tmpfp16, RoundMode::CAST_RINT, num_col_);
+            int4_y_que_.EnQue(int4_y);
+        } else {
+            AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.AllocTensor<int8_t>();
+            CastFromF16ToI8(int8_y, tmpfp16, quantMin_, num_col_);
+            int8_y_que_.EnQue(int8_y);
+        }
         fp16_x_que_.FreeTensor(fp16_x);
     }
 
@@ -242,7 +254,6 @@ private:
     {
         AscendC::LocalTensor<T> fp16_x = fp16_x_que_.DeQue<T>();
         AscendC::LocalTensor<float> fp32_xy = fp32_xy_buf_.Get<float>();
-        AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.AllocTensor<int8_t>();
         AscendC::LocalTensor<float> buf = calc_buf_.Get<float>();
         AscendC::LocalTensor<float> g = buf[OFFSET_GAMMA * slice_size_];  // 0
         AscendC::LocalTensor<float> sqx = buf[OFFSET_SQX * slice_size_];  // 1
@@ -267,22 +278,39 @@ private:
         AscendC::LocalTensor<half> tmpfp16Buf = calc_buf_.Get<half>();
         AscendC::LocalTensor<half> tmpfp16 = tmpfp16Buf[OFFSET_SUM * slice_size_ * DIM_2]; // 2：work,float偏移到half
         CastFrom32To16(tmpfp16, fp32_xy, num);
-        CastFromF16ToI8(int8_y, tmpfp16, quantMin_, num);
-        int8_y_que_.EnQue(int8_y);
+        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+            AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.AllocTensor<int4b_t>();
+            Cast(int4_y, tmpfp16, RoundMode::CAST_RINT, num);
+            int4_y_que_.EnQue(int4_y);
+        } else {
+            AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.AllocTensor<int8_t>();
+            CastFromF16ToI8(int8_y, tmpfp16, quantMin_, num);
+            int8_y_que_.EnQue(int8_y);
+        }
         fp16_x_que_.FreeTensor(fp16_x);
     }
 
     __aicore__ inline void CopyOut(int64_t offset, uint32_t numel)
     {
-        AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.DeQue<int8_t>();
-        DataCopyCustom<int8_t>(gm_y_[offset], int8_y, numel);
-        int8_y_que_.FreeTensor(int8_y);
+        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+            AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.DeQue<int4b_t>();
+            DataCopyParams copyParams;
+            copyParams.blockLen = numel * sizeof(int4b_t) / SIZE_INT4;
+            copyParams.blockCount = 1;
+            DataCopyPad(gm_y_int4[offset], int4_y, copyParams);
+            int4_y_que_.FreeTensor(int4_y);
+        } else {
+            AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.DeQue<int8_t>();
+            DataCopyCustom<int8_t>(gm_y_[offset], int8_y, numel);
+            int8_y_que_.FreeTensor(int8_y);
+        }
     }
 
 private:
     AscendC::TPipe pipe;
     AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> fp16_x_que_;
     AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> int8_y_que_;
+    AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> int4_y_que_;
     AscendC::TBuf<AscendC::TPosition::VECCALC> fp32_xy_buf_;
     AscendC::TBuf<AscendC::TPosition::VECCALC> calc_buf_;
     AscendC::TBuf<AscendC::TPosition::VECCALC> fp16_buf_;
@@ -291,6 +319,7 @@ private:
     AscendC::GlobalTensor<T> gm_g_;
     AscendC::GlobalTensor<T> gm_b_;
     AscendC::GlobalTensor<int8_t> gm_y_;
+    AscendC::GlobalTensor<int4b_t> gm_y_int4;
     uint32_t num_core_{0};   // 一共激活多少AICORE
     uint32_t num_col_{0};    // 输入的列数
     uint32_t row_work_{0};   // 需要计算多少行
@@ -302,6 +331,7 @@ private:
     float input_offset_{0};  // 非对称量化偏移适配高精度
     float epsilon_{1e-12f};  // norm平滑参数
     uint32_t num_col_align_int8{0};
+    uint32_t num_col_align_int4{0};
     uint32_t num_col_align_f16{0};
     uint32_t num_col_align_f32{0};
     uint32_t num_col_align_f32_long{0};
@@ -310,6 +340,7 @@ private:
     uint32_t slice_size_{0};
     uint32_t num_slice_{0};
     uint32_t tail_copy_{0};
+    int32_t dstType{29};
 };
 
 extern "C" __global__ __aicore__ void rms_norm_quant(
@@ -317,36 +348,36 @@ extern "C" __global__ __aicore__ void rms_norm_quant(
 {
     GET_TILING_DATA(tiling_data, tiling);
     if (TILING_KEY_IS(257)) { // fp16, beta, gamma, beta, no slice 0b0_1_0_0_000001
-        RmsNormQuant<half, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<half, DTYPE_Y, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(1)) { // fp16, empty beta, gamma, beta, no slice  0b0_0_0_0_000001
-        RmsNormQuant<half, false, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<half, DTYPE_Y, false, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(321)) { // fp16, beta, gamma, beta, use slice  0b0_1_0_1_000001
-        RmsNormQuant<half, true, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<half, DTYPE_Y, true, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(65)) { // fp16, empty beta, gamma, beta, use slice  0b0_0_0_1_000001
-        RmsNormQuant<half, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<half, DTYPE_Y, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
 #if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220)
     if (TILING_KEY_IS(283)) { // bf16, beta, gamma, beta, no slice  0b0_1_0_0_011011
-        RmsNormQuant<bfloat16_t, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<bfloat16_t, DTYPE_Y, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(27)) { // bf16, empty beta, gamma, beta, no slice  0b0_0_0_0_011011
-        RmsNormQuant<bfloat16_t, false, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<bfloat16_t, DTYPE_Y, false, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(347)) { // bf16, beta, gamma, beta, use slice  0b0_1_0_1_011011
-        RmsNormQuant<bfloat16_t, true, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<bfloat16_t, DTYPE_Y, true, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
     if (TILING_KEY_IS(91)) { // bf16, empty beta, gamma, beta, use slice  0b0_0_0_1_011011
-        RmsNormQuant<bfloat16_t, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
+        RmsNormQuant<bfloat16_t, DTYPE_Y, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
 #endif

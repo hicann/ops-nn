@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
@@ -277,7 +277,7 @@ TEST_F(l2_flip_test, abnormal_2) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
   // SAMPLE: precision simulate
-  // ut.TestPrecision();
+  
 }
 
 
@@ -296,7 +296,7 @@ TEST_F(l2_flip_test, abnormal_3) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
   // SAMPLE: precision simulate
-  // ut.TestPrecision();
+  
 }
 
 
@@ -315,7 +315,7 @@ TEST_F(l2_flip_test, abnormal_4) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
   // SAMPLE: precision simulate
-  // ut.TestPrecision();
+  
 }
 
 // 异常场景：dim为空
@@ -333,7 +333,7 @@ TEST_F(l2_flip_test, abnormal_dim_null) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
   // SAMPLE: precision simulate
-  // ut.TestPrecision();
+  
 }
 
 // 异常场景：out为空
@@ -351,7 +351,7 @@ TEST_F(l2_flip_test, abnormal_out_null) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
   // SAMPLE: precision simulate
-  // ut.TestPrecision();
+  
 }
 
 // 异常场景：dims中轴有重复

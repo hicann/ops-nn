@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -95,6 +95,9 @@ TEST_P(AvgPool3DTest, test_case_avg_pool3d) {
   tilingData->tileInput = tilingParam.tileInput;
   tilingData->tileHW = tilingParam.tileHW;
   tilingData->atomicAddNum = tilingParam.atomicAddNum;
+  if (tilingParam.usedCoreNum != 0){
+    tilingData->usedCoreNum = tilingParam.usedCoreNum;
+  }
 
   uint32_t blockDim = tilingParam.formerNum + tilingParam.tailNum;
   ICPU_SET_TILING_KEY(tilingKey);
@@ -202,6 +205,27 @@ static AvgPool3DTestParam cases[] = {
       0, 1, 0,
       43, 32, 42, 16,
       128, 0, 0, 256
+    }
+  },
+  {
+    "test_case_big_kernel_float32",
+    sizeof(float),
+    60,
+    {
+      1, 16, 0,
+      8, 16, 16,
+      8, 7, 7,
+      1, 3, 3,
+      1, 2, 2,
+      0, 0, 0,
+      0, 1, 0,
+      17, 16, 16, 32,
+      128, 4, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 48
     }
   },
 };

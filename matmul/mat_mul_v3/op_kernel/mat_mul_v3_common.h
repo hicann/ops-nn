@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file mat_mul_v3_common.h
@@ -16,7 +16,7 @@
 #define __OP_KERNEL_MATMUL_V3_COMMON_H__
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
-
+#include "mat_mul_v3_tiling_data.h"
 
 using namespace AscendC;
 using namespace matmul;
@@ -51,12 +51,20 @@ const uint64_t AIC_SYNC_AIV_FLAG = 6;
 
 constexpr uint64_t BLOCK_BYTE_SIZE = 32;
 
+#if defined(__DAV_C310__)
+const uint8_t AIC_SYNC_AIV_MODE_4 = 4;
+const uint64_t VEC0_FLAG_ID_OFFSET = 0;
+const uint64_t VEC1_FLAG_ID_OFFSET = 16;
+#endif
 // common MDL config
 constexpr MatmulConfig MM_CFG_MDL = GetMDLConfig();
 // set isVecND2Nz
 constexpr MatmulConfig MM_CFG_VEC_ND2NZ = GetMDLConfig(false, false, 0, true);
 // set enUnitFlag
 constexpr MatmulConfig MM_CFG_NO_PRELOAD = GetMDLConfig(false, false, 0, false, false, false, true);
+// enable K shift
+constexpr MatmulConfig MM_CFG_K_SHIFT =
+    GetMDLConfig(false, false, 0, false, false, false, true, true, true, false, false, true);
 // set doMTE2Preload
 constexpr MatmulConfig MM_CFG_PRELOAD_MK = GetMDLConfig(false, false, 2);
 constexpr MatmulConfig MM_CFG_PRELOAD_NK = GetMDLConfig(false, false, 1);
@@ -175,6 +183,8 @@ __aicore__ inline void WaitFlagDevLocal(int64_t flagID)
     CrossCoreWaitFlag(flagID);
 }
 
+//supportMmadS8S4平台无L2cacheUseInfo，用宏隔离
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 template <class A_T, class B_T, class C_T, class BiasT>
 __aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo,
     GlobalTensor<A_T> &aGlobal, GlobalTensor<B_T> &bGlobal,
@@ -186,6 +196,7 @@ __aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo,
         }
     }
 }
+#endif
 
 template <class T>
 __aicore__ inline void CopyGmToUbufAlign(const LocalTensor<T>& dst, const GlobalTensor<T>& src,

@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    
+    AddOpTestCase(swi_glu_quant "ascend910B1" "" )
 endif()
