@@ -10,7 +10,8 @@
 
 set -e
 RELEASE_TARGETS=("ophost" "opapi")
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910")
+
+SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910" "kirinx90")
 TRIGER_UTS=()
 
 # 所有支持的短选项

@@ -16,6 +16,7 @@ SOC_MAP=([Ascend310P]="Ascend310P3"
           [Ascend910B]="Ascend910B1"
           [Ascend910_93]="Ascend910_9391"
           [Ascend910_95]="Ascend910_9599"
+          [KirinX90]="KirinX90"
 )
 
 OPC_TASK_NAME="opc_cmd.sh"

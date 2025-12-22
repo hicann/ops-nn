@@ -27,6 +27,7 @@ enum class SocVersion {
     ASCEND310B,
     ASCEND310C,
     ASCEND610LITE,
+    KIRINX90,
     RESERVED_VERSION = 99999
 };
 
