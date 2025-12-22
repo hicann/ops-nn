@@ -482,7 +482,7 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAddmm);
     // 固定写法，调用框架能力，完成计算
@@ -498,7 +498,7 @@ aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
 }
 
 aclnnStatus aclnnInplaceAddmm(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     // 固定写法，调用框架能力，完成计算
     L2_DFX_PHASE_2(aclnnInplaceAddmm);
@@ -546,7 +546,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
 }
 
 ACLNN_API aclnnStatus
-aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAddmmWeightNz);
     // 固定写法，调用框架能力，完成计算

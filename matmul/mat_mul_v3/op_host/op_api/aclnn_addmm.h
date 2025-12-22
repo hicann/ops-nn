@@ -37,13 +37,13 @@ ACLNN_API aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
  * @brief aclnnAddmm的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus
-aclnnAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+aclnnAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 /**
  * @brief aclnnInplaceAddmm的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus
-aclnnInplaceAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+aclnnInplaceAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 /**
  * @brief aclnnAddmmWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -72,7 +72,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
  * @return aclnnStatus: 返回状态码
  */
 ACLNN_API aclnnStatus
-aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 #ifdef __cplusplus
 }
 #endif
