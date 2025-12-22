@@ -1292,9 +1292,6 @@ if [[ -z "$GENOP_NAME" ]] || [[ -z "$GENOP_TYPE" ]]; then
 
 main() {
   checkopts "$@"
-  if [[ "$OP_KERNEL" == "TRUE" ]]; then
-    exit 0
-  fi
   if [[ "$ENABLE_GENOP" == "TRUE" ]]; then
     gen_op
     exit $?

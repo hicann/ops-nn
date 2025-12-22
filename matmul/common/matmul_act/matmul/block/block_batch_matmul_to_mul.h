@@ -279,7 +279,7 @@ public:
 
         AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(eventIdMte3VPing);
         AivProcess(ubOffsetAPing, ubOffsetBPing, ubOffsetCPing, batchNumPing_);
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
         AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(eventIdVMte2Ping);
 
         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventIdPing3);

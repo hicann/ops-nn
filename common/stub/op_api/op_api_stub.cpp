@@ -221,7 +221,7 @@ const aclTensor* Slice(
 const aclTensorList *SplitV(const aclTensor* self, const aclIntArray* splitSize, int64_t dim, aclOpExecutor* executor)
 {
     op::FVector<const aclTensor*> splitVector;
-    for (int64_t index = 0; index < splitSize->Size(); index++) {
+    for (size_t index = 0; index < splitSize->Size(); index++) {
         auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
         splitVector.emplace_back(out);
     }
