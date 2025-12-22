@@ -138,7 +138,7 @@ bool ProcessWeightBlock(
 }
 
 bool SetOneBlockDense(
-    const int8_t* weight, int8_t* sparseWeight, uint8_t* index, const int64_t& kNdOffset, int32_t validWeightCount)
+    const int8_t* weight, int8_t* sparseWeight, uint8_t* index, int32_t validWeightCount)
 {
     if (validWeightCount < 0) {
         return true;
@@ -148,7 +148,7 @@ bool SetOneBlockDense(
     sparseWeightBlock.reserve(SPARSE_ATOMIC_SIZE); // 8个数为4选2的一组
     std::vector<int8_t> compressedWeightBlock;
     compressedWeightBlock.reserve(SPARSE_INDEX_MULTI); // 对应的压缩后的4个数
-    for (uint64_t i = 0; i < validWeightCount; i++) {
+    for (uint64_t i = 0; i < static_cast<uint64_t>(validWeightCount); i++) {
         sparseWeightBlock.push_back(weight[i]);
     }
     for (uint64_t i = 0; i < SPARSE_ATOMIC_SIZE - validWeightCount; i++) {
@@ -178,9 +178,9 @@ bool CalParseWeightAndIndex(
                 continue;
             }
             // weight中64个数对应sparseWeight一个C0, 8个数对应1个index
-            for (int64_t k0Loop = 0; k0Loop < INDEX_C0_SIZE; k0Loop++) {
+            for (int64_t k0Loop = 0; k0Loop < static_cast<int64_t>(INDEX_C0_SIZE); k0Loop++) {
                 int64_t kNdOffset = k1Loop * NZ_K0_INT8_SIZE * SPARSE_MULTI + k0Loop * SPARSE_ATOMIC_SIZE;
-                int32_t validWeightCount = kNdOffset + SPARSE_ATOMIC_SIZE >= kDimNdShape ?
+                int32_t validWeightCount = kNdOffset + SPARSE_ATOMIC_SIZE >= static_cast<uint64_t>(kDimNdShape) ?
                                             (kDimNdShape - kNdOffset) : SPARSE_ATOMIC_SIZE;
                 int64_t ndOffset = nLoop * kDimNdShape + kNdOffset;
                 int64_t sparseWeightOffset = (k1Loop * nDimNzShape + nLoop) * NZ_K0_INT8_SIZE +
@@ -189,7 +189,7 @@ bool CalParseWeightAndIndex(
 
                 CHECK_RET(
                     SetOneBlockDense(&weight[ndOffset], &sparseWeight[sparseWeightOffset], &index[sparseIndexOffset],
-                                     kNdOffset, validWeightCount),
+                                     validWeightCount),
                     false);
             }
         }

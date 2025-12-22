@@ -197,7 +197,7 @@ bool Sparse4to2QuantMatmulTiling::AnalyzeInputs()
         x1InnerAlign != static_cast<uint64_t>(x2Inner + x2Inner),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "Invalid inputs, k axis of input x(8 aligned value is %lu) must double that of sparseWeight(value is %lu).",
+            "Invalid inputs, k axis of input x(8 aligned value is %lu) must double that of sparseWeight(value is %ld).",
             x1InnerAlign, x2Inner),
         return false);
     OP_TILING_CHECK(
@@ -220,7 +220,6 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::CheckContext()
     OP_TILING_CHECK(attrs == nullptr,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Get Attrs failed!"),
                     return ge::GRAPH_FAILED);
-    auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
@@ -1092,7 +1091,7 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::CalcUbTiling(uint64_t& baseM, uint6
     OP_TILING_CHECK(
         needUbSize >= ubSize,
         CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "There is no proper ub tiling when m(%lu) n(%lu) baseM(%u) baseN(%u)",
+            inputParams_.opName, "There is no proper ub tiling when m(%lu) n(%lu) baseM(%lu) baseN(%lu)",
             inputParams_.mSize, inputParams_.nSize, baseM, baseN),
         return ge::GRAPH_FAILED);
     ubSize -= needUbSize;

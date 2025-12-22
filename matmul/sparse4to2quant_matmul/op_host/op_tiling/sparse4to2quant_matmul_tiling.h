@@ -191,7 +191,6 @@ private:
     bool isUbQuant_ = false;
     uint64_t workspaceSize_ = 0;
     Sparse4to2QuantMatmulCompileInfo compileInfo_;
-    gert::TilingContext* context;
     platform_ascendc::SocVersion socVersion_;
     Sparse4to2QuantMatmulInfo inputParams_;
     SparseQmm::Sparse4to2QuantMatmulTilingData tilingData_;
