@@ -133,8 +133,6 @@ aclnnStatus ExecSoftmaxCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* f
   CHECK_RET(SoftmaxCrossEntropyOutResult != nullptr && LogitsResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
-  int64_t dimNum = loss->GetViewShape().GetDimNum();
-  int64_t dimNum_1 = SoftmaxCrossEntropyOutResult->GetViewShape().GetDimNum();
   auto viewCopyOutResult = l0op::ViewCopy(SoftmaxCrossEntropyOutResult, loss, uniqueExecutor.get());
   CHECK_RET(viewCopyOutResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
   auto viewCopyLogitsOutResult = l0op::ViewCopy(LogitsResult, backprop, uniqueExecutor.get());

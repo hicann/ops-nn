@@ -29,7 +29,6 @@ std::tuple<aclTensor*, aclTensor*> SoftmaxCrossEntropyWithLogits(const aclTensor
   L0_DFX(SoftmaxCrossEntropyWithLogits, features, labels);
   // 获取 features 的 shape
   const auto& featShape = features->GetViewShape();
-  size_t dimNum = featShape.GetDimNum();
   op::Shape lossShape({featShape.GetDim(0)});
   // 分配输出 Tensor
   auto loss = executor->AllocTensor(lossShape, features->GetDataType());
