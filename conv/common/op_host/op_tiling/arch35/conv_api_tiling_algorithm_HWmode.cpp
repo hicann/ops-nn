@@ -557,6 +557,17 @@ bool ConvTilingAlgorithmHWmode::CheckBL1FullLoad()
            this->l1TilingCalc.fixpParamsL1MaxSize <= tilingIns_->platformInfo.l1Size;
 }
 
+bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad()
+{
+    uint64_t hoAL1Full = tilingIns_->shapeInfo.singleHo;
+    uint64_t woAL1Full = AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0);
+    // load3d m start position <= LOAD3D_M_START_POS_LIMIT
+    if (!tilingIns_->isDmaFlag && hoAL1Full * woAL1Full > LOAD3D_M_START_POS_LIMIT) {
+        return false;
+    }
+    return true;
+}
+
 bool ConvTilingAlgorithmHWmode::CheckAL1FullLoad()
 {
     if (tilingIns_->isDmaFlag &&
@@ -564,12 +575,10 @@ bool ConvTilingAlgorithmHWmode::CheckAL1FullLoad()
         return false;
     }
  
-    uint64_t hoAL1Full = tilingIns_->shapeInfo.singleHo;
-    uint64_t woAL1Full = AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0);
-    // load3d m start position <= LOAD3D_M_START_POS_LIMIT
-    if (!tilingIns_->isDmaFlag && hoAL1Full * woAL1Full > LOAD3D_M_START_POS_LIMIT) {
+    if (!CheckHoWoL1FullLoad()) {
         return false;
     }
+
     if (!tilingIns_->isDmaFlag && tilingIns_->shapeInfo.singleCi1 * tilingIns_->shapeInfo.singlekH *
         tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0 > MAX_16_BIT_NUM) {
         return false;
@@ -585,10 +594,7 @@ bool ConvTilingAlgorithmHWmode::CheckABL1FullLoad()
         return false;
     }
  
-    uint64_t hoAL1Full = tilingIns_->shapeInfo.singleHo;
-    uint64_t woAL1Full = AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0);
-    // load3d m start position <= LOAD3D_M_START_POS_LIMIT
-    if (!tilingIns_->isDmaFlag && hoAL1Full * woAL1Full > LOAD3D_M_START_POS_LIMIT) {
+    if (!CheckHoWoL1FullLoad()) {
         return false;
     }
     return this->l1TilingCalc.aL1MaxSize + this->l1TilingCalc.bL1MaxSize + this->l1TilingCalc.biasL1MaxSize +

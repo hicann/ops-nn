@@ -238,8 +238,7 @@ void ConvTilingAlgorithmMmode::GetL1TilingRange()
     CalcCommFactor(multiMAL1Max, multiMAL1Max, this->l1TilingRange.mAL1ValueRange);
     VectorElementMultip(this->l1TilingRange.mAL1ValueRange, l0TilingParams.mL0);
     // load3d m start position <= LOAD3D_M_START_POS_LIMIT
-    if (tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
-        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    if (tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
         auto mL1EffectiveCount = count_if(this->l1TilingRange.mAL1ValueRange.begin(),
             this->l1TilingRange.mAL1ValueRange.end(), [](uint64_t x) { return x <= LOAD3D_M_START_POS_LIMIT; });
         this->l1TilingRange.mAL1ValueRange.resize(mL1EffectiveCount);
@@ -596,8 +595,7 @@ void ConvTilingAlgorithmMmode::BiasL1TilingDecision()
 
     // decide if bias can fullload in L1, than decide if fixpipe Params can full load in L1
     bool isSupportSoc = tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
-                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55 ||
-                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::MC62CM12A;
+                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55;
     if (!this->l1TilingFlag.isBiasFullLoad) {
         this->l1TilingFlag.isBiasFullLoad = true;
         bool exceedDataCopyLimits = isSupportSoc && tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 *

@@ -12,8 +12,8 @@
  * \file conv_api_tiling_algorithm_base.h
  * \brief
  */
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_BASE_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_BASE_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BASE_H
+#define ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BASE_H
 
 #include "conv_api_tiling_base.h"
 
@@ -63,4 +63,4 @@ protected:
 };
 } // namespace conv_tiling
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BASE_H

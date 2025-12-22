@@ -254,7 +254,7 @@ template <class Intf>
 __aicore__ inline void ReduceKCloseL0PingPong(Intf *self, bool isFirst)
 {
     event_t eventID = static_cast<event_t>(L0_SYBC_DB_CLOSE);
-    wait_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
     if (!((self->ctx.convTiling->kAL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadAL0Flag))) {
         self->ctx.al0 = self->ctx.wholeAl0Tensor;
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -275,10 +275,10 @@ __aicore__ inline void ReduceKCloseL0PingPong(Intf *self, bool isFirst)
             Conv2dFunc::WeightUbTransSyncSet<Intf>(self);
         }
     }
-    set_flag(PIPE_MTE1, PIPE_M, eventID);
-    wait_flag(PIPE_MTE1, PIPE_M, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
-    set_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
     self->ctx.kIter++;
 }
 
@@ -286,7 +286,7 @@ template <class Intf>
 __aicore__ inline void ReduceKOpenL0APingPong(Intf *self, uint16_t& al0PingPongFlag, bool isFirst)
 {
     event_t eventID = static_cast<event_t>(al0PingPongFlag);
-    wait_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
     self->ctx.al0 =
         self->ctx.wholeAl0Tensor[(al0PingPongFlag) * L0A_HALF_SIZE / Intf::sizeOfFmap];
     self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -300,8 +300,8 @@ __aicore__ inline void ReduceKOpenL0APingPong(Intf *self, uint16_t& al0PingPongF
         self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
         // BL0 wait MMAD
         event_t e = static_cast<event_t>(al0PingPongFlag ^ 1);
-        wait_flag(PIPE_M, PIPE_MTE1, e);
-        set_flag(PIPE_M, PIPE_MTE1, e);
+        AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
+        AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
         self->ctx.loadBL0Ins.LoadBL0(isFirst);
         if constexpr (Intf::groupOptNDFlag) {
             OptGroupSyncSet<Intf>(self);
@@ -311,10 +311,10 @@ __aicore__ inline void ReduceKOpenL0APingPong(Intf *self, uint16_t& al0PingPongF
             Conv2dFunc::WeightUbTransSyncSet<Intf>(self);
         }
     }
-    set_flag(PIPE_MTE1, PIPE_M, eventID);
-    wait_flag(PIPE_MTE1, PIPE_M, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
-    set_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
     al0PingPongFlag ^= 1;
     self->ctx.kIter++;
 }
@@ -323,7 +323,7 @@ template <class Intf>
 __aicore__ inline void ReduceKOpenL0BPingPong(Intf *self, uint16_t& bl0PingPongFlag, bool isFirst)
 {
     event_t eventID = static_cast<event_t>(bl0PingPongFlag);
-    wait_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
  
     self->ctx.bl0 =
         self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
@@ -342,18 +342,18 @@ __aicore__ inline void ReduceKOpenL0BPingPong(Intf *self, uint16_t& bl0PingPongF
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
         // AL0 wait MMAD
         event_t e = static_cast<event_t>((bl0PingPongFlag ^ 1));
-        wait_flag(PIPE_M, PIPE_MTE1, e);
-        set_flag(PIPE_M, PIPE_MTE1, e);
+        AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
+        AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
         self->ctx.loadAL0Ins.LoadAL0(isFirst);
         if constexpr (Intf::isDmaFlag) {
             Conv2dFunc::DmaSyncSet<Intf>(self);
         }
     }
 
-    set_flag(PIPE_MTE1, PIPE_M, eventID);
-    wait_flag(PIPE_MTE1, PIPE_M, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
-    set_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
     bl0PingPongFlag ^= 1;
     self->ctx.kIter++;
 }
@@ -366,7 +366,7 @@ __aicore__ inline void ReduceKOpenL0AL0BPingPong(Intf *self, uint16_t& al0PingPo
     self->ctx.bl0 =
         self->ctx.wholeBl0Tensor[(al0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
     event_t eventID = static_cast<event_t>(al0PingPongFlag);
-    wait_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
     self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
     self->ctx.loadAL0Ins.LoadAL0(isFirst);
     if constexpr (Intf::isDmaFlag) {
@@ -382,10 +382,10 @@ __aicore__ inline void ReduceKOpenL0AL0BPingPong(Intf *self, uint16_t& al0PingPo
     } else if constexpr (Intf::weightUbTrans) {
         Conv2dFunc::WeightUbTransSyncSet<Intf>(self);
     }
-    set_flag(PIPE_MTE1, PIPE_M, eventID);
-    wait_flag(PIPE_MTE1, PIPE_M, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
-    set_flag(PIPE_M, PIPE_MTE1, eventID);
+    AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
     al0PingPongFlag ^= 1;
     self->ctx.kIter++;
 }

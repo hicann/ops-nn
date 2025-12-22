@@ -56,9 +56,9 @@ int64_t Conv3dTiling::GetTiling(optiling::TConv3DTiling &tiling)
     return ret;
 }
 
-void Conv3dTiling::SetOutputOrder(int8_t outputOrder)
+void Conv3dTiling::SetOutputOrder(int8_t outOrder)
 {
-    this->outputOrder = outputOrder;
+    this->outputOrder = outOrder;
 }
 
 int64_t Conv3dTiling::Compute()
@@ -746,10 +746,10 @@ void Conv3dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
 }
 
-void Conv3dTiling::SetHF32(bool hf32Enable, bool hf32TransMode = false)
+void Conv3dTiling::SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag = false)
 {
-    this->hf32Enable = hf32Enable;
-    this->hf32TransMode = hf32TransMode;
+    this->hf32Enable = hf32EnableFlag;
+    this->hf32TransMode = hf32TransModeFlag;
 }
 
 void Conv3dTiling::SetQuantScale(bool hasScale)

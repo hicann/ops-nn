@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_UTIL_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_UTIL_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_UTIL_H
+#define ASCENDC_TILING_CONV_API_TILING_UTIL_H
 
 #include <iostream>
 #include <cstdint>
@@ -305,7 +305,6 @@ constexpr uint32_t FORMAT_FM_INDEX = 0;
 constexpr uint32_t FORMAT_WEIGHT_INDEX = 1;
 constexpr uint32_t FORMAT_BIAS_INDEX = 2;
 
-constexpr uint32_t L1_SIZE_VALUE = 524488;
 constexpr uint32_t MIN_M_L1_SIZE = 16;
 
 constexpr uint32_t L1_SCORE_BASE_5_POINTS = 5;
@@ -414,4 +413,4 @@ uint64_t DivideAndAlign(uint64_t num, uint64_t b, uint64_t c);
 uint64_t Lcm(const uint64_t valueA, const uint64_t valueB);
 } // namespace conv_tiling
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_UTIL_H

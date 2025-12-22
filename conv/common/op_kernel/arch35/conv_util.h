@@ -104,25 +104,14 @@ static constexpr IsResetLoad3dConfig CONV_LOAD3DV2_DEFAULT_CONFIG = {false, fals
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {
     CO2Layout::COLUMN_MAJOR,
     false,
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    true
-#endif
 };
 constexpr FixpipeConfig CFG_ROW_MAJOR_FIXED_POINT = {
     CO2Layout::ROW_MAJOR,
     false,
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    true
-#endif
 };
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-#define ASCEND_IS_AIC_CONV constexpr(true)
-#define ASCEND_IS_AIV_CONV constexpr(true)
-#else
 #define ASCEND_IS_AIC_CONV ASCEND_IS_AIC
 #define ASCEND_IS_AIV_CONV ASCEND_IS_AIV
-#endif
 
 // unit flag mode
 constexpr uint8_t UNIT_FLAG_DISABLE = 0;

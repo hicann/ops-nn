@@ -53,7 +53,7 @@ void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<u
     sort(reslist.begin(), reslist.end());
 }
 
-uint32_t ConvAlignB(uint32_t a, uint32_t b)
+uint64_t ConvAlignB(uint64_t a, uint64_t b)
 {
     if (b == 0) {
         return 0;
@@ -474,9 +474,11 @@ ge::graphStatus ConvBase::CheckL1SizeLimitsInMSplitMode()
 
 ge::graphStatus ConvBase::CheckC04L1SizeLimitsInHWSplitMode()
 {
-    // c04 require wi fulload L1
+    // c04 require wi fulload L1 if hi > 1
+    uint64_t tempWi = shapeInfo_.hi > 1 ? shapeInfo_.wi : ConvInferWiL1(convOpsConstParams_.m0,
+        shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
     uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(C04_CIN_SIZE, ConvAlignB(
-        C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), shapeInfo_.wi);
+        C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), tempWi);
     if (usdL1SizeUnderMinHWtiling > opInfo_->l1Size) {
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: c04 minUsedL1SizeInHWmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",
@@ -741,10 +743,19 @@ void ConvBase::GetBlockDimRangeHWsplitMode()
     ConvCalcCommFactor(shapeInfo_.ho, aicoreNum_, blockDimRanges_.hoRange);
     ConvBlockDimFactorMix(shapeInfo_.ho, blockDimRanges_.hoRange, blockDimRanges_.aicNumRange);
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG) {
-        ConvCalcCommFactor(shapeInfo_.wo, aicoreNum_, blockDimRanges_.woRange);
-        ConvBlockDimFactorMix(shapeInfo_.wo, blockDimRanges_.woRange, blockDimRanges_.aicNumRange);
+        // 如果 L1 全载，优先使用在 batch 轴绑核, wo 最大的绑轴数量为 aicoreNum_ / max(batchRange),
+        uint64_t fMapDtypeSize = dtypeSizeTab.at(descInfo_.fMapDtype);
+        uint64_t kAL1max = ConvAlignB(shapeInfo_.ci, convOpsConstParams_.k0);
+        uint64_t fmapUsedL1Size = ConvAlignB(shapeInfo_.wi * kAL1max * fMapDtypeSize, C0_SIZE);
+        if (fmapUsedL1Size < ConvCeilDiv(opInfo_->l1Size, CONST_VALUE_2)) {
+            uint32_t woRangeMaxConv1D = ConvCeilDiv(aicoreNum_, shapeInfo_.batch);
+            ConvCalcCommFactor(shapeInfo_.wo, woRangeMaxConv1D, blockDimRanges_.woRange);
+        } else {
+            ConvCalcCommFactor(shapeInfo_.wo, aicoreNum_, blockDimRanges_.woRange);
+            ConvBlockDimFactorMix(shapeInfo_.wo, blockDimRanges_.woRange, blockDimRanges_.aicNumRange);
+        }
         return;
-    }
+    }                                         
     blockDimRanges_.woRange.emplace_back(1);
 
     if (shapeInfo_.wo < GetMinBurstNum()) {
@@ -929,14 +940,6 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, const platform
         } else {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
             ss << "(quantFlag is disable and inputDtype is HIFLOAT8) is ";
-        }
-    } else if (socVersion == platform_ascendc::SocVersion::MC62CM12A) {
-        if (extendConvFlag) {
-            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MC62CM12A;
-            ss << "(extendConvFlag is enable) is ";
-        } else {
-            supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MC62CM12A;
-            ss << "(extendConvFlag is disable) is ";
         }
     } else {
         supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;

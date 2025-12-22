@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_MMODE_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_MMODE_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_ALGORITHM_MMODE_H
+#define ASCENDC_TILING_CONV_API_TILING_ALGORITHM_MMODE_H
 
 #include <cstdint>
 #include <unordered_map>
@@ -148,4 +148,4 @@ private:
 };
 } // namespace conv_tiling_algo_m
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_ALGORITHM_MMODE_H

@@ -52,6 +52,7 @@ struct Iterate {
                 return Conv2dFunc::DmaVecImpl<Intf>(self);
             }
         }
+        return false;
     }
 
     static __aicore__ inline bool IterateImplHWMode(Intf *self, bool enPartialSum);

@@ -30,27 +30,23 @@ using conv_tiling::ConvGroupType;
 static std::map<platform_ascendc::SocVersion, std::string> socNameTab = {
     {platform_ascendc::SocVersion::ASCEND910_95, "Ascend910_95"},
     {platform_ascendc::SocVersion::ASCEND910_55, "Ascend910_55"},
-    {platform_ascendc::SocVersion::MC62CM12A, "MC62CM12A"},
     {platform_ascendc::SocVersion::RESERVED_VERSION, "RESERVED_VERSION"}
 };
 
 static map<string, platform_ascendc::SocVersion> socConvertMap = {
     {"Ascend910_9589", platform_ascendc::SocVersion::ASCEND910_95},
     {"Ascend910_5591", platform_ascendc::SocVersion::ASCEND910_55},
-    {"MC62CM12AA", platform_ascendc::SocVersion::MC62CM12A},
 };
 
 static map<platform_ascendc::SocVersion, uint64_t> socBTsizeMap = {
     {platform_ascendc::SocVersion::ASCEND910_95, BT_SIZE_910_95},
     {platform_ascendc::SocVersion::ASCEND910_55, BT_SIZE_910_55},
-    {platform_ascendc::SocVersion::MC62CM12A, BT_SIZE_MC62CM12A},
     {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
 };
 
 static map<platform_ascendc::SocVersion, uint64_t> socFBsizeMap = {
     {platform_ascendc::SocVersion::ASCEND910_95, FB_SIZE_910_95},
     {platform_ascendc::SocVersion::ASCEND910_55, FB_SIZE_910_55},
-    {platform_ascendc::SocVersion::MC62CM12A, FB_SIZE_MC62CM12A},
     {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
 };
 
@@ -110,15 +106,9 @@ const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_910_95 = {
     {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32}
 };
 
-// [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_MC62CM12A = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16}
-};
-
 const std::map<platform_ascendc::SocVersion, std::vector<std::vector<ConvDtype>>> SOC_CONV_SUPPORTED_TYPES =
 {
-    {platform_ascendc::SocVersion::ASCEND910_95, CONV_SUPPORTED_TYPES_910_95},
-    {platform_ascendc::SocVersion::MC62CM12A, CONV_SUPPORTED_TYPES_MC62CM12A}
+    {platform_ascendc::SocVersion::ASCEND910_95, CONV_SUPPORTED_TYPES_910_95}
 };
 
 // [fmap, weight, output, bias]
@@ -161,16 +151,6 @@ const std::vector<std::vector<ConvDtype>> QUANTCONV_SUPPORTED_TYPES = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16}
-};
-
-// [fmap, weight, output, bias]
 const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NCHW = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
@@ -196,13 +176,11 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
 
 const std::map<platform_ascendc::SocVersion,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
-    {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
     {platform_ascendc::SocVersion::ASCEND910_95, EXTENDCONV_SUPPORTED_TYPES_NCHW}
 };
 
 const std::map<platform_ascendc::SocVersion,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
-    {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
     {platform_ascendc::SocVersion::ASCEND910_95, EXTENDCONV_SUPPORTED_TYPES_NHWC}
 };
 
@@ -417,7 +395,7 @@ uint32_t Gcd(uint32_t i, uint32_t j);
 
 uint64_t ConvCeilDiv(uint64_t a, uint64_t b);
 void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<uint32_t> &reslist);
-uint32_t ConvAlignB(uint32_t a, uint32_t b);
+uint64_t ConvAlignB(uint64_t a, uint64_t b);
 uint64_t ConvInferHiL1(uint64_t inputHoL1, uint64_t hi, uint64_t singlekH, uint32_t dilationH, uint32_t strideH);
 uint64_t ConvInferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, uint32_t dilationW, uint32_t strideW);
 int64_t ConvComputeHo(int64_t hi, int64_t hk, int64_t padTop, int64_t padBottom, int64_t dilationH, int64_t strideH);

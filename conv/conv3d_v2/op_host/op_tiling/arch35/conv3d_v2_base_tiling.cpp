@@ -38,27 +38,6 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
     curShortSoc =  tilingCache.GetSocVersion();
     if (curShortSoc == platform_ascendc::SocVersion::RESERVED_VERSION) {
         auto platformInfoPtr = context_->GetPlatformInfo();
-        if (platformInfoPtr == nullptr) {
-            auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
-            OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-            ConvTilingParseInfo opInfo = *compileInfoPtr;
-            opInfo_->aicoreNum = opInfo.aicoreNum;
-            opInfo_->l2Size = opInfo.l2Size;
-            opInfo_->l1Size = opInfo.l1Size;
-            opInfo_->l0aSize = opInfo.l0aSize;
-            opInfo_->l0bSize = opInfo.l0bSize;
-            opInfo_->l0cSize = opInfo.l0cSize;
-            opInfo_->ubSize = opInfo.ubSize;
-            opInfo_->btSize = opInfo.btSize;
-            opInfo_->l2Rate = opInfo.l2Rate;
-            opInfo_->socVersion = opInfo.socVersion;
-            opInfo_->shortSocVersion = opInfo.shortSocVersion;
-            if (socConvertMap.find(opInfo_->socVersion) == socConvertMap.end()) {
-                OP_LOGE(context_->GetNodeName(), "%s AscendC: GetPlatform SocVersion failed.", paramInfo_.nodeType.c_str());
-                return ge::GRAPH_FAILED;
-            }
-            curShortSoc = socConvertMap.at(opInfo_->socVersion);
-        } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
         curShortSoc = ascendcPlatform.GetSocVersion();
@@ -68,7 +47,6 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, opInfo_->l0cSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, opInfo_->ubSize);
         tilingCache.SetSocVersion(curShortSoc, *opInfo_);
-        }
     }
     SetApiInputPlatformInfo(curShortSoc);
     return ge::GRAPH_SUCCESS;

@@ -13,15 +13,15 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
+#define ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
 
 #include <cstdint>
 #include <unordered_map>
 #include <memory>
 #include "conv_api_tiling_algorithm_base.h"
 #include "conv_api_tiling_base.h"
-#include "conv/conv2d_v2/op_host/op_tiling/arch35/conv2d_api_tiling.h"
+#include "conv/conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_api_tiling.h"
 using namespace conv_tiling;
 namespace conv_tiling_algo_bb {
 struct L1TilingParams {
@@ -235,4 +235,4 @@ private:
 
 } // namespace conv_tiling_algo_bb
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H

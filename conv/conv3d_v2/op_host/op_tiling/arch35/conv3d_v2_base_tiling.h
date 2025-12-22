@@ -60,7 +60,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
     ge::graphStatus Conv3DInfoInitAndCheck();
-    const bool GetTilingFromRepo();
+    bool GetTilingFromRepo();
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
     void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);
     void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> aoeTiling);

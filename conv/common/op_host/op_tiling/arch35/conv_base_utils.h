@@ -59,6 +59,24 @@ constexpr size_t UINT64_BYTE_COUNT = 8;
 constexpr size_t UINT32_BIT_COUNT = 32;
 constexpr size_t BITS_PER_BYTE = 8;
 
+constexpr uint32_t ATTR_STRIDE_INDEX = 0;
+constexpr uint32_t ATTR_PAD_INDEX = 1;
+constexpr uint32_t ATTR_DILATION_INDEX = 2;
+constexpr uint32_t ATTR_GROUP_INDEX = 3;
+constexpr uint32_t ATTR_DATAFORMAT_INDEX = 4;
+constexpr uint32_t ATTR_PAD_MODE_INDEX = 6;
+constexpr uint32_t ATTR_ENABLE_HF32_INDEX = 7;
+
+constexpr uint32_t ATTR_QUANT_DTYPE_INDEX = 0;
+constexpr uint32_t ATTR_QUANT_STRIDE_INDEX = 1;
+constexpr uint32_t ATTR_QUANT_PAD_INDEX = 2;
+constexpr uint32_t ATTR_QUANT_DILATION_INDEX = 3;
+constexpr uint32_t ATTR_QUANT_GROUP_INDEX = 4;
+constexpr uint32_t ATTR_QUANT_DATAFORMAT_INDEX = 5;
+constexpr uint32_t ATTR_QUANT_OFFSETX_INDEX = 6;
+constexpr uint32_t ATTR_QUANT_ROUNDMODE_INDEX = 7;
+constexpr uint32_t ATTR_QUANT_PADMODE_INDEX = 8;
+
 constexpr uint32_t SWEET_POINT_AI_FP16 = 144;
 
 enum class QuantMode : std::uint8_t {
@@ -241,11 +259,9 @@ constexpr uint64_t L0C_SIZE = 262144;
 constexpr uint64_t FB_SIZE_910_55 = 6144;
 constexpr uint64_t FB_SIZE_910_95 = 4096;
 constexpr uint64_t FB_SIZE_910B = 2048;
-constexpr uint64_t FB_SIZE_MC62CM12A = 6144;
 constexpr uint64_t BT_SIZE_910_55 = 4096;
 constexpr uint64_t BT_SIZE_910_95 = 4096;
 constexpr uint64_t BT_SIZE_910B = 1024;
-constexpr uint64_t BT_SIZE_MC62CM12A = 4096;
 constexpr uint64_t BIAS_TABLE_SIZE = 4096;
 constexpr uint64_t OPT_GROUP_RESERVED_SIZE = 256;
 constexpr uint64_t WEIGHT_UB_NUMS = 2;
@@ -305,12 +321,6 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
 };
 
-const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MC62CM12A = {
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
-};
-
 const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}
 };
@@ -335,13 +345,6 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV3D_DEFAULT_FORMAT_LIST = 
 // ExtendConv2D fmap, weight, output supprot format list
 const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
-};
-
-// ExtendConv2D fmap, weight, output supprot format list
-const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MC62CM12A = {
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
 };
 

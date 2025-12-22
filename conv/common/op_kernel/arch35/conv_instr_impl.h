@@ -91,23 +91,9 @@ public:
                      self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
         }
 
-        if constexpr (AscendC::IsSameType<typename Intf::BiasT, half>::value && 
-                      AscendC::IsSameType<typename Intf::L0cT, int32_t>::value) {
-            // fixed-point multiplication should set cvt_mode = 2 and fix_val, which is encapsulated by basic api.
-            DataCopyParams biasBtCopyParams(1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0);
-            DataCopy(biasBt, biasL1[offset], biasBtCopyParams);
-        } else if constexpr (AscendC::IsSameType<typename Intf::BiasT, half>::value) {
-            copy_cbuf_to_bt((uint64_t)0, (__cbuf__ typename Intf::BiasT*)self_->ctx.biasL1[offset].GetPhyAddr(),
-                (bool)1, 1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0);
-        } else {
-            #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-            copy_cbuf_to_bt((uint64_t)0, (__cbuf__ typename Intf::BiasT*)self_->ctx.biasL1[offset].GetPhyAddr(),
-                (bool)0, 1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0, 0);
-            #else
-            copy_cbuf_to_bt((uint64_t)0, (__cbuf__ typename Intf::BiasT*)self_->ctx.biasL1[offset].GetPhyAddr(),
-                (bool)0, 1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0);
-            #endif
-        }
+        // fixed-point multiplication should set cvt_mode = 2 and fix_val, which is encapsulated by basic api.
+        DataCopyParams biasBtCopyParams(1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0);
+        DataCopy(biasBt, biasL1[offset], biasBtCopyParams);
     }
 
 private:
@@ -135,17 +121,22 @@ public:
 
     __aicore__ inline void LoadBL0(bool isFirst)
     {
-        if (unlikely(isFirst)) {
-            uint64_t mStartPosition = self_->ctx.nL0Iter * nStep_;
-            xt_ = (((self_->ctx.convTiling->nL1DivBlockSize & MASK_16) << 0) | ((ratioOfNToN0 & MASK_16) << DST_STRIDE_OFFSET));
-            xmtmp_ = (((mStartPosition & MASK_16) << 0) | ((ratioOfNToN0 & MASK_8) << M_STEP_OFFSET));
-        }
         uint64_t kStep = (self_->ctx.kIter != self_->ctx.maxKL0Iter) ?
                           self_->ctx.convTiling->kStep : (self_->ctx.kL0Tail / Intf::k0);
-        xm_ = (((self_->ctx.kBL0Iter * self_->ctx.convTiling->kStep) & MASK_16) << K_START_OFFSET) |
-        ((kStep & MASK_8) << K_STEP_OFFSET) | xmtmp_;
-        load_cbuf_to_cb((__cb__ typename Intf::WeightT *)self_->ctx.bl0.GetPhyAddr(),
-                        (__cbuf__ typename Intf::WeightT *)self_->ctx.bl1.GetPhyAddr(), xm_, xt_, false);
+        if (unlikely(isFirst)) {
+            uint64_t mStartPosition = self_->ctx.nL0Iter * nStep_;
+            param_.SetMStartPosition(static_cast<uint32_t>(mStartPosition));
+            param_.SetKStartPosition(static_cast<uint32_t>(self_->ctx.kBL0Iter * self_->ctx.convTiling->kStep));
+            param_.SetMStep(static_cast<uint16_t>(ratioOfNToN0));
+            param_.SetKStep(static_cast<uint16_t>(kStep));
+            param_.SetSrcStride(static_cast<int32_t>(self_->ctx.convTiling->nL1DivBlockSize));
+            param_.SetDstStride(static_cast<uint16_t>(ratioOfNToN0));
+            param_.SetIfTranspose(false);
+        } else {
+            param_.SetKStartPosition(static_cast<uint32_t>(self_->ctx.kBL0Iter * self_->ctx.convTiling->kStep));
+            param_.SetKStep(static_cast<uint16_t>(kStep));
+        }
+        LoadData<TPosition::B2, TPosition::B1, typename Intf::WeightT>(self_->ctx.bl0, self_->ctx.bl1, param_);
     }
 
 private:
@@ -155,6 +146,7 @@ private:
     uint64_t xt_ = 0;
     uint64_t xmtmp_ = 0;
     uint64_t nStep_ = 0;
+    Load2DBitModeParam param_;
 };
 
 template <class Intf>
@@ -236,105 +228,175 @@ private:
 };
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-__aicore__ inline QuantMode_t GetQuantPre(Intf *self)
+__aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 {
-    if constexpr (AscendC::IsSameType<typename Intf::FmapT, hifloat8_t>::value ||
-                  AscendC::IsSameType<typename Intf::FmapT, fp8_e4m3fn_t>::value) {
-        if constexpr (AscendC::IsSameType<OutputT, float>::value) {
+    // quant conv2d/conv3d: must be vector quant
+    // extend conv2d: may be scalar or vector quant
+    if constexpr (AscendC::IsSameType<OutputT, float>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                return QuantMode_t::VQF322F32_PRE;
+            } else {
+                return QuantMode_t::QF322F32_PRE;
+            }
+        } else {
             return QuantMode_t::VQF322F32_PRE;
         }
+    }
 
-        if constexpr (AscendC::IsSameType<OutputT, half>::value) {
+    if constexpr (AscendC::IsSameType<OutputT, half>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                return QuantMode_t::VQF322F16_PRE;
+            } else {
+                return QuantMode_t::QF322F16_PRE;
+            }
+        } else {
             return QuantMode_t::VQF322F16_PRE;
         }
+    }
 
-        if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
+    if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                return QuantMode_t::VQF322BF16_PRE;
+            } else {
+                return QuantMode_t::QF322BF16_PRE;
+            }
+        } else {
             return QuantMode_t::VQF322BF16_PRE;
         }
+    }
 
-        if constexpr (AscendC::IsSameType<OutputT, hifloat8_t>::value) {
+    if constexpr (AscendC::IsSameType<OutputT, hifloat8_t>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                return QuantMode_t::VQF322HIF8_PRE;
+            } else {
+                return QuantMode_t::QF322HIF8_PRE;
+            }
+        } else {
             if (self->ctx.convTiling->hasScale == 0) {
+                // conv2d support hif8 in hif8 out
                 return QuantMode_t::QF322HIF8_PRE;
             } else if (self->ctx.convTiling->roundMode == ROUND_MODE_ROUND) {
+                // quantconv2d/quantconv3d
                 return QuantMode_t::VQF322HIF8_PRE;
             }
         }
+    }
 
-        if constexpr (AscendC::IsSameType<OutputT, fp8_e4m3fn_t>::value) {
+    if constexpr (AscendC::IsSameType<OutputT, fp8_e4m3fn_t>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                return QuantMode_t::VQF322FP8_PRE;
+            } else {
+                return QuantMode_t::QF322FP8_PRE;
+            }
+        } else {
             return QuantMode_t::VQF322FP8_PRE;
         }
     }
 
-    if constexpr (AscendC::IsSameType<typename Intf::L0cT, int32_t>::value) {
-        if constexpr (AscendC::IsSameType<OutputT, half>::value) {
-            if constexpr (Intf::isExtendConv2d) {
-                if constexpr (FixpipeIdx == 0) {
-                    if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VDEQF16;
-                    } else {
-                        return QuantMode_t::DEQF16;
-                    }
+    return QuantMode_t::F322F16;
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
+__aicore__ inline QuantMode_t GetQuantPreInt32(Intf *self)
+{
+    // l0c (int32) -> ddr(fp16/int8)
+    if constexpr (AscendC::IsSameType<OutputT, half>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if constexpr (FixpipeIdx == 0) {
+                if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VDEQF16;
                 } else {
-                    if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VDEQF16;
-                    } else {
-                        return QuantMode_t::DEQF16;
-                    }
+                    return QuantMode_t::DEQF16;
                 }
-            } else if constexpr (Intf::isFixedPoint) {
-                return QuantMode_t::DEQF16;
             } else {
-                // current quant_conv2d/quant_conv3d are both vector quant.
-                return QuantMode_t::VDEQF16;
+                if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VDEQF16;
+                } else {
+                    return QuantMode_t::DEQF16;
+                }
             }
-        } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
-            if constexpr (Intf::isExtendConv2d) {
-                if constexpr (FixpipeIdx == 0) {
-                    if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VREQ8;
-                    } else {
-                        return QuantMode_t::REQ8;
-                    }
+        } else if constexpr (Intf::isFixedPoint) {
+            return QuantMode_t::DEQF16;
+        } else {
+            // current quant_conv2d/quant_conv3d are both vector quant.
+            return QuantMode_t::VDEQF16;
+        }
+    } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if constexpr (FixpipeIdx == 0) {
+                if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VREQ8;
                 } else {
-                    if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VREQ8;
-                    } else {
-                        return QuantMode_t::REQ8;
-                    }
+                    return QuantMode_t::REQ8;
                 }
-            } else if constexpr (Intf::isFixedPoint) {
-                return QuantMode_t::REQ8;
             } else {
-                // current quant_conv2d/quant_conv3d are both vector quant.
-                return QuantMode_t::VREQ8;
+                if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VREQ8;
+                } else {
+                    return QuantMode_t::REQ8;
+                }
+            }
+        } else if constexpr (Intf::isFixedPoint) {
+            return QuantMode_t::REQ8;
+        } else {
+            // current quant_conv2d/quant_conv3d are both vector quant.
+            return QuantMode_t::VREQ8;
+        }
+    }
+
+    return QuantMode_t::F322F16;
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
+__aicore__ inline QuantMode_t GetQuantPreFp32(Intf *self)
+{
+    // l0c (fp32) -> ddr(fp32/fp16/bf16/int8)
+    if constexpr (AscendC::IsSameType<OutputT, float>::value) {
+        return QuantMode_t::NoQuant;
+    } else if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
+        return QuantMode_t::F322BF16;
+    } else if constexpr (AscendC::IsSameType<OutputT, half>::value) {
+        return QuantMode_t::F322F16;
+    } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
+        if constexpr (Intf::isExtendConv2d) {
+            if constexpr (FixpipeIdx == 0) {
+                if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VQF322B8_PRE;
+                } else {
+                    return QuantMode_t::QF322B8_PRE;
+                }
+            } else {
+                if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    return QuantMode_t::VQF322B8_PRE;
+                } else {
+                    return QuantMode_t::QF322B8_PRE;
+                }
             }
         }
     }
 
+    return QuantMode_t::F322F16;
+}
+
+template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
+__aicore__ inline QuantMode_t GetQuantPre(Intf *self)
+{
+    if constexpr (AscendC::IsSameType<typename Intf::FmapT, hifloat8_t>::value ||
+                  AscendC::IsSameType<typename Intf::FmapT, fp8_e4m3fn_t>::value) {
+        return GetQuantPreHif8Fp8<Intf, OutputT, FixpipeIdx>(self);
+    }
+
+    if constexpr (AscendC::IsSameType<typename Intf::L0cT, int32_t>::value) {
+        return GetQuantPreInt32<Intf, OutputT, FixpipeIdx>(self);
+    }
+
     if constexpr (AscendC::IsSameType<typename Intf::L0cT, float>::value) {
-        if constexpr (AscendC::IsSameType<OutputT, float>::value) {
-            return QuantMode_t::NoQuant;
-        } else if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
-            return QuantMode_t::F322BF16;
-        } else if constexpr (AscendC::IsSameType<OutputT, half>::value) {
-            return QuantMode_t::F322F16;
-        } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
-            if constexpr (Intf::isExtendConv2d) {
-                if constexpr (FixpipeIdx == 0) {
-                    if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VQF322B8_PRE;
-                    } else {
-                        return QuantMode_t::QF322B8_PRE;
-                    }
-                } else {
-                    if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        return QuantMode_t::VQF322B8_PRE;
-                    } else {
-                        return QuantMode_t::QF322B8_PRE;
-                    }
-                }
-            }
-        }
+        return GetQuantPreFp32<Intf, OutputT, FixpipeIdx>(self);
     }
 
     return QuantMode_t::F322F16;

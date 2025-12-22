@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_BASE_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_BASE_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_BASE_H
+#define ASCENDC_TILING_CONV_API_TILING_BASE_H
 
 #include "conv_api_tiling_util.h"
 
@@ -232,4 +232,4 @@ protected:
 };
 } // namespace conv_tiling
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_BASE_H

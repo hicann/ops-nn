@@ -122,10 +122,11 @@ public:
                     ((static_cast<uint64_t>(self_->ctx.convTiling->dilationW) & MASK_8) << DILATIONW_OFFSET) |
                     ((static_cast<uint64_t>(self_->ctx.convTiling->dilationH) & MASK_8) << DILATIONH_OFFSET) |
                     ((static_cast<uint64_t>(channelSize_) & MASK_16) << CIN_OFFSET);
+                param_.SetConfig1(xt_);
             }
             xm_ = ((currentKL0 & MASK_16) << 0) | ((posK & MASK_16) << POSK_OFFSET) | xmtmp_;
-            img2colv2_cbuf_to_ca((__ca__ typename Intf::FmapT *)self_->ctx.al0.GetPhyAddr(),
-                                (__cbuf__ typename Intf::FmapT *)self_->ctx.al1.GetPhyAddr(), xm_, xt_);
+            param_.SetConfig0(xm_);
+            LoadData<TPosition::A2, TPosition::A1, typename Intf::FmapT>(self_->ctx.al0, self_->ctx.al1, param_);
         }
     };
 
@@ -170,6 +171,7 @@ private:
     uint64_t xm_ = 0;
     uint64_t xt_ = 0;
     uint64_t xmtmp_ = 0;
+    Load3DBitModeParam param_;
 };
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
@@ -190,12 +192,7 @@ public:
 
     __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &intriParams)
     {
-        if constexpr (Intf::posOutput == TPosition::VECCALC) {
-            intriParams.mSize = currentML0_;
-            intriParams.params.srcNzMatrixStride = 0;
-            intriParams.params.dnNum = 1;
-            intriParams.params.dstDnMatrixStride = 0;
-        } else if constexpr (Intf::isDmaFlag) {
+        if constexpr (Intf::isDmaFlag) {
             intriParams.mSize = self_->ctx.currentWoL0;
             intriParams.params.srcNzMatrixStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
             intriParams.params.dnNum = self_->ctx.currentHoL0;
@@ -216,50 +213,18 @@ public:
 
         intriParams.nSize = currentNL0_;
         intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
-        if constexpr (Intf::posOutput == TPosition::VECCALC) {
-            intriParams.dstStride = currentML0_;
-        } else if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
             intriParams.dstStride = self_->ctx.orgDo * valueHoWo_;
         } else {
             intriParams.dstStride = valueHoWo_;
         }
-        intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
         intriParams.params.srcNzC0Stride = 1;
-        if (self_->ctx.convTiling->hasScale == 0) {
-            intriParams.deqScalar = DEQ_SCALAR_ONE;
-        }
-        if constexpr (Intf::isExtendConv2d) {
-            if constexpr (FixpipeIdx == 0) {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode0;
-                intriParams.deqScalar = self_->ctx.deqScalar0;
-            } else {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode1;
-                intriParams.deqScalar = self_->ctx.deqScalar1;
-            }
-        }
-        if constexpr (FixpipeIdx == 1) {
-            intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-        } else {
-            if constexpr (Intf::isExtendConv2d) {
-                if (self_->ctx.convTiling->dualOutput) {
-                    intriParams.unitFlag = UNIT_FLAG_ENABLE_ONLY;
-                } else {
-                    intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-                }
-            } else {
-                intriParams.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
-            }
-        }
+        SetBaseParams<CO2Layout::COLUMN_MAJOR>(intriParams);
     }
 
     __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsC310<CO2Layout::ROW_MAJOR> &intriParams)
     {
-        if constexpr (Intf::posOutput == TPosition::VECCALC) {
-            intriParams.mSize = currentML0_;
-            intriParams.params.srcNdStride = 0;
-            intriParams.params.ndNum = 1;
-            intriParams.params.dstNdStride = 0;
-        } else if constexpr (Intf::isDmaFlag) {
+        if constexpr (Intf::isDmaFlag) {
             intriParams.mSize = self_->ctx.currentWoL0;
             intriParams.params.srcNdStride = AlignB(self_->ctx.currentWoL0, BLOCK_L0_M);
             intriParams.params.ndNum = self_->ctx.currentHoL0;
@@ -279,6 +244,60 @@ public:
         intriParams.dstStride = self_->ctx.orgCo;
         intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
         intriParams.nSize = currentNL0_;
+        SetBaseParams<CO2Layout::ROW_MAJOR>(intriParams);
+    }
+
+    template <CO2Layout format>
+    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsC310<format> &intriParams, CopyUbInfo* ubInfo = nullptr)
+    {
+        if (ubInfo == nullptr) {
+            return;
+        }
+        uint64_t unUsedNL0 = currentNL0_ >= ubInfo->nLoopIdx * ubInfo->nUb ? currentNL0_ - ubInfo->nLoopIdx * ubInfo->nUb : 0;
+        uint64_t unUsedML0 = currentML0_ >= ubInfo->mLoopIdx * ubInfo->mUb ? currentML0_ - ubInfo->mLoopIdx * ubInfo->mUb : 0;
+        ubInfo->realNUb = unUsedNL0 < ubInfo->nUb ? unUsedNL0 : ubInfo->nUb;
+        ubInfo->realHUb = 0;
+        ubInfo->realWUb = unUsedML0 < ubInfo->mUb ? unUsedML0 : ubInfo->mUb;
+        ubInfo->realBatchUb = 1;
+        ubInfo->outBatchIdx = self_->ctx.batchIter + ubInfo->batchLoopIdx * ubInfo->batchUb;
+        ubInfo->outCIdx = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
+                         self_->ctx.nL0Iter * self_->ctx.convTiling->nL0 + ubInfo->nLoopIdx * ubInfo->nUb;
+        ubInfo->outHIdx = self_->ctx.hoAL1Iter * self_->ctx.convTiling->hoL1 +
+                         self_->ctx.hoL0Iter * self_->ctx.convTiling->hoL0 + ubInfo->mLoopIdx * ubInfo->mUb / self_->ctx.convTiling->woL0;
+        if (self_->ctx.woL1SmallTail == 0) {
+            ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTiling->woL1 +
+                             self_->ctx.woL0Iter * self_->ctx.convTiling->woL0 + ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTiling->woL0;
+        } else {
+            if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
+                ubInfo->outWIdx = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTiling->woL1 + self_->ctx.woAL1Tail) +
+                                 self_->ctx.woL0Iter * self_->ctx.convTiling->woL0 + ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTiling->woL0;
+            } else {
+                ubInfo->outWIdx = self_->ctx.woAL1Iter * self_->ctx.convTiling->woL1 +
+                                 self_->ctx.woL0Iter * self_->ctx.convTiling->woL0 + ubInfo->mLoopIdx * ubInfo->mUb % self_->ctx.convTiling->woL0;
+            }
+        }
+
+        intriParams.nSize = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+        intriParams.mSize = AlignB(ubInfo->realWUb, BLOCK_L0_M);
+        intriParams.srcStride = self_->ctx.currentML0Align;
+        if constexpr (format == CO2Layout::ROW_MAJOR) {
+            intriParams.dstStride = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+            intriParams.params.dstNdStride = 0;
+            intriParams.params.srcNdStride = 0;
+            intriParams.params.ndNum = 1;
+        } else if constexpr (format == CO2Layout::COLUMN_MAJOR) {
+            intriParams.dstStride = AlignB(ubInfo->realWUb, BLOCK_L0_M);;
+            intriParams.params.dnNum = 1;
+            intriParams.params.dstDnMatrixStride = 0;
+            intriParams.params.srcNzMatrixStride = 0;
+            intriParams.params.srcNzC0Stride = 1;
+        }
+        SetBaseParams<format>(intriParams);
+    }
+
+    template <CO2Layout format>
+    __aicore__ inline void SetBaseParams(FixpipeParamsC310<format> &intriParams)
+    {
         intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
         if (self_->ctx.convTiling->hasScale == 0) {
             intriParams.deqScalar = DEQ_SCALAR_ONE;
@@ -371,7 +390,7 @@ public:
     }
 
     template <template <typename> class TensorTypeT, const FixpipeConfig &config>
-    __aicore__ inline void CopyOut(const TensorTypeT<OutputT> &output)
+    __aicore__ inline void CopyOut(const TensorTypeT<OutputT> &output, CopyUbInfo* ubInfo = nullptr)
     {
         uint64_t offset = 0;
         if constexpr (Intf::posOutput == TPosition::GM) {
@@ -379,7 +398,12 @@ public:
         }
 
         FixpipeParamsC310<config.format> intriParams;
-        if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
+        if constexpr (Intf::posOutput == TPosition::VECCALC) {
+            SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
+            if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+                return;
+            }
+        } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
             SetFixpipeIntriParamsHWC(intriParams);
         } else {
             SetFixpipeIntriParams(intriParams);

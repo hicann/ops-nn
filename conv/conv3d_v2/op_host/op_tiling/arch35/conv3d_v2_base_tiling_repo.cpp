@@ -18,7 +18,7 @@
 
 namespace optiling {
 namespace conv_ops_tiling {
-const bool Conv3dBaseTilingV2::GetTilingFromRepo()
+bool Conv3dBaseTilingV2::GetTilingFromRepo()
 {
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
     auto compileInfoPtr =

@@ -291,7 +291,7 @@ ge::graphStatus Conv3dBaseTilingV2::CheckQuantScaleDesc()
     size_t scaleShapeLen = scaleShapePtr->GetStorageShape().GetDim(0);
     OP_TILING_CHECK(scaleShapeLen != static_cast<size_t>(oriShapeAttrInfo_.oriWeightN),
                     OP_LOGE(context_->GetNodeName(),
-                            "%s AscendC: input illegal scale shape: %ld, which must equal to Cout: %ld.",
+                            "%s AscendC: input illegal scale shape: %lu, which must equal to Cout: %ld.",
                             paramInfo_.nodeType.c_str(), scaleShapeLen, oriShapeAttrInfo_.oriWeightN),
                     return ge::GRAPH_FAILED);
     fixpipeInfo_.channelWiseCoeff += INT64_DTYPE_SIZE_COMPARE_FP16;

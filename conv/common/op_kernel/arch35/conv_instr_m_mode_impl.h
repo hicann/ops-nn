@@ -99,8 +99,10 @@ public:
                   ((static_cast<uint64_t>(self_->ctx.convTiling->dilationW) & MASK_8) << DILATIONW_OFFSET) |
                   ((static_cast<uint64_t>(self_->ctx.convTiling->dilationH) & MASK_8) << DILATIONH_OFFSET) |
                   ((static_cast<uint64_t>(channelSize_) & MASK_16) << CIN_OFFSET);
+            param_.SetConfig1(xt_);
         }
         xm_ = ((currentKL0 & MASK_16) << 0) | ((posK & MASK_16) << POSK_OFFSET) | xmtmp_;
+        param_.SetConfig0(xm_);
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::MULTI_BATCH)) {
             uint32_t srcOffset = 0;
@@ -109,14 +111,13 @@ public:
                 self_->ctx.convTiling->cinAInCore : alignCinATailInCore_) * realHixWi;
             uint32_t dstBatchStride = currentML0Align_ * self_->ctx.convTiling->kL0;
             for (uint16_t batchIter = 0; batchIter < self_->ctx.innerBatch; batchIter++) {
-                img2colv2_cbuf_to_ca((__ca__ typename Intf::FmapT *)self_->ctx.al0[dstOffset].GetPhyAddr(),
-                    (__cbuf__ typename Intf::FmapT *)self_->ctx.al1[srcOffset].GetPhyAddr(), xm_, xt_);
+                LoadData<TPosition::A2, TPosition::A1, typename Intf::FmapT>(self_->ctx.al0[dstOffset],
+                                                                            self_->ctx.al1[srcOffset], param_);
                 srcOffset += srcBatchStride;
                 dstOffset += dstBatchStride;
             }
         } else {
-            img2colv2_cbuf_to_ca((__ca__ typename Intf::FmapT *)self_->ctx.al0.GetPhyAddr(),
-                (__cbuf__ typename Intf::FmapT *)self_->ctx.al1.GetPhyAddr(), xm_, xt_);
+            LoadData<TPosition::A2, TPosition::A1, typename Intf::FmapT>(self_->ctx.al0, self_->ctx.al1, param_);
         }
     };
 
@@ -137,6 +138,7 @@ private:
     uint16_t channelSize_ = 0;
     uint64_t c04KStepTail = 0;
     uint64_t realHixWi = 0;
+    Load3DBitModeParam param_;
 };
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
@@ -158,7 +160,7 @@ public:
     }
 
     template <template <typename> class TensorTypeT, const FixpipeConfig &config>
-    __aicore__ inline void CopyOut(const TensorTypeT<OutputT> &output)
+    __aicore__ inline void CopyOut(const TensorTypeT<OutputT> &output, CopyUbInfo* ubInfo = nullptr)
     {
         uint64_t offset = 0;
         if constexpr (Intf::posOutput == TPosition::GM) {
@@ -166,16 +168,15 @@ public:
         }
 
         if constexpr (Intf::isInnerBatchFlag) {
-            FixpipeParamsC310<config.format> intriParams;
-            if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
-                InnerBatchParamsHWC(intriParams);
-            } else {
-                InnerBatchParamsCHW(intriParams);
-            }
-            CopyOutInnerBatch<TensorTypeT, config.format, config>(output, offset, intriParams);
+            CopyOutInnerBatch<TensorTypeT, config.format, config>(output, offset, ubInfo);
         } else {
             FixpipeParamsC310<config.format> intriParams;
-            if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
+            if constexpr (Intf::posOutput == TPosition::VECCALC) {
+                SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
+                if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+                    return;
+                }
+            } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
                 SetFixpipeIntriParamsHWC(intriParams);
             } else {
                 SetFixpipeIntriParams(intriParams);
@@ -198,9 +199,19 @@ public:
 
 private:
     template <template <typename> class TensorTypeT, CO2Layout format, const FixpipeConfig &config>
-    __aicore__ inline void CopyOutInnerBatch(const TensorTypeT<OutputT> &output, uint64_t offset,
-                                             FixpipeParamsC310<format> &intriParams)
+    __aicore__ inline void CopyOutInnerBatch(const TensorTypeT<OutputT> &output, uint64_t offset, CopyUbInfo* ubInfo = nullptr)
     {
+        FixpipeParamsC310<format> intriParams;
+        if constexpr (Intf::posOutput == TPosition::VECCALC) {
+            SetFixpipeIntriParamsUb<format>(intriParams, ubInfo);
+            if (ubInfo->realBatchUb == 0 || ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+                return;
+            }
+        } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
+            InnerBatchParamsHWC(intriParams);
+        } else {
+            InnerBatchParamsCHW(intriParams);
+        }
         SetBaseParams<format>(intriParams);
 
         if constexpr (Intf::isExtendConv2d) {
@@ -268,9 +279,7 @@ private:
         intriParams.nSize = currentNL0_;
         intriParams.mSize = currentML0_;
         intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
-        if constexpr (Intf::posOutput == TPosition::VECCALC) {
-            intriParams.dstStride = currentML0_;
-        } else if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
             intriParams.dstStride = self_->ctx.orgDo * valueHoWo_;
         } else {
             intriParams.dstStride = valueHoWo_;
@@ -280,6 +289,78 @@ private:
         intriParams.params.dstDnMatrixStride = valueHoWo_;
         intriParams.params.srcNzC0Stride = 1;
         SetBaseParams<CO2Layout::COLUMN_MAJOR>(intriParams);
+    }
+
+    __aicore__ inline void SetUbInfo(CopyUbInfo* ubInfo)
+    {
+        uint64_t unUsedNL0 = currentNL0_ >= ubInfo->nLoopIdx * ubInfo->nUb ? currentNL0_ - ubInfo->nLoopIdx * ubInfo->nUb : 0;
+        uint64_t unUsedML0 = currentML0_ >= ubInfo->mLoopIdx * ubInfo->mUb ? currentML0_ - ubInfo->mLoopIdx * ubInfo->mUb : 0;
+        ubInfo->realNUb = unUsedNL0 < ubInfo->nUb ? unUsedNL0 : ubInfo->nUb;
+        ubInfo->realHUb = 0;
+        ubInfo->realWUb = unUsedML0 < ubInfo->mUb ? unUsedML0 : ubInfo->mUb;
+        if constexpr (Intf::isInnerBatchFlag) {
+            uint64_t unUsedInnerbatch = self_->innerBatch >= ubInfo->batchLoopIdx * ubInfo->batchUb ? self_->innerBatch - ubInfo->batchLoopIdx * ubInfo->batchUb : 0;
+            ubInfo->realBatchUb = unUsedInnerbatch < ubInfo->batchUb ? unUsedInnerbatch : ubInfo->batchUb;
+        } else {
+            ubInfo->realBatchUb = 1;
+        }
+        ubInfo->outBatchIdx = self_->ctx.batchIter + ubInfo->batchLoopIdx * ubInfo->batchUb;
+        ubInfo->outCIdx = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
+                         self_->ctx.nL0Iter * self_->ctx.convTiling->nL0 + ubInfo->nLoopIdx * ubInfo->nUb;
+        ubInfo->outHIdx = 0;
+        ubInfo->outWIdx = self_->ctx.mAL1Iter * self_->ctx.mAL1 +
+                         self_->ctx.mL0Iter * self_->ctx.mL0 + ubInfo->mLoopIdx * ubInfo->mUb;
+    }
+
+    template <CO2Layout format>
+    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsC310<format> &intriParams, CopyUbInfo* ubInfo = nullptr)
+    {
+        if (ubInfo == nullptr) {
+            return;
+        }
+
+        SetUbInfo(ubInfo);
+
+        intriParams.nSize = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+        intriParams.mSize = AlignB(ubInfo->realWUb, BLOCK_L0_M);
+        if constexpr (format == CO2Layout::ROW_MAJOR) {
+            intriParams.dstStride = AlignB(ubInfo->realNUb, BLOCK_L0_N);
+            intriParams.params.dstNdStride = 0;
+            if constexpr (Intf::isInnerBatchFlag) {
+                intriParams.params.ndNum = ubInfo->realBatchUb;
+                if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
+                    intriParams.srcStride = AlignB(self_->ctx.innerBatch * currentML0_, BLOCK_L0_M);
+                    intriParams.params.srcNdStride = currentML0_;
+                } else {
+                    intriParams.srcStride = self_->ctx.currentML0Align;
+                    intriParams.params.srcNdStride = self_->ctx.currentML0Align * CeilDiv(currentNL0_, BLOCK_L0_N);
+                }
+            } else {
+                intriParams.params.ndNum = 1;
+                intriParams.srcStride = self_->ctx.currentML0Align;
+                intriParams.params.srcNdStride = 0;
+            }
+        } else if constexpr (format == CO2Layout::COLUMN_MAJOR) {
+            intriParams.dstStride = AlignB(ubInfo->realWUb, BLOCK_L0_M);
+            intriParams.params.srcNzC0Stride = 1;
+            if constexpr (Intf::isInnerBatchFlag) {
+                intriParams.params.dnNum = ubInfo->realBatchUb;
+                intriParams.params.dstDnMatrixStride = AlignB(ubInfo->realWUb, BLOCK_L0_M) * AlignB(ubInfo->realNUb, BLOCK_L0_N);
+                if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
+                    intriParams.srcStride = AlignB(self_->ctx.innerBatch * currentML0_, BLOCK_L0_N);
+                    intriParams.params.srcNzMatrixStride = currentML0_;
+                } else {
+                    intriParams.srcStride = self_->ctx.currentML0Align;
+                    intriParams.params.srcNzMatrixStride = self_->ctx.currentML0Align * CeilDiv(currentNL0_, BLOCK_L0_N);
+                }
+            } else {
+                intriParams.srcStride = self_->ctx.currentML0Align;
+                intriParams.params.dnNum = 1;
+                intriParams.params.dstDnMatrixStride = 0;
+                intriParams.params.srcNzMatrixStride = 0;
+            }     
+        }
+        SetBaseParams<format>(intriParams);
     }
 
     template <CO2Layout format>

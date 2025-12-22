@@ -15,6 +15,7 @@
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_TILING_TEMPLATES_REGISTRY_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_TILING_TEMPLATES_REGISTRY_H
 #include "tiling_base/tiling_templates_registry.h"
+#include "tiling_base/static_register_symbol.h"
 #include "platform/platform_infos_def.h"
 #include "arch35/conv_base.h"
 #include "arch35/conv_base_utils.h"
@@ -145,6 +146,7 @@ private:
 };
 
 #define CONV_REGISTER_TILING_TEMPLATE(op_type, class_name, soc_version, priority)        \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
     static ConvRegisterNew VAR_UNUSED##op_type##class_name##priority##_register =        \
         ConvRegisterNew(#op_type).tiling<class_name>(priority, soc_version)
         

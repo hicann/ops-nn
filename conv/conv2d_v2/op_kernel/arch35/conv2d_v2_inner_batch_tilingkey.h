@@ -16,7 +16,9 @@
 #ifndef CONV2DV2_INNER_BATCH_TILINGKEY_H
 #define CONV2DV2_INNER_BATCH_TILINGKEY_H
 
-#include "conv_tilingkey.h"
+#ifndef CONV_TILINGKEY_H
+#include "../../common/arch35/conv_tilingkey.h"
+#endif
 
 namespace Conv2DV2Key {
 using namespace ConvKey;
@@ -28,6 +30,7 @@ using namespace ConvKey;
      defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW)
 
 #define CONV2D_INNER_BATCH_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()                                                          \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0),                                                                       \
 ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
@@ -52,6 +55,7 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
     CONV_INNER_BATCH_MULTI)
 
 #define CONV2D_INNER_BATCH_WEIGHT_UB_ONLY_AL1_FULLLOAD_SEL()                                                         \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_FULLLOAD_AL1),                                                                                  \
 ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
@@ -76,6 +80,7 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
     CONV_INNER_BATCH_MULTI)
 
 #define CONV2D_INNER_BATCH_WEIGHT_UB_NO_FULLLOAD_AL0_OPEN_SEL()                                                      \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_OTHER),                                                                                         \
 ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
@@ -100,6 +105,7 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
     CONV_INNER_BATCH_MULTI)
 
 #define CONV2D_INNER_BATCH_WEIGHT_UB_NO_FULLLOAD_BL0_OPEN_SEL()                                                      \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_OTHER),                                                                                         \
 ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
@@ -124,6 +130,7 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
     CONV_INNER_BATCH_MULTI)
 
 #define CONV2D_INNER_BATCH_WEIGHT_UB_NO_FULLLOAD_ALL_OPEN_SEL()                                                      \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_OTHER),                                                                                         \
 ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \

@@ -57,6 +57,30 @@ struct Extendconv2dFixpipeParams {
     GlobalTensor<ClipValue1T> clipValue1;
 };
 
+struct CopyUbInfo {
+    // only support batchUb = 1 in tiling hw mode
+    // when batchUb > 1, mUb should equal to convTiling->hoL0
+    uint64_t batchUb = 0;
+    // nUb should be aligned to BLOCK_L0_N
+    uint64_t nUb = 0;
+    // mUb should be aligned to BLOCK_L0_M
+    // In tiling m mode, mUb is part of convTiling->hoL0
+    // In tiling hw mode, mUb is part of convTiling->hoL0*convTiling->woL0,
+    // additionally, when convTiling->hoL0 != 1, mUb must be >= convTiling->woL0.
+    uint64_t mUb = 0;
+    uint64_t batchLoopIdx = 0;
+    uint64_t nLoopIdx = 0;
+    uint64_t mLoopIdx = 0;
+    uint64_t realBatchUb = 0;
+    uint64_t realNUb = 0;
+    uint64_t realHUb = 0;
+    uint64_t realWUb = 0;
+    uint64_t outBatchIdx = 0;
+    uint64_t outCIdx = 0;
+    uint64_t outHIdx = 0;
+    uint64_t outWIdx = 0;
+};
+
 enum class ConvFmapTiling : std::uint8_t {
     FULLLOAD_AL1 = 0,
     ONLY_M_FULLLOAD_AL1_AL0,
@@ -149,11 +173,7 @@ struct GetDstType<float> {
 
 template <>
 struct GetDstType<half> {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    using Type = int32_t;
-#else
     using Type = float;
-#endif
 };
 
 template <>

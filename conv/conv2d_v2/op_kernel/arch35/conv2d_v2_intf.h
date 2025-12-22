@@ -312,21 +312,21 @@ public:
     }
 
     template <template <typename> class TensorTypeT, bool sync = true>
-    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output, CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output, enSequentialWrite)) {
-            local::template call<TensorTypeT, sync>(this, output, enSequentialWrite);
+        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output, ubInfo, enSequentialWrite)) {
+            local::template call<TensorTypeT, sync>(this, output, ubInfo, enSequentialWrite);
         }
     }
 
     template <template <typename> class TensorTypeT, bool sync = true>
-    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output0, 
-                                      const GlobalTensor<Output1T>& output1, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output0, const GlobalTensor<Output1T>& output1,
+                                      CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output0, output1, enSequentialWrite)) {
-            local::template call<TensorTypeT, sync>(this, output0, output1, enSequentialWrite);
+        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output0, output1, ubInfo, enSequentialWrite)) {
+            local::template call<TensorTypeT, sync>(this, output0, output1, ubInfo, enSequentialWrite);
         }
     }
 };

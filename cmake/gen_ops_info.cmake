@@ -382,6 +382,7 @@ function(gen_ops_info_and_python)
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/matmul_act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
+    COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
   )
@@ -396,11 +397,14 @@ function(gen_ops_info_and_python)
       DESTINATION ${IMPL_INSTALL_DIR}/common/matmul_act
     )
     install(
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/arch35/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/arch35
+    )
+    install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/inc/
       DESTINATION ${IMPL_INSTALL_DIR}/inc
     )
   endif()
-
   add_ops_impl_target(
     TARGET ascendc_impl_gen
     OPS_INFO_DIR ${ASCEND_AUTOGEN_PATH}

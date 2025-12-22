@@ -92,12 +92,11 @@ struct SetFixpipeParams {
                 }
             }
             if constexpr (Intf::isExtendConv2d) {
-                if (self->ctx.convTiling->dualOutput) {
-                    if (self->ctx.convTiling->quantMode1 != static_cast<uint8_t>(QuantModeType::NO_QUANT)) {
-                        self->ctx.scale1gm.SetGlobalBuffer(fixpipeParams.scale1.GetPhyAddr(0), fixpipeParams.scale1.GetSize());
-                        if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
-                            self->ctx.deqScalar1 = fixpipeParams.scale1.GetValue(0);
-                        }
+                if (self->ctx.convTiling->dualOutput &&
+                    self->ctx.convTiling->quantMode1 != static_cast<uint8_t>(QuantModeType::NO_QUANT)) {
+                    self->ctx.scale1gm.SetGlobalBuffer(fixpipeParams.scale1.GetPhyAddr(0), fixpipeParams.scale1.GetSize());
+                    if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
+                        self->ctx.deqScalar1 = fixpipeParams.scale1.GetValue(0);
                     }
                 }
                 if (self->ctx.convTiling->quantMode0 != static_cast<uint8_t>(QuantModeType::NO_QUANT) ||
@@ -124,22 +123,22 @@ template <class Intf, uint32_t ImplType>
 struct GetTensorC {
     template <template <typename> class TensorTypeT, const FixpipeConfig &config, bool sync = true>
     static __aicore__ inline void call(
-        Intf *self, const TensorTypeT<typename Intf::OutputT> &output, bool enSequentialWrite = false)
+        Intf *self, const TensorTypeT<typename Intf::OutputT> &output, CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         GlobalTensor<typename Intf::Output1T> output1;
-        GetTensorC<Intf, ImplType>::call<TensorTypeT, config>(self, output, output1);
+        GetTensorC<Intf, ImplType>::call<TensorTypeT, config>(self, output, output1, ubInfo);
     }
 
     template <template <typename> class TensorTypeT, const FixpipeConfig &config, bool sync = true>
     static __aicore__ inline void call(
-        Intf *self, const TensorTypeT<typename Intf::OutputT> &output0,
-        const GlobalTensor<typename Intf::Output1T> &output1, bool enSequentialWrite = false)
+        Intf *self, const TensorTypeT<typename Intf::OutputT> &output0, const GlobalTensor<typename Intf::Output1T> &output1,
+        CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         if ASCEND_IS_AIC_CONV {
-            self->ctx.copyOutIns.template CopyOut<TensorTypeT, config>(output0);
+            self->ctx.copyOutIns.template CopyOut<TensorTypeT, config>(output0, ubInfo);
             if constexpr (Intf::isExtendConv2d) {
                 if (self->ctx.convTiling->dualOutput) {
-                    self->ctx.copyOutIns1.template CopyOut<GlobalTensor, config>(output1);
+                    self->ctx.copyOutIns1.template CopyOut<GlobalTensor, config>(output1, ubInfo);
                 }
             }
 
@@ -175,43 +174,7 @@ struct IterateAll {
 
         while (Iterate<Intf, ImplType>::call(self, enPartialSum)) {
             if constexpr (Intf::isExtendConv2d) {
-                if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
-                    if constexpr (Intf::isFixedPoint) {
-                        if (self->ctx.convTiling->dualOutput) {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0, output1);
-                        } else {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0);
-                        }
-                    } else {
-                        if (self->ctx.convTiling->dualOutput) {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0, output1);
-                        } else {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0);
-                        }
-                    }
-                } else {
-                    if constexpr (Intf::isFixedPoint) {
-                        if (self->ctx.convTiling->dualOutput) {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0, output1);
-                        } else {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0);
-                        }
-                    } else {
-                        if (self->ctx.convTiling->dualOutput) {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0, output1);
-                        } else {
-                            GetTensorC<Intf, ImplType>::template
-                                call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0);
-                        }
-                    }
-                }
+                IterateAll<Intf, ImplType>::GetExtendTensorC(self, output0, output1);
             } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
                 if constexpr (Intf::isFixedPoint) {
                     GetTensorC<Intf, ImplType>::template
@@ -276,6 +239,48 @@ struct IterateAll {
                 }
                 self->ctx.queueScaleL1.EnQue(self->ctx.scaleL1);
                 self->ctx.scaleL1 = self->ctx.queueScaleL1.template DeQue<typename Intf::ScaleT>();
+            }
+        }
+    }
+
+    template <bool sync = true>
+    static __aicore__ inline void GetExtendTensorC(Intf *self, const GlobalTensor<typename Intf::OutputT> &output0,
+                                                   const GlobalTensor<typename Intf::Output1T> &output1) {
+        if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
+            if constexpr (Intf::isFixedPoint) {
+                if (self->ctx.convTiling->dualOutput) {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0, output1);
+                } else {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0);
+                }
+            } else {
+                if (self->ctx.convTiling->dualOutput) {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0, output1);
+                } else {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0);
+                }
+            }
+        } else {
+            if constexpr (Intf::isFixedPoint) {
+                if (self->ctx.convTiling->dualOutput) {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0, output1);
+                } else {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0);
+                }
+            } else {
+                if (self->ctx.convTiling->dualOutput) {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0, output1);
+                } else {
+                    GetTensorC<Intf, ImplType>::template
+                        call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0);
+                }
             }
         }
     }

@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_HWMODE_H
-#define ASCENDC_TIKCFW_TILING_CONV_API_TILING_ALGORITHM_HWMODE_H
+#ifndef ASCENDC_TILING_CONV_API_TILING_ALGORITHM_HWMODE_H
+#define ASCENDC_TILING_CONV_API_TILING_ALGORITHM_HWMODE_H
 
 #include <cstdint>
 #include <unordered_map>
@@ -147,6 +147,7 @@ private:
     int64_t InferWiL1(uint64_t inputWoL1, int64_t wi) const;
 
     bool CheckBL1FullLoad();
+    bool CheckHoWoL1FullLoad();
     bool CheckAL1FullLoad();
     bool CheckABL1FullLoad();
     bool CheckHinOverLoad3dv2Limit(uint64_t hout) const;
@@ -201,4 +202,4 @@ private:
 
 } // namespace conv_tiling_algo_hw
 
-#endif
+#endif // ASCENDC_TILING_CONV_API_TILING_ALGORITHM_HWMODE_H

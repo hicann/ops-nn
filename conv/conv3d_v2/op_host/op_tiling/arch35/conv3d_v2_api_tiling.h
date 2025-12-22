@@ -47,9 +47,9 @@ public:
     void SetGroups(int32_t groups);
     void SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt);
     void CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, ConvOptGroupInfo& optGroupInfo) const;
-    void SetOutputOrder(int8_t outputOrder);
+    void SetOutputOrder(int8_t outOrder);
     void SetScalarParams(optiling::TConv3DTiling& tiling);
-    void SetHF32(bool hf32Enable, bool hf32TransMode);
+    void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
     void SetQuantScale(bool hasScale);
     void SetFixpipeParams(const FixpipeInfo& fixpipeInfo);
     void SetOffsetx(int8_t offsetx);

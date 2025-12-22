@@ -13,7 +13,8 @@
  * \brief
  */
 #include "conv3d_v2_base_tiling.h"
-#include "../../../op_kernel/arch35/conv3dv2_tilingkey.h"
+#include "conv/common/op_kernel/arch35/conv_tilingkey.h"
+#include "conv/conv3d_v2/op_kernel/arch35/conv3d_v2_tilingkey.h"
 
 namespace optiling {
 namespace conv_ops_tiling {
