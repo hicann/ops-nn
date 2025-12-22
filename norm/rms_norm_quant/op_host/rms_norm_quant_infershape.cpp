@@ -152,8 +152,6 @@ static ge::graphStatus InferShape4RmsNormQuant(gert::InferShapeContext* context)
 
 static graphStatus InferDataType4RmsNormQuant(gert::InferDataTypeContext* context)
 {
-    bool EN_QUANT = true;
-    bool EN_PRE_POST = false;
     ge::DataType y_dtype = DT_INT8;
     auto dstTypePtr = context->GetAttrs()->GetInt(ATTR_DST_TYPE);
     if (dstTypePtr != nullptr) {
