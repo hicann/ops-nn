@@ -160,11 +160,11 @@ aclnnStatus aclnnTopKTopPSampleGetWorkspaceSize(
   const aclTensor *topK, 
   const aclTensor *topP, 
   const aclTensor *q, 
+  double           eps, 
+  bool             isNeedLogits, 
+  int64_t          topKGuess, 
   const aclTensor *logitsSelectIdx, 
   const aclTensor *logitsTopKPSelect, 
-  float            eps, 
-  uint32_t         isNeedLogits, 
-  uint32_t         topKGuess, 
   uint64_t        *workspaceSize, 
   aclOpExecutor  **executor)
 
@@ -250,7 +250,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>输入</td>
         <td>表示在softmax和权重采样中防止除零，建议设置为1e-8。</td>
         <td>-</td>
-        <td>FLOAT32</td>
+        <td>DOUBLE</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -259,7 +259,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>输入</td>
         <td>表示控制logitsTopKPselect的输出条件，建议设置为0。</td>
         <td>-</td>
-        <td>UINT32</td>
+        <td>BOOL</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -269,7 +269,7 @@ aclnnStatus aclnnTopKTopPSample(
         <td>输入</td>
         <td>表示每个batch在尝试topP部分遍历采样logits时的候选logits大小，必须为正整数。</td>
         <td>-</td>
-        <td>UINT32</td>
+        <td>INT64</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
