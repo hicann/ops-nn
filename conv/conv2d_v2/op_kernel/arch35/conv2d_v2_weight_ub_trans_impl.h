@@ -220,7 +220,7 @@ __aicore__ inline void WeightUbTransInitBuf(Intf *self)
 template <class Intf>
 __aicore__ inline void WeightUbTransVecInit(Intf *self)
 {
-    self->ctx.vecId = get_subblockid();
+    self->ctx.vecId = GetBlockIdx();
 
     self->ctx.singleCoreCi = self->ctx.convTiling->singleCoreCi;
     self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
