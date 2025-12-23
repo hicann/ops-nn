@@ -156,7 +156,7 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     // 2. 计算ub内一次最多能存放的数据量
     ubSize_ = compileInfo->ubSizePlatForm - SCALE_SPACE;
     OP_CHECK_IF(
-        (ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %li is less than 1024", ubSize_),
+        (ubSize_ < MIN_UB_SIZE), OP_LOGE(tilingContext_, "ub size %lu is less than 1024", ubSize_),
         return ge::GRAPH_FAILED);
     // 计算连续场景下的参数
     TilingCompute(idxNum, usedCoreNum_);

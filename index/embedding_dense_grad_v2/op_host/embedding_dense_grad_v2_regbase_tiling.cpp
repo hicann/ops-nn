@@ -86,7 +86,7 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     OP_CHECK_IF(
         indicesDtypeSize_ <= 0,
         OP_LOGE(
-            opName_, "Get invalid dtype size. indices dtype [%s], size: %d.",
+            opName_, "Get invalid dtype size. indices dtype [%s], size: %u.",
             Ops::Base::ToString(indicesDtype_).c_str(), indicesDtypeSize_),
         return ge::GRAPH_FAILED);
 
@@ -131,7 +131,7 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         gradDtypeSize_ <= 0,
         OP_LOGE(
-            opName_, "Get invalid dtype size. grad dtype [%s], size: %d.", Ops::Base::ToString(gradDType_).c_str(),
+            opName_, "Get invalid dtype size. grad dtype [%s], size: %u.", Ops::Base::ToString(gradDType_).c_str(),
             gradDtypeSize_),
         return ge::GRAPH_FAILED);
 

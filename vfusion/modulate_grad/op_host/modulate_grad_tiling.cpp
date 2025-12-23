@@ -67,9 +67,7 @@ namespace optiling{
     }
     void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t blockDim){
         uint32_t B = tiling->B;
-        uint32_t L = tiling->L;
         uint32_t D = tiling->D;
-        uint32_t dataTypeSize = 4;
         if (blockDim == 0){
             return ;
         }
@@ -103,7 +101,6 @@ namespace optiling{
     }
     static ge::graphStatus TilingFunc(gert::TilingContext* context)
     {
-        constexpr uint32_t GRAD_OUTPUT_INDEX = 0;
         constexpr uint32_t INPUT_INDEX = 1;
         constexpr uint32_t SCALE_INDEX = 2;
         constexpr uint32_t SHIFT_INDEX = 3;
@@ -112,8 +109,6 @@ namespace optiling{
         context->SetTilingKey(0);
         ModulateGradTiling tilingData;
         ModulateGradTilingData tiling;
-        ge::DataType dataType = context->GetInputDesc(0)->GetDataType();
-        const gert::StorageShape* grad_output_shape = context->GetInputShape(GRAD_OUTPUT_INDEX);
         const gert::StorageShape* input_shape = context->GetInputShape(INPUT_INDEX);
         auto scale_input = context->GetOptionalInputShape(SCALE_INDEX);
         auto shift_input = context->GetOptionalInputShape(SHIFT_INDEX);
@@ -154,8 +149,6 @@ namespace optiling{
         tilingData.set_has_scale(tiling.has_scale);
         tilingData.set_has_shift(tiling.has_shift);
 
-        uint8_t* tilingBuf = static_cast<uint8_t*>(context->GetRawTilingData()->GetData());
-        const uint32_t tilingCapacity = context->GetRawTilingData()->GetCapacity();
         PrintTilingData(context, tiling);
         tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(),context->GetRawTilingData()->GetCapacity());
         context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -173,7 +166,7 @@ namespace optiling{
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
         if (compileInfo->totalCoreNum == 0) {
-            OP_LOGE(context, "coreNum %lu", compileInfo->totalCoreNum);
+            OP_LOGE(context, "coreNum %u", compileInfo->totalCoreNum);
             return ge::GRAPH_FAILED;
         }
         uint64_t ubSizePlatForm;

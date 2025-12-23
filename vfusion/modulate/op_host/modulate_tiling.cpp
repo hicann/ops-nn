@@ -231,7 +231,7 @@ ge::graphStatus TilingPrepareForModulate(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     if (compileInfo->totalCoreNum == 0) {
-        OP_LOGE(context, "coreNum %lu", compileInfo->totalCoreNum);
+        OP_LOGE(context, "coreNum %d", compileInfo->totalCoreNum);
         return ge::GRAPH_FAILED;
     }
     uint64_t ubSizePlatForm;

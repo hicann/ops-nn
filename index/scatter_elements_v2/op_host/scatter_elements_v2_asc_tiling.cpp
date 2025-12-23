@@ -338,7 +338,7 @@ void ScatterElementsV2AscTiling::GetCastTypeSize()
     }
 }
 
-uint32_t ScatterElementsV2AscTiling::GetMaxSortTmpBuf(int64_t sortDim)
+uint32_t ScatterElementsV2AscTiling::GetMaxSortTmpBuf([[maybe_unused]] int64_t sortDim)
 {
     return MAX_SORT_SPACE;
 }

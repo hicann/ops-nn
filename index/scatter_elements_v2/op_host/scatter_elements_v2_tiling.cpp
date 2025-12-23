@@ -409,8 +409,6 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         return ge::GRAPH_FAILED;
     }
 
-    uint32_t isDeterministicKey = tilingContext->GetDeterministic() == 1 ? 1 : 0;
-
     if (ge::DT_INT64 == indicesDtype) {
         indicesSize += SIZE_OF_INT32;
     }
