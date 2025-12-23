@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 
 #ifndef LEGACY_COMMMON_MANAGER_H
 #define LEGACY_COMMMON_MANAGER_H
@@ -19,15 +19,15 @@ namespace Ops {
 namespace NN {
 class LegacyCommonMgr {
 public:
+    LegacyCommonMgr();
+    ~LegacyCommonMgr();
+
     // 删除复制构造函数和赋值运算符
     LegacyCommonMgr(const LegacyCommonMgr&) = delete;
     LegacyCommonMgr& operator=(const LegacyCommonMgr&) = delete;
 
-    // 获取单例实例
-    static LegacyCommonMgr& GetInstance() {
-        static LegacyCommonMgr instance;
-        return instance;
-    }
+    // 获取实例
+    static const LegacyCommonMgr& GetInstance();
 
     /**
      * @brief 获取函数指针
@@ -37,7 +37,7 @@ public:
      * @return 函数指针
      */
     template<typename FuncType>
-    FuncType GetFunc(const char * symbolName)
+    FuncType GetFunc(const char * symbolName) const
     {
         OP_LOGI("LegacyCommonMgr", "try to find symbol %s.", symbolName);
         if (handle_ == nullptr || symbolName == nullptr) {
@@ -56,11 +56,16 @@ public:
     }
 
 private:
-    // 私有构造函数
-    LegacyCommonMgr();
-    ~LegacyCommonMgr();
-
     bool GetLegacyCommonSoPath(std::string& soPath) const;
+
+    bool GetParentPath(std::string& parentPath, std::string& currSoName) const;
+
+    bool GetSoPathForBuiltin(const std::string& parentPath, const std::string& currSoName, std::string& soPath) const;
+
+    bool GetSoPathForCustomOp(const std::string& parentPath, const std::string& currSoName, std::string& soPath) const;
+
+    bool GetSoPathForOm(const std::string& parentPath, std::string& soPath) const;
+
     std::string GetCpuArch() const;
 
     void* handle_;
