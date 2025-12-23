@@ -530,6 +530,7 @@
     {"name":"ScaledMaskedSoftmaxGradV2", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95", "ascend310p"], "auto_sync": true},
     {"name":"PadInfer", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"Sort", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
+    {"name":"HardSwishV2", "compute_units": ["ascend910b"], "auto_sync" : true,"impl_mode" : ""},
     {"name":"SortWithIndex", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Cumsum", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"TopKV2", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
@@ -597,5 +598,3 @@
     {"name":"SparseTensorDenseMatMul", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend910_95": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ReluV2", "compute_units": ["ascend910b"], "auto_sync" : false, "impl_mode" : "high_performance"}
 ]
-
-
