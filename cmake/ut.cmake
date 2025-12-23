@@ -332,7 +332,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/matmul_act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
-            COMMAND cp -r ${PROJECT_SOURCE_DIR}/*/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
+            COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
         )
