@@ -592,6 +592,7 @@
     {"name":"UnfoldGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
     {"name":"Bincount", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"CeluV2", "compute_units": ["ascend910b"], "auto_sync" : true, "impl_mode" : "high_performance"},
+    {"name":"LeakyreluV2", "compute_units": ["ascend910b"], "auto_sync":true, "impl_mode" : "high_performance"},
     {"name":"Addr", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"SparseTensorDenseMatMul", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend910_95": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"ReluV2", "compute_units": ["ascend910b"], "auto_sync" : false, "impl_mode" : "high_performance"}
