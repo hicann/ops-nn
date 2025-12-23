@@ -188,7 +188,7 @@ ge::graphStatus ClippedSwigluTiling::CheckAndGetXAndAttrs()
     xDims_ = inputShapeX.GetDimNum();
     OP_CHECK_IF(
         (cutDim_ > (xDims_ - 1) || cutDim_ < -1 * xDims_),
-        OP_LOGE(context_->GetNodeName(), "dim should in [-%ld, %d], but get %ld,", xDims_, xDims_ - 1, cutDim_),
+        OP_LOGE(context_->GetNodeName(), "dim should in [-%ld, %ld], but get %ld,", xDims_, xDims_ - 1, cutDim_),
         return ge::GRAPH_FAILED);
     cutDim_ = cutDim_ < 0 ? (cutDim_ + xDims_) : cutDim_; // cutDim统一为正数
     xCutDimNum_ = inputShapeX.GetDim(cutDim_);

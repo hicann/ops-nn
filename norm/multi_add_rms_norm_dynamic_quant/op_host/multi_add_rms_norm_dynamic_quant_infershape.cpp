@@ -44,7 +44,7 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
 
     int64_t xDimValue = 0;
 
-    OP_CHECK_IF((xDimNum - gammaDimNum < 0), OP_LOGD("InferReduceShape", "Get invalid x and gamma DimNum"), return false);
+    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGD("InferReduceShape", "Get invalid x and gamma DimNum"), return false);
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         xDimValue = xShape->GetDim(i);
         reduceShape->SetDim(i, xDimValue);
