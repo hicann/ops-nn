@@ -41,7 +41,7 @@ class TestApplyAdamWV2RegbaseTiling : public testing::Test {
 static string TilingData2Str(const gert::TilingData* tiling_data) {
     auto data = tiling_data->GetData();
     string result;
-    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+    for (size_t i = tiling_data->GetDataSize() - sizeof(int64_t); i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
         result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
         result += " ";
     }
@@ -226,344 +226,344 @@ static void DoApplyAdamWV2RegbaseTilingCase(std::initializer_list<int64_t>& inpu
     EXPECT_EQ(tiling_data_result, expectStr);
 }
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_int64_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_int64_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1152 456 456 128 128 1152 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_int64) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_int64) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1344 391 391 128 128 1344 0 0 4510805389529107661 4510805389542529434 4575657222453644493 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657222453644493 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_int64_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_int64_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1152 456 456 128 128 1152 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_int64) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_int64) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1280 410 410 768 768 1280 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_int64_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_int64_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1152 456 456 128 128 1152 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_int64) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_int64) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1280 410 410 768 768 1280 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_BF16 /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_BF16 /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_amsgrad_01) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_amsgrad_01) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1152 456 456 128 128 1152 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_01) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_01) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1280 410 410 768 768 1280 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_amsgrad_02) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_amsgrad_02) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1152 456 456 128 128 1152 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_02) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_int64_02) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 1280 410 410 768 768 1280 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_INT64 /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
 
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_float_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_float_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2304 228 228 1280 1280 2304 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_float) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float_float) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2752 191 191 1408 1408 2752 0 0 4510805389529107661 4510805389542529434 4575657222453644493 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657222453644493 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_float_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_float_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2304 228 228 1280 1280 2304 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_float) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_float16_float) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2688 196 196 128 128 2688 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_float_amsgrad) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_float_amsgrad) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2304 228 228 1280 1280 2304 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT16 /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_float) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_bfloat16_float) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2688 196 196 128 128 2688 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_BF16 /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_BF16 /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_amsgrad_01) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_amsgrad_01) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2304 228 228 1280 1280 2304 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_01) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_01) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2688 196 196 128 128 2688 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_amsgrad_02) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.0;
-//     float beta1 = 0.0;
-//     float beta2 = 0.0;
-//     float weightDecay = 0.0;
-//     float eps = 0.0;
-//     bool amsgrad = true;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_amsgrad_02) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.0;
+    float beta1 = 0.0;
+    float beta2 = 0.0;
+    float weightDecay = 0.0;
+    float eps = 0.0;
+    bool amsgrad = true;
 
-//     bool maximize = false;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2304 228 228 1280 1280 2304 0 0 0 0 4575657221408423936 ";
-//     DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = false;
+    std::string expectStr =
+        "4575657221408423936 ";
+    DoApplyAdamWV2RegbaseAmsGradTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_FLOAT16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
 
-// TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_02) {
-//     // FLOAT
-//     std::initializer_list<int64_t> inputShape = {2048, 16384};
-//     float lr = 0.1;
-//     float beta1 = 0.3;
-//     float beta2 = 0.3;
-//     float weightDecay = 0.3;
-//     float eps = 0.2;
-//     bool amsgrad = false;
+TEST_F(TestApplyAdamWV2RegbaseTiling, adamw_v2_mixtype_float_02) {
+    // FLOAT
+    std::initializer_list<int64_t> inputShape = {2048, 16384};
+    float lr = 0.1;
+    float beta1 = 0.3;
+    float beta2 = 0.3;
+    float weightDecay = 0.3;
+    float eps = 0.2;
+    bool amsgrad = false;
 
-//     bool maximize = true;
-//     std::string expectStr =
-//         "1 33554432 524288 64 2688 196 196 128 128 2688 0 0 4510805389529107661 4510805389542529434 -4647714814401131315 ";
-//     DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
-//         lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
-// }
+    bool maximize = true;
+    std::string expectStr =
+        "-4647714814401131315 ";
+    DoApplyAdamWV2RegbaseTilingCase(inputShape, ge::DT_FLOAT /*inputDtype*/, ge::DT_BF16 /*gradDtype*/, ge::DT_FLOAT /*stepDtype*/,
+        lr, beta1, beta2, weightDecay, eps, amsgrad, maximize, expectStr);
+}
