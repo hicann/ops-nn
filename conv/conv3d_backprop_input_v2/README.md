@@ -4,8 +4,13 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾 950 AI 处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -14,7 +19,7 @@
 - 计算公式：
 
   $$
-    \frac{\partial L}{\partial x_{n, c_{in}, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}\cdot w_{c_{out}, c_{in}, p, q}
+    \frac{\partial L}{\partial x_{n, c_{in}, d, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{r=1}^{k_D} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, d-r, i-p, j-q}}\cdot w_{c_{out}, c_{in}, r, p, q}
   $$
 
 ## 参数说明
@@ -22,15 +27,17 @@
 | <div style="width:120px">参数名</div>  | <div style="width:120px">输入/输出/属性</div>  | <div style="width:380px">描述</div> | <div style="width:350px">数据类型</div>  | <div style="width:220px">数据格式</div> |
 | ------------------| ------------------ | ------------------------------------------------------------------------------------ | ----------------- | --------------------- |
 | input_size | 输入 | <ul><li>一维张量，给出待求梯度特征图的5D形状。</li><li>张量中整数的顺序由特征图格式决定，整数表示特征图各维度的长度。</li></ul> | INT32、INT64 | - |
-| filter | 输入   | <ul><li>输入特征图，5D卷积核张量$w_{c_{out}, c_{in}, p, q}$。</li><li>$c_{out}$相当于'filter'的N维度。</li><li>$k_H$与$k_W$相当于'filter'的H维度和W维度。</li></ul> | FLOAT16、BFLOAT16、FLOAT32、HIFLOAT8、FLOAT8_E4M3FN | NCDHW、NDHWC、DHWCN |
-| out_backprop | 输入 | <ul><li>5D输出梯度张量，等同于公式中的$\frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}$。</li><li>数据格式与'y'一致。</li></ul> | - | NDHWC、NCDHW |
+| filter | 输入   | <ul><li>5D卷积核张量$w_{c_{out}, c_{in}, r, p, q}$。</li><li>$c_{out}$相当于'filter'的N维度。</li><li>$k_H$、$k_W$、$k_D$相当于'filter'的H维度、W维度和D维度。</li></ul> | FLOAT16、BFLOAT16、FLOAT32 | NCDHW、NDHWC、DHWCN |
+| out_backprop | 输入 | <ul><li>5D输出梯度张量，等同于公式中的$\frac{\partial L}{\partial y_{n, c_{out}, d-r, i-p, j-q}}$。</li><li>数据格式与'y'一致。</li></ul> | FLOAT16、FLOAT32、BFLOAT16 | NDHWC、NCDHW |
 | strides | 必填属性 | <ul><li>一个包含5个整数的元组或列表，用于指定滑动窗口在特征图每个维度上的步长。</li><li>轴顺序与特征图格式一致。</li></ul> | - | - |
 | pads | 必填属性 | <ul><li>一个包含 6 个整数的元组或列表，用于指定特征图在各个方向上的填充量。</li><li>仅沿深度（D）、高度（H）和宽度（W）维度进行填充。</li><li>通过为各方向设置合适的填充值，可实现“SAME”和“VALID”两种填充模式。</li></ul> | - | - |
 | dilations  | 可选属性 | <ul><li>一个包含5个整数的元组或列表，表示特征图各维度的膨胀（空洞）因子。</li><li>默认值为[1,1,1,1,1]。</li><li>轴顺序与特征图格式一致。</li></ul> | - | - |
-| groups  | 可选属性 | <ul><li>整数，范围为[1,65535]，默认1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>$c_{in}$与$c_{out}$必须能被'groups'整除。</li><li>不同'groups'与dtype的组合支持见下方表格说明。</li></ul> | - | - |
-| data_format  | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。对应关系为：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>指定'out_backprop'与'y'的数据排布格式。</li></ul> | - | - |
-| y  | 输出 | <ul><li>与'out_backprop'同格式的5D张量，即公式中的$\frac{\partial L}{\partial x_{n, c_{in}, i, j}}$。</li></ul> | FLOAT16、BFLOAT16、FLOAT32、HIFLOAT8、FLOAT8_E4M3FN | NDHWC、NCDHW |
+| groups  | 可选属性 | <ul><li>整数，范围为[1,65535]，默认1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>$c_{in}$与$c_{out}$必须能被'groups'整除。</li><li>不同'groups'与dtype的组合支持见下方表格说明。</li></ul> | INT | - |
+| data_format  | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。对应关系为：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>指定'out_backprop'与'y'的数据排布格式。</li></ul> | STRING | - |
+| y  | 输出 | <ul><li>与'out_backprop'同格式的5D张量，即公式中的$\frac{\partial L}{\partial x_{n, c_{in}, d, i, j}}$。</li></ul> | FLOAT16、BFLOAT16、FLOAT32 | NDHWC、NCDHW |
 
+- 特征图：正向卷积中的[输入特征图'x'](../conv3d_v2/README.md)。
+- <term>昇腾910_95 AI处理器</term>：当'out_backprop'和'y'数据格式为NDHWC，暂不支持groups>1。
 - 不同groups取值与dtype的组合说明
 
     | groups |        dtype           | out_backprop format | filter format |     y format   |
