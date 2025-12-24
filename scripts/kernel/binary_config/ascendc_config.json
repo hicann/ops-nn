@@ -552,6 +552,7 @@
     {"name":"MoeDistributeDispatchSetup", "compute_units": ["ascend910_93"], "auto_sync": false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
     {"name":"MoeDistributeDispatchTeardown", "compute_units": ["ascend910_93"], "auto_sync": false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
     {"name":"PreRmsNorm", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
+    {"name":"BinaryCrossEntropyGradV2", "compute_units": ["ascend910b"], "auto_sync":true, "impl_mode" : "high_performance"},
     {"name":"RmsNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"PreRmsNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"PostLayerNorm", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
