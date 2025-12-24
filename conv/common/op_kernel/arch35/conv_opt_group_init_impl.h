@@ -293,7 +293,7 @@ __aicore__ inline void OptGroupInitBuf(Intf *self)
 template <class Intf>
 __aicore__ inline void OptGroupVecInit(Intf *self)
 {
-    self->ctx.vecId = GetBlockIdx();
+    self->ctx.vecId = get_subblockid();
 
     self->ctx.singleCoreCi = self->ctx.convTiling->singleCoreCi;
     self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;

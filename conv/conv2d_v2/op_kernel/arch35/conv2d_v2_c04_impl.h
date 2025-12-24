@@ -170,7 +170,7 @@ __aicore__ inline void C04InitBuf(Intf *self)
 template <class Intf>
 __aicore__ inline void C04VecInit(Intf *self)
 {
-    self->ctx.vecId = GetBlockIdx();
+    self->ctx.vecId = get_subblockid();
 
     self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
     self->ctx.kSizeC04 = self->ctx.convTiling->kernelHxkernelW * C04_CIN_SIZE;
