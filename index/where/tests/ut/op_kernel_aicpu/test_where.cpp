@@ -26,12 +26,11 @@ using namespace aicpu;
 class TEST_WHERE_UT : public testing::Test {};
 
 
-#define CREATE_NODEDEF(shapes, data_types, datas) do {                  \
+#define CREATE_NODEDEF(shapes, data_types, datas)                  \
   auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef(); \
   NodeDefBuilder(node_def.get(), "Where", "Where")                 \
       .Input({"x", data_types[0], shapes[0], datas[0]})            \
-      .Output({"y", data_types[1], shapes[1], datas[1]})
-} while(0)
+      .Output({"y", data_types[1], shapes[1], datas[1]})           \
 
 #define ADD_CASE(case_name, base_type, aicpu_type, shape, data_num, input_data)\
   TEST_F(TEST_WHERE_UT, TestWhere_##case_name) {                               \
