@@ -319,7 +319,7 @@ private:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
 #if __CCE_AICORE__ == 220
-        DataCopyCustom<float>(rstdGm[i_o_idx * rowFactor], rstdLocal, num);
+        DataCopyCustom<float>(rstdGm[static_cast<int64_t>(i_o_idx) * static_cast<int64_t>(rowFactor)], rstdLocal, num);
 #endif
         outQueueRstd.FreeTensor(rstdLocal);
     }

@@ -90,7 +90,7 @@ public:
 
     __aicore__ inline void SubProcessHalf(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint32_t gm_bias = i_o * rowFactor * numCol;
+        int64_t gm_bias = static_cast<int64_t>(i_o) * static_cast<int64_t>(rowFactor) * static_cast<int64_t>(numCol);
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(calc_row_num);
         CopyOutX(gm_bias, calc_row_num);
@@ -98,7 +98,7 @@ public:
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num);
         outQueueRstd.EnQue<float>(rstdLocal);
-        CopyOutRstd(i_o * rowFactor, calc_row_num);
+        CopyOutRstd(static_cast<int64_t>(i_o) * static_cast<int64_t>(rowFactor), calc_row_num);
 #else
         LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num);
@@ -108,7 +108,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyInX(int64_t gm_bias, uint32_t calc_row_num)
     {
         LocalTensor<T> x1Local = inQueueX.AllocTensor<T>();
         DataCopyCustom<T>(x1Local, x1Gm[gm_bias], calc_row_num * numCol);
@@ -143,7 +143,7 @@ private:
         return xLocal;
     }
 
-    __aicore__ inline void CopyOutX(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutX(int64_t gm_bias, uint32_t calc_row_num)
     {
         // CopyOut x1 + x2
         auto x_out = outQueueY.DeQue<T>();
@@ -244,7 +244,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(int64_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, calc_row_num * numCol);
@@ -252,7 +252,7 @@ private:
     }
 
 #if __CCE_AICORE__ == 220
-    __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
+    __aicore__ inline void CopyOutRstd(int64_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
         DataCopyParams copyParams;

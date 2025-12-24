@@ -32,7 +32,7 @@ def compare_data(golden_file_lists, output_file_lists, d_type):
     for gold, out in zip(golden_file_lists, output_file_lists):
         tmp_out = np.fromfile(out, np_dtype)
         tmp_gold = np.fromfile(gold, np_dtype)
-        diff_res = np.isclose(tmp_gold, tmp_gold, precision, 0, True)
+        diff_res = np.isclose(tmp_out, tmp_gold, precision, 0, True)
         diff_idx = np.where(diff_res != True)[0]
         if len(diff_idx) == 0:
             print("PASSED!")
