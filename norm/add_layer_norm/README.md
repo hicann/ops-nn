@@ -115,14 +115,14 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/zh/context/broadcast关系.md)-->
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/zh/context/broadcast关系.md)-->
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

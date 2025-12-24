@@ -2,8 +2,8 @@
 
 > 本章罗列的部分目录是可选的，请以实际交付件为准。尤其**单算子目录**，不同场景下交付件有差异，具体说明如下：
 >
-> - 若缺少op_host目录，可能是调用了其他算子op_host实现，调用逻辑参见该算子op_api或op_graph目录下源码实现；也可能是Kernel暂无Ascend C实现，如有需要，欢迎开发者参考[贡献指南](../../CONTRIBUTING.md)补充贡献该算子。
-> - 若缺少op_kernel目录，可能是调用了其他算子op_kernel实现，调用逻辑参见该算子op_api或op_graph目录下源码实现；也可能是Kernel暂无Ascend C实现，如有需要，欢迎开发者参考[贡献指南](../../CONTRIBUTING.md)补充贡献该算子。
+> - 若缺少op_host目录，可能是调用了其他算子op_host实现，调用逻辑参见该算子op_api或op_graph目录下源码实现；也可能是Kernel暂无Ascend C实现，如有需要，欢迎开发者参考[贡献指南](../../../CONTRIBUTING.md)补充贡献该算子。
+> - 若缺少op_kernel目录，可能是调用了其他算子op_kernel实现，调用逻辑参见该算子op_api或op_graph目录下源码实现；也可能是Kernel暂无Ascend C实现，如有需要，欢迎开发者参考[贡献指南](../../../CONTRIBUTING.md)补充贡献该算子。
 > - 若缺少op_api目录，说明该算子暂不支持aclnn调用。
 > - 若缺少op_graph目录，说明该算子暂不支持图模式调用。
 
@@ -15,9 +15,9 @@
 ├── common                                              # 项目公共头文件和公共代码
 │   ├── CMakeLists.txt
 │   ├── inc                                             # 公共头文件目录
-│   └── stub                                            
+│   └── src                                             # 公共代码目录
 ├── ${op_class}                                         # 算子分类，如activation、conv、matmul类算子
-│   ├${op_name}                                         # 算子工程目录，${op_name}表示算子名（小写下划线形式）
+│   ├── ${op_name}                                      # 算子工程目录，${op_name}表示算子名（小写下划线形式）
 │   │   ├── CMakeLists.txt                              # 算子CMakeList入口
 │   │   ├── README.md                                   # 算子介绍文档
 │   │   ├── docs                                        # 算子文档目录
@@ -49,7 +49,7 @@
 │   │   │       ├── ${op_name}.cpp                      # 算子l0接口实现文件
 │   │   │       ├── ${op_name}.h                        # 算子l0接口实现头文件
 │   │   │       └── CMakeLists.txt
-│   │   │── op_kernel                                   # Device侧Kernel实现
+│   │   │── op_kernel                                   # AI Core算子Device侧Kernel实现
 │   │   │   ├── ${sub_case}                             # 可选，${sub_case}子场景使用的目录
 │   │   │   │   ├── ${op_name}_${model}.h               # 算子kernel实现文件，${model}表示用户自定义文件名后缀，通常为Tiling模板名
 │   │   │   │   └── ...
@@ -57,6 +57,9 @@
 │   │   │   ├── ${op_name}_tiling_data.h                # 可选，TilingData文件，存储Tiling策略相关配置信息，如块大小、并行度，若未配置表明该算子无相应的Tiling策略
 │   │   │   ├── ${op_name}.cpp                          # Kernel入口文件，包含主函数和调度逻辑
 │   │   │   └── ${op_name}.h                            # Kernel实现文件，定义Kernel头文件，包含函数声明、结构定义、逻辑实现
+│   │   │── op_kernel_aicpu                             # 可选，AI CPU算子Device侧Kernel实现
+│   │   │   ├── ${op_name}_aicpu.cpp                    # Kernel入口文件，包含主函数和调度逻辑
+│   │   │   └── ${op_name}_aicpu.h                      # Kernel头文件，包含函数声明、结构定义、逻辑实现
 │   │   └── tests                                       # 算子测试用例目录
 │   │       ├── CMakeLists.txt
 │   │       └── ut                                      # 可选，UT测试用例，根据实际情况开发相应的用例
@@ -98,6 +101,12 @@
 │   │   ├── op_host                                     # 算子信息库、InferShape相关实现
 │   │   ├── op_kernel_aicpu                             # 算子Kernel目录
 │   │   └── tests                                       # 算子测试用例目录
+│   ├── fast_kernel_launch_example                      # 轻量级，高性能的算子开发工程模板
+│   │   ├── ascend_ops                                  # 示例算子实现目录
+│   │   ├── CMakeLists.txt                              # 算子编译配置文件
+│   │   ├── README.md                                   # 轻量级，高性能的算子开发工程说明资料
+│   │   ├── requirements.txt
+│   │   └── setup.py                                    # 构建脚本
 │   ├── CMakeLists.txt
 │   └── README.md                                       # 项目示例介绍文档
 ├── experimental                                        # 用户自定义算子存放目录

@@ -13,7 +13,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)
 ，必须先调用“aclnnMishBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnMishBackward”接口执行计算。
 
 ```Cpp
@@ -63,7 +63,7 @@ aclnnStatus aclnnMishBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入。公式中的gradOutput。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -73,7 +73,7 @@ aclnnStatus aclnnMishBackward(
       <td>self</td>
       <td>输入</td>
       <td>正向的输入数据。公式中的self。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnMishBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>计算得到梯度，作为反向传播下一步反向算子的计算输入。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与gradOutput的数据类型需满足推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnMishBackward(
 
 - **返回值**：
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -191,14 +191,14 @@ aclnnStatus aclnnMishBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 无。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

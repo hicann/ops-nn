@@ -24,7 +24,7 @@
   - aclnnLeakyRelu：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceLeakyRelu：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 
-- 每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnLeakyReluGetWorkspaceSize”或者“aclnnInplaceLeakyReluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLeakyRelu”或者“aclnnInplaceLeakyRelu”接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLeakyReluGetWorkspaceSize”或者“aclnnInplaceLeakyReluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLeakyRelu”或者“aclnnInplaceLeakyRelu”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnLeakyReluGetWorkspaceSize(
@@ -110,7 +110,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>out</td>
       <td>输出</td>
       <td>待进行LeakyRelu激活函数的出参。</td>
-      <td>out的数据类型需要是self可转换的数据类型（参见<a href="../../../docs/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td>out的数据类型需要是self可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -219,7 +219,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceLeakyReluGetWorkspaceSize
 
@@ -294,7 +294,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -364,7 +364,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -372,7 +372,7 @@ negativeSlope使用整型类型作为属性输入，而输入self是FLOAT类型�
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 **aclnnLeakyRelu示例代码：**
 

@@ -28,7 +28,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用`aclnnAddLayerNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddLayerNorm`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddLayerNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddLayerNorm`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddLayerNormGetWorkspaceSize(
@@ -154,7 +154,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>meanOut</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中（x1 + x2 + biasOptional）的结果的均值。对应公式中的`E(x)`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>rstdOut</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中`rstd`的结果。对应公式中的`rstd`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -215,7 +215,7 @@ aclnnStatus aclnnAddLayerNorm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -315,7 +315,7 @@ aclnnStatus aclnnAddLayerNorm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - **功能维度**
@@ -346,7 +346,7 @@ aclnnStatus aclnnAddLayerNorm(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

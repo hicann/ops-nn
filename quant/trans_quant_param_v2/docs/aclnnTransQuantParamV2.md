@@ -34,7 +34,7 @@
           $$
 
 ## 函数原型
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnTransQuantParamV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTransQuantParamV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransQuantParamV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTransQuantParamV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(
@@ -135,7 +135,7 @@ aclnnStatus aclnnTransQuantParamV2(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -210,7 +210,7 @@ aclnnStatus aclnnTransQuantParamV2(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
@@ -225,7 +225,7 @@ aclnnStatus aclnnTransQuantParamV2(
     - 当输入scale的shape为2维，out的shape与输入scale的shape维度和大小完全一致。
 
 ## 调用示例
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
 #include <memory>
 #include <iostream>

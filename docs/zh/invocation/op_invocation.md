@@ -19,7 +19,7 @@ aclnn接口调用流程介绍请参考[《应用开发（C&C++）》](https://hi
 
 ### 示例代码
 
-`AddExample`算子以aclnn接口形式调用的示例代码如下（详细代码参见[test_aclnn_add_example.cpp](../../examples/add_example/examples/test_aclnn_add_example.cpp)），**仅为参考**，其他算子接口调用过程类似，请替换为实际aclnn接口。调用前，请按照环境安装的提示信息设置环境变量。
+`AddExample`算子以aclnn接口形式调用的示例代码如下（详细代码参见[test_aclnn_add_example.cpp](../../../examples/add_example/examples/test_aclnn_add_example.cpp)），**仅为参考**，其他算子接口调用过程类似，请替换为实际aclnn接口。调用前，请按照环境安装的提示信息设置环境变量。
 
 注意：如需调用本项目其他算子，可访问对应算子`examples`目录下的test\_aclnn\_\$\{op\_name\}.cpp，\$\{op\_name\}表示算子名。
 
@@ -103,7 +103,7 @@ int main()
 
 ### 编译与运行
 
->说明：对于项目内已实现的算子（非自定义算子），可通过根目录下[build.sh](../../build.sh)直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
+>说明：对于项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
 
 1. 前提条件。
    请参考本项目[编译执行](./quick_op_invocation.md#编译执行)完成目标算子的编译部署。
@@ -121,7 +121,7 @@ int main()
    add_compile_options(-std=c++11)
 
    # 设置编译输出目录为当前目录下的bin文件夹
-   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")
+   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")    
 
    # 设置调试和发布模式的编译选项
    set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
@@ -133,7 +133,7 @@ int main()
    endif()
    set(LD_LIB_PATH "$ENV{LD_LIBRARY_PATH}")
 
-   # 分割路径列表并找到包含/vendors/的路径（仅自定义算子需要）
+   # 分割路径列表并找到包含/vendors/的路径（仅自定义算子需要）  
    string(REPLACE ":" ";" LD_LIB_LIST "${LD_LIB_PATH}")
    set(TARGET_PATH "")
    foreach(path ${LD_LIB_LIST})
@@ -153,11 +153,11 @@ int main()
    endif()
 
    # 添加可执行文件（请替换为实际算子可执行文件），指定算子调用的*.cpp文件
-   add_executable(test_aclnn_add_example
-   test_aclnn_add_example.cpp)
+   add_executable(test_aclnn_add_example              
+   test_aclnn_add_example.cpp)         
 
    # ASCEND_PATH（CANN软件包目录，请根据实际路径修改）
-   if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
+   if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")      
        set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
    else()
        set(ASCEND_PATH "/usr/local/Ascend/cann")
@@ -167,8 +167,11 @@ int main()
    set(INCLUDE_BASE_DIR "${ASCEND_PATH}/include")
    include_directories(
        ${INCLUDE_BASE_DIR}
-       ${ASCEND_PATH}/opp/vendors/${TARGET_SUBDIR}/op_api/include    # 仅自定义算子需要
+       ${ASCEND_PATH}/opp/vendors/${TARGET_SUBDIR}/op_api/include        # 仅自定义算子需要
        # ${INCLUDE_BASE_DIR}/aclnn                                   # 仅内置算子需要
+   )
+   include_directories(
+       ${INCLUDE_BASE_DIR}
    )
 
    # 链接所需的动态库
@@ -179,14 +182,14 @@ int main()
        # ${ASCEND_PATH}/lib64/libopapi_nn.so    # 仅内置算子需要
    )
 
-   # 安装目标文件到bin目录
+   # 安装目标文件到bin目录  
    install(TARGETS test_aclnn_add_example DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
     ```
 
 3. 创建run.sh文件。
-
+   
     在test\_aclnn\_\$\{op\_name\}.cpp同级目录下创建run.sh文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
-
+    
     ```bash
     if [ -n "$ASCEND_INSTALL_PATH" ]; then
         _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
@@ -197,16 +200,16 @@ int main()
     fi
 
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
-
+    
     rm -rf build
-    mkdir -p build
+    mkdir -p build 
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE
     make
     cd bin
     ./test_aclnn_add_example            # 替换为实际算子可执行文件名
     ```
-
+    
 4. 运行run.sh文件。
     在run.sh文件所在路径执行如下命令：
 
@@ -229,7 +232,7 @@ int main()
 构图流程介绍请参考[《图模式开发指南》](https://hiascend.com/document/redirect/CannCommunityAscendGraph)中“构建Graph > 使用图开发接口全新构建Graph > 通过算子原型构建Graph”章节。
 ### 示例代码
 
-`AddExample`算子以图方式调用的示例代码如下（详细代码参见[test_geir_add_example.cpp](../../examples/add_example/examples/test_geir_add_example.cpp)），**仅为参考**，其他算子的调用过程类似，请替换为实际的算子原型。
+`AddExample`算子以图方式调用的示例代码如下（详细代码参见[test_geir_add_example.cpp](../../../examples/add_example/examples/test_geir_add_example.cpp)），**仅为参考**，其他算子的调用过程类似，请替换为实际的算子原型。
 
 如需调用本项目其他算子，可访问对应算子`examples`目录下的test\_geir\_\$\{op\_name\}.cpp，$\{op\_name\}表示算子名。
 
@@ -278,7 +281,7 @@ int main() {
 
 ### 编译与运行
 
->说明：对于项目内已实现的算子（非自定义算子），可通过根目录下[build.sh](../../build.sh)直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
+>说明：对于项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[本地验证](./quick_op_invocation.md#本地验证)。
 
 1. 前提条件。
    请参考本项目[编译执行](./quick_op_invocation.md#编译执行)完成目标算子的编译部署。
@@ -289,10 +292,10 @@ int main() {
 
     ```bash
    cmake_minimum_required(VERSION 3.14)
-
+    
    # 设置工程名
    project(GE_IR_EXAMPLE)
-
+   
    if(NOT "$ENV{ASCEND_OPP_PATH}" STREQUAL "")
        get_filename_component(ASCEND_PATH $ENV{ASCEND_OPP_PATH} DIRECTORY)
    elseif(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
@@ -300,31 +303,31 @@ int main() {
    else()
        set(ASCEND_PATH "/usr/local/Ascend/cann")
    endif()
-
+   
    set(FWK_INCLUDE_DIR "${ASCEND_PATH}/compiler/include")
-
+   
    message(STATUS "ASCEND_PATH: ${ASCEND_PATH}")
-
+   
    file(GLOB files CONFIGURE_DEPENDS
-        test_geir_add_example.cpp
+        test_geir_add_example.cpp         
    )
-
+   
    # 添加可执行文件（请替换为实际算子可执行文件）
-   add_executable(test_geir_add_example ${files})
-
+   add_executable(test_geir_add_example ${files})      
+   
    find_library(GRAPH_LIBRARY_DIR libgraph.so "${ASCEND_PATH}/compiler/lib64/stub")
    find_library(GE_RUNNER_LIBRARY_DIR libge_runner.so "${ASCEND_PATH}/compiler/lib64/stub")
    find_library(GRAPH_BASE_LIBRARY_DIR libgraph_base.so "${ASCEND_PATH}/compiler/lib64")
-
+   
    # 链接所需的动态库
-   target_link_libraries(test_geir_add_example PRIVATE
+   target_link_libraries(test_geir_add_example PRIVATE      
         ${GRAPH_LIBRARY_DIR}
         ${GE_RUNNER_LIBRARY_DIR}
         ${GRAPH_BASE_LIBRARY_DIR}
    )
-
+   
    # 设置头文件路径
-   target_include_directories(test_geir_add_example PRIVATE
+   target_include_directories(test_geir_add_example PRIVATE       
         ${FWK_INCLUDE_DIR}/graph/
         ${FWK_INCLUDE_DIR}/ge/
         ${ASCEND_PATH}/opp/built-in/op_proto/inc/
@@ -349,7 +352,7 @@ int main() {
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
 
     rm -rf build
-    mkdir -p build
+    mkdir -p build 
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE
     make
@@ -358,13 +361,13 @@ int main() {
 
 4. 运行run.sh脚本。
     在run.sh文件所在路径执行如下命令：
-
+   
     ```bash
     bash run.sh
     ```
-
+   
     默认在当前执行路径 `/build/bin`下生成可执行文件test\_geir\_add\_example，运行结果如下：
-
+   
     ```
     INFO - [XIR]: Finalize ir graph session success
     ```

@@ -20,7 +20,7 @@
   $$
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnDeepNormGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeepNorm”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDeepNormGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeepNorm”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnDeepNormGetWorkspaceSize(
@@ -134,7 +134,7 @@ aclnnStatus aclnnDeepNorm(
       <td>meanOut</td>
       <td>输出</td>
       <td>表示计算输出的均值，用于归一化操作，对应公式中的`mean`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnDeepNorm(
       <td>rstdOut</td>
       <td>输出</td>
       <td>表示计算输出的标准差倒数，用于归一化操作，对应公式中`rstd`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与输入`x`满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（前几维的维度和输入`x`前几维的维度相同，前几维表示不需要norm的维度，其余维度大小为1）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnDeepNorm(
 
 -   **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -262,7 +262,7 @@ aclnnStatus aclnnDeepNorm(
 
 - **返回值：**
 
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -282,7 +282,7 @@ aclnnStatus aclnnDeepNorm(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

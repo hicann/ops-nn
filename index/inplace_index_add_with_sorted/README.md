@@ -87,4 +87,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_index_add](../inplace_scatter_add/examples/test_aclnn_inplace_scatter_add.cpp) | 通过[aclnnIndexAdd](../inplace_scatter_add/docs/aclnnIndexAdd.md)接口方式调用InplaceIndexAddWithSorted算子。 |
+| aclnn调用 | [test_aclnn_index_add](../inplace_scatter_add/examples/test_aclnn_index_add.cpp) | 通过[aclnnIndexAdd](../inplace_scatter_add/docs/aclnnIndexAdd.md)接口方式调用InplaceIndexAddWithSorted算子。 |

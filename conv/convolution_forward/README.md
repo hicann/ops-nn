@@ -31,8 +31,8 @@
 
 | <div style="width:120px">参数名</div>  | <div style="width:120px">输入/输出/属性</div>  | <div style="width:350px">描述</div> | <div style="width:350px">数据类型</div>  | <div style="width:220px">数据格式</div> |
 | ------------------| ------------------ | ------------------------------------------------------------------------------------------- | ----------------- | --------------------- |
-| input | 输入 | <ul><li>公式中的 input，表示卷积输入。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../docs/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN| NCL、NCHW、NCDHW |
-| weight | 输入 | <ul><li>公式中的 weight，表示卷积权重。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../docs/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>所有维度≥1。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
+| input | 输入 | <ul><li>公式中的 input，表示卷积输入。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN| NCL、NCHW、NCDHW |
+| weight | 输入 | <ul><li>公式中的 weight，表示卷积权重。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>所有维度≥1。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
 | bias | 输入 | <ul><li>公式中的 bias，表示卷积偏置。</li><li>当 transposed=false 时为一维且数值与 weight 第一维相等；当 transposed=true 时为一维且数值与 weight.shape[1] * groups 相等。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
 | stride | 输入 | <ul><li>卷积扫描步长。</li><li>数组长度需等于 input 的维度减 2，值应该大于 0。</li></ul> | INT32 | - |
 | padding | 输入 | <ul><li>对 input 的填充。</li><li>数组长度：conv1d 非转置为 1 或 2；conv2d 为 2 或 4；conv3d 为 3。值应该大于等于 0。</li></ul> | INT32 | - |

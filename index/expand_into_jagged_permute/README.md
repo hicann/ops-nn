@@ -82,5 +82,5 @@ inputOffset、outputOffset的长度比permute多1。
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_expand_into_jagged_permute.cpp](examples/test_expand_into_jagged_permute.cpp) | 通过[aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute.md)接口方式调用ExpandIntoJaggedPermute算子。 |
+| aclnn接口  | [test_aclnn_expand_into_jagged_permute.cpp](examples/test_aclnn_expand_into_jagged_permute.cpp) | 通过[aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute.md)接口方式调用ExpandIntoJaggedPermute算子。 |
 

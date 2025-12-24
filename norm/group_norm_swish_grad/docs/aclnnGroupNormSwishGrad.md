@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnGroupNormSwishGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSwishGrad”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupNormSwishGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSwishGrad”接口执行计算。
 
 - `aclnnStatus aclnnGroupNormSwishGradGetWorkspaceSize(const aclTensor *dy, const aclTensor *mean, const aclTensor *rstd, const aclTensor *x, const aclTensor *gamma, const aclTensor *beta, int64_t numGroups, char *dataFormatOptional, double swishScale, bool dgammaIsRequire, bool dbetaIsRequire, const aclTensor *dxOut, const aclTensor *dgammaOut, const aclTensor *dbetaOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
 - `aclnnStatus aclnnGroupNormSwishGrad(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
@@ -27,17 +27,17 @@
 
 - **参数说明：**
   
-  * dy (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，反向计算的梯度，维度需大于一维，元素个数需要等于N\*C\*HxW，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * dy (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，反向计算的梯度，维度需大于一维，元素个数需要等于N\*C\*HxW，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * mean (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第二个输出，表示input分组后每个组的均值，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。 
+  * mean (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第二个输出，表示input分组后每个组的均值，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。 
 
-  * rstd (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第三个输出，表示input分组后每个组的标准差倒数，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * rstd (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第三个输出，表示input分组后每个组的标准差倒数，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * x (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向的输入$x$，维度需大于一维，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * x (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向的输入$x$，维度需大于一维，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * gamma (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的缩放系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * gamma (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的缩放系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * beta (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的偏移系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * beta (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的偏移系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
   * numGroups (int64_t, 计算输入)：INT64常量，表示将输入gradOut的C维度分为group组，group需大于0，C必须可以被group整除并且比值不能超过4000。
 
@@ -49,11 +49,11 @@
 
   * dbetaIsRequire (bool, 计算输入)：是否需要输出dbeta，建议值true。
 
-  * dxOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，x的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$x$相同，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * dxOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，x的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$x$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * dgammaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，gamma的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * dgammaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，gamma的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * dbetaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，beta的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/context/非连续的Tensor.md)。
+  * dbetaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，beta的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
   * workspaceSize (uint64_t\*, 出参)：返回需要在Device侧申请的workspace大小。
 
@@ -61,7 +61,7 @@
 
 - **返回值：**
   
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ```
 第一段接口完成入参校验，出现以下场景时报错：
@@ -90,7 +90,7 @@
   * stream(aclrtStream, 入参)：指定执行任务的Stream。
 - **返回值：**
   
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -98,7 +98,7 @@
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

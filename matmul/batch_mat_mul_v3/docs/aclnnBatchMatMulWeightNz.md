@@ -19,7 +19,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnBatchMatMulWeightNzGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchMatMulWeightNZ”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchMatMulWeightNzGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchMatMulWeightNZ”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(
@@ -66,10 +66,10 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
       <td>self</td>
       <td>输入</td>
       <td>表示矩阵乘的第一个矩阵，公式中的self。</td>
-      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>在self不转置的情况下各个维度表示：（b, m，k）。</li>
       <li>在self转置的情况下各个维度表示：（b, k，m）。</li>
-      <li>self的第一个维度b需要与mat2第一个维度b满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>。</li>
+      <li>self的第一个维度b需要与mat2第一个维度b满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
@@ -80,10 +80,10 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li> 
+      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li> 
       <li>当B矩阵不转置时， AI处理器亲和数据排布格式各个维度表示：（b, n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
       <li>当B矩阵转置时， AI处理器亲和数据排布格式各个维度表示：（b, k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
-      <li>mat2的第一个维度b需要与mat2第一个维度b满足<a href="../../../docs/context/broadcast关系.md">broadcast关系</a>。</li>
+      <li>mat2的第一个维度b需要与mat2第一个维度b满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16</td>
       <td>NZ</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td><ul><li>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <td><ul><li>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>各个维度表示：（b, m，n），m与self的m一致，n与mat2的n1以及n0满足ceil(n / n0) = n1的关系，b要与self的b和mat2的b经过broadcast推导后一致。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 809px"><colgroup>
@@ -214,14 +214,14 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
   </table>
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 
 ## 调用示例
 
-self和mat2数据类型为float16，mat2为AI处理器亲和数据排布格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+self和mat2数据类型为float16，mat2为AI处理器亲和数据排布格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   ```Cpp
   #include <iostream>
   #include <vector>

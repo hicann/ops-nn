@@ -13,7 +13,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnHardsigmoidBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardsigmoidBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnHardsigmoidBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardsigmoidBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
@@ -83,7 +83,7 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>out</td>
       <td>输出</td>
       <td>为self的梯度值，公式中的grad\_input。</td>
-      <td><ul><li>gradOutput与self、out的shape一致。</li><li>数据类型需要是self与gradOutput推导之后可转换的数据类型（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+      <td><ul><li>gradOutput与self、out的shape一致。</li><li>数据类型需要是self与gradOutput推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 - **返回值：**
   
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -191,7 +191,7 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 - **返回值：**
   
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -199,7 +199,7 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

@@ -92,7 +92,7 @@
 
 ## 约束说明
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](aclnnQuantMatmulV4.md)）配套使用。
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口对应的aclnn接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
 - 关于scale、offset、y的shape说明如下：
   - 当无offset时，y shape与scale shape一致。
@@ -110,6 +110,3 @@
 | aclnn接口  | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | 通过[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)接口方式调用TransQuantParamV2算子。 |
 | aclnn接口  | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | 通过[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)接口方式调用TransQuantParamV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/trans_quant_param_v2_proto.h)构图方式调用TransQuantParamV2算子。         |
-
-<!--没有IR原型，只有op_ref,这一条补充啥啊？9.17之前反馈没有IR原型，但是9.17发现IR原型归档了，同步补充了一条-->
-<!--[test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp)-->
