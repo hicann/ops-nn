@@ -308,6 +308,8 @@ ge::graphStatus Tiling4ApplyAdamWQuant(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4ApplyAdamWQuant(gert::TilingParseContext* context)
 {
+    OP_LOGD(context, "TilingPrepare4ApplyAdamWQuant enter.");
+    OP_LOGD(context, "TilingPrepare4ApplyAdamWQuant exit.");
     return ge::GRAPH_SUCCESS;
 }
 
