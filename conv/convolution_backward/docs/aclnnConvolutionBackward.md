@@ -58,6 +58,7 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
     const aclTensor     *input,
     const aclTensor     *weight,
     const aclIntArray   *biasSizes,
+    const aclIntArray   *stride,
     const aclIntArray   *padding,
     const aclIntArray   *dilation,
     bool                 transposed,
@@ -162,7 +163,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>stride</td>
@@ -174,20 +175,20 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>padding</td>
       <td>输入</td>
       <td>反向传播过程中对于输入填充。</td>
       <td>
-       <ul><li>数组长度可以为weight维度减2，在2d场景下数组长度可以为4。</li>
+       <ul><li>数组长度可以为weight维度减2，代表每维填充长度（前后方向填充长度一致）。在2d场景下数组长度可以为4，为每维的前后两个方向设置不同的填充长度。</li>
        <li>数值必须大于等于0。</li>
       </td>
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>dilation</td>
@@ -200,7 +201,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>transposed</td>
@@ -210,7 +211,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>outputPadding</td>
@@ -223,7 +224,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>groups</td>
@@ -235,7 +236,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>outputMask</td>
@@ -248,7 +249,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>cubeMathType</td>
@@ -265,7 +266,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>gradInput</td>
@@ -279,7 +280,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>gradWeight</td>
@@ -292,7 +293,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>FLOAT、FLOAT16、BFLOAT16、</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>gradBias</td>
@@ -305,7 +306,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -315,7 +316,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -325,7 +326,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>×</td>
+      <td>-</td>
     </tr>
    </tbody>
   </table>
@@ -437,7 +438,6 @@ aclnnStatus aclnnConvolutionBackward(
 
   <table style="undefined;table-layout: fixed; width: 2600px"><colgroup>
     <col style="width:200px">
-    <col style="width:800px">
     <col style="width:900px">
     </colgroup>
    <thead>
@@ -457,27 +457,15 @@ aclnnStatus aclnnConvolutionBackward(
        <ul><li>weight的N轴必须大于0。</li>
        <li>weight的N轴必须和input的C轴相等。</li>
      </td>
-     <td>
-       <ul><li>input的维度必须是2维以上。stride、padding、dilation、outputPadding的维度必须等于input维度-2，其中padding在2D的时候可以是4维。</li>
-       <li>transposed=false时，D、H、W维度约束满足公式一（见表格下方说明）。</li>
-       <li>transposed=true时：</li>
-       <ul><li>weight的N轴必须大于0。</li>
-       <li>weight的N轴必须和input的C轴相等。</li>
-     </td>
    </tr>
    <tr>
      <th scope="row">gradOutput约束</th>
-     <td>-</td>
      <td>
      <ul><li>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。</li>
      </td>
    </tr>
    <tr>
      <th scope="row">input约束</th>
-     <td>
-       <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
-       <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
-     </td>
      <td>
      <ul><li>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。</li>
         <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
@@ -487,10 +475,6 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">weight约束</th>
      <td>
-     <ul><li>transposed=true：H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
-     <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），H、W的大小应该在[1,511]的范围内，其他维度的大小应该大于等于1。当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li>
-     </td>
-     <td>
      <ul><li>2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。</li>
        <ul><li>transposed=true: 当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
        <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li>
@@ -499,26 +483,17 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">stride约束</th>
      <td>
-     <ul><li>3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,63]的范围内。</li>
-     </td>
-     <td>
      <ul><li>3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。</li>
      </td>
    </tr>
    <tr>
      <th scope="row">padding约束</th>
      <td>
-     <ul><li>3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,255]的范围内。</li>
-     </td>
-     <td>
      <ul><li>3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。</li>
      </td>
    </tr>
    <tr>
      <th scope="row">dilation约束</th>
-     <td>
-     <ul><li>1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,255]的范围内。</li>
-     </td>
      <td>
      <ul><li>1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。</li>
      </td>
@@ -528,7 +503,7 @@ aclnnStatus aclnnConvolutionBackward(
 
   - 公式一：
     $$
-        (input_{dim} + pad_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
+        (input_{dim} + padding_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
     $$
 
 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
