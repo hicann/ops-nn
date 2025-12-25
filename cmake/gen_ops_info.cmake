@@ -469,6 +469,10 @@ function(gen_ops_info_and_python)
           continue()
         endif()
 
+        if(NOT EXISTS ${OP_DIR}/op_host/${op_name}_def.cpp)
+          continue()
+        endif()
+
         set(HAS_OP_COMPILE_OF_COMPUTE_UNIT TRUE)
 
         # generate opc shell scripts for autogen binary config ops
