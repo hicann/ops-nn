@@ -163,8 +163,8 @@
       ]
     },
     {
-      "bin_filename": "BatchMatMulV3_ND_ND_ND_ND_FP16_FP16_FP32_FP32",
-      "simplified_key": "diy,2/2/2/2/1/1/0/0",
+      "bin_filename": "BatchMatMulV3_ND_ND_ND_ND_FP16_FP16_FP16_FP32",
+      "simplified_key": "diy,2/2/2/2/1/1/1/0",
       "inputs": [
         {
           "name": "x1",
@@ -189,7 +189,7 @@
         {
           "name": "bias",
           "index": 2,
-          "dtype": "float32",
+          "dtype": "float16",
           "format": "ND",
           "paramType": "optional",
           "shape": [
@@ -403,8 +403,8 @@
       ]
     },
     {
-      "bin_filename": "BatchMatMulV3_ND_ND_ND_ND_BF16_BF16_FP32_FP32",
-      "simplified_key": "diy,2/2/2/2/27/27/0/0",
+      "bin_filename": "BatchMatMulV3_ND_ND_ND_ND_BF16_BF16_BF16_FP32",
+      "simplified_key": "diy,2/2/2/2/27/27/27/0",
       "inputs": [
         {
           "name": "x1",
@@ -429,7 +429,7 @@
         {
           "name": "bias",
           "index": 2,
-          "dtype": "float32",
+          "dtype": "bfloat16",
           "format": "ND",
           "paramType": "optional",
           "shape": [

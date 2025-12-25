@@ -301,7 +301,7 @@ static aclnnStatus SetBatchMatMulOpSupportInfo(
     // 判断传入L0接口，用于计算的Dtype
     SetMmSupportDType(matmulOpInfo, cubeMathType);
 
-    // 1971场景 ACLNN中BMM全部走ND格式，1980场景进入函数路由
+    // 910B场景 ACLNN中BMM全部走ND格式，910场景进入函数路由
     if (CheckSocVersionIsSupportBf16()) {
         matmulOpInfo.support_info.output_format = Format::FORMAT_ND;
         matmulOpInfo.support_info.self_format = Format::FORMAT_ND;
@@ -318,7 +318,7 @@ static aclnnStatus SetBatchMatMulOpSupportInfo(
 }
 
 static aclnnStatus GetBatchMatmulOpInfo(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, MmOpInfo& matmulOpInfo, int8_t cubeMathType)
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, MmOpInfo& matmulOpInfo, int8_t cubeMathType, bool isBaddbmm)
 {
     matmulOpInfo.ori_info.self_dtype = self->GetDataType();
     matmulOpInfo.ori_info.self_format = GetPrimaryFormat(self->GetStorageFormat());
@@ -345,7 +345,7 @@ static aclnnStatus GetBatchMatmulOpInfo(
     matmulOpInfo.enableFp16Bf16InFp32Out = (inputFp16Flag || inputBf16Flag) &&
                                            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
-                                           (cubeMathType == KEEP_DTYPE);
+                                           (cubeMathType == KEEP_DTYPE) && isBaddbmm;
 
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d, enableFp16Bf16InFp32Out=%d", matmulOpInfo.opImplModeEnum, matmulOpInfo.enableHf32,
@@ -593,25 +593,24 @@ const aclTensor* GetBatchMatmulOp(
     bool adjX1, bool adjX2, const bool offsetX, aclOpExecutor* executor, bool isBaddbmm)
 {
     auto bmmOpOut = selfTransdata;
+    bool is910B_or_910_93 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
+    bool is910_95 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool isFp16_or_Bf16 = matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 ||
+                          matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16;
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
-        if (GetCurrentPlatformInfo().GetSocVersion() ==
-                SocVersion::ASCEND910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
-            (GetBatchDimAll(mat2Transdata) <= 1 &&
-             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
+    if (is910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
+        (GetBatchDimAll(mat2Transdata) <= 1 && (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
             int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x0);
-            return TransBmm2Mm(
-                selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
-        }
+            return TransBmm2Mm(selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
+    }
         OP_LOGI("Hit batch_mat_mul_v3 scenario.");
-        if  ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 || matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) && isBaddbmm) {
+        if (isFp16_or_Bf16 && isBaddbmm && is910B_or_910_93) { // 仅910B 910_93路由该场景
             OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario.");
-            bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
-                selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+            bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
         } else {
-            bmmOpOut = l0op::BatchMatMulV3Nd(
-                selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+            bmmOpOut = l0op::BatchMatMulV3Nd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
         }
-
         return bmmOpOut;
     }
     // 输入是FP16的场景
@@ -619,30 +618,21 @@ const aclTensor* GetBatchMatmulOp(
         if (matmulOpInfo.support_info.output_dtype == op::DataType::DT_FLOAT16) {
             // 输入是FP16, 输出是FP16的场景
             if (matmulOpInfo.support_info.self_format == op::Format::FORMAT_ND) {
-                bmmOpOut = l0op::BatchMatMulNd(
-                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
-                    executor);
+                bmmOpOut = l0op::BatchMatMulNd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
             } else {
-                bmmOpOut = l0op::BatchMatMulNzFp162Fp16(
-                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
-                    executor);
+                bmmOpOut = l0op::BatchMatMulNzFp162Fp16(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
             }
         } else {
             // 输入是FP16, 输出是FP32的场景
             if (matmulOpInfo.support_info.self_format == op::Format::FORMAT_ND) {
-                bmmOpOut = l0op::BatchMatMulNdFp162Fp32(
-                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
-                    executor);
+                bmmOpOut = l0op::BatchMatMulNdFp162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
             } else {
-                bmmOpOut = l0op::BatchMatMulNzFp162Fp32(
-                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
-                    executor);
+                bmmOpOut = l0op::BatchMatMulNzFp162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
             }
         }
     } else {
         // 输入是FP32/BF16,输出是FP32/BF16的场景
-        bmmOpOut = l0op::BatchMatMulNd(
-            selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+        bmmOpOut = l0op::BatchMatMulNd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
     }
     return bmmOpOut;
 }
@@ -676,7 +666,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
 {
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), nullptr);
     MmOpInfo matmulOpInfo;
-    GetBatchMatmulOpInfo(self, mat2, out, matmulOpInfo, cubeMathType);
+    GetBatchMatmulOpInfo(self, mat2, out, matmulOpInfo, cubeMathType, isBaddbmm);
 
     auto selfCast = l0op::Cast(self, matmulOpInfo.support_info.self_dtype, executor);
     CHECK_RET(selfCast != nullptr, nullptr);
@@ -717,9 +707,7 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
     if (isTransposeMat2Contiguous) {
         bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     } else if (ifKEqual1) {
-        auto selfTransdataCast = l0op::Cast(selfTransdata, op::DataType::DT_FLOAT, executor);
-        auto mat2TransdataCast = l0op::Cast(mat2Transdata, op::DataType::DT_FLOAT, executor);
-        bmmOpOut = l0op::Mul(selfTransdataCast, mat2TransdataCast, executor);
+        bmmOpOut = l0op::Mul(selfTransdata, mat2Transdata, executor);
     } else {
         bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     }

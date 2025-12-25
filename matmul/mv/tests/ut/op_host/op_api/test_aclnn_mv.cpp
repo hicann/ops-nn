@@ -78,7 +78,7 @@ TEST_F(l2_mv_test, l2_mv_test_01)
         ACL_FORMAT_ND, 1);
 }
 
-// self + other + out: fp32 1980不支持FP32, cubeMathType为0/3/其余值时报错，1/2正常运行
+// self + other + out: fp32 910不支持FP32, cubeMathType为0/3/其余值时报错，1/2正常运行
 TEST_F(l2_mv_test, l2_mv_test_02)
 {
     test_run_invalid(
@@ -98,7 +98,7 @@ TEST_F(l2_mv_test, l2_mv_test_02)
         ACL_FORMAT_ND, 4);
 }
 
-// self + other + out: fp32 1971支持FP32, cubeMathType为0/1/2/3正常运行, 其余值报错
+// self + other + out: fp32 910B支持FP32, cubeMathType为0/1/2/3正常运行, 其余值报错
 TEST_F(l2_mv_test, ascend910B2_l2_mv_test_02)
 {
     test_run(

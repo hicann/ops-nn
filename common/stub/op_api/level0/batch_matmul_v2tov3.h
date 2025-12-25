@@ -12,6 +12,7 @@
 #define PTA_NPU_OP_API_INC_LEVEL0_OP_BATCH_MATMUL_V2TOV3_H_
 
 #include "opdev/op_executor.h"
+#include "matmul/common/op_host/op_api/matmul_util.h"
 
 namespace l0op {
 

@@ -211,7 +211,7 @@ TEST_F(l2_batch_matmul_test, case_13)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 1980 Fp16 16Aligin Nd
+// 910 Fp16 16Aligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_14)
 {
     auto tensor_1_desc = TensorDesc({16, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -252,7 +252,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_14)
     // SAMPLE: precision simulate
 }
 
-// 1980 Fp16 16notAligin Nd
+// 910 Fp16 16notAligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_18)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -289,7 +289,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_18)
     // SAMPLE: precision simulate
 }
 
-// 1980 Fp32 16notAligin Nd
+// 910 Fp32 16notAligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_22)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -325,7 +325,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_22)
     // SAMPLE: precision simulate
 }
 
-// 1980 Fp32 16Aligin Nd
+// 910 Fp32 16Aligin Nd
 TEST_F(l2_batch_matmul_test, ascend910A_case_23)
 {
     auto tensor_1_desc = TensorDesc({16, 16, 32}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -363,7 +363,7 @@ TEST_F(l2_batch_matmul_test, ascend910A_case_23)
     // SAMPLE: precision simulate
 }
 
-// 1971 Fp32 Nd
+// 910B Fp32 Nd
 TEST_F(l2_batch_matmul_test, ascend910B2_case_24)
 {
     auto tensor_1_desc = TensorDesc({1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -398,7 +398,7 @@ TEST_F(l2_batch_matmul_test, ascend910B2_case_24)
     // SAMPLE: precision simulate
 }
 
-// 1971 Fp16 Nd  IsNdToNzOnTheFly = true,
+// 910B Fp16 Nd  IsNdToNzOnTheFly = true,
 TEST_F(l2_batch_matmul_test, ascend910B2_case_28)
 {
     auto tensor_1_desc = TensorDesc({1, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -437,7 +437,7 @@ TEST_F(l2_batch_matmul_test, ascend910B2_case_28)
     // SAMPLE: precision simulate
 }
 
-// 1971 Fp16 Nd  IsNdToNzOnTheFly = false,
+// 910B Fp16 Nd  IsNdToNzOnTheFly = false,
 TEST_F(l2_batch_matmul_test, ascend910B2_case_32)
 {
     auto tensor_1_desc = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);

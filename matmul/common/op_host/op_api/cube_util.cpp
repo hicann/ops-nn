@@ -70,11 +70,11 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) 
             OP_LOGD("The cubeMathType is KEEP_DTYPE.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
         case ALLOW_FP32_DOWN_PRECISION:
-            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉1980 + BF16场景
+            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉910 + BF16场景
             OP_LOGD("The cubeMathType is ALLOW_FP32_DOWN_PRECISION.");
             return CheckSocSupportDtype(cubeTensorDtype, true);
         case USE_FP16:
-            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉1980 + BF16场景
+            // 注意：非910B场景，BF16报错，FP32支持  正常来说在校验cubemathtype前, dtype应该拦截掉910 + BF16场景
             OP_LOGD("The cubeMathType is USE_FP16.");
             return CheckSocSupportDtype(cubeTensorDtype, true);
         case USE_HF32:
