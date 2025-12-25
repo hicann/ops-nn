@@ -85,8 +85,8 @@ aclnnStatus aclnnMatmulWeightNz(
         当B矩阵转置时， AI处理器亲和数据排布格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>2</td>
+        <td>NZ</td>
+        <td>4</td>
         <td>√</td>
       </tr>
       <tr>
