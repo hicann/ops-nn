@@ -663,6 +663,7 @@ checkopts() {
           ;;
         soc=*)
           COMPUTE_UNIT=${OPTARG#*=}
+          COMPUTE_UNIT=$(echo "$COMPUTE_UNIT" | sed 's/ascend950/ascend910_95/g')
           ;;
         vendor_name=*)
           VENDOR_NAME=${OPTARG#*=}
