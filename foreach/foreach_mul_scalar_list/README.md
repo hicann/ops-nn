@@ -64,11 +64,9 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。
-    - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
-
-
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - 当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。
+  - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
 ## 约束说明
 
 无
@@ -79,5 +77,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_mul_scalar_list](examples/test_aclnn_foreach_mul_scalar_list.cpp) | 通过[aclnnForeachMulScalarList](docs/aclnnForeachMulScalarList.md)接口方式调用ForeachMulScalarList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_mul_scalar_list_proto.h)构图方式调用ForeachMulScalarList算子。         |
-
-<!--[test_geir_foreach_mul_scalar_list](examples/test_geir_foreach_mul_scalar_list.cpp)-->

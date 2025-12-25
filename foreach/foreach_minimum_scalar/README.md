@@ -74,5 +74,3 @@
 | aclnn接口  | [test_aclnn_foreach_minimum_scalar](examples/test_aclnn_foreach_minimum_scalar.cpp) | 通过[aclnnForeachMinimumScalar](docs/aclnnForeachMinimumScalar.md)接口方式调用ForeachMinimumScalar算子。 |
 | aclnn接口  | [test_aclnn_foreach_minimum_scalar_v2](examples/test_aclnn_foreach_minimum_scalar_v2.cpp) | 通过[aclnnForeachMinimumScalarV2](docs/aclnnForeachMinimumScalarV2.md)接口方式调用ForeachMinimumScalar算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_minimum_scalar_proto.h)构图方式调用ForeachMinimumScalar算子。         |
-
-<!--[test_geir_foreach_minimum_scalar](examples/test_geir_foreach_minimum_scalar.cpp)-->

@@ -21,14 +21,17 @@
 - 示例：
   - 示例1：
     假设输入张量$x=\begin{bmatrix}1 & 2 & 3\\ 4 & 5 & 6\\ 7 & 8 & 9\end{bmatrix}$，索引张量$index=\begin{bmatrix}0 & 2\\ 1 & 0\end{bmatrix}$，$dim = 0$，那么输出张量$y=\begin{bmatrix}1 & 8\\ 4 & 2\end{bmatrix}$，具体计算过程如下：
+
     $$
     \begin{aligned} y_{0,0}&=x_{index_{0,0}, 0}=x_{0,0}=1 \\
     y_{0,1}&=x_{index_{0,1}, 1}=x_{2,1}=8 \\
     y_{1,0}&=x_{index_{1,0}, 0}=x_{1,0}=4 \\
     y_{1,1}&=x_{index_{1,1}, 1}=x_{0,1}=2 \end{aligned}
     $$
+
   - 示例2：
     假设输入张量$x=\begin{bmatrix}1 & 2 & 3\\ 4 & 5 & 6\\ 7 & 8 & 9\end{bmatrix}$，索引张量$index=\begin{bmatrix}0 & 2\\ 1 & 0\end{bmatrix}$，$dim = 1$，那么输出张量$y=\begin{bmatrix}1 & 3\\ 5 & 4\end{bmatrix}$，具体计算过程如下：
+
     $$
     \begin{aligned} y_{0,0}&=x_{0, index_{0,0}}=x_{0,0}=1 \\
     y_{0,1}&=x_{0, index_{0,1}}=x_{0,2}=3 \\

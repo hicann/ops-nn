@@ -76,11 +76,9 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，`scalar`数据类型与`x1`的数据类型保持一致。
-    - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
-
-
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - 当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，`scalar`数据类型与`x1`的数据类型保持一致。
+  - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
 ## 约束说明
 
 无
@@ -92,5 +90,3 @@
 | aclnn接口  | [test_aclnn_foreach_addcmul_scalar](examples/test_aclnn_foreach_addcmul_scalar.cpp) | 通过[aclnnForeachAddcmulScalar](docs/aclnnForeachAddcmulScalar.md)接口方式调用ForeachAddcmulScalar算子。 |
 | aclnn接口  | [test_aclnn_foreach_addcmul_scalar_v2](examples/test_aclnn_foreach_addcmul_scalar_v2.cpp) | 通过[aclnnForeachAddcmulScalarV2](docs/aclnnForeachAddcmulScalarV2.md)接口方式调用ForeachAddcmulScalar算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_scalar_proto.h)构图方式调用ForeachAddcmulScalar算子。         |
-
-<!--[test_geir_foreach_addcmul_scalar](examples/test_geir_foreach_addcmul_scalar.cpp)-->

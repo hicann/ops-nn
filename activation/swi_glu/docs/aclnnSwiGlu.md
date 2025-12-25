@@ -38,8 +38,8 @@ aclnnStatus aclnnSwiGlu(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 270px">
@@ -64,13 +64,13 @@ aclnnStatus aclnnSwiGlu(
       <td>x</td>
       <td>输入</td>
       <td>表示待计算的数据，公式中的x<sub>i</sub>。</td>
-      <td><ul><li>不支持空Tensor。</li><li>维度必须大于0且shape必须在入参dim对应维度上是偶数。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>维度必须大于0且shape必须在入参dim对应维度上是偶数。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>-</td>
       <td>×</td>
     </tr>
-     <tr>
+      <tr>
       <td>dim</td>
       <td>输入</td>
       <td>需要进行切分的维度序号，对x相应轴进行对半切分。</td>
@@ -85,9 +85,9 @@ aclnnStatus aclnnSwiGlu(
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>i</sub>。</td>
       <td>数据类型与计算输入x的类型一致。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>INT8</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>-</td>
       <td>×</td>
     </tr>
      <tr>
@@ -113,7 +113,6 @@ aclnnStatus aclnnSwiGlu(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -145,7 +144,6 @@ aclnnStatus aclnnSwiGlu(
       <td>dim不在取值范围内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSwiGlu
 
@@ -186,14 +184,14 @@ aclnnStatus aclnnSwiGlu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSwiGlu默认确定性实现。
 
 ## 调用示例
 

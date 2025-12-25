@@ -107,7 +107,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 无
@@ -119,5 +118,3 @@
 | aclnn接口  | [test_aclnn_layer_norm_v4](examples/test_aclnn_layer_norm_v4.cpp) | 通过[aclnnLayerNorm](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | aclnn接口  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | 图模式 | - | 通过[算子IR](op_graph/layer_norm_v4_proto.h)构图方式调用LayerNormV4算子。         |
-
-<!--[test_geir_layer_norm_v4](examples/test_geir_layer_norm_v4.cpp)--> 

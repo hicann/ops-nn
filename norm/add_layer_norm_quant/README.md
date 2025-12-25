@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -166,7 +166,7 @@
     <tr>
       <td>quant_mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或"dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
+      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或 "dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
       <td>String</td>
       <td>-</td>
     </tr>
@@ -236,9 +236,7 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口  | - | 通过[aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant.md)接口方式调用AddLayerNormQuant算子。 |
 | 图模式 | [test_geir_add_layer_norm_quant](examples/test_geir_add_layer_norm_quant.cpp)  | 通过[算子IR](op_graph/add_layer_norm_quant_proto.h)构图方式调用AddLayerNormQuant算子。         |
 
-
-<!--
-| aclnn接口  | [test_aclnn_add_layer_norm_quant](examples/test_aclnn_add_layer_norm_quant.cpp) | 通过[aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant.md)接口方式调用AddLayerNormQuant算子。 |
--->
+<!--[test_geir_add_layer_norm_quant](examples/test_geir_add_layer_norm_quant.cpp)-->

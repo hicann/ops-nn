@@ -6,19 +6,18 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
-- 算子功能：对于输入数据self，使用scale和zeroPoint对输入self在指定轴axis上进行伪量化处理，并根据quantMin和quantMax对伪量化输出进行值域更新，最终返回结果out及对应位置掩码mask。
+- 算子功能：对于输入数据x，使用scale和zeroPoint对输入x在指定轴axis上进行伪量化处理，并根据quantMin和quantMax对伪量化输出进行值域更新，最终返回结果y及对应位置掩码mask。
 - 计算公式：根据算子功能先计算临时变量qval，再计算得出out和mask。
 
   $$
-  qval = Round(std::nearby\_int(self / scale) + zeroPoint)
+  qval = Round(std::nearby\_int(x / scale) + zeroPoint)
   $$
 
   $$
-  out = (Min(quantMax, Max(quantMin, qval)) - zeroPoint) * scale
+  y = (Min(quantMax, Max(quantMin, qval)) - zeroPoint) * scale
   $$
 
   $$
@@ -44,9 +43,9 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
-      <td>公式中的`self`。</td>
+      <td>公式中的`x`。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
@@ -58,44 +57,44 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>zeroPoint</td>
+      <td>zero_point</td>
       <td>输入</td>
-      <td>公式中的`zeroPoint`，表示输入伪量化的零基准参数。shape只支持1维。</td>
+      <td>公式中的`zero_point`，表示输入伪量化的零基准参数。shape只支持1维。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>axis</td>
-      <td>输入</td>
+      <td>属性</td>
       <td>表示计算维度。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>quantMin</td>
-      <td>输入</td>
+      <td>quant_min</td>
+      <td>属性</td>
       <td>表示输入数据伪量化后的最小值。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>quantMax</td>
-      <td>输入</td>
+      <td>quant_max</td>
+      <td>属性</td>
       <td>表示输入数据伪量化后的最大值。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>y</td>
       <td>输出</td>
-      <td>公式中的`out`。维度和计算输入`self`一致。</td>
+      <td>公式中的`y`。维度和计算输入`x`的维度一致。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mask</td>
       <td>输出</td>
-      <td>公式中的`mask`。维度和计算输入`self`一致。</td>
+      <td>公式中的`mask`。维度和计算输入`x`一致。</td>
       <td>BOOL</td>
       <td>ND</td>
     </tr>
@@ -112,4 +111,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_fake_quant_per_channel_affine_cachemask.cpp](examples/test_aclnn_fake_quant_per_channel_affine_cachemask.cpp) | 通过[aclnnFakeQuantPerChannelAffineCachemask](docs/aclnnFakeQuantPerChannelAffineCachemask.md)接口方式调用FakeQuantAffineCachemask算子。 |
 | aclnn接口  | [test_aclnn_fake_quant_per_tensor_affine_cachemask.cpp](examples/test_aclnn_fake_quant_per_tensor_affine_cachemask.cpp) | 通过[aclnnFakeQuantPerTensorAffineCachemask](docs/aclnnFakeQuantPerTensorAffineCachemask.md)接口方式调用FakeQuantAffineCachemask算子。 |
-<!--| 图模式 | [test_geir_fake_quant_affine_cachemask.cpp](examples/test_geir_fake_quant_affine_cachemask.cpp)  | 通过[算子IR](op_graph/fake_quant_affine_cachemask_proto.h)构图方式调用FakeQuantAffineCachemask算子。         |-->
+| 图模式 | [test_geir_fake_quant_affine_cachemask.cpp](examples/test_geir_fake_quant_affine_cachemask.cpp)  | 通过[算子IR](op_graph/fake_quant_affine_cachemask_proto.h)构图方式调用FakeQuantAffineCachemask算子。         |

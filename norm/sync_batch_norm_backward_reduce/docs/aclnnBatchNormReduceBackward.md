@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
   
   主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。计算结果如下：
   - 计算损失函数L对缩放权重γ的梯度($\frac{\partial L}{\partial γ}$)。
@@ -55,26 +55,27 @@ aclnnStatus aclnnBatchNormReduceBackwardGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnBatchNormReduceBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void                *workspace,
+  uint64_t             workspaceSize,
+  aclOpExecutor       *executor,
+  const aclrtStream    stream)
 ```
 
 ## aclnnBatchNormReduceBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -238,8 +239,8 @@ aclnnStatus aclnnBatchNormReduceBackward(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -344,17 +345,20 @@ aclnnStatus aclnnBatchNormReduceBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-当任一输入的为空Tensor时，输出为空Tensor。
+- 当任一输入的为空Tensor时，输出为空Tensor。
+- 确定性计算：
+  - aclnnBatchNormReduceBackward默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

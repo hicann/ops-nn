@@ -33,7 +33,7 @@
         <td>grad</td>
         <td>输入</td>
         <td>表示数据的原始梯度。</td>
-        <td>FLOAT</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -47,7 +47,7 @@
         <td>out</td>
         <td>输出</td>
         <td>表示梯度求和的结果输出。</td>
-        <td>FLOAT</td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
       </tr>
       <tr>
@@ -73,6 +73,8 @@
       </tr>
     </tbody></table>
 
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：grad不支持BFLOAT16、FLOAT16，indices不支持INT64。
+
 ## 约束说明
 
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：
@@ -86,3 +88,4 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_embedding_dense_grad_v2](./examples/test_aclnn_embedding_dense_grad_v2.cpp) | 通过[aclnnEmbeddingDenseBackward](./docs/aclnnEmbeddingDenseBackward.md)接口方式调用EmbeddingDenseGradV2算子。 |
+| 图模式调用 | [test_geir_embedding_dense_grad_v2](./examples/op_graph/test_geir_embedding_dense_grad_v2.cpp)   | 通过[算子IR](./op_graph/embedding_dense_grad_v2_proto.h)构图方式调用EmbeddingDenseGradV2算子。 |

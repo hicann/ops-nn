@@ -21,6 +21,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeGluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeGlu”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeGluGetWorkspaceSize(
   const aclTensor *self,
@@ -44,14 +45,14 @@ aclnnStatus aclnnGeGlu(
 
 - **参数说明：**
   
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 290px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -70,22 +71,22 @@ aclnnStatus aclnnGeGlu(
       <td>self</td>
       <td>输入</td>
       <td>待进行GeGlu计算的入参，公式中的self。</td>
-      <td>支持空Tensor。</td>
+      <td>-</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
       <td>dim</td>
       <td>输入</td>
       <td>可选入参。</td>
-      <td><ul><li>设定的slice轴，需要对self对应的轴进行对半切。</li><li>dim对应的self的轴必须是双数。</li></ul></td>
+      <td><ul><li>设定的slice轴，需要对self对应的轴进行对半分割。</li><li>dim对应的self的轴必须是偶数。</li></ul></td>
       <td>INT</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
       <tr>
       <td>approximate</td>
       <td>输入</td>
@@ -95,7 +96,7 @@ aclnnStatus aclnnGeGlu(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
@@ -103,7 +104,7 @@ aclnnStatus aclnnGeGlu(
       <td><ul><li>out的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -113,7 +114,7 @@ aclnnStatus aclnnGeGlu(
       <td><ul><li>out的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
@@ -139,8 +140,6 @@ aclnnStatus aclnnGeGlu(
   </tbody>
   </table>
   
-  
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -175,7 +174,7 @@ aclnnStatus aclnnGeGlu(
       <td>self、out、outGelu的维数大于8。</td>
     </tr>
     <tr>
-      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
+      <td>当self.dim()=0时，dim的取值不在[-1, 0]范围内或者out、outGelu不为标量Tensor；当self.dim()>0时，dim取值不在[-self.dim, self.dim()-1]范围内。</td>
     </tr>
     <tr>
       <td>out、outGelu在dim维的size不等于self在dim维size的1/2。</td>
@@ -226,7 +225,8 @@ aclnnStatus aclnnGeGlu(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGeGlu默认确定性实现。
 
 ## 调用示例
 

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。
+- 算子功能：计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及Swish的输出。
 
 - 计算公式：
   - **GroupNorm:**
@@ -31,7 +31,7 @@
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
     
-    当activateSwish为True时，会计算Swish， 此时swish计算公式的x为GroupNorm公式得到的out。
+    当activateSwish为True时，会计算Swish， 此时Swish计算公式的x为GroupNorm公式得到的out。
 
 ## 参数说明
 
@@ -96,7 +96,7 @@
     <tr>
       <td>activateSwish</td>
       <td>属性</td>
-      <td>表示是否支持swish计算。</td>
+      <td>表示是否支持Swish计算。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>

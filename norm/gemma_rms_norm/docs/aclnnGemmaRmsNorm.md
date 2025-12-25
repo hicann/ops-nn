@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma做了+1操作。
+- 接口功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma做了+1操作。
 - 计算公式：
 
   $$
@@ -30,6 +30,7 @@ aclnnStatus aclnnGemmaRmsNormGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnGemmaRmsNorm(
   void          *workspace,
@@ -42,14 +43,14 @@ aclnnStatus aclnnGemmaRmsNorm(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -143,8 +144,8 @@ aclnnStatus aclnnGemmaRmsNorm(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -212,31 +213,33 @@ aclnnStatus aclnnGemmaRmsNorm(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-- **功能维度**
-  - 数据类型支持
+- 功能维度：
+  - 数据类型支持：
     - x、gamma、yOut支持FLOAT32、FLOAT16、BFLOAT16。
     - rstdOut支持：FLOAT32。
   - [数据格式](../../../docs/zh/context/数据格式.md)支持：ND。
-- **未支持类型说明**
+- 未支持类型说明：
   
   DOUBLE：指令不支持DOUBLE。
 
-- **边界值场景说明**
+- 边界值场景说明：
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
-- **各平台支持数据类型说明**
+- 各平台支持数据类型说明：
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |
     | -------- | -------- | -------- | -------- |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 |
     | FLOAT32 | FLOAT32  | FLOAT32 | FLOAT32  |
+
+- 确定性计算：
+  - aclnnGemmaRmsNorm默认确定性实现。
 
 ## 调用示例
 

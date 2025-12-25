@@ -74,5 +74,3 @@
 | aclnn接口  | [test_aclnn_foreach_pow_scalar](examples/test_aclnn_foreach_pow_scalar.cpp) | 通过[aclnnForeachPowScalar](docs/aclnnForeachPowScalar.md)接口方式调用ForeachPowScalar算子。 |
 | aclnn接口  | [test_aclnn_foreach_pow_scalar_v2](examples/test_aclnn_foreach_pow_scalar_v2.cpp) | 通过[aclnnForeachPowScalarV2](docs/aclnnForeachPowScalarV2.md)接口方式调用ForeachPowScalarV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_proto.h)构图方式调用ForeachPowScalar算子。         |
-
-<!--[test_geir_foreach_pow_scalar](examples/test_geir_foreach_pow_scalar.cpp)-->

@@ -16,6 +16,7 @@
   $$
   y = \frac{(x - E(x))}{\sqrt{Var(x) + ε}} * γ + β
   $$
+
   E(x)表示均值，Var(x)表示方差，均需要在算子内部计算得到；ε表示一个极小的浮点数，防止分母为0的情况。
 
   
@@ -139,6 +140,12 @@
     - 输入x和输出y的数据格式不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
   
+<!-- 
+**/
+
+
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
+-->
 
 ## 约束说明
 
@@ -151,5 +158,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_batch_norm_v3](examples/test_aclnn_batch_norm_v3.cpp) | 通过[aclnnBatchNorm](docs/aclnnBatchNorm.md)接口方式调用BatchNormV3算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/batch_norm_v3_proto.h)构图方式调用BatchNormV3算子。         |
-
-<!--[test_geir_batch_norm_v3](examples/test_geir_batch_norm_v3.cpp)-->

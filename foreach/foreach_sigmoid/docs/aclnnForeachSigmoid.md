@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：对输入张量列表的每个张量进行Sigmoid函数运算。
@@ -46,14 +45,14 @@ aclnnStatus aclnnForeachSigmoid(
 
 ## aclnnForeachSigmoidGetWorkspaceSize
 - **参数说明**：
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
-    <col style="width: 392px">
-    <col style="width: 228px">
+    <col style="width: 330px">
+    <col style="width: 223px">
     <col style="width: 101px">
-    <col style="width: 100px">
+    <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
     <thead>
@@ -117,8 +116,8 @@ aclnnStatus aclnnForeachSigmoid(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -154,7 +153,6 @@ aclnnStatus aclnnForeachSigmoid(
     </tr>
     
   </tbody></table>
-
 
 ## aclnnForeachSigmoid
 
@@ -201,7 +199,8 @@ aclnnStatus aclnnForeachSigmoid(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnForeachSigmoid默认确定性实现。
 
 ## 调用示例
 
@@ -210,7 +209,6 @@ aclnnStatus aclnnForeachSigmoid(
 ```Cpp
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_sigmoid.h"
 
@@ -236,7 +234,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，资源初始化
+    // 固定写法，acl初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -285,7 +283,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* out1 = nullptr;

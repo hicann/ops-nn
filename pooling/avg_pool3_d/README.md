@@ -1,4 +1,4 @@
-# AvgPool3d
+# AvgPool3D
 
 ##  产品支持情况
 
@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -33,9 +32,9 @@ $$
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 1250px"><colgroup>
   <col style="width: 150px">
-  <col style="width: 100px">
+  <col style="width: 150px">
   <col style="width: 500px">
   <col style="width: 250px">
   <col style="width: 200px">
@@ -50,60 +49,67 @@ $$
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
       <td>表示待转换的张量，公式中的`input`。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>ND、NCDHW</td>
+      <td>ND</td>
     </tr>
     <tr>
-      <td>kernelSize</td>
-      <td>输入</td>
+      <td>ksize</td>
+      <td>属性</td>
       <td>表示池化窗口大小，公式中的`kernelSize`。</td>
-      <td>INT32、INT64</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>stride</td>
-      <td>输入</td>
+      <td>strides</td>
+      <td>属性</td>
       <td>表示池化操作的步长，公式中的`stride`。</td>
-      <td>INT32、INT64</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>padding</td>
-      <td>输入</td>
-      <td>表示在输入的D、H、W方向上padding补0的层数，公式中的`padding`。</td>
-      <td>INT32、INT64</td>
+      <td>pads</td>
+      <td>属性</td>
+      <td>表示在输入的D、H、W方向上pads补0的层数，公式中的`padding`。</td>
+      <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>ceilMode</td>
-      <td>输入</td>
+      <td>ceil_mode</td>
+      <td>可选属性</td>
       <td>表示计算输出shape时，向下取整（False），否则向上取整。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>countIncludePad</td>
-      <td>输入</td>
+      <td>count_include_pad</td>
+      <td>可选属性</td>
       <td>表示平均计算中包括零填充（True），否则不包括。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>divisorOverride</td>
-      <td>输入</td>
+      <td>divisor_override</td>
+      <td>可选属性</td>
       <td>如果指定，它将用作平均计算中的除数，当值为0时，该属性不生效。</td>
-      <td>INT64</td>
+      <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>data_format</td>
+      <td>可选属性</td>
+      <td>输入数据格式，支持"NDHWC"。</td>
+      <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>y</td>
       <td>输出</td>
-      <td>待进行avgpool3d计算的出参，公式中的`out`。数据类型、数据格式需要与`self`一致。</td>
+      <td>待进行AvgPool3D计算的出参，公式中的`out`。数据类型、数据格式需要与`x`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>ND、NCDHW</td>
+      <td>ND</td>
     </tr>
   </tbody></table>
 
@@ -116,5 +122,4 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_avgpool2d.cpp](examples/test_aclnn_avgpool2d.cpp) | 通过[aclnnAvgPool2d](docs/aclnnAvgPool2d.md)接口方式调用AvgPool2d算子。 |
-<!--| 图模式 | [test_geir_avg_pool3_d.cpp](examples/test_geir_avg_pool3_d.cpp)  | 通过[算子IR](op_graph/avg_pool3_d_proto.h)构图方式调用AvgPool3d算子。         |-->
+| aclnn接口  | [test_aclnn_avgpool3d.cpp](examples/test_aclnn_avgpool3d.cpp) | 通过[aclnnAvgPool3d](docs/aclnnAvgPool3d.md)接口方式调用AvgPool3d算子。 |

@@ -90,4 +90,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_scatter_list](./examples/test_aclnn_scatter_list.cpp) | 通过aclnnScatterList接口方式调用ScatterList算子。 |
+| 图模式调用 | [test_geir_scatter_list](./examples/test_geir_scatter_list.cpp)   | 通过[算子IR](./op_graph/scatter_list_proto.h)构图方式调用ScatterList算子。 |

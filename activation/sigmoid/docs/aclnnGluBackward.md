@@ -7,10 +7,9 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
-- 算子功能：完成[aclnnGlu](./aclnnGlu.md)的反向。
+- 算子功能：完成[aclnnGlu](../../sigmoid/docs/aclnnGlu.md)的反向。
 - 计算公式：
 
   $$
@@ -29,35 +28,34 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGluBackward”接口执行计算。
 
-- `aclnnStatus aclnnGluBackwardGetWorkspaceSize(const aclTensor *gradOut, const aclTensor *self, int64_t dim, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnGluBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
-
 ```Cpp
-aclnnStatus aclnnSigmoidGetWorkspaceSize(
-  const aclTensor  *self,
-  aclTensor        *out,
-  uint64_t         *workspaceSize,
-  aclOpExecutor   **executor)
+aclnnStatus aclnnGluBackwardGetWorkspaceSize(
+  const aclTensor *gradOut,
+  const aclTensor *self,
+  int64_t          dim,
+  const aclTensor *out,
+  uint64_t        *workspaceSize,
+  aclOpExecutor  **executor)
 ```
 
 ```Cpp
-aclnnStatus aclnnSigmoid(
-  void*             workspace,
-  uint64_t          workspaceSize,
-  aclOpExecutor*    executor,
-  const aclrtStream stream)
+aclnnStatus aclnnGluBackward(
+  void           *workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor  *executor,
+  aclrtStream     stream)
 ```
 
 ## aclnnGluBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1303px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1410px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 200px">
-  <col style="width: 200px">
+  <col style="width: 260px">
+  <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
   <col style="width: 145px">
@@ -74,24 +72,24 @@ aclnnStatus aclnnSigmoid(
       <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
-       <tr>
+    <tr>
       <td>gradOut</td>
       <td>输入</td>
-      <td>表示梯度更新系数，公式中的`y_grad`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型必须与self的数据类型一致。</li><li>shape为$(*_1,M,*_2)$其中$*$表示self中对应维度，$M = N /2$。</li></ul></td>
+      <td>表示梯度更新系数，公式中的y_grad。</td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型必须与self的数据类型一致，shape为$(*_1,M,*_2)$其中$*$表示self中对应维度，$M = N /2$。</li></ul></td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
       <tr>
       <td>self</td>
       <td>输入</td>
       <td>待进行GluBackward计算的入参。</td>
-      <td><ul><li>支持空Tensor。</li><li>tensor的维度必须大于0，且shape必须在入参dim对应的维度上可以整除2，shape表示为$(*_1,N,*_2)$其中$*$表示任何数量的附加维，$N$表示dim指定的维度大小。</li></ul></td>
+      <td>tensor的维度必须大于0，且shape必须在入参dim对应的维度上可以整除2，shape表示为$(*_1,N,*_2)$其中$*$表示任何数量的附加维，$N$表示dim指定的维度大小。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
       <tr>
@@ -99,19 +97,19 @@ aclnnStatus aclnnSigmoid(
       <td>输入</td>
       <td>表示要拆分输入self的维度。</td>
       <td>取值范围[-self.dim，self.dim-1]。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
-    <tr>
+     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>计算的出参。</td>
-      <td><ul><li>数据类型必须与self的数据类型一致。</li><li>shape必须与self的shape一致。</li></ul></td>
+      <td>计算出参。</td>
+      <td>数据类型和shape必须与self的一致。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
       <tr>
@@ -137,7 +135,6 @@ aclnnStatus aclnnSigmoid(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -171,10 +168,10 @@ aclnnStatus aclnnSigmoid(
     <tr>
       <td>入参self根据指定的dim所对应的维度不能整除2。</td>
     </tr>
-    <tr>
+      <tr>
       <td>out的shape不等于self的shape。</td>
     </tr>
-    <tr>
+      <tr>
       <td>gradOut、out的数据类型不与self一致。</td>
     </tr>
       <tr>
@@ -183,11 +180,10 @@ aclnnStatus aclnnSigmoid(
       <tr>
       <td>gradOut、self、out的维度大于8。</td>
     </tr>
-       <tr>
+      <tr>
       <td>self的维度等于0。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnGluBackward
 
@@ -228,13 +224,14 @@ aclnnStatus aclnnSigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnGluBackward默认确定性实现。
 
 ## 调用示例
 

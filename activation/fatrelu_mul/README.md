@@ -18,11 +18,13 @@
   给定输入张量input，最后一维的长度为2d，进行以下计算：
   
   1. 将input分割为两部分：
+
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
      
   2. 对x1应用Threshold激活函数，定义如下：
+
      $$
      \text{Threshold}(x, \text{threshold}) = 
         \begin{cases} 
@@ -30,22 +32,25 @@
         x & \text{if } x \geq \text{threshold}
         \end{cases}
      $$
+
      因此，计算：
+
      $$
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
      
   3. 最终输出是x1和x2的逐元素乘积：
+
      $$
      \text{out} = x_1 \times x_2
      $$
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 851px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 891px"><colgroup>
   <col style="width: 121px">
   <col style="width: 144px">
-  <col style="width: 213px">
+  <col style="width: 253px">
   <col style="width: 257px">
   <col style="width: 116px">
   </colgroup>

@@ -47,14 +47,14 @@ aclnnStatus aclnnHeaviside(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 220px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -121,7 +121,6 @@ aclnnStatus aclnnHeaviside(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -203,12 +202,12 @@ aclnnStatus aclnnHeaviside(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnHeaviside默认确定性实现。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-
 
 ```cpp
  #include <iostream>

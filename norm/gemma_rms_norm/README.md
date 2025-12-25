@@ -65,7 +65,7 @@
     <tr>
       <td>rstd</td>
       <td>输出</td>      
-      <td><ul><li>x的标准差倒数，对应公式中`Rms(x)`的倒数。</li><li>shape支持1-8维度，shape与入参`x`的shape前几维保持一致，前几维指x的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
+      <td><ul><li>x的标准差倒数，对应公式中`Rms(x)`的倒数。</li><li>shape支持1-8维度，shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -81,5 +81,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_gemma_rms_norm](examples/test_aclnn_gemma_rms_norm.cpp) | 通过[aclnnGemmaRmsNorm](docs/aclnnGemmaRmsNorm.md)接口方式调用GemmaRmsNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/gemma_rms_norm_proto.h)构图方式调用GemmaRmsNorm算子。         |
-
-<!--[test_geir_xxx](examples/test_geir_xxx.cpp)-->

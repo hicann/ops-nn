@@ -58,8 +58,8 @@ aclnnStatus aclnnInplaceSelu(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 220px">
@@ -123,8 +123,6 @@ aclnnStatus aclnnInplaceSelu(
   </tbody>
   </table>
   
-
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -159,7 +157,6 @@ aclnnStatus aclnnInplaceSelu(
       <td>self和out的type不匹配。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnSelu
 
@@ -200,7 +197,6 @@ aclnnStatus aclnnInplaceSelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -209,11 +205,11 @@ aclnnStatus aclnnInplaceSelu(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1355px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 247px">
-  <col style="width: 108px">
+  <col style="width: 158px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -264,7 +260,6 @@ aclnnStatus aclnnInplaceSelu(
     </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -293,7 +288,6 @@ aclnnStatus aclnnInplaceSelu(
       <td>selfRef数据类型不在支持的范围内。</td>
     </tr>
     </tbody></table>
-
 
 ## aclnnInplaceSelu
 
@@ -334,13 +328,14 @@ aclnnStatus aclnnInplaceSelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnSelu&aclnnInplaceSelu默认确定性实现。
 
 ## 调用示例
 

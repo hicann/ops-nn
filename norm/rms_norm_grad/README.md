@@ -91,10 +91,7 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
-
-无
 
 ## 调用说明
 
@@ -102,5 +99,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_rms_norm_grad](examples/test_aclnn_rms_norm_grad.cpp) | 通过[aclnnRmsNormGrad](docs/aclnnRmsNormGrad.md)接口方式调用RmsNormGrad算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/rms_norm_grad_proto.h)构图方式调用RmsNormGrad算子。         |
-
-<!--[test_geir_rms_norm_grad](examples/test_geir_rms_norm_grad.cpp)-->

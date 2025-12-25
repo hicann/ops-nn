@@ -2,25 +2,26 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         |  是否支持   |
+| :----------------------------------------------------------- |:-------:|
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
 
 ## 功能说明
 
-- 算子功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转化模式。
+- 接口功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。相较于aclnnTransQuantParamV2版本，增加了roundMode输入，用于选择数据类型转换过程中，数据值转换采取的转化模式。
 - 计算公式：
 
   1. `out`为64位格式，初始为0。
 
   2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
+
      $$
      scale = Round(scale)
      $$
 
   3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
-     
+
      $$
      out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
      $$
@@ -29,17 +30,19 @@
      - 若`offset`不存在，不再进行后续计算。
      - 若`offset`存在：
        1. 将`offset`值处理为int，范围为[-256, 255]。
-     
+
           $$
           offset = Max(Min(INT(Round(offset)),255),-256)
           $$
 
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
+
           $$
           out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
           $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransQuantParamV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTransQuantParamV3”接口执行计算。
 
 ```Cpp
@@ -51,27 +54,27 @@ aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnTransQuantParamV3(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void                *workspace,
+  uint64_t             workspaceSize,
+  aclOpExecutor       *executor,
+  const aclrtStream    stream)
 ```
 
 ## aclnnTransQuantParamV3GetWorkspaceSize
 
 - **参数说明：**
 
-
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -155,8 +158,8 @@ aclnnStatus aclnnTransQuantParamV3(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -229,6 +232,7 @@ aclnnStatus aclnnTransQuantParamV3(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
 - 关于scale、offset、out的shape说明如下：
@@ -239,9 +243,13 @@ aclnnStatus aclnnTransQuantParamV3(
     - offset，scale，out的shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
     - 当输入scale的shape为1维，out的shape也为1维，且shape大小为scale与offset单维shape大小的最大值。
     - 当输入scale的shape为2维，out的shape与输入scale的shape维度和大小完全一致。
+- 确定性计算：
+  - aclnnTransQuantParamV3默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <memory>
 #include <iostream>

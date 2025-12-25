@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -21,10 +21,14 @@
   $$
    yOut=round(x/scaleOut)
   $$
+
   - 若输入smoothScalesOptional，则
+
   $$
   input = x\cdot smoothScalesOptional
   $$
+
+
   $$
    scaleOut=row\_max(abs(input))/dtypeMax
   $$
@@ -32,6 +36,7 @@
   $$
    yOut=round(input/scaleOut)
   $$
+
   其中row\_max代表每行求最大值，dtypeMax为输出数据类型的最大值。
 
 ## 参数说明
@@ -96,7 +101,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：输出`y`的数据类型仅支持INT8、INT4。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
 
 ## 约束说明
 
@@ -108,5 +113,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_dynamic_quant](examples/test_aclnn_dynamic_quant.cpp) | 通过[aclnnDynamicQuant](docs/aclnnDynamicQuant.md)接口方式调用DynamicQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_quant_proto.h)构图方式调用DynamicQuant算子。         |
-
-<!--[test_geir_dynamic_quant](examples/test_geir_dynamic_quant.cpp)--> 

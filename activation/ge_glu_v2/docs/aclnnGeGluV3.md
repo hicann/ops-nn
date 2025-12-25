@@ -52,14 +52,14 @@ aclnnStatus aclnnGeGluV3(
 
 - **参数说明：**
   
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 200px">
+  <col style="width: 280px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -78,17 +78,17 @@ aclnnStatus aclnnGeGluV3(
       <td>self</td>
       <td>输入</td>
       <td>待进行GeGluV3计算的入参，公式中的self。</td>
-      <td>支持空Tensor。</td>
+      <td>-</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
       <td>dim</td>
       <td>输入</td>
       <td>可选入参。</td>
-      <td><ul><li>设定的slice轴，需要对self对应的轴进行对半切。</li><li>dim对应的self的轴必须是双数。</li></ul></td>
+      <td><ul><li>设定的slice轴，需要对self对应的轴进行对半分割。</li><li>dim对应的self的轴必须是偶数。</li></ul></td>
       <td>INT</td>
       <td>-</td>
       <td>-</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnGeGluV3(
       <td><ul><li>out的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -131,7 +131,7 @@ aclnnStatus aclnnGeGluV3(
       <td><ul><li>outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</li><li>数据类型与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
       <tr>
@@ -157,8 +157,6 @@ aclnnStatus aclnnGeGluV3(
   </tbody>
   </table>
   
-  
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -179,7 +177,7 @@ aclnnStatus aclnnGeGluV3(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>参数self、out、outGelu是空指针。</td>
+      <td>参数self、out、outGelu为空指针。</td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
@@ -199,7 +197,6 @@ aclnnStatus aclnnGeGluV3(
       <td>out、outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnGeGluV3
 
@@ -239,14 +236,14 @@ aclnnStatus aclnnGeGluV3(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGeGluV3默认确定性实现。
 
 ## 调用示例
 

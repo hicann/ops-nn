@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -69,4 +68,4 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_repeat_interleave_grad](./examples/test_aclnn_repeat_interleave_grad.cpp) | 通过[aclnnRepeatInterleaveGrad](./docs/aclnnRepeatInterleaveGrad.md)接口方式调用RepeatInterleaveGrad算子。 |
-| 图模式调用 | - | 通过[算子IR](./op_graph/repeat_interleave_grad_proto.h)构图方式调用RepeatInterleaveGrad算子。 |
+| 图模式调用 | [test_geir_repeat_interleave_grad](./examples/test_geir_repeat_interleave_grad.cpp) | 通过[算子IR](./op_graph/repeat_interleave_grad_proto.h)构图方式调用RepeatInterleaveGrad算子。 |

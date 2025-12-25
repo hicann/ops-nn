@@ -7,10 +7,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
-- 算子功能：对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。本接口相较于[aclnnForeachSubList](aclnnForeachSubList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 算子功能：对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。
+  本接口相较于[aclnnForeachSubList](aclnnForeachSubList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$
@@ -36,25 +36,26 @@ aclnnStatus aclnnForeachSubListV2GetWorkspaceSize(
   uint64_t            *workspaceSize, 
   aclOpExecutor      **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnForeachSubListV2(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
-  aclrtStream    stream)
+  void                *workspace, 
+  uint64_t             workspaceSize, 
+  aclOpExecutor       *executor, 
+  const aclrtStream    stream)
 ```
 
 ## aclnnForeachSubListV2GetWorkspaceSize
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -138,8 +139,8 @@ aclnnStatus aclnnForeachSubListV2(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -220,7 +221,8 @@ aclnnStatus aclnnForeachSubListV2(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnForeachSubListV2默认确定性实现。
 
 ## 调用示例
 
@@ -229,7 +231,6 @@ aclnnStatus aclnnForeachSubListV2(
 ```Cpp
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_sub_list_v2.h"
 
@@ -307,7 +308,7 @@ int main() {
   void* other1DeviceAddr = nullptr;
   void* other2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* other1 = nullptr;

@@ -2,58 +2,74 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
-- 算子功能：为输入张量进行per-token对称/非对称动态量化。在MOE场景下，每个专家的smoothScalesOptional是不同的，根据输入的groupIndexOptional进行区分。
+- 接口功能：为输入张量进行per-token对称/非对称动态量化。在MOE场景下，每个专家的smoothScalesOptional是不同的，根据输入的groupIndexOptional进行区分。
 
 - 计算公式：
   - 对称量化：
     - 若不输入smoothScalesOptional，则
+
       $$
         scaleOut=row\_max(abs(x))/127
       $$
+
       $$
         yOut=round(x/scaleOut)
       $$
+
     - 若输入smoothScalesOptional，则
+
       $$
         input = x\cdot smoothScalesOptional
       $$
+
       $$
         scaleOut=row\_max(abs(input))/127
       $$
+
       $$
         yOut=round(input/scaleOut)
       $$
+
   - 非对称量化：
     - 若不输入smoothScalesOptional，则
+
       $$
         scaleOut=(row\_max(x) - row\_min(x))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(x)/scaleOut
       $$
+
       $$
         yOut=round(x/scaleOut+offset)
       $$
+
     - 若输入smoothScalesOptional，则
+
       $$
         input = x\cdot smoothScalesOptional
       $$
+
       $$
         scaleOut=(row\_max(input) - row\_min(input))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(input)/scaleOut
       $$
+
       $$
         yOut=round(input/scaleOut+offset)
       $$
+
   其中row\_max代表每行求最大值，row_min代表每行求最小值。当输出yOut类型为INT8时，scale_opt为255.0，offset_opt为127.0；yOut类型为INT4时，scale_opt为15.0，offset_opt为7.0。
 
 ## 函数原型
@@ -72,6 +88,7 @@ aclnnStatus aclnnDynamicQuantV2GetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```cpp
 aclnnStatus aclnnDynamicQuantV2(
   void          *workspace,
@@ -84,14 +101,14 @@ aclnnStatus aclnnDynamicQuantV2(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -199,15 +216,14 @@ aclnnStatus aclnnDynamicQuantV2(
   </tbody>
   </table>
 
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -236,7 +252,7 @@ aclnnStatus aclnnDynamicQuantV2(
     </tr>
   </tbody></table>
 
-## aclnnDynamicQuant
+## aclnnDynamicQuantV2
 
 - **参数说明：**
 
@@ -280,8 +296,11 @@ aclnnStatus aclnnDynamicQuantV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - `yOut`的数据类型为INT4时，需满足`x`和`yOut`的最后一维能被2整除。
 - `yOut`的数据类型为INT32时，需满足`x`的最后一维能被8整除。
+- 确定性计算：
+  - aclnnDynamicQuantV2默认确定性实现。
 
 ## 调用示例
 
@@ -359,7 +378,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1. （固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

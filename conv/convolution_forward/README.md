@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -31,8 +31,8 @@
 
 | <div style="width:120px">参数名</div>  | <div style="width:120px">输入/输出/属性</div>  | <div style="width:350px">描述</div> | <div style="width:350px">数据类型</div>  | <div style="width:220px">数据格式</div> |
 | ------------------| ------------------ | ------------------------------------------------------------------------------------------- | ----------------- | --------------------- |
-| input | 输入 | <ul><li>公式中的 input，表示卷积输入。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN| NCL、NCHW、NCDHW |
-| weight | 输入 | <ul><li>公式中的 weight，表示卷积权重。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>所有维度≥1。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
+| input | 输入 | <ul><li>公式中的 input，表示卷积输入。</li><li>数据类型需要与 weight 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>N≥0，C≥1，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN| NCL、NCHW、NCDHW |
+| weight | 输入 | <ul><li>公式中的 weight，表示卷积权重。</li><li>数据类型需要与 input 满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>所有维度≥1。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
 | bias | 输入 | <ul><li>公式中的 bias，表示卷积偏置。</li><li>当 transposed=false 时为一维且数值与 weight 第一维相等；当 transposed=true 时为一维且数值与 weight.shape[1] * groups 相等。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
 | stride | 输入 | <ul><li>卷积扫描步长。</li><li>数组长度需等于 input 的维度减 2，值应该大于 0。</li></ul> | INT32 | - |
 | padding | 输入 | <ul><li>对 input 的填充。</li><li>数组长度：conv1d 非转置为 1 或 2；conv2d 为 2 或 4；conv3d 为 3。值应该大于等于 0。</li></ul> | INT32 | - |
@@ -54,7 +54,6 @@
     - cubeMathType 为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。
     - cubeMathType 为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。
     - cubeMathType 为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。
-
 ## 约束说明
 
 * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。

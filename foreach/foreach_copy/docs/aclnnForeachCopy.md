@@ -46,14 +46,14 @@ aclnnStatus aclnnForeachCopy(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
-    <col style="width: 392px">
-    <col style="width: 228px">
+    <col style="width: 330px">
+    <col style="width: 223px">
     <col style="width: 101px">
-    <col style="width: 100px">
+    <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
     <thead>
@@ -117,8 +117,8 @@ aclnnStatus aclnnForeachCopy(
 
   第一段接口完成入参校验，出现以下场景时报错：
   
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -201,7 +201,8 @@ aclnnStatus aclnnForeachCopy(
 
 ## 约束说明
 
-  无。
+- 确定性计算：
+  - aclnnForeachCopy默认确定性实现。
 
 ## 调用示例
 
@@ -210,7 +211,6 @@ aclnnStatus aclnnForeachCopy(
 ```Cpp
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_copy.h"
 #define CHECK_RET(cond, return_expr) \
@@ -233,7 +233,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
 }
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，资源初始化
+    // 固定写法，acl初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

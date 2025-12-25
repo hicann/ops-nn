@@ -58,11 +58,11 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1303px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1393px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 200px">
+  <col style="width: 220px">
   <col style="width: 200px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -123,7 +123,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -149,13 +148,12 @@ aclnnStatus aclnnInplaceSigmoid(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>self和out的数据类型不在支持的范围之内。</td>
+      <td>self和out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和out的shape不匹配。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnSigmoid
 
@@ -196,7 +194,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -205,10 +202,10 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1355px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
-  <col style="width: 247px">
+  <col style="width: 297px">
   <col style="width: 108px">
   <col style="width: 177px">
   <col style="width: 104px">
@@ -260,7 +257,6 @@ aclnnStatus aclnnInplaceSigmoid(
     </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -286,10 +282,9 @@ aclnnStatus aclnnInplaceSigmoid(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>selfRef的数据类型和数据格式不在支持的范围之内。</td>
+      <td>selfRef的数据类型不在支持的范围之内。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnInplaceSigmoid
 
@@ -330,14 +325,14 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSigmoid&aclnnInplaceSigmoid默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

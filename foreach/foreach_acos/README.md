@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_acos](examples/test_aclnn_foreach_acos.cpp) | 通过[aclnnForeachAcos](docs/aclnnForeachAcos.md)接口方式调用ForeachAcos算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_acos_proto.h)构图方式调用ForeachAcos算子。         |
-
-<!--[test_geir_foreach_acos](examples/test_geir_foreach_acos.cpp)-->

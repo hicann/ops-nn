@@ -7,10 +7,9 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
-- 算子功能：[aclnnRmsNorm](../../rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。
+- 接口功能：[aclnnRmsNorm](../../rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。
 - 算子公式：
 
   - 正向公式：
@@ -30,6 +29,7 @@
   $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnRmsNormGradGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnRmsNormGrad`接口执行计算。
 
 ```Cpp
@@ -53,16 +53,17 @@ aclnnStatus aclnnRmsNormGrad(
 ```
 
 ## aclnnRmsNormGradGetWorkspaceSize
+
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -136,7 +137,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -160,15 +161,14 @@ aclnnStatus aclnnRmsNormGrad(
   </tbody>
   </table>
 
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -198,8 +198,8 @@ aclnnStatus aclnnRmsNormGrad(
   </tbody></table>
 
 ## aclnnRmsNormGrad
-- **参数说明：**
 
+- **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -236,7 +236,6 @@ aclnnStatus aclnnRmsNormGrad(
   </tbody>
   </table>
 
-
 - **返回值：**
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -251,10 +250,10 @@ aclnnStatus aclnnRmsNormGrad(
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
     | BFLOAT16 | BFLOAT16 | FLOAT32  | BFLOAT16 | BFLOAT16 | FLOAT32  |
-
+- 确定性计算：
+  - aclnnRmsNormGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
-
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 

@@ -32,19 +32,18 @@ aclnnStatus aclnnHardsigmoidBackward(
   aclrtStream     stream)
 ```
 
-
 ## aclnnHardsigmoidBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1470px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 300px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -112,8 +111,6 @@ aclnnStatus aclnnHardsigmoidBackward(
    </tbody>
   </table>
   
- 
-
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -148,7 +145,6 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>gradOutput和self推导后的数据类型不能转换成out的数据类型。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnHardsigmoidBackward
 
@@ -195,7 +191,8 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnHardsigmoidBackward默认确定性实现。
 
 ## 调用示例
 

@@ -7,10 +7,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 [FastGelu](../../fast_gelu/docs/aclnnFastGelu.md)的反向计算。
 FastGeluBackward定义如下：
+
 $$
 dx = dy * ((\frac{1}{e^{-1.702 x}+1} - 1) * -1.702x + 1) * \frac{1}{(e^{-1.702 x}+1)}
 $$                   
@@ -40,11 +40,11 @@ aclnnStatus aclnnFastGeluBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -66,7 +66,7 @@ aclnnStatus aclnnFastGeluBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播的梯度数据，公式中的dy。</td>
-      <td><ul><li>与self、gradInput的数据格式一致。</li><li>与self、gradInput的shape一致。</li><li>与self、gradInput的数据类型一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>与self、gradInput的数据格式一致。</li><li>与self、gradInput的shape一致。</li><li>与self、gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -76,7 +76,7 @@ aclnnStatus aclnnFastGeluBackward(
       <td>self</td>
       <td>输入</td>
       <td>表示输入张量，与正向的self相同，公式中的x。</td>
-      <td><ul><li>与gradOutput、gradInput的数据格式一致。</li><li>与gradOutput、gradInput的shape一致。</li><li>与gradOutput、gradInput的数据类型一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>与gradOutput、gradInput的数据格式一致。</li><li>与gradOutput、gradInput的shape一致。</li><li>与gradOutput、gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnFastGeluBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>表示输出张量，公式中的dx。</td>
-      <td><ul><li>与gradOutput、self的数据格式一致。</li><li>与gradOutput、self的shape一致。</li><li>与gradOutput、self的数据类型一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>与gradOutput、self的数据格式一致。</li><li>与gradOutput、self的shape一致。</li><li>与gradOutput、self的数据类型一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -114,7 +114,6 @@ aclnnStatus aclnnFastGeluBackward(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -153,7 +152,6 @@ aclnnStatus aclnnFastGeluBackward(
       <td>self的shape维度大于8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnFastGeluBackward
 
@@ -194,14 +192,14 @@ aclnnStatus aclnnFastGeluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnFastGeluBackward默认确定性实现。
 
 ## 调用示例
 

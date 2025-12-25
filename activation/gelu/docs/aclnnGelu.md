@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：高斯误差线性单元激活函数。
@@ -21,7 +20,6 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGelu”接口执行计算。
-
 
 ```Cpp
 aclnnStatus aclnnGeluGetWorkspaceSize(
@@ -39,16 +37,15 @@ aclnnStatus aclnnGelu(
   const aclrtStream stream)
 ```
 
-
 ## aclnnGeluGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -108,9 +105,7 @@ aclnnStatus aclnnGelu(
     </tr>
   </tbody>
   </table>
-
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -188,14 +183,14 @@ aclnnStatus aclnnGelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGelu默认确定性实现。
 
 ## 调用示例
 

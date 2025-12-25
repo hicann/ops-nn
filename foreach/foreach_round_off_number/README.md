@@ -74,5 +74,3 @@
 | aclnn接口  | [test_aclnn_foreach_round_off_number](examples/test_aclnn_foreach_round_off_number.cpp) | 通过[aclnnForeachRoundOffNumber](docs/aclnnForeachRoundOffNumber.md)接口方式调用ForeachRoundOffNumber算子。 |
 | aclnn接口  | [test_aclnn_foreach_round_off_number_v2](examples/test_aclnn_foreach_round_off_number_v2.cpp) | 通过[aclnnForeachRoundOffNumberV2](docs/aclnnForeachRoundOffNumberV2.md)接口方式调用ForeachRoundOffNumberV2算子。 |
 | 图模式 | - | 通过[算子IR](op_graph/foreach_round_off_number_proto.h)构图方式调用ForeachRoundOffNumber算子。         |
-
-<!--[test_geir_foreach_round_off_number](examples/test_geir_foreach_round_off_number.cpp) -->

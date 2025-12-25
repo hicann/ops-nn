@@ -10,7 +10,7 @@
 ## 功能说明
 - 算子功能：完成[aclnnSwiGlu](../../swi_glu/docs/aclnnSwiGlu.md)的反向计算，完成x的SwiGlu反向梯度计算。
 
-- 计算公式：
+- 计算公式： 
   <p style="text-align: center">
   out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A)*A)]*B
   </p>
@@ -40,15 +40,14 @@ aclnnStatus aclnnSwiGluGrad(
   aclrtStream      stream)
 ```
 
-
 ## aclnnSwiGluGradGetWorkspaceSize
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 270px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -101,7 +100,7 @@ aclnnStatus aclnnSwiGluGrad(
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>A</sub>和out<sub>B</sub>的合并。</td>
       <td><ul><li>数据类型与计算输入x的类型一致。</li><li>shape与x一致。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>INT8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -128,9 +127,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
    </tbody>
   </table>
-
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -163,8 +160,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
   </tbody></table>
 
-
-## aclnnSwiGluGrad
+## aclnnSwiGluGrad 
 
 - **参数说明：**
 
@@ -203,14 +199,14 @@ aclnnStatus aclnnSwiGluGrad(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSwiGluGrad默认确定性实现。
 
 ## 调用示例
 

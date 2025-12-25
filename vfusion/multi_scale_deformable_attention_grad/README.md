@@ -14,24 +14,29 @@
 - 计算公式：
 
     给定输出的梯度：
+
     $$
     G^{\text{out}}_{b,q,h,:} \in \mathbb{R}^D
     $$
 
     展开注意力权重：
+
     $$
     \tilde{G}_{b,q,h,\ell,p,:} = A_{b,q,h,\ell,p} \cdot G^{\text{out}}_{b,q,h,:}
     $$
 
 
     计算 Value 的梯度，对每个邻点 (y,x)：
+
     $$
     \nabla V_{b,\ell,y,x,h,:} \; += \;
     \sum_q \tilde{G}_{b,q,h,\ell,p,:} \cdot w_{ij}
     $$
+
     其中 $w_{ij}\in\{w_{00},w_{10},w_{01},w_{11}\}$ 由采样位置决定。
 
     计算注意力权重的梯度
+
     $$
     \nabla A_{b,q,h,\ell,p} =
     \left\langle G^{\text{out}}_{b,q,h,:},
@@ -55,6 +60,7 @@
     $$
 
     缩放回归一化坐标：
+
     $$
     \nabla u = \frac{1}{W_\ell} \nabla x,\qquad
     \nabla v = \frac{1}{H_\ell} \nabla y

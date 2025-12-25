@@ -52,19 +52,18 @@ aclnnStatus aclnnPreluBackward(
    aclrtStream      stream)
 ```
 
-
 ## aclnnPreluBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1490px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 240px">
+  <col style="width: 300px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -152,8 +151,6 @@ aclnnStatus aclnnPreluBackward(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -194,10 +191,9 @@ aclnnStatus aclnnPreluBackward(
       <td>weight的元素个数为1时，gradWeight的shape与weight不相同。</td>
     </tr>
     <tr>
-      <td>gradOutput和self的shape不满足条件(支持broadcast同时broadcastshape等于self, 即单向broadcast)。</td>
+      <td>gradOutput和self的shape不满足条件（支持broadcast同时broadcastshape等于self, 即单向broadcast）。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnPreluBackward
 
@@ -238,14 +234,14 @@ aclnnStatus aclnnPreluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnPreluBackward默认确定性实现。
 
 ## 调用示例
 

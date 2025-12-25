@@ -87,5 +87,3 @@
 | aclnn接口  | [test_aclnn_foreach_addcdiv_scalar](examples/test_aclnn_foreach_addcdiv_scalar.cpp) | 通过[aclnnForeachAddcdivScalar](docs/aclnnForeachAddcdivScalar.md)接口方式调用ForeachAddcdivScalar算子。 |
 | aclnn接口  | [test_aclnn_foreach_addcdiv_scalar_v2](examples/test_aclnn_foreach_addcdiv_scalar_v2.cpp) | 通过[aclnnForeachAddcdivScalarV2](docs/aclnnForeachAddcdivScalarV2.md)接口方式调用ForeachAddcdivScalar算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_addcdiv_scalar_proto.h)构图方式调用ForeachAddcdivScalar算子。         |
-
-<!--[test_geir_foreach_addcdiv_scalar](examples/test_geir_foreach_addcdiv_scalar.cpp)-->

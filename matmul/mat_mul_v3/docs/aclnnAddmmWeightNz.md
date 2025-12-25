@@ -23,7 +23,6 @@
 
 ## 函数原型
 
-
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmWeightNzGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmmWeightNz”接口执行计算。
 ```cpp
 aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
@@ -44,7 +43,6 @@ aclnnStatus aclnnAddmmWeightNz(
   aclOpExecutor  *executor,
   aclrtStream     stream)
 ```
-
 
 ## aclnnAddmmWeightNzGetWorkspaceSize
 
@@ -202,11 +200,9 @@ aclnnStatus aclnnAddmmWeightNz(
       </tbody>
       </table>
 
-
 ## aclnnAddmmWeightNz
 
 - **参数说明：**
-
 
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -245,14 +241,13 @@ aclnnStatus aclnnAddmmWeightNz(
   </table>
   </div>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-  不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
-
+  
+- 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
@@ -423,7 +418,6 @@ aclnnStatus aclnnAddmmWeightNz(
     // 创建beta aclScalar
     beta = aclCreateScalar(&betaValue,aclDataType::ACL_FLOAT);
     CHECK_RET(beta != nullptr, return ret);
-
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名
     int8_t cubeMathType = 1;

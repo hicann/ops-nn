@@ -2,14 +2,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
-- **算子功能**：计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。
+- **接口功能**：计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。
 - **计算公式**：
   记 $x=self$，$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n - 1} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的样本方差，则
 
@@ -29,6 +29,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](./../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnGroupNormGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnGroupNorm`接口执行计算。
+
 ```cpp
 aclnnStatus aclnnGroupNormGetWorkspaceSize(
   const aclTensor *self, 
@@ -57,14 +58,14 @@ aclnnStatus aclnnGroupNorm(
 ## aclnnGroupNormGetWorkspaceSize
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -190,7 +191,7 @@ aclnnStatus aclnnGroupNorm(
       <td>ND</td>
       <td>2</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -214,17 +215,14 @@ aclnnStatus aclnnGroupNorm(
   </tbody>
   </table>
 
-
-
-
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](./../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -329,14 +327,14 @@ aclnnStatus aclnnGroupNorm(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](./../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGroupNorm默认确定性实现。
 
 ## 调用示例
 

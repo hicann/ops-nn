@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_sqrt](examples/test_aclnn_foreach_sqrt.cpp) | 通过[aclnnForeachSqrt](docs/aclnnForeachSqrt.md)接口方式调用ForeachSqrt算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sqrt_proto.h)构图方式调用ForeachSqrt算子。         |
-
-<!--[test_geir_foreach_sqrt](examples/test_geir_foreach_sqrt.cpp)-->

@@ -73,5 +73,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_div_list](examples/test_aclnn_foreach_div_list.cpp) | 通过[aclnnForeachDivList](docs/aclnnForeachDivList.md)接口方式调用ForeachDivList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_div_list_proto.h)构图方式调用ForeachDivList算子。         |
-
-<!--[test_geir_foreach_div_list](examples/test_geir_foreach_div_list.cpp)-->

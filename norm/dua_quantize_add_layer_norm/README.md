@@ -175,5 +175,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | 图模式 | [test_geir_dua_quantize_add_layer_norm](examples/test_geir_dua_quantize_add_layer_norm.cpp)  | 通过[算子IR](op_graph/dua_quantize_add_layer_norm_proto.h)构图方式调用DuaQuantizeAddLayerNorm算子。         |
-
-<!--[test_geir_dua_quantize_add_layer_norm](examples/test_geir_dua_quantize_add_layer_norm.cpp)-->

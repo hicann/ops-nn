@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -77,7 +76,7 @@
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>公式中的`self`，Device侧的aclTensor。</td>
+      <td>公式中的`self`，公式中的输出。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

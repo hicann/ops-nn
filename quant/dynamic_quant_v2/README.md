@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -14,43 +14,58 @@
 - 计算公式：
   - 对称量化：
     - 若不输入smooth_scales，则
+
       $$
         scale=row\_max(abs(x))/127
       $$
+
       $$
         y=round(x/scale)
       $$
+
     - 若输入smooth_scales，则
+
       $$
         input = x\cdot smooth_scales
       $$
+
       $$
         scale=row\_max(abs(input))/127
       $$
+
       $$
         y=round(input/scale)
       $$
+
   - 非对称量化：
     - 若不输入smooth_scales，则
+
       $$
         scale=(row\_max(x) - row\_min(x))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(x)/scale
       $$
+
       $$
         y=round(x/scale+offset)
       $$
+
     - 若输入smooth_scales，则
+
       $$
         input = x\cdot smooth_scales
       $$
+
       $$
         scale=(row\_max(input) - row\_min(input))/scale\_opt
       $$
+
       $$
         offset=offset\_opt-row\_max(input)/scale
       $$
+
       $$
         y=round(input/scale+offset)
       $$
@@ -144,7 +159,7 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：输出`y`的数据类型仅支持INT8、INT4。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
 
 ## 约束说明
 
@@ -157,5 +172,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_dynamic_quant_v2](examples/test_aclnn_dynamic_quant_v2.cpp) | 通过[aclnnDynamicQuantV2](docs/aclnnDynamicQuantV2.md)接口方式调用DynamicQuantV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_quant_v2_proto.h)构图方式调用DynamicQuantV2算子。         |
-
-<!--[test_geir_dynamic_quant_v2](examples/test_geir_dynamic_quant_v2.cpp)-->

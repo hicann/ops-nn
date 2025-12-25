@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|×|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -80,6 +79,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式调用 |  -  | 通过[算子IR](./op_graph/dynamic_quant_update_scatter_proto.h)构图方式调用DynamicQuantUpdateScatter算子。 |
-
-<!-- [test_geir_dynamic_quant_update_scatter](./examples/test_geir_dynamic_quant_update_scatter.cpp) -->
+| 图模式调用 | [test_geir_dynamic_quant_update_scatter](./examples/test_geir_dynamic_quant_update_scatter.cpp)   | 通过[算子IR](./op_graph/dynamic_quant_update_scatter_proto.h)构图方式调用DynamicQuantUpdateScatter算子。 |

@@ -57,14 +57,14 @@
     <tr>
       <td>x3</td>
       <td>输入</td>
-      <td>表示进行混合运算中乘法的第三个输入张量列表，对应公式中的`x3`。元素个数与`x1`中Tensor的个数相等。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行混合运算中乘法的第三个输入张量列表，对应公式中的`x3`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示进行混合运算中乘法的第一个输入张量，对应公式中的`scalars`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
+      <td>表示进行混合运算中乘法的第一个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -87,5 +87,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_addcmul_scalar_list](examples/test_aclnn_foreach_addcmul_scalar_list.cpp) | 通过[aclnnForeachAddcmulScalarList](docs/aclnnForeachAddcmulScalarList.md)接口方式调用ForeachAddcmulScalarList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_scalar_list_proto.h)构图方式调用ForeachAddcmulScalarList算子。         |
-
-<!--[test_geir_foreach_addcmul_scalar_list](examples/test_geir_foreach_addcmul_scalar_list.cpp)-->

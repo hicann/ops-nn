@@ -15,10 +15,14 @@
   $$
   y = A \times \text{weight\_scale} \times \text{activate\_scale}
   $$
+
+
   $$
     y = (A + \text{bias}) \times \text{weight\_scale} \times \text{activate\_scale}
 
   $$
+
+
   $$
     y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 

@@ -2,15 +2,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
-- 算子功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果 。
+- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果 。
 
 - 计算公式：
 
@@ -50,7 +49,6 @@
     \end{cases}
   $$
 
-
   $$
   scale2Out=\begin{cases}
     row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional) \\
@@ -81,14 +79,15 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
   const aclTensor    *betaOptional,
   double              epsilon,
   const aclBoolArray *outputMaskOptional,
-  const aclTensor    *y1Out,
-  const aclTensor    *y2Out,
-  const aclTensor    *xOut,
-  const aclTensor    *scale1Out,
-  const aclTensor    *scale2Out,
+  aclTensor          *y1Out,
+  aclTensor          *y2Out,
+  aclTensor          *xOut,
+  aclTensor          *scale1Out,
+  aclTensor          *scale2Out,
   uint64_t           *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   void          *workspace,
@@ -101,14 +100,14 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
-    <col style="width: 392px">
-    <col style="width: 228px">
+    <col style="width: 330px">
+    <col style="width: 223px">
     <col style="width: 101px">
-    <col style="width: 100px">
+    <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
     <thead>
@@ -217,7 +216,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><!--<li>当smoothScale2Optional不存在时，此输出无意义。</li>--><li>shape需要与`y1Out`保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><!--<li>当smoothScale2Optional不存在时，此输出无意义。</li>--><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>2-8</td>
@@ -282,8 +281,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -372,6 +371,9 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
     | ---------- | ---------- | ------------- | ---------------------------- | ---------------------------- | -------------------- | ------------- | ------------- | ----------------- | ----------------- |
     | FLOAT16    | FLOAT16    | FLOAT16       | FLOAT16                      | FLOAT16                      | FLOAT16              | INT8          | INT8          | FLOAT32           | FLOAT32           |
     | BFLOAT16   | BFLOAT16   | BFLOAT16      | BFLOAT16                     | BFLOAT16                     | BFLOAT16             | INT8          | INT8          | FLOAT32           | FLOAT32           |
+
+- 确定性计算：
+  - aclnnAddRmsNormDynamicQuantV2默认确定性实现。
 
 ## 调用示例
 

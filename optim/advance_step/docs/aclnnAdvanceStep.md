@@ -10,31 +10,31 @@
 ## 功能说明
 
 - 算子功能：
-
+  
   vLLM是一个高性能的LLM推理和服务框架，专注于优化大规模语言模型的推理效率。它的核心特点包括PageAttention和高效内存管理。advance_step算子的主要作用是推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。
 
 - 计算公式：
-
+  
   $$
   blockIdx是当前代码被执行的核的index。
   $$
-
+  
   $$
   blockTablesStride = blockTables.stride(0)
   $$
-
+  
   $$
   inputTokens[blockIdx] = sampledTokenIds[blockIdx]
   $$
-
+  
   $$
   inputPositions[blockIdx] = seqLens[blockIdx]
   $$
-
+  
   $$
   seqLens[blockIdx] = seqLens[blockIdx] + 1
   $$
-
+  
   $$
   slotMapping[blockIdx] = (blockTables[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx] \% blockSize)
   $$
@@ -70,11 +70,11 @@ aclnnStatus aclnnAdvanceStep(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
-  <col style="width: 200px">
   <col style="width: 250px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -151,7 +151,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>ND</td>
       <td>2</td>
       <td>×</td>
-    </tr>
+    </tr> 
       <tr>
       <td>numSeqs</td>
       <td>输入</td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
+    </tr> 
       <tr>
       <td>numQueries</td>
       <td>输入</td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
+    </tr> 
      <tr>
       <td>blockSize</td>
       <td>输入</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>
+    </tr>      
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnAdvanceStep(
     </tr>
   </tbody>
   </table>
-
+  
 - **返回值：**
 
  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -245,7 +245,7 @@ aclnnStatus aclnnAdvanceStep(
 </tbody>
 </table>
 
-
+  
 ## aclnnAdvanceStep
 
 - **参数说明：**
@@ -284,15 +284,16 @@ aclnnStatus aclnnAdvanceStep(
     </tr>
   </tbody>
   </table>
-
+  
 
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnAdvanceStep默认确定性实现。
 
 ## 调用示例
 
@@ -369,7 +370,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1. （固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

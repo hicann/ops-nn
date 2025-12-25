@@ -8,8 +8,8 @@
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
-- 算子功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。
-- 计算公式：
+- 算子功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。  
+- 计算公式：  
   <p style="text-align: center">
   out<sub>i</sub> = SwiGlu(x<sub>i</sub>)=Swish(A<sub>i</sub>)*B<sub>i</sub>
   </p>
@@ -51,13 +51,12 @@
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>公式中的i。</td>
+      <td>公式中的out<sub>i</sub>。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-
+    
   </tbody></table>
-
 
 ## 约束说明
 

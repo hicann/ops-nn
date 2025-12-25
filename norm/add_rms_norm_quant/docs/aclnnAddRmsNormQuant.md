@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
   RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。
 - 计算公式：
   
@@ -78,14 +78,14 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
-    <col style="width: 392px">
-    <col style="width: 228px">
+    <col style="width: 330px">
+    <col style="width: 223px">
     <col style="width: 101px">
-    <col style="width: 100px">
+    <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
     <thead>
@@ -133,7 +133,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>scales1</td>
       <td>输入</td>
-      <td>表示量化过程中得到`y1Out`进行的scales张量，对应公式中的`scales1`。</td>
+      <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>scales2Optional</td>
       <td>输入</td>
-      <td>表示量化过程中得到`y2Out`进行的scales张量。对应公式中的`scales2`。</td>
+      <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。<li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>zeroPoints1Optional</td>
       <td>输入</td>
-      <td>表示量化过程中得到`y1Out`进行的offset张量。对应公式中的`zero_points1`。</td>
+      <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zero_points1`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致。</li></ul></td>
       <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>zeroPoints2Optional</td>
       <td>输入</td>
-      <td>表示量化过程中得到`y2Out`进行的offset张量。对应公式中的`zero_points2`。</td>
+      <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zero_points2`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
       <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与输入`x1`/`x2`一致。</li></ul></td>
-      <td>INT8</td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -213,8 +213,8 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>y2Out</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>预留参数，实际未使用，输出为随机值。</li></ul></td>
-      <td>INT8</td>
+      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`y1Out`保持一致。</li></ul></td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -252,12 +252,13 @@ aclnnStatus aclnnAddRmsNormQuant(
   </tbody>
   </table>
   
- 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16、BFLOAT16。
       - 入参`scales1`、`scales2Optional`仅支持FLOAT32、BFLOAT16。
       - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32、BFLOAT16。
+      - 出参`y1Out`、`y2Out`仅支持INT8。
+    - 出参`y2Out`为预留参数，实际未使用，输出为随机值。
     - 入参`divMode`仅支持True。
 
 - **返回值：**
@@ -266,8 +267,8 @@ aclnnStatus aclnnAddRmsNormQuant(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -347,24 +348,23 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## 约束说明
 
-
-- **支持类型说明**
+- 支持类型说明：
 
   是否支持空Tensor：支持空进空出。
 
-- **数据格式说明**
+- 数据格式说明：
   
   所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
 
-- **各产品型号支持数据类型说明**
+- 各产品型号支持数据类型说明：
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
-
+- 确定性计算：
+  - aclnnAddRmsNormQuant默认确定性实现。
 
 ## 调用示例
 

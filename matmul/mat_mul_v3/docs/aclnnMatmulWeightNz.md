@@ -1,7 +1,5 @@
 # aclnnMatmulWeightNz
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -139,7 +137,6 @@ aclnnStatus aclnnMatmulWeightNz(
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到AI处理器亲和数据排布格式的转换。
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -179,7 +176,6 @@ aclnnStatus aclnnMatmulWeightNz(
 
 - **参数说明：**
 
-
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
   <col style="width: 250px">
@@ -217,12 +213,12 @@ aclnnStatus aclnnMatmulWeightNz(
   </table>
   </div>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+- 确定性说明：
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持2维, mat2只支持AI处理器亲和数据排布格式(NZ)，调用此接口之前，必须完成mat2从ND到AI处理器亲和数据排布格式的转换。
 - 当mat2任意一个维度为1，且mat2为非连续的NZ格式时，不保证精度和功能, 即不支持k=1或者n=1时，mat2先转NZ后再对tensor的shape做任何操作处理, 如transpose操作。

@@ -9,16 +9,18 @@
 
 ## 功能说明
 
-- 算子功能：对输入x反量化操作，将输入的INT32的数据转化为FLOAT16/BFLOAT16输出。
+- 接口功能：对输入x反量化操作，将输入的INT32的数据转化为FLOAT16/BFLOAT16输出。
 - 计算公式：
 
   $$
   y = A \times \text{weight\_scale} \times \text{activate\_scale}
   $$
+
   $$
     y = (A + \text{bias}) \times \text{weight\_scale} \times \text{activate\_scale}
 
   $$
+
   $$
     y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 
@@ -51,11 +53,11 @@ aclnnStatus aclnnDequantBias(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+  <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 270px">
+  <col style="width: 320px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -183,7 +185,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>输入x、weightScale或输出out的数据类型不在支持的范围内。</td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+    <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
     <td rowspan="3">561002</td>
     <td>输入activateScaleOptional、biasOptional的数据类型不在支持的范围内。</td>
   </tr>
@@ -192,7 +194,6 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   </tr>
 </tbody>
 </table>
-
 
 ## aclnnDequantBias
 
@@ -240,7 +241,10 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 
 ## 约束说明
 
-输入和输出参数中shape的N和M必须是正整数，且M的取值小于等于25000。
+- 确定性计算：
+  - aclnnDequantBias默认确定性实现。
+
+- 输入和输出参数中shape的N和M必须是正整数，且M的取值小于等于25000。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
@@ -369,7 +373,7 @@ int main() {
 
   // 调用aclnnDequantBias第一段接口
   ret = aclnnDequantBiasGetWorkspaceSize(input, weight, activation, bias,
-      1, y, &workspaceSize, &executor);
+      true, y, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDequantBiasGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
   // 根据第一段接口计算出的workspaceSize申请device内存

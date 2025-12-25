@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_log2](examples/test_aclnn_foreach_log2.cpp) | 通过[aclnnForeachLog2](docs/aclnnForeachLog2.md)接口方式调用ForeachLog2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_log2_proto.h)构图方式调用ForeachLog2算子。         |
-
-<!--[test_geir_foreach_log2](examples/test_geir_foreach_log2.cpp)-->

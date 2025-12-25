@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -209,7 +208,7 @@
     <tr>
       <td>time_major</td>
       <td>属性</td>
-      <td>输入数据的排列方式，默认为True。</td>
+      <td>输入数据的排列方式，默认True。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -243,7 +242,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 无
@@ -252,6 +250,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 |  - | 通过[算子IR](op_graph/dynamic_rnn_proto.h)构图方式调用DynamicRnn算子。         |
-
-<!-- [test_geir_dynamic_rnn](examples/test_geir_dynamic_rnn.cpp) -->
+| 图模式 | [test_geir_dynamic_rnn](examples/test_geir_dynamic_rnn.cpp)  | 通过[算子IR](op_graph/dynamic_rnn_proto.h)构图方式调用DynamicRnn算子。         |

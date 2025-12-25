@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：
@@ -19,11 +18,13 @@
   给定输入张量input，最后一维的长度为2d，进行以下计算：
   
   1. 将input分割为两部分：
+
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
      
   2. 对x1应用Threshold激活函数，定义如下：
+
      $$
      \text{Threshold}(x, \text{threshold}) = 
         \begin{cases} 
@@ -31,12 +32,15 @@
         x & \text{if } x \geq \text{threshold}
         \end{cases}
      $$
+
      因此，计算：
+
      $$
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
      
   3. 最终输出是x1和x2的逐元素乘积：
+
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -65,11 +69,11 @@ aclnnStatus aclnnFatreluMul(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -214,7 +218,10 @@ aclnnStatus aclnnFatreluMul(
 
 ## 约束说明
 
-典型场景尾轴为16的倍数，当尾轴为非32Byte对齐时，建议走小算子拼接逻辑。
+- 确定性计算：
+  - aclnnFatreluMul默认确定性实现。
+
+- 典型场景尾轴为16的倍数，当尾轴为非32Byte对齐时，建议走小算子拼接逻辑。
 
 ## 调用示例
 

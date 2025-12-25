@@ -9,8 +9,9 @@
 
 ## 功能说明
 
-- 算子功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0时，取0。
+- 算子功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
 - 计算公式：
+
 $$
 relu(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}
 $$
@@ -54,19 +55,18 @@ aclnnStatus aclnnInplaceRelu(
   const aclrtStream stream)
 ```
 
-
 ## aclnnReluGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 301px">
-  <col style="width: 194px">
-  <col style="width: 301px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 200px">
+  <col style="width: 220px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -123,9 +123,7 @@ aclnnStatus aclnnInplaceRelu(
     </tr>
   </tbody>
   </table>
-
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -151,16 +149,15 @@ aclnnStatus aclnnInplaceRelu(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>self和out的数据类型和数据格式不在支持的范围之内。</td>
+      <td>self和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>self和out的数据类型和数据格式不相同。</td>
+      <td>self和out的数据类型不相同。</td>
     </tr>
     <tr>
       <td>self和out的shape超过8维，或者两者shape不一致。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnRelu
 
@@ -201,18 +198,16 @@ aclnnStatus aclnnInplaceRelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
 
 ## aclnnInplaceReluGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1305px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 247px">
   <col style="width: 108px">
@@ -265,9 +260,7 @@ aclnnStatus aclnnInplaceRelu(
     </tr>
     </tbody>
   </table>
-
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -293,13 +286,12 @@ aclnnStatus aclnnInplaceRelu(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>self的数据类型和数据格式不在支持的范围之内。</td>
+      <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self的shape超过8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceRelu
 
@@ -340,14 +332,14 @@ aclnnStatus aclnnInplaceRelu(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnRelu&aclnnInplaceRelu默认确定性实现。
 
 ## 调用示例
 

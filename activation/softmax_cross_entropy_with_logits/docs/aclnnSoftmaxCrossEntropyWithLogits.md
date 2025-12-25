@@ -4,13 +4,8 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>昇腾910_95 AI处理器</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |      ×    |
-|  <term>Atlas 推理系列产品 </term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
-|  <term>Atlas 200/300/500 推理产品</term>       |      ×    |
 
 ## 功能说明
 
@@ -49,16 +44,15 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
   const aclrtStream stream)
 ```
 
-
 ## aclnnSoftmaxCrossEntropyWithLogits
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 220px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -139,9 +133,6 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
   </tbody>
   </table>
   
-   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。  
-
-
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -170,7 +161,6 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
       <td>features和labels的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftmaxCrossEntropyWithLogits
 
@@ -217,7 +207,8 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftmaxCrossEntropyWithLogits默认确定性实现。
 
 ## 调用示例
 

@@ -7,11 +7,11 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。
 - 计算公式：
+
   $$
   Hardsigmoid(self)=\begin{cases}
   &1, &if(self\gt3) \\
@@ -60,16 +60,15 @@ aclnnStatus aclnnInplaceHardsigmoid(
   const aclrtStream stream)
 ```
 
-
 ## aclnnHardsigmoidGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 111px">
+  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
+  <col style="width: 131px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -130,8 +129,6 @@ aclnnStatus aclnnInplaceHardsigmoid(
   </tbody>
   </table>
   
- 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -169,7 +166,6 @@ aclnnStatus aclnnInplaceHardsigmoid(
       <td>self或out的shape超过8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnHardsigmoid
 
@@ -210,7 +206,6 @@ aclnnStatus aclnnInplaceHardsigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
 	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -219,11 +214,11 @@ aclnnStatus aclnnInplaceHardsigmoid(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -274,7 +269,6 @@ aclnnStatus aclnnInplaceHardsigmoid(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -306,7 +300,6 @@ aclnnStatus aclnnInplaceHardsigmoid(
       <td>self的shape超过8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceHardsigmoid
 
@@ -347,14 +340,14 @@ aclnnStatus aclnnInplaceHardsigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
 	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnHardsigmoid&aclnnInplaceHardsigmoid默认确定性实现。
 
 ## 调用示例
 

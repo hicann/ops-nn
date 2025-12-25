@@ -9,15 +9,14 @@
 
 ## 功能说明
 
-- 算子功能：对原始输入logits进行top-k和top-p采样过滤。
+- 算子功能：对输入sorted_value和sorted_indices进行top-k和top-p采样过滤。
 - 计算公式：
-  - 对输入logits按最后一轴进行升序排序，得到对应的排序结果sortedValue和sortedIndices。
-  $$sortedValue, sortedIndices = sort(logits, dim=-1, descend=false, stable=true)$$
   - 计算保留的阈值（第k大的值）。
   $$topKValue[b][v] = sortedValue[b][sortedValue.size(1) - k[b]]$$
   - 生成top-k需要过滤的mask。
   $$topKMask = sortedValue < topKValue$$
   - 通过topKMask将小于阈值的部分置为-Inf。
+
   $$
   sortedValue[b][v] = 
   \begin{cases}
@@ -25,6 +24,7 @@
   sortedValue[b][v] & \text{topKMask[b][v]=false}
   \end{cases}
   $$
+
   - 通过softmax将经过top-k过滤后的数据按最后一轴转换为概率分布。
   $$probsValue = softmax(sortedValue, dim=-1)$$
   - 按最后一轴计算累计概率（从最小的概率开始累加）。
@@ -33,6 +33,7 @@
   $$topPMask[b][v] = probsSum[b][v] <= 1-p[b]$$
   $$topPMask[b][-1] = false$$
   - 通过topPMask将小于阈值的部分置为-Inf。
+
   $$
   sortedValue[b][v] = 
   \begin{cases}
@@ -40,15 +41,16 @@
   sortedValue[b][v] & \text{topPMask[b][v]=false}
   \end{cases}
   $$
+
   - 将过滤后的结果按sortedIndices还原到原始顺序。
   $$out[b][v] = sortedValue[b][sortedIndices[b][v]]$$
   其中$0 \le b \lt logits.size(0), 0 \le v \lt logits.size(1)$。
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1050px"><colgroup>
-  <col style="width: 100px">
-  <col style="width: 100px">
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 150px">
+  <col style="width: 150px">
   <col style="width: 500px">
   <col style="width: 250px">
   <col style="width: 100px">
@@ -63,30 +65,37 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>logits</td>
+      <td>sorted_value</td>
       <td>输入</td>
-      <td>表示需要处理的数据，公式中的logits。</td>
+      <td>表示需要处理的数据的值，公式中的`sortedValue`。需要升序顺序。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>sorted_indices</td>
+      <td>输入</td>
+      <td>表示需要处理的数据的索引，公式中的`sortedIndices`。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>p</td>
       <td>输入</td>
-      <td>表示top-p的阈值，公式中的p。数据类型需要与`logits`一致，shape需要与`logits.size(0)`一致。</td>
+      <td>表示top-p的阈值，公式中的p。数据类型需要与`sorted_value`一致，shape需要与`sorted_value.size(0)`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>k</td>
       <td>输入</td>
-      <td>表示top-k的阈值，公式中的k，shape需要与`logits.size(0)`一致。</td>
+      <td>表示top-k的阈值，公式中的k，shape需要与`sorted_value.size(0)`一致。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>表示过滤后的数据，公式中的out。数据类型、shape需要与`logits`一致。</td>
+      <td>表示过滤后的数据，公式中的out。数据类型、shape需要与`sorted_value`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

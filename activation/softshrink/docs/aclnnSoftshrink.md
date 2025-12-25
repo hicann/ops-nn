@@ -44,8 +44,8 @@ aclnnStatus aclnnSoftshrink(
 
 - **参数说明：**
   
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1390px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 220px">
@@ -118,7 +118,6 @@ aclnnStatus aclnnSoftshrink(
     </tr>
   </tbody>
   </table>
-  
   
 - **返回值：**
 
@@ -203,7 +202,8 @@ aclnnStatus aclnnSoftshrink(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftshrink默认确定性实现。
 
 ## 调用示例
 

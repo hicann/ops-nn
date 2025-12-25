@@ -1,7 +1,5 @@
 # aclnnAddmm&aclnnInplaceAddmm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -182,11 +180,10 @@ aclnnStatus aclnnInplaceAddmm(
     </tr>
   </tbody></table>
 
-
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-        - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
-        - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
-        - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+  - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
+  - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
 
 - **返回值：**
 
@@ -262,7 +259,6 @@ aclnnStatus aclnnInplaceAddmm(
   </tbody>
   </table>
   </div>
-
 
 - **返回值：**
 
@@ -413,11 +409,9 @@ aclnnStatus aclnnInplaceAddmm(
       </tbody>
       </table>
 
-
 ## aclnnInplaceAddmm
 
 - **参数说明：**
-
 
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -456,11 +450,13 @@ aclnnStatus aclnnInplaceAddmm(
   </table>
   </div>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+## 约束说明
+- 确定性计算
+  - aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

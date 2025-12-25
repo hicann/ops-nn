@@ -1,4 +1,4 @@
-# MaxPool3dWithArgmaxV2
+# MaxPool3DWithArgmaxV2
 
 ##  产品支持情况
 
@@ -6,23 +6,24 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
-- 算子功能：对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。
+- 算子功能：对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值y和索引argmax。
 - 计算公式：
   
-  * output tensor中每个元素的计算公式：
+  * y tensor中每个元素的计算公式：
     
     $$
     out(N_i, C_j, d, h, w) = \max\limits_{{k\in[0,k_{D}-1],m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times d + k, stride[1]\times h + m, stride[2]\times w + n)
     $$
+
   * out tensor的shape推导公式 (默认ceilMode=false，即向下取整)：
     
     $$
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lfloor{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1, \lfloor{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rfloor + 1]
     $$
+
   * out tensor的shape推导公式 (默认ceilMode=true，即向上取整)：
     
     $$
@@ -113,14 +114,12 @@
   </tbody></table>
 
 ## 约束说明
-- 输入数据排布不支持NDHWC。
-- kernelSize、stride、padding、dilation、ceilMode参数需要保证输出out shape中不存在小于1的轴。
-- 当ceilMode为True的时候，如果滑动窗口全部在右侧padding区域上，这个输出结果将被忽略。
 
+无。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_max_pool3d_with_argmax.cpp](examples/test_aclnn_max_pool3d_with_argmax.cpp) | 通过[aclnnMaxPool3dWithArgmax](docs/aclnnMaxPool3dWithArgmax.md)接口方式调用MaxPool3dWithArgmaxV2算子。 |
+| aclnn接口  | [test_aclnn_max_pool3d_with_argmax.cpp](examples/test_aclnn_max_pool3d_with_argmax.cpp) | 通过[aclnnMaxPool3dWithArgmax](docs/aclnnMaxPool3dWithArgmax.md)接口方式调用MaxPool3DWithArgmaxV2算子。 |
 

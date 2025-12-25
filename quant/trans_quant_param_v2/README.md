@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         |  是否支持   |
+| :----------------------------------------------------------- |:-------:|
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
 
 ## 功能说明
 
@@ -16,6 +16,7 @@
   1. `out`为64位格式，初始为0。
 
   2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
+
      $$
      scale = Round(scale)
      $$
@@ -36,6 +37,7 @@
           $$
 
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
+
           $$
           out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
           $$
@@ -110,3 +112,5 @@
 | aclnn接口  | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | 通过[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)接口方式调用TransQuantParamV2算子。 |
 | aclnn接口  | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | 通过[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)接口方式调用TransQuantParamV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/trans_quant_param_v2_proto.h)构图方式调用TransQuantParamV2算子。         |
+
+<!--没有IR原型，只有op_ref,这一条补充啥啊？9.17之前反馈没有IR原型，但是9.17发现IR原型归档了，同步补充了一条-->

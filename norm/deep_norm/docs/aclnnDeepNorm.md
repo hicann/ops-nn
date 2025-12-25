@@ -9,15 +9,17 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
+- 接口功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
 - 计算公式：
   
   $$
   DeepNorm(x_i^{\prime}) = ({x_i^{\prime} - \bar{x^{\prime}}})*{rstd} * gamma + beta,
   $$
+
   $$
   \text { where } rstd = \frac{1} {\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + epsilon} }, \quad \operatorname{x^{\prime}_i} = alpha * x_i   + gx_i
   $$
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDeepNormGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeepNorm”接口执行计算。
@@ -36,6 +38,7 @@ aclnnStatus aclnnDeepNormGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnDeepNorm(
   void          *workspace,
@@ -48,14 +51,14 @@ aclnnStatus aclnnDeepNorm(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -159,7 +162,7 @@ aclnnStatus aclnnDeepNorm(
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -183,14 +186,14 @@ aclnnStatus aclnnDeepNorm(
   </tbody>
   </table>
 
--   **返回值**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -259,7 +262,6 @@ aclnnStatus aclnnDeepNorm(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -279,6 +281,9 @@ aclnnStatus aclnnDeepNorm(
 - 边界值场景说明：
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
+
+- 确定性计算：
+  - aclnnDeepNorm默认确定性实现。
 
 ## 调用示例
 

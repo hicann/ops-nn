@@ -1,14 +1,11 @@
 # aclnnExpandIntoJaggedPermute
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/expand_into_jagged_permute)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |     √   |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> | √ |
-
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -22,7 +19,6 @@ $$
 $$
 outputPermuteOut[outputOffset[i]:outputOffset[i+1]] = arange(inputOffset[permute[i]],inputOffset[permute[i]]+len)
 $$
-
 
 ## 函数原型
 
@@ -228,6 +224,9 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 
 ## 约束说明
 
+- 确定性计算：
+  - aclnnExpandIntoJaggedPermute默认确定性实现。
+
 1.inputOffset、outputOffset的shape要相同。
 
 2.permute、inputOffset、outputOffset、outputPermuteOut的数据类型需要相同。
@@ -273,7 +272,6 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     }
     return shapeSize;
 }
-
 
 template <typename T>
 bool ReadFile(const std::string &filePath, std::vector<int64_t> shape, std::vector<T>& hostData)
@@ -390,7 +388,6 @@ int main() {
   aclTensor* outputOffsets = nullptr;
   aclTensor* outputPermute = nullptr;
   int64_t outputSize = 6;
-
 
   std::vector<int32_t> permuteHostData = {1, 0, 2};
   std::vector<int32_t> inputOffsetsHostData = {0, 3, 5, 8};

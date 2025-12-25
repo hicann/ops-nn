@@ -1,6 +1,6 @@
 # aclnnConvTbcBackward
 
-## 产品支持情况 
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -16,26 +16,30 @@
   假定输入Conv_tbc正向的输入$input$的shape是$(H_{\text{in}},N,C_{\text{in}})$，输出梯度$gradOutput$的shape是$(H_{\text{out}},N,C_{\text{out}})$，卷积核$weight$的shape是$(K,C_{\text{in}},C_{\text{out}})$，偏置$bias$的shape为$(C_{\text{out}})$。
 
   $$
-  H_{out} = {H_{in} + 2*pad + 1 - K}
+  H_{out} = \lfloor \frac{H_{in} + 2 \cdot pad - K}{S} \rfloor + 1
   $$
 
-  输入张量input的梯度输出$gradInput_{(t,b,c)}$将被表示为：
+  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。
 
-  $$
-  gradInput_{(t,b,c)} = \sum_{k=0}^{K-1} gradOutput_{(t+k,b,d)} \cdot   weight_{(k,c,d)}
-  $$
+  - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$（对应函数原型中的gradInput参数）：
 
-  卷积核weight的梯度输出$gradWeight_{(t,b,c)}$将被表示为：
+    $$
+    \frac{\partial L}{\partial x_{t,b,c_{in}}} = \sum_{k=0}^{K-1} \sum_{c_{out}=0}^{C_{out}-1} \frac{\partial L}{\partial y_{t-k,b,c_{out}}} \cdot w_{k,c_{in},c_{out}}
+    $$
 
-  $$
-  gradWeight_{(t,b,c)} = \sum_{k=0}^{K-1} gradOutput_{(t+k,b,d)} \cdot input_{(k,c,d)}
-  $$
+    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。
 
-  偏置bias的梯度输出$gradBias$将被表示为：
+  - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
 
-  $$
-  gradBias_j = \sum_{i=1}^{N}\sum_{t=1}^{H_{\text{out}}} gradOutput_{i,t,j}
-  $$
+    $$
+    \frac{\partial L}{\partial w_{k,c_{in},c_{out}}} = \sum_{b=0}^{N-1} \sum_{t=0}^{H_{out}-1} x_{t \cdot S+k,b,c_{in}} \cdot \frac{\partial L}{\partial y_{t,b,c_{out}}}
+    $$
+
+  - 对于 $b$ 的梯度 $\frac{\partial L}{\partial b}$（对应函数原型中的gradBias参数）：
+
+    $$
+    \frac{\partial L}{\partial b_{c_{out}}} = \sum_{b=0}^{N-1}\sum_{t=0}^{H_{\text{out}}-1} \frac{\partial L}{\partial y_{t,b,c_{out}}}
+    $$
 
 ## 函数原型
 
@@ -43,24 +47,24 @@
 
 ```cpp
 aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(
-    const aclTensor*     self, 
-    const aclTensor*     input, 
-    const aclTensor*     weight, 
-    const aclTensor*     bias, 
-    int64_t              pad, 
-    int8_t               cubeMathType, 
-    aclTensor*           gradInput, 
-    aclTensor*           gradWeight, 
-    aclTensor*           gradBias, 
-    uint64_t*            workspaceSize, 
-    aclOpExecutor**      executor)
+    const aclTensor *self, 
+    const aclTensor *input, 
+    const aclTensor *weight, 
+    const aclTensor *bias, 
+    int64_t          pad, 
+    int8_t           cubeMathType, 
+    aclTensor       *gradInput, 
+    aclTensor       *gradWeight, 
+    aclTensor       *gradBias, 
+    uint64_t        *workspaceSize, 
+    aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnConvTbcBackward(
-    void*                workspace, 
+    void                *workspace, 
     uint64_t             workspaceSize, 
-    aclOpExecutor*       executor, 
+    aclOpExecutor       *executor, 
     const aclrtStream    stream)
 ```
 
@@ -148,7 +152,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>表示T维度上左右填充的个数。</td>
      <td>
-       <ul><li>其值应该在[0,255]的范围内。</li></ul>
+       其值应该在[0,255]的范围内。
      </td>
      <td>-</td>
      <td>-</td>
@@ -160,11 +164,13 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>用于判断Cube单元应该使用哪种计算逻辑进行运算。</td>
      <td>
-       <ul><li>INT8类型的枚举值，支持的枚举值如下：</li>
-       <ul><li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
+       支持的枚举值如下：
+       <ul>
+       <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
        <li>1：ALLOW_FP32_DOWN_PRECISION，允许将输入数据降精度计算。</li>
        <li>2：USE_FP16，允许转换为数据类型FLOAT16进行计算。</li>
        <li>3：USE_HF32，允许转换为数据类型HFLOAT32计算。</li>
+       </ul>
      </td>
      <td>-</td>
      <td>-</td>
@@ -236,11 +242,6 @@ aclnnStatus aclnnConvTbcBackward(
     </tbody>
   </table> 
 
-      - 不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-      - 不支持HIFLOAT8、FLOAT8_E4M3FN。
-      - 不支持空Tensor。
-      - 只有在gradWeight参数中，才支持HIFLOAT8、FLOAT8_E4M3FN，在其他参数中不支持HIFLOAT8、FLOAT8_E4M3FN。
   - 公式一：$(H_{\text{out}},N,C_{\text{out}})$
   - 公式二：$(H_{\text{in}},N,C_{\text{in}})$
   - 公式三：$(K,C_{\text{in}},C_{\text{out}})$
@@ -248,25 +249,17 @@ aclnnStatus aclnnConvTbcBackward(
   - 公式五：$(H_{\text{in}},N,C_{\text{in}})$
   - 公式六：$(K,C_{\text{in}},C_{\text{out}})$
   - 公式七：$(C_{\text{out}})$
-  - cubeMathType说明：
-      - 枚举值为0
-      - 枚举值为1
-          - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是FLOAT，处理器转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
-      - 枚举值为2
-          - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是BFLOAT16时不支持该选项。
-      - 枚举值为3
-          - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。
-
 
 - **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
+
     第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
     <col style="width:250px">
     <col style="width:130px">
-    <col style="width:650px">
+    <col style="width:1050px">
     </colgroup>
     <thead>
      <tr>
@@ -322,10 +315,10 @@ aclnnStatus aclnnConvTbcBackward(
 ## aclnnConvTbcBackward
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
        <col style="width:100px">
        <col style="width:100px">
-       <col style="width:550px">
+       <col style="width:950px">
        </colgroup>
     <thead>
      <tr>
@@ -358,16 +351,18 @@ aclnnStatus aclnnConvTbcBackward(
     </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
-    <col style="width:200px">
-    <col style="width:800px">
+- 确定性计算
+  - aclnnConvTbcBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
+<table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
+    <col style="width:150px">
+    <col style="width:700px">
     </colgroup>
    <thead>
     <tr>
@@ -377,29 +372,43 @@ aclnnStatus aclnnConvTbcBackward(
    </thead>
    <tbody>
    <tr>
-     <th scope="row">gradOutput约束</th>   
+     <th scope="row">gradOutput约束</th>
      <td>
-        <ul><li>各个维度的大小应在[1,2147483646]的范围内。</li></ul>
+        各个维度的大小应在[1,2147483646]的范围内。
      </td>
    </tr>
    <tr>
-     <th scope="row">input约束</th>   
+     <th scope="row">input约束</th>
      <td>
-        <ul><li>各个维度的大小应在[1,2147483646]的范围内。</li></ul>
+        各个维度的大小应在[1,2147483646]的范围内。
      </td>
    </tr>
    <tr>
-     <th scope="row">weight约束</th>   
+     <th scope="row">weight约束</th>
      <td>
-        <ul><li>L的大小应该在[1,255]的范围内，其他维度的大小应该在[1,2147483646]的范围内。</li></ul>
+        L的大小应该在[1,255]的范围内，其他维度的大小应该在[1,2147483646]的范围内。
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">dtype约束</th>
+     <td>
+        不支持HIFLOAT8、FLOAT8_E4M3FN。
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">cubeMathType说明</th>
+     <td>
+        <ul><li>枚举值为0：暂无说明。</li>
+        <li>枚举值为1：当输入是FLOAT，处理器转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为2：当输入是BFLOAT16时不支持该选项。</li>
+        <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。</li>
+        </ul>
      </td>
    </tr>
    </tbody>
 </table>
 
-
 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
-
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

@@ -8,8 +8,8 @@
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
-- 算子功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。
-- 计算公式：
+- 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。  
+- 计算公式：  
 
   $$
   dequantOut = Dequant(x, weightScaleOptional, activationScaleOptional, biasOptional)
@@ -54,13 +54,12 @@ aclnnStatus aclnnDequantSwigluQuant(
     aclrtStream    stream)
 ```
 
-
 ## aclnnDequantSwigluQuantGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
+  <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 300px">
@@ -229,53 +228,56 @@ aclnnStatus aclnnDequantSwigluQuant(
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持INT8。
     - scaleOut参数：
       - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT。
-
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  第一段接口会完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
-  <col style="width: 103px">
-  <col style="width: 604px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回码</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的x、yOut或scaleOut是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>输入或输出的数据类型不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>输入或输出的参数维度不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>输入或输出的shape不满足约束要求。</td>
-    </tr>
-    <tr>
-      <td>输入的取值不满足要求。</td>
-    </tr>
-  </tbody></table>
-
+aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+第一段接口会完成入参校验，出现以下场景时报错：
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+<col style="width: 316px">
+<col style="width: 111px">
+<col style="width: 723px">
+</colgroup>
+<thead>
+  <tr>
+    <th>返回码</th>
+    <th>错误码</th>
+    <th>描述</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>ACLNN_ERR_PARAM_NULLPTR</td>
+    <td>161001</td>
+    <td>传入的x、yOut或scaleOut是空指针。</td>
+  </tr>
+  <tr>
+    <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+    <td rowspan="4">161002</td>
+    <td>输入或输出的数据类型不在支持的范围内。</td>
+  </tr>
+  <tr>
+    <td>输入或输出的参数维度不在支持的范围内。</td>
+  </tr>
+  <tr>
+    <td>输入或输出的shape不满足约束要求。</td>
+  </tr>
+  <tr>
+    <td>输入的取值不满足要求。</td>
+  </tr>
+  <tr>
+    <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td>561002</td>
+    <td>输入张量的内存大小超过上限。</td>
+  </tr>
+</tbody>
+</table>
 
 ## aclnnDequantSwigluQuant
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
+<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+<col style="width: 167px">
+<col style="width: 123px">
+<col style="width: 860px">
   </colgroup>
   <thead>
     <tr>
@@ -307,17 +309,19 @@ aclnnStatus aclnnDequantSwigluQuant(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-
 ## 约束说明
+
+- 确定性计算：
+  - aclnnDequantSwigluQuant默认确定性实现。
 
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 + （activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 
 ## 调用示例
 
@@ -414,7 +418,7 @@ int main() {
   std::vector<float> offsetHostData = {1};
   std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   std::vector<float> scaleOutHostData = {0, 0};
-
+  
   // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

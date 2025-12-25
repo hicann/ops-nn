@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。
@@ -61,16 +60,15 @@ aclnnStatus aclnnInplaceHardswish(
   const aclrtStream stream)
 ```
 
-
 ## aclnnHardswishGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 111px">
+  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
+  <col style="width: 131px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -131,8 +129,6 @@ aclnnStatus aclnnInplaceHardswish(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -167,7 +163,6 @@ aclnnStatus aclnnInplaceHardswish(
       <td>self与out的数据类型不满足互转换规则。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnHardswish
 
@@ -208,7 +203,6 @@ aclnnStatus aclnnInplaceHardswish(
   </tbody>
   </table>
 
-
 - **返回值：**
 
 	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -217,8 +211,8 @@ aclnnStatus aclnnInplaceHardswish(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
@@ -302,7 +296,6 @@ aclnnStatus aclnnInplaceHardswish(
     </tr>
   </tbody></table>
 
-
 ## aclnnInplaceHardswish
 
 - **参数说明：**
@@ -342,15 +335,14 @@ aclnnStatus aclnnInplaceHardswish(
   </tbody>
   </table>
 
-
-
 - **返回值：**
 
 	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnHardswish&aclnnInplaceHardswish默认确定性实现。
 
 ## 调用示例
 

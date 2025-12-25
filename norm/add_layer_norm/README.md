@@ -34,6 +34,7 @@
 
     D为x中参加均值计算的数量。
   - $Var(x)$：
+
     $$
     Var(x) = E(x-{\bar{x}})^2
     $$
@@ -115,14 +116,14 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/zh/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../docs/zh/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -135,7 +136,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 - 是否支持空tensor：不支持空进空出。
@@ -147,5 +147,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_add_layer_norm](examples/test_aclnn_add_layer_norm.cpp) | 通过[aclnnAddLayerNorm](docs/aclnnAddLayerNorm.md)接口方式调用AddLayerNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/add_layer_norm_proto.h)构图方式调用AddLayerNorm算子。         |
-
-<!--[test_geir_add_layer_norm](examples/test_geir_add_layer_norm.cpp)-->

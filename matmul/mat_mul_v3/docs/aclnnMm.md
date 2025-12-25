@@ -1,7 +1,5 @@
 # aclnnMm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -101,7 +99,8 @@ aclnnStatus aclnnMm(
         <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
-        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li></ul>
+        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+        <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -134,6 +133,7 @@ aclnnStatus aclnnMm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+    - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
 
 - **返回值：**
 
@@ -174,7 +174,6 @@ aclnnStatus aclnnMm(
 
 - **参数说明：**
 
-
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
   <col style="width: 250px">
@@ -212,11 +211,15 @@ aclnnStatus aclnnMm(
   </table>
   </div>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
+## 约束说明
+- 确定性说明:
+  - aclnnMm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
 
 ## 调用示例
 

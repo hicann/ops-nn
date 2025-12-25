@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_cosh](examples/test_aclnn_foreach_cosh.cpp) | 通过[aclnnForeachCosh](docs/aclnnForeachCosh.md)接口方式调用ForeachCosh算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_cosh_proto.h)构图方式调用ForeachCosh算子。         |
-
-<!--[test_geir_foreach_cosh](examples/test_geir_foreach_cosh.cpp)-->

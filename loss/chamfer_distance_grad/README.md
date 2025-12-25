@@ -132,6 +132,6 @@ xyz1、xyz2的shape为(B, N, 2)，grad_dist1、grad_dist2、idx1、idx2的shape�
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_chamfer_distance_grad](./examples/test_aclnn_chamfer_distance_grad.cpp) | 通过[aclnnChamferDistanceBackward](./docs/aclnnChamferDistanceBackward.md)接口方式调用ChamferDistanceGrad算子。    |
+| aclnn调用 | [test_aclnn_chamfer_distance_backward](./examples/test_aclnn_chamfer_distance_grad.cpp) | 通过[aclnnChamferDistanceBackward](./docs/aclnnChamferDistanceBackward.md)接口方式调用ChamferDistanceGrad算子。    |
 
 

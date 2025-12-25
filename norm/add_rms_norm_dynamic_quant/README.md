@@ -27,18 +27,24 @@
     y & \ \  smoothScale1Optional\ = null
     \end{cases}
   $$
+
+
   $$
   input2 =\begin{cases}
     y\cdot smoothScale2Optional & \ \ smoothScale2Optional\ != null  \\
     y & \ \ smoothScale2Optional\ = null
     \end{cases}
   $$
+
+
   $$
   scale1Out=\begin{cases}
     row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ outputMask\ = null \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
+
+
   $$
   y1Out=\begin{cases}
     round(input1/scale1Out) & outputMask[0]=True\ ||\ outputMask\ = null \\
@@ -53,6 +59,8 @@
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ = null)
     \end{cases}
   $$
+
+
   $$
   y2Out=\begin{cases}
     round(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
@@ -173,7 +181,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 - 当output_mask不为空时，参数smooth_scale1有值时，则output_mask[0]必须为True。参数smooth_scale2有值时，则output_mask[1]必须为True。
@@ -187,5 +194,3 @@
 | aclnn接口  | [test_aclnn_add_rms_norm_dynamic_quant](examples/test_aclnn_add_rms_norm_dynamic_quant.cpp) | 通过[aclnnAddRmsNormDynamicQuant](docs/aclnnAddRmsNormDynamicQuant.md)接口方式调用AddRmsNormDynamicQuant算子。 |
 | aclnn接口  | [test_aclnn_add_rms_norm_dynamic_quant_v2](examples/test_aclnn_add_rms_norm_dynamic_quant_v2.cpp) | 通过[aclnnAddRmsNormDynamicQuantV2](docs/aclnnAddRmsNormDynamicQuantV2.md)接口方式调用AddRmsNormDynamicQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/add_rms_norm_dynamic_quant_proto.h)构图方式调用AddRmsNormDynamicQuant算子。         |
-
-<!--[test_geir_add_rms_norm_dynamic_quant](examples/test_geir_add_rms_norm_dynamic_quant.cpp)-->

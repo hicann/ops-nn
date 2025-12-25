@@ -12,13 +12,13 @@
 - 接口功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrtMode为true时，计算公式为：
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -40,6 +40,7 @@ aclnnStatus aclnnAscendQuantV3GetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAscendQuantV3(
   void          *workspace,
@@ -52,15 +53,14 @@ aclnnStatus aclnnAscendQuantV3(
 
 - **参数说明：**
 
-
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -78,7 +78,7 @@ aclnnStatus aclnnAscendQuantV3(
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>需要做量化的输入。对应公式中的`x1`。</td>
+      <td>需要做量化的输入。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据格式为ND时，如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
@@ -179,13 +179,12 @@ aclnnStatus aclnnAscendQuantV3(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
+
     - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
     - 出参`y`的数据类型仅支持INT8，INT32，INT4。当数据格式为NZ时，数据类型支持INT32。
     - 入参`roundMode`：支持取值round，ceil，trunc，floor。当输入`x`的数据格式为NZ时，支持取值round。
     - 入参`dstType`支持取值2，3，29，分别表示INT8、INT32、INT4。当输入`x`的数据格式为NZ时，支持取值3，表示INT32。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
-
 
 - **返回值：**
 
@@ -193,8 +192,8 @@ aclnnStatus aclnnAscendQuantV3(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -234,7 +233,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>y的数据类型为INT4时，x的shape尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
+      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的1/8，或者x与y的shape的非尾轴的大小不一致。</td>
     </tr>
   </tbody></table>
 
@@ -283,7 +282,8 @@ aclnnStatus aclnnAscendQuantV3(
 
 ## 约束说明
 
-无
+- 确定性计算：
+  - aclnnAscendQuantV3默认确定性实现。
 
 ## 调用示例
 

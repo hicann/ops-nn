@@ -6,8 +6,7 @@
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Kirin X90 处理器系列产品</term>     |     √    |
-
+|  <term>Kirin X90 处理器系列产品</term>       |     √    |
 
 ## 功能说明
 
@@ -84,5 +83,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_rms_norm](examples/test_aclnn_rms_norm.cpp) | 通过[aclnnRmsNorm](docs/aclnnRmsNorm.md)接口方式调用RmsNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/rms_norm_proto.h)构图方式调用RmsNorm算子。         |
-
-<!--[test_geir_rms_norm](examples/test_geir_rms_norm.cpp)-->

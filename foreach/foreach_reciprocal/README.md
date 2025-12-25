@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_reciprocal](examples/test_aclnn_foreach_reciprocal.cpp) | 通过[aclnnForeachReciprocal](docs/aclnnForeachReciprocal.md)接口方式调用ForeachReciprocal算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_reciprocal_proto.h)构图方式调用ForeachReciprocal算子。         |
-
-<!--[test_geir_foreach_reciprocal](examples/test_geir_foreach_reciprocal.cpp)-->

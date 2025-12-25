@@ -14,6 +14,7 @@
 - 计算公式：
   - **GroupNorm:**
   记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
+
   $$
   \left\{
   \begin{array} {rcl}
@@ -23,10 +24,13 @@
   \end{array}
   \right.
   $$
+
   - **Silu:**
+
   $$
   out = \frac{x}{1+e^{-x}}
   $$
+
       当activateSilu为True时，会计算Silu， 此时Silu计算公式的x为GroupNorm公式得到的out。
       
 ## 参数说明

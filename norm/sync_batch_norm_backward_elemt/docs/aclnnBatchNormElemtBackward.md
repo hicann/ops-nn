@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnBatchNormElemt](../../batch_norm_elemt/docs/aclnnBatchNormElemt.md)的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。
+- 接口功能：[aclnnBatchNormElemt](../../batch_norm_elemt/docs/aclnnBatchNormElemt.md)的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
 
   $$
@@ -34,26 +34,27 @@ aclnnStatus aclnnBatchNormElemtBackwardGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnBatchNormElemtBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void                *workspace,
+  uint64_t             workspaceSize,
+  aclOpExecutor       *executor,
+  const aclrtStream    stream)
 ```
 
 ## aclnnBatchNormElemtBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -112,7 +113,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
       <td>weight</td>
       <td>输入</td>
       <td>表示权重Tensor，对应公式中的`weight`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -181,15 +182,14 @@ aclnnStatus aclnnBatchNormElemtBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -281,10 +281,14 @@ aclnnStatus aclnnBatchNormElemtBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnBatchNormElemtBackward默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

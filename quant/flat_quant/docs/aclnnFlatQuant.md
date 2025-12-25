@@ -7,21 +7,20 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
-- **算子功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
+- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
 
 - **计算公式**：
   
-  1.输入x右乘kroneckerP2: 
+  1.输入x右乘kroneckerP2：
   
     $$
     x' = x @ kroneckerP2
     $$
 
   2.kroneckerP1左乘x':
-    
+
     $$
     x'' = kroneckerP1@x'
     $$
@@ -62,18 +61,17 @@ aclnnStatus aclnnFlatQuant(
     aclrtStream    stream)
 ```
 
-
 ## aclnnFlatQuantGetWorkspaceSize
 
 - **参数说明**：
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -102,7 +100,7 @@ aclnnStatus aclnnFlatQuant(
       <td>kroneckerP1</td>
       <td>输入</td>
       <td>输入的计算矩阵1，对应公式中的`kroneckerP1`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[M, M]，M与x中M维一致</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[M, M]，M与x中M维一致。</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -112,7 +110,7 @@ aclnnStatus aclnnFlatQuant(
       <td>kroneckerP2</td>
       <td>输入</td>
       <td>输入的计算矩阵2，对应公式中的`kroneckerP2`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[M, M]，M与x中M维一致</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[N, N]，N与x中N维一致。</li><li>数据类型与入参x的数据类型一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -147,7 +145,7 @@ aclnnStatus aclnnFlatQuant(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -171,14 +169,13 @@ aclnnStatus aclnnFlatQuant(
   </tbody>
   </table>
 
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -193,7 +190,7 @@ aclnnStatus aclnnFlatQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
+      <td>传入参数中的必选输入（x、kroneckerP1、kroneckerP2）、必选输出（out、quantScale）是空指针。</td>
     </tr>
     <tr>
       <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
@@ -207,7 +204,7 @@ aclnnStatus aclnnFlatQuant(
       <td>x的维度不为3。</td>
     </tr>
     <tr>
-      <td>x的第一维度超过262144，或者第二维度超过256，或者第三维度超过256。</td>
+      <td>x的第一维度超出范围[1, 262144]，或者第二维度超出[1, 256]，或者第三维度超出[1, 256]。</td>
     </tr>
     <tr>
       <td>kroneckerP1的维度不为2，或者第一维度和第二维度与x的第二维度不一致。</td>
@@ -226,9 +223,9 @@ aclnnStatus aclnnFlatQuant(
     </tr>
     <tr>
       <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
-    </tr>                               
+    </tr>
   </tbody></table>
- 
+
 ## aclnnFlatQuant
 
 - **参数说明**：
@@ -268,14 +265,14 @@ aclnnStatus aclnnFlatQuant(
   </tbody>
   </table>
 
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnFlatQuant默认确定性实现。
 
 ## 调用示例
 

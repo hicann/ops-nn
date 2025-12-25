@@ -15,6 +15,8 @@
   $$
   DeepNorm(x_i^{\prime}) = (\frac{x_i^{\prime} - \bar{x^{\prime}}}{rstd}) * gamma + beta,
   $$
+
+
   $$
   \text { where } rstd = \sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps} , \quad \operatorname{x^{\prime}_i} = alpha * x_i   + gx_i
   $$
@@ -103,7 +105,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 无
@@ -114,5 +115,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_deep_norm](examples/test_aclnn_deep_norm.cpp) | 通过[aclnnDeepNorm](docs/aclnnDeepNorm.md)接口方式调用DeepNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/deep_norm_proto.h)构图方式调用DeepNorm算子。         |
-
-<!--[test_geir_deep_norm](examples/test_geir_deep_norm.cpp)-->

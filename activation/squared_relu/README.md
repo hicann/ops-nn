@@ -25,6 +25,8 @@
   Relu(x_i)=max(0,x_i)
   $$
 
+  其中，x是输入Tensor，y是输出Tensor，i是元素在Tensor中的位置索引。
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 773px"><colgroup>
@@ -61,8 +63,8 @@
 
 ## 约束说明
 
-- 输入值为NaN, 输出也为NaN, 输入是Inf, 输出也是Inf。
-- 输入是-Inf, 输出是0。
+- 输入值为NaN，输出也为NaN，输入是Inf，输出也是Inf。
+- 输入是-Inf，输出是0。
 - 输入shape只支持维度1至8维，不在范围内执行报错。 
 
 ## 调用说明

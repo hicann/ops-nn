@@ -2,10 +2,10 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -89,7 +89,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 无
@@ -100,5 +99,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_inplace_add_rms_norm](examples/test_aclnn_inplace_add_rms_norm.cpp) | 通过[aclnnInplaceAddRmsNorm](docs/aclnnInplaceAddRmsNorm.md)接口方式调用InplaceAddRmsNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/inplace_add_rms_norm_proto.h)构图方式调用InplaceAddRmsNorm算子。         |
-
-<!--[test_geir_inplace_add_rms_norm](examples/test_geir_inplace_add_rms_norm.cpp)-->

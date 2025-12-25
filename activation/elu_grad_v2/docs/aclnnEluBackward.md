@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：[aclnnElu](../../elu/docs/aclnnElu&aclnnInplaceElu.md)激活函数的反向计算，输出ELU激活函数正向输入的梯度。
@@ -63,8 +62,8 @@ aclnnStatus aclnnEluBackward(
 
 - **参数说明：**
   
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 111px">
+  <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
   <col style="width: 200px">
@@ -178,8 +177,6 @@ aclnnStatus aclnnEluBackward(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -227,7 +224,6 @@ aclnnStatus aclnnEluBackward(
     </tr>
   </tbody></table>
 
-
 ## aclnnEluBackward
 
 - **参数说明：**
@@ -267,14 +263,14 @@ aclnnStatus aclnnEluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnEluBackward默认确定性实现。
 
 ## 调用示例
 

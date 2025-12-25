@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnLayerNorm](../../layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 
+- 接口功能：[aclnnLayerNorm](../../layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
   
   $$
@@ -27,7 +27,7 @@
   $$
   temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_1}(gradOut \times weightOptional \times (input - mean) \times rstd)
   $$
- 
+
   $$
   gradInputOut = (gradOut \times weightOptional - (temp_1 + temp_2)) \times rstd
   $$
@@ -62,6 +62,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
   uint64_t           *workspaceSize,
   aclOpExecutor     **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnLayerNormBackward(
   void          *workspace,
@@ -74,14 +75,14 @@ aclnnStatus aclnnLayerNormBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -234,8 +235,8 @@ aclnnStatus aclnnLayerNormBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -347,15 +348,14 @@ aclnnStatus aclnnLayerNormBackward(
 
   gradOut，input，mean，rstd，weightOptional（非空时），biasOptional（非空时），gradInputOut（非空时），gradWeightOut（非空时），gradBiasOut（非空时），shape支持1-8维。
 
-<!--确定性计算
 - 确定性计算：
-
-  aclnnLayerNormBackward默认为确定性实现，暂不支持非确定性实现，[确定性计算](../../../docs/zh/context/确定性计算.md)配置后不会生效。
-  -->
+  
+  aclnnLayerNormBackward默认确定性实现。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -585,3 +585,4 @@ int main()
     return 0;
 }
 ```
+

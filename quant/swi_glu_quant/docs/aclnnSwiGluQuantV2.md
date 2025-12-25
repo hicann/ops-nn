@@ -9,10 +9,11 @@
 
 ## 功能说明
 
-- 算子功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。
-- 算子功能差异点说明：相比于aclnnSwiGluQuant接口，aclnnSwiGluQuantV2新增支持groupIndexOptional传入cumsum模式和count模式，通过groupListType控制不同的模式；新增支持非MoE（groupIndexOptional传空）的场景；新增支持int8或int4量化输出yOut，通过dstType控制不同的量化输出数据类型。
+- 接口功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。
+- 接口功能差异点说明：相比于aclnnSwiGluQuant接口，aclnnSwiGluQuantV2新增支持groupIndexOptional传入cumsum模式和count模式，通过groupListType控制不同的模式；新增支持非MoE（groupIndexOptional传空）的场景；新增支持int8或int4量化输出yOut，通过dstType控制不同的量化输出数据类型。
 - 算子支持范围：当前SwiGluQuant支持MoE场景（传入groupIndexOptional）和非MoE场景（groupIndexOptional传空），SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
 - MoE场景动态量化计算公式：  
+
   $$
     Act = SwiGlu(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act[0\colon g[0],\colon] * smooth\_scales[0\colon g[0],\colon], i=0 \\
@@ -23,20 +24,25 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
+
      其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。int8量化时，$dstTypeScale = 127$（127是int8的最大值）；int4量化时，$dstTypeScale = 7$（7是int4的最大值）。
   
 - MoE场景静态量化计算公式：  
+
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act(0\colon g[0],\colon) * smooth\_scales[0\colon g[0],\colon] + offsets[0\colon g[0],\colon], i=0 \\
     Y_{tmp}^i = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[g[i]\colon g[i+1], \colon] + offsets[g[i]\colon g[i+1], \colon], i \in (0, G) \cap \mathbb{Z}\\
   $$
+
   $$
     Y = Cast(Y_{tmp})
   $$
+
   其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
 - 非MoE场景（groupIndexOptional传空）动态量化计算公式：  
+
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp} = Act* smooth\_scales(0,\colon)\\
@@ -46,16 +52,20 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
+
      其中，A表示输入x的前半部分，B表示输入x的后半部分。int8量化时，$dstTypeScale = 127$（127是int8的最大值）；int4量化时，$dstTypeScale = 7$（7是int4的最大值）。
   
 - 非MoE场景（groupIndexOptional传空）静态量化计算公式：  
+
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp} = Act * smooth\_scales(0,\colon) + offsets(0,\colon) \\
   $$
+
   $$
     Y = Cast(Y_{tmp})
   $$
+
   其中，A表示输入x的前半部分，B表示输入x的后半部分。
 
 ## 函数原型
@@ -89,11 +99,11 @@ aclnnStatus aclnnSwiGluQuantV2(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
+  <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 270px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -115,7 +125,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>x</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td><ul><li>x的最后一维需要为2的倍数，且x的维数必须大于1维。</li><li>当前仅支持输入x的最后一维长度不超过8192。</li><li>当dstType传入值为29（表示yOut输出为INT4量化）时，x的最后一维需要为4的倍数。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>x的最后一维需要为2的倍数，且x的维数必须大于1维。</li><li>当前仅支持输入x的最后一维长度不超过8192。</li><li>当dstType传入值为29（表示yOut输出为INT4量化）时，x的最后一维需要为4的倍数。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -125,7 +135,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>smoothScalesOptional</td>
       <td>输入</td>
       <td>量化的smooth_scales，公式中的smooth_scales。</td>
-      <td><ul><li>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。<li>不支持空Tensor。</li></ul></td>
+      <td>shape支持[G, N]，[G, ]，其中G代表groupIndex分组数量，N为计算输入x的最后一维大小的二分之一。</td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -135,7 +145,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>offsetsOptional</td>
       <td>输入</td>
       <td>公式中的offsets。</td>
-      <td><ul><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li>该参数在动态量化场景下不生效，用户传入空指针即可。</li><li>静态量化场景下：数据类型支持FLOAT。</li><li>per_channel模式下shape支持[G, N]。</li><li>per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smoothScalesOptional保持一致。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -145,7 +155,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index，公式中的group_index。</td>
-      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</td>
+      <td>shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积；G的值不得超过输入x的除最后一维之外的所有维度大小之积。</li></td>
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>
@@ -195,7 +205,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>yOut</td>
       <td>输出</td>
       <td>输出张量。</td>
-      <td><ul><li>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。<li>不支持空Tensor。</li></ul></td>
+      <td>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。</td>
       <td>INT8、INT4</td>
       <td>ND</td>
       <td>-</td>
@@ -266,7 +276,6 @@ aclnnStatus aclnnSwiGluQuantV2(
     </tr>
   </tbody></table>
 
-
 ## aclnnSwiGluQuantV2
 
 - **参数说明：**
@@ -306,15 +315,14 @@ aclnnStatus aclnnSwiGluQuantV2(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSwiGluQuantV2默认确定性实现。
 
 ## 调用示例
 
@@ -347,7 +355,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，AscendCL初始化
+  // 固定写法，资源初始化
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -381,7 +389,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

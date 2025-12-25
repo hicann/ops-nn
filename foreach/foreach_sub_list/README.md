@@ -82,5 +82,3 @@
 | aclnn接口  | [test_aclnn_foreach_sub_list](examples/test_aclnn_foreach_sub_list.cpp) | 通过[aclnnForeachSubList](docs/aclnnForeachSubList.md)接口方式调用ForeachSubList算子。 |
 | aclnn接口  | [test_aclnn_foreach_sub_list_v2](examples/test_aclnn_foreach_sub_list_v2.cpp) | 通过[aclnnForeachSubListV2](docs/aclnnForeachSubListV2.md)接口方式调用ForeachSubList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sub_list_proto.h)构图方式调用ForeachSubList算子。         |
-
-<!--[test_geir_foreach_sub_list](examples/test_geir_foreach_sub_list.cpp)-->

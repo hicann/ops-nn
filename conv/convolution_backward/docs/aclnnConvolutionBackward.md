@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 接口功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。
+- 接口功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。   
 
 - 计算公式：
 
@@ -26,24 +26,24 @@
   $$
     W_{out}=\lfloor \frac{W_{in}+2*padding[2]-dilation[2] * (kernelSize[2] -1) -1}{stride[2]}+1 \rfloor
   $$
-
-  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。
+  
+  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。  
   - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$（对应函数原型中的gradInput参数）：
-
+  
     $$
     \frac{\partial L}{\partial x_{n, c_{in}, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}\cdot w_{c_{out}, c_{in}, p, q}
     $$
-
-    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。
-
+  
+    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。  
+  
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
-
+  
     $$
     \frac{\partial L}{\partial w_{c_{out}, c_{in}, p, q}} = \sum_{n=1}^{N} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} x_{n, c_{in}, i \cdot s_H + p, j \cdot s_W + q} \cdot \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
-
+  
   - 对于 $b$ 的梯度 $\frac{\partial L}{\partial b}$（对应函数原型中的gradBias参数）：
-
+  
     $$
     \frac{\partial L}{\partial b_{c_{out}}} = \sum_{n=1}^{N}       \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
@@ -53,7 +53,7 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnConvolutionBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnConvolutionBackward”接口执行计算。
 
 ```cpp
-aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
+aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(  
     const aclTensor     *gradOutput,
     const aclTensor     *input,
     const aclTensor     *weight,
@@ -74,10 +74,10 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnConvolutionBackward(
-    void                *workspace,
-    uint64_t             workspaceSize,
-    aclOpExecutor       *executor,
+aclnnStatus aclnnConvolutionBackward(   
+    void                *workspace,   
+    uint64_t             workspaceSize,  
+    aclOpExecutor       *executor,  
     const aclrtStream    stream)
 ```
 ## aclnnConvolutionBackwardGetWorkspaceSize
@@ -110,13 +110,13 @@ aclnnStatus aclnnConvolutionBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>输出张量y对L的梯度。</a></td>
-      <td>
+      <td>  
        <ul><li>支持空Tensor。</li>
        <li>数据类型与input、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和input、weight满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与input、gradInput一致。</li>
       </td>
-      <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、 FLOAT8_E4M3FN</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
       <td>√</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnConvolutionBackward(
        <li>shape不支持broadcast，要求和gradOutput、weight满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与gradOutput、gradInput一致。</li>
       </td>
-      <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、 FLOAT8_E4M3FN</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
       <td>√</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnConvolutionBackward(
        <li>shape不支持broadcast，要求和gradOutput、input满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与gradWeight一致。</li>
       </td>
-      <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、 FLOAT8_E4M3FN</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
       <td>√</td>
@@ -163,45 +163,48 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>stride</td>
       <td>输入</td>
       <td>反向传播过程中卷积核在输入上移动的步长。</td>
       <td>
-       <ul><li>数组长度为weight维度减2，数值必须大于0。</li>
+       <ul><li>对于一维卷积反向，数组长度必须为1。</li>
+       <li>数组长度为weight维度减2，数值必须大于0。</li>
       </td>
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>padding</td>
       <td>输入</td>
       <td>反向传播过程中对于输入填充。</td>
       <td>
-       <ul><li>数组长度可以为weight维度减2，代表每维填充长度（前后方向填充长度一致）。在2d场景下数组长度可以为4，为每维的前后两个方向设置不同的填充长度。</li>
+       <ul><li>对于一维卷积反向，数组长度必须为1。</li>
+       <li>数组长度可以为weight维度减2，在2d场景下数组长度可以为4。</li>
        <li>数值必须大于等于0。</li>
       </td>
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>dilation</td>
       <td>输入</td>
       <td>反向传播过程中的膨胀参数。</td>
       <td>
-       <ul><li>数组长度可以为weight维度减2。</li>
+       <ul><li>对于一维卷积反向，数组长度必须为1。</li>
+       <li>数组长度可以为weight维度减2。</li>
        <li>数值必须大于0。</li>
       </td>
       <td>INT64</td>
       <td>-</td>
       <td>参见<a href="#约束说明" target="_blank">约束说明。</a></td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>transposed</td>
@@ -211,7 +214,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>outputPadding</td>
@@ -224,19 +227,19 @@ aclnnStatus aclnnConvolutionBackward(
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>groups</td>
       <td>输入</td>
       <td>反向传播过程中输入通道的分组数。</td>
       <td>
-       <ul><li>需满足groups*weight的C维度=input的C维度，groups取值范围为[1,65535]。</li>
+       需满足groups*weight的C维度=input的C维度，groups取值范围为[1,65535]。
       </td>
       <td>INT32</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>outputMask</td>
@@ -249,14 +252,14 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>cubeMathType</td>
       <td>输入</td>
       <td>用于判断Cube单元应该使用哪种计算逻辑进行运算。</td>
       <td>
-       <ul><li>数据类型为INT8，注意：如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
+       <ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
        <li>支持的枚举值如下：</li>
        <ul><li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
        <li>1：ALLOW_FP32_DOWN_PRECISION，允许将输入数据降精度计算。</li>
@@ -266,7 +269,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>gradInput</td>
@@ -277,10 +280,10 @@ aclnnStatus aclnnConvolutionBackward(
        <li>数据类型与input保持一致。</li>
        <li>数据格式需要与input、gradOutput一致。</li>
       </td>
-      <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>gradWeight</td>
@@ -293,7 +296,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>FLOAT、FLOAT16、BFLOAT16、</td>
       <td>NCL、NCHW、NCDHW</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>gradBias</td>
@@ -306,7 +309,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -316,7 +319,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -326,23 +329,21 @@ aclnnStatus aclnnConvolutionBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
+      <td>×</td>
     </tr>
    </tbody>
-  </table>
-
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 不支持HIFLOAT8、FLOAT8_E4M3FN。
+  </table>  
 
 - **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
+
     第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
     <col style="width:250px">
     <col style="width:130px">
-    <col style="width:650px">
+    <col style="width:1050px">
     </colgroup>
    <thead>
     <tr>
@@ -392,15 +393,14 @@ aclnnStatus aclnnConvolutionBackward(
 
    </table>
 
-
 ## aclnnConvolutionBackward
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
        <col style="width:100px">
        <col style="width:100px">
-       <col style="width:550px">
+       <col style="width:950px">
        </colgroup>
     <thead>
        <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
@@ -420,25 +420,27 @@ aclnnStatus aclnnConvolutionBackward(
        <td>executor</td>
        <td>输入</td>
        <td>op执行器，包含了算子计算流程。</td>
-       </tr>
+       </tr>       
        <tr>
        <td>stream</td>
        <td>输入</td>
        <td>指定执行任务的Stream。</td>
-       </tr>
+       </tr> 
     </tbody>
   </table>
-
 
 - **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+  
+- 确定性计算
+  - aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-  <table style="undefined;table-layout: fixed; width: 2600px"><colgroup>
-    <col style="width:200px">
-    <col style="width:900px">
+  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
+    <col style="width:150px">
+    <col style="width:700px">
     </colgroup>
    <thead>
     <tr>
@@ -451,63 +453,86 @@ aclnnStatus aclnnConvolutionBackward(
    <tr>
      <th scope="row">空Tensor约束</th>
      <td>
-       <ul><li>input的维度必须是2维以上。stride、padding、dilation、outputPadding的维度必须等于input维度-2，其中padding在2D的时候可以是4维。</li>
-       <li>transposed=false时，D、H、W维度约束满足公式一（见表格下方说明）。</li>
-       <li>transposed=true时：</li>
-       <ul><li>weight的N轴必须大于0。</li>
-       <li>weight的N轴必须和input的C轴相等。</li>
+        <ul><li>input的维度必须是2维以上。stride、padding、dilation、outputPadding的维度必须等于input维度-2，其中padding在2D的时候可以是4维。</li>
+        <li>transposed=false时，D、H、W维度约束满足公式一（见表格下方说明）。</li>
+        <li>transposed=true时：</li>
+          <ul><li>weight的N轴必须大于0。</li>
+          <li>weight的N轴必须和input的C轴相等。</li></ul>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">gradOutput约束</th>
      <td>
-     <ul><li>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。</li>
+        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。
      </td>
    </tr>
    <tr>
      <th scope="row">input约束</th>
      <td>
-     <ul><li>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。</li>
-        <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
-        <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
+        <ul>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。
+          <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
+          <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li></ul>
+         </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">weight约束</th>
      <td>
-     <ul><li>2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。</li>
-       <ul><li>transposed=true: 当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
-       <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li>
+        <ul>2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。
+           <ul><li>transposed=true: 当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
+           <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li></ul>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">stride约束</th>
      <td>
-     <ul><li>3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。</li>
+        3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。
      </td>
    </tr>
    <tr>
      <th scope="row">padding约束</th>
      <td>
-     <ul><li>3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。</li>
+        3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。
      </td>
    </tr>
    <tr>
      <th scope="row">dilation约束</th>
      <td>
-     <ul><li>1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。</li>
+        1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。
      </td>
+   </tr>
+   <tr>
+     <th scope="row">dtype约束</th>
+     <td>
+        不支持HIFLOAT8、FLOAT8_E4M3FN。
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">cubeMathType说明</th>
+     <td>
+        <ul><li>枚举值为0：暂无说明。</li>
+        <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为2：当输入是BFLOAT16时不支持该选项。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">其他约束</th>
+     <td>-</td>
    </tr>
    </tbody>
   </table>
-
+    
   - 公式一：
+
     $$
-        (input_{dim} + padding_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
+        (input_{dim} + pad_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
     $$
 
 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
-
 
 ## 调用示例
 

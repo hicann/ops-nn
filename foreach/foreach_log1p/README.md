@@ -11,7 +11,7 @@
 
 - 算子功能：对张量列表中的每一个元素执行先加一再以e为底的对数函数运算。
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_log1p](examples/test_aclnn_foreach_log1p.cpp) | 通过[aclnnForeachLog1p](docs/aclnnForeachLog1p.md)接口方式调用ForeachLog1p算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_log1p_proto.h)构图方式调用ForeachLog1p算子。         |
-
-<!--[test_geir_foreach_log1p](examples/test_geir_foreach_log1p.cpp)-->

@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：用于实现两个张量列表内容的复制。
@@ -67,5 +66,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_copy](examples/test_aclnn_foreach_copy.cpp) | 通过[aclnnForeachCopy](docs/aclnnForeachCopy.md)接口方式调用ForeachCopy算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_copy_proto.h)构图方式调用ForeachCopy算子。         |
-
-<!--[test_geir_foreach_copy](examples/test_geir_foreach_copy.cpp)-->

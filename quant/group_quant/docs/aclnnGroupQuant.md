@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入x进行分组量化操作。
+- 接口功能：对输入x进行分组量化操作。
 - 计算公式：
 
   $$
@@ -31,6 +31,7 @@ aclnnStatus aclnnGroupQuantGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnGroupQuant(
   void          *workspace,
@@ -43,14 +44,14 @@ aclnnStatus aclnnGroupQuant(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -154,8 +155,8 @@ aclnnStatus aclnnGroupQuant(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -235,12 +236,15 @@ aclnnStatus aclnnGroupQuant(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 输入`scale`与输入`offsetOptional`的数据类型一致。
 - 如果属性`dstType`为29(INT4)，那么输入`x`的shape的最后一维需要能被2整除。
 - 如果属性`dstType`为3(INT32)，那么输入`x`的shape的最后一维需要能被8整除，输入`x`的shape尾轴是输出`y`的shape尾轴大小的8倍。
 - 输入`groupIndex`必须是非递减序列，最小值不能小于0，最大值必须与输入`x`的shape的第0维大小相等；当不满足约束限制时，参数`groupIndex`不校验。
 - 输入`scale`的第0维大小不支持为0。
 - 输入`offsetOptional`的shape当前仅支持[1, ]或[]。
+- 确定性计算：
+  - aclnnGroupQuant默认确定性实现。
 
 ## 调用示例
 

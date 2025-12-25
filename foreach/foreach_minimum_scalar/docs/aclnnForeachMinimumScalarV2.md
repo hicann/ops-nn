@@ -28,7 +28,7 @@
 ```cpp
 aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
   const aclTensorList *x, 
-  const aclScalar      scalar, 
+  const aclScalar     *scalar,
   aclTensorList       *out, 
   uint64_t            *workspaceSize, 
   aclOpExecutor      **executor)
@@ -46,14 +46,14 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -126,8 +126,8 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -160,12 +160,11 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
-    </tr>            
-
+    </tr>
   </tbody></table>
 
-
 ## aclnnForeachMinimumScalarV2
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -203,14 +202,14 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   </tbody>
   </table>
 
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnForeachMinimumScalarV2默认确定性实现。
 
 ## 调用示例
 
@@ -219,7 +218,6 @@ aclnnStatus aclnnForeachMinimumScalarV2(
 ```Cpp
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_minimum_scalar_v2.h"
 
@@ -293,7 +291,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclScalar* alpha = nullptr;

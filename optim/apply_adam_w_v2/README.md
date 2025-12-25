@@ -14,24 +14,37 @@
   实现adamW优化器功能。
 
 - 计算公式：
+
   $$
   if(maximize) : g_{t} = - g_{t}
   $$
+
+
   $$
   m_{t}=\beta_{1} m_{t-1}+\left(1-\beta_{1}\right) g_{t}
   $$
+
+
   $$
   v_{t}=\beta_{2} v_{t-1}+\left(1-\beta_{2}\right) g_{t}^{2}
   $$
+
+
   $$
   \hat{m}_{t}=\frac{m_{t}}{1-\beta_{1}^{t}}
   $$
+
+
   $$
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}}
   $$
+
+
   $$
   if(amsgrad) : maxGradNorm = max(maxGradNorm,\hat{v}_{t})
   $$
+
+
   $$
   \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}
   $$

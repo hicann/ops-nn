@@ -13,14 +13,14 @@
 
 - 计算公式：
   
-  1.输入x右乘kroneckerP2: 
+  1.输入x右乘kroneckerP2：
   
     $$
     x' = x @ kroneckerP2
     $$
 
   2.kroneckerP1左乘x':
-    
+
     $$
     x'' = kroneckerP1@x'
     $$
@@ -109,5 +109,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_flat_quant](examples/test_aclnn_flat_quant.cpp) | 通过[aclnnFlatQuant](docs/aclnnFlatQuant.md)接口方式调用FlatQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/flat_quant_proto.h)构图方式调用FlatQuant算子。         |
-
-<!--[test_geir_flat_quant](examples/test_geir_flat_quant.cpp)-->

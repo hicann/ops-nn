@@ -42,10 +42,10 @@ aclnnStatus aclnnSoftmax(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1270px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
-  <col style="width: 190px">
+  <col style="width: 250px">
   <col style="width: 200px">
   <col style="width: 177px">
   <col style="width: 104px">
@@ -116,8 +116,7 @@ aclnnStatus aclnnSoftmax(
     </tr>
   </tbody>
   </table>
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -152,7 +151,6 @@ aclnnStatus aclnnSoftmax(
       <td>self的数据类型不在支持的范围内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftmax
 
@@ -193,14 +191,14 @@ aclnnStatus aclnnSoftmax(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftmax默认确定性实现。
 
 ## 调用示例
 

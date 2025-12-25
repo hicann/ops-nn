@@ -66,5 +66,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_sigmoid](examples/test_aclnn_foreach_sigmoid.cpp) | 通过[aclnnForeachSigmoid](docs/aclnnForeachSigmoid.md)接口方式调用ForeachSigmoid算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sigmoid_proto.h)构图方式调用ForeachSigmoid算子。         |
-
-<!--[test_geir_foreach_sigmoid](examples/test_geir_foreach_sigmoid.cpp)-->

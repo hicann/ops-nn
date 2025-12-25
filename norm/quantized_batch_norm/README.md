@@ -136,4 +136,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_quantized_batch_norm](examples/test_aclnn_quantized_batch_norm.cpp) | 通过[aclnnQuantizedBatchNorm](docs/aclnnQuantizedBatchNorm.md)接口方式调用QuantizedBatchNorm算子。 |
-<!--| 图模式 | [test_geir_quantized_batch_norm](examples/test_geir_quantized_batch_norm.cpp)  | 通过[算子IR](op_graph/quantized_batch_norm_proto.h)构图方式调用QuantizedBatchNorm算子。       |-->  

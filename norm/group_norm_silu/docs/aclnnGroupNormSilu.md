@@ -4,13 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -18,6 +13,7 @@
 - 计算公式：
   - **GroupNorm:**
   记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
+
   $$
   \left\{
   \begin{array} {rcl}
@@ -27,7 +23,9 @@
   \end{array}
   \right.
   $$
+
   - **Silu:**
+
   $$
   out = \frac{groupnormOut}{1+e^{-groupnormOut}}
   $$
@@ -44,27 +42,19 @@
 - **参数说明：**
 
   - self(aclTensor*, 计算输入)：`out`计算公式中的$x$，维度需大于一维且小于等于八维，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
   - gamma(aclTensor*, 计算输入):可选参数，`out`计算公式中的$\gamma$，维度为一维，元素数量需与输入$self$的第1维度保持相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
   - beta(aclTensor*, 计算输入):可选参数，`out`计算公式中的$\beta$，维度为一维，元素数量需与输入$self$的第1维度保持相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
   - group(int, 计算输入): INT32或者INT64常量，表示将输入$self$的第1维度分为group组。
   - eps(double, 计算输入): DOUBLE常量，`out`和`rstdOut`计算公式中的$eps$值。
   - out(aclTensor*, 计算输出): 输出张量，数据类型和shape与$self$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
   - meanOut(aclTensor*, 计算输出): 输出张量，shape为`(N, group)`，其中`N`与$self$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型与self相同。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型与self相同。
-    - <term>昇腾910_95 AI处理器</term>：数据类型与gamma和beta相同。
   - rstdOut(aclTensor*, 计算输出): 输出张量，shape为`(N, group)`，其中`N`与$self$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas 推理系列产品</term>：数据类型与self相同。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型与self相同。
-    - <term>昇腾910_95 AI处理器</term>：数据类型与gamma和beta相同。
   - workspaceSize(uint64_t\*, 出参): 返回需要在Device侧申请的workspace大小。
   - executor(aclOpExecutor **, 出参): 返回op执行器，包含算子计算流程。
 

@@ -12,39 +12,44 @@
 - 算子功能：[DeepNorm](../deep_norm/README.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。
 
 - 计算公式：
-
-    $$
-    dgx_i = tmpone_i * rstd + \frac{2}{D} * dvar * tmptwo_i + {\frac{1}{D}} * dmean
-    $$
-
-    $$
-    dx_i = alpha * {gx}_i
-    $$
-
-    $$
-    dbeta = \sum_{i=1}^{N} dy_i
-    $$
-
-    $$
-    dgamma =  \sum_{i=1}^{N} dy_i * rstd * {tmptwo}_i
-    $$
-
-    其中：
-    $$
-    tmpone_i = dy_i * gamma
-    $$
-
-    $$
-    tmptwo_i = alpha * x_i + {gx}_i - mean
-    $$
-
-    $$
-    dvar = \sum_{i=1}^{N} (-0.5) * {tmpone}_i * {tmptwo}_i * {rstd}^3
-    $$
-
-    $$
-    dmean = \sum_{i=1}^{N} (-1) * {tmpone}_i * rstd
-    $$
+  
+  $$
+  dgx_i = tmpone_i * rstd + dvar * tmptwo_i + dmean
+  $$
+  
+  $$
+  dx_i = alpha * {dgx}_i
+  $$
+  
+  $$
+  dbeta = \sum_{i=1}^{N} dy_i
+  $$
+  
+  $$
+  dgamma =  \sum_{i=1}^{N} dy_i * rstd * {tmptwo}_i
+  $$
+  
+  其中：
+  
+  $$
+  oneDiv=-1/SizeOf(gamma)
+  $$
+  
+  $$
+  tmpone_i = dy_i * gamma
+  $$
+  
+  $$
+  tmptwo_i = alpha * x_i + {gx}_i - mean
+  $$
+  
+  $$
+  dvar = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * {tmptwo}_i * {rstd}^3
+  $$
+  
+  $$
+  dmean = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * rstd
+  $$
 
 ## 参数说明
 
@@ -153,5 +158,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_deep_norm_grad](examples/test_aclnn_deep_norm_grad.cpp) | 通过[aclnnDeepNormGrad](docs/aclnnDeepNormGrad.md)接口方式调用DeepNormGrad算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/deep_norm_grad_proto.h)构图方式调用DeepNormGrad算子。         |
-
-<!--[test_geir_deep_norm_grad](examples/test_geir_deep_norm_grad.cpp)-->

@@ -77,6 +77,4 @@ a和b的维度要大于dim，且a和b的dim维大小必须是3。
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式调用 |  -  | 通过[算子IR](./op_graph/cross_v2_proto.h)构图方式调用CrossV2算子。 |
-
-<!-- [test_geir_cross_v2](./examples/test_geir_cross_v2.cpp) -->
+| 图模式调用 | [test_geir_cross_v2](./examples/test_geir_cross_v2.cpp)   | 通过[算子IR](./op_graph/cross_v2_proto.h)构图方式调用CrossV2算子。 |

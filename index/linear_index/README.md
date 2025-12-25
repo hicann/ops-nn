@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -31,16 +30,23 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>indices</td>
+      <td>stride</td>
       <td>输入</td>
-      <td>输入索引。</td>
+      <td>步长。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>shape</td>
+      <td>indices_list</td>
       <td>输入</td>
-      <td>输入数据的shape信息。</td>
+      <td>索引列表。</td>
+      <td>INT32、INT64</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>value_size</td>
+      <td>输入</td>
+      <td>值的大小。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -50,20 +56,6 @@
       <td>待输出的索引。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-    </tr>
-    <tr>
-      <td>axis</td>
-      <td>可选属性</td>
-      <td>待计算的轴。</td>
-      <td>Int</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>combine</td>
-      <td>可选属性</td>
-      <td>是否合轴。</td>
-      <td>Bool</td>
-      <td>-</td>
     </tr>
   </tbody></table>
 

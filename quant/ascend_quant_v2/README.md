@@ -12,13 +12,13 @@
 - 算子功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
 - 计算公式：
   - sqrt\_mode为false时，计算公式为：
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrt\_mode为true时，计算公式为：
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -99,12 +99,10 @@
     </tr>
   </tbody></table>
 
-
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 输出Tensor数据类型仅支持INT8、INT4。<!--INT32 -->
-    - dst_type：支持取值2，29，分别表示INT8、INT4。<!--INT32(3)aclnn中有这个类型-->
-    - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
-
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - 输出Tensor数据类型仅支持INT8、INT4。<!--INT32 -->
+  - dst_type：支持取值2，29，分别表示INT8、INT4。<!--INT32(3)aclnn中有这个类型-->
+  - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 ## 约束说明
 
 无
@@ -116,5 +114,3 @@
 | aclnn接口  | [test_aclnn_ascend_quant](examples/test_aclnn_ascend_quant.cpp) | 通过[aclnnAscendQuant](docs/aclnnAscendQuant.md)接口方式调用AscendQuantV2算子。 |
 | aclnn接口  | [test_aclnn_ascend_quant_v3](examples/test_aclnn_ascend_quant_v3.cpp) | 通过[aclnnAscendQuantV3](docs/aclnnAscendQuantV3.md)接口方式调用AscendQuantV2算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/ascend_quant_v2_proto.h)构图方式调用AscendQuantV2算子。         |
-
-<!--[test_geir_ascend_quant_v2](examples/test_geir_ascend_quant_v2.cpp)-->

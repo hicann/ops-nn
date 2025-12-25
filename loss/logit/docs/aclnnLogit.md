@@ -51,19 +51,18 @@ aclnnStatus aclnnLogit(
   aclrtStream      stream)
 ```
 
-
 ## aclnnLogitGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1464px"><colgroup>
-  <col style="width: 159px">
-  <col style="width: 120px">
-  <col style="width: 292px">
-  <col style="width: 275px">
-  <col style="width: 230px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1400px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 200px">
+  <col style="width: 250px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -102,7 +101,7 @@ aclnnStatus aclnnLogit(
       <td>out</td>
       <td>输出</td>
       <td>输出张量，公式中的输出y。</td>
-      <td>输出的数据类型、数据格式和shape与输入input保持一致。</li></ul></td>
+      <td>输出的数据类型、数据格式和shape与输入input保持一致。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -130,7 +129,6 @@ aclnnStatus aclnnLogit(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -160,7 +158,6 @@ aclnnStatus aclnnLogit(
       <td>input的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnLogit
 
@@ -201,12 +198,14 @@ aclnnStatus aclnnLogit(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
+- 确定性计算：
+  - aclnnLogit默认确定性实现。
 
 - input取值范围不在[0, 1]，输出NaN，取值0时为-Inf，取值为1时为Inf。
 - eps大于1时，输出NaN，取值为1时为Inf。
@@ -253,7 +252,7 @@ void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，AscendCL初始化
+  // 固定写法，资源初始化
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -287,7 +286,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

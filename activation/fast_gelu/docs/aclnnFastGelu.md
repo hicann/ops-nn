@@ -7,10 +7,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 快速高斯误差线性单元激活函数。
 FastGelu定义如下：
+
 $$
 FastGelu(x_i) = \frac {x_i} {1 + e^{-1.702 x_i}}
 $$                   
@@ -41,11 +41,11 @@ aclnnStatus aclnnFastGelu(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -67,7 +67,7 @@ aclnnStatus aclnnFastGelu(
       <td>self</td>
       <td>输入</td>
       <td>表示输入张量，公式中的x_{i}。</td>
-      <td><ul><li>数据格式需要与out一致。</li><li>shape需要与out一致。</li><li>数据类型需要与out一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据格式需要与out一致。</li><li>shape需要与out一致。</li><li>数据类型需要与out一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -77,7 +77,7 @@ aclnnStatus aclnnFastGelu(
       <td>out</td>
       <td>输出</td>
       <td>表示输出张量，公式中的FastGelu(x_i)。</td>
-      <td><ul><li>数据格式需要与self一致。</li><li>shape需要与self一致。</li><li>数据格式需要与self一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据格式需要与self一致。</li><li>shape需要与self一致。</li><li>数据格式需要与self一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -145,7 +145,6 @@ aclnnStatus aclnnFastGelu(
     </tr>
    </tbody></table>
 
-
 ## aclnnFastGelu
 
 - **参数说明：**
@@ -185,14 +184,14 @@ aclnnStatus aclnnFastGelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnFastGelu默认确定性实现。
 
 ## 调用示例
 

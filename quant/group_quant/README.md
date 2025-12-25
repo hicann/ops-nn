@@ -92,5 +92,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_group_quant](examples/test_aclnn_group_quant.cpp) | 通过[aclnnGroupQuant](docs/aclnnGroupQuant.md)接口方式调用GroupQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/group_quant_proto.h)构图方式调用GroupQuant算子。         |
-
-<!--[test_geir_group_quant](examples/test_geir_group_quant.cpp)-->

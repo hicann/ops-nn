@@ -10,7 +10,7 @@
 ## 功能说明
 - 算子功能：完成[aclnnSwiGlu](../swi_glu/docs/aclnnSwiGlu.md)的反向计算，完成x的SwiGlu反向梯度计算。
 
-- 计算公式：
+- 计算公式： 
   <p style="text-align: center">
   out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A)*A)]*B
   </p>
@@ -47,7 +47,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>公式中的输入A和B<sub>i</sub>。</td>
+      <td>公式中的输入A和B。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -66,9 +66,8 @@
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-
+    
   </tbody></table>
-
 
 ## 约束说明
 

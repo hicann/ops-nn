@@ -58,5 +58,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_zero_inplace](examples/test_aclnn_foreach_zero_inplace.cpp) | 通过[aclnnForeachZeroInplace](docs/aclnnForeachZeroInplace.md)接口方式调用ForeachZeroInplace算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_zero_inplace_proto.h)构图方式调用ForeachZeroInplace算子。         |
-
-<!--[test_geir_foreach_zero_inplace](examples/test_geir_foreach_zero_inplace.cpp)-->

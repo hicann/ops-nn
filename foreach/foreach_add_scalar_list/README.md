@@ -10,7 +10,6 @@
 ## 功能说明
 
 - 算子功能：输入张量列表和输入标量列表执行逐元素相加运算。
-
 - 计算公式：
 
   $$
@@ -74,6 +73,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_add_scalar_list](examples/test_aclnn_foreach_add_scalar_list.cpp) | 通过[aclnnForeachAddScalarList](docs/aclnnForeachAddScalarList.md)接口方式调用ForeachAddScalarList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_add_scalar_list_proto.h)构图方式调用ForeachAddScalarList算子。         |
-
-<!--[test_geir_foreach_add_scalar_list](examples/test_geir_foreach_add_scalar_list.cpp)-->
-<!--[test_aclnn_foreach_add_scalar_list](examples/test_aclnn_foreach_add_scalar_list.cpp)-->

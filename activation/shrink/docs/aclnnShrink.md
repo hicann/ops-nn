@@ -46,8 +46,8 @@ aclnnStatus aclnnShrink(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
   <col style="width: 230px">
@@ -167,7 +167,6 @@ aclnnStatus aclnnShrink(
     </tr>
   </tbody></table>
 
-
 ## aclnnShrink
 
 - **参数说明：**
@@ -207,14 +206,14 @@ aclnnStatus aclnnShrink(
   </tbody>
   </table>
 
-
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnShrink默认确定性实现。
 
 ## 调用示例
 

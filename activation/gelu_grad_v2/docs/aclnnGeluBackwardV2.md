@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：完成[aclnnGeluV2](../../gelu_v2/docs/aclnnGeluV2.md)的反向。
@@ -60,16 +59,15 @@ aclnnStatus aclnnGeluBackwardV2(
   const aclrtStream stream)
 ```
 
-
 ## aclnnGeluBackwardV2GetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 111px">
+  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
+  <col style="width: 131px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -150,8 +148,6 @@ aclnnStatus aclnnGeluBackwardV2(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -193,7 +189,6 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody></table>
 
-
 ## aclnnGeluBackwardV2
 
 - **参数说明：**
@@ -233,14 +228,14 @@ aclnnStatus aclnnGeluBackwardV2(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGeluBackwardV2默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

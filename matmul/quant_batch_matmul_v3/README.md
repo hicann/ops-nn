@@ -7,7 +7,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -16,35 +15,40 @@
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 无pertoken无bias：
+
       $$
       out = x1@x2 * scale + offset
       $$
 
     - bias INT32：
+
       $$
       out = (x1@x2 + bias) * scale + offset
       $$
 
     - bias BFLOAT16/FLOAT32（此场景无offset）：
+
       $$
       out = x1@x2 * scale + bias
       $$
 
     - pertoken无bias：
+
       $$
       out = x1@x2 * scale * pertokenScaleOptional
       $$
 
     - pertoken， bias INT32（此场景无offset）：
+
       $$
       out = (x1@x2 + bias) * scale * pertokenScaleOptional
       $$
 
     - pertoken， bias BFLOAT16/FLOAT16/FLOAT32（此场景无offset）：
+
       $$
       out = x1@x2 * scale * pertokenScaleOptional + bias
       $$
-
 
 ## 参数说明
 
@@ -124,9 +128,13 @@
   - offset只支持FLOAT32数据类型。
   - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和BFLOAT16数据类型。
-
 ## 约束说明
 
 - 不支持空tensor。
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
 
+## 调用说明
+
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口  | [test_aclnn_quant_matmul_v3](examples/test_aclnn_quant_matmul_v3_at.cpp) | 通过<br>[aclnnQuantMatmulV3](docs/aclnnQuantMatmulV3.md)<br>[aclnnQuantMatmulV4](docs/aclnnQuantMatmulV4.md)<br>[aclnnQuantMatmulWeightNz](docs/aclnnQuantMatmulWeightNz.md)<br>[aclnnQuantMatmulV5](../quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV3算子。 |

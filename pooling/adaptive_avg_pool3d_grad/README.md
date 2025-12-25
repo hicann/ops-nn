@@ -6,7 +6,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -32,25 +31,25 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>y_grad</td>
       <td>输入</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的入参，表示当前节点的梯度。数据类型、数据格式、shape的总维数与入参`self`保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的入参，表示当前节点的梯度。数据类型、数据格式、shape的总维数与入参`x`保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>NCDHW、ND</td>
+      <td>ND</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的入参。数据类型、数据格式、shape的总维数与入参`gradOutput`保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的入参。数据类型、数据格式、shape的总维数与入参`y_grad`保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>NCDHW、ND</td>
+      <td>ND</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>x_grad</td>
       <td>输出</td>
-      <td>待进行AdaptiveAvgPool3dGrad计算的出参。数据类型、shape与入参`self`保持一致。</td>
+      <td>待进行AdaptiveAvgPool3dGrad计算的出参。数据类型、shape与入参`x`的保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>NCDHW、ND</td>
+      <td>ND</td>
     </tr>
   </tbody></table>
 

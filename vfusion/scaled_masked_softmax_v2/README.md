@@ -79,4 +79,8 @@
 
 无
 
+## 调用说明
 
+| 调用方式 | 调用样例                                                                   | 说明                                                             |
+|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_scaled_masked_softmax](./examples/test_aclnn_scaled_masked_softmax.cpp) | 通过[aclnnScaledMaskedSoftmax](./docs/aclnnScaledMaskedSoftmax.md)接口方式调用aclnnScaledMaskedSoftmax算子。    |

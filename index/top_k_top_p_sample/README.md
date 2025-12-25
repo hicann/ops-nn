@@ -20,7 +20,7 @@
   |Sample采样|×|×|√|对输入logits按每个batch，进行Softmax后与q进行除法取最大结果|
   |topK-topP采样|√|√|×|对输入logits按每个batch，先进行topK采样，再进行topP采样后取最大结果|
   |topK-Sample采样|√|×|√|对输入logits按每个batch，先进行topK采样，再进行Sample采样后取最大结果|
-  |topP-Sample采样|×|√|√|对输入logits按每个batch，先进行topP采样，在进行Sample采样后取最大结果|
+  |topP-Sample采样|×|√|√|对输入logits按每个batch，先进行topP采样，再进行Sample采样后取最大结果|
   |topK-topP-Sample采样|√|√|√|对输入logits按每个batch，先进行topK采样，再进行topP采样，最后进行Sample采样后取最大结果|
 - 计算公式：
 
@@ -62,12 +62,12 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   topKMask[b] = sortedValue[b]<Min(topKValue[b])
   $$
 
-  * 将小于阈值的部分通过mask置为-inf
+  * 将小于阈值的部分通过mask置为-Inf
 
   $$
   sortedValue[b][v]=
   \begin{cases}
-  -inf & \text{topKMask[b][v]=true} \\
+  -Inf & \text{topKMask[b][v]=true} \\
   sortedValue[b][v] & \text{topKMask[b][v]=false} &
   \end{cases}
   $$
@@ -81,41 +81,48 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * 按最后一轴计算累积概率（从最小的概率开始累加）
 
   $$
-  probsSum[b]=probsValue[b].cumcum (dim=-1)
+  probsSum[b]=probsValue[b].cumsum (dim=-1)
   $$
 
   TopP采样
 
   * 如果前序topK采样已有排序输出结果，则根据topK采样输出计算累积词频，并根据topP截断采样：
+
     $$
     topPMask[b] = probsSum[b][*] < topP[b]
     $$
 
   * 如果topK采样被跳过，则先对输入logits[b]进行softmax处理：
+
   $$
   logitsValue[b] = logits[b].softmax(dim=-1)
   $$
+
   * 尝试使用topKGuess，对logits进行滚动排序，获取计算topP的mask：
+
   $$
   topPValue[b] = {Max(topKGuess)}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ topPValue[b]\left \{s-1 \right \}  \cup \left \{ logitsValue[b][v] \ge topKMin[b][s-1] \right \} \right \}
   $$
 
   * 如果在访问到logitsValue[b]的第1e4个元素之前，下条件得到满足，则视为topKGuess成功，
+
   $$
   \sum^{topKGuess}(topPValue[b]) \ge topP[b]\\
   topPMask[b][Index(topPValue[b])] = false
   $$
+
   * 如果topKGuess失败，则对当前序logitsValue[b]进行全排序和cumsum，按topP[b]截断采样：
+
   $$
   sortedLogits[b] = sort(logitsValue[b], descendant) \\
-  probsSum[b]=sortedLogits[b].cumcum (dim=-1) \\
+  probsSum[b]=sortedLogits[b].cumsum (dim=-1) \\
   topPMask[b] = (probsSum[b] - sortedLogits[b])>topP[b] 
   $$
 
-  * 将需要过滤的位置设置为-inf，得到sortedValue[b][v]：
+  * 将需要过滤的位置设置为-Inf，得到sortedValue[b][v]：
 
     $$
-    sortedValue[b][v] = \begin{cases} -inf& \text{topPMask[b][v]=true}\\sortedValue[b][v]& \text{topPMask[b][v]=false}\end{cases}
+    sortedValue[b][v] = \begin{cases} -Inf& \text{topPMask[b][v]=true}\\sortedValue[b][v]& \text{topPMask[b][v]=false}\end{cases}
     $$
 
     取过滤后sortedValue[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为`logitsIdx`:
@@ -141,6 +148,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
     probsOpt = \frac{probs}{q + eps}
     $$
+
   * 从`probsOpt`中取出每个batch的最大元素，从`logitsIdx`中gather相应元素的输入索引，作为输出`logitsSelectIdx`：
     
     $$

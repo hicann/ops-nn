@@ -9,29 +9,33 @@
 
 ## 功能说明
 
-- 算子功能：
+- 算子功能： 
   通过采样位置（sample location）、注意力权重（attention weights）、映射后的value特征、多尺度特征起始索引位置、多尺度特征图的空间大小（便于将采样位置由归一化的值变成绝对位置）等参数来遍历不同尺寸特征图的不同采样点。
 
 - 计算公式：
 
     将采样点的归一化坐标 $(u,v)\in[0,1]$ 映射到第 $\ell$ 层特征图的像素坐标系：
+
     $$
     x = u \cdot W_\ell - 0.5, \qquad y = v \cdot H_\ell - 0.5
     $$
 
 
     确定采样点落在哪四个整数网格点之间：
+
     $$
     x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
     y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
-    $$
+    $$  
 
     计算采样点相对于左上角网格点的偏移，用于插值权重：
+
     $$
     \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
-    $$
+    $$  
 
     计算双线性插值权重，四个邻点的和为1
+
     $$
     \begin{aligned}
     w_{00} &= (1-\alpha_y)(1-\alpha_x), \\
@@ -42,22 +46,24 @@
     $$
 
     计算得到采样点对应的特征向量（长度为 $D$）:
+
     $$
     \operatorname{bilinear}(V;\,b,h,\ell,x,y) =
     w_{00} \, V_{b,\ell,y_0,x_0,h,:}
     + w_{10} \, V_{b,\ell,y_0,x_1,h,:}
     + w_{01} \, V_{b,\ell,y_1,x_0,h,:}
     + w_{11} \, V_{b,\ell,y_1,x_1,h,:}
-    $$
+    $$  
 
     所有层、所有采样点的双线性采样结果，加权求和得到最终输出：
+
     $$
     O_{b,q,h,:} =
     \sum_{\ell=0}^{L-1} \sum_{p=0}^{N_p-1}
     A_{b,q,h,\ell,p} \cdot
     \operatorname{bilinear}\!\left(V;\,b,h,\ell,
     x_{b,q,h,\ell,p}, y_{b,q,h,\ell,p}\right)
-    $$
+    $$  
 
 ## 参数说明
 

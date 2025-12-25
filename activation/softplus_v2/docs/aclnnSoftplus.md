@@ -44,11 +44,11 @@ aclnnStatus aclnnSoftplus(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1320px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 210px">
-  <col style="width: 230px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -80,7 +80,7 @@ aclnnStatus aclnnSoftplus(
       <td>beta</td>
       <td>输入</td>
       <td>公式中的beta。</td>
-      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（除了当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数的场景不满足以外，其余场景均满足推导关系）。</li></ul></td>
+      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。这些场景不满足推导关系外，其余场景均满足推导关系）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -129,8 +129,6 @@ aclnnStatus aclnnSoftplus(
   </tbody>
   </table>
   
-
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -165,7 +163,6 @@ aclnnStatus aclnnSoftplus(
       <td>self与out的数据类型不一致且无法转换。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftplus
 
@@ -206,14 +203,14 @@ aclnnStatus aclnnSoftplus(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftplus默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

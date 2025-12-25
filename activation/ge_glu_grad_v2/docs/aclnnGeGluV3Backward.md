@@ -14,6 +14,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeGluV3BackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeGluV3Backward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(
   const aclTensor *gradOutput,
@@ -29,9 +30,9 @@ aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(
 
 ```Cpp
 aclnnStatus aclnnGeGluV3Backward(
-  void            *workspace,
-  uint64_t         workspaceSize,
-  aclOpExecutor   *executor,
+  void            *workspace, 
+  uint64_t         workspaceSize, 
+  aclOpExecutor   *executor, 
   aclrtStream      stream)
 ```
 
@@ -39,14 +40,14 @@ aclnnStatus aclnnGeGluV3Backward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 280px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -65,7 +66,7 @@ aclnnStatus aclnnGeGluV3Backward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>待进行GeGluV3Backward计算的入参，公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半。</li></ul></td>
+      <td><ul><li>shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -75,7 +76,7 @@ aclnnStatus aclnnGeGluV3Backward(
       <td>self</td>
       <td>输入</td>
       <td>GeGluV3Backward计算的入参，公式中的self。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape中除dim维外，其它维的大小跟gradOutput一样，dim维的大小是gradOutput的两倍。</li></ul></td>
+      <td><ul><li>shape中除dim维外，其它维的大小跟gradOutput一样，dim维的大小是gradOutput的两倍。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -84,7 +85,7 @@ aclnnStatus aclnnGeGluV3Backward(
       <td>gelu</td>
       <td>输入</td>
       <td>GeGluV3Backward计算的入参，公式中的gelu。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput一样。</li><li>数据类型与self一致。</li></ul></td>
+      <td><ul><li>shape需要与gradOutput一样。</li><li>数据类型与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -152,8 +153,6 @@ aclnnStatus aclnnGeGluV3Backward(
     </tr>
   </tbody>
   </table>
-
-
 
 - **返回值：**
 
@@ -238,7 +237,8 @@ aclnnStatus aclnnGeGluV3Backward(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGeGluV3Backward默认确定性实现。
 
 ## 调用示例
 
@@ -406,4 +406,3 @@ int main()
     return 0;
 }
 ```
-

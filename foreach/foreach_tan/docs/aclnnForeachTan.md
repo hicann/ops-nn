@@ -44,14 +44,14 @@ aclnnStatus aclnnForeachTan(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+    <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
-    <col style="width: 392px">
-    <col style="width: 228px">
+    <col style="width: 330px">
+    <col style="width: 223px">
     <col style="width: 101px">
-    <col style="width: 100px">
+    <col style="width: 190px">
     <col style="width: 145px">
     </colgroup>
     <thead>
@@ -109,15 +109,14 @@ aclnnStatus aclnnForeachTan(
   </tbody>
   </table>
 
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -199,7 +198,9 @@ aclnnStatus aclnnForeachTan(
 
 ## 约束说明
 
-输入值域在[-65504, 65504]范围满足功能精度要求，超过数值范围无法保证精度。
+- 输入值域在[-65504, 65504]范围满足功能精度要求，超过数值范围无法保证精度。
+- 确定性计算：
+  - aclnnForeachTan默认确定性实现。
 
 ## 调用示例
 
@@ -208,7 +209,6 @@ aclnnStatus aclnnForeachTan(
 ```Cpp
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_tan.h"
 
@@ -234,7 +234,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，资源初始化
+    // 固定写法，acl初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -283,7 +283,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* out1 = nullptr;

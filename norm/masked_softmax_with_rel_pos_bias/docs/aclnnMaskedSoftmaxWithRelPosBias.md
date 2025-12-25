@@ -4,17 +4,12 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-- 算子功能：替换在swinTransformer中使用window attention计算softmax的部分。
+- 接口功能：替换在swinTransformer中使用window attention计算softmax的部分。
 
 - 计算公式：
 
@@ -141,8 +136,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   </tbody>
   </table>
 
-  - <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
-  
 - **返回值：**
   <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。</p>
   <p>第一段接口完成入参校验，出现以下场景报错：</p>
@@ -214,8 +207,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-
-- <term>Atlas 推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。
+- 确定性计算：
+  - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
 
 - 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize 表示S2对齐32Byte后的结果。 
   
@@ -246,7 +239,6 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     minComputeSize = xSize* 12 + softMaskMinTmpSize;
     ```
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：如果为BFLOAT16类型，其与FLOAT16类型的公式保持一致。
-
 
 ## 调用示例
 
@@ -279,7 +271,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，AscendCL初始化
+  // 固定写法，资源初始化
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -313,7 +305,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

@@ -12,6 +12,7 @@
 - 算子功能：[aclnnSoftplus](../../softplus_v2/docs/aclnnSoftplus.md)的反向传播。
 
 - 计算公式：
+
   $$
   gradInput = gradOutput  \cdot  \begin{cases}
   \frac{1}{1+e^{(-\beta * self)}}, ~~~~~~~\beta * self \le threshold \\
@@ -42,16 +43,15 @@ aclnnStatus aclnnSoftplusBackward(
   aclrtStream    stream)
 ```
 
-
 ## aclnnSoftplusBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 250px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -142,8 +142,6 @@ aclnnStatus aclnnSoftplusBackward(
     </tbody>
   </table>
   
-
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -175,7 +173,6 @@ aclnnStatus aclnnSoftplusBackward(
       <td>gradOutput、self和gradInput的shape不同。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftplusBackward
 
@@ -216,14 +213,14 @@ aclnnStatus aclnnSoftplusBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
   
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftplusBackward默认确定性实现。
 
 ## 调用示例
 

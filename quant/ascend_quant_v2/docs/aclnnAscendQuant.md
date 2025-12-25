@@ -9,16 +9,16 @@
 
 ## 功能说明
 
-- 算子功能：对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。
+- 接口功能：对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为:
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrtMode为true时，计算公式为:
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -39,6 +39,7 @@ aclnnStatus aclnnAscendQuantGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAscendQuant(
   void          *workspace,
@@ -46,18 +47,19 @@ aclnnStatus aclnnAscendQuant(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnAscendQuantGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -106,7 +108,7 @@ aclnnStatus aclnnAscendQuant(
       <td>sqrtMode</td>
       <td>输入</td>
       <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
-      <td>当取值为true时，公式为y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
+      <td>当取值为true时，公式为 y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
       <td>BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -165,16 +167,14 @@ aclnnStatus aclnnAscendQuant(
   </tbody>
   </table>
   
- 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -208,7 +208,7 @@ aclnnStatus aclnnAscendQuant(
       <td>y的数据类型为INT4时，x的shape尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的8倍，或者x与y的shape的非尾轴的大小不一致。</td>
+      <td>y的数据类型为INT32时，y的shape尾轴不是x的shape尾轴大小的1/8，或者x与y的shape的非尾轴的大小不一致。</td>
     </tr>
   </tbody></table>
 
@@ -257,7 +257,8 @@ aclnnStatus aclnnAscendQuant(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnAscendQuant默认确定性实现。
 
 ## 调用示例
 

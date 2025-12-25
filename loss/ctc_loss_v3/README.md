@@ -105,3 +105,8 @@
 * targets的shape为(N, S)或者(sum(target_lengths),)，其中S>=max(target_lengths)。
 * reduction的取值范围为{'none', 'mean', 'sum'}。
 
+## 调用说明
+
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口 | [test_aclnn_ctc_loss_v3](examples/test_aclnn_ctc_loss_v3.cpp) | 通过[aclnnCtcLossV3](docs/aclnnCtcLoss.md)接口方式调用CtclossV3算子。 |

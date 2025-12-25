@@ -6,13 +6,13 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
 - 算子功能：将alpha和value相乘，并按照sorted_indices中的顺序，累加到var张量的指定axis维度中。
 
 - 计算公式：
+
   $$
   var[indices]+= alpha * updates
   $$
@@ -87,4 +87,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_index_add](../inplace_scatter_add/examples/test_aclnn_index_add.cpp) | 通过[aclnnIndexAdd](../inplace_scatter_add/docs/aclnnIndexAdd.md)接口方式调用InplaceIndexAddWithSorted算子。 |
+| aclnn调用 | [test_aclnn_index_add](../inplace_scatter_add/examples/test_aclnn_inplace_scatter_add.cpp) | 通过[aclnnIndexAdd](../inplace_scatter_add/docs/aclnnIndexAdd.md)接口方式调用InplaceIndexAddWithSorted算子。 |

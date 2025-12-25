@@ -128,7 +128,6 @@
 ## 约束说明
 
 无
-<!--LayerNormBackward默认为确定性实现，暂不支持非确定性实现，[确定性计算](./docs/zh/context/确定性计算.md)配置后不会生效。-->
 
 ## 调用说明
 
@@ -136,5 +135,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_layer_norm_grad_v3](examples/test_aclnn_layer_norm_grad_v3.cpp) | 通过[aclnnLayerNormBackward](docs/aclnnLayerNormBackward.md)接口方式调用LayerNormGradV3算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/layer_norm_grad_v3_proto.h)构图方式调用LayerNormGradV3算子。         |
-
-<!--[test_geir_layer_norm_grad_v3](examples/test_geir_layer_norm_grad_v3.cpp)-->

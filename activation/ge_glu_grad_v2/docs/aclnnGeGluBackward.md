@@ -30,6 +30,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeGluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeGluBackward”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(
   const aclTensor *gradOutput,
@@ -54,14 +55,14 @@ aclnnStatus aclnnGeGluBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 280px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -80,7 +81,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>待进行GeGluBackward计算的入参，公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self一致。</li><li>shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半。</li></ul></td>
+      <td><ul><li>数据类型与self一致。</li><li>shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -90,7 +91,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>self</td>
       <td>输入</td>
       <td>GeGluBackward计算的入参，公式中的self。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape中除dim维外，其它维的大小跟gradOutput一样，dim维的大小是gradOutput的两倍。</li></ul></td>
+      <td><ul><li>shape中除dim维外，其它维的大小与gradOutput一样，dim维的大小是gradOutput的两倍。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -99,7 +100,7 @@ aclnnStatus aclnnGeGluBackward(
       <td>gelu</td>
       <td>输入</td>
       <td>GeGluBackward计算的入参，公式中的gelu。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与self一致。</li><li>shape需要与gradOutput一样。</li></ul></td>
+      <td><ul><li>数据类型与self一致。</li><li>shape需要与gradOutput一样。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -158,8 +159,6 @@ aclnnStatus aclnnGeGluBackward(
   </tbody>
   </table>
 
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -180,7 +179,7 @@ aclnnStatus aclnnGeGluBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>参数gradOutput、self、gelu、gradInput是空指针。</td>
+      <td>参数gradOutput、self、gelu、gradInput为空指针。</td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
@@ -197,7 +196,6 @@ aclnnStatus aclnnGeGluBackward(
       <td>参数approximate的取值范围不是0和1。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnGeGluBackward
 
@@ -244,7 +242,8 @@ aclnnStatus aclnnGeGluBackward(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnGeGluBackward默认确定性实现。
 
 ## 调用示例
 

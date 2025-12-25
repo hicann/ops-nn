@@ -6,12 +6,11 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|×|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
 - 算子功能：将DynamicQuantV2和ScatterUpdate单算子自动融合为DynamicQuantUpdateScatterV2融合算子，以实现INT4类型的非对称量化。
-- 过程描述：原始数据x首先经过DynamicQuantV2算子处理，将其转化为INT4类型，并输出对应的缩放因子scale和偏移量offset。随后，三个不同的ScatterUpdate以插入索引indices、三个初始数据（var，var_scale和var_offset）和DynamicQuantV2算子的三个输出（即量化后的数据，scale和offset）作为输入按指定位置执行写入更新操作，最终得到三个原地更新输出var，var_scale和var_offset，分别对应量化更新后的数据及其对应的量化参数。
+- 过程描述：原始数据x首先经过DynamicQuantV2算子处理，将其转化为INT4类型，并输出对应的缩放因子scale和偏移量offset。随后，ScatterUpdate以插入索引indices和DynamicQuantV2算子的三个输出（即量化后的数据，scale和offset）作为输入按指定位置执行写入更新操作，最终得到三个输出var，var_scale和var_offset，分别对应量化更新后的数据及其对应的量化参数。
 
 ## 参数说明
 
@@ -47,22 +46,22 @@
     </tr>
     <tr>
       <td>var</td>
-      <td>输入/输出</td>
-      <td>需要更新的量化结果，对应过程描述中的"var"</td>
+      <td>输出</td>
+      <td>输出量化的结果，对应过程描述中的"var"</td>
       <td>INT4</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var_scale</td>
-      <td>输入/输出</td>
-      <td>需要更新的量化scale因子，对应过程描述中的"var_scale"</td>
+      <td>输出</td>
+      <td>输出量化的scale因子，对应过程描述中的"var_scale"</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var_offset</td>
-      <td>输入/输出</td>
-      <td>需要更新的量化offset因子，对应过程描述中的"var_offset"</td>
+      <td>输出</td>
+      <td>输出量化的offset因子，对应过程描述中的"var_offset"</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>

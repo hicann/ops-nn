@@ -18,24 +18,31 @@
   给定输入张量 `input`，最后一维的长度为 `2d`，函数 `GeluMul` 进行以下计算：
 
   1. 将 `input` 分割为两部分：
+
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
 
   2. 对x1应用GELU激活函数，"tanh"模式公式如下：
+
      $$
      \text{GELU}(x) = 0.5 \cdot x \cdot \left( 1 + \tanh\left( \sqrt{\frac{2}{\pi}} \cdot \left( x + 0.044715 x^3 \right) \right) \right)
      $$
+
      “none”对应的erf模式公式如下：
+
      $$
      \text{GELU}(x) = 0.5 \cdot x \left( 1 + \text{erf}\left( \frac{x}{\sqrt{2}} \right) \right)
      $$
+
      因此，计算：
+
      $$
      x_1 = \text{GELU}(x_1)
      $$
 
   3. 最终输出是x1和x2的逐元素乘积：
+
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -64,14 +71,14 @@ aclnnStatus aclnnGeluMul(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1458px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 276px">
-  <col style="width: 308px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
+  <col style="width: 201px">
+  <col style="width: 115px">
+  <col style="width: 200px">
+  <col style="width: 280px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -138,7 +145,6 @@ aclnnStatus aclnnGeluMul(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -214,7 +220,10 @@ aclnnStatus aclnnGeluMul(
 
 ## 约束说明
 
-典型场景尾轴为16的倍数，当尾轴为非32B对齐时，建议走小算子拼接逻辑。
+- 确定性计算：
+  - aclnnGeluMul默认确定性实现。
+
+- 典型场景尾轴为16的倍数，当尾轴为非32B对齐时，建议走小算子拼接逻辑。
 
 ## 调用示例
 
@@ -346,7 +355,6 @@ int main() {
 
   // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
   PrintOutResult(outShape, &outDeviceAddr);
-
 
   // 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensor(input);

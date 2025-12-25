@@ -11,6 +11,7 @@
 
 - 算子功能：将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况。
 - 计算公式：
+
 $$
 len = outputOffset[i+1] - outputOffset[i]
 $$
@@ -82,5 +83,5 @@ inputOffset、outputOffset的长度比permute多1。
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_expand_into_jagged_permute.cpp](examples/test_aclnn_expand_into_jagged_permute.cpp) | 通过[aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute.md)接口方式调用ExpandIntoJaggedPermute算子。 |
+| aclnn接口  | [test_expand_into_jagged_permute.cpp](tests/ut/op_kernel/test_expand_into_jagged_permute.cpp) | 通过[aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute.md)接口方式调用ExpandIntoJaggedPermute算子。 |
 

@@ -7,11 +7,11 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。
 - 计算公式：
+
 $$
 out(x) = \begin{cases} x, & x\gt threshold \\ value, & otherwise \end{cases}
 $$
@@ -59,16 +59,15 @@ aclnnStatus aclnnInplaceThreshold(
   aclrtStream      stream)
 ```
 
-
 ## aclnnThresholdGetWorkspaceSize
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1303px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1403px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 200px">
+  <col style="width: 230px">
   <col style="width: 200px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -149,7 +148,6 @@ aclnnStatus aclnnInplaceThreshold(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -187,7 +185,6 @@ aclnnStatus aclnnInplaceThreshold(
       <td>self和out的shape超过8维，或者两者shape不一致。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnThreshold
 
@@ -227,21 +224,19 @@ aclnnStatus aclnnInplaceThreshold(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
 
 ## aclnnInplaceThresholdGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1235px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1405px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 247px">
-  <col style="width: 108px">
+  <col style="width: 208px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -273,7 +268,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>threshold</td>
       <td>输入</td>
       <td>表示阈值，公式中的输入threshold。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
+      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -283,7 +278,7 @@ aclnnStatus aclnnInplaceThreshold(
       <td>value</td>
       <td>输入</td>
       <td>表示输入self的元素小于阈值时的返回值，公式中的输入value。</td>
-      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
+      <td>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT32、INT8、UINT8、INT16、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -311,9 +306,7 @@ aclnnStatus aclnnInplaceThreshold(
     </tr>
     </tbody>
   </table>
-
-
-
+  
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -348,7 +341,6 @@ aclnnStatus aclnnInplaceThreshold(
       <td>selfRef的shape超过8维。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnInplaceThreshold
 
@@ -389,14 +381,14 @@ aclnnStatus aclnnInplaceThreshold(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnThreshold&aclnnInplaceThreshold默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

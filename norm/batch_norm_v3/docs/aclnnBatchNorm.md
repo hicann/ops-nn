@@ -9,13 +9,14 @@
 
 ## 功能说明
 
-- 算子功能：对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
+- 接口功能：对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
 
 - 计算公式：
 
   $$
   y = \frac{(x - E(x))}{\sqrt{Var(x) + eps}} * weight + bias
   $$
+
   E(x)表示均值，Var(x)表示方差，均需要在算子内部计算得到；ε表示一个极小的浮点数，防止分母为0的情况。
 
 ## 函数原型
@@ -38,6 +39,7 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnBatchNorm(
   void          *workspace,
@@ -50,14 +52,14 @@ aclnnStatus aclnnBatchNorm(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -157,7 +159,7 @@ aclnnStatus aclnnBatchNorm(
       <td>output</td>
       <td>输出</td>
       <td>表示BatchNorm的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`input`的数据类型一致。</li><li>shape与`input`入参的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`input`的数据类型一致。</li><li>shape和格式与`input`入参的shape和格式相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NC、NCL、NCHW、NHWC、NCDHW、NDHWC、ND</td>
       <td>2-8</td>
@@ -182,7 +184,7 @@ aclnnStatus aclnnBatchNorm(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -206,20 +208,17 @@ aclnnStatus aclnnBatchNorm(
   </tbody>
   </table>
 
-
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
     - 参数`saveInvstd`表示input的方差。
-
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -299,10 +298,14 @@ aclnnStatus aclnnBatchNorm(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnBatchNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

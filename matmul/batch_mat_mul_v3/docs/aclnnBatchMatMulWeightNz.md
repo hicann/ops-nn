@@ -217,7 +217,8 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
+
+- 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 
 ## 调用示例
 

@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
@@ -62,17 +61,17 @@
       $$
       rstd=\frac {1}{\sqrt{\operatorname{Var}(x)}}
       $$
-
+    
     - $\frac{{\rm d}\hat{x_j}}{{\rm d}x_i}$：
-
+    
       $$
       \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x_i)}}-\frac{1}{\operatorname{Var}(x_i)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}
       $$
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
-
+ 
     - $\frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}$：
-
+    
       $$
       \frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}=\frac{1}{D}
       $$
@@ -80,7 +79,7 @@
       其中，D为x中参加均值计算的数量。
 
     - $\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}$：
-
+      
       $$
       \frac{\rm d \operatorname{Var}(x_i)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}  (x_i)}}(x_i-\operatorname{E}(x))
       $$
@@ -90,6 +89,7 @@
       $$
       dxOut = rstd * ({inputdy_i * \gamma_j} - \frac{1}{D} * (\sum_{j}{inputdy_i * \gamma_j} + \hat      {x_j} * \sum_{j}{inputdy_i * \gamma_j * \hat{x_j}})) + dsumOptional
       $$
+
 
 ## 参数说明
 
@@ -133,14 +133,15 @@
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>表示正向输入x1、x2之和的标准差的倒数，对应公式中的`rstd`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
+      <td>表示正向输入x1、x2之和的标准差的倒数，对应公式中的`rstd`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>表示正向输入x1、x2之和的均值，对应公式中的`E(x)`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
+      <td>表示正向输入x1、x2之和的均值，对应公式中的`E(x)`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

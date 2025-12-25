@@ -4,13 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾 950 AI 处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -37,7 +32,6 @@
 | y  | 输出 | <ul><li>与'out_backprop'同格式的5D张量，即公式中的$\frac{\partial L}{\partial x_{n, c_{in}, d, i, j}}$。</li></ul> | FLOAT16、BFLOAT16、FLOAT32 | NDHWC、NCDHW |
 
 - 特征图：正向卷积中的[输入特征图'x'](../conv3d_v2/README.md)。
-- <term>昇腾910_95 AI处理器</term>：当'out_backprop'和'y'数据格式为NDHWC，暂不支持groups>1。
 - 不同groups取值与dtype的组合说明
 
     | groups |        dtype           | out_backprop format | filter format |     y format   |

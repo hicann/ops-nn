@@ -60,10 +60,11 @@
     <tr>
       <td>approximate</td>
       <td>属性</td>
-      <td><ul><li>取值范围是0('none')、1('tanh')。</li></ul></td>
+      <td>取值范围是0('none')、1('tanh')。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
+      <tr>
       <td>activateLeft</td>
       <td>属性</td>
       <td><ul><li>激活函数操作数据块的方向。</li><li>false表示对右边做activate。</li></ul></td>
@@ -80,7 +81,6 @@
   </tbody></table>
 
 - aclnnGeGluBackward接口不包含activateLeft参数。
-
 ## 约束说明
 
 无
@@ -92,6 +92,3 @@
 | aclnn调用 | [test_aclnn_ge_glu_backward](./examples/test_aclnn_ge_glu_backward.cpp) | 通过[aclnnGeGluBackward](./docs/aclnnGeGluBackward.md)接口方式调用GeGluGradV2算子。    |
 | aclnn调用 | [test_aclnn_ge_glu_v3_backward](./examples/test_aclnn_ge_glu_v3_backward.cpp) | 通过[aclnnGeGluV3Backward](./docs/aclnnGeGluV3Backward.md)接口方式调用GeGluGradV2算子。    |
 | 图模式调用 | -   | 通过[算子IR](./op_graph/ge_glu_grad_v2_proto.h)构图方式调用GeGluGradV2算子。 |
-
-
-

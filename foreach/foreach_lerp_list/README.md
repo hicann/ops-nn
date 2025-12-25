@@ -80,5 +80,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_lerp_list](examples/test_aclnn_foreach_lerp_list.cpp) | 通过[aclnnForeachLerpList](docs/aclnnForeachLerpList.md)接口方式调用ForeachLerpList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_lerp_list_proto.h)构图方式调用ForeachLerpList算子。         |
-
-<!--[test_geir_foreach_lerp_list](examples/test_geir_foreach_lerp_list.cpp)-->

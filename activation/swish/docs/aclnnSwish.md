@@ -48,8 +48,8 @@ aclnnStatus aclnnSwish(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 230px">
   <col style="width: 240px">
@@ -123,8 +123,6 @@ aclnnStatus aclnnSwish(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -159,7 +157,6 @@ aclnnStatus aclnnSwish(
       <td>self和out的shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSwish
 
@@ -208,7 +205,8 @@ aclnnStatus aclnnSwish(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSwish默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

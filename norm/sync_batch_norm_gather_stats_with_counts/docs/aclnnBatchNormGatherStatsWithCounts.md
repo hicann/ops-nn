@@ -9,12 +9,12 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
   
   收集所有device的均值和方差，更新全局的均值和标准差的倒数。BatchNorm的性能和BatchSize相关，BatchSize越大，BatchNorm的统计量也会越准。然而像检测这样的任务，占用显存较高，一张显卡往往只拿较少的图片，比如两张来训练，这就导致BN的表现变差。一个解决方式就是SyncBatchNorm，所有卡共享同一个BatchNorm，得到全局的统计量。
 
   aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/API/aolapi/context/aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。
-  <!--aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。-->
+  <!--aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](../../ReduceMean?ReduceStdWithMean/docs/aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。-->
 
 - 计算公式：
 
@@ -51,26 +51,27 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnBatchNormGatherStatsWithCounts(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void                *workspace,
+  uint64_t             workspaceSize,
+  aclOpExecutor       *executor,
+  const aclrtStream    stream)
 ```
 
 ## aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -208,15 +209,14 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -314,10 +314,14 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnBatchNormGatherStatsWithCounts默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

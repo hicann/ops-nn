@@ -30,6 +30,7 @@
     $$
     y2=round((y/scales2)+zero\_points2)
     $$
+
   - divMode为False时：
 
     $$
@@ -75,7 +76,7 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape与x1需要norm（层归一化）的维度保持一致。</td>
+      <td>表示标准化过程中的权重张量，对应公式中的`g`。shape与`x1`需要norm（层归一化）的维度保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -158,14 +159,9 @@
     </tr>
   </tbody></table>
 
-
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、gamma、x、beta的数据类型不支持FLOAT32。
 
-
-
 ## 约束说明
-
-无
 
 ## 调用说明
 
@@ -173,7 +169,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp) | 通过[aclnnAddRmsNormQuant](docs/aclnnAddRmsNormQuant.md)接口方式调用AddRmsNormQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/add_rms_norm_quant_proto.h)构图方式调用AddRmsNormQuant算子。         |
-
-<!--[test_geir_add_rms_norm_quant](examples/test_geir_add_rms_norm_quant.cpp)-->
-<!--[test_aclnn_add_rms_norm_quant](examples/test_aclnn_add_rms_norm_quant.cpp)-->
-<!--[test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp)-->

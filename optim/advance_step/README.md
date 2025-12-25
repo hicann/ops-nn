@@ -130,5 +130,5 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | - | 通过[aclnnAdvanceStep](./docs/aclnnAdvanceStep.md)接口方式调用AdvanceStep算子。    |
+| aclnn调用 | [test_aclnn_advance_step](./examples/test_aclnn_advance_step.cpp) | 通过[aclnnAdvanceStep](./docs/aclnnAdvanceStep.md)接口方式调用AdvanceStep算子。    |
 | 图模式调用 | -   | 通过[算子IR](./op_graph/advance_step_proto.h)构图方式调用AdvanceStep算子。 |

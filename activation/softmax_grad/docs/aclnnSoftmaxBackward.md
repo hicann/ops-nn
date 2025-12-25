@@ -12,6 +12,7 @@
 - 算子功能：完成[softmax](../../softmax_v2/docs/aclnnSoftmax.md)的反向传播。
 - 计算公式：对于Softmax函数的求导，可以使用以下公式：
   out（输入梯度值）和gradOutput（上一层输出梯度）、output（Softmax正向输出）的关系可表示如下：
+
   $$
   out = gradOutput \cdot output - sum(gradOutput \cdot output)\cdot output
   $$
@@ -41,11 +42,11 @@ aclnnStatus aclnnSoftmaxBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1410px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 230px">
+  <col style="width: 260px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -125,9 +126,7 @@ aclnnStatus aclnnSoftmaxBackward(
     </tr>
     </tbody>
   </table>
-
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -165,7 +164,6 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>gradOutput、output、out的shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftmaxBackward
 
@@ -212,7 +210,8 @@ aclnnStatus aclnnSoftmaxBackward(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftmaxBackward默认确定性实现。
 
 ## 调用示例
 

@@ -2,14 +2,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
-- 算子功能：对输入张量进行per-token对称动态量化。
+- 接口功能：对输入张量进行per-token对称动态量化。
 
 - 计算公式：
   - 若不输入smoothScalesOptional，则
@@ -21,10 +21,13 @@
   $$
    yOut=round(x/scaleOut)
   $$
+
   - 若输入smoothScalesOptional，则
+  
   $$
   input = x\cdot smoothScalesOptional
   $$
+
   $$
    scaleOut=row\_max(abs(input))/dtypeMax
   $$
@@ -32,6 +35,7 @@
   $$
    yOut=round(input/scaleOut)
   $$
+
   其中row\_max代表每行求最大值，dtypeMax为输出数据类型的最大值。
 
 ## 函数原型
@@ -47,6 +51,7 @@ aclnnStatus aclnnDynamicQuantGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnDynamicQuant(
   void          *workspace,
@@ -59,14 +64,14 @@ aclnnStatus aclnnDynamicQuant(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -147,16 +152,14 @@ aclnnStatus aclnnDynamicQuant(
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   
     出参`yOut`的数据类型仅支持INT4、INT8。
-
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -229,8 +232,11 @@ aclnnStatus aclnnDynamicQuant(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。
 - yOut的数据类型为INT32时，需满足x的最后一维能被8整除。
+- 确定性计算：
+  - aclnnDynamicQuant默认确定性实现。
 
 ## 调用示例
 
@@ -308,7 +314,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1. （固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

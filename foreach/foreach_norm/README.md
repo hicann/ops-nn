@@ -11,9 +11,8 @@
 
 - 算子功能：对输入张量列表的每个张量进行范数运算。
 - 计算公式：
-  
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
+
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
@@ -21,8 +20,6 @@
     $$
     y = \left(\sum_{i=0}^{n-1}|x_i|^{p}\right)^{\frac{1}{{p}}}  (i=0,1,...n-1)
     $$
-
-
 
 ## 参数说明
 
@@ -66,6 +63,9 @@
   </tbody></table>
 
 
+- 输入`x`、输出`y`支持的最大长度为256个。
+- 输入`scalar`的取值，仅支持1或者2。
+
 ## 约束说明
 
 无
@@ -76,5 +76,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_norm](examples/test_aclnn_foreach_norm.cpp) | 通过[aclnnForeachNorm](docs/aclnnForeachNorm.md)接口方式调用ForeachNorm算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_norm_proto.h)构图方式调用ForeachNorm算子。         |
-
-<!--[test_geir_foreach_norm](examples/test_geir_foreach_norm.cpp)-->

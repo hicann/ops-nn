@@ -7,7 +7,6 @@
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
- 
 
 ## 功能说明
 
@@ -17,6 +16,7 @@
   $$
   out = \sum_{i=0}^{batch}(x1_i @ x2_i) * x1Scale * x2Scale
   $$
+
   其中 $x1$, $x2$, $out$ 分别是维度为 $(batch, M, K)$, $(batch, K, N)$ 和 $(M, N)$ 的矩阵。$x1Scale$ 和 $x2Scale$ 分别是维度为 $(M,)$ 和 $(N,)$ 的向量。
 
 ## 参数说明
@@ -79,4 +79,8 @@
 - 不支持空tensor。
 - 左右矩阵不支持非连续tensor。
 
+## 调用说明
 
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口  | [test_aclnn_quant_matmul_reduce_sum](examples/test_aclnn_quant_matmul_reduce_sum_weight_nz.cpp) | 通过<br>[aclnnQuantMatmulReduceSumWeightNz](docs/aclnnQuantMatmulReduceSumWeightNz.md)</br>等方式调用QuantMatmulReduceSum算子。 |

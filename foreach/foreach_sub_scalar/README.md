@@ -74,5 +74,3 @@
 | aclnn接口  | [test_aclnn_foreach_sub_scalar](examples/test_aclnn_foreach_sub_scalar.cpp) | 通过[aclnnForeachSubScalar](docs/aclnnForeachSubScalar.md)接口方式调用ForeachSubScalar算子。 |
 | aclnn接口  | [test_aclnn_foreach_sub_scalar_v2](examples/test_aclnn_foreach_sub_scalar_v2.cpp) | 通过[aclnnForeachSubScalarV2](docs/aclnnForeachSubScalarV2.md)接口方式调用ForeachSubScalar算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_sub_scalar_proto.h)构图方式调用ForeachSubScalar算子。         |
-
-<!--[test_geir_foreach_sub_scalar](examples/test_geir_foreach_sub_scalar.cpp)-->

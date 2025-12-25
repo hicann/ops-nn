@@ -81,5 +81,3 @@
 | aclnn接口  | [test_aclnn_foreach_add_list](examples/test_aclnn_foreach_add_list.cpp) | 通过[aclnnForeachAddList](docs/aclnnForeachAddList.md)接口方式调用ForeachAddList算子。 |
 | aclnn接口  | [test_aclnn_foreach_add_list_v2](examples/test_aclnn_foreach_add_list_v2.cpp) | 通过[aclnnForeachAddListV2](docs/aclnnForeachAddListV2.md)接口方式调用ForeachAddList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_add_list_proto.h)构图方式调用ForeachAddList算子。         |
-
-<!--[test_geir_foreach_add_list](examples/test_geir_foreach_add_list.cpp)-->

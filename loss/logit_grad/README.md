@@ -24,10 +24,10 @@ $$
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 878px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 908px"><colgroup>
   <col style="width: 91px">
   <col style="width: 149px">
-  <col style="width: 266px">
+  <col style="width: 296px">
   <col style="width: 256px">
   <col style="width: 116px">
   </colgroup>

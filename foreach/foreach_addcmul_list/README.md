@@ -86,5 +86,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_addcmul_list](examples/test_aclnn_foreach_addcmul_list.cpp) | 通过[aclnnForeachAddcmulList](docs/aclnnForeachAddcmulList.md)接口方式调用ForeachAddcmulList算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_list_proto.h)构图方式调用ForeachAddcmulList算子。         |
-
-<!--[test_geir_foreach_addcmul_list](examples/test_geir_foreach_addcmul_list.cpp)-->

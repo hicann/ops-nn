@@ -7,10 +7,9 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
-- 算子功能：[aclnnGroupNorm](../../group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
+- 接口功能：[aclnnGroupNorm](../../group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
   
   $$
@@ -49,26 +48,27 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
   uint64_t*            workspaceSize,
   aclOpExecutor**      executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnGroupNormBackward(
-  void          *workspace,
-  uint64_t       workspaceSize,
-  aclOpExecutor *executor,
-  aclrtStream    stream)
+  void                *workspace,
+  uint64_t             workspaceSize,
+  aclOpExecutor       *executor,
+  const aclrtStream    stream)
 ```
 
 ## aclnnGroupNormBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -212,7 +212,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>ND</td>
       <td>2</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -236,11 +236,9 @@ aclnnStatus aclnnGroupNormBackward(
   </tbody>
   </table>
 
-
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
-    参数`mean`和`gradOut`的数据类型相同。
 
+    参数`mean`和`gradOut`的数据类型相同。
 
 - **返回值：**
 
@@ -248,8 +246,8 @@ aclnnStatus aclnnGroupNormBackward(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -360,7 +358,8 @@ aclnnStatus aclnnGroupNormBackward(
 
 ## 约束说明
 
-是否支持空Tenor：支持空进空出。
+- 确定性计算：
+  - aclnnGroupNormBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
 

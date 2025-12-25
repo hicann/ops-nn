@@ -4,13 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 
 ## 功能说明
@@ -72,17 +67,11 @@
 | gradWeight | 输出 | <ul><li>卷积核权重张量$w$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial w}$。</li><li>数据格式需要与'weight'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | NCL、NCHW、NCDHW |
 | gradBias | 输出 | <ul><li>偏置$b$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial b}$。</li><li>数据类型与'gradOutput'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
 
-* <term>昇腾910_95 AI处理器</term>：
-    - 只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
-* <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>： 
-    - 不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
-    - gradOutput、weight参数下，不支持空Tensor。
 * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 不支持HIFLOAT8、FLOAT8_E4M3FN。
 
 ## 约束说明  
 
-* <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。
 * 更详细的约束说明可查看[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口资料。
 
 ## 调用说明

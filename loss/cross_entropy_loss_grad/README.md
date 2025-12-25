@@ -11,6 +11,7 @@
 
 - **算子功能**：aclnnCrossEntropyLoss的反向传播。
 - **计算公式**：
+
   $$
   ignoreMask_{target(t)}=\begin{cases}
   1, &target(t) ≠ ignoreIndex \\
@@ -121,49 +122,49 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradLoss</td>
+      <td>grad</td>
       <td>输入</td>
-      <td>正向输出loss的梯度，公式中的`grad`。</td>
+      <td>正向输出loss的梯度，公式中的grad。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>logProb</td>
       <td>输入</td>
-      <td>正向输入的logSoftmax计算结果，公式中的`logProb`。</td>
+      <td>正向输入的logSoftmax计算结果，公式中的logProb。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>target</td>
       <td>输入</td>
-      <td>类索引，公式中的`target`。</td>
+      <td>类索引，公式中的target。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weight</td>
       <td>可选输入</td>
-      <td><li>表示为每个类别指定的缩放权重，公式中的`weight`。<li>默认为全1。</td>
+      <td><li>表示为每个类别指定的缩放权重，公式中的weight。<li>默认为全1。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>gradZlossOptional</td>
+      <td>gradZloss</td>
       <td>可选输入</td>
-      <td><li>正向输出zloss的梯度，公式中的`gradZloss`。<li>当前仅支持传入nullptr。</td>
+      <td><li>正向输出zloss的梯度，公式中的gradZloss。<li>当前暂不支持。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>lseForZlossOptional</td>
+      <td>lseForZloss</td>
       <td>可选输入</td>
-      <td><li>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse，公式中的`lseForZloss`。<li>当前只支持传入nullptr。</td>
+      <td><li>zloss相关输入，如果lse_square_scale_for_zloss非0，正向额外输出的lse_for_zloss中间结果给反向用于计算lse，公式中的lseForZloss。<li>当前暂不支持。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>reductionOptional</td>
+      <td>reduction</td>
       <td>可选属性</td>
       <td><li>指定要应用于输出的归约方式。<li>默认值为“mean”。</td>
       <td>STRING</td>
@@ -186,14 +187,14 @@
     <tr>
       <td>lseSquareScaleForZloss</td>
       <td>可选属性</td>
-      <td><li>表示zloss计算所需的scale。<li>当前仅支持传入0.0。</td>
+      <td><li>表示zloss计算所需的scale。<li>当前暂不支持。</td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>梯度计算结果，对应公式中的`out`。</td>
+      <td>梯度计算结果，对应公式中的out。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -203,8 +204,7 @@
 
   - target仅支持类标签索引，不支持概率输入。
   - gradLoss、logProb、gradZlossOptional、lseForZlossOptional、xGradOut数据类型需保持一致。
-  - 当前暂不支持zloss功能。gradZlossOptional、lseForZlossOptional不支持传入，且lseSquareScaleForZloss仅支持输入0.0。
-  - logProb第零维N需满足N<200000。
+  - 当前暂不支持zloss功能，传入相关输入，即gradZlossOptional、lseForZlossOptional、lseSquareScaleForZloss，不会生效。
 
 ## 调用说明
 

@@ -58,7 +58,7 @@
     <tr>
       <td>eps</td>
       <td>属性</td>
-      <td><ul><li>输入x的epsilon限制边界，防止除0错误。</li><li>建议值-1。</li></ul></td>
+      <td><ul><li>输入x的eps限制边界，防止除0错误。</li><li>建议值-1。</li></ul></td>
       <td>DOUBLE</td>
       <td>-</td>
     </tr>

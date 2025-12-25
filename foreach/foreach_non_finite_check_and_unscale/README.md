@@ -12,6 +12,7 @@
 - 算子功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
+
   $$
   foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
     foundInf, &其他.
@@ -73,5 +74,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_non_finite_check_and_unscale](examples/test_aclnn_foreach_non_finite_check_and_unscale.cpp) | 通过[aclnnForeachNonFiniteCheckAndUnscale](docs/aclnnForeachNonFiniteCheckAndUnscale.md)接口方式调用ForeachNonFiniteCheckAndUnscale算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_non_finite_check_and_unscale_proto.h)构图方式调用ForeachNonFiniteCheckAndUnscale算子。         |
-
-<!--[test_geir_foreach_non_finite_check_and_unscale](examples/test_geir_foreach_non_finite_check_and_unscale.cpp)-->

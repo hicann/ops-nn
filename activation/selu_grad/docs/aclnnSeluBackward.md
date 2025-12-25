@@ -18,10 +18,13 @@
   $$
   \frac{\partial selu(x)}{\partial x}=\begin{cases} \alpha e^x,x<0 \\1,x\geq 0\end{cases}
   $$
+
   计算误差对输入的导数：
+
   $$
   \frac{\partial E}{\partial x}=\frac{\partial E}{\partial y}\frac{\partial selu(x)}{\partial x}
   $$
+
   其中$y$为输出，$E$为损失函数
   $alpha$=1.6732632423543772848170429916717
   
@@ -49,11 +52,11 @@ aclnnStatus aclnnSeluBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 300px">
+  <col style="width: 220px">
+  <col style="width: 330px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -124,8 +127,6 @@ aclnnStatus aclnnSeluBackward(
   </tbody>
   </table>
 
- 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -160,7 +161,6 @@ aclnnStatus aclnnSeluBackward(
       <td>gradOutput、result、gradInput的数据类型不满足数据类型推导规则。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSeluBackward
 
@@ -201,13 +201,14 @@ aclnnStatus aclnnSeluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnSeluBackward默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量进行量化处理。
+- 接口功能：对输入张量进行量化处理。
 - 计算公式：
   
   $$
@@ -17,6 +17,7 @@
   $$
   
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantizeGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantize”接口执行计算。
 
 ```Cpp
@@ -30,6 +31,7 @@ aclnnStatus aclnnQuantizeGetWorkspaceSize(
   uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnQuantize(
   void          *workspace,
@@ -42,14 +44,14 @@ aclnnStatus aclnnQuantize(
 
 - **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
-  <col style="width: 146px">
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">
-  <col style="width: 392px">
-  <col style="width: 228px">
+  <col style="width: 330px">
+  <col style="width: 223px">
   <col style="width: 101px">
-  <col style="width: 100px">
+  <col style="width: 190px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -88,7 +90,7 @@ aclnnStatus aclnnQuantize(
       <td>zeroPoints</td>
       <td>输入</td>
       <td>表示量化过程中对x进行offset的张量，对应公式中的`zeroPoints`。</td>
-      <td><ul><li>支持空Tensor。</li><li>支持传入空指针。</li><li>size需要为1或和输入x中axis轴的size相等，并与scales的size相等。/li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>支持传入空指针。</li><li>size需要为1或和输入x中axis轴的size相等，并与scales的size相等。</li></ul></td>
       <td>INT32、INT8、UINT8、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -147,12 +149,11 @@ aclnnStatus aclnnQuantize(
   </tbody>
   </table>
   
-
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
       - 出参`out`仅支持INT8、UINT8、INT32。
-    - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。 
+    - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
   
 - **返回值**
 
@@ -160,8 +161,8 @@ aclnnStatus aclnnQuantize(
   
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
+  <col style="width: 268px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -243,7 +244,9 @@ aclnnStatus aclnnQuantize(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-无。
+
+- 确定性计算：
+  - aclnnQuantize默认确定性实现。
 
 ## 调用示例
 

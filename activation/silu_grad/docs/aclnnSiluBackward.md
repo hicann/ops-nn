@@ -34,7 +34,6 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSiluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSiluBackward”接口执行计算。
 
-
 ```Cpp
 aclnnStatus aclnnSiluBackwardGetWorkspaceSize(
   const aclTensor*    gradOutput,
@@ -56,11 +55,11 @@ aclnnStatus aclnnSiluBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1330px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 250px">
+  <col style="width: 280px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -130,9 +129,7 @@ aclnnStatus aclnnSiluBackward(
     </tr>
    </tbody>
   </table>
-
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -167,7 +164,6 @@ aclnnStatus aclnnSiluBackward(
       <td>gradOutput、self或gradInput的shape不同或不满足broadcast关系。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSiluBackward
 
@@ -208,14 +204,14 @@ aclnnStatus aclnnSiluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSiluBackward默认确定性实现。
 
 ## 调用示例
 

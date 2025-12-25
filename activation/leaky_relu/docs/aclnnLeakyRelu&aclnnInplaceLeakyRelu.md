@@ -7,7 +7,6 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-
 ## 功能说明
 
 - 算子功能：激活函数，用于解决Relu函数在输入小于0时输出为0的问题，避免神经元无法更新参数。
@@ -58,7 +57,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
   aclOpExecutor  *executor,
   aclrtStream     stream)
 ```
-
 
 ## aclnnLeakyReluGetWorkspaceSize
 
@@ -139,8 +137,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
   </tbody>
   </table>
   
- 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -175,7 +171,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>out的shape与self不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnLeakyRelu
 
@@ -216,7 +211,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -225,11 +219,11 @@ aclnnStatus aclnnInplaceLeakyRelu(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 250px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -290,8 +284,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
   </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -320,7 +312,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>selfRef的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceLeakyRelu
 
@@ -361,14 +352,16 @@ aclnnStatus aclnnInplaceLeakyRelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-negativeSlope使用整型类型作为属性输入，而输入self是FLOAT类型，那么如果negativeSlope大于2^24或小于-2^24可能存在精度损失。同理，如果输入self是FLOAT16类型，那么negativeSlope大于2^11或小于-2^11可能存在精度损失。
+- 确定性计算：
+  - aclnnLeakyRelu&aclnnInplaceLeakyRelu默认确定性实现。
+
+- negativeSlope使用整型类型作为属性输入，而输入self是FLOAT类型，那么如果negativeSlope大于2^24或小于-2^24可能存在精度损失。同理，如果输入self是FLOAT16类型，那么negativeSlope大于2^11或小于-2^11可能存在精度损失。
 
 ## 调用示例
 

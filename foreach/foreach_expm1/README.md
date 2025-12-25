@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_expm1](examples/test_aclnn_foreach_expm1.cpp) | 通过[aclnnForeachExpm1](docs/aclnnForeachExpm1.md)接口方式调用ForeachExpm1算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_expm1_proto.h)构图方式调用ForeachExpm1算子。         |
-
-<!--[test_geir_foreach_expm1](examples/test_geir_foreach_expm1.cpp)-->

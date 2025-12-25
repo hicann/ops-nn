@@ -65,5 +65,3 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_tanh](examples/test_aclnn_foreach_tanh.cpp) | 通过[aclnnForeachTanh](docs/aclnnForeachTanh.md)接口方式调用ForeachTanh算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/foreach_tanh_proto.h)构图方式调用ForeachTanh算子。         |
-
-<!--[test_geir_foreach_tanh](examples/test_geir_foreach_tanh.cpp)-->

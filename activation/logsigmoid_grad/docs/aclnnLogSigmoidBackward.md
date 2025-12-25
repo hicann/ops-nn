@@ -48,14 +48,14 @@ aclnnStatus aclnnLogSigmoidBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1496px"><colgroup>
-  <col style="width: 154px">
-  <col style="width: 120px">
-  <col style="width: 301px">
-  <col style="width: 321px">
-  <col style="width: 212px">
-  <col style="width: 107px">
-  <col style="width: 136px">
+  <table style="undefined;table-layout: fixed; width: 1497px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 247px">
+  <col style="width: 300px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -130,8 +130,7 @@ aclnnStatus aclnnLogSigmoidBackward(
     </tr>
   </tbody>
   </table>
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -166,7 +165,6 @@ aclnnStatus aclnnLogSigmoidBackward(
       <td>gradOutput、self和gradInput的数据类型不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnLogSigmoidBackward
 
@@ -213,7 +211,8 @@ aclnnStatus aclnnLogSigmoidBackward(
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnLogSigmoidBackward默认确定性实现。
 
 ## 调用示例
 

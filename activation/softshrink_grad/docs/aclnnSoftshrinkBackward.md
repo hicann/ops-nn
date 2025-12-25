@@ -53,16 +53,15 @@ aclnnStatus aclnnSoftshrinkBackward(
   const aclrtStream stream)
 ```
 
-
 ## aclnnSoftshrinkBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1310px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1410px"><colgroup>
+  <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 230px">
+  <col style="width: 260px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -95,6 +94,7 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>输入</td>
       <td>正向输入值。公式中的x。</td>
       <td><ul><li>支持空Tensor。</li><li>shape与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要与gradOutput一致。</li></ul></td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -103,8 +103,8 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>lambda</td>
       <td>输入</td>
       <td>公式中的输入λ。</td>
-      <td>取值范围应大于等于0。</td>
-      <td>FLOAT</td>
+      <td>数据类型支持常见的数值类型，如FLOAT类型，取值范围应大于等于0。</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -142,8 +142,6 @@ aclnnStatus aclnnSoftshrinkBackward(
    </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -169,7 +167,7 @@ aclnnStatus aclnnSoftshrinkBackward(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>gradOutput、self、lambda和gradInput的数据类型不在支持的范围之内。</td>
+      <td>gradOutput、self和gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和gradOutput的shape不满足broadcast规则。</td>
@@ -184,7 +182,6 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>gradOutput、self和gradInput的维度大于8。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftshrinkBackward
 
@@ -225,14 +222,14 @@ aclnnStatus aclnnSoftshrinkBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSoftshrinkBackward默认确定性实现。
 
 ## 调用示例
 

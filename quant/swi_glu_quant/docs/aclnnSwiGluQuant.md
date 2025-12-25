@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算
+- 接口功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算
 - 算子支持范围：当前SwiGluQuant**仅支持MoE场景**，SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
 - 动态量化计算公式：  
   
@@ -23,6 +23,7 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
+
      其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
      
 - 静态量化计算公式：
@@ -32,9 +33,11 @@
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon] + offsets[0,\colon], i=0 \\
     Y_{tmp}[g[i]\colon g[i+1], \colon] = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[i+1, \colon] + offsets[i+1, \colon], i \in (0, G) \cap \mathbb{Z}\\
   $$
+
   $$
     Y = Cast(Y_{tmp})
   $$
+
   其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
 ## 函数原型
@@ -62,16 +65,15 @@ aclnnStatus aclnnSwiGluQuant(
   aclrtStream      stream)
 ```
 
-
 ## aclnnSwiGluQuantGetWorkspaceSize
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1350px"><colgroup>
-  <col style="width: 101px">
+  <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
+  <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 270px">
+  <col style="width: 300px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -227,7 +229,6 @@ aclnnStatus aclnnSwiGluQuant(
     </tr>
   </tbody></table>
 
-
 ## aclnnSwiGluQuant
 - **参数说明：**
 
@@ -266,14 +267,13 @@ aclnnStatus aclnnSwiGluQuant(
   </tbody>
   </table>
 
-
 - **返回值：**
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnSwiGluQuant默认确定性实现。
 
 ## 调用示例
 
@@ -306,7 +306,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，AscendCL初始化
+  // 固定写法，资源初始化
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -340,7 +340,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
