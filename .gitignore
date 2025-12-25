@@ -58,7 +58,7 @@ ut_report.txt
 ascend_download
 
 # makeself
-# makeself
+makeself
 
 # tbetoolkits log files
 tbetoolkits-*.log
