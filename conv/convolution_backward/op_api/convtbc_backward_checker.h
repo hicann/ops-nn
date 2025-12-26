@@ -20,7 +20,7 @@
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/transdata.h"
-#include "../../../common/op_host/op_api/conv_cube_util.h"
+#include "../../common/op_host/op_api/conv_cube_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"

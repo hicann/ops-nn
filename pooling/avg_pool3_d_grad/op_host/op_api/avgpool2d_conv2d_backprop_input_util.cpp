@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "avgpool2d_conv2d_backprop_input_util.h"
-#include "../../../../conv/convolution_backward/op_host/op_api/convolutionbackward.h"
+#include "../../../../conv/convolution_backward/op_api/convolutionbackward.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
