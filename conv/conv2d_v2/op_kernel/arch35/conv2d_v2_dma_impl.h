@@ -200,7 +200,7 @@ __aicore__ inline void DmaInitBuf(Intf *self)
 template <class Intf>
 __aicore__ inline void DmaVecInit(Intf *self)
 {
-    self->ctx.vecId = get_subblockid();
+    self->ctx.vecId = GetSubBlockIdx();
  
     self->ctx.orgCi = self->ctx.convTiling->orgCi;
     self->ctx.orgHi = self->ctx.convTiling->orgHi;
