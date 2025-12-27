@@ -29,12 +29,12 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
     target_link_libraries(${AICPU_OP_KERNEL_UT_EXE} PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan>
         $<BUILD_INTERFACE:dlog_headers>
-        -ldl
         -Wl,--whole-archive
             ${ASCEND_DIR}/lib64/libaicpu_context_host.a
             ${ASCEND_DIR}/lib64/libaicpu_nodedef_host.a
             ${ASCEND_DIR}/lib64/libhost_ascend_protobuf.a
         -Wl,--no-whole-archive
+        -ldl
         -Wl,-Bsymbolic
         -Wl,--exclude-libs=libhost_ascend_protobuf.a
         -Wl,--no-as-needed

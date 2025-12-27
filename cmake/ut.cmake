@@ -755,6 +755,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             ${OPBASE_INC_DIRS}
             ${AICPU_INC_DIRS}
             ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel_aicpu
+            ${ASCEND_DIR}/pkg_inc/base
             )
     target_link_libraries(${opName}_cases_obj PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
