@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+* Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 /*!
  * \file ctc_loss_v2.cpp
  * \brief
@@ -116,8 +115,7 @@ static bool IsV2AiCoreSupport(
 }
 
 // 根据size判断算子是否支持走aicore CTCLossV3
-static bool IsV3AiCoreSupport(
-    const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets)
+static bool IsV3AiCoreSupport(const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets)
 {
     auto logAlphaShape = logAlpha->GetViewShape();
     int64_t maxLabel = (logAlphaShape.GetDim(LABEL_INDEX) - 1) / COEF;
