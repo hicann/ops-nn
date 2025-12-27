@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -15,9 +15,9 @@
 
 #ifndef APPLY_ADAM_W_DAG_H
 #define APPLY_ADAM_W_DAG_H
-#include "op_kernel/atvoss/atp/dag.h"
-#include "op_kernel/atvoss/atp/vec.h"
-#include "op_kernel/atvoss/atp/placeholder.h"
+#include "atvoss/util/dag.h"
+#include "atvoss/util/vec.h"
+#include "atvoss/util/placeholder.h"
 
 #ifdef __CCE_AICORE__
 #include "../inc/platform.h"
@@ -29,6 +29,7 @@ namespace AscendC {
 namespace Vec {
 #ifdef __CCE_AICORE__
 using AscendC::MicroAPI::RegTensor;
+using namespace Ops::Base;
 
 constexpr static MicroAPI::CastTrait castTrait0 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                    MicroAPI::MaskMergeMode::ZEROING,
@@ -132,8 +133,8 @@ __aicore__ inline void CalcDataVarOut(MicroAPI::RegTensor<U> &regVarOut, MicroAP
 
 #endif
 template <typename T, typename U = float>
-struct CalcGt : public ElemwiseBinaryOP<U, T, U> {
-    __aicore__ inline CalcGt(LocalTensor<U> &gTOut, LocalTensor<T> &grad, U &maximizeFactor, int32_t count) {
+struct CalcGt : public Ops::Base::Vec::ElemwiseBinaryOP<U, T, U> {
+    __aicore__ inline CalcGt(Ops::Base::LocalTensor<U> &gTOut, Ops::Base::LocalTensor<T> &grad, U &maximizeFactor, int32_t count) {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -161,8 +162,8 @@ struct CalcGt : public ElemwiseBinaryOP<U, T, U> {
 };
 
 template <typename T, typename U = float>
-struct CalcM : public ElemwiseTernaryOP<U, T, U, T> {
-    __aicore__ inline CalcM(LocalTensor<U> &mOut, LocalTensor<T> &m, LocalTensor<U> &grad, T &beta1, int32_t count) {
+struct CalcM : public Ops::Base::Vec::ElemwiseTernaryOP<U, T, U, T> {
+    __aicore__ inline CalcM(Ops::Base::LocalTensor<U> &mOut, Ops::Base::LocalTensor<T> &m, Ops::Base::LocalTensor<U> &grad, T &beta1, int32_t count) {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -207,8 +208,8 @@ struct CalcM : public ElemwiseTernaryOP<U, T, U, T> {
 };
 
 template <typename T, typename U = float>
-struct CalcV : public ElemwiseTernaryOP<U, T, U, T> {
-    __aicore__ inline CalcV(LocalTensor<U> &vOut, LocalTensor<T> &v, LocalTensor<U> &grad, T &beta2, int32_t count) {
+struct CalcV : public Ops::Base::Vec::ElemwiseTernaryOP<U, T, U, T> {
+    __aicore__ inline CalcV(Ops::Base::LocalTensor<U> &vOut, Ops::Base::LocalTensor<T> &v, Ops::Base::LocalTensor<U> &grad, T &beta2, int32_t count) {
 #ifdef __CCE_AICORE__
         uint32_t oneRepeat = VECTOR_LENGTH / sizeof(U);
         uint32_t totalLen = count;
@@ -253,8 +254,8 @@ struct CalcV : public ElemwiseTernaryOP<U, T, U, T> {
 };
 
 template <typename T, typename U = float>
-struct CalcVar : public Elemwise10OP<U, T, U, U, T, T, T, T, T, T, T> {
-    __aicore__ inline CalcVar(LocalTensor<U> &varOut, LocalTensor<T> &var, LocalTensor<U> &mOut, LocalTensor<U> &vOut,
+struct CalcVar : public Ops::Base::Vec::Elemwise10OP<U, T, U, U, T, T, T, T, T, T, T> {
+    __aicore__ inline CalcVar(Ops::Base::LocalTensor<U> &varOut, Ops::Base::LocalTensor<T> &var, Ops::Base::LocalTensor<U> &mOut, Ops::Base::LocalTensor<U> &vOut,
                               T &beta1Power, T &beta2Power, T &lr, T &weightDecay, T &beta1, T &beta2, T &epsilon,
                               int32_t count) {
 #ifdef __CCE_AICORE__
@@ -318,63 +319,63 @@ struct CalcVar : public Elemwise10OP<U, T, U, U, T, T, T, T, T, T, T> {
 
 namespace ApplyAdamWOp {
 using namespace AscendC;
-
+using namespace Ops::Base;
 template <typename T, typename U = float>
 struct ApplyAdamWDAG {
-  using OpVar = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
-  using OpM = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
-  using OpV = Bind<Vec::CopyIn<T>, Placeholder::In2<T>>;
-  using OpGrad = Bind<Vec::CopyIn<T>, Placeholder::In10<T>>;
-  using OpGt = Bind<Vec::CalcGt<T, U>, OpGrad, Placeholder::Var<U, 0>>;
-  using OpMOut = Bind<Vec::CalcM<T, U>, OpM, OpGt, Placeholder::In7<T, Placeholder::ScalarAttr<true>>>;
-  using OpVOut = Bind<Vec::CalcV<T, U>, OpV, OpGt, Placeholder::In8<T, Placeholder::ScalarAttr<true>>>;
+  using OpVar = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In0<T>>;
+  using OpM = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In1<T>>;
+  using OpV = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In2<T>>;
+  using OpGrad = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In10<T>>;
+  using OpGt = Bind<AscendC::Vec::CalcGt<T, U>, OpGrad, Placeholder::Var<U, 0>>;
+  using OpMOut = Bind<AscendC::Vec::CalcM<T, U>, OpM, OpGt, Placeholder::In7<T, Placeholder::ScalarAttr<true>>>;
+  using OpVOut = Bind<AscendC::Vec::CalcV<T, U>, OpV, OpGt, Placeholder::In8<T, Placeholder::ScalarAttr<true>>>;
   using OpVarOut =
-      Bind<Vec::CalcVar<T, U>, OpVar, OpMOut, OpVOut, Placeholder::In3<T, Placeholder::ScalarAttr<true>>,\
+      Bind<AscendC::Vec::CalcVar<T, U>, OpVar, OpMOut, OpVOut, Placeholder::In3<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In4<T, Placeholder::ScalarAttr<true>>, Placeholder::In5<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In6<T, Placeholder::ScalarAttr<true>>, Placeholder::In7<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In8<T, Placeholder::ScalarAttr<true>>, Placeholder::In9<T, Placeholder::ScalarAttr<true>>>;
   
-  using OpVarOutCast = Bind<Vec::Cast<T, U, 1>, OpVarOut>;
-  using OpMOutCast = Bind<Vec::Cast<T, U, 1>, OpMOut>;
-  using OpVOutCast = Bind<Vec::Cast<T, U, 1>, OpVOut>;
-  using OpCopyVarOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpVarOutCast>;
-  using OpCopyMOut = Bind<Vec::CopyOut<T>, Placeholder::Out1<T>, OpMOutCast>;
-  using OpCopyVOut = Bind<Vec::CopyOut<T>, Placeholder::Out2<T>, OpVOutCast>;
+  using OpVarOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpVarOut>;
+  using OpMOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpMOut>;
+  using OpVOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpVOut>;
+  using OpCopyVarOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out0<T>, OpVarOutCast>;
+  using OpCopyMOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out1<T>, OpMOutCast>;
+  using OpCopyVOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out2<T>, OpVOutCast>;
 
-  using Outputs = Elems<OpCopyVarOut, OpCopyMOut, OpCopyVOut>;
+  using Outputs = Elems<typename ApplyAdamWDAG::OpCopyVarOut, typename ApplyAdamWDAG::OpCopyMOut, typename ApplyAdamWDAG::OpCopyVOut>;
   using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
-  using OpDag = DAGSch<Outputs, void, MemCfg>;
+  using OpDag = DAGSch<typename ApplyAdamWDAG::Outputs, void, MemCfg>;
 };
 
 template <typename T, typename U = float>
 struct ApplyAdamWAmsGradDAG {
-  using OpVar = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
-  using OpM = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
-  using OpV = Bind<Vec::CopyIn<T>, Placeholder::In2<T>>;
-  using OpGrad = Bind<Vec::CopyIn<T>, Placeholder::In10<T>>;
-  using OpMaxGradNorm = Bind<Vec::CopyIn<T>, Placeholder::In11<T>>;
-  using OpMaxGradNormCast = Bind<Vec::Cast<U, T, 0>, OpMaxGradNorm>;
+  using OpVar = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In0<T>>;
+  using OpM = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In1<T>>;
+  using OpV = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In2<T>>;
+  using OpGrad = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In10<T>>;
+  using OpMaxGradNorm = Bind<Ops::Base::Vec::CopyIn<T>, Placeholder::In11<T>>;
+  using OpMaxGradNormCast = Bind<Ops::Base::Vec::Cast<U, T, 0>, OpMaxGradNorm>;
 
-  using OpGt = Bind<Vec::CalcGt<T, U>, OpGrad, Placeholder::Var<U, 0>>;
-  using OpMOut = Bind<Vec::CalcM<T, U>, OpM, OpGt, Placeholder::In7<T, Placeholder::ScalarAttr<true>>>;
-  using OpVOut = Bind<Vec::CalcV<T, U>, OpV, OpGt, Placeholder::In8<T, Placeholder::ScalarAttr<true>>>;
-  using OpVMax = Bind<Vec::Max<U>, OpVOut, OpMaxGradNormCast>;
+  using OpGt = Bind<AscendC::Vec::CalcGt<T, U>, OpGrad, Placeholder::Var<U, 0>>;
+  using OpMOut = Bind<AscendC::Vec::CalcM<T, U>, OpM, OpGt, Placeholder::In7<T, Placeholder::ScalarAttr<true>>>;
+  using OpVOut = Bind<AscendC::Vec::CalcV<T, U>, OpV, OpGt, Placeholder::In8<T, Placeholder::ScalarAttr<true>>>;
+  using OpVMax = Bind<Ops::Base::Vec::Max<U>, OpVOut, OpMaxGradNormCast>;
   using OpVarOut =
-      Bind<Vec::CalcVar<T, U>, OpVar, OpMOut, OpVMax, Placeholder::In3<T, Placeholder::ScalarAttr<true>>,\
+      Bind<AscendC::Vec::CalcVar<T, U>, OpVar, OpMOut, OpVMax, Placeholder::In3<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In4<T, Placeholder::ScalarAttr<true>>, Placeholder::In5<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In6<T, Placeholder::ScalarAttr<true>>, Placeholder::In7<T, Placeholder::ScalarAttr<true>>,\
            Placeholder::In8<T, Placeholder::ScalarAttr<true>>, Placeholder::In9<T, Placeholder::ScalarAttr<true>>>;
 
-  using OpVarOutCast = Bind<Vec::Cast<T, U, 1>, OpVarOut>;
-  using OpMOutCast = Bind<Vec::Cast<T, U, 1>, OpMOut>;
-  using OpVOutCast = Bind<Vec::Cast<T, U, 1>, OpVOut>;
-  using OpCopyVarOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpVarOutCast>;
-  using OpCopyMOut = Bind<Vec::CopyOut<T>, Placeholder::Out1<T>, OpMOutCast>;
-  using OpCopyVOut = Bind<Vec::CopyOut<T>, Placeholder::Out2<T>, OpVOutCast>;
+  using OpVarOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpVarOut>;
+  using OpMOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpMOut>;
+  using OpVOutCast = Bind<Ops::Base::Vec::Cast<T, U, 1>, OpVOut>;
+  using OpCopyVarOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out0<T>, OpVarOutCast>;
+  using OpCopyMOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out1<T>, OpMOutCast>;
+  using OpCopyVOut = Bind<Ops::Base::Vec::CopyOut<T>, Placeholder::Out2<T>, OpVOutCast>;
 
-  using Outputs = Elems<OpCopyVarOut, OpCopyMOut, OpCopyVOut>;
+  using Outputs = Elems<typename ApplyAdamWAmsGradDAG::OpCopyVarOut, typename ApplyAdamWAmsGradDAG::OpCopyMOut, typename ApplyAdamWAmsGradDAG::OpCopyVOut>;
   using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
-  using OpDag = DAGSch<Outputs, void, MemCfg>;
+  using OpDag = DAGSch<typename ApplyAdamWAmsGradDAG::Outputs, void, MemCfg>;
 };
 }  // namespace ApplyAdamWOp
 #endif  // APPLY_ADAM_W_DAG_H
