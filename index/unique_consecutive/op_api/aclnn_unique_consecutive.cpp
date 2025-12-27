@@ -17,7 +17,6 @@
 #include "aclnn_unique_consecutive.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/shape_utils.h"

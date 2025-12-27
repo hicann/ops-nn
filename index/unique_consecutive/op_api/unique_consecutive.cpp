@@ -83,15 +83,6 @@ aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, b
     auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
 
     aclnnStatus ret = ACLNN_SUCCESS;
-    if (!returnCounts) {
-        ret = ADD_TO_LAUNCHER_LIST_AICORE(UniqueConsecutive,
-                                      OP_INPUT(self),
-                                      OP_OUTPUT(valueOut, inverseOut, countsOut),
-                                      OP_ATTR(returnInverse, returnCounts, NoneN, outIdx),
-                                      OP_OUTSHAPE({outShapeTensor, 0})
-        );
-        return ret;
-    }
     ret = ADD_TO_LAUNCHER_LIST_AICORE(UniqueConsecutive,
                                       OP_INPUT(self),
                                       OP_OUTPUT(valueOut, inverseOut, countsOut),

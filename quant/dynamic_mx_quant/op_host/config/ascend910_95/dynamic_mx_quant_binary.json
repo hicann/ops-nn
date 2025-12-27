@@ -1,0 +1,517 @@
+{
+    "op_type": "DynamicMxQuant",
+    "op_list": [
+      {
+        "bin_filename": "DynamicMxQuant_bf16toe2m1",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float4_e2m1",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mxscale",
+            "index": 1,
+            "dtype": "float8_e8m0",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "blocksize",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "scale_alg",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_bf16toe1m2",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float4_e1m2",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_fp16toe1m2",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float4_e1m2",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_fp16toe2m1",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float4_e2m1",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_bf16toe4m3",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float8_e4m3fn",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_bf16toe5m2",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "bfloat16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float8_e5m2",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_fp16toe4m3",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float8_e4m3fn",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      },
+      {
+        "bin_filename": "DynamicMxQuant_fp16toe5m2",
+        "inputs": [
+            {
+              "name": "x",
+              "index": 0,
+              "dtype": "float16",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "outputs": [
+            {
+              "name": "y",
+              "index": 0,
+              "dtype": "float8_e5m2",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            },
+            {
+              "name": "mxscale",
+              "index": 1,
+              "dtype": "float8_e8m0",
+              "format": "ND",
+              "paramType": "required",
+              "shape": [
+                -2
+              ]
+            }
+        ],
+        "attrs": [
+            {
+              "name": "axis",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "round_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+              "name": "dst_type",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "blocksize",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            }
+        ]
+      }
+    ]
+}

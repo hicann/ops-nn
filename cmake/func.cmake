@@ -361,6 +361,10 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
   endif()
   file(GLOB_RECURSE SUB_OPTILING_SRC ${source_dir}/op_tiling/*.cpp)
 
+  if(UT_TEST_ALL OR OP_HOST_UT)
+    file(GLOB_RECURSE OPTILING_SRCS ${source_dir}/*_tiling*.cpp)
+  endif()
+
   if (OPTILING_SRCS OR SUB_OPTILING_SRC)
     add_tiling_modules()
     target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${OPTILING_SRCS} ${SUB_OPTILING_SRC})

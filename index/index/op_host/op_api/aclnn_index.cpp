@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
  /*!
  * \file aclnn_index.cpp
  * \brief index Aclnn file
@@ -56,6 +55,7 @@ static const int64_t DATA_LIMIT_MULTI_INDEX = 500000;
 static const int64_t MASK_MODE_01_SIZE = 2;
 static const int64_t UB_LIMIT = 256;
 static const int64_t TAIL_SIZE_LIMIT = 32;
+static constexpr size_t MAX_DIM_LEN = 8;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
@@ -153,6 +153,16 @@ static void CheckShape(const aclTensor *self, const aclTensorList* indices)
   }
 }
 
+static inline bool CheckShapeDim(const aclTensor *self, const aclTensorList* indices) {
+  OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
+  int64_t indicesSize = static_cast<int64_t>(indices->Size());
+
+  for (int64_t i = 0; i < indicesSize; i++) {
+    OP_CHECK_MAX_DIM((*indices)[i], MAX_DIM_LEN, return false);
+  }
+  return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensorList* indices, const aclTensor *out) {
   // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
   // 1. 检查参数是否为空指针
@@ -163,6 +173,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensorList* indic
   CHECK_RET(CheckFormat(self, indices, out), ACLNN_ERR_PARAM_INVALID);
   // 4. 检查shape是否支持
   CheckShape(self, indices);
+  CHECK_RET(CheckShapeDim(self, indices), ACLNN_ERR_PARAM_INVALID);
   return ACLNN_SUCCESS;
 }
 
@@ -212,23 +223,26 @@ bool check_index_aicore(const aclTensor *self, const FVector<const aclTensor*, 8
     }
   }
 
+  bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
   // The input of the aicore does not support float64.
-  if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95) {
+  if (is91095) {
     if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910_95)) {
-        return false;
+      return false;
     }
   } else if (op::GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND910B) {
     if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B)) {
-        return false;
+      return false;
     }
   } else if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
     return false;
   }
 
   // indices must be continuous
-  for (size_t idx = 1; idx < masks.size(); idx++) {
-    if (masks[idx] - masks[idx - 1] < 0) {
-      return false;
+  if (!is91095) {
+    for (size_t idx = 1; idx < masks.size(); idx++) {
+      if (masks[idx] - masks[idx - 1] < 0) {
+          return false;
+      }
     }
   }
 
@@ -304,23 +318,30 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor *self,
     }
     masksNum += 1;
   }
-
+  OP_LOGI("masksNum is %zu, indicesNum is %zu", masksNum, indicesNum);
+  size_t indicesDim = indicesNum > 0 ? allDefinedIndices[0]->GetViewShape().GetDimNum() : 0UL;
+  size_t xDim = self->GetViewShape().GetDimNum();
+  size_t outputDim = indicesDim + xDim - static_cast<size_t>(indicesNum);
+  OP_LOGI("x dim is %zu, indices dim is %zu, so output dim is %zu", xDim, indicesDim, outputDim);
+  if (outputDim > MAX_DIM_LEN) {
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]", outputDim);
+    return ACLNN_ERR_PARAM_INVALID;
+  }
   int64_t tailSize = 1;
   for (size_t i = masks.size(); i < self->GetViewShape().GetDimNum(); i++) {
     tailSize = tailSize * self->GetViewShape().GetDim(i);
   }
-
   bool isAicore = check_index_aicore(self, allDefinedIndices, masks);
+  bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
   // small tail size will use transpose
-  if (isAicore && masksNum > indicesNum && tailSize < TAIL_SIZE_LIMIT) {
+  if (isAicore && masksNum > indicesNum && tailSize < TAIL_SIZE_LIMIT && !is91095) {
     needTranspose = 1;
     masks.clear();
     for (int64_t i = 0; i < indicesNum; i++) {
       masks.emplace_back(1);
     }
   }
-
-  bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
+  
   // construct output shape after transpose
   op::ShapeVector transposedOutputShape;
   if (!is91095) {
