@@ -67,7 +67,7 @@ to a right permission."
     exit 1
 fi
 
-installed_path="$(cd "${_CURR_PATH}/../../../../../"; pwd)"
+installed_path="$(cd "${_CURR_PATH}/../../../../"; pwd)"
 parent_installed_path="$(cd "${installed_path}/../"; pwd)"
 cd ~
 sh "${install_shell}" "--aa" "--aa" "--uninstall" "--install-path=${installed_path}" "${quiet_parameter}"

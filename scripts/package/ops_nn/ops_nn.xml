@@ -22,7 +22,6 @@
     <version_info install="true" install_path="ops_nn" install_own="$username:$usergroup" install_mod="440"/>
     <file_info value="ops_nn_script" copy_type="source" src_path="" dst_path="share/info/ops_nn" install_path="share/info/ops_nn">
         <file value="script" entity="true"/>
-        <file value="bin" entity="true"/>
         <file value="version.info"/>
     </file_info>
     <!--block_info-->
@@ -38,7 +37,6 @@
         <path value="share" install_mod="550"/>
         <path value="share/info" install_mod="750"/>
         <path value="share/info/ops_nn" install_mod="550"/>
-        <path value="share/info/ops_nn/bin" install_mod="550"/>
         <path value="share/info/ops_nn/script" install_mod="550"/>
     </dir_info>
 </config>

@@ -139,7 +139,7 @@ KEY_RUNPKG_VERSION="Version"
 getrunpkginfo() {
     _key_param="$1"
     if [ -f "${_VERSION_INFO_FILE}" ]; then
-        . "${_VERSION_INFO_FILE}"
+        . "${_VERSION_INFO_FILE}" 2> /dev/null
         case "${_key_param}" in
         Version)
             echo ${Version}
@@ -341,6 +341,7 @@ is_install_path="${10}"
 is_upgrade="${11}"
 in_feature_new="${12}"
 chip_type_new="${13}"
+pkg_version_dir="${14}"
 in_install_for_all=""
 
 logandprint "[INFO]: Command opp_upgrade"
@@ -350,17 +351,15 @@ if [ "${is_for_all}" = y ]; then
 fi
 
 get_version "pkg_version" "$_VERSION_INFO_FILE"
-get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
 is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE"
 
 get_package_upgrade_version_dir "upgrade_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
-get_package_upgrade_version_dir "upgrade_old_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_old_dir}"
-get_package_upgrade_install_info "upgrade_install_info" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
-get_package_upgrade_install_info "upgrade_old_install_info" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_old_dir}"
-get_package_last_installed_version "version_pair" "$_TARGET_INSTALL_PATH" "ops_nn"
+upgrade_version_dir="$pkg_version_dir"
+upgrade_old_version_dir="$pkg_version_dir"
+upgrade_install_info="$_TARGET_INSTALL_PATH/$pkg_version_dir/share/info/$ops_base_platform_dir/ascend_install.info"
+upgrade_old_install_info="$upgrade_install_info"
 
 if [ "$pkg_is_multi_version" = "true" ]; then
-    get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
     install_version_dir=${_TARGET_INSTALL_PATH}/${pkg_version_dir}
 else
     install_version_dir=${_TARGET_INSTALL_PATH}
@@ -404,8 +403,8 @@ checkinstalledtype "${install_type}"
 checkfileexist "${_FILELIST_FILE}"
 checkfileexist "${_COMMON_PARSER_FILE}"
 # check the ops_nn module sub directory exist or not
-opp_sub_dir="${install_version_dir}/${upgrade_version_dir}""/share/info/${ops_nn_platform_dir}/"
-old_opp_sub_dir="${install_version_dir}/${upgrade_old_version_dir}""/share/info/${ops_nn_platform_old_dir}/"
+opp_sub_dir="${_TARGET_INSTALL_PATH}/${upgrade_version_dir}""/share/info/${ops_nn_platform_dir}/"
+old_opp_sub_dir="${_TARGET_INSTALL_PATH}/${upgrade_old_version_dir}""/share/info/${ops_nn_platform_old_dir}/"
 if [ -d ${old_opp_sub_dir}/built-in ]; then
     opp_sub_dir=${old_opp_sub_dir}
 fi
@@ -479,10 +478,6 @@ if [ "$(id -u)" != 0 ] && [ ! -w "${_TARGET_INSTALL_PATH}" ]; then
     is_change_dir_mode="true"
 fi
 logandprint "[INFO]: Update the ops_nn install info."
-if [ ! -d "${relative_path_val}/${ops_nn_platform_dir}" ]; then
-    mkdir -p "${relative_path_val}/${ops_nn_platform_dir}"
-    chmod "$_CUSTOM_PERM" "${relative_path_val}" 2> /dev/null
-fi
 
 if [ "${in_feature_new}" = "" ]; then
     in_feature_1="--feature=all"
@@ -561,8 +556,6 @@ for dir in ${subdirs}; do
         chown -R "${_TARGET_USERNAME}":"${_TARGET_USERGROUP}" "${install_version_dir}/ops_nn/${dir}" 2> /dev/null
     fi
 done
-chown "${_TARGET_USERNAME}":"${_TARGET_USERGROUP}" "${install_version_dir}/${ops_nn_platform_dir}" 2> /dev/null
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Change ops_nn onwership failed.."
 
 #chmod to support copy
 if [ -d "${install_version_dir}/${ops_nn_platform_dir}/vendors" ] && [ "$(id -u)" != "0" ]; then
@@ -571,14 +564,8 @@ fi
 
 logandprint "[INFO]: upgradePercentage:100%"
 logandprint "[INFO]: Installation information listed below:"
-logandprint "[INFO]: Install path: (${install_version_dir}/${ops_nn_platform_dir})"
 logandprint "[INFO]: Install log file path: (${_INSTALL_LOG_FILE})"
 logandprint "[INFO]: Operation log file path: (${_OPERATE_LOG_FILE})"
-if [ "${is_setenv}" != "y" ];then
-    logandprint "[INFO]: Using requirements: when ops_nn module install finished or \
-before you run the ops_nn module, execute the command \
-[ export ASCEND_OPS_NN_PATH=${install_version_dir}/${ops_nn_platform_dir} ] to set the environment path."
-fi
 logandprint "[INFO]: OpsNN package upgraded successfully! The new version takes effect immediately."
 exit 0
 

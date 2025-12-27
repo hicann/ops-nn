@@ -88,6 +88,8 @@ def remove_ascend(text):
     if text is None:
         return None
     text_lower = text.lower()
+    if text_lower == "ascend910_93":
+        return "A3"
     if "ascend" in text_lower:
         return text_lower.replace("ascend", "")
     return text_lower

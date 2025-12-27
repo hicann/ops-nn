@@ -146,7 +146,7 @@ KEY_RUNPKG_VERSION="Version"
 getrunpkginfo() {
     _key_param="$1"
     if [ -f "${_VERSION_INFO_FILE}" ]; then
-        . "${_VERSION_INFO_FILE}"
+        . "${_VERSION_INFO_FILE}" 2> /dev/null
         case "${_key_param}" in
         Version)
             echo ${Version}
@@ -275,6 +275,7 @@ docker_root="${12}"
 is_install_path="${13}"
 in_feature_new="${14}"
 chip_type_new="${15}"
+pkg_version_dir="${16}"
 
 logandprint "[INFO]: Command ops_nn_install"
 
@@ -291,7 +292,6 @@ if [ "${_TARGET_INSTALL_PATH}" = "" ] || [ "${_TARGET_USERNAME}" = "" ] ||
 fi
 
 get_version "pkg_version" "$_VERSION_INFO_FILE"
-get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
 get_package_upgrade_version_dir "upgrade_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
 get_package_upgrade_version_dir "upgrade_old_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_old_dir}"
 get_package_last_installed_version "last_installed" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
@@ -301,7 +301,6 @@ last_installed_old_version=$(echo ${last_installed} | cut --only-delimited -d":"
 
 is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE"
 if [ "$pkg_is_multi_version" = "true" ]; then
-    get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
     version_install_dir=${_TARGET_INSTALL_PATH}/${pkg_version_dir}
 else
     version_install_dir=${_TARGET_INSTALL_PATH}

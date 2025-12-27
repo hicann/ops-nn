@@ -267,7 +267,7 @@ KEY_RUNPKG_VERSION="Version"
 getrunpkginfo() {
     _key_param="$1"
     if [ -f "${_VERSION_INFO_FILE}" ]; then
-        . "${_VERSION_INFO_FILE}"
+        . "${_VERSION_INFO_FILE}" 2> /dev/null
         case "${_key_param}" in
         Version)
             echo ${Version}
@@ -392,7 +392,7 @@ path or clean the previous version ops_nn install info (/etc/ascend_install.info
                 return 1
             fi
         else
-            sh "${_UNINSTALL_SHELL_FILE}" "${target_dir}" "uninstall" "${is_quiet}" $in_feature "${is_docker_install}" "${docker_root}"
+            sh "${_UNINSTALL_SHELL_FILE}" "${target_dir}" "uninstall" "${is_quiet}" $in_feature "${is_docker_install}" "${docker_root}" "$pkg_version_dir"
             if [ "$?" != 0 ]; then
                 logandprint "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Clean the installed directory failed."
                 return 1
@@ -666,8 +666,8 @@ check_version_file () {
 
 
 check_opp_version_file () {
-    if [ -f "${_CURR_PATH}/../../version.info" ];then
-        opp_ver_info="${_CURR_PATH}/../../version.info"
+    if [ -f "${_CURR_PATH}/../version.info" ];then
+        opp_ver_info="${_CURR_PATH}/../version.info"
     elif [ -f "${_DEFAULT_INSTALL_PATH}/${opp_platform_dir}/version.info" ];then #TODO:
         opp_ver_info="${_DEFAULT_INSTALL_PATH}/${opp_platform_dir}/version.info"
     else
@@ -1054,7 +1054,6 @@ iter_i=0
 startlog
 
 is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE"
-get_version_dir "pkg_version_dir" "$_VERSION_INFO_FILE"
 while true
 do
     # skip 2 parameters avoid run pkg and directory as input parameter
@@ -1161,6 +1160,13 @@ if [ "${is_input_path}" != y ]; then
     _TARGET_INSTALL_PATH="${_DEFAULT_INSTALL_PATH}"
 else
     _TARGET_INSTALL_PATH="${in_install_path_param}"
+fi
+
+if is_version_dirpath "$_TARGET_INSTALL_PATH"; then
+    pkg_version_dir="$(basename "$_TARGET_INSTALL_PATH")"
+    _TARGET_INSTALL_PATH="$(dirname "$_TARGET_INSTALL_PATH")"
+else
+    pkg_version_dir="cann"
 fi
 
 if [ "$pkg_is_multi_version" = "true" ]; then
@@ -1374,13 +1380,11 @@ matchfullpath "${target_dir}"
 #target_dir=${absolute_path}
 
 if [ "${is_check}" = "y" ]; then
-    if [ -z "$pkg_version_dir" ]; then
-        preinstall_check --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
-        if [ $? -ne 0 ]; then
-            logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
-            exit 1
+    preinstall_check --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
+    if [ $? -ne 0 ]; then
+        logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
+        exit 1
 	fi
-    fi
 fi
 
 
@@ -1503,7 +1507,7 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
             else
                 chip_type_new=${chip_type_new}
             fi
-            sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "" "n" "${in_feature_new}" "${chip_type_new}"
+            sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "" "n" "${in_feature_new}" "${chip_type_new}" "$$pkg_version_dir"
             chmod -R 555 "${target_dir}/${opp_platform_dir}/script"> /dev/null 2>&1
             chmod -R 555 "${target_dir}/${opp_platform_dir}/bin"> /dev/null 2>&1
             if [ $(id -u) -eq 0 ]; then
@@ -1518,18 +1522,16 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
         fi
     fi
     # check the compatibility of ops_nn
-    if [ -z "$pkg_version_dir" ]; then
-        preinstall_process --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
-        if [ $? -ne 0 ]; then
-            logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
-            exit 1
-        fi
+    preinstall_process --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
+    if [ $? -ne 0 ]; then
+        logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
+        exit 1
     fi
     # call opp_install.sh
     if [ -d "${target_dir}/ops_nn" ] && [ ! -L "${target_dir}/ops_nn" ] && [ -f "${target_dir}/ops_nn/script/uninstall.sh" ]; then
         bash "${target_dir}/ops_nn/script/uninstall.sh"
     fi
-    sh "${_INSTALL_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" "${in_feature}" "${in_install_type}" "${is_quiet}" "${_FIRST_NOT_EXIST_DIR}" "${is_the_last_dir_opp}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "${is_input_path}" "${in_feature_new}" "${chip_type_new}"
+    sh "${_INSTALL_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" "${in_feature}" "${in_install_type}" "${is_quiet}" "${_FIRST_NOT_EXIST_DIR}" "${is_the_last_dir_opp}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "${is_input_path}" "${in_feature_new}" "${chip_type_new}" "$pkg_version_dir"
     if [ "$?" != 0 ]; then
         logoperationretstatus "install" "${in_install_type}" "1" "${in_cmd_list}"
     fi
@@ -1546,14 +1548,12 @@ if [ "${is_upgrade}" = "y" ];then
         interact_pre_check
     fi
     # check the compatibility of ops_nn
-    if [ -z "$pkg_version_dir" ]; then
-        preinstall_process --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
-        if [ $? -ne 0 ]; then
-            logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
-            exit 1
-        fi
+    preinstall_process --install-path="${target_dir}" --docker-root="${docker_root}" --script-dir="${_CURR_PATH}" --package="${opp_platform_dir}" --logfile="${_INSTALL_LOG_FILE}"
+    if [ $? -ne 0 ]; then
+        logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
+        exit 1
     fi
-    sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "${is_input_path}" "${is_upgrade}" "${in_feature_new}" "${chip_type_new}"
+    sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "${is_input_path}" "${is_upgrade}" "${in_feature_new}" "${chip_type_new}" "$pkg_version_dir"
     if [ $(id -u) -eq 0 ]; then
         chown -R "root":"root" "${target_dir}/share/info/${opp_platform_dir}/script" 2> /dev/null
         chown "root":"root" "${target_dir}/share/info/${opp_platform_dir}" 2> /dev/null
@@ -1592,7 +1592,7 @@ if [ "${is_uninstall}" = "y" ];then
     fi
     # call opp_uninstall.sh
 #    aicpuinfofile "remove"
-    sh "${_UNINSTALL_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "uninstall" "${is_quiet}" $in_feature "${is_docker_install}" "${docker_root}"
+    sh "${_UNINSTALL_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "uninstall" "${is_quiet}" $in_feature "${is_docker_install}" "${docker_root}" "$pkg_version_dir"
     # remove precheck info in ${target_dir}/bin/prereq_check.bash
     logandprint "[INFO]: Remove precheck info."
 
