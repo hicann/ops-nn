@@ -12,6 +12,7 @@
  * \file linear_index_v2.cpp
  * \brief
  */
+
 #include "linear_index_v2.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"

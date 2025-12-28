@@ -1,16 +1,17 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
+ 
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnn_index_fill_tensor.h"
+#include "aclnnop/aclnn_index_fill.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \
@@ -67,7 +68,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl对外接口列表
+  // 1. （固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -75,20 +76,25 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {3, 3};
+  std::vector<int64_t> indexShape = {1};
   std::vector<int64_t> outShape = selfShape;
   void* selfDeviceAddr = nullptr;
-  void* outDeviceAddr = nullptr; 
+  void* indexDeviceAddr = nullptr;
+  void* outDeviceAddr = nullptr;
   aclTensor* self = nullptr;
+  aclTensor* index = nullptr;
   aclScalar* value = nullptr;
-  aclIntArray* index = nullptr;
   aclTensor* out = nullptr;
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<int> indexHostData = {0};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   int64_t dim = 1;
   float fillVal = 10;
-  int64_t indexVal = 0;
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  // 创建index aclTensor
+  ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT64, &index);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
@@ -96,25 +102,22 @@ int main() {
   // 创建value aclScalar
   value = aclCreateScalar(&fillVal, aclDataType::ACL_FLOAT);
   CHECK_RET(value != nullptr, return ret);
-  // 创建index aclIntArray
-  index = aclCreateIntArray(&indexVal, 1);
-  CHECK_RET(index != nullptr, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // 调用aclnnIndexFillTensor第一段接口
-  ret = aclnnIndexFillTensorGetWorkspaceSize(self, dim, index, value, out, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexFillTensorGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnIndexFill第一段接口
+  ret = aclnnIndexFillGetWorkspaceSize(self, dim, index, value, out, &workspaceSize, &executor);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexFillGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnIndexFillTensor第二段接口
-  ret = aclnnIndexFillTensor(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexFillTensor failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnIndexFill第二段接口
+  ret = aclnnIndexFill(workspaceAddr, workspaceSize, executor, stream);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexFill failed. ERROR: %d\n", ret); return ret);
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -130,12 +133,13 @@ int main() {
 
   // 6. 释放申请的变量，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
+  aclDestroyTensor(index);
   aclDestroyTensor(out);
   aclDestroyScalar(value);
-  aclDestroyIntArray(index);
 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
+  aclrtFree(indexDeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);

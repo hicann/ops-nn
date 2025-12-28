@@ -12,6 +12,7 @@
  * \file index_put_with_sort.cpp
  * \brief
  */
+
 #include "index_put_with_sort.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
