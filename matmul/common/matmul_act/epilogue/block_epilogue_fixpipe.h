@@ -108,6 +108,14 @@ public:
         Run(blockShape, dstOffset, splitM);
         return;
     }
+
+    __host_aicore__ static Status CanImplement(Arguments const &args)
+    {
+        if (l0M * l0N * sizeof(DataTypeIn_) > TOTAL_UB_SIZE) {
+            return Status::l1L0ErrorExceedsLimit;
+        }
+        return Status::success;
+    }
 };
 } // namespace Block
 } // namespace Gemm

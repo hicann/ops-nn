@@ -1,15 +1,22 @@
 # aclnnBatchMatMulWeightNz
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    x     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-- 接口功能：完成张量self与张量mat2的矩阵乘计算，mat2仅支持AI处理器亲和数据排布格式，只支持self为3维，mat2为5维。
+- 接口功能：完成张量self与张量mat2的矩阵乘计算，mat2仅支持NZ格式，只支持self为3维，mat2为5维。
 
 - 计算公式：
 
@@ -81,8 +88,8 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
       <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li> 
-      <li>当B矩阵不转置时， AI处理器亲和数据排布格式各个维度表示：（b, n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
-      <li>当B矩阵转置时， AI处理器亲和数据排布格式各个维度表示：（b, k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
+      <li>当B矩阵不转置时， NZ格式各个维度表示：（b, n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
+      <li>当B矩阵转置时， NZ格式各个维度表示：（b, k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
       <li>mat2的第一个维度b需要与mat2第一个维度b满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16</td>
@@ -219,12 +226,13 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMulWeightNz默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>: aclnnBatchMatMulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 
 ## 调用示例
 
-self和mat2数据类型为float16，mat2为AI处理器亲和数据排布格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   ```Cpp
   #include <iostream>
   #include <vector>

@@ -65,6 +65,7 @@ public:
                 .ExtendCfgInfo("softsync.flag", "true");
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
+
         aicConfig.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16})
@@ -91,6 +92,7 @@ public:
             .Format({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND});
         this->AICore().AddConfig("ascend310p", aicConfig);
+
         aicConfig.Input("x1")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16})
@@ -146,6 +148,47 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND});
         aicConfig.ExtendCfgInfo("opFile.value", "batch_mat_mul_v3_apt");
         this->AICore().AddConfig("mc62cm12a", aicConfig);
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND});
+        config_kirin.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Input("offset_w")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_INT8, ge::DT_INT8, ge::DT_INT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND});
+        return config_kirin;
     }
 };
 

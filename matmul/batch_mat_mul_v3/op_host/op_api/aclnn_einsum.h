@@ -38,7 +38,7 @@ ACLNN_API aclnnStatus aclnnEinsumGetWorkspaceSize(const aclTensorList* tensors, 
 /**
  * @brief aclnnEinsum的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnEinsumGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。

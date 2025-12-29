@@ -136,35 +136,6 @@ const static std::map<platform_ascendc::SocVersion, ResetBaseFunc> ResetBaseFunc
     {platform_ascendc::SocVersion::ASCEND910_95, ResetBase91095},
 };
 
-// ------------------------------ CheckIfDoubleAswt -------------------------------------------//
-bool CheckIfDoubleAswtDefault(const MatMulV3Args & /* args */, const uint64_t /* batchC */)
-{
-    return false;
-}
-
-bool CheckIfDoubleAswt91095(const MatMulV3Args &args, const uint64_t batchC)
-{
-    constexpr uint64_t halfL2Size = 64UL * 1024UL * 1024UL;  // 64mb
-    constexpr uint64_t cubeBoundRatio = 512UL;
-    if (batchC * args.mValue * args.nValue * args.aDtypeSize < halfL2Size) {  // check matC exceed half L2
-        return false;
-    }
-    if ((args.mValue * args.nValue / (args.mValue + args.nValue)) > cubeBoundRatio) {  // check if cube bound or streamk
-        return false;
-    }
-    if (args.kValue > (args.mValue >> 1) ||
-        args.kValue > (args.nValue >> 1)) {  // check if matA or matb occupies most of L2
-        return false;
-    }
-    return true;
-}
-
-using CheckIfDoubleAswtFunc = bool (*)(const MatMulV3Args &, const uint64_t);
-
-const static std::map<platform_ascendc::SocVersion, CheckIfDoubleAswtFunc> CheckIfDoubleAswtFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, CheckIfDoubleAswt91095},
-};
-
 // ------------------------------ GetL0C2Out -------------------------------------------//
 MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */,
                               const MatMulV3RunInfo & /* runInfo */)
@@ -198,6 +169,47 @@ using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo &, const Ma
 const static std::map<platform_ascendc::SocVersion, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {platform_ascendc::SocVersion::ASCEND910_95, GetL0C2Out91095},
 };
+
+
+// ------------------------------ GetStepSmallK -------------------------------------------//
+uint64_t GetStepSmallKDefault(const MatMulV3Args& /* args */, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
+{
+    return isBL1FullLoad ? runInfo.stepKa : runInfo.stepKb;
+}
+
+uint64_t GetStepSmallK91095(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
+{
+    uint64_t stepBigK = runInfo.stepKa;
+    uint64_t stepSmallK = runInfo.stepKb;
+    uint64_t dtypeSize = args.aDtypeSize;
+    ge::DataType inputType = args.aType;
+    bool isTrans = args.isBTrans;
+    if (isBL1FullLoad) {
+        stepBigK = runInfo.stepKb;
+        stepSmallK = runInfo.stepKa;
+        dtypeSize = args.bDtypeSize;
+        inputType = args.bType;
+        isTrans = args.isATrans;
+    }
+
+    static const double SMALL_TAIL = 0.25;
+    bool isSmallTail = static_cast<double>(stepBigK % stepSmallK) / stepSmallK <= SMALL_TAIL;
+    isSmallTail = (isSmallTail && !isTrans) || runInfo.baseK * dtypeSize >= BASIC_BLOCK_SIZE_256;
+    // A/B全载场景，stepK big为全载矩阵的stepK, 调整stepK small为2, 减少mte2耗时, 提高搬运带宽
+    if ((inputType == ge::DT_FLOAT && !args.isHf32)) {
+        stepSmallK = 1UL;
+    } else if (isSmallTail) {
+        stepSmallK = 2UL;
+    }
+    return stepSmallK;
+}
+
+using GetStepSmallKFunc = uint64_t (*)(const MatMulV3Args&, const MatMulV3RunInfo&, bool);
+
+// 全载模板修改stepK
+const static std::map<platform_ascendc::SocVersion, GetStepSmallKFunc> GetStepSmallKFuncMap = {
+    {platform_ascendc::SocVersion::ASCEND910_95, GetStepSmallK91095},
+};
 }  // namespace
 
 namespace optiling {
@@ -229,13 +241,60 @@ MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo &comp
     return iter(compileInfo, args, runInfo);
 }
 
-bool MatMulV3TilingHelper::CheckIfDoubleAswt(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                             const uint64_t batchC)
+uint64_t MatMulV3TilingHelper::GetStepSmallK(
+    bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
-    auto iter = (CheckIfDoubleAswtFuncMap.find(compileInfo.socVersion) == CheckIfDoubleAswtFuncMap.end())
-                    ? CheckIfDoubleAswtDefault
-                    : CheckIfDoubleAswtFuncMap.at(compileInfo.socVersion);
-    return iter(args, batchC);
+    auto iter = (GetStepSmallKFuncMap.find(compileInfo.socVersion) == GetStepSmallKFuncMap.end()) ?
+                    GetStepSmallKDefault :
+                    GetStepSmallKFuncMap.at(compileInfo.socVersion);
+    return iter(args, runInfo, isBL1FullLoad);
+}
+
+void MatMulV3TilingHelper::AdjustBL1TilingCommon(
+    uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
+{
+    // fine tune tiling basen
+    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t bl0Size = nAlignedValue * runInfo.baseK * args.bDtypeSize * DB_SIZE;
+    runInfo.baseN = bl0Size <= compileInfo.l0BSize ? nAlignedValue : std::min(nAlignedValue, runInfo.baseN);
+    runInfo.stepN = MathUtil::CeilDivision(args.nValue, runInfo.baseN);
+    runInfo.stepKb = MathUtil::CeilDivision(args.kValue, runInfo.baseK);
+    // fine tune stepK for fullload
+    runInfo.stepKa = GetStepSmallK(true, compileInfo, args, runInfo);
+    // take full use of cores
+    if (aBatchDimAll * MathUtil::CeilDivision(args.mValue, runInfo.baseM) < compileInfo.aicNum) {
+        runInfo.baseM =
+            ops::CeilAlign(MathUtil::CeilDivision(aBatchDimAll * args.mValue, compileInfo.aicNum), BASIC_BLOCK_SIZE_16);
+    }
+    runInfo.depthA1 = DB_SIZE * runInfo.stepKa;
+    runInfo.depthB1 = runInfo.stepN * runInfo.stepKb;
+}
+
+void MatMulV3TilingHelper::AdjustAL1TilingCommon(
+    uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
+{
+    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t al0Size = mAlignedValue * runInfo.baseK * args.aDtypeSize * DB_SIZE;
+    runInfo.baseM = al0Size <= compileInfo.l0ASize ? mAlignedValue : std::min(mAlignedValue, runInfo.baseM);
+    runInfo.stepM = MathUtil::CeilDivision(args.mValue, runInfo.baseM);
+    runInfo.stepKa = MathUtil::CeilDivision(args.kValue, runInfo.baseK);
+    runInfo.stepKb = GetStepSmallK(false, compileInfo, args, runInfo);
+    // take full use of cores
+    if (bBatchDimAll * MathUtil::CeilDivision(args.nValue, runInfo.baseN) < compileInfo.aicNum) {
+        runInfo.baseN =
+            ops::CeilAlign(MathUtil::CeilDivision(bBatchDimAll * args.nValue, compileInfo.aicNum), BASIC_BLOCK_SIZE_16);
+    }
+    runInfo.depthB1 = DB_SIZE * runInfo.stepKb;
+    runInfo.depthA1 = runInfo.stepM * runInfo.stepKa;
+}
+
+void MatMulV3TilingHelper::ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo)
+{
+    // 全载模板需重置负载均衡计算
+    runInfo.mBaseTailSplitCnt = 1UL;
+    runInfo.nBaseTailSplitCnt = 1UL;
+    runInfo.tailInfo.mTailMain = 0UL;
+    runInfo.tailInfo.nTailMain = 0UL;
 }
 }  // namespace matmul_v3_advanced
 }  // namespace optiling

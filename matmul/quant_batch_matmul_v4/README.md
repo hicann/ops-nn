@@ -5,8 +5,13 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
+|昇腾910_95 AI处理器|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|x|
+|Atlas 训练系列产品|x|
+|Atlas 200/300/500 推理产品|×|
 
 ## 参数说明
 
@@ -55,7 +60,7 @@
       $$
       out = x1@x2 * scale * x1Scale + bias
       $$
-    
+
     - x1，x2为INT8，x1Scale, x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16  (pertoken-pergroup量化):
 
       $$
@@ -66,6 +71,44 @@
 
       $$
       out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
+      $$
+
+  - <term>昇腾910_95 AI处理器</term>：
+
+    - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，无x2Offset，可选参数bias的dtype为FLOAT32，out为FLOAT8_E4M3FN/HIFLOAT8/FLOAT16/BFLOAT16/FLOAT32：
+
+      $$
+      out = (x1@x2 + bias) * x2Scale
+      $$
+
+    - mx[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
+
+      $$
+      out = (x1* x1Scale)@(x2* x2Scale) + bias
+      $$
+
+    - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，可选参数bias的dtype为FLOAT32：
+
+      $$
+      out = (x1@x2 + bias) * x2Scale * x1Scale
+      $$
+
+    - 在G-B && B-B[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，无bias，当x1为(a0, a1)，x2为(b0, b1)时，x1Scale为(ceil(a0 / 128), ceil(a1 / 128))或(a0, ceil(a1 / 128))，x2Scale为(ceil(b0 / 128), ceil(b1 / 128)):
+
+      $$
+      out_{pq} = \sum_{0}^{\left \lfloor \frac{k}{blockSize} \right \rfloor} (x1_{pr}@x2_{rq}*(x1Scale_{pr}*x2Scale_{rq}))
+      $$
+
+    - x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x1Offset，无x2Offset，可选参数bias的dtype为BFLOAT16，out为BFLOAT16:
+
+      $$
+      out = (x1 * x1Scale)@(x2 * x2Scale) + bias
+      $$
+
+    - x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，无x1Scale，x2Scale为BFLOAT16，无x1Offset，无x2Offset，无bias, yScale为UINT64，out为BFLOAT16:
+
+      $$
+      out = (x1@(x2 * x2Scale)) * yScale
       $$
 
 ## 算子规格
@@ -173,6 +216,23 @@
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
   | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
+
+- 昇腾910_95 AI处理器：
+  | x1                        | x2                        | x1Scale     | x2Scale     | x2Offset | yScale | bias    | out                                    |
+  | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
+  | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/INT32   | FLOAT16/BFLOAT16                       |
+  | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr/FLOAT32  | nullptr     | nullptr/INT32   | INT8                              |
+  | INT8                      | INT8                      | nullptr/FLOAT32| FLOAT32/BFLOAT16  | nullptr     | nullptr     | nullptr/INT32/FLOAT32/BFLOAT16   | BFLOAT16              |
+  | INT8                      | INT8                      | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/INT32/FLOAT32/FLOAT16  | FLOAT16                 |
+  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT8_E4M3FN/FLOAT16/BFLOAT16/FLOAT32 |
+  | HIFLOAT8                  | HIFLOAT8                  | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/FLOAT32 | HIFLOAT8/FLOAT16/BFLOAT16/FLOAT32      |
+  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+  | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+  | FLOAT4_E2M1/FLOAT4_E1M2   | FLOAT4_E2M1/FLOAT4_E1M2   | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+  | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+  | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16| BFLOAT16                               |
+  | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16          | nullptr     | INT64/UINT64    | nullptr         | BFLOAT16                               |
+
 
 ## 约束说明
 

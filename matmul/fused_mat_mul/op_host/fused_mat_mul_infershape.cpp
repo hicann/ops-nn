@@ -55,12 +55,15 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
          strcmp(fused_op_type, "relu") != 0),
         CUBE_INNER_ERR_REPORT(op_name, "fusedOpType must be in the type of /add/mul/gelu_erf/gelu_tanh/relu"),
         return ge::GRAPH_FAILED);
-    if (strcmp(fused_op_type, "") != 0 && strcmp(fused_op_type, "relu") != 0) {
+    // bias拦截
+    if (strcmp(fused_op_type, "") != 0 && strcmp(fused_op_type, "relu") != 0 && strcmp(fused_op_type, "add") != 0 &&
+        strcmp(fused_op_type, "mul") != 0) {
         OP_CHECK_IF(
             shape_bias != nullptr && shape_bias->GetDimNum() != 0,
-            CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type add/mul/gelu_erf/gelu_tanh"),
+            CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type gelu_erf/gelu_tanh"),
             return ge::GRAPH_FAILED);
     }
+    // x3输入拦截
     if (strcmp(fused_op_type, "add") == 0 || strcmp(fused_op_type, "mul") == 0) {
         OP_CHECK_IF(
             shape_c == nullptr, CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);

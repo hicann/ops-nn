@@ -13,14 +13,14 @@
  * \brief
  */
 
-#ifndef ACT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
-#define ACT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
+#ifndef CMCT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
+#define CMCT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
 
-#include "matmul_act/matmul/block/block_scheduler_utils.h"
-#include "matmul_act/matmul/block/block_scheduler_policy.h"
+#include "cmct/block/block_scheduler_utils.h"
+#include "cmct/block/block_scheduler_policy.h"
 #include "mat_mul_tiling_data.h"
 
-namespace Act {
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 template <
@@ -199,7 +199,7 @@ struct BlockSchedulerSelector<
     ProblemShape_,
     L1TileShape_,
     L0TileShape_,
-    Act::Gemm::BuiltInStreamKScheduler,
+    Cmct::Gemm::BuiltInStreamKScheduler,
     TransA_,
     TransB_
 > {
@@ -208,5 +208,5 @@ using SchedulerOp = BlockSchedulerStreamKBuiltIn<ProblemShape_, L1TileShape_, L0
 
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
+} // namespace Cmct
 #endif

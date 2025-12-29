@@ -30,10 +30,6 @@ ge::graphStatus BatchMatMulV3AswTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
-    if (MatMulV3TilingHelper::CheckIfDoubleAswt(compileInfo_, args_, batchInfo_->batchC)) {
-        aswtModel_ = MatMulV3Model::DOUBLE_ASWT;
-    }
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -41,7 +37,7 @@ uint64_t BatchMatMulV3AswTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(aswtModel_)
+        .SetModel(MatMulV3Model::BASIC)
         .GetTilingKey();
 }
 

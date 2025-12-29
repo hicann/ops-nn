@@ -1,11 +1,18 @@
 # aclnnAddmm&aclnnInplaceAddmm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -36,16 +43,16 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
   const aclScalar *beta, 
   const aclScalar *alpha, 
   aclTensor       *out, 
-  int8_t           cubeMathType, 
+  int8_t          cubeMathType, 
   uint64_t        *workspaceSize, 
-  aclOpExecutor  **executor)
+  aclOpExecutor   **executor)
 ```
 ```cpp
 aclnnStatus aclnnAddmm(
   void           *workspace,
-  uint64_t        workspaceSize,
+  uint64_t       workspaceSize,
   aclOpExecutor  *executor,
-  aclrtStream     stream)
+  aclrtStream    stream)
 ```
 ```cpp
 aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
@@ -54,16 +61,16 @@ aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
   const aclTensor *mat2, 
   const aclScalar *beta, 
   const aclScalar *alpha, 
-  int8_t           cubeMathType, 
+  int8_t          cubeMathType, 
   uint64_t        *workspaceSize, 
-  aclOpExecutor  **executor)
+  aclOpExecutor   **executor)
 ```
 ```cpp
 aclnnStatus aclnnInplaceAddmm(
   void           *workspace,
-  uint64_t        workspaceSize,
+  uint64_t       workspaceSize,
   aclOpExecutor  *executor,
-  aclrtStream     stream)
+  aclrtStream    stream)
 ```
 
 ## aclnnAddmmGetWorkspaceSize
@@ -103,10 +110,21 @@ aclnnStatus aclnnInplaceAddmm(
       <td>√</td>
     </tr>
     <tr>
+      <td>mat1</td>
+      <td>输入</td>
+      <td>表示矩阵乘的第二个矩阵，公式中的mat1。</td>
+      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      </td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
+    </tr>
+    <tr>
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -180,10 +198,15 @@ aclnnStatus aclnnInplaceAddmm(
     </tr>
   </tbody></table>
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
-  - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
-  - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
 
 - **返回值：**
 
@@ -229,7 +252,7 @@ aclnnStatus aclnnInplaceAddmm(
   <col style="width: 130px">
   <col style="width: 650px">
   </colgroup>
-  <table><thead>
+  <thead>
     <tr>
       <th>参数名</th>
       <th>输入/输出</th>
@@ -259,6 +282,7 @@ aclnnStatus aclnnInplaceAddmm(
   </tbody>
   </table>
   </div>
+
 
 - **返回值：**
 
@@ -301,10 +325,21 @@ aclnnStatus aclnnInplaceAddmm(
       <td>√</td>
     </tr>
     <tr>
+      <td>mat1</td>
+      <td>输入</td>
+      <td>表示矩阵乘的第二个矩阵，公式中的mat1。</td>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      </td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
+    </tr>
+    <tr>
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -368,7 +403,12 @@ aclnnStatus aclnnInplaceAddmm(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
@@ -409,9 +449,11 @@ aclnnStatus aclnnInplaceAddmm(
       </tbody>
       </table>
 
+
 ## aclnnInplaceAddmm
 
 - **参数说明：**
+
 
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -419,7 +461,7 @@ aclnnStatus aclnnInplaceAddmm(
   <col style="width: 130px">
   <col style="width: 650px">
   </colgroup>
-  <table><thead>
+  <thead>
     <tr>
       <th>参数名</th>
       <th>输入/输出</th>
@@ -450,13 +492,16 @@ aclnnStatus aclnnInplaceAddmm(
   </table>
   </div>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
+- 确定性计算
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>昇腾910_95 AI处理器</term>: aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

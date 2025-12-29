@@ -1,11 +1,18 @@
 # aclnnBaddbmm&aclnnInplaceBaddbmm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -19,7 +26,6 @@ self必须要支持和batch1@batch2的结果做broadcast。（broadcast，广播
   $$
   out = βself+α(batch1@batch2)
   $$
-
   注意：如果β为0，则self会被忽略，不参与计算。
 
 - 示例：
@@ -156,7 +162,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>2</td>
+      <td>3</td>
       <td>√</td>
     </tr>
     <tr>
@@ -196,11 +202,21 @@ aclnnStatus aclnnInplaceBaddbmm(
     </tr>
   </tbody></table>
 
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - cubeMathType=0，当输入数据类型为FLOAT16或BFLOAT16时，矩阵乘计算会使用FLOAT16 / BFLOAT16输入、FLOAT32输出的方式传递，当输入为其他数据类型时不做处理；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
+  - <term>昇腾910_95 AI处理器</term>：
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
+
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -406,10 +422,15 @@ aclnnStatus aclnnInplaceBaddbmm(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
-    - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
-    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+    - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
 
 - **返回值：**
 
@@ -505,8 +526,9 @@ aclnnStatus aclnnInplaceBaddbmm(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>: aclnnBaddbmm&aclnnInplaceBaddbmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。
+- <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

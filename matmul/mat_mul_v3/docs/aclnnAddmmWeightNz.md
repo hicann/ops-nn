@@ -1,11 +1,18 @@
 # aclnnAddmmWeightNz
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -23,6 +30,7 @@
 
 ## 函数原型
 
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmWeightNzGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmmWeightNz”接口执行计算。
 ```cpp
 aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
@@ -32,17 +40,18 @@ aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
   const aclScalar *beta, 
   const aclScalar *alpha, 
   aclTensor       *out, 
-  int8_t           cubeMathType, 
+  int8_t          cubeMathType, 
   uint64_t        *workspaceSize, 
-  aclOpExecutor  **executor)
+  aclOpExecutor   **executor)
 ```
 ```cpp
 aclnnStatus aclnnAddmmWeightNz(
   void           *workspace,
-  uint64_t        workspaceSize,
+  uint64_t       workspaceSize,
   aclOpExecutor  *executor,
-  aclrtStream     stream)
+  aclrtStream    stream)
 ```
+
 
 ## aclnnAddmmWeightNzGetWorkspaceSize
 
@@ -85,8 +94,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
       <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> 
-      </li><li>当mat2矩阵不转置时，AI处理器亲和数据排布格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
-     </li><li>当mat2矩阵转置时，AI处理器亲和数据排布格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1</li> 
+      </li><li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
+     </li><li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1</li> 
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -160,11 +169,16 @@ aclnnStatus aclnnAddmmWeightNz(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：
       - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
       - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
       - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-
+    
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -200,9 +214,11 @@ aclnnStatus aclnnAddmmWeightNz(
       </tbody>
       </table>
 
+
 ## aclnnAddmmWeightNz
 
 - **参数说明：**
+
 
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -241,6 +257,7 @@ aclnnStatus aclnnAddmmWeightNz(
   </table>
   </div>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -248,6 +265,7 @@ aclnnStatus aclnnAddmmWeightNz(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>: aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 
@@ -421,6 +439,7 @@ aclnnStatus aclnnAddmmWeightNz(
     // 创建beta aclScalar
     beta = aclCreateScalar(&betaValue,aclDataType::ACL_FLOAT);
     CHECK_RET(beta != nullptr, return ret);
+
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名
     int8_t cubeMathType = 1;

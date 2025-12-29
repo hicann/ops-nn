@@ -229,7 +229,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 512}, false, 0, 0, 32, 1UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
     {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_2", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -238,7 +238,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 512}, false, 0, 0, 32, 17UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
     {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 1
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_3", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -247,7 +247,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {4, 32, 4096}, false, 0, 0, 32, 257UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
     {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 4
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_4", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -256,7 +256,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 4096}, false, 0, 0, 32, 273UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
     {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 4
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_5", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -265,7 +265,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 512}, false, 0, 0, 32, 0UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
     {0, 1, 2}, {0, 1, 2}, {1, 0, 2}, 1
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_6", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -274,7 +274,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 512}, false, 0, 0, 32, 16UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 ",
     {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, 1
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_7", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -283,7 +283,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 4096}, false, 0, 0, 32, 256UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
     {0, 1, 2}, {0, 1, 2}, {1, 0, 2}, 4
   },{
     "TransposeBatchMatMul_910D1_test_iterbatch_8", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
@@ -292,7 +292,7 @@ static TilingTestParam ascend910_95_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend910_95" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 4096}, false, 0, 0, 32, 272UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 2 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
+    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 ",
     {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, 4
   }
 };

@@ -19,7 +19,7 @@
 
 namespace optiling {
 namespace fused_matmul {
-using matmul_v3_advanced::strategy::BASIC_ASWT;
+using matmul_v3_advanced::strategy::BASIC_ASWT;	
 MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, ASCEND910_95, BASIC_ASWT);
 
 bool FusedMatMulAswBasicApiTiling::IsCapable()
@@ -32,5 +32,16 @@ bool FusedMatMulAswBasicApiTiling::IsCapable()
     OP_LOGI(args_.opName, "FusedMatMul tiling enable state basic api");
     return true;
 }
+
+uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
+{
+    MatMulV3TilingKey tmp = MatMulV3TilingKey();
+    MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
+    return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
+        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
+        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+        .GetTilingKey();
+}
+
 } // namespace fused_matmul
 } // namespace optiling

@@ -19,6 +19,7 @@
 #include "matmul_v3_common_advanced.h"
 #include "matmul_v3_compile_info_advanced.h"
 #include "matmul_v3_tiling_key.h"
+#include "../../../op_kernel/arch35/mat_mul_v3_tiling_key_public.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -28,8 +29,16 @@ public:
     static void CalL1Tiling(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo);
     static MatMulV3L0C2Out GetL0C2Out(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
         const MatMulV3RunInfo &runInfo);
-    static bool CheckIfDoubleAswt(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                  const uint64_t batchC);
+    static uint64_t GetStepSmallK(
+        bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+        MatMulV3RunInfo& runInfo);
+    static void AdjustBL1TilingCommon(
+        uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+        MatMulV3RunInfo& runInfo);
+    static void AdjustAL1TilingCommon(
+        uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+        MatMulV3RunInfo& runInfo);
+    static void ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo);
 };
 }
 }

@@ -131,6 +131,56 @@ public:
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
     }
 
+    __host_aicore__ static Status CheckShape(ProblemShape const& shape)
+    {
+        int64_t m = shape.m;
+        int64_t n = shape.n;
+        int64_t k = shape.k;
+        int64_t b = shape.b;
+        if (b > INT32_MAX) {
+            return Status::batchErrorExcceedsLimit;
+        }
+        // Check m, n, k overlimit data type
+        if (m > INT32_MAX || n > INT32_MAX || k > INT32_MAX) {
+            return Status::mnkErrorExceedsLimit;
+        }
+        // Check matrix size exceeds limit
+        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // mk matrix k limit
+            return Status::mkErrorMatrixExceedsLimit;
+        }
+
+        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) { // km matrix m limit
+            return Status::kmErrorMatrixExceedsLimit;
+        }
+        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) { // kn matrix n limit
+            return Status::knErrorMatrixExceedsLimit;
+        }
+
+        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // nk matrix k limit
+            return Status::nkErrorMatrixExceedsLimit;
+        }
+        return Status::success;
+    }
+
+    __host_aicore__ static Status CanImplement(Arguments const &args)
+    {
+        // Check shape in kernel
+        CHECK_AND_RETURN(CheckShape(args.problemShape));
+        // Check mmad args
+        CHECK_AND_RETURN(BlockMmadBuilder::CanImplement(args.mmadArgs));
+
+        return Status::success;
+    }
+
+    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape, int64_t blockNum)
+    {
+        size_t workSpaceSize = 0;
+        // Calculate extra workspace size for mmad
+        workSpaceSize += BlockMmadBuilder::GetWorkspaceSize();
+
+        return workSpaceSize;
+    }
+
     __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
@@ -154,6 +204,12 @@ public:
         Init(params);
 
         BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
+        if (bs.GetBL2CacheDisable()) {
+            bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+        }
+        if (bs.GetAL2CacheDisable()) {
+            aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+        }        
         int64_t tileNum = bs.GetTileNum();
         TupleShape iterBatchTuple = bs.GetIterBatchTuple();
         TupleShape tileL0Tuple = bs.GetTileL0Tuple();

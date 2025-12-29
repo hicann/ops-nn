@@ -108,25 +108,55 @@ protected:
         return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::K_EQUAL_ZERO);
     }
 
+    bool CheckMatMulStreamK(uint64_t tilingkey) const
+    {
+        return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K);
+    }
+
     // 针对非全载右矩阵是否进入L2条件
     L2CacheMode SetDisableL2cache(uint32_t mL1, uint32_t kaL1, uint32_t kbL1, uint32_t nL1) const
     {
+        L2CacheMode cacheMode = L2CacheMode::L2_CACHE_DEFAULT;
         uint64_t innerA = args_.isATrans ? args_.mValue : args_.kValue;
         uint64_t innerB = args_.isBTrans ? args_.kValue : args_.nValue;
         // 判断切分部分是不是128B对齐
-        bool flagA = args_.isATrans ? (mL1 * args_.aDtypeSize % ALIGN_128 == 0) : (kaL1 * args_.aDtypeSize % ALIGN_128 == 0);
-        bool flagB = args_.isBTrans ? (kbL1 * args_.bDtypeSize % ALIGN_128 == 0) : (nL1 * args_.bDtypeSize % ALIGN_128 == 0);
+        bool flagA =
+            args_.isATrans ? (mL1 * args_.aDtypeSize % ALIGN_128 == 0) : (kaL1 * args_.aDtypeSize % ALIGN_128 == 0);
+        bool flagB =
+            args_.isBTrans ? (kbL1 * args_.bDtypeSize % ALIGN_128 == 0) : (nL1 * args_.bDtypeSize % ALIGN_128 == 0);
+
+        uint64_t totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) + 
+                             args_.mValue * args_.kValue * args_.aDtypeSize +
+                             args_.kValue * args_.nValue * args_.bDtypeSize;
+        if (batchInfo_ != nullptr) {
+            totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) * batchInfo_->batchC + 
+                        args_.mValue * args_.kValue * args_.aDtypeSize * batchInfo_->batchA +
+                        args_.kValue * args_.nValue * args_.bDtypeSize * batchInfo_->batchB;
+        }
+
+        OP_LOGD("MatMulV3", "Input + Output totalSize: %lu, l2Size:%lu.", totalSize, compileInfo_.l2Size);
+        if (totalSize < compileInfo_.l2Size) {          
+            return cacheMode;
+        }
         // 左矩阵UNCACHE
-        if (runInfo_.baseN >= args_.nValue && runInfo_.tailInfo.nCnt <= 1 && innerA * args_.aDtypeSize % ALIGN_128 == 0 &&
-            flagA) {
-            return L2CacheMode::A_L2_CACHE_DISABLE;
-        }
+        bool leftNotL2Cache = runInfo_.baseN >= args_.nValue && runInfo_.tailInfo.nCnt <= 1 &&
+            innerA * args_.aDtypeSize % ALIGN_128 == 0 && flagA;
         // 右矩阵UNCACHE
-        if (runInfo_.baseM >= args_.mValue && runInfo_.tailInfo.mCnt <= 1 && innerB * args_.bDtypeSize % ALIGN_128 == 0 &&
-            flagB) {
-            return L2CacheMode::B_L2_CACHE_DISABLE;
+        bool rightNotL2Cache = runInfo_.baseM >= args_.mValue && runInfo_.tailInfo.mCnt <= 1 &&
+            innerB * args_.bDtypeSize % ALIGN_128 == 0 && flagB;
+
+        if (leftNotL2Cache && rightNotL2Cache) {
+            cacheMode = L2CacheMode::ALL_L2_CACHE_DISABLE;
+        } else if (leftNotL2Cache) {
+            cacheMode = L2CacheMode::A_L2_CACHE_DISABLE;
+        } else if (rightNotL2Cache) {
+            cacheMode = L2CacheMode::B_L2_CACHE_DISABLE;
         }
-        return L2CacheMode::L2_CACHE_DEFAULT;
+        OP_LOGD("MatMulV3", "L2 cache params: flagA:%d, flagB:%d, leftNotL2Cache:%d, rightNotL2Cache:%d, cacheMode:%d.", 
+            static_cast<int32_t>(flagA), static_cast<int32_t>(flagB), static_cast<int32_t>(leftNotL2Cache), 
+            static_cast<int32_t>(rightNotL2Cache), static_cast<int32_t>(cacheMode));
+
+        return cacheMode;
     }
 
     ge::graphStatus PostTiling() override
@@ -193,8 +223,11 @@ protected:
         }
         context_->SetBlockDim(tiling.blockDim);
         context_->SetTilingKey(tiling.tilingKey);
+        if (CheckMatMulStreamK(tiling.tilingKey)) {
+            context_->SetScheduleMode(1);
+        }
         if (tiling.workspaceSize.size() > 0) {
-            size_t *workspaces = context_->GetWorkspaceSizes(1); // set workapce
+            size_t *workspaces = context_->GetWorkspaceSizes(1); // set workspace
             OP_TILING_CHECK(workspaces == nullptr,
                 CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspace is nullptr"), return ge::GRAPH_FAILED);
             workspaces[0] = tiling.workspaceSize[0];
@@ -236,7 +269,7 @@ protected:
         }
         return ge::GRAPH_SUCCESS;
     };
-    
+
     ge::graphStatus SetTilingData(const TilingResult& tiling) const
     {
         if ((strcmp(context_->GetNodeType(), "MatMulV3") == 0) && (tiling.tilingDataSize <= TILINGDATA_OFFSET) &&
@@ -336,8 +369,9 @@ protected:
     };
 
     virtual ge::graphStatus GetTilingData(BatchMatMulV3BasicTilingData &tilingData) const
-    {
-        tilingData.batchDimAll = batchInfo_->batchA;
+    {   
+        // A全载和B全载基础API当前只支持单边batch, 后续放开后不能再用batchC
+        tilingData.batchDimAll = batchInfo_->batchC;
         return GetTilingData(tilingData.matMulTilingData);
     };
 
@@ -400,6 +434,8 @@ protected:
         iterbatchTilingBasicData.baseN = runInfo_.baseN;
         iterbatchTilingBasicData.baseK = runInfo_.baseK;
         iterbatchTilingBasicData.innerBatch = runInfo_.innerBatch;
+        iterbatchTilingBasicData.l2CacheDisable =
+            SetDisableL2cache(args_.mValue, args_.kValue, args_.kValue, args_.nValue);
         return ge::GRAPH_SUCCESS;
     };
 

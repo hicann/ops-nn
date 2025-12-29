@@ -28,7 +28,7 @@
 #include "mat_mul_v3_tiling_key.h"
 
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #include "mat_mul_multi_core_splitk_kernel.h"
 #endif
 

@@ -20,6 +20,7 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 
+constexpr uint64_t BIAS_ZERO_DIM = 0;
 constexpr uint64_t FINAL_SHAPE_DIM = 1;
 constexpr uint64_t NO_BATCH_SHAPE_DIM = 2;
 constexpr uint64_t ONE_BATCH_SHAPE_DIM = 3;

@@ -20,7 +20,6 @@
 #include "quant_batch_matmul_v4_constant.h"
 #include "quant_batch_matmul_v4_tiling_data.h"
 #include "quant_batch_matmul_v4_vf.h"
-#include "../../common/anti_quant.h"
 
 using AscendC::BLOCK_CUBE;
 using AscendC::CrossCoreSetFlag;
@@ -56,6 +55,7 @@ using matmul::MatmulType;
 
 namespace QuantBatchMatmulV4
 {
+using AscendC::IsSameType;
 
 constexpr uint8_t MAX_AL1_BUF_NUM = 4;
 template <TPosition POSITION, CubeFormat FORMAT, typename TYPE, bool ISTRANS = false,

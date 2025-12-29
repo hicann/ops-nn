@@ -16,7 +16,6 @@
 #define MMV3_MATMUL_ASW_KERNEL_H
 
 #include "mat_mul_asw_block.h"
-#include "mat_mul_dasw_block.h"
 
 namespace MatmulV3Advanced {
 
@@ -77,11 +76,13 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.M) * block_.matmulTilingData_->tCubeTiling.N);
     biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM), block_.matmulTilingData_->tCubeTiling.N);
     // 右矩阵UNCACHE
-    if (block_.matmulTilingData_->l2CacheDisable == L2CacheMode::B_L2_CACHE_DISABLE) {
+    if (block_.matmulTilingData_->l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.matmulTilingData_->l2CacheDisable == L2CacheMode::B_L2_CACHE_DISABLE) {
         bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
     }
     // 左矩阵UNCACHE
-    if (block_.matmulTilingData_->l2CacheDisable == L2CacheMode::A_L2_CACHE_DISABLE) {
+    if (block_.matmulTilingData_->l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.matmulTilingData_->l2CacheDisable == L2CacheMode::A_L2_CACHE_DISABLE) {
         aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
     }
 }

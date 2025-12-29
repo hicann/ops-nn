@@ -115,15 +115,13 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
 {
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
-    auto dimTensor1 = x1Shape.GetDimNum();
-    auto dimTensor2 = x2Shape.GetDimNum();
     int64_t x1KDim = x1->GetViewShape().GetDim((*perm_x1)[2]);
     int64_t x2KDim = x2->GetViewShape().GetDim((*perm_x2)[1]);
     int64_t batchNum = x2->GetViewShape().GetDim((*perm_x2)[0]);
     int64_t K = x2->GetViewShape().GetDim((*perm_x2)[1]);
     int64_t N = x2->GetViewShape().GetDim((*perm_x2)[2]);
 
-    if ((dimTensor1 != EXPECTED_DIM) || (dimTensor2 != EXPECTED_DIM)) {
+    if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
@@ -136,12 +134,17 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     }
     
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
+    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
         if (!CheckDavidLimit(scale, perm_x1, perm_x2)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ASCEND910_95 Limit.");
             return false;
         }
     } else {
+        if (!x2_need_transpose) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "perm_x2 should be [0, 1, 2].");
+            return false;
+        }
         if (x1_need_transpose && x1->GetViewShape().GetDim(1) * x1KDim >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul k should be less than 65536.");
             return false;

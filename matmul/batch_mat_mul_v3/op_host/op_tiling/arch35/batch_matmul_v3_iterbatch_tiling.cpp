@@ -63,9 +63,7 @@ ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
     }
     runInfo_.bmmRunInfo.iterBatch = iterBatch_;
     runInfo_.bmmRunInfo.batchOutNum = batchOutNum_;
-    iterBatchBiasModel_ = (args_.hasBias && (args_.batchInfo->batchBias == 1UL)) ?
-                              MatMulV3BatchModel::SINGLE_BIAS_MODEL :
-                              MatMulV3BatchModel::MULTI_BATCH_MODEL;
+    iterBatchBiasModel_ = MatMulV3BatchModel::SINGLE_BIAS_MODEL;
     return ge::GRAPH_SUCCESS;
 }
 

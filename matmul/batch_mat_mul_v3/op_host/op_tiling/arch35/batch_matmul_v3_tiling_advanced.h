@@ -29,11 +29,11 @@ public:
     ge::graphStatus DoTiling() override;
 
 protected:
-    ge::graphStatus GetBatchInfo(const gert::TilingContext &context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
-private:
+    virtual ge::graphStatus GetBatchInfo(
+        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
     void MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
-    ge::graphStatus GetBmmBiasInfo(const gert::TilingContext &context, MatMulV3Args& args,
-                                   MatMulV3BatchInfo& batchInfo);
+    virtual ge::graphStatus GetBmmBiasInfo(
+        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
 };
 }
 }

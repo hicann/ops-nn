@@ -15,7 +15,6 @@
 #ifndef __OP_HOST_FUSED_MATMUL_TILING_H__
 #define __OP_HOST_FUSED_MATMUL_TILING_H__
 
-#include <map>
 #include <nlohmann/json.hpp>
 
 #include "error_util.h"

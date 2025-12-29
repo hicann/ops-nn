@@ -104,6 +104,34 @@ static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape &shape)
     }
     return blockNum;
 }
+
+template <class ProblemShape_>
+__host_aicore__ static Status DoCheckArgs(const ProblemShape_ &shape, int64_t l1M, int64_t l1N, int64_t l1K,
+                                          int64_t l0M, int64_t l0N, int64_t l0K)
+{
+    if (l1M > 128 || l0M > 128 || l1N > 256 || l0N > 256) { // 128,256: input limit
+        return Status::l1L0ErrorExceedsLimit;
+    }
+
+    if (l1M % MATMUL_MNK_ALIGN != 0 || l1N % MATMUL_MNK_ALIGN != 0 || l1K % MATMUL_MNK_ALIGN != 0 ||
+        l0M % MATMUL_MNK_ALIGN != 0 || l0N % MATMUL_MNK_ALIGN != 0 || l0K % MATMUL_MNK_ALIGN != 0) {
+        return Status::l1L0ErrorNotAlign;
+    }
+
+    if (l1M != l0M || l1N != l0N) {
+        return Status::l1MnL0MnErrorNotSame;
+    }
+
+    if (l1K < l0K) {
+        return Status::l1kErrorSmallerL0k;
+    }
+
+    if (l1K % l0K != 0) {
+        return Status::l1kErrorL0kNotAlign;
+    }
+    return Status::success;
+}
+
 } // namespace Block
 } // namespace Gemm
 } // namespace Act

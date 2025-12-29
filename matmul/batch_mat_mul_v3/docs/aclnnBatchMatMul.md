@@ -1,11 +1,18 @@
 # aclnnBatchMatMul
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -136,10 +143,18 @@ aclnnStatus aclnnBatchMatMul(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 不支持BFLOAT16数据类型；
+    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
+    - 不支持cubeMathType=3。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>昇腾910_95 AI处理器</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
-    - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
-    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+    - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
+
+
+
 
 - **返回值：**
 
@@ -170,9 +185,6 @@ aclnnStatus aclnnBatchMatMul(
     </tr>
     <tr>
       <td>self、mat2或out的数据格式不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>self和mat2的第一维度不相等（非broadcast）。</td>
     </tr>
     <tr>
       <td>self和mat2的维度不是三维。</td>
@@ -226,10 +238,10 @@ aclnnStatus aclnnBatchMatMul(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性说明：
+- 确定性计算
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMul默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>: aclnnBatchMatMul默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

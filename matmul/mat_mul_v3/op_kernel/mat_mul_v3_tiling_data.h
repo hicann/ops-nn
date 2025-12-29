@@ -16,6 +16,7 @@
 #ifndef MAT_MUL_V3_TILING_DATA_H
 #define MAT_MUL_V3_TILING_DATA_H
 
+#include <cstdint>
 #include "kernel_tiling/kernel_tiling.h"
 
 #pragma pack(push, 8)

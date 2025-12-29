@@ -99,6 +99,16 @@ public:
     {
         return DoGetBlockNum(l1M, l1N, shape);
     }
+
+    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape)
+    {
+        return 0;
+    }
+
+    __host_aicore__ static Status CanImplement(ProblemShape shape)
+    {
+        return DoCheckArgs<ProblemShape>(shape, l1M, l1N, l1K, l0M, l0N, l0K);
+    }
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>

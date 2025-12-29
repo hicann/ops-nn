@@ -56,39 +56,20 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
     auto outputShape = context.GetOutputShape(0)->GetOriginShape();
     size_t biasDims = biasShape.GetDimNum();
     size_t cDims = outputShape.GetDimNum();
-    uint64_t batchBias3 = 1UL;
-    uint64_t batchBias2 = 1UL;
-    uint64_t batchBias1 = 1UL;
-    uint64_t batchBias0 = 1UL;
+    if(biasDims > NUM_TWO){
+         OP_LOGE(args.opName, "Bias dim of BatchMatmul must lower than 3.");
+         return ge::GRAPH_FAILED;
+    }
     // 先校验bias的尾值是否与output尾值相等
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
         OP_LOGE(args.opName, "Last dim of bias is not equal to last dim of output.");
         return ge::GRAPH_FAILED;
     }
-    if (biasDims >= NUM_TWO) {
-        if (biasShape[biasDims - NO_BATCH_SHAPE_DIM] != 1) { // bias的倒数第二维必须为1
-            OP_LOGE(args.opName, "M of bias must be 1.");
-            return ge::GRAPH_FAILED;
-        }
+    if (biasDims == NUM_TWO && biasShape[BIAS_ZERO_DIM] != 1) { // bias的倒数第二维必须为1
+        OP_LOGE(args.opName, "M of bias must be 1.");
+        return ge::GRAPH_FAILED;
     }
-    // 若为batchbias，继续做后续校验
-    if (biasDims > NUM_TWO) {
-        if (batchInfo.batchA0 != batchInfo.batchB0 || batchInfo.batchA1 != batchInfo.batchB1 ||
-            batchInfo.batchA2 != batchInfo.batchB2 || batchInfo.batchA3 != batchInfo.batchB3)  {
-            OP_LOGE(args.opName, "BatchBias scene, the batch of A and B must be equal.");
-            return ge::GRAPH_FAILED;
-        }
-        batchBias3 = biasDims > NO_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - ONE_BATCH_SHAPE_DIM) : 1UL;
-        batchBias2 = biasDims > ONE_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - TWO_BATCH_SHAPE_DIM) : 1UL;
-        batchBias1 = biasDims > TWO_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - THREE_BATCH_SHAPE_DIM) : 1UL;
-        batchBias0 = biasDims > THREE_BATCH_SHAPE_DIM ? biasShape.GetDim(biasDims - FOUR_BATCH_SHAPE_DIM) : 1UL;
-        if (!(batchBias3 == batchInfo.batchC3 && batchBias2 == batchInfo.batchC2 && batchBias1 == batchInfo.batchC1 &&
-            batchBias0 == batchInfo.batchC0)) {
-            OP_LOGE(args.opName, "The batch of bias must be equal to the batch of C.");
-            return ge::GRAPH_FAILED;
-        }
-    }
-    batchInfo.batchBias = batchBias3 * batchBias2 * batchBias1 * batchBias0;
+    batchInfo.batchBias = 1;
     OP_LOGI(args.opName, "Check BatchMatMulV3 with bias success.");
     return ge::GRAPH_SUCCESS;
 }

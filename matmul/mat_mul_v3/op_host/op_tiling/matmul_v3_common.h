@@ -144,8 +144,8 @@ struct MatmulV3Args
     bool isATrans = false;
     bool isBTrans = false;
     bool isHf32 = false;
-    bool hasBias = false;
     bool isForceGrpAccForFp32 = false;
+    bool hasBias = false;
     bool nd2nzA = false;
     bool nd2nzB = false;
     bool isNzA = false;

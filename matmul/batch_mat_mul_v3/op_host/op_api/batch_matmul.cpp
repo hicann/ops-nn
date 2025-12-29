@@ -61,7 +61,7 @@ const aclTensor* BatchMatMulV3NdFp16Bf162Fp32(
     uint32_t execMode = enableHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
         BatchMatMulV3, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut), OP_ATTR(adjX1, adjX2, offsetX, enableHf32),
-        OP_MODE(execMode));
+        OP_MODE(execMode)); 
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr, "Add to launcher list aicore failed.");
     return bmmOut;
 }

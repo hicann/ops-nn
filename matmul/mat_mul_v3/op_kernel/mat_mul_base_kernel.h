@@ -48,7 +48,14 @@ public:
 
 protected:
     BLOCK_TYPE block_;
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+    using C_HALF_TYPE = MatmulType<AscendC::TPosition::VECIN, C_TYPE::format, half>;
+    MatmulImpl<A_TYPE, B_TYPE, C_HALF_TYPE, BIAS_TYPE, MM_CFG, MM_CB> mm_;
+    TQue<QuePosition::VECIN, 1> cLocalHalfQue;
+    TQue<QuePosition::VECOUT, 1> cLocalFloatQue;
+#else
     MatmulImpl<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MM_CFG, MM_CB> mm_;
+#endif
     using A_T = typename A_TYPE::T;
     using B_T = typename B_TYPE::T;
     using C_T = typename C_TYPE::T;
@@ -77,6 +84,10 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
     pipe_->InitBuffer(ubBuf_, TOTAL_UB_SIZE);
     LocalTensor<uint8_t> buf = ubBuf_.template Get<uint8_t>();
     mm_.SetLocalWorkspace(buf);
+#endif
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+    pipe->InitBuffer(cLocalHalfQue, 1, TOTAL_UB_SIZE / 2);
+    pipe->InitBuffer(cLocalFloatQue, 1, TOTAL_UB_SIZE / 2);
 #endif
     SetOrgShape();
 }
@@ -165,7 +176,28 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
                         mm_.SetBias(biasGlobal_[block_.offset_.offsetBias]);
                     }
                     mm_.Iterate();
+
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+                    if constexpr (IsSameType<C_T, float>::value) {
+                        LocalTensor<half> cLocalHalf_ = cLocalHalfQue.AllocTensor<half>();
+                        mm_.GetTensorC(cLocalHalf_, enAtomic);
+                        uint64_t computeSize = block_.params_.singleCoreM * block_.params_.singleCoreN;
+                        cLocalHalfQue.EnQue(cLocalHalf_);
+                        cLocalHalfQue.DeQue<half>();
+                        LocalTensor<float> cLocalFloat_ = cLocalFloatQue.AllocTensor<float>();
+                        Cast(cLocalFloat_, cLocalHalf_, AscendC::RoundMode::CAST_NONE, computeSize);
+                        cLocalFloatQue.EnQue(cLocalFloat_);
+                        cLocalFloatQue.DeQue<float>();
+                        DataCopy(cGlobal_[block_.offset_.offsetC], cLocalFloat_, computeSize);
+                        cLocalHalfQue.FreeTensor(cLocalHalf_);
+                        cLocalFloatQue.FreeTensor(cLocalFloat_);
+                    } else {
+                        mm_.GetTensorC(cGlobal_[block_.offset_.offsetC], enAtomic);
+                    }
+#else
                     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC], enAtomic);
+#endif
+
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
                     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID7);
                     WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID7);

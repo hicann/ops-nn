@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file gemm_v3.cpp
+ * \file gemm_v3_apt.cpp
  * \brief
  */
 #if defined(__DAV_C310__)
@@ -48,11 +48,11 @@ using namespace matmul;
         using aType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_A, transA>; \
         using bType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_B, transB>; \
                                                                                            \
-        /* 创建模板类实例并初始化 */                                            \
+        /* 创建模板类实例并初始化 */                                                         \
         templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                      \
         op.Init(aGM, bGM, yGM, biasGM, nullptr, user, &tilingData, &pipe);                 \
                                                                                            \
-        /* 执行处理逻辑 */                                                           \
+        /* 执行处理逻辑 */                                                                  \
         op.Process(1);                                                                     \
     } while (0)
 
@@ -74,9 +74,9 @@ __global__ __aicore__ void gemm_v3(
     // GemmV3复用matmulV3 kernel和tilingKey，暂只支持aswt模板
     if constexpr (
         API_LEVEL == MAT_MUL_HIGH_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY){
-            MMV3_IMPL_CLASS_TRNAS(
-        aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock, MM_CFG_NO_PRELOAD);
-        }
+        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        MMV3_IMPL_CLASS_TRNAS(
+            aTran, bTran, MatmulV3Advanced::MatmulAswKernel, MatmulV3Advanced::MatmulAswBlock, MM_CFG_NO_PRELOAD);
+    }
 #endif
 }

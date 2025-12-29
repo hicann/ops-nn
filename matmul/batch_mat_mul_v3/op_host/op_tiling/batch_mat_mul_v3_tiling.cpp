@@ -81,6 +81,7 @@ static ge::graphStatus TilingPrepareForBatchMatMulV3(gert::TilingParseContext *c
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
 
     if(!TilingPrepareForOpCache(context)) {
+        OP_LOGE(context->GetNodeName(), "TilingPrepareForOpCache fail");
         return ge::GRAPH_FAILED;
     }
     OP_LOGI(

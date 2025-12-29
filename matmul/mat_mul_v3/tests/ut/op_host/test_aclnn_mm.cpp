@@ -14,6 +14,7 @@
 
 #include "../../../op_host/op_api/aclnn_mm.h"
 #include "op_api/op_api_def.h"
+#include "opdev/platform.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -1059,4 +1060,174 @@ TEST_F(l2_mm_test, ascend910B2_test_splitk_fp16_fp16_fp16_1)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 接口整改异常用例 - 910_95
+TEST_F(l2_mm_test, mm_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 接口整改异常用例 - 310
+TEST_F(l2_mm_test, mm_310_FP32_FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_310_FP32_FP16_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 0;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_310_FP32_FP32_USE_HF32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 3;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_FP32_FP32_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = 3;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_310_FP32_FP32_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_mm_test, mm_FP32_FP16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    int8_t cube_math_type = -1;
+    auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

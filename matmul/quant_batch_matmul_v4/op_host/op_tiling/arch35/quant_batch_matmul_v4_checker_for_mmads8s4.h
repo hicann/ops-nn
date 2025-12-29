@@ -69,7 +69,6 @@ protected:
     bool CheckDimValue(const gert::StorageShape *scaleShape,
                        const gert::StorageShape *biasShape,
                        const gert::StorageShape *offsetShape,
-                       const gert::StorageShape *x2TableShape,
                        const std::vector<int64_t> &dimValueOfMKN) const;
     bool ExtraInputCheck() const override;
 };

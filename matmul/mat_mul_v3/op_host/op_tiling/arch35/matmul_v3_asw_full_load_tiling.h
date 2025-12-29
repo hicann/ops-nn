@@ -28,11 +28,7 @@ public:
 
     ~MatMulV3AswFullLoadTiling() override {};
     bool CheckBL1FullLoadDefault(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t nAlignedValue) const;
-    bool CheckBL1FullLoad91095(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t nAlignedValue);
     bool CheckAL1FullLoadDefault(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue) const;
-    bool CheckAL1FullLoad91095(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue);
-    void AdjustTiling91095Basic(uint64_t biasBatchDimAll);
-    void AdjustAL1Tiling91095Basic(uint64_t biasBatchDimAll);
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -40,27 +36,20 @@ protected:
     uint64_t GetTilingKey() const override;
 
     void DoBL1FullLoad(bool isKFullLoad, uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
-    void DoAL1FullLoad(
-        bool isKFullLoad, uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL, bool isBmm = false);
+    void DoAL1FullLoad(bool isKFullLoad, uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
 
 private:
     void FullLoadPre();
     bool CheckABL1FullLoad() const;
     void DoABL1FullLoad();
-    void CalcTailBasicBlockBL1Full();
-    void CalcTailBasicBlockAL1Full();
     bool CheckBL1FullLoad(bool &isKFullLoad);
     bool CheckAL1FullLoad(bool &isKFullLoad);
-    void AdjustTilingDefault(uint64_t biasBatchDimAll);
-    void AdjustTilingCommon(uint64_t aBatchDimAll);
+    void AdjustBL1TilingDefault(uint64_t biasBatchDimAll);
     void AdjustAL1TilingDefault(uint64_t biasBatchDimAll);
-    bool CheckAL1FullLoadCond(bool &isKFullLoad, uint64_t kAlignedValue, uint64_t mAlignedValue);
     bool ABL1FullLoadExtraCond(uint64_t al1SingleCoreSize, uint64_t bl1SingleCoreSize) const;
-    uint64_t GetStepSmallK(bool isBL1FullLoad) const;
 
     MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
     MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
-    MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::HIGH_LEVEL};
     uint64_t biasSize_ {0};
     bool isSingleRound_ {false};
 };

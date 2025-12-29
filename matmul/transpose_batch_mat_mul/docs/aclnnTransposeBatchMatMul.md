@@ -1,11 +1,19 @@
 # aclnnTransposeBatchMatMul
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/transpose_batch_mat_mul)
+
 ## 产品支持情况
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品 </term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×    |
+
 
 ## 功能说明
 
@@ -21,25 +29,25 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMul”接口执行计算。
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(
-    const aclTensor    *x1,
-    const aclTensor    *x2,
-    const aclTensor    *bias,
-    const aclTensor    *scale,
-    const aclIntArray  *permX1,
-    const aclIntArray  *permX2,
-    const aclIntArray  *permY,
+    const aclTensor*   aclTensor* x1,
+    const aclTensor*   aclTensor* x2,
+    const aclTensor*   aclTensor* bias,
+    const aclTensor*   aclTensor* scale,
+    const aclIntArray* permX1,
+    const aclIntArray* permX2,
+    const aclIntArray* permY,
     int8_t             cubeMathType,
     const int32_t      batchSplitFactor,
-    aclTensor          *out,
-    uint64_t           *workspaceSize,
-    aclOpExecutor      **executor)
+    aclTensor*         out,
+    uint64_t*          workspaceSize,
+    aclOpExecutor**    executor)
 ```
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMul(
-    void               *workspace, 
-    uint64_t           workspaceSize,
-    aclOpExecutor      *executor,
-    const aclrtStream  stream)
+    void              *workspace, 
+    uint64_t          workspaceSize,
+    aclOpExecutor     *executor,
+    const aclrtStream stream)
 ```
 ## aclnnTransposeBatchMatMulGetWorkSpaceSize
 
@@ -120,15 +128,16 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
       <td>scale</td>
         <td>输入（可选）</td>
-        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，Device侧aclTensor。</td>
+        <td>表示量化输入，Device侧aclTensor。</td>
         <td>
         <ul>
-            <li>shape仅支持一维且需要满足且等于[b*n]。</li>
+            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+            <li>shape仅支持二维且需要满足与mat1相乘条件。</li>
         </ul>
         </td>
         <td>INT64、UINT64</td>
         <td>ND</td>
-        <td>1</td>
+        <td>2</td>
         <td>√</td>
       </tr>
       <tr>
@@ -149,11 +158,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>permX2</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>
-        <ul>
-            <li>支持[0, 1, 2]。</li>
-        </ul>
-        </td>
+        <td>-</td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -223,29 +228,17 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>3</td>
         <td>-</td>
       </tr>
-      <tr>
-      <td>workspaceSize</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
       </tbody>
       </table>
   
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
+    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
+    - permX2仅支持输入[0, 1, 2]。
+  - <term>昇腾910_95 AI处理器</term>：
+    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+    - 不支持scale。
+    - out不支持INT8类型。
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -271,10 +264,22 @@ aclnnStatus aclnnTransposeBatchMatMul(
     <tr>
       <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="6">161002</td>
-      <td>x1、x2、out、scale的数据类型不在支持的范围内。</td>
+      <td>x1、x2或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>x1、x2、out、scale、batchSplitFactor的输入维度大小不在支持的范围内。</td>
+      <td>x1的第二维和x2的第一维度不相等。</td>
+    </tr>
+    <tr>
+      <td>x1或x2的维度大小不等于3。</td>
+    </tr>
+    <tr>
+      <td>x2的第二维或x2的第三维不能被128整除。</td>
+    </tr>
+    <tr>
+      <td>scale的数据类型不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td>batchSplitFactor的数值大小不在支持的范围内。</td>
     </tr>
   </tbody>
   </table>
@@ -284,37 +289,52 @@ aclnnStatus aclnnTransposeBatchMatMul(
 - **参数说明：**
 
   <div style="overflow-x: auto;">
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-  <col style="width: 250px">
-  <col style="width: 130px">
-  <col style="width: 650px">
+  <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
+  <col style="width: 151px">
+  <col style="width: 121px">
+  <col style="width: 301px">
+  <col style="width: 331px">
+  <col style="width: 237px">
+  <col style="width: 111px">
+  <col style="width: 111px">
+  <col style="width: 145px">
   </colgroup>
-  <table><thead>
+  <thead>
     <tr>
       <th>参数名</th>
-      <th>输入/输出</th>
+      <th style="white-space: nowrap">输入/输出</th>
       <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
     </tr></thead>
   <tbody>
     <tr>
       <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
+      <td>入参</td>
+      <td>在Device侧申请的workspace内存地址</td>
+      <td>-</td>
+      <td>void</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
-      <td>输入</td>
+      <td>入参</td>
       <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeBatchMatMulGetWorkSpaceSize获取。</td>
+      <td>-</td>
+      <td>uint64_t</td>
     </tr>
     <tr>
       <td>executor</td>
-      <td>输入</td>
+      <td>入参</td>
       <td>op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的stream。</td>
+      <td>入参</td>
+      <td>指定执行任务的Stream。</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
   </tbody>
   </table>
@@ -326,12 +346,11 @@ aclnnStatus aclnnTransposeBatchMatMul(
 
 ## 约束说明
 - 确定性说明：
-  - <term>aclnnTransposeBatchMatMul默认确定性实现。</term>
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnTransposeBatchMatMul默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>: aclnnTransposeBatchMatMul默认确定性实现。
 
-- <term>输入约束</term>：
-    - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)，K和N需要被128整除。
-    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
-    - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  * 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp

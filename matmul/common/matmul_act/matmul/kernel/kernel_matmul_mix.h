@@ -133,6 +133,62 @@ public:
             yGlobal_, params.epilogueParams.outGmAddr, m, n);
     }
 
+    __host_aicore__ static Status CheckShape(ProblemShape const &shape)
+    {
+        int64_t m = shape.m;
+        int64_t n = shape.n;
+        int64_t k = shape.k;
+        int64_t b = shape.b;
+        if (b > INT32_MAX) {
+            return Status::batchErrorExcceedsLimit;
+        }
+        // Check m, n, k overlimit data type
+        if (m > INT32_MAX || n > INT32_MAX || k > INT32_MAX) {
+            return Status::mnkErrorExceedsLimit;
+        }
+        // Check matrix size exceeds limit
+        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // mk matrix k limit
+            return Status::mkErrorMatrixExceedsLimit;
+        }
+
+        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) {  // km matrix m limit
+            return Status::kmErrorMatrixExceedsLimit;
+        }
+        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) {  // kn matrix n limit
+            return Status::knErrorMatrixExceedsLimit;
+        }
+
+        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // nk matrix k limit
+            return Status::nkErrorMatrixExceedsLimit;
+        }
+        return Status::success;
+    }
+
+    __host_aicore__ static Status CanImplement(Arguments const &args)
+    {
+        // Check shape in kernel
+        CHECK_AND_RETURN(CheckShape(args.problemShape));
+        // Check mmad args
+        CHECK_AND_RETURN(BlockMmadBuilder::CanImplement(args.mmadArgs));
+        // Check args for block scheduler
+        CHECK_AND_RETURN(BlockSchedulerOp::CanImplement(args.problemShape));
+        // Check args fro block epilogue
+        CHECK_AND_RETURN(BlockEpilogue::CanImplement(args.epilogueArgs));
+        return Status::success;
+    }
+
+    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape, int64_t blockNum)
+    {
+        size_t workSpaceSize = 0;
+        // Calculate extra workspace size for mmad
+        workSpaceSize += BlockMmadBuilder::GetWorkspaceSize();
+        // Calculate extra workspace size for epilogue
+        workSpaceSize += BlockEpilogue::GetWorkspaceSize(blockNum, l1M, l1N);
+        // Calculate extra workspace size for block scheduler
+        workSpaceSize += BlockSchedulerOp::GetWorkspaceSize(shape);
+        return workSpaceSize;
+    }
+
     __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);

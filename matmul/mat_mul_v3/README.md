@@ -5,8 +5,13 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
+|昇腾910_95 AI处理器|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|√|
+|Atlas 训练系列产品|×|
+|Atlas 200/300/500 推理产品|×|
 
 ## 功能说明
 
@@ -16,7 +21,6 @@
   $$
   C=op(A) @ op(B) + bias
   $$
-
   其中，$op(A)$，$op(B)$ 和 $op(C)$ 分别是维度为 $(M, K)$, $(K, N)$ 和 $(M, N)$的矩阵。$bias$ 是维度为$(1, N)$或$(N)$的向量。
 
 ## 参数说明
@@ -69,9 +73,12 @@
 
 - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
+- Atlas 推理系列产品：只支持FLOAT16数据格式，输入b只支持FRACTAL_NZ格式。
+- 昇腾910_95 AI处理器：只有输入b支持FRACTAL_NZ格式。
+
 ## 约束说明
 
-- 不支持空tensor。
+- 支持空tensor，空tensor场景下不支持bias。
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
 
 ## 调用说明

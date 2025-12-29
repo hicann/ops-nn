@@ -16,11 +16,11 @@
 #ifndef BATCH_MAT_MUL_V3_MATMUL2MUL_BLOCK_SCHEDULER_H
 #define BATCH_MAT_MUL_V3_MATMUL2MUL_BLOCK_SCHEDULER_H
 
-#include "matmul_act/matmul/block/block_scheduler_policy.h"
-#include "matmul_act/matmul/block/block_scheduler_utils.h"
+#include "cmct/block/block_scheduler_policy.h"
+#include "cmct/block/block_scheduler_utils.h"
 #include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 
-namespace Act {
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 
@@ -67,12 +67,12 @@ public:
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
 struct BlockSchedulerSelector<
-    ProblemShape_, L1TileShape_, L0TileShape_, Act::Gemm::BuiltInBatchMatmulToMulScheduler, TransA_, TransB_> {
+    ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInBatchMatmulToMulScheduler, TransA_, TransB_> {
     using SchedulerOp = BlockSchedulerBatchMatMulToMulBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
+} // namespace Cmct
 
 #endif

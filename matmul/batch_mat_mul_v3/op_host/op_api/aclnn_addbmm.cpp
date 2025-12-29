@@ -32,6 +32,7 @@
 
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 
 using namespace Ops::NN;
 using namespace op;
@@ -211,6 +212,37 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CheckInputParams(
+    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
+    const aclScalar* alpha, const aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查输入、输出参数是否为空指针
+    CHECK_RET(CheckInputNotNull(self, batch1, batch2, beta, alpha), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckAddbmmOutputNotNull(out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(socRule->CheckInput(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查batch1和batch2是否满足Shape、广播、Empty条件
+    CHECK_RET(CheckShape(self, batch1, batch2), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查self和batch1@batch2是否能广播
+    CHECK_RET(CheckBroadCast(self, batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 5. 检查batch1, batch2和out的format是否一致，self存在与其他输入format不一样的情况
+    CHECK_RET(CheckAddbmmFormat(batch1, batch2), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
+// 对于一个 [B, M, N] 的 batch，batch1 的 M 为 0；或者 batch2 的 N 为 0
+static inline bool isAddBmmProcessEmptyTensor(const aclTensor* batch1, const aclTensor* batch2)
+{
+    return (batch1->GetViewShape())[SECOND_DIM] == 0 || (batch2->GetViewShape())[THIRD_DIM] == 0;
+}
+
 static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
 {
     // 获取shape信息
@@ -232,6 +264,244 @@ const aclTensor* addBmmProcessBroadcastSelf(
     auto out = l0op::BroadcastTo(self, outShape, executor);
     return out;
 }
+
+static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScalar* beta, aclOpExecutor* executor){
+    // self * beta
+    const aclTensor* selfContiguous = l0op::Contiguous(self, executor);
+    // self为bf16时cast为fp32保证精度
+    if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
+        selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+    }
+    CHECK_RET(selfContiguous != nullptr, nullptr);
+    const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+    CHECK_RET(mulOut != nullptr, nullptr);
+    return mulOut;
+}
+
+class AddbmmAlpha0Beta0Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        FVector<int64_t> fillShape = {(matA->GetViewShape())[SECOND_DIM], (matB->GetViewShape())[THIRD_DIM]};
+        const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        const aclScalar* valueScalar = executor->AllocScalar(0);
+        const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        const aclTensor* fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        convOut = fillTensor;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddbmmAlpha0Beta0Graph() override = default;
+};
+
+class AddbmmAlpha0Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // self(bias) * beta
+        const aclTensor* mulOut = SelfMulsBetaProcess(bias, beta, executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        mulOut = addBmmProcessBroadcastSelf(mulOut, matA, matB, executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = mulOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddbmmAlpha0Graph() override = default;
+};
+
+class AddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // bmmOut = batch1(matA) @ batch2(matB)
+        bool isBaddbmm = false;
+        const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
+        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        
+        const int64_t dim[] = {0};
+        const aclTensor* reduceSumOut = l0op::ReduceSumOp(bmmOut, executor->AllocIntArray(dim, 1), false, executor);
+        
+        // mulOut = reduceSumOut * alpha
+        const aclTensor* mulOut = l0op::Muls(reduceSumOut, alpha->ToFloat(), executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = mulOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddbmmBeta0Graph() override = default;
+};
+
+class AddbmmMmOpWithBiasGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // biasBmmOut = batch1(matA) @ batch2(matB) + self(bias)
+        const aclTensor* biasBmmOut = ExecBmmOpWithBiasV2(matA, matB, bias, output, cubeMathType, executor);
+        CHECK_RET(biasBmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const int64_t dim[] = {0};
+        biasBmmOut = l0op::ReduceSumOp(biasBmmOut, executor->AllocIntArray(dim, 1), false, executor);
+        convOut = biasBmmOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddbmmMmOpWithBiasGraph() override = default;
+};
+
+class AddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // self(bias) * beta
+        const aclTensor* mulOut = SelfMulsBetaProcess(bias, beta, executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // bmmOut = batch1(matA) @ batch2(matB)
+        bool isBaddbmm = false;
+        const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
+        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        
+        const int64_t dim[] = {0};
+        const aclTensor* reduceSumOut = l0op::ReduceSumOp(bmmOut, executor->AllocIntArray(dim, 1), false, executor);
+        CHECK_RET(reduceSumOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
+        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), reduceSumOut->GetDataType());
+        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, executor);
+        CHECK_RET(mulOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将reduceSumOut的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* reduceSumOutCasted = l0op::Cast(reduceSumOut, promoteTypeAdd, executor);
+        CHECK_RET(reduceSumOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 进行Add或Axpy计算
+        const aclTensor* addOut = nullptr;
+        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+            // alpha == 0    addOut = mulOutCasted + bmmOutCasted
+            addOut = l0op::Add(mulOutCasted, reduceSumOutCasted, executor);
+        } else {
+            // alpha != 0    addOut = mulOutCasted + bmmOutCasted * alpha
+            addOut = l0op::Axpy(mulOutCasted, reduceSumOutCasted, alpha->ToFloat(), executor);
+        }
+        CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = addOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto result = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~AddbmmMatmulGraph() override = default;
+};
+
+// 创建计算图
+std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
+    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
+    aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+{
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
+
+    // alpha == 0    batch1和batch2不参与计算
+    if (std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+        // beta == 0    self不参与计算
+        if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+            matmulGraph = std::make_shared<AddbmmAlpha0Beta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+            return matmulGraph;
+        }
+        // beta != 0
+        matmulGraph = std::make_shared<AddbmmAlpha0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        return matmulGraph;
+    }
+
+    // alpha != 0 && beta == 0    self不参与计算，走计算图3，即不调用add算子
+    if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+        matmulGraph = std::make_shared<AddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        return matmulGraph;
+    }
+    
+    // 以下全部是 alpha != 0 && beta != 0
+    // beta == 1 && alpha == 1 && self.shape[0] == mat2.shape[1] && 不属于切k，直接走matmul的bias模式
+    if (NeedToConvertBias(self, batch1, batch2, beta, alpha)) {
+        OP_LOGI("addbmm run in NeedToConvertBias branch");
+        matmulGraph = std::make_shared<AddbmmMmOpWithBiasGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        return matmulGraph;
+    }
+    // 多数场景  beta != 0，则self参与计算，走计算图1和2，即调用add或axpy算子
+    OP_LOGI("addbmm run in bmm+add branch");
+    matmulGraph = std::make_shared<AddbmmMatmulGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+    return matmulGraph;
+}
+
 } // namespace
 
 aclnnStatus aclnnAddbmmGetWorkspaceSize(
@@ -239,8 +509,9 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
     const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
+
     // 参数检查
-    auto ret = CheckParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
+    auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 创建OpExecutor
@@ -249,7 +520,7 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
 
     // 输入空Tensor处理方法，这种情况下addbmm算子的最终结果就是空Tensor，因此直接返回
     // 若batch1、batch2的第一维是空Tensor，在bmm接口内部会生成一个符合shape的空Tensor，继续参与计算
-    if ((batch1->GetViewShape())[SECOND_DIM] == 0 || (batch2->GetViewShape())[THIRD_DIM] == 0) {
+    if (isAddBmmProcessEmptyTensor(batch1, batch1)) {
         auto emptyOut = addBmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -262,120 +533,17 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    const aclTensor* castOut = nullptr;
-    // 若alpha为0，则batch1和batch2不参与计算
-    if (std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-        // 若beta为0，则self不参与计算
-        if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-            FVector<int64_t> fillShape = {(batch1->GetViewShape())[SECOND_DIM], (batch2->GetViewShape())[THIRD_DIM]};
-            const aclTensor* dims =
-                uniqueExecutor.get()->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
-            aclIntArray* shapeArray = uniqueExecutor.get()->AllocIntArray(fillShape.data(), fillShape.size());
-            const aclScalar* valueScalar = uniqueExecutor.get()->AllocScalar(0);
-            const aclTensor* valueTensor = uniqueExecutor.get()->ConvertToTensor(valueScalar, out->GetDataType());
-            auto fillTensor = l0op::Fill(dims, valueTensor, shapeArray, uniqueExecutor.get());
-            auto viewCopyResult = l0op::ViewCopy(fillTensor, out, uniqueExecutor.get());
-            CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 根据不同的输入选择不同的计算图
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddbmmGraphImpl(self, batch1, batch2, beta, alpha, out, cubeMathType, uniqueExecutor.get());
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-            // 固定写法，获取计算过程中需要使用的workspace大小
-            *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-            uniqueExecutor.ReleaseTo(executor);
-            return ACLNN_SUCCESS;
-        }
-
-        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-        // beta * self (self为bf16时cast为fp32保证精度)
-        if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
-            selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        }
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        mulOut = addBmmProcessBroadcastSelf(mulOut, batch1, batch2, uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，将计算结果转换成输出out的数据类型
-        castOut = l0op::Cast(mulOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-        // 若beta为0，则self不参与计算，走计算图3，即不调用add算子
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get());
-        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        const int64_t dim[] = {0};
-        auto reduceSumOut =
-            l0op::ReduceSumOp(bmmOut, uniqueExecutor.get()->AllocIntArray(dim, 1), false, uniqueExecutor.get());
-
-        // 做reduceSumOut和alpha的Muls操作
-        auto mulOut = l0op::Muls(reduceSumOut, alpha->ToFloat(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，将计算结果转换成输出out的数据类型
-        castOut = l0op::Cast(mulOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (NeedToConvertBias(self, batch1, batch2, beta, alpha)) {
-        OP_LOGI("addbmm run in NeedToConvertBias branch");
-        auto biasBmmOut = ExecBmmOpWithBias(batch1, batch2, self, out, cubeMathType, uniqueExecutor.get());
-        CHECK_RET(biasBmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const int64_t dim[] = {0};
-        biasBmmOut =
-            l0op::ReduceSumOp(biasBmmOut, uniqueExecutor.get()->AllocIntArray(dim, 1), false, uniqueExecutor.get());
-        castOut = l0op::Cast(biasBmmOut, out->GetDataType(), uniqueExecutor.get());
-    } else {
-        // 若beta不为0，则self参与计算，走计算图1和2，即调用add或axpy算子
-        OP_LOGI("addbmm run in bmm+add branch");
-        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-        // beta * self (self为bf16时cast为fp32保证精度)
-        if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
-            selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-        }
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get());
-        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        const int64_t dim[] = {0};
-        auto reduceSumOut =
-            l0op::ReduceSumOp(bmmOut, uniqueExecutor.get()->AllocIntArray(dim, 1), false, uniqueExecutor.get());
-        CHECK_RET(reduceSumOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
-        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), reduceSumOut->GetDataType());
-
-        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, uniqueExecutor.get());
-        CHECK_RET(mulOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将输入batch1的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto reduceSumOutCasted = l0op::Cast(reduceSumOut, promoteTypeAdd, uniqueExecutor.get());
-        CHECK_RET(reduceSumOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 进行Add或Axpy计算
-        const aclTensor* addOut = nullptr;
-        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
-            addOut = l0op::Add(mulOutCasted, reduceSumOutCasted, uniqueExecutor.get());
-        } else {
-            addOut = l0op::Axpy(mulOutCasted, reduceSumOutCasted, alpha->ToFloat(), uniqueExecutor.get());
-        }
-        CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，将计算结果转换成输出out的数据类型
-        castOut = l0op::Cast(addOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 执行计算图
+    auto executeStatus = matmulGraph->Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
+    uniqueExecutor.ReleaseTo(executor); // 需要把uniqueExecutor持有executor转移给executor
 
     return ACLNN_SUCCESS;
 }

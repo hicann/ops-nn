@@ -112,7 +112,7 @@ protected:
     MatMulV3ATrans atrans_ = MatMulV3ATrans::A_NO_TRANS;
     MatMulV3BTrans btrans_ = MatMulV3BTrans::B_NO_TRANS;
     MatMulV3Model model_ = MatMulV3Model::BASIC;
-    MatMulV3BatchModel batchModel_ = MatMulV3BatchModel::BATH_MODEL;
+    MatMulV3BatchModel batchModel_ = MatMulV3BatchModel::BATCH_MODEL;
     MatMulV3ApiLevel apiLevel_ = MatMulV3ApiLevel::HIGH_LEVEL;
     MatMulV3FullLoad fullLoad_ = MatMulV3FullLoad::NONE_FULL_LOAD;
     MatMulV3L0C2Out out_ = MatMulV3L0C2Out::ON_THE_FLY;

@@ -44,7 +44,7 @@ ACLNN_API aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor*
                                                                 uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
- * @brief aclnnBatchMatmulQuant的第二段接口，用于执行计算。
+ * @brief aclnnTransposeBatchMatmul的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                                 const aclrtStream stream);

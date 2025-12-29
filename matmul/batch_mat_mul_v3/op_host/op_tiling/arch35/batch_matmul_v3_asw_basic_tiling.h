@@ -36,8 +36,6 @@ protected:
     uint64_t GetTilingKey() const override;
 
     uint64_t GetBlockDim() const override;
-
-    MatMulV3Model aswtModel_{MatMulV3Model::BASIC};
 };
 }
 }

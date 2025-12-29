@@ -32,6 +32,8 @@ struct OpBaseInfo {
   op::Format mat2_format;
   op::DataType output_dtype;
   op::Format output_format;
+  op::DataType bias_dtype;
+  op::Format bias_format;
 };
 
 struct OpShapeInfo {
@@ -113,6 +115,9 @@ MmOpInfo GetMatmulOpInfo(const aclTensor *self, const aclTensor *mat2, int8_t cu
 bool ContiguousAndCast(const aclTensor *&contiguousInput, const aclTensor *&castOut, bool &transposeFlag,
                                      op::DataType dtype, aclOpExecutor *executor);
 
+bool ContiguousAndCastBias(const aclTensor*& contiguousInput, const aclTensor*& castOut, op::DataType dtype,
+    aclOpExecutor* executor);
+
 bool GetNzSplitKFlag(const aclTensor *self, const aclTensor *mat2, const op::Format selfSuppFormat, const op::Format outSuppFormat);
 
 bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2);
@@ -154,6 +159,225 @@ uint64_t TransDequantScaleToM1(const float deqScale);
 const aclTensor *ContiguousBias(const aclTensor *self, const aclTensor *bias, aclOpExecutor *executor);
 
 op::FVector<int64_t> GetShape(const aclTensor *tensor);
+
+const aclTensor* MatmulCommonProcess (
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
+    const int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor,
+    bool transposeX2);
+
+bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
+MmOpInfo& mmOpInfo, int8_t cubeMathType);
+
+// strategy =============================================================================================
+
+class MatmulGraphImpl {
+public:
+    virtual aclnnStatus PreProcess(){ return ACLNN_SUCCESS; }
+
+    virtual aclnnStatus Impl() = 0;
+
+    virtual aclnnStatus PostProcess(){ return CommonPostProcess(); }
+
+    MatmulGraphImpl(
+        const aclTensor* matAParam, const aclTensor* matBParam, const aclTensor* biasParam, aclTensor* outputParam,
+        const aclScalar* alphaNearMat1, const aclScalar* betaNearBias, int8_t cubeMathTypeParam,
+        aclOpExecutor* executorParam)
+        : matA(matAParam),
+          matB(matBParam),
+          bias(biasParam),
+          output(outputParam),
+          alpha(alphaNearMat1),
+          beta(betaNearBias),
+          cubeMathType(cubeMathTypeParam),
+          executor(executorParam) {};
+
+    MatmulGraphImpl(
+        const aclTensor* matAParam, const aclTensor* matBParam, aclTensor* outputParam,
+        int8_t cubeMathTypeParam, aclOpExecutor* executorParam)
+        : matA(matAParam),
+          matB(matBParam),
+          output(outputParam),
+          cubeMathType(cubeMathTypeParam),
+          executor(executorParam) {};
+
+    virtual ~MatmulGraphImpl() = default;
+
+    aclnnStatus Execute() {
+        aclnnStatus ret = PreProcess();
+        if (ret != ACLNN_SUCCESS) {
+            return ret;
+        }
+
+        ret = Impl();
+        if (ret != ACLNN_SUCCESS) {
+            return ret;
+        }
+
+        ret = PostProcess();
+        if (ret != ACLNN_SUCCESS) {
+            return ret;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    void SetOpInfo (MmOpInfo& mmOpInfo){
+      opInfo = mmOpInfo;
+    }
+
+    aclnnStatus CommonPostProcess();
+
+    aclnnStatus CommonPostProcessWithReshape();
+
+protected:
+    const aclTensor* matA;
+    const aclTensor* matB;
+    const aclTensor* bias = nullptr;
+    aclTensor* output;
+    const aclScalar* alpha;
+    const aclScalar* beta;
+    int8_t cubeMathType;
+    MmOpInfo opInfo; // 用于提前计算所有前后处理相关的format、dtype等信息
+    const aclTensor* convOut = nullptr;
+    uint64_t* workspaceSize = nullptr;
+    aclOpExecutor* executor;
+};
+
+// ======================================================================================================
+
+// SoC规则基类：抽象不同SoC的校验和数据类型推导逻辑
+class SocMatMulRuleBase {
+protected:
+    static const op::DataType FP16 = op::DataType::DT_FLOAT16;
+    static const op::DataType FP32 = op::DataType::DT_FLOAT;
+    static const op::DataType BF16 = op::DataType::DT_BF16;
+
+    // 存储SoC版本
+    op::SocVersion socVersion;
+
+    // 保护构造函数：禁止直接实例化基类（只能通过派生类构造）
+    SocMatMulRuleBase(op::SocVersion ascendSocVersion) : socVersion(ascendSocVersion) {}
+
+public:
+    // 虚析构函数：确保派生类析构正常调用
+    virtual ~SocMatMulRuleBase() = default;
+
+    // 校验规则接口：检查当前输入是否符合SoC的约束
+    // 返回：校验通过返回true，否则返回false
+    virtual bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) = 0;
+
+    // 返回计算时的数据类型MmOpInfo
+    virtual aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) = 0  ;
+
+    // 获取支持的类型列表
+    virtual std::initializer_list<op::DataType> GetSupportedDTypes() = 0;
+
+    // 初步推导后的类型及兼容记录
+    struct PromoteResult {
+        op::DataType type;
+        bool isError;
+        const char* logMessage;
+
+        constexpr PromoteResult(op::DataType dataType, bool err, const char* msg) : type(dataType), isError(err), logMessage(msg) {}
+    };
+
+protected:
+    // CheckInputTensorDtypeValid
+    bool CheckInputTensorDtypeValid(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out) ;
+
+    inline int GetIndexByDataType(op::DataType dataType) const {
+        static const std::map<op::DataType, int> typeIndexMap = {
+            {op::DataType::DT_FLOAT, 0},
+            {op::DataType::DT_FLOAT16, 1},
+            {op::DataType::DT_BF16, 2}
+        };
+        return typeIndexMap.at(dataType);
+    }
+
+    // 获取两个input的组合形式
+    inline int GetInputCase(const op::DataType& typeA, const op::DataType& typeB) {
+        int indexA = GetIndexByDataType(typeA);
+        int indexB = GetIndexByDataType(typeB);
+
+        static const int intputCaseTable[][3] = {
+            /*        Fp32 FP16 BF16 */
+            /*FP32*/ {0,   1,   3},
+            /*FP16*/ {1,   2,   4},
+            /*BF16*/ {3,   4,   5}
+        };
+
+        int inputCase = intputCaseTable[indexA][indexB];
+        return inputCase;
+    }
+
+    virtual PromoteResult GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) = 0;
+
+    aclnnStatus GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype);
+};
+
+// 适用soc: ASCEND910B, ASCEND910_93, ASCEND910_95,
+class Ascend910BMatMulRule : public SocMatMulRuleBase {
+public:
+    Ascend910BMatMulRule(op::SocVersion soc_version)
+        : SocMatMulRuleBase(soc_version) {}
+
+    ~Ascend910BMatMulRule() override = default;
+
+    bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
+
+    aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) override;
+
+    std::initializer_list<op::DataType> GetSupportedDTypes() override;
+
+private:
+
+    PromoteResult GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) override;
+
+    op::DataType UpdateOutputDtype(op::DataType upperDtype, op::DataType outOriDtype, int8_t cubeMathType) const;
+
+    op::DataType UpdateBiasDtype(op::DataType upperDtype, op::DataType biasOriDtype) const;
+};
+
+// 适用其他soc
+class Ascend310AMatMulRule : public SocMatMulRuleBase {
+public:
+    Ascend310AMatMulRule(op::SocVersion soc_version)
+        : SocMatMulRuleBase(soc_version) {}
+
+    ~Ascend310AMatMulRule() override = default;
+
+    bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
+
+    aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) override;
+
+    std::initializer_list<op::DataType> GetSupportedDTypes() override;
+
+private:
+
+    PromoteResult GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) override;
+
+    op::DataType UpdateOutputDtype(op::DataType upperDtype, op::DataType outOriDtype) const;
+
+    op::DataType PromoteOutputAndBiasDtype(op::DataType outputDtype, op::DataType biasOriDtype) const;
+};
+
+// 单例
+class SocMatMulRule {
+public:
+    static std::shared_ptr<SocMatMulRuleBase> getInstance() {
+        if(instance == nullptr) {
+            instance = BuildRule();
+        }
+        return std::move(instance);
+    }
+
+private:
+    static std::shared_ptr<SocMatMulRuleBase> instance;
+
+    static std::shared_ptr<SocMatMulRuleBase> BuildRule() ;
+};
+
+// =====================================================================================================
+
 } // namespace NN
 } // namespace Ops
 
@@ -173,6 +397,7 @@ const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2,
 
 const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
                            aclOpExecutor *executor, bool isBaddbmm = false);
+
 #ifdef __cplusplus
 }
 #endif

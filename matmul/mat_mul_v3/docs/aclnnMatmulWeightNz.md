@@ -1,15 +1,22 @@
 # aclnnMatmulWeightNz
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-- 接口功能：完成张量self与张量mat2的矩阵乘计算，mat2仅支持AI处理器亲和数据排布格式，只支持self为2维, mat2为4维。
+- 接口功能：完成张量self与张量mat2的矩阵乘计算，mat2仅支持NZ格式，只支持self为2维, mat2为4维。
   相似接口有aclnnMatmul(mat2仅支持ND) aclnnMm（支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatmul（仅支持3维的矩阵乘，其中第1维为batch）。
 - 计算公式：
 
@@ -25,16 +32,16 @@ aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
   const aclTensor *self, 
   const aclTensor *mat2, 
   aclTensor       *out, 
-  int8_t           cubeMathType, 
+  int8_t          cubeMathType, 
   uint64_t        *workspaceSize, 
-  aclOpExecutor  **executor)
+  aclOpExecutor   **executor)
 ```
 ```cpp
 aclnnStatus aclnnMatmulWeightNz(
   void           *workspace,
-  uint64_t        workspaceSize,
+  uint64_t       workspaceSize,
   aclOpExecutor  *executor,
-  aclrtStream     stream)
+  aclrtStream    stream)
 ```
 
 ## aclnnMatmulWeightNzGetWorkspaceSize
@@ -79,8 +86,8 @@ aclnnStatus aclnnMatmulWeightNz(
         <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
         <td>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</br>
         mat2的Reduce维度需要与self的Reduce维度大小相等。</br>
-        当B矩阵不转置时， AI处理器亲和数据排布格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
-        当B矩阵转置时， AI处理器亲和数据排布格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
+        当B矩阵不转置时， NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
+        当B矩阵转置时， NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</br>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>NZ</td>
@@ -136,21 +143,28 @@ aclnnStatus aclnnMatmulWeightNz(
     </tbody></table>
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到AI处理器亲和数据排布格式的转换。
+    - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
+  - <term>昇腾910_95 AI处理器</term>:
+    - 调用此接口之前，必须使用aclnnNpuFormatCast接口完成mat2的原始输入Format从ND到NZ格式的转换。
+    - 不支持 cubeMathType为1：ALLOW_FP32_DOWN_PRECISION 的选项
+    - 不支持 cubeMathType为3：USE_HF32 的选项
+    - 不支持 cubeMathType为4：FORCE_GRP_ACC_FOR_FP32 的选项
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  <table style="undefined;table-layout: fixed; width: 809px"><colgroup>
-  <col style="width: 257px">
-  <col style="width: 121px">
-  <col style="width: 431px">
+  <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
+  <col style="width: 250px">
+  <col style="width: 130px">
+  <col style="width: 650px">
   </colgroup>
   <thead>
     <tr>
       <th>返回值</th>
       <th>错误码</th>
       <th>描述</th>
-    </tr></thead>
+    </tr>
+  </thead>
   <tbody>
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
@@ -158,23 +172,22 @@ aclnnStatus aclnnMatmulWeightNz(
       <td>传入的self、mat2或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>self和mat2的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和mat2无法做数据类型推导。</td>
-    </tr>
     <tr>
       <td>推导出的数据类型无法转换为指定输出out的类型。</td>
-    </tr>
+    <tr>
   </tbody>
   </table>
-  
 
 ## aclnnMatmulWeightNz
 
 - **参数说明：**
+
 
   <div style="overflow-x: auto;">
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -213,6 +226,7 @@ aclnnStatus aclnnMatmulWeightNz(
   </table>
   </div>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -220,15 +234,16 @@ aclnnStatus aclnnMatmulWeightNz(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz默认确定性实现。
+  - <term>昇腾910_95 AI处理器</term>：aclnnMatmulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
-- self只支持2维, mat2只支持AI处理器亲和数据排布格式(NZ)，调用此接口之前，必须完成mat2从ND到AI处理器亲和数据排布格式的转换。
-- 当mat2任意一个维度为1，且mat2为非连续的NZ格式时，不保证精度和功能, 即不支持k=1或者n=1时，mat2先转NZ后再对tensor的shape做任何操作处理, 如transpose操作。
+- self只支持2维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
+- 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 ## 调用示例
 
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  self和mat2数据类型为float16，mat2为AI处理器亲和数据排布格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+  self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   ```Cpp
   #include <iostream>
   #include <vector>
@@ -451,3 +466,239 @@ aclnnStatus aclnnMatmulWeightNz(
   }
   ```
 
+- <term>昇腾910_95 AI处理器</term>：
+  self和mat2数据类型为bfloat16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+  ```Cpp
+    #include <iostream>
+    #include <vector>
+    #include "acl/acl.h"
+    #include "aclnnop/aclnn_matmul.h"
+    #include "aclnnop/aclnn_npu_format_cast.h"
+
+    #define CHECK_RET(cond, return_expr) \
+      do {                               \
+        if (!(cond)) {                   \
+          return_expr;                   \
+        }                                \
+      } while (0)
+
+    #define LOG_PRINT(message, ...)     \
+      do {                              \
+        printf(message, ##__VA_ARGS__); \
+      } while (0)
+
+    int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+      int64_t shapeSize = 1;
+      for (auto i : shape) {
+        shapeSize *= i;
+      }
+      return shapeSize;
+    }
+
+    // 将bloat16的uint16_t表示转换为float表示
+    float Bf16ToFloat(uint16_t h) {
+      uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U;  // sign bit
+      uint32_t exponent = (h >> 7) & 0x00FFU;                      // exponent bits
+      uint32_t mantissa =  h & 0x007FU;                           // mantissa bits
+      
+      // 指数偏移不变
+      // mantissa 左移 23 - 7 ，其余补0
+      uint32_t f_bits = sign | (exponent << 23) | (mantissa << (23 - 7));
+      // 强转float
+      return *reinterpret_cast<float*>(&f_bits);
+    }
+
+    int Init(int32_t deviceId, aclrtStream* stream) {
+      // 固定写法，资源初始化
+      auto ret = aclInit(nullptr);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
+      ret = aclrtSetDevice(deviceId);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+      ret = aclrtCreateStream(stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+      return 0;
+    }
+
+    template <typename T>
+    int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                        aclDataType dataType, aclTensor** tensor) {
+      auto size = GetShapeSize(shape) * sizeof(T);
+      // 调用aclrtMalloc申请device侧内存
+      auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+      // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
+      ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+
+      // 计算连续tensor的strides
+      std::vector<int64_t> strides(shape.size(), 1);
+      for (int64_t i = shape.size() - 2; i >= 0; i--) {
+        strides[i] = shape[i + 1] * strides[i + 1];
+      }
+
+      // 调用aclCreateTensor接口创建aclTensor
+      *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                shape.data(), shape.size(), *deviceAddr);
+      return 0;
+    }
+
+    template <typename T>
+    int CreateAclTensorWithFormat(const std::vector<T>& hostData, const std::vector<int64_t>& shape, 
+                                  int64_t** storageShape, uint64_t* storageShapeSize, void** deviceAddr,
+                                  aclDataType dataType, aclTensor** tensor, aclFormat format) {
+        auto size = hostData.size() * sizeof(T);
+        // 调用aclrtMalloc申请device侧内存
+        auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+        // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
+        ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+
+        // 计算连续tensor的strides
+        std::vector<int64_t> strides(shape.size(), 1);
+        for (int64_t i = shape.size() - 2; i >= 0; i--) {
+            strides[i] = shape[i + 1] * strides[i + 1];
+        }
+
+        *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0,
+                                    format, *storageShape, *storageShapeSize, *deviceAddr);
+        return 0;
+    }
+
+    int main() {
+      // 1. device/stream初始化，参考acl API手册（固定写法）
+      // 根据自己的实际device填写deviceId
+      int32_t deviceId = 0;
+      aclrtStream stream;
+      auto ret = Init(deviceId, &stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+
+      // 2. 构造输入与输出，需要根据API的接口自定义构造
+      int64_t m = 16;
+      int64_t k = 32;
+      int64_t n = 16;
+      std::vector<int64_t> selfShape = {m, k};
+      std::vector<int64_t> mat2Shape = {k, n};
+      std::vector<int64_t> outShape = {m, n};
+      void* selfDeviceAddr = nullptr;
+      void* mat2DeviceAddr = nullptr;
+      void* outDeviceAddr = nullptr;
+      void* dstDeviceAddr = nullptr;
+
+      aclTensor* self = nullptr;
+      aclTensor* mat2 = nullptr;
+      aclTensor* out = nullptr;
+      aclTensor* mat2NZ = nullptr;
+      
+      std::vector<uint16_t> selfHostData(m * k, 0x3F80); // bfloat16_t 用0x3F80表示uint_16的1
+      std::vector<uint16_t> mat2HostData(k * n, 0x3F80); // bfloat16_t 用0x3F80表示uint_16的1
+      std::vector<uint16_t> outHostData(m * n, 0);
+      // weightNz需要的空间大于等于原[k,n]矩阵, 需要对齐16
+      int64_t kAlign = (k + 16 - 1) / 16 * 16;
+      int64_t nAlign = (n + 16 - 1) / 16 * 16;
+      std::vector<uint16_t> dstTensorHostData(kAlign * nAlign, 0x3F80);
+
+      aclDataType srcDtype = aclDataType::ACL_BF16;
+      aclDataType additionalDtype = aclDataType::ACL_BF16;
+      // 创建self aclTensor
+      ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, srcDtype, &self);
+      CHECK_RET(ret == ACL_SUCCESS, return ret);
+      // 创建mat2 aclTensor
+      ret = CreateAclTensor(mat2HostData, mat2Shape, &mat2DeviceAddr, srcDtype, &mat2);
+      CHECK_RET(ret == ACL_SUCCESS, return ret);
+      // 创建out aclTensor
+      ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, srcDtype, &out);
+      CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      int8_t cubeMathType = 1;
+      aclOpExecutor* executor = nullptr;
+
+      // weight tensor ND转NZ，调用npu_foramt_cast接口
+      int64_t* dstShape = nullptr;
+      uint64_t dstShapeSize = 0;
+      int actualFormat;
+      uint64_t workspaceSize = 0;
+      void* workspaceAddr = nullptr;
+
+      uint64_t workspaceSizeMm = 0;
+      void* workspaceAddrMm = nullptr;
+
+      // 计算目标tensor的shape和format
+      ret = aclnnNpuFormatCastCalculateSizeAndFormat(mat2, 29, additionalDtype, &dstShape, &dstShapeSize, &actualFormat);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastCalculateSizeAndFormat failed. ERROR: %d\n", ret); return ret);
+
+      ret = CreateAclTensorWithFormat(dstTensorHostData, mat2Shape, &dstShape, &dstShapeSize, &dstDeviceAddr, srcDtype, &mat2NZ, static_cast<aclFormat>(actualFormat));
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
+
+      // 调用aclnnNpuFormatCastGetWorkspaceSize第一段接口
+      ret = aclnnNpuFormatCastGetWorkspaceSize(mat2, mat2NZ, &workspaceSize, &executor);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+
+      // 根据第一段接口计算出的workspaceSize申请device内存
+      if (workspaceSize > 0) {
+          ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+          CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+      }
+
+      // 调用aclnnNpuFormatCastGetWorkspaceSize第二段接口
+      ret = aclnnNpuFormatCast(workspaceAddr, workspaceSize, executor, stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
+
+      // 4. 同步等待任务执行结束
+      ret = aclrtSynchronizeStream(stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+      // 调用aclnnMatmulWeightNz第一段接口
+      ret = aclnnMatmulWeightNzGetWorkspaceSize(self, mat2NZ, out, cubeMathType, &workspaceSizeMm, &executor);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+
+      // 根据第一段接口计算出的workspaceSize申请device内存
+      if (workspaceSizeMm > 0) {
+        ret = aclrtMalloc(&workspaceAddrMm, workspaceSizeMm, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+      }
+      // 调用aclnnMatmulWeightNz第二段接口
+      ret = aclnnMatmulWeightNz(workspaceAddrMm, workspaceSizeMm, executor, stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
+
+      // 4. 同步等待任务执行结束
+      ret = aclrtSynchronizeStream(stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+      // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+      auto size = GetShapeSize(outShape);
+      std::vector<uint16_t> resultData(size, 0);
+      ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                        size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+      for (int64_t i = 0; i < size; i++) {
+        float bf16Float = Bf16ToFloat(resultData[i]);
+        LOG_PRINT("result[%ld] is: %f\n", i, bf16Float);
+      }
+
+      // 6. 释放aclTensor和aclScalar
+      aclDestroyTensor(self);
+      aclDestroyTensor(mat2);
+      aclDestroyTensor(out);
+      aclDestroyTensor(mat2NZ);
+
+      // 7. 释放device资源
+      aclrtFree(selfDeviceAddr);
+      aclrtFree(mat2DeviceAddr);
+      aclrtFree(outDeviceAddr);
+      aclrtFree(dstDeviceAddr);
+
+      if (workspaceSize > 0) {
+        aclrtFree(workspaceAddr);
+      }
+
+      if (workspaceSizeMm > 0) {
+        aclrtFree(workspaceAddrMm);
+      }
+      aclrtDestroyStream(stream);
+      aclrtResetDevice(deviceId);
+      aclFinalize();
+      return 0;
+    }
+  ```

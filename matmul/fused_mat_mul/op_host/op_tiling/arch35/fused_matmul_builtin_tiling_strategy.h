@@ -34,11 +34,12 @@ const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> FusedM
 };
 
 inline std::vector<int32_t> GetFusedMatMulPriorities(platform_ascendc::SocVersion socVersion)
-{
+{   
     std::vector<int32_t> priorities = {};
     if (FusedMatMulPrioritiesMap.find(socVersion) != FusedMatMulPrioritiesMap.end()) {
         priorities = FusedMatMulPrioritiesMap.at(socVersion);
     }
+
     return priorities;
 };
 } // namespace strategy

@@ -53,7 +53,7 @@ uint64_t BatchMatMulV3KEqZeroTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey().SetTrans(false, false)
         .SetApiLevel(MatMulV3ApiLevel::HIGH_LEVEL)
-        .SetBatchModel(MatMulV3BatchModel::BATH_MODEL)
+        .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
         .SetModel(MatMulV3Model::K_EQUAL_ZERO)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
         .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)

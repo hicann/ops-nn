@@ -35,8 +35,10 @@ const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BUILT_IN = {
     op::DataType::DT_BF16, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 static constexpr size_t DIM_LEN = 2;
 
-bool IsBuiltInScene(const char* fusedOpType) {
-    return std::strcmp(fusedOpType, "") == 0 || std::strcmp(fusedOpType, "relu") == 0;
+bool IsBuiltInScene(const char* fusedOpType)
+{
+    return std::strcmp(fusedOpType, "") == 0 || std::strcmp(fusedOpType, "relu") == 0 ||
+           std::strcmp(fusedOpType, "add") == 0 || std::strcmp(fusedOpType, "mul") == 0;
 }
 
 // 校验fusedOpType是否合法

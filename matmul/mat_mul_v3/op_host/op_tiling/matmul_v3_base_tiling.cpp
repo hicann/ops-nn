@@ -2466,7 +2466,6 @@ bool MatmulV3BaseTiling::SupportMultiSplitK() const
     if (!compileInfo_.supportL12BtBf16 && !compileInfo_.supportL0c2out) {
         return false;
     }
-
     // 判断是否为分组累加模式
     if (SupportForceGrpAccForFp32()) {
         return true;

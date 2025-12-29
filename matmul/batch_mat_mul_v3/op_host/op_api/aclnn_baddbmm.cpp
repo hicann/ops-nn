@@ -29,6 +29,7 @@
 
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 
 using namespace Ops::NN;
 using namespace op;
@@ -222,6 +223,39 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CheckInputParams(
+    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
+    const aclScalar* alpha, const aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查输入、输出参数是否为空指针
+    CHECK_RET(CheckInputNotNull(self, batch1, batch2, beta, alpha), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckOutputNotNull(out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(socRule->CheckInput(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查batch1和batch2是否满足Shape、广播、Empty条件
+    CHECK_RET(CheckShape(self, batch1, batch2), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查self和batch1@batch2是否能广播
+    CHECK_RET(CheckBroadCast(self, batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 5. 检查batch1, batch2和out的format是否一致，self存在与其他输入format不一样的情况
+    CHECK_RET(CheckFormat(batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
+// 对于一个 [B, M, N] 的 batch，batch1 的 B 或 M 为 0；或者 batch2 的 N 为 0
+static inline bool isProcessEmptyTensor(const aclTensor* batch1, const aclTensor* batch2)
+{
+    return (batch1->GetViewShape())[FIRST_DIM] == 0 || 
+           (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
+           (batch2->GetViewShape())[SHAPE_LIMIT - LAST_DIM] == 0;
+}
+
 static const aclTensor* bmmProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
 {
     // 获取shape信息
@@ -233,24 +267,132 @@ static const aclTensor* bmmProcessEmptyTensor(const aclTensor* self, const aclTe
     OP_LOGI("Returning an empty tensor without actually doing calculation");
     return out;
 }
+
+class BaddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // bmmOut = batch1(matA) @ batch2(matB)
+        bool isBaddbmm = true;
+        const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
+        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // mulOut = bmmOut * alpha
+        const aclTensor* mulOut = l0op::Muls(bmmOut, alpha->ToFloat(), executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = mulOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~BaddbmmBeta0Graph() override = default;
+};
+
+class BaddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // self(bias) * beta
+        const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // bmmOut = batch1(matA) @ batch2(matB)
+        bool isBaddbmm = true;
+        const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
+        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        
+        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
+        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
+        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, executor);
+        CHECK_RET(mulOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 将bmmOut的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+        const aclTensor* bmmOutCasted = l0op::Cast(bmmOut, promoteTypeAdd, executor);
+        CHECK_RET(bmmOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 进行Add或Axpy计算
+        const aclTensor* addOut = nullptr;
+        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+            // alpha == 0
+            // addOut = mulOutCasted + bmmOutCasted
+            addOut = l0op::Add(mulOutCasted, bmmOutCasted, executor);
+        } else {
+            // alpha != 0
+            // addOut = mulOutCasted + bmmOutCasted * alpha
+            addOut = l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
+        }
+        CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = addOut;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 固定写法，将计算结果转换成输出output的数据类型
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 固定写法，将计算结果拷贝到输出output上，output可能是非连续的tensor
+        auto result = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~BaddbmmMatmulGraph() override = default;
+};
+
+// 创建计算图
+std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(
+    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
+    aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+{
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
+
+    // beta == 0
+    if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+        matmulGraph = std::make_shared<BaddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        return matmulGraph;
+    }
+
+    // beta != 0
+    matmulGraph = std::make_shared<BaddbmmMatmulGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+    return matmulGraph;
+}
 } // namespace
 
 aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor) 
 {
     L2_DFX_PHASE_1(aclnnBaddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
     // 参数检查
-    auto ret = CheckParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
+    auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
-    // 输入空Tensor处理方法
-    if ((batch1->GetViewShape())[FIRST_DIM] == 0 || (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
-        (batch2->GetViewShape())[SHAPE_LIMIT - LAST_DIM] == 0) {
+    
+    // 输入空Tensor处理方法，直接返回了一个空 Tensor，未做计算
+    if (isProcessEmptyTensor(batch1, batch1)) {
         auto emptyOut = bmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -263,63 +405,17 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    const aclTensor* castOut = nullptr;
-    if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
-        bool isBaddbmm = true;
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get(), isBaddbmm);
-        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 根据不同的输入选择不同的计算图
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateBaddbmmGraphImpl(self, batch1, batch2, beta, alpha, out, cubeMathType, uniqueExecutor.get());
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        // 做bmmOut和alpha的Muls操作
-        auto mulOut = l0op::Muls(bmmOut, alpha->ToFloat(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，将计算结果转换成输出out的数据类型
-        castOut = l0op::Cast(mulOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else {
-        // beta * self
-        auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), uniqueExecutor.get());
-        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        bool isBaddbmm = true;
-        auto bmmOut = ExecBmmOp(batch1, batch2, out, cubeMathType, uniqueExecutor.get(), isBaddbmm);
-        CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
-        auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
-
-        // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto mulOutCasted = l0op::Cast(mulOut, promoteTypeAdd, uniqueExecutor.get());
-        CHECK_RET(mulOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将输入batch1的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto bmmOutCasted = l0op::Cast(bmmOut, promoteTypeAdd, uniqueExecutor.get());
-        CHECK_RET(bmmOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 进行Add计算
-        const aclTensor* addOut = nullptr;
-        if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
-            addOut = l0op::Add(mulOutCasted, bmmOutCasted, uniqueExecutor.get());
-        } else {
-            addOut = l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), uniqueExecutor.get());
-        }
-        CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 固定写法，将计算结果转换成输出out的数据类型
-        castOut = l0op::Cast(addOut, out->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-
-    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 执行计算图
+    auto executeStatus = matmulGraph->Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
+    uniqueExecutor.ReleaseTo(executor); // 需要把uniqueExecutor持有executor转移给executor
 
     return ACLNN_SUCCESS;
 }

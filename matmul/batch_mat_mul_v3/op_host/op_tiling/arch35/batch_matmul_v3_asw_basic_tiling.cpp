@@ -26,13 +26,9 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBasicTiling, ASCEND91
 
 bool BatchMatMulV3AswBasicTiling::IsCapable()
 {
-    if (MatMulV3TilingHelper::CheckIfDoubleAswt(compileInfo_, args_, batchInfo_->batchC)) {
-        return false;
-    }
-
     bool isEqualBatch = batchInfo_->batchA0 == batchInfo_->batchB0 && batchInfo_->batchA1 == batchInfo_->batchB1 &&
                            batchInfo_->batchA2 == batchInfo_->batchB2 && batchInfo_->batchA3 == batchInfo_->batchB3;
-    if (args_.hasBias || !isEqualBatch) {
+    if (!isEqualBatch) {
         return false;
     }
     return true;
@@ -61,7 +57,7 @@ uint64_t BatchMatMulV3AswBasicTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(aswtModel_)
+        .SetModel(MatMulV3Model::BASIC)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }

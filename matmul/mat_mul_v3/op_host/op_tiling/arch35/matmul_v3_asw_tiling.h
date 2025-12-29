@@ -37,8 +37,6 @@ protected:
 
     uint64_t GetTilingKey() const override;
 
-    MatMulV3Model aswtModel_{MatMulV3Model::BASIC};
-
 private:
     struct CalcParams {
         uint64_t baseStart;

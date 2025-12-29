@@ -16,6 +16,7 @@
 #ifndef QUANT_BATCH_MATMUL_V4_TILING_DATA_H
 #define QUANT_BATCH_MATMUL_V4_TILING_DATA_H
 
+#include <cstdint>
 #include "kernel_tiling/kernel_tiling.h"
 
 #if defined(__CCE_AICORE__)

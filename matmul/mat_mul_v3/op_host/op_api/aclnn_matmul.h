@@ -37,7 +37,7 @@ ACLNN_API aclnnStatus aclnnMatmul(void* workspace, uint64_t workspaceSize, aclOp
  * @domain aclnn_ops_infer
  * 算子功能：相对于aclnnMatmul, mat2为NZ格式。
  * @param [in] self: matmul左矩阵，数据类型支持：float16, bfloat16, format只支持ND。
- * @param [in] mat2: matmul右矩阵，数据类型支持：float16, bfloat16, 支持AI处理器亲和数据排布格式（NZ）。
+ * @param [in] mat2: matmul右矩阵，数据类型支持：float16, bfloat16, 支持NZ格式。
  * @param [in] cubeMathType: 用于指定Cube单元的计算逻辑，类型为Host侧的整型int8_t。
  * @param [out] out: 计算结果，数据类型：float16, bfloat16。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。

@@ -16,6 +16,7 @@
 #ifndef BATCH_MAT_MUL_V3_TILING_DATA_H
 #define BATCH_MAT_MUL_V3_TILING_DATA_H
 
+#include <cstdint>
 #include "kernel_tiling/kernel_tiling.h"
 
 #if defined(__CCE_AICORE__)

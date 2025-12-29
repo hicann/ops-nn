@@ -22,6 +22,7 @@
 #include "aclnn_kernels/transdata.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -34,6 +35,7 @@
 #include "util/math_util.h"
 
 using Ops::Base::CeilDiv;
+using Ops::Base::CeilAlign;
 using Ops::Base::FloorDiv;
 
 using namespace Ops::NN;
@@ -64,6 +66,8 @@ namespace {
 static const int32_t SHAPE_LIMIT = 3;
 static const int32_t SHAPE_LIMIT_NZ = 5;
 static const int32_t FIRST_DIM = 0;
+static const int32_t SECOND_DIM = 1;
+static const int32_t THIRD_DIM = 2;
 static const int32_t PENULTIMATE_DIM = 2;
 static const int32_t LAST_DIM = 1;
 static const uint64_t NUM_TWO = 2UL;
@@ -94,6 +98,13 @@ static inline bool CheckSocVersionIsSupportBf16(void)
 {
     return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+}
+
+// [B,M,K] @ [B,K,N] = [B,M,N]
+static inline bool CheckBmmResIsEmpty(const aclTensor* self, const aclTensor* mat2)
+{
+    return self->GetViewShape().GetDim(FIRST_DIM) == 0 || self->GetViewShape().GetDim(SECOND_DIM) == 0 ||
+        mat2->GetViewShape().GetDim(THIRD_DIM) == 0;
 }
 
 static bool CheckDtypeValid(
@@ -256,21 +267,20 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     return fillTensor;
 }
 
-static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
-    // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查self和mat2的shape是否符合要求
     CHECK_RET(CheckShape(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
-
-    // 4. 检查cubeMathType
-    CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-
     return ACLNN_SUCCESS;
 }
 
@@ -336,21 +346,19 @@ static aclnnStatus GetBatchMatmulOpInfo(
         inputFp32Flag && ((cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32)) ? 0x40 : 0x1;
     matmulOpInfo.enableHf32 =
         inputFp32Flag && ((cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32));
-    
+
     bool inputFp16Flag = matmulOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16;
     bool inputBf16Flag = matmulOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                          matmulOpInfo.support_info.mat2_dtype == DataType::DT_BF16;
-    // 在A2/A3平台下，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
+    // 在A2/A3平台下，来自Baddbmm的接口调用，如果输入数据类型为fp16或bf16，且进行高精度计算，则使能输出数据类型为fp32
     matmulOpInfo.enableFp16Bf16InFp32Out = (inputFp16Flag || inputBf16Flag) &&
                                            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) &&
                                            (cubeMathType == KEEP_DTYPE) && isBaddbmm;
-
     OP_LOGD(
         "opImplModeEnum=%ld, enableHf32=%d, cubeMathType=%d, enableFp16Bf16InFp32Out=%d", matmulOpInfo.opImplModeEnum, matmulOpInfo.enableHf32,
         cubeMathType, matmulOpInfo.enableFp16Bf16InFp32Out);
-    
     GetMmInfo(matmulOpInfo);
     return ACLNN_SUCCESS;
 }
@@ -383,16 +391,6 @@ static const aclTensor* SetTensorToNDFormat(const aclTensor* input)
     }
     return formatTensor;
 }
-
-inline static uint64_t CeilAlign(uint64_t x, uint64_t align)
-{
-    if (align == 0) {
-        return x;
-    }
-    const uint64_t ratio = x / align;
-    return (x % align == 0) ? x : (ratio + 1UL) * align;
-};
-
 
 inline static bool IsBatchEqual(const FVector<int64_t>& batchDimForX1, const FVector<int64_t>& batchDimForX2)
 {
@@ -515,7 +513,7 @@ bool CheckSocIfBatchMatMulToMul910B(const aclTensor* self, const aclTensor* mat2
     return true;
 }
 
-bool CheckShapeEqualToMul(const uint64_t& mDim, const uint64_t& nDim, const uint64_t& batchNum, 
+bool CheckShapeEqualToMul(const uint64_t& mDim, const uint64_t& nDim, const uint64_t& batchNum,
                           const uint64_t& dataSize, const uint64_t& alignNum) {
   // 判断batch数是否符合条件(大于等于128)
   if (batchNum < MIN_BATCH_NUM) {
@@ -593,24 +591,28 @@ const aclTensor* GetBatchMatmulOp(
     bool adjX1, bool adjX2, const bool offsetX, aclOpExecutor* executor, bool isBaddbmm)
 {
     auto bmmOpOut = selfTransdata;
-    bool is910B_or_910_93 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93;
-    bool is910_95 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
-    bool isFp16_or_Bf16 = matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 ||
-                          matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16;
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
-    if (is910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
-        (GetBatchDimAll(mat2Transdata) <= 1 && (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
-            int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x0);
-            return TransBmm2Mm(selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
-    }
-        OP_LOGI("Hit batch_mat_mul_v3 scenario.");
-        if (isFp16_or_Bf16 && isBaddbmm && is910B_or_910_93) { // 仅910B 910_93路由该场景
-            OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario.");
-            bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
-        } else {
-            bmmOpOut = l0op::BatchMatMulV3Nd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+        if (GetCurrentPlatformInfo().GetSocVersion() ==
+                SocVersion::ASCEND910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
+            (GetBatchDimAll(mat2Transdata) <= 1 &&
+             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
+            int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
+            return TransBmm2Mm(
+                selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
         }
+        OP_LOGI("Hit batch_mat_mul_v3 scenario.");
+        if ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 ||
+             matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) && isBaddbmm &&
+            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+              GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93)) { // 仅910B 910_93路由该场景
+            OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario. - aclnn");
+            bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
+                selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+        } else {
+            bmmOpOut = l0op::BatchMatMulV3Nd(
+                selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+        }
+
         return bmmOpOut;
     }
     // 输入是FP16的场景
@@ -618,21 +620,30 @@ const aclTensor* GetBatchMatmulOp(
         if (matmulOpInfo.support_info.output_dtype == op::DataType::DT_FLOAT16) {
             // 输入是FP16, 输出是FP16的场景
             if (matmulOpInfo.support_info.self_format == op::Format::FORMAT_ND) {
-                bmmOpOut = l0op::BatchMatMulNd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+                bmmOpOut = l0op::BatchMatMulNd(
+                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
+                    executor);
             } else {
-                bmmOpOut = l0op::BatchMatMulNzFp162Fp16(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+                bmmOpOut = l0op::BatchMatMulNzFp162Fp16(
+                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
+                    executor);
             }
         } else {
             // 输入是FP16, 输出是FP32的场景
             if (matmulOpInfo.support_info.self_format == op::Format::FORMAT_ND) {
-                bmmOpOut = l0op::BatchMatMulNdFp162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+                bmmOpOut = l0op::BatchMatMulNdFp162Fp32(
+                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
+                    executor);
             } else {
-                bmmOpOut = l0op::BatchMatMulNzFp162Fp32(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+                bmmOpOut = l0op::BatchMatMulNzFp162Fp32(
+                    selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum,
+                    executor);
             }
         }
     } else {
         // 输入是FP32/BF16,输出是FP32/BF16的场景
-        bmmOpOut = l0op::BatchMatMulNd(selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
+        bmmOpOut = l0op::BatchMatMulNd(
+            selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.opImplModeEnum, executor);
     }
     return bmmOpOut;
 }
@@ -803,7 +814,7 @@ bool CheckTransNonContiguousShapeSupport(
 const aclTensor* ExecBmmOpWithBias(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
     aclOpExecutor* executor, bool isBaddbmm)
-{   
+{
     CHECK_RET(CheckBmmOp(self, mat2, bias, out, cubeMathType) == ACLNN_SUCCESS, nullptr);
     if (self->IsEmpty() || mat2->IsEmpty()) {
         auto emptyOut = ProcessEmptyTensor(self, mat2, executor);
@@ -906,6 +917,73 @@ const aclTensor* ExecBmmOp(
 {
     return ExecBmmOpWithBias(self, mat2, nullptr, out, cubeMathType, executor, isBaddbmm);
 }
+
+// 空tensor计算图实现
+class BatchmmEmptyTensorGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 空Tensor 不做处理
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    ~BatchmmEmptyTensorGraph() override = default;
+};
+
+// 正常场景计算图实现
+class BatchMatmulExecBmmOpGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 执行 out = mat1 @ mat2
+        bool isBaddbmm = false;
+        const aclTensor* out = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override {
+        // cast
+        convOut = l0op::Cast(convOut, output->GetDataType(), executor);
+        CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // ViewCopy
+        auto result = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~BatchMatmulExecBmmOpGraph() override = default;
+};
+
+// 创建计算图
+std::shared_ptr<MatmulGraphImpl> CreateBatchMatmulGraphImpl(
+    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+{
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
+    // 空tensor
+    if (CheckBmmResIsEmpty(self, mat2)) {
+        matmulGraph = std::make_shared<BatchmmEmptyTensorGraph>(self, mat2, nullptr, out, nullptr, nullptr, cubeMathType, executor);
+    }
+    // 正常场景
+    matmulGraph = std::make_shared<BatchMatmulExecBmmOpGraph>(self, mat2, nullptr, out, nullptr, nullptr, cubeMathType, executor);
+    return matmulGraph;
+}
 } // namespace
 
 aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
@@ -919,22 +997,23 @@ aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(self, mat2, out, cubeMathType);
+    auto ret = CheckParamsV2(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 从最初的接口进入bmm计算
-    auto bmmOut = ExecBmmOp(self, mat2, out, cubeMathType, uniqueExecutor.get());
-    CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    if (bmmOut->IsEmpty()) {
-        // 当输出为空tensor的场景，空tensor处理
+    // 空tensor场景
+    if (CheckBmmResIsEmpty(self, mat2)) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    auto viewCopyResult = l0op::ViewCopy(bmmOut, out, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 根据不同的输入选择不同的计算图
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateBatchMatmulGraphImpl(self, mat2, out, cubeMathType, uniqueExecutor.get());
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 执行计算图
+    auto executeStatus = matmulGraph -> Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

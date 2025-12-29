@@ -80,3 +80,104 @@ TEST_F(l2_batch_matmul_weight_nz_test, ascend910B_test_aligned_fp32_out_weight_n
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 接口整改异常用例 910_95
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+// 接口整改异常用例 - 310
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP16_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP32_USE_HF32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, USE_HF32);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP16_USE_HF32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, USE_HF32);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP32_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}
+
+TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_NZ_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
+    TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
+    TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+}

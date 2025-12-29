@@ -86,7 +86,7 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWi
         offsetB += Get<1>(blockCoord);
     }
     if (isBias) {
-        offsetBias = Get<MNK_B>(blockCoord) * n + Get<1>(blockCoord);
+        offsetBias = Get<1>(blockCoord);
     }
     return {offsetA, offsetB, offsetC, offsetBias};
 }

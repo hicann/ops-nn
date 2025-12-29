@@ -122,6 +122,25 @@ public:
 
     __aicore__ inline ~BlockMmadBuilder() {}
 
+    __host_aicore__ static size_t GetWorkspaceSize()
+    {
+        return 0;
+    }
+
+    __host_aicore__ static Status CanImplement(Arguments const& args)
+    {
+        if (AscendC::Std::is_same_v<bfloat16_t, AType> && args.biasGmAddr != nullptr) {
+            return Status::bf16BiasErrorInvalidDataType;
+        }
+
+        if (l0M * l0K * sizeof(AType) * DOUBLE_BUFFER_COUNT > L0A_SIZE ||
+            l0N * l0K * sizeof(BType) * DOUBLE_BUFFER_COUNT > L0B_SIZE || l0M * l0N * sizeof(CType) > L0C_SIZE ||
+            (l1M * l1K * sizeof(AType) + l1K * l1N * sizeof(BType)) * DOUBLE_BUFFER_COUNT > L1_SIZE) {
+            return Status::tileShapeErrorExceedsLimit;
+        }
+        return Status::success;
+    }
+
     __host_aicore__ static Params InitParams(const Arguments& args)
     {
         return args;

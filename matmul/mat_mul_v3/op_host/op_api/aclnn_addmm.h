@@ -51,7 +51,7 @@ aclnnInplaceAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* execut
  * 算子功能：相对于aclnnAddmm, mat2为NZ格式。
  * @param [in] self: bias矩阵，数据类型支持：float16, bfloat16, float32，format只支持ND。
  * @param [in] mat1: matmul左矩阵，数据类型支持：float16, bfloat16, format只支持ND。
- * @param [in] mat2: matmul右矩阵，数据类型支持：float16, bfloat16, 支持AI处理器亲和数据排布格式（NZ）。
+ * @param [in] mat2: matmul右矩阵，数据类型支持：float16, bfloat16, 支持NZ格式。
  * @param [in] beta: self矩阵系数，数据类型支持：FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8。
  * @param [in] alpha: (mat1 @ mat2)矩阵计算结果系数，数据类型支持：FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8。
  * @param [in] cubeMathType: 用于指定Cube单元的计算逻辑，类型为Host侧的整型int8_t。

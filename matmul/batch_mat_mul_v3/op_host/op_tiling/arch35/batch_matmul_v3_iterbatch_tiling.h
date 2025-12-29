@@ -43,7 +43,7 @@ private:
     uint64_t batchOutNum_{1};
     uint64_t preCoreBatch_{1};
     uint64_t inputSizeOneBatch_{1};
-    MatMulV3BatchModel iterBatchBiasModel_{MatMulV3BatchModel::MULTI_BATCH_MODEL};
+    MatMulV3BatchModel iterBatchBiasModel_{MatMulV3BatchModel::SINGLE_BIAS_MODEL};
 };
 }
 }

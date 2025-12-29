@@ -189,7 +189,6 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckX2TableShape() const
 bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape *scaleShape,
                                                        const gert::StorageShape *biasShape,
                                                        const gert::StorageShape *offsetShape,
-                                                       const gert::StorageShape *x2TableShape,
                                                        const std::vector<int64_t> &dimValueOfMKN) const
 {
     // x1,x2 shapeK必须相等
@@ -268,9 +267,8 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckShape(const std::vector<gert::Shap
     auto &x2Shape = *mandtoryShape[1];     // using index 1 to get x2Shape
     auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
-    auto x2TableShape = context_->GetOptionalInputShape(GetX2TableIdx());
     if (!CheckShapeInRangeForOptionalInputs(biasShape, offsetShape) ||
-        !CheckDimValue(scaleShape, biasShape, offsetShape, x2TableShape, dimValueOfMKN) ||
+        !CheckDimValue(scaleShape, biasShape, offsetShape, dimValueOfMKN) ||
         !CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx())) {
         return false;
     }

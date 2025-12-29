@@ -13,14 +13,14 @@
  * \brief
  */
 
-#ifndef ACT_BLOCK_SCHEDULER_ASWT_BUILTIN_H
-#define ACT_BLOCK_SCHEDULER_ASWT_BUILTIN_H
+#ifndef CMCT_BLOCK_SCHEDULER_ASWT_BUILTIN_H
+#define CMCT_BLOCK_SCHEDULER_ASWT_BUILTIN_H
 
-#include "matmul_act/matmul/block/block_scheduler_policy.h"
-#include "matmul_act/matmul/block/block_scheduler_utils.h"
+#include "cmct/block/block_scheduler_policy.h"
+#include "cmct/block/block_scheduler_utils.h"
 #include "mat_mul_tiling_data.h"
 
-namespace Act {
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 constexpr uint16_t A_FULL_LOAD_MODE = 1;
@@ -65,7 +65,7 @@ public:
     uint8_t l1BuferNum_{0};
     uint8_t l0cDB_{1};
     uint8_t ubDB_{1};
-    L2CacheMode l2CacheDisable_;
+    L2CacheMode l2CacheDisable_{L2CacheMode::L2_CACHE_DEFAULT};
     int64_t sliceM_{1};
     int64_t srcNdStride_{1};
     int64_t mL1NormCnt_{0};
@@ -168,12 +168,14 @@ public:
 
     __aicore__ inline bool GetAL2CacheDisable()
     {
-        return (l2CacheDisable_ == L2CacheMode::A_L2_CACHE_DISABLE);
+        return (l2CacheDisable_ == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+                l2CacheDisable_ == L2CacheMode::A_L2_CACHE_DISABLE);
     }
 
     __aicore__ inline bool GetBL2CacheDisable()
     {
-        return (l2CacheDisable_ == L2CacheMode::B_L2_CACHE_DISABLE);
+        return (l2CacheDisable_ == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+                l2CacheDisable_ == L2CacheMode::B_L2_CACHE_DISABLE);
     }
 
     __aicore__ inline Shape<int64_t, int64_t> GetSliceParams()
@@ -323,7 +325,7 @@ struct BlockSchedulerSelector<
     ProblemShape_,
     L1TileShape_,
     L0TileShape_,
-    Act::Gemm::BuiltInAswtScheduler<>,
+    Cmct::Gemm::BuiltInAswtScheduler<>,
     TransA_,
     TransB_
 > {
@@ -340,7 +342,7 @@ struct BlockSchedulerSelector<
     ProblemShape_,
     L1TileShape_,
     L0TileShape_,
-    Act::Gemm::BuiltInAswtScheduler<B_FULL_LOAD_MODE>,
+    Cmct::Gemm::BuiltInAswtScheduler<B_FULL_LOAD_MODE>,
     TransA_,
     TransB_
 > {
@@ -357,7 +359,7 @@ struct BlockSchedulerSelector<
     ProblemShape_,
     L1TileShape_,
     L0TileShape_,
-    Act::Gemm::BuiltInAswtScheduler<A_FULL_LOAD_MODE>,
+    Cmct::Gemm::BuiltInAswtScheduler<A_FULL_LOAD_MODE>,
     TransA_,
     TransB_
 > {
@@ -366,5 +368,5 @@ struct BlockSchedulerSelector<
 
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
+} // namespace Cmct
 #endif

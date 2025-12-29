@@ -16,7 +16,6 @@
 #define BATCH_MAT_MUL_V3_ASW_KERNEL_ADVANCED_H
 
 #include "batch_mat_mul_v3_asw_block_advanced.h"
-#include "batch_mat_mul_v3_dasw_block_advanced.h"
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 

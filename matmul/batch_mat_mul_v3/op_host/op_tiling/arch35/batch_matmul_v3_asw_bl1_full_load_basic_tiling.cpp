@@ -24,18 +24,43 @@ namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, ASCEND910_95, BL1_FULL_LOAD_BASIC);
 
+
+bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
+{
+    if (batchInfo_->batchB > 1UL) { // matrix B should not have batch when BL1FullLoad
+        return false;
+    }
+    if (args_.nValue > BASIC_BLOCK_SIZE_256) {
+        return false;
+    }
+    // get align m,k,n value
+    uint64_t alignMValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignKaValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignKbValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignNValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignMatASize = batchInfo_->batchA * alignMValue * alignKaValue * args_.aDtypeSize;
+    uint64_t alignMatBSize = batchInfo_->batchB * alignKbValue * alignNValue * args_.bDtypeSize;
+    if (alignMatASize < (compileInfo_.l1Size) * compileInfo_.aicNum &&
+        batchInfo_->batchA * ops::CeilDiv(args_.mValue, BASIC_BLOCK_SIZE_256) <
+            4UL * compileInfo_.aicNum) {  // each core needs to loop at least 4 batch
+        return false;
+    }
+    if (alignMatBSize * NUM_TWO > compileInfo_.l1Size) {
+        return false;
+    }
+    return true;
+}
+
 ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
-    MatMulV3AswFullLoadTiling::DoBL1FullLoad(isBl1MulCoreLoad_, args_.batchInfo->batchA, args_.batchInfo->batchBias);
+    // 复用基础API B全载
+    MatMulV3BasicAswtTiling::DoBL1FullLoad(args_.batchInfo->batchA, args_.batchInfo->batchBias);
 
     // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
-    uint64_t c0Size = BLOCK_BYTE_SIZE / args_.aDtypeSize;
-    uint64_t alignKbValue = args_.isBTrans ? ops::CeilAlign(args_.kValue, c0Size) :
-                                             ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignNValue = args_.isBTrans ? ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16) :
-                                            ops::CeilAlign(args_.nValue, c0Size);
+    uint64_t alignKbValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t alignNValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
     uint64_t bL1TensorSize = alignKbValue * alignNValue * args_.bDtypeSize;
 
     uint64_t aL1TensorSize = runInfo_.baseM * runInfo_.baseK * runInfo_.stepKa * args_.aDtypeSize;
@@ -50,45 +75,11 @@ ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
-{
-    if (batchInfo_->batchA < 1UL) { // matrix A should have batch when BL1FullLoad
-        return false;
-    }
-    if (batchInfo_->batchB > 1UL) { // matrix B should not have batch when BL1FullLoad
-        return false;
-    }
-    if (args_.nValue > BASIC_BLOCK_SIZE_256) {
-        return false;
-    }
-    // get align m,k,n value
-    uint64_t c0Size = BLOCK_BYTE_SIZE / args_.aDtypeSize;
-    uint64_t alignMValue = args_.isATrans ? ops::CeilAlign(args_.mValue, c0Size) :
-                                            ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignKaValue = args_.isATrans ? ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16) :
-                                             ops::CeilAlign(args_.kValue, c0Size);
-    uint64_t alignKbValue = args_.isBTrans ? ops::CeilAlign(args_.kValue, c0Size) :
-                                             ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t alignNValue = args_.isBTrans ? ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16) :
-                                            ops::CeilAlign(args_.nValue, c0Size);
-    uint64_t alignMatASize = batchInfo_->batchA * alignMValue * alignKaValue * args_.aDtypeSize;
-    uint64_t alignMatBSize = batchInfo_->batchB * alignKbValue * alignNValue * args_.bDtypeSize;
-    if (alignMatASize < (compileInfo_.l1Size) * compileInfo_.aicNum &&
-        batchInfo_->batchA * ops::CeilDiv(args_.mValue, BASIC_BLOCK_SIZE_256) <
-            4UL * compileInfo_.aicNum) {  // each core needs to loop at least 4 batch
-        return false;
-    }
-    if (alignMatBSize * NUM_TWO > compileInfo_.l1Size) {
-        return false;
-    }
-    return true;
-}
-
 uint64_t BatchMatMulV3AswBL1FullLoadBasicTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(aswtModel_)
+        .SetModel(MatMulV3Model::BASIC)
         .SetFullLoad(MatMulV3FullLoad::B_FULL_LOAD)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();

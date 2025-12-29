@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include <cstdint>
+
 #ifndef OP_KERNEL_TBMM_TILING_KEY_PUBLIC_H
 #define OP_KERNEL_TBMM_TILING_KEY_PUBLIC_H
 

@@ -17,15 +17,15 @@
 #define __OP_HOST_BATCH_MATMUL_V3_ASW_BL1_FULL_LOAD_BASIC_TILING_H__
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
-#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_asw_full_load_tiling.h"
+#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_basic_aswt_tiling.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
-class BatchMatMulV3AswBL1FullLoadBasicTiling : public MatMulV3AswFullLoadTiling {
+class BatchMatMulV3AswBL1FullLoadBasicTiling : public MatMulV3BasicAswtTiling {
 public:
     BatchMatMulV3AswBL1FullLoadBasicTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3AswFullLoadTiling(context, cfg) {};
+        : MatMulV3BasicAswtTiling(context, cfg) {};
 
     ~BatchMatMulV3AswBL1FullLoadBasicTiling() override {};
 
@@ -35,9 +35,6 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
     uint64_t GetTilingKey() const override;
-
-protected:
-    bool isBl1MulCoreLoad_{false};
 };
 }
 }

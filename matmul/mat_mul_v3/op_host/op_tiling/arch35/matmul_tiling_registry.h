@@ -21,6 +21,7 @@
 #include <memory>
 #include <functional>
 
+#include "tiling_base/static_register_symbol.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "error_util.h"
@@ -181,6 +182,7 @@ private:
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 MM_REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
 #define MM_REGISTER_TILING_TEMPLATE(opType, className, socVersion, priority)                                      \
+    GLOBAL_REGISTER_SYMBOL(opType, className, priority, __COUNTER__, __LINE__);                \
     static MMRegister __attribute__((unused)) mm_register_##opType##_##className##_##socVersion##_##priority##_ = \
         MMRegister(#opType).tiling<className>(static_cast<int32_t>(priority), platform_ascendc::SocVersion::socVersion)
 } // namespace optiling

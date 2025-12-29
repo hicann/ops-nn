@@ -123,7 +123,6 @@ namespace optiling {
 namespace matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicStreamKTiling, ASCEND910_95, BASIC_STREAM_K);
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, MatMulV3BasicStreamKTiling, ASCEND910_95, BASIC_STREAM_K);
 
 bool MatMulV3BasicStreamKTiling::CheckStreamKSKTiling() const
 {

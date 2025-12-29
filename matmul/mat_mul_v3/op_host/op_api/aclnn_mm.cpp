@@ -11,6 +11,7 @@
 
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn_kernels/cast.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "opdev/op_dfx.h"
@@ -175,6 +176,26 @@ static bool CheckOutputShapeValid(const aclTensor* self, const aclTensor* mat2, 
     return true;
 }
 
+inline static aclnnStatus CheckMmInputParams(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验。
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET( socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查Shape是否支持
+    CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查OutputShape是否支持
+    CHECK_RET(CheckOutputShapeValid(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
 inline static aclnnStatus CheckParam(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
@@ -194,6 +215,30 @@ inline static aclnnStatus CheckParam(
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
+
+
+static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+{
+    return MatmulCommonProcess (mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false);
+}
+
+class MmMatMulGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override{
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    ~MmMatMulGraph() override = default;
+};
+
+
 } // namespace
 
 aclnnStatus aclnnMmGetWorkspaceSize(
@@ -201,32 +246,33 @@ aclnnStatus aclnnMmGetWorkspaceSize(
     aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMm, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
-    // 固定写法，创建OpExecutor
-    auto unique_executor = CREATE_EXECUTOR();
-    CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 入参检查
-    auto ret = CheckParam(self, mat2, out, cubeMathType);
+    auto ret = CheckMmInputParams(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // mm/bmm
-    UpdateCubeMathType(self, mat2, out, cubeMathType);
-    auto matmulOut = ExecMmOp(self, mat2, cubeMathType, unique_executor.get());
-    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if (matmulOut->IsEmpty()) {
-        // 当输出为空tensor的场景，空tensor处理
+    // 空tensor处理
+    if (out -> IsEmpty() && (self->IsEmpty() || mat2->IsEmpty())) {
+        OP_LOGI("Returning an empty tensor without actually doing calculation.");
         *workspaceSize = 0UL;
-        unique_executor.ReleaseTo(executor);
+        uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    auto viewCopyResult = l0op::ViewCopy(matmulOut, out, unique_executor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 构建matmul计算图
+    auto matmulGraph = std::make_shared<MmMatMulGraph>(self, mat2, out, cubeMathType, uniqueExecutor.get());
+
+    // 执行计算图
+    auto executeStatus = matmulGraph -> Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 获取workspace
-    *workspaceSize = unique_executor->GetWorkspaceSize();
-    unique_executor.ReleaseTo(executor);
+    *workspaceSize = uniqueExecutor -> GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
 
     return ACLNN_SUCCESS;
 }

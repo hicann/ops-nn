@@ -165,7 +165,7 @@ public:
                 if (curBlockIdx > lastCoreNum) {
                     return;
                 } else if (curBlockIdx == lastCoreNum) {
-                    batchNum = Get<2>(batchShape); // get batchnum from dim 2
+                    batchNum = Get<2>(batchShape);
                     tileIdx = tileNum;
                 }
             } else {
@@ -177,6 +177,52 @@ public:
             int64_t offsetC = calBatchNums * m_ * n_;
             blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB]);
         }
+    }
+
+    __host_aicore__ static Status CheckShape(const ProblemShape& shape)
+    {
+        int64_t m = shape.m;
+        int64_t n = shape.n;
+        int64_t k = shape.k;
+        int64_t b = shape.b;
+        if (b > INT32_MAX) {
+            return Status::batchErrorExcceedsLimit;
+        }
+        // Check m,n,k overlimit data type
+        if (m > INT32_MAX || n > INT32_MAX || k > INT32_MAX) {
+            return Status::mnkErrorExceedsLimit;
+        }
+        // Check matrix size exceeds limit
+        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // mk matrix k limit
+            return Status::mkErrorMatrixExceedsLimit;
+        }
+        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) { // km matrix m limit
+            return Status::kmErrorMatrixExceedsLimit;
+        }
+        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) { // kn matrix n limit
+            return Status::knErrorMatrixExceedsLimit;
+        }
+        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // nk matrix k limit
+            return Status::nkErrorMatrixExceedsLimit;
+        }
+        return Status::success;
+    }
+
+    __host_aicore__ static Status CheckArgs(const Arguments& args)
+    {
+        // Check shape in kernel
+        CHECK_AND_RETURN(CheckShape(args.problemShape));
+        // Check mmad args
+        CHECK_AND_RETURN(BlockMmadBuilder::CheckArgs(args.mmadArgs));
+        return Status::success;
+    }
+
+    __host_aicore__ static size_t GetWorkSpaceSize(ProblemShape shape, int64_t blockNum)
+    {
+        size_t workSpaceSize = 0;
+        // Calculate extra workspace size for mmad
+        workSpaceSize += BlockMmadBuilder::GetWorkSpaceSize();
+        return workSpaceSize;
     }
 
     __host_aicore__ static Params InitParams(const Arguments& args, GM_ADDR workspace)

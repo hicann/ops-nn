@@ -34,6 +34,7 @@
 #include "util/math_util.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "op_api/op_api_def.h"
 
 using Ops::Base::CeilDiv;
@@ -82,7 +83,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
 {
     if (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();        
+        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
         // only support fp16|bf16 weightNZ
         if (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT) {
             OP_LOGE(
@@ -173,7 +174,7 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     // Tensor1 dims number is 0 OR error dims number is 0
     if (dimTensor1 == 0 || dimTensor2 == 0) {
         OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Matmul not support %s, %s", op::ToString(mat2Shape).GetString(),
+            ACLNN_ERR_PARAM_INVALID, "Matmul not support %s, %s", op::ToString(selfShape).GetString(),
             op::ToString(mat2Shape).GetString());
         return false;
     } else if (dimTensor2 == 1 || dimTensor2 == 2) { // tensor1 dims number is 1 OR tensor2 dims number is 2
@@ -222,6 +223,27 @@ inline static aclnnStatus CheckParam(
     CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查cubeMathType
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
+inline static aclnnStatus CheckInputParams(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
+
+    CHECK_RET(CheckWeightNzDtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查Shape是否支持
+    CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -303,6 +325,12 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
     // check viewShape
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
+    if (mat2Shape.GetDim(0) == 1 || mat2Shape.GetDim(1) == 1) { // 不支持N=1 or K = 1
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Not support mat2 n = 1 or k = 1 when foramt is FRACTAL_NZ, mat2: %s",
+            op::ToString(mat2Shape).GetString());
+        return false;
+    }
     auto dimTensor1 = selfShape.GetDimNum();
     auto selfKDim = selfShape.GetDim(dimTensor1 - 1);
     auto mat2KDim = mat2Shape.GetDim(0);
@@ -326,6 +354,28 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
     // 4. 检查cubeMathType
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("MatmulWeightNz check params success.");
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus CheckWeightNzInputParams(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
+
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        socRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
+        ACLNN_ERR_PARAM_INVALID);
+
+    CHECK_RET(CheckWeightNzDtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. 检查Shape是否支持
+    CHECK_RET(CheckWeightNzShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
+
+    OP_LOGD("MatmulWeightNz check params success.");
+
     return ACLNN_SUCCESS;
 }
 
@@ -564,6 +614,380 @@ static const aclTensor* BuildMatMulGraph(
 
     return matReshape;
 }
+
+// ===========================================================================================
+
+static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+{
+    return MatmulCommonProcess(mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false);
+}
+
+static inline const aclTensor* BatchMatmulProcess(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+{
+    auto matmulOut = ExecBmmOpWithBiasV2(self, mat2, nullptr, out, cubeMathType, executor);
+    CHECK_RET(matmulOut != nullptr, nullptr);
+    return matmulOut;
+}
+
+class MatMulEmptyTensorGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override{
+        // 获取shape信息
+        op::Shape outShape = output->GetViewShape();
+        auto outputNew = executor->AllocTensor(outShape, matA->GetDataType());
+        CHECK_RET(outputNew != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        FVector<int64_t> fillShape = GetShape(outputNew);
+        const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+        aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+        const aclScalar* valueScalar = executor->AllocScalar(0);
+        const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, output->GetDataType());
+        auto fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+        convOut = fillTensor;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        // 执行ViewCopy
+        auto result = l0op::ViewCopy(convOut, output, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    };
+
+    ~MatMulEmptyTensorGraph() override = default;
+};
+
+class MatMulDotGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        auto self = matA;
+        auto mat2 = matB;
+
+        // 检查输入size是否相等
+        auto dimSize1 = self->GetViewShape().GetDim(0);
+        auto dimSize2 = mat2->GetViewShape().GetDim(0);
+        if (dimSize1 != dimSize2) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Self dimSize [%ld] should be same as mat2 dimSize [%ld].", dimSize1, dimSize2);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+
+        // 连续性转换
+        self = l0op::Contiguous(self, executor);
+        CHECK_RET(self != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        mat2 = l0op::Contiguous(mat2, executor);
+        CHECK_RET(mat2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 全部转成ND
+        self = l0op::ReFormat(self, op::Format::FORMAT_ND);
+        CHECK_RET(self != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
+        CHECK_RET(mat2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 提升精度
+        auto promoteType = op::PromoteType(self->GetDataType(), mat2->GetDataType());
+        self = l0op::Cast(self, promoteType, executor);
+        CHECK_RET(self != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        mat2 = l0op::Cast(mat2, promoteType, executor);
+        CHECK_RET(mat2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        matA = self;
+        matB = mat2;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 执行点乘
+        const aclTensor* out  = l0op::Dot(matA, matB, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulDotGraph() override = default;
+};
+
+class MatMulDimNum1And2Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        // matA的Unsqueeze
+        FVector<int64_t> dimData{0};
+        auto matAUnsqueeze = ContiguousUnsqueezeNd(matA, dimData, executor);
+        CHECK_RET(matAUnsqueeze != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        matA = matAUnsqueeze;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    aclnnStatus Impl() override{
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    ~MatMulDimNum1And2Graph() override = default;
+};
+
+class MatMulDimNum2And1Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    aclnnStatus PreProcess() override{
+        // matB的Unsqueeze
+        FVector<int64_t> dimData{-1};
+        auto matBUnsqueeze = ContiguousUnsqueezeNd(matB, dimData, executor);
+        CHECK_RET(matBUnsqueeze != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        matB = matBUnsqueeze;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    ~MatMulDimNum2And1Graph() override = default;
+};
+
+class MatMulDimNum2And2Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override{
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulDimNum2And2Graph() override = default;
+};
+
+class MatMulDimNumMatAGe3Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        auto mat2Unsqueeze = matB;
+        auto dimTensor1 = matA->GetViewShape().GetDimNum();
+        auto dimTensor2 = matB->GetViewShape().GetDimNum();
+        if (dimTensor2 == 1) {
+            FVector<int64_t> dimData{-1};
+            mat2Unsqueeze = ContiguousUnsqueezeNd(matB, dimData, executor);
+            CHECK_RET(mat2Unsqueeze != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        auto selfReshape = matA;
+        // 非连续3D * 2D直接走MM, 无需转连续
+        if (!Ops::NN::IsSliceNonContiguous(matA)) {
+            // Fold the batch into the first dimension
+            auto selfContiguous = l0op::Contiguous(matA, executor);
+            CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            op::Shape shape{-1, selfContiguous->GetViewShape().GetDim(dimTensor1 - 1)};
+            selfReshape = l0op::Reshape(selfContiguous, shape, executor);
+            CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        // exec matA matB
+        matA = selfReshape;
+        matB = mat2Unsqueeze;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulDimNumMatAGe3Graph() override = default;
+};
+
+class MatMulDimNumMatBGe3Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus PreProcess() override{
+        auto dimTensor1 = matA->GetViewShape().GetDimNum();
+        FVector<int64_t> dimData;
+        if (dimTensor1 == 1) {
+            dimData = FVector<int64_t>{0}; // unsquee dim 0
+        } else {
+            dimData = FVector<int64_t>{0, 1}; //  unsquee dim 0,1
+        }
+        auto selfUnsqueeze = ContiguousUnsqueezeNd(matA, dimData, executor);
+        CHECK_RET(selfUnsqueeze != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        matA = selfUnsqueeze;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus Impl() override{
+        // 执行 BatchMatmul: out = matA @ matB
+        auto out = BatchMatmulProcess(matA, matB, output, cubeMathType, executor);
+
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulDimNumMatBGe3Graph() override = default;
+};
+
+class MatMulDimNumBothGe3Graph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override{
+        // 执行 BatchMatmul: out = matA @ matB
+        auto out = BatchMatmulProcess(matA, matB, output, cubeMathType, executor);
+
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulDimNumBothGe3Graph() override = default;
+};
+
+class MatMulWeightNzGraph : public Ops::NN::MatmulGraphImpl{
+public:
+    using MatmulGraphImpl::MatmulGraphImpl;
+
+    aclnnStatus Impl() override{
+        // adpat for weightNz transpose scene
+        bool transposeX2 = GetTransposeAttrValue(matB);
+        // swap last two dims value
+        if (transposeX2) {
+            const_cast<aclTensor *>(matB)->SetViewShape(SwapLastTwoDimValue(matB->GetViewShape()));
+        }
+        // Check storage shape Nz shape
+        op::Shape weightNzShape = GetWeightNzShape(matB, transposeX2);
+        if (!CheckWeightNzStorageShape(weightNzShape, matB->GetStorageShape())) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "mat2'format only support NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+
+        // Set Nz format
+        matB = SetTensorToNZFormat(matB, weightNzShape, executor);
+
+        // 执行 Matmul: out = matA @ matB
+        const aclTensor* out = MatmulCommonProcess(matA, matB, nullptr, output, cubeMathType, opInfo, executor, transposeX2);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        convOut = out;
+        return ACLNN_SUCCESS;
+    };
+
+    aclnnStatus PostProcess() override{
+        return CommonPostProcessWithReshape();
+    };
+
+    ~MatMulWeightNzGraph() override = default;
+};
+
+// 创建Matmul计算图
+std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(
+    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor) {
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
+
+    // 空tensor处理, 当输出的shape不为空时
+    if ((self->IsEmpty() || mat2->IsEmpty()) && (!out -> IsEmpty())) {
+        matmulGraph = std::make_shared<MatMulEmptyTensorGraph>(self, mat2, out, cubeMathType, executor);
+        return matmulGraph;
+    }
+
+    auto dimTensor1 = self->GetViewShape().GetDimNum();
+    auto dimTensor2 = mat2->GetViewShape().GetDimNum();
+    if (dimTensor1 == 1 && dimTensor2 == 1) {
+        // dot_out
+        matmulGraph = std::make_shared<MatMulDotGraph>(self, mat2, out, cubeMathType, executor);
+    } else if (dimTensor1 == 2 && dimTensor2 == 1) { // Tensor1 dims number 2  && Tensor2 dims number 1
+        matmulGraph = std::make_shared<MatMulDimNum2And1Graph>(self, mat2, out, cubeMathType, executor);
+    } else if (dimTensor1 == 1 && dimTensor2 == 2) { // Tensor1 dims number 1 && Tensor2 dims number 2
+        matmulGraph = std::make_shared<MatMulDimNum1And2Graph>(self, mat2, out, cubeMathType, executor);
+    } else if (dimTensor1 == 2 && dimTensor2 == 2) { // Tensor1 dims number 2 && Tensor2 dims number 2
+        matmulGraph = std::make_shared<MatMulDimNum2And2Graph>(self, mat2, out, cubeMathType, executor);
+    } else if (dimTensor1 >= 3 && (dimTensor2 == 1 || dimTensor2 == 2)) { // dimTensor1 is 1 or 2 && dimTensor2  >= 3
+        // t1:(N, n, m) * t2:(m, p)
+        matmulGraph = std::make_shared<MatMulDimNumMatAGe3Graph>(self, mat2, out, cubeMathType, executor);
+    } else if ((dimTensor1 == 1 || dimTensor1 == 2) &&  dimTensor2 >= 3) { // dimTensor2 >= 3  && dimTensor1 is 1 or 2
+        // t1:(n, m) * t2:(N, m, p)
+        matmulGraph = std::make_shared<MatMulDimNumMatBGe3Graph>(self, mat2, out, cubeMathType, executor);
+    } else if (dimTensor1 >= 3 && dimTensor2 >= 3) { // Tensor1 dims number >= 3 && Tensor2 dim number >= 3
+        matmulGraph = std::make_shared<MatMulDimNumBothGe3Graph>(self, mat2, out, cubeMathType, executor);
+    } else { // Impossible cases.
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Internal error self: %s, mat2: %s",
+            op::ToString(self->GetViewShape()).GetString(), op::ToString(mat2->GetViewShape()).GetString());
+        return nullptr;
+    }
+    return matmulGraph;
+}
+
+// 创建WeightNZ计算图
+std::shared_ptr<MatmulGraphImpl> CreateMatmulWeightNZGraphImpl(
+    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor) {
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
+
+    // 空tensor处理, 当输出的shape不为空时
+    if ((self->IsEmpty() || mat2->IsEmpty()) && (!out -> IsEmpty())) {
+        matmulGraph = std::make_shared<MatMulEmptyTensorGraph>(self, mat2, out, cubeMathType, executor);
+        return matmulGraph;
+    }
+
+    matmulGraph = std::make_shared<MatMulWeightNzGraph>(self, mat2, out, cubeMathType, executor);
+
+    return matmulGraph;
+}
+
 } // namespace
 
 aclnnStatus aclnnMatmulGetWorkspaceSize(
@@ -571,30 +995,35 @@ aclnnStatus aclnnMatmulGetWorkspaceSize(
     aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmul, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
+
+    // 入参检查
+    auto ret = CheckInputParams(self, mat2, out, cubeMathType);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 入参检查
-    auto ret = CheckParam(self, mat2, out, cubeMathType);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
-    // 构建matmul计算图
-    auto matmulOut = BuildMatMulGraph(self, mat2, out, cubeMathType, uniqueExecutor.get());
-    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (matmulOut->IsEmpty()) {
-        // 当输出为空tensor的场景，空tensor处理
+    // 空tensor处理
+    if (out -> IsEmpty() && (self->IsEmpty() || mat2->IsEmpty())) {
+        OP_LOGI("Returning an empty tensor without actually doing calculation.");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    auto viewCopyResult = l0op::ViewCopy(matmulOut, out, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 构建matmul计算图
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateMatmulGraphImpl(self, mat2, out, cubeMathType, uniqueExecutor.get());
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 执行计算图
+    auto executeStatus = matmulGraph -> Execute();
+    CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 获取workspace
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
+
     return ACLNN_SUCCESS;
 }
 

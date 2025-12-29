@@ -39,11 +39,11 @@ constexpr uint64_t WORKSPACE_SIZE = 1024;
 const std::unordered_map<platform_ascendc::SocVersion, std::array<std::vector<std::string>, 2>> SocFusedOpSupport = {
     {platform_ascendc::SocVersion::ASCEND910_95,
      std::array<std::vector<std::string>, 2>{
-         std::vector<std::string>{"", "relu"}, std::vector<std::string>{"add", "mul", "gelu_erf", "gelu_tanh"}}},
+         std::vector<std::string>{"", "relu", "add", "mul",}, std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
     {platform_ascendc::SocVersion::RESERVED_VERSION,
      std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu"}, std::vector<std::string>{}}}};
 
-const std::initializer_list<std::string> FusedOpTypeSupportF32 = {"", "relu"};
+const std::initializer_list<std::string> FusedOpTypeSupportF32 = {"", "relu", "add", "mul"};
 
 const std::vector<std::vector<ge::DataType>> DavidDtypeSupportListB16 = {
     // x1,              x2,             bias,              x3,           y
@@ -295,6 +295,7 @@ ge::graphStatus FusedMatMulTilingFunc(gert::TilingContext* context)
     OP_TILING_CHECK(
         BuiltInTilingCheck(context, useBuiltInTiling) != ge::GRAPH_SUCCESS,
         CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to check built-in tiling"), return ge::GRAPH_FAILED);
+    // 继承BMM Tiling
     if (useBuiltInTiling) {
         return fused_matmul::FusedMatMulBuiltInTiling(context).DoTiling();
     }
@@ -376,7 +377,7 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
 
     // high level, trans, mm basic, no fullload, on the fly, fuse_op_type
     uint64_t tilingKey = GET_TPL_TILING_KEY(
-        0, static_cast<uint64_t>(GetTrans(isATrans, isBTrans)), 0, 0, 0,
+        0, static_cast<uint64_t>(GetTrans(isATrans, isBTrans)), 0, 0, 0, 0,
         static_cast<uint64_t>(FUSED_OP_TYPE_MAP.at(opType_)));
 
     int64_t m = 0L;

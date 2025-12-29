@@ -511,9 +511,6 @@ ge::graphStatus MatMulV3AswTiling::DoNormOpTiling()
     OptimizeEdgeBasicBlock();
     CalcTailBasicBlock();
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
-    if (MatMulV3TilingHelper::CheckIfDoubleAswt(compileInfo_, args_, 1UL)) {
-        aswtModel_ = MatMulV3Model::DOUBLE_ASWT;
-    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -526,9 +523,6 @@ ge::graphStatus MatMulV3AswTiling::DoOpTiling()
     }
     CalcTailBasicBlock();
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
-    if (MatMulV3TilingHelper::CheckIfDoubleAswt(compileInfo_, args_, 1UL)) {
-        aswtModel_ = MatMulV3Model::DOUBLE_ASWT;
-    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -537,7 +531,7 @@ uint64_t MatMulV3AswTiling::GetTilingKey() const
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(aswtModel_)
+        .SetModel(MatMulV3Model::BASIC)
         .SetL0C2Out(MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_))
         .GetTilingKey();
 }
