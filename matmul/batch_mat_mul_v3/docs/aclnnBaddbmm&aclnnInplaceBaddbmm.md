@@ -503,7 +503,9 @@ aclnnStatus aclnnInplaceBaddbmm(
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-  
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
+
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。
 
 ## 调用示例

@@ -219,6 +219,8 @@ aclnnStatus aclnnMatmulWeightNz(
 
 ## 约束说明
 - 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz默认确定性实现。
+
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持2维, mat2只支持AI处理器亲和数据排布格式(NZ)，调用此接口之前，必须完成mat2从ND到AI处理器亲和数据排布格式的转换。
 - 当mat2任意一个维度为1，且mat2为非连续的NZ格式时，不保证精度和功能, 即不支持k=1或者n=1时，mat2先转NZ后再对tensor的shape做任何操作处理, 如transpose操作。

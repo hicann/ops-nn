@@ -341,8 +341,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性计算
-  - aclnnWeightQuantBatchMatmulV3默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnWeightQuantBatchMatmulV3默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - per_channel模式：为提高性能，推荐使用transpose后的weight输入。m范围为[65, 96]时，推荐使用数据类型为UINT64/INT64的antiquantScale。
 

@@ -189,8 +189,8 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性计算
-  - aclnnConvertWeightToINT4Pack默认确定性实现。
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
 
 参数间数据类型、数据格式间关系如下：
 

@@ -246,8 +246,11 @@ aclnnStatus aclnnAddmmWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-  
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认确定性实现。
+
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
+
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

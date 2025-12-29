@@ -22,8 +22,8 @@
 
 算子接口列表如下：
 
-|    接口名   |      说明     |
-|-----------|------------|
+|    接口名   |      说明     |    确定性说明（A2/A3）    |
+|-----------|------------|------------|
 | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md)|在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。|
 | [aclnnAdaptiveAvgPool2dBackward]()|[aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。|
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)|在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。|
@@ -31,9 +31,10 @@
 | [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool2d.md)|根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。|
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md)|根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。|
 | [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md)|正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。|
-| [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) |首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 |
-| [aclnnAddmm](../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) |计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和|
-| [aclnnAddmv](../../matmul/addmv/docs/aclnnAddmv.md) | 完成矩阵乘计算，然后和向量相加。 |
+| [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) |首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 |默认确定性实现|
+| [aclnnAddmm](../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md) |计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和|默认非确定性实现，支持配置开启|
+| [aclnnAddmmWeightNz](../../matmul/mat_mul_v3/docs/aclnnAddmmWeightNz)|计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。相较于原有addmm接口，新接口mat2支持nz格式。|默认确定性实现|
+| [aclnnAddmv](../../matmul/addmv/docs/aclnnAddmv.md) | 完成矩阵乘计算，然后和向量相加。 |默认非确定性实现，支持配置开启|
 | [aclnnAddLayerNorm](../../norm/add_layer_norm/docs/aclnnAddLayerNorm.md)|实现AddLayerNorm功能。|
 | [aclnnAddLayerNormQuant](../../norm/add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md)|LayerNorm算子是大模型常用的归一化操作。|
 | [aclnnAddRmsNormCast](../../norm/add_rms_norm_cast/docs/aclnnAddRmsNormCast.md)|RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。|
@@ -51,9 +52,10 @@
 | [aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md)|二维平均池化的反向传播，计算二维平均池化正向传播的输入梯度。|
 | [aclnnAvgPool3d](../../pooling/avg_pool3_d/docs/aclnnAvgPool3d.md)|对输入Tensor进行窗口为$kD * kH * kW$、步长为$sD * sH * sW$的三维平均池化操作。|
 | [aclnnAvgPool3dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool3dBackward.md)|三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。|
-| [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) |计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 |
-| [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) |完成张量self与张量mat2的矩阵乘计算。 |
-| [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 |
+| [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) |计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 |默认确定性实现|
+| [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) |完成张量self与张量mat2的矩阵乘计算。 |默认确定性实现|
+| [aclnnBatchMatmulQuant](../../matmul/batch_matmul_quant/docs/aclnnBatchMatmulQuant.md)|实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。|默认确定性实现|
+| [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 |默认确定性实现|
 | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)|对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。|
 | [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md)|将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。|
 | [aclnnBatchNormElemtBackward](../../norm/sync_batch_norm_backward_elemt/docs/aclnnBatchNormElemtBackward.md)|aclnnBatchNormElemt的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。|
@@ -71,6 +73,7 @@
 | [aclnnConvolution](../../conv/convolution_forward/docs/aclnnConvolution.md) |实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。|
 | [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md) |实现卷积的反向传播。|
 | [aclnnConvDepthwise2d](../../conv/convolution_forward/docs/aclnnConvDepthwise2d.md) |实现二维深度卷积（DepthwiseConv2D）计算。|
+| [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)|对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。|默认确定性实现|
 | [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md) |实现时序（TBC）一维卷积。|
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) |用于计算时序卷积的反向传播|
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 |
@@ -83,6 +86,7 @@
 | [aclnnDynamicQuantV2](../../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md)|为输入张量进行per-token对称/非对称动态量化。|
 | [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md)|为输入张量进行动态量化。|
 | [aclnnDynamicQuantUpdateScatter](../../quant/dynamic_quant_update_scatter/docs/aclnnDynamicQuantUpdateScatter.md)|将DynamicQuantV2和ScatterUpdate单算子自动融合为DynamicQuantUpdateScatterV2融合算子，以实现INT4类型的非对称量化。|
+| [aclnnEinsum](../../batch_mat_mul_v3/docs/aclnnEinsum.md)|使用爱因斯坦求和约定执行张量计算，形式为“term1, term2 -> output-term”，按照以下等式生成输出张量，其中reduce-sum对出现在输入项(term1, term2)中但未出现在输出项中的所有索引执行求和。|默认确定性实现|
 | [aclnnElu&aclnnInplaceElu](../../activation/elu/docs/aclnnElu&aclnnInplaceElu.md) |对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。|
 | [aclnnEluBackward](../../activation/elu_grad_v2/docs/aclnnEluBackward.md) |aclnnElu激活函数的反向计算，输出ELU激活函数正向输入的梯度。|
 | [aclnnEmbedding](../../index/gather_v2/docs/aclnnEmbedding.md) |把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量。  |
@@ -166,6 +170,8 @@
 | [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行正切函数运算的结果。  |
 | [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 返回一个和输入张量列表同样形状大小的新张量列表，它的每一个张量是输入张量列表的每个张量进行双曲正切函数运算的结果。  |
 | [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md) | 原地更新输入张量列表，输入张量列表的每个张量置为0。  |
+| [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) |功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss。 |默认确定性实现|
+| [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) |是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。|默认确定性实现|
 | [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md) | 对输入tensor中指定的维度dim进行数据聚集。  |
 | [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md) | 对于维度为r≥1的输入张量self，和维度q≥1的输入张量indices，将数据切片收集到维度为 (q-1) + (r - indices_shape[-1]) 的输出张量out中。  |
 | [aclnnGatherV2](../../index/gather_v2/docs/aclnnGatherV2.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。  |
@@ -180,6 +186,7 @@
 | [aclnnGeluMul](../../activation/gelu_mul/docs/aclnnGeluMul.md) |将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Gelu计算，将计算结果与x2相乘。|
 | [aclnnGeluQuant](../../activation/gelu_quant/docs/aclnnGeluQuant.md) |将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行gelu激活后，对激活的结果进行量化，输出量化后的结果。|
 | [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md) |高斯误差线性单元激活函数。|
+| [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) |计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 |默认确定性实现|
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md)|GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma做了+1操作。|
 | [aclnnGlu](../../activation/sigmoid/docs/aclnnGlu.md) |GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。|
 | [aclnnGluBackward](../../activation/sigmoid/docs/aclnnGluBackward.md) |完成aclnnGlu的反向。|
@@ -226,8 +233,8 @@
 | [aclnnLogSoftmax](../../activation/logsoftmax_v2/docs/aclnnLogSoftmax.md) |对输入张量计算logsoftmax值。|
 | [aclnnLogSoftmaxBackward](../../activation/logsoftmax_grad/docs/aclnnLogSoftmaxBackward.md) |完成aclnnLogSoftmax的反向传播。|
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) |替换在swinTransformer中使用window attention计算softmax的部分|
-| [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|
-| [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。|
+| [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
+| [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。|默认确定性实现|
 | [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)|对于输入信号的输入通道，提供2维（H，W维度）最大池化（max pooling）操作，输出池化后的值out和索引indices。|
 | [aclnnMaxPool2dWithIndicesBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md)|正向最大池化aclnnMaxPool2dWithIndices的反向传播。|
 | [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md)|对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。|
@@ -237,7 +244,7 @@
 | [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。  |
 | [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | axPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。  |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 |
-| [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) |完成2维张量self与张量mat2的矩阵乘计算。|
+| [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) |完成2维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) |一个自正则化的非单调神经网络激活函数。|
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) |计算aclnnMish的反向传播过程。|
 | [aclnnMseLoss](../../loss/mse_loss/docs/aclnnMseLoss.md) | 计算输入x和目标y中每个元素之间的均方误差。 |
@@ -245,7 +252,7 @@
 | [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md) | 计算负对数似然损失值。 |
 | [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md)|通过指定参数来遍历不同尺寸特征图的不同采样点。|
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md)|正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。|
-| [aclnnMv](../../matmul/mv/docs/aclnnMv.md) |计算矩阵input与向量vec的乘积。 |
+| [aclnnMv](../../matmul/mv/docs/aclnnMv.md) |计算矩阵input与向量vec的乘积。 |默认非确定性实现，支持配置开启|
 | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md)|返回给定张量的矩阵范数或者向量范数。|
 | [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md) | 计算负对数似然损失值。 |
 | [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。|
@@ -258,11 +265,13 @@
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) |完成per-channel量化的2D/3D卷积计算。|
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md)|对输入张量进行量化处理。|
 | [aclnnQuantizeBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md)|将输入Tensor做一个反量化的计算，再根据输入的weight、bias、epsilon做归一化，最后根据输出的outputScale以及outputZeroPoint做量化。|
-| [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。 |
-| [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。 |
-| [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) |完成量化的矩阵乘计算。 |
-| [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) |完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。 |
-| [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md) |完成量化的矩阵乘计算。 |
+| [aclnnQuantMatmul](../../matmul/quant_matmul/docs/aclnnQuantMatmul.md)|完成张量self与张量mat2的矩阵乘计算（支持1维到6维作为输入的矩阵乘）。|默认确定性实现|
+| [aclnnQuantMatmulV2](../../matmul/quant_matmul/docs/aclnnQuantMatmulV2.md)|完成量化的矩阵乘计算，最大支持输入维度为3维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。|默认确定性实现|
+| [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。 |默认确定性实现|
+| [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md) |完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。 |默认确定性实现|
+| [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) |完成量化的矩阵乘计算。 |默认确定性实现|
+| [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) |完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。 |默认非确定性实现，支持配置开启|
+| [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md) |完成量化的矩阵乘计算。 |默认确定性实现|
 | [aclnnRelu&aclnnInplaceRelu](../../activation/relu/docs/aclnnRelu&aclnnInplaceRelu.md) |激活函数，返回与输入tensor shape相同的tensor, tensor中value大于等于0时，取值该value，小于0，取0。|
 | [aclnnRenorm&aclnnInplaceRenorm](../../norm/renorm/docs/aclnnRenorm&aclnnInplaceRenorm.md)|返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxNorm值。|
 | [aclnnRepeatInterleave](../../index/repeat_interleave/docs/aclnnRepeatInterleave.md) | 将tensor self进行flatten后，重复Tensor repeats中的相应次数。 |
@@ -304,12 +313,13 @@
 | [aclnnTake](../../index/gather_v2/docs/aclnnTake.md) | 将输入的self张量视为一维数组，把index的值当作索引，从self中取值，输出shape与index一致的Tensor。 |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) |对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) |完成aclnnThreshold的反向。 |
-| [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) |完成张量x1与张量x2的矩阵乘计算。 |
+| [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) |完成张量x1与张量x2的矩阵乘计算。 |默认确定性实现|
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md)|完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。
 | [aclnnUnique](../../index/scatter_elements/docs/aclnnUnique.md) |返回输入张量中的唯一元素。 |
 | [aclnnUnique2](../../index/scatter_elements/docs/aclnnUnique2.md) |对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。 |
 | [aclnnUniqueConsecutive](../../index/unique_consecutive/docs/aclnnUniqueConsecutive.md) |去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。 |
 | [aclnnUniqueDim](../../index/unique_with_counts_ext2/docs/aclnnUniqueDim.md) |在某一dim轴上，对输入张量self做去重操作。 |
-| [aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 |
-| [aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 |
+| [aclnnWeightQuantBatchMatmul](../../matmul/weight_quant_batch_matmul/docs/aclnnWeightQuantBatchMatmul.md)|伪量化用于对self * mat2（matmul/batchmatmul）中的mat2进行量化。|默认确定性实现|
+| [aclnnWeightQuantBatchMatmulV2](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV2.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 |默认非确定性实现，支持配置开启|
+| [aclnnWeightQuantBatchMatmulV3](../../matmul/weight_quant_batch_matmul_v2/docs/aclnnWeightQuantBatchMatmulV3.md) |完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。 |默认非确定性实现，支持配置开启|
 

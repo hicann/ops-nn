@@ -297,8 +297,8 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 
 
 ## 约束说明
-- 确定性计算
-  - aclnnWeightQuantBatchMatmul默认确定性实现。
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnWeightQuantBatchMatmul默认确定性实现。
 
 ## 调用示例
 
