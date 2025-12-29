@@ -2,10 +2,11 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| 产品                                                     | 是否支持 |
+| :------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 
 ## 功能说明
@@ -67,7 +68,9 @@
 | gradWeight | 输出 | <ul><li>卷积核权重张量$w$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial w}$。</li><li>数据格式需要与'weight'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | NCL、NCHW、NCDHW |
 | gradBias | 输出 | <ul><li>偏置$b$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial b}$。</li><li>数据类型与'gradOutput'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | ND |
 
-* <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+* <term>Ascend 950PR/Ascend 950DT</term>：
+    - 只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
+* <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 不支持HIFLOAT8、FLOAT8_E4M3FN。
 
 ## 约束说明  
