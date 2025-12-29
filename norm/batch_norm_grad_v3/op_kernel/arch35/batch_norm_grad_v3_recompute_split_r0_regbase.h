@@ -270,7 +270,7 @@ public:
                 xInQue_.FreeTensor(xLocal);
             }
         }
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
     }
 
     __aicore__ inline void CopyInMeanAndRstd(int64_t offset)

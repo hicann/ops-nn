@@ -92,8 +92,6 @@ public:
 
     __aicore__ inline void Process()
     {
-        set_mov_pad_val(0);
-
         LocalTensor<float> binaryAddTensor = binaryAddBuf_.Get<float>();
         for (uint32_t i = 0; i < aDimLoopNum_; i++) {
             uint32_t a = i == aDimLoopNum_ - 1 ? aDimLoopTail_ : aDimPerLoop_;

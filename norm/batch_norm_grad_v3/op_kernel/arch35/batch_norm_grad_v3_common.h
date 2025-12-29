@@ -209,7 +209,7 @@ __aicore__ inline void CopyIn(
 
 __aicore__ inline int64_t GetCacheID(const int64_t idx)
 {
-    return bcnt1(idx ^ (idx + 1)) - 1;
+    return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
 }
 
 constexpr float POS_INF = 3.40282366920938E+38;
