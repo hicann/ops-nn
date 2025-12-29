@@ -90,34 +90,7 @@ IMPL_OP(AddExample).InferDataType(InferDataTypeAddExample);
 |/|string|String|
 |/|float|Float|
 |/|list|ListInt|
-基本信息如下：
-|输入/输出|关键字|示例|
-|-----|------|-----|
-|必选输入|INPUT|.INPUT(${name}, TensorType({input_dtype}))|
-|可选输入|OPTIONAL_INPUT|.OPTIONAL_INPUT(${name}, TensorType({optional_input_dtype}))|
-|必选属性|REQUIRED_ATTR|.REQUIRED_ATTR(${name}, ${dtype})|
-|可选属性|ATTR|.ATTR(${name}, ${dtype}, ${default_value})|
-|输出|OUTPUT|.OUTPUT(${name}, TensorType({output_dtype}))|
 
-常用张量/属性数据类型示例如下：
-|张量类型|属性类型|示例|
-|-----|------|-----|
-|int64|/|DT_INT64|
-|int32|/|DT_INT32|
-|int16|/|DT_INT16|
-|int8|/|DT_INT8|
-|double|/|DT_DOUBLE|
-|float32|/|DT_FLOAT|
-|float16|/|DT_FLOAT16|
-|bfloat16|/|DT_BF16|
-|complex128|/|DT_COMPLEX128|
-|complex64|/|DT_COMPLEX64|
-|complex32|/|DT_COMPLEX32|
-|/|int|Int|
-|/|bool|Bool|
-|/|string|String|
-|/|float|Float|
-|/|list|ListInt|
 基本信息如下：
 |输入/输出|关键字|示例|
 |-----|------|-----|
