@@ -9,30 +9,27 @@
  */
 
 /*!
- * \file tiling_util.h
+ * \file pool_3d_tiling_common.cpp
  * \brief
  */
+ 
+#include "pool_3d_tiling_common.h"
 
-#pragma once
-
-#include "register/op_impl_registry.h"
-
-namespace Ops {
-namespace NN {
-namespace OpTiling {
-static const gert::Shape g_vec_1_shape = {1};
-
-bool IsRegbaseSocVersion(const gert::TilingParseContext* context);
-
-bool IsRegbaseSocVersion(const gert::TilingContext* context);
-
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+namespace optiling
 {
-    if (inShape.IsScalar()) {
-        return g_vec_1_shape;
+    
+// Integer division rounding to -Infinity
+int64_t DivRtn(const int64_t x, const int64_t y)
+{
+    if (y == 0) {
+        return 0;
     }
-    return inShape;
+    int64_t q = x / y;
+    int64_t r = x % y;
+    if ((r != 0) && ((r < 0) != (y < 0))) {
+        --q;
+    };
+    return q;
 }
-} // namespace OpTiling
-} // namespace NN
-} // namespace Ops
+
+}  // namespace optiling

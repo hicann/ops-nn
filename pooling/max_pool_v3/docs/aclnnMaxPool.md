@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
@@ -44,6 +45,7 @@
 - **参数说明：**
   - self（aclTensor\*，计算输入）：Device侧的aclTensor输入，对应公式中的H_in和W_in。维度需要是3D（维度分别代表C，H，W）或4D（维度分别代表N，C，H，W），N为Batchsize大小，C为Tensor通道大小，H为Tensor高度，W为Tensor宽度，不支持其他维度。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
   - kernelShape（aclIntArray\*，计算输入）：表示最大池化的窗口大小，对应公式中的k_h和k_w，长度为1或2，且数组元素必须都大于0。
   - strides（aclIntArray\*，计算输入）：窗口移动的步长，对应公式中的s_h和s_w，数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。
   - autoPad（int64_t，计算输入）：指定padding的方式。其中0代表"NOTSET"，并且只支持数值0。
@@ -52,6 +54,7 @@
   - ceilMode（int64_t，计算输入）：计算输出形状的取整模式，为0时，代表False，向下取整；非0值时，代表True，向上取整。
   - out（aclTensor\*，计算输出）：数据类型和self一致。shape由上述公式推导出。数据格式和维度与输入self一致。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
   - workspaceSize（uint64_t\*，出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
 

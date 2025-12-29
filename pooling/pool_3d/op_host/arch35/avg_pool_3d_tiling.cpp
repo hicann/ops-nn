@@ -7,32 +7,23 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
+ 
 /*!
- * \file tiling_util.h
+ * \file avg_pool_3d_tiling.cpp
  * \brief
  */
 
-#pragma once
+#include "pool_tiling_templates_registry.h"
+#include "avg_pool_3d_tiling_common.h"
 
-#include "register/op_impl_registry.h"
-
-namespace Ops {
-namespace NN {
-namespace OpTiling {
-static const gert::Shape g_vec_1_shape = {1};
-
-bool IsRegbaseSocVersion(const gert::TilingParseContext* context);
-
-bool IsRegbaseSocVersion(const gert::TilingContext* context);
-
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+using namespace AscendC;
+using optiling::PoolTilingRegistry;
+namespace optiling
 {
-    if (inShape.IsScalar()) {
-        return g_vec_1_shape;
-    }
-    return inShape;
+
+ge::graphStatus Tiling4AvgPool3DRegBase(gert::TilingContext* context)
+{
+    return PoolTilingRegistry::GetInstance().DoTilingImpl(context);
 }
-} // namespace OpTiling
-} // namespace NN
-} // namespace Ops
+
+}  // namespace optiling
