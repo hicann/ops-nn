@@ -1,0 +1,89 @@
+{
+    "op_type": "EmbeddingHashTableLookupOrInsert",
+    "op_list": [
+      {
+        "bin_filename": "EmbeddingHashTableLookupOrInsert_float",
+        "inputs": [
+          {
+            "name": "table_handle",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "keys",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+            {
+            "name": "values",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+            {
+              "name": "bucket_size",
+              "dtype": "int64",
+              "value": null
+            },
+            {
+              "name": "embedding_dim",
+              "dtype": "int64",
+              "value": null
+            },
+            {
+                "name": "filter_mode",
+                "dtype": "string",
+                "value": null
+            },
+            {
+                "name": "filter_freq",
+                "dtype": "int64",
+                "value": null
+            },
+            {
+                "name": "default_key_or_value",
+                "dtype": "bool",
+                "value": null
+            },
+            {
+              "name": "default_key",
+              "dtype": "int64",
+              "value": null
+            },
+            {
+              "name": "default_value",
+              "dtype": "float32",
+              "value": null
+            },            
+            {
+              "name": "filter_key_flag",
+              "dtype": "bool",
+              "value": null
+            },
+            {
+              "name":  "filter_key",
+              "dtype": "int64",
+              "value": null
+            }
+        ]
+      }
+    ]
+}

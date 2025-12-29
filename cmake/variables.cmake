@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 # 算子类别清单
-set(OP_CATEGORY_LIST "reliability" "activation" "conv" "foreach" "vfusion" "index" "loss" "matmul" "norm" "optim" "pooling" "quant" "rnn" "control")
+set(OP_CATEGORY_LIST "reliability" "activation" "conv" "foreach" "hash" "vfusion" "index" "loss" "matmul" "norm" "optim" "pooling" "quant" "rnn" "control")
 
 set(COMMON_NAME common_${PKG_NAME})
 set(OPHOST_NAME ophost_${PKG_NAME})

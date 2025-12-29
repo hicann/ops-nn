@@ -1,0 +1,112 @@
+{
+    "op_type": "EmbeddingHashTableExport",
+    "op_list": [
+      {
+        "bin_filename": "EmbeddingHashTableExport_715434dbd8c449e8487d17c94e2d3730",
+        "inputs": [
+          {
+            "name": "table_handles",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "table_sizes",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "embedding_dims",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "bucket_sizes",
+            "index": 3,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          [
+            {
+              "name": "keys",
+              "index": 0,
+              "dtype": "int64",
+              "format": "ND",
+              "paramType": "dynamic",
+              "shape": [
+                -2
+              ]
+            }
+          ],
+          [
+            {
+              "name": "counters",
+              "index": 1,
+              "dtype": "uint64",
+              "format": "ND",
+              "paramType": "dynamic",
+              "shape": [
+                -2
+              ]
+            }
+          ],
+          [
+            {
+              "name": "filter_flags",
+              "index": 2,
+              "dtype": "uint8",
+              "format": "ND",
+              "paramType": "dynamic",
+              "shape": [
+                -2
+              ]
+            }
+          ],
+          [
+            {
+              "name": "values",
+              "index": 3,
+              "dtype": "float32",
+              "format": "ND",
+              "paramType": "dynamic",
+              "shape": [
+                -2
+              ]
+            }
+          ]
+        ],
+        "attrs": [
+            {
+              "name": "export_mode",
+              "dtype": "string",
+              "value": null
+            },
+            {
+                "name": "filtered_export_flag",
+                "dtype": "bool",
+                "value": false
+            }
+        ]
+      }
+    ]
+}

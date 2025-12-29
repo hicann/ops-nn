@@ -1,0 +1,53 @@
+{
+    "op_type": "InitEmbeddingHashTable",
+    "op_list": [
+      {
+        "bin_filename": "InitEmbeddingHashTable_7432c54acbf147ba88c8cb5811c690ff",
+        "inputs": [
+          {
+            "name": "table_handle",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "sampled_values",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [],
+        "attrs": [
+          {
+            "name": "bucket_size",
+            "dtype": "int64",
+            "value": null
+          },
+          {
+            "name": "embedding_dim",
+            "dtype": "int64",
+            "value": null
+          },
+          {
+            "name": "initializer_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "constant_value",
+            "dtype": "float32",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }
