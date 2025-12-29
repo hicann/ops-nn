@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE weight_quant_batch_matmul ACLNNTYPE aclnn_exclude DEPENDENCIES mat_mul_v3 trans_quant_param)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE weight_quant_batch_matmul ACLNNTYPE aclnn_exclude DEPENDENCIES mat_mul_v3 trans_quant_param batch_mat_mul_v3)

@@ -48,7 +48,7 @@ static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataT
 static const int64_t M_THRESHOLD = 64;
 static const int64_t SUPPORT_DIMS = 2;
 
-inline static bool SelectFixPipe (int64_t M, int64_t M_THRESHOLD) {
+inline static bool SelectFixPipe (int64_t M) {
     return M <= M_THRESHOLD;
 }
 
@@ -60,7 +60,7 @@ inline static bool CheckNotNull(const aclTensor *x1, const aclTensor *x2,
 {
   int64_t dimTensor1 = x1->GetViewShape().GetDimNum();
   int64_t M = transposeX1 ?  x1->GetViewShape().GetDim(dimTensor1 - 1) : x1->GetViewShape().GetDim(dimTensor1 - 2);
-  if (SelectFixPipe(M, M_THRESHOLD)) {
+  if (SelectFixPipe(M)) {
     OP_CHECK_NULL(diagonalMatrix, return false);
     OP_CHECK_NULL(deqOffset, return false);
     OP_CHECK_NULL(deqScale, return false);
@@ -83,7 +83,7 @@ inline static bool CheckDtypeValid(const aclTensor *x1, const aclTensor *x2, con
     OP_CHECK_DTYPE_NOT_SUPPORT(bias, BIAS_DTYPE_SUPPORT_LIST, return false);
   }
 
-  if (SelectFixPipe(M, M_THRESHOLD)) {
+  if (SelectFixPipe(M)) {
     OP_CHECK_DTYPE_NOT_SUPPORT(diagonalMatrix, DIAG_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(deqOffset, DEQOFFSET_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(deqScale, DEQSCALE_DTYPE_SUPPORT_LIST, return false);
@@ -131,7 +131,7 @@ static bool CheckAntiQuantTensorValid(const aclTensor *addOffset, const aclTenso
                                       const aclTensor *diagonalMatrix, const aclTensor *deqOffset,
                                       const aclTensor *deqScale, bool transposeX2,
                                       int64_t M, int64_t N) {
-  if (SelectFixPipe(M, M_THRESHOLD)) {
+  if (SelectFixPipe(M)) {
     if (!CheckOffsetAndScale(deqOffset, false, N)) {
       OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fixpipe Offset's broad cast dim is not equal to one or N, can't broadcast");
       return false;
@@ -382,7 +382,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(const aclTensor *x1, con
   // 构建matmul计算图
   int64_t dimTensor1 = x1->GetViewShape().GetDimNum();
   int64_t m = transposeX1 ?  x1->GetViewShape().GetDim(dimTensor1 - 1) : x1->GetViewShape().GetDim(dimTensor1 - 2);
-  if (SelectFixPipe(m, M_THRESHOLD)) {
+  if (SelectFixPipe(m)) {
     auto reformatDeqScale = const_cast<aclTensor *>(deqScale);
     reformatDeqScale->SetStorageFormat(op::Format::FORMAT_NC1HWC0);
     matmulOut = l0op::WeightQuantBatchmatmul(x1, x2, bias, diagonalMatrix, deqOffset, reformatDeqScale,
