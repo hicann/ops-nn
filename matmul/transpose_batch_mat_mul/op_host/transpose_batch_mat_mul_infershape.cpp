@@ -154,9 +154,6 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext *cont
         CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to transpose shape of x1"), return ge::GRAPH_FAILED);
   CHECK(!TransposeShape(*shape_x2, *perm_x2, shape_x2_transposed),
         CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to transpose shape of x2"), return ge::GRAPH_FAILED);
-  
-  const auto perm_x1_attr = perm_x1->GetData();
-  auto x1_need_transpose = (*perm_x1_attr == 1 && *(perm_x1_attr + 1) == 0 && *(perm_x1_attr + 2) == 2);
 
   CHECK(
       shape_x1_transposed.GetDim(2) != shape_x2_transposed.GetDim(1),
