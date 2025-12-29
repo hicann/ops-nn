@@ -162,7 +162,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* other, co
   return ACLNN_SUCCESS;
 }
 
-static bool IsSupportAxpy(const DataType promoteType, const aclScalar* alpha) {
+static bool IsSupportAxpy(const DataType promoteType) {
   return CheckType(promoteType, AXPY_DTYPE_SUPPORT_LIST);
 }
 
@@ -227,7 +227,7 @@ aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor*
     // 进行非混合输入类型的Add计算分支判断
     if (!(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
       addOpOut = l0op::Add(selfCasted, otherCasted, uniqueExecutor.get());
-    } else if (IsSupportAxpy(promoteType, alpha)) {
+    } else if (IsSupportAxpy(promoteType)) {
       addOpOut = l0op::Axpy(selfCasted, otherCasted, alpha->ToFloat(), uniqueExecutor.get());
     } else {
       const auto alphaTensor = uniqueExecutor.get()->ConvertToTensor(alpha, promoteType);
