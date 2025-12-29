@@ -1,4 +1,4 @@
-# DynamicMxQuant
+# MaxPoolGradWithArgmaxV3
 
 ##  产品支持情况
 
@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。
+- 算子功能：正向最大池化MaxPoolGradWithArgmaxV3的反向。
 
 ## 参数说明
 
@@ -33,57 +33,78 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>待量化数据。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>输入x</td>
+      <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>axis</td>
-      <td>输入属性</td>
-      <td>量化发生的轴</td>
-      <td>INT64</td>
+      <td>grad</td>
+      <td>输入</td>
+      <td>梯度Tensor</td>
+      <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>round_mode</td>
-      <td>输入属性</td>
-      <td>数据转换的模式</td>
-      <td>INT64</td>
+      <td>argmax</td>
+      <td>输入</td>
+      <td>输入grad</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>dst_type</td>
+      <td>ksize</td>
       <td>输入属性</td>
-      <td>指定数据转换后yOut的类型</td>
-      <td>INT64</td>
+      <td>池化窗口大小</td>
+      <td>Int</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>blocksize</td>
+      <td>strides</td>
       <td>输入属性</td>
-      <td>每次量化的元素个数</td>
-      <td>INT64</td>
+      <td>窗口移动步长</td>
+      <td>Int</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>scale_alg</td>
+      <td>pads</td>
       <td>输入属性</td>
-      <td>mxscale的计算方法</td>
-      <td>INT64</td>
+      <td>每一条边补充的层数</td>
+      <td>Int</td>
       <td>ND</td>
     </tr>
+    <tr>
+      <td>dtype</td>
+      <td>输入属性</td>
+      <td>输出argmax的数据类型</td>
+      <td>Int</td>
+      <td>ND</td>
     </tr>
+    <tr>
+      <td>dilation</td>
+      <td>输入属性</td>
+      <td>控制窗口中元素步幅</td>
+      <td>Int</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>ceil_mode</td>
+      <td>输入属性</td>
+      <td>为true是用向上取整的方法</td>
+      <td>Bool</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>data_format</td>
+      <td>输入属性</td>
+      <td>数据格式</td>
+      <td>String</td>
+      <td>ND</td>
+    </tr>
+    <tr>
       <td>y</td>
       <td>输出</td>
-      <td>输入x量化后的对应结果</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
-      <td>ND</td>
-    </tr>
-    </tr>
-      <td>mxscale</td>
       <td>输出</td>
-      <td>每个分组对应的量化尺度</td>
-      <td>FLOAT8_E8M0</td>
+      <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -96,4 +117,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_dynamic_mx_quant](./examples/test_aclnn_dynamic_mx_quant.cpp) | 通过[aclnnDynamicMxQuant](./docs/aclnnDynamicMxQuant.md)接口方式调用DynamicMxQuant算子。 |
+| aclnn调用 | [test_aclnn_max_pool_grad_with_argmax_v3](./examples/test_aclnn_max_pool_grad_with_argmax_v3.cpp) | 通过[aclnnMaxPoolGradWithArgmaxV3](./docs/aclnnMaxPoolGradWithArgmaxV3.md)接口方式调用aclnnMaxPoolGradWithArgmaxV3算子。 |
