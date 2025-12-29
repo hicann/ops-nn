@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>昇腾 950 AI 处理器</term></td>
+<td><term>Ascend 950PR/Ascend 950DT</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -16,23 +16,7 @@
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 200I/500 A2 推理产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 推理系列产品 </term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 训练系列产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 200/300/500 推理产品</term></td>
+<td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 </table>
@@ -163,7 +147,7 @@
 
 ## 约束说明
 
-- 昇腾 950 AI 处理器：
+- Ascend 950PR/Ascend 950DT：
   - 当 `x` 数据类型为 `HIFLOAT8` 时，`filter` 的数据类型必须与 `x` 一致。`N` 维度大小应该大于等于 0。`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在 `bias`、`output` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
   - 当 `x` 和 `filter` 数据类型是 `HIFLOAT8` 时，`bias` 数据类型会转成 `FLOAT` 参与计算。

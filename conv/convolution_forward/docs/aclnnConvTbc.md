@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -223,48 +224,78 @@ aclnnStatus aclnnConvTbc(
 - 确定性计算
   - aclnnConvTbc默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-    <col style="width:150px">
-    <col style="width:700px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width:70px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
     </colgroup>
-  <thead>
+   <thead>
     <tr>
-    <th><term>约束类型</term></th>
-    <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr>
-    <th scope="row">self、weight</th>
-    <td>
+     <th><term>约束类型</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
+   </tr>
+   </thead>
+   <tbody>
+   <tr>
+     <th scope="row">self、weight</th>
+     <td>
         <ul>
           <li>self、weight 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。</li>
           <li>weight 支持 N、C 维度大于等于 0。</li>
         </ul>
-    </td>
-  </tr>
-  <tr>
-    <th scope="row">bias</th>
-    <td>-</td>
-  </tr>
-  <tr>
-    <th scope="row">out</th>
-    <td>
+     </td>
+     <td>
+        <ul>
+           <li>self、weight 支持 N、C 维度大于等于 0，支持 L 维度大于等于 0（等于 0 的场景仅在 out 推导的 L 维度也等于 0 时支持）。</li>
+           <li>weight 支持 N 维度大于等于 0（等于 0 的场景仅在 bias 的 N 维度和 out 的 C 维度也等于 0 时支持），C 维度大小的支持情况与 self 的 C 维度一致，L 维度的大小应该在 [1,255] 的范围内。</li>
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">bias</th>
+     <td>-</td>
+     <td>
+        <ul>
+          当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">out</th>
+     <td>
+        <ul>
           out 支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。
-    </td>
-  </tr>
-  <tr>
-    <th scope="row">cubeMathType</th>
-    <td>
+        </ul>
+     </td>
+     <td>
+        <ul>
+          <li>支持 N 维度大于等于 0，支持 C 维度大于等于 0（等于 0 的场景仅在 weight 的 N 维度等于 0 时支持）。</li>
+          <li>支持 L 维度大于等于 0（等于 0 的场景仅在 self 的 L 维度等于 0 时支持）。</li>
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">cubeMathType</th>
+     <td>
         <ul>
           <li>为 0(KEEP_DTYPE) 时，当输入是 FLOAT 暂不支持。</li>
           <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
           <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         <ul>
-    </td>
-  </tr>
-  </tbody>
+     </td>
+     <td>
+        <ul>
+          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+        </ul>
+     </td>
+   </tr>
+   </tbody>
   </table>
 
 ## 调用示例

@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -300,14 +301,18 @@ aclnnStatus aclnnConvolution(
 - 确定性计算
   - aclnnConvolution默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-    <col style="width:150px">
-    <col style="width:700px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width:70px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
     </colgroup>
    <thead>
     <tr>
      <th><term>约束类型</term></th>
-     <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
    </tr>
    </thead>
    <tbody>
@@ -319,6 +324,15 @@ aclnnStatus aclnnConvolution(
         <ul><li>conv1d transposed=true 场景，weight L 的大小应该在[1,255]范围内，其他维度应该大于等于 1。</li></ul>
         <ul><li>conv3d 正向场景，weight H、W 的大小应该在[1,511]范围内。</li></ul>
      </td>
+     <td>
+        <ul>
+           input、weight 数据类型支持 FLOAT、FLOAT16、BFLOAT16、HIFLOAT8。
+           <ul>
+              <li>transposed=true 时：input 数据类型额外支持 FLOAT8_E4M3FN，当input数据类型为HIFLOAT8或FLOAT8_E4M3FN时，output和weight的数据类型必须与input一致。支持 N 维度大于等于0，其他各个维度的大小应该大于等于1。weight数据类型额外支持 FLOAT8_E4M3FN，所有维度的大小应该大于等于0（当D、H 或 W 维度为0时，要求推导出的output对应维度也为0）。</li>
+              <li>transposed=false 时：当 input 数据类型为 HIFLOAT8 时，weight 的数据类型必须与 input 一致。支持 N 维度大于等于0，支持 D、H、W 维度大于等于0（等于0的场景仅在 output 推导的 D、H、W 维度也等于0时支持），支持 C 维度大于等于0（等于0的场景仅在 output 推导的 N、C、D、H、W 其中某一维度等于0时支持）。weight的H、W的大小应该在[1,255]的范围内。N维度大小应该大于等于0（等于0的场景仅在bias、output的N维度也等于0时支持）。C维度大小的支持情况与input的C维度一致。</li>
+            </ul>
+        </ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">bias</th>
@@ -328,17 +342,53 @@ aclnnStatus aclnnConvolution(
           <li>conv1d、conv2d、conv3d 正向场景下 bias 会转成 FLOAT 参与计算。</li>
         </ul>
      </td>
+     <td>
+        <ul>
+          bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。
+          <ul>
+            <li>transposed=true 时：当 input 和 weight 数据类型是 HIFLOAT8 和 FLOAT8_E4M3FN 时，不支持带 bias。</li>
+            <li>transposed=false 时：当 input 和 weight 数据类型是 HIFLOAT8 时，bias 数据类型会转成 FLOAT 参与计算。</li>
+          </ul>
+        </ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">stride</th>
      <td>
+        <ul>
           conv3d transposed=true场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。conv1d和conv2d transposed=true场景，各个值都应该大于等于1。conv3d正向场景，strideH和strideW应该在[1,63]的范围内。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          conv3d transposed=true场景，strideD、strideH、strideW应该大于等于1。conv3d transposed=false场景，strideH、strideW应该在[1,63]的范围内，strideD应该在[1, 1000000]的范围内。
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">padding</th>
      <td>
+        <ul>
           conv3d transposed=true场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。conv1d和conv2d transposed=false场景，各个值都应该在[0,255]的范围内。conv3d正向场景，paddingH和paddingW应该在[0,255]的范围内。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          conv3d transposed=true场景，paddingD、paddingH、paddingW应该大于等于0。conv3d transposed=false场景，paddingH、paddingW应该在[0,255]范围内，paddingD应该在[0, 1000000]的范围内。
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">dilation</th>
+     <td>
+        <ul>
+          conv1d、conv2d和conv3d transposed=true场景，各个值都应该在[1,255]的范围内。conv3d正向场景，dilationH和dilationW应该在[1,255]的范围内。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          conv3d transposed=true场景，dilationD、dilationH、dilationW应该大于等于1。conv3d transposed=false场景，dilationH、dilationW应该在[1,255]范围内，dilationD应该在[1, 1000000]的范围内。
+        </ul>
      </td>
    </tr>
    <tr>
@@ -351,11 +401,25 @@ aclnnStatus aclnnConvolution(
           <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         <ul>
      </td>
+     <td>
+        <ul>
+          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+        </ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">其他约束</th>
      <td>
+        <ul>
           input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          transposed为true的场景，支持1D、2D和3D卷积，支持空 Tensor。
+        </ul>
      </td>
    </tr>
    </tbody>

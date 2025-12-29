@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -255,53 +256,78 @@ aclnnStatus aclnnConvDepthwise2d(
 - 确定性计算
   - aclnnConvDepthwise2d默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-    <col style="width:150px">
-    <col style="width:700px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width:70px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
+    <col style="width:200px">
     </colgroup>
-  <thead>
+   <thead>
     <tr>
-    <th><term>约束类型</term></th>
-    <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr>
-    <th scope="row">self、weight</th>
-    <td>
+     <th><term>约束类型</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
+   </tr>
+   </thead>
+   <tbody>
+   <tr>
+     <th scope="row">self、weight</th>
+     <td>
         <ul>
           <li>self、weight 数据类型不支持 HIFLOAT8。</li>
           <li>self 通道数应小于等于 65535。</li>
         </ul>
-    </td>
-  </tr>
-  <tr>
-    <th scope="row">bias</th>
-    <td>bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。</td>
-  </tr>
-  <tr>
-    <th scope="row">cubeMathType</th>
-    <td>
+     </td>
+     <td> - </td>
+   </tr>
+   <tr>
+     <th scope="row">bias</th>
+     <td>
+        <ul>
+          bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">cubeMathType</th>
+     <td>
         <ul>
           <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
           <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
         <ul>
-    </td>
-  </tr>
-  <tr>
-    <th scope="row">kernelSize 约束</th>
-    <td>
+     </td>
+     <td>
+        <ul>
+          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
+          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
+          <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">kernelSize 约束</th>
+     <td colspan="4">
+        <ul>
           kernelSize 数值为 weight 的 H、W 两维的大小。
-    </td>
-  </tr>
-  <tr>
-    <th scope="row">其他约束</th>
-    <td>
+        </ul>
+     </td>
+   </tr>
+   <tr>
+     <th scope="row">其他约束</th>
+     <td colspan="4">
+        <ul>
           self, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
-    </td>
-  </tr>
-  </tbody>
+        </ul>
+     </td>
+   </tr>
+   </tbody>
   </table>
 
 ## 调用示例

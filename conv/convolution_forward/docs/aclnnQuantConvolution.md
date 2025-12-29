@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -279,10 +280,33 @@ aclnnStatus aclnnQuantConvolution(
 
 - **参数说明：**
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+  <table>
+  <tr>
+  <th style="width:120px">参数名</th>
+  <th style="width:80px">输入/输出</th>
+  <th>描述</th>
+  </tr>
+  <tr>
+  <td>workspace</td>
+  <td>输入</td>
+  <td>在 Device 侧申请的 workspace 内存地址。</td>
+  </tr>
+  <tr>
+  <td>workspaceSize</td>
+  <td>输入</td>
+  <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnQuantConvolutionGetWorkspaceSize 获取。</td>
+  </tr>
+  <tr>
+  <td>executor</td>
+  <td>输入</td>
+  <td>op 执行器，包含了算子计算流程。</td>
+  </tr>
+  <tr>
+  <td>stream</td>
+  <td>输入</td>
+  <td>指定执行任务的 Stream。</td>
+  </tr>
+  </table>
 
 - **返回值：**
 
@@ -300,7 +324,7 @@ aclnnStatus aclnnQuantConvolution(
    <thead>
     <tr>
      <th><term>约束类型</term></th>
-     <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
    </tr>
    </thead>
    <tbody>
@@ -308,9 +332,6 @@ aclnnStatus aclnnQuantConvolution(
      <th scope="row">input、weight</th>
      <td>
         <ul>input、weight 数据类型不支持 FLOAT8_E4M3FN、HIFLOAT8，数据格式不支持 NCHW。</ul>
-     </td>
-     <td>
-        <ul>-</ul>
      </td>
    </tr>
    <tr>
@@ -597,7 +618,7 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
 }
 ```
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 ```
 int main() {
   // 1. （固定写法）device/stream 初始化，参考 acl API 手册

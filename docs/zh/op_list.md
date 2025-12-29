@@ -686,6 +686,16 @@
   </tr>
   <tr>
     <td>conv</td>
+    <td><a href="../../conv/conv2d_v2/README.md">conv2d_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现 2D 卷积功能。</td>
+  </tr>
+  <tr>
+    <td>conv</td>
     <td><a href="../../conv/convolution_backward/README.md">convolution_backward</a></td>
     <td>✓</td>
     <td>✓</td>
