@@ -17,7 +17,6 @@
 #define __BATCH_MAT_MUL_V4_EIN_SUM_KERNEL_H__
 
 #ifdef __CCE_KT_TEST__
-using __bf16 = bfloat16_t;
 #include "stub_def.h"
 #include "stub_fun.h"
 #else
