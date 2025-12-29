@@ -146,9 +146,6 @@ struct MatMulV3RunInfo {
     double defaultBalance = 0.0;    // 默认负载均衡率
     double redundantData = 0.0;    // 默认重复搬运量
     uint64_t totalDataAmount = 1UL;
-    uint64_t mergeBatchAL1 = 1UL;
-    uint64_t mergeBatchBL1 = 1UL;
-    uint64_t mergeBatchL0 = 1UL;
     MatMulV3TailInfo tailInfo;
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;

@@ -141,21 +141,6 @@ struct BatchMatMulV3IterBatchBasicTilingData {
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct BatchMatMulV3MergeBatchBasicTilingData {
-    uint32_t m = 1;
-    uint32_t n = 1;
-    uint32_t k = 1;
-    uint32_t b = 1;
-    uint32_t batchAL1 = 1;
-    uint32_t batchBL1 = 1;
-    uint32_t batchL0 = 1;
-    uint32_t kL1 = 1;
-    uint32_t baseK = 16;
-    uint32_t isHf32 = 0;
-};
-#pragma pack(pop)
-
-#pragma pack(push, 8)
 struct BatchMatMulToMulBasicTilingData{
     uint32_t m = 1;
     uint32_t n = 1;

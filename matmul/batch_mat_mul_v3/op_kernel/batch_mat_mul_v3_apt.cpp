@@ -21,7 +21,6 @@
 #include "arch35/batch_mat_mul_v3_asw_al1_full_load_kernel_advanced.h"
 #include "arch35/batch_mat_mul_v3_asw_bl1_full_load_kernel_advanced.h"
 #include "arch35/batch_mat_mul_v3_iterbatch_basicapi_act.h"
-#include "arch35/batch_mat_mul_v3_mergebatch_basicapi_act.h"
 #include "arch35/batch_mat_mul_v3_matmul2mul_act.h"
 #include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_act.h"
 #include "../mat_mul_v3/arch35/mat_mul_input_k_eq_zero_clear_output.h"
@@ -198,12 +197,6 @@ __global__ __aicore__ void batch_mat_mul_v3(
         BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_BATCH_BIAS) {
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
         BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
-            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
-    } else if constexpr (
-        BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_MERGE_BATCH) {
-        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3MergeBatchBasicTilingData, tilingData, tilingGM);
-        BatchMatMulActMergeBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (
         BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&

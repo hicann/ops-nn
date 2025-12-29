@@ -97,12 +97,6 @@ protected:
                 MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::MULTI_BATCH_MODEL);
     }
 
-    bool CheckMergeBatchBasicApi(uint64_t tilingkey) const
-    {
-        return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
-                MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::MERGE_BATCH_MODEL);
-    }
-
     bool CheckMatMulToMulBasicApi(uint64_t tilingkey) const
     {
         return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
@@ -146,7 +140,6 @@ protected:
         BatchMatMulV3BasicTilingData batchBasicTilingData;
         MatMulV3BasicTilingData tilingBasicData;
         BatchMatMulV3IterBatchBasicTilingData iterbatchTilingBasicData;
-        BatchMatMulV3MergeBatchBasicTilingData mergebatchTilingBasicData;
         BatchMatMulToMulBasicTilingData matmulToMulBasicData;
         MatMulV3KEqZeroBasicTilingData kEqZeroBasicTilingData;
         ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;
@@ -172,10 +165,6 @@ protected:
             getTilingRet = GetTilingData(iterbatchTilingBasicData);
             tiling.tilingData = static_cast<void *>(&iterbatchTilingBasicData);
             tiling.tilingDataSize = sizeof(BatchMatMulV3IterBatchBasicTilingData);
-        } else if (CheckMergeBatchBasicApi(tiling.tilingKey)) {
-            getTilingRet = GetTilingData(mergebatchTilingBasicData);
-            tiling.tilingData = static_cast<void *>(&mergebatchTilingBasicData);
-            tiling.tilingDataSize = sizeof(BatchMatMulV3MergeBatchBasicTilingData);
         } else if (batchInfo_ == nullptr) {
             getTilingRet = GetTilingData(tilingData);
             tiling.tilingData = static_cast<void *>(&tilingData);
@@ -411,21 +400,6 @@ protected:
         iterbatchTilingBasicData.baseN = runInfo_.baseN;
         iterbatchTilingBasicData.baseK = runInfo_.baseK;
         iterbatchTilingBasicData.innerBatch = runInfo_.innerBatch;
-        return ge::GRAPH_SUCCESS;
-    };
-
-    virtual ge::graphStatus GetTilingData(BatchMatMulV3MergeBatchBasicTilingData &mergebatchTilingBasicData) const
-    {
-        mergebatchTilingBasicData.m = args_.mValue;
-        mergebatchTilingBasicData.n = args_.nValue;
-        mergebatchTilingBasicData.k = args_.kValue;
-        mergebatchTilingBasicData.b = batchInfo_->batchC;
-        mergebatchTilingBasicData.batchAL1 = runInfo_.mergeBatchAL1;
-        mergebatchTilingBasicData.batchBL1 = runInfo_.mergeBatchBL1;
-        mergebatchTilingBasicData.batchL0 = runInfo_.mergeBatchL0;
-        mergebatchTilingBasicData.baseK = runInfo_.baseK;
-        mergebatchTilingBasicData.kL1 = runInfo_.stepKa * runInfo_.baseK;
-        mergebatchTilingBasicData.isHf32 = args_.isHf32;
         return ge::GRAPH_SUCCESS;
     };
 

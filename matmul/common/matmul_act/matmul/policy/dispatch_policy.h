@@ -27,7 +27,6 @@ struct KernelMultiBlockOnKAxis {}; // Multi-tile pipelined transfer with K-axis 
 struct KernelMmadPerBaseK {};      // Perform matrix multiplication with baseK granularity
 struct KernelL1Input {};           // L1 input pipeline
 struct KernelIterBatch {};         // Multi-tile pipelined transfer with batch caching
-struct KernelMergeBatch {};         // Multi-tile pipelined transfer with batch caching
 struct KernelMmadWithScale {};     // Multi-block with scale
 struct KernelMultiBlockStreamK {}; // Multi-tile transfer with K-axis spliting and caching
 struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
@@ -173,13 +172,6 @@ struct MatmulIterBatch {
     using ScheduleType = KernelIterBatch;
     using SingleShape = SingleCoreShape;
     constexpr static bool ENABLE_INTRINSICS_CHECK = false;
-};
-
-template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
-struct MatmulMergeBatch {
-    using ScheduleType = KernelMergeBatch;
-    using SingleShape = SingleCoreShape;
-    constexpr static bool enableInputDataLenCheck = false;
 };
 
 /**

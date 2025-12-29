@@ -26,7 +26,6 @@ struct BuiltInAswtScheduler {
 };
 struct BuiltInStreamKScheduler {};
 struct BuiltInIterBatchScheduler {};
-struct BuiltInMergeBatchScheduler {};
 struct BuiltInBatchMatmulToMulScheduler {};
 struct IterateKScheduler {};
 struct QuantIterateKScheduler {};
