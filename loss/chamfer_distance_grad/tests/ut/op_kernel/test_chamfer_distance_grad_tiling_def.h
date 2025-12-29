@@ -16,7 +16,7 @@
 struct ChamferDistanceGradTilingDataTest {
     uint32_t batch_size = 0;     // 1
     uint32_t num = 0;            // 2
-    uint32_t ub_size = 0;        // 3
+    uint64_t ub_size = 0;        // 3
     uint32_t task_per_core = 0;  // 4
     uint32_t core_used = 0;      // 5
     uint32_t task_tail_core = 0; // 6
