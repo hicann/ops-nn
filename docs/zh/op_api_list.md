@@ -78,11 +78,14 @@
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) |用于计算时序卷积的反向传播|
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 |
+| [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 |
 | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)|对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。|
 | [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md)|[aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。|
 | [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md)|对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。|
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md)|在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。|默认确定性实现|
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md)|在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。|
+| [aclnnGroupedDynamicMxQuant](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuant.md)|根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。|
+| [aclnnDynamicMxQuant](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuant.md)|目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。|
 | [aclnnDynamicQuantV2](../../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md)|为输入张量进行per-token对称/非对称动态量化。|
 | [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md)|为输入张量进行动态量化。|
 | [aclnnDynamicQuantUpdateScatter](../../quant/dynamic_quant_update_scatter/docs/aclnnDynamicQuantUpdateScatter.md)|将DynamicQuantV2和ScatterUpdate单算子自动融合为DynamicQuantUpdateScatterV2融合算子，以实现INT4类型的非对称量化。|

@@ -67,22 +67,22 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/fast_gelu/README.md">fast_gelu</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>快速高斯误差线性单元激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/fast_gelu_grad/README.md">fast_gelu_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>FastGelu反向传播。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -237,12 +237,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/hardtanh_grad/README.md">hardtanh_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>激活函数aclnnHardtanh的反向。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1367,42 +1367,42 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/gather_v2/README.md">gather_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/index/README.md">index</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>根据索引indices将输入x对应坐标的数据取出。</td>
   </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/index_fill_d/README.md">index_fill_d</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>沿输入self的给定轴dim，将index指定位置的值使用value进行替换。</td>
   </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/index_put_v2/README.md">index_put_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>根据索引 indices 将输入 self 对应坐标的数据与输入 values 进行替换或累加。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1567,12 +1567,12 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/unique_consecutive/README.md">unique_consecutive</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>去除每一个元素后的重复元素。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1647,22 +1647,22 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/ctc_loss_v2/README.md">ctc_loss_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算连接时序分类损失值。</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/ctc_loss_v2_grad/README.md">ctc_loss_v2_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>ctcLoss的反向传播，计算CTC的损失梯度。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -1743,6 +1743,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
+    <td><a href="../../loss/mse_loss_grad/README.md">mse_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>均方误差函数aclnnMseLoss的反向传播。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2483,6 +2493,26 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>为输入张量进行per-token对称动态量化。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/grouped_dynamic_mx_quant/README.md">grouped_dynamic_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/dynamic_mx_quant/README.md">dynamic_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对传入的数据进行分组的float8的动态量化。</td>
   </tr>
   <tr>
     <td>quant</td>
