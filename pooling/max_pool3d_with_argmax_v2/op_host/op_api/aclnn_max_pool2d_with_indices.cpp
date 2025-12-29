@@ -11,7 +11,7 @@
 #include "aclnn_max_pool2d_with_indices.h"
 #include "max_pool_with_argmax_v1.h"
 #include "max_pool3d_with_argmax_v2.h"
-#include "../../../max_pool_with_argmax_v3/op_host/op_api/max_pool_with_argmax_v3.h"
+#include "../../../max_pool_with_argmax_v3/op_api/max_pool_with_argmax_v3.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/unsqueeze.h"
 #include "level0/squeeze.h"
