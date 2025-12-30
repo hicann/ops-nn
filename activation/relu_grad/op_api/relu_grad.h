@@ -7,15 +7,16 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OP_API_INC_LEVEL0_ELU_GRAD_V2_H_
-#define OP_API_INC_LEVEL0_ELU_GRAD_V2_H_
+#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_RELU_GRAD_H_
+#define PTA_NPU_OP_API_INC_LEVEL0_OP_RELU_GRAD_H_
 
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* EluGradV2(
-    const aclTensor* gradOutput, float alpha, float scale, float inputScale, bool isResult,
-    const aclTensor* selfOrResult, aclOpExecutor* executor);
+const aclTensor *ReluGrad(const aclTensor *gradOutput,
+                          const aclTensor *self,
+                          aclOpExecutor *executor);
+
 }
 
-#endif // OP_API_INC_LEVEL0_ELU_GRAD_V2_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_RELU_GRAD_H_
