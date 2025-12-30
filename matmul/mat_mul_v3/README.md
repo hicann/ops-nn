@@ -5,13 +5,9 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|昇腾910_95 AI处理器|√|
+|Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
-|Atlas 200I/500 A2推理产品|×|
-|Atlas 推理系列产品|√|
-|Atlas 训练系列产品|×|
-|Atlas 200/300/500 推理产品|×|
+|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
 
 ## 功能说明
 
@@ -71,10 +67,9 @@
     </tr>
   </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
+- Atlas A2 训练系列产品/Atlas A2 推理系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
-- Atlas 推理系列产品：只支持FLOAT16数据格式，输入b只支持FRACTAL_NZ格式。
-- 昇腾910_95 AI处理器：只有输入b支持FRACTAL_NZ格式。
+- Ascend 950PR/Ascend 950DT：只有输入b支持FRACTAL_NZ格式。
 
 ## 约束说明
 

@@ -1,18 +1,12 @@
 # aclnnTransposeBatchMatMul
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/transpose_batch_mat_mul)
-
 ## 产品支持情况
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品 </term>                             |    ×    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×    |
 
 
 ## 功能说明
@@ -196,7 +190,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <tr>
         <td>batchSplitFactor</td>
         <td>输入</td>
-        <td>用于指定矩阵乘输出矩阵中N维的切分大小，Host侧的整型。</td>
+        <td>用于指定矩阵乘输出矩阵中B维的切分大小，Host侧的整型。</td>
         <td>
         <ul>
           <li>取值范围为[1, B]且能被B整除。</li>
@@ -231,14 +225,6 @@ aclnnStatus aclnnTransposeBatchMatMul(
       </tbody>
       </table>
   
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
-    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
-    - permX2仅支持输入[0, 1, 2]。
-  - <term>昇腾910_95 AI处理器</term>：
-    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
-    - 不支持scale。
-    - out不支持INT8类型。
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -346,11 +332,18 @@ aclnnStatus aclnnTransposeBatchMatMul(
 
 ## 约束说明
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnTransposeBatchMatMul默认确定性实现。
-  - <term>昇腾910_95 AI处理器</term>: aclnnTransposeBatchMatMul默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnTransposeBatchMatMul默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  * 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
+    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
+    - permX2仅支持输入[0, 1, 2]。
+    - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+    - 不支持scale。
+    - out不支持INT8类型。
+
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp

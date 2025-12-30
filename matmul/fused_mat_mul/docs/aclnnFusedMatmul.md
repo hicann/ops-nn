@@ -1,7 +1,5 @@
 # aclnnFusedMatmul
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/fused_mat_mul)
-
 ## 产品支持情况
 
 <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
@@ -15,7 +13,7 @@
       </tr></thread>
     <tbody>
       <tr>
-        <td><term>昇腾910_95 AI处理器</term></td>
+        <td><term>Ascend 950PR/Ascend 950DT</term></td>
         <td>√</td>
       </tr>
       <tr>
@@ -23,23 +21,7 @@
         <td>×</td>
       </tr>
       <tr>
-        <td><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></td>
-        <td>×</td>
-      </tr>
-      <tr>
-        <td><term>Atlas 200I/500 A2 推理产品</term></td>
-        <td>×</td>
-      </tr>
-      <tr>
-        <td><term>Atlas 推理系列产品</term></td>
-        <td>×</td>
-      </tr>
-      <tr>
-        <td><term>Atlas 训练系列产品</term></td>
-        <td>×</td>
-      </tr>
-      <tr>
-        <td><term>Atlas 200/300/500 推理产品</term></td>
+        <td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
         <td>×</td>
       </tr>
   </tbody></table>
@@ -323,8 +305,10 @@ aclnnStatus aclnnFusedMatmul(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-  - 确定性说明：aclnnFusedMatmul默认确定性实现。
-  - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16、FLOAT32。
+- 确定性说明：
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
+
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16、FLOAT32。
 
 ## 调用示例
 

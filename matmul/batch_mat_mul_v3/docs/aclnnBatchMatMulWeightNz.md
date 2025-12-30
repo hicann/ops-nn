@@ -1,18 +1,12 @@
 # aclnnBatchMatMulWeightNz
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/batch_mat_mul_v3)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    x     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    x     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -226,7 +220,7 @@ aclnnStatus aclnnBatchMatMulWeightNZ(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMulWeightNz默认确定性实现。
-  - <term>昇腾910_95 AI处理器</term>: aclnnBatchMatMulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnBatchMatMulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 

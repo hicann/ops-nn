@@ -6,14 +6,14 @@
 | 产品 | 是否支持 |
 | ---- | :----:|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
 
 ## 功能说明
 
 - 算子功能：完成稀疏4:2量化的矩阵乘计算。
 - 计算公式：
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - pertoken， bias BFLOAT16/FLOAT16/FLOAT32：
       $$
       out = x@sparseWeight * sparseWeightScale * xScale + bias

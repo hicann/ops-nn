@@ -1896,6 +1896,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/fused_mat_mul/README.md">fused_mat_mul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>矩阵乘与通用向量计算融合。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/gemm/README.md">gemm</a></td>
     <td>✗</td>
     <td>✓</td>

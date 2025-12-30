@@ -1,18 +1,12 @@
 # aclnnMatmulWeightNz
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/mat_mul_v3)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -142,9 +136,9 @@ aclnnStatus aclnnMatmulWeightNz(
       </tr>
     </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
-  - <term>昇腾910_95 AI处理器</term>:
+  - <term>Ascend 950PR/Ascend 950DT</term>:
     - 调用此接口之前，必须使用aclnnNpuFormatCast接口完成mat2的原始输入Format从ND到NZ格式的转换。
     - 不支持 cubeMathType为1：ALLOW_FP32_DOWN_PRECISION 的选项
     - 不支持 cubeMathType为3：USE_HF32 的选项
@@ -234,7 +228,7 @@ aclnnStatus aclnnMatmulWeightNz(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz默认确定性实现。
-  - <term>昇腾910_95 AI处理器</term>：aclnnMatmulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmulWeightNz默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持2维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
@@ -242,7 +236,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 ## 调用示例
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   ```Cpp
   #include <iostream>
@@ -466,7 +460,7 @@ aclnnStatus aclnnMatmulWeightNz(
   }
   ```
 
-- <term>昇腾910_95 AI处理器</term>：
+- <term>Ascend 950PR/Ascend 950DT</term>：
   self和mat2数据类型为bfloat16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   ```Cpp
     #include <iostream>

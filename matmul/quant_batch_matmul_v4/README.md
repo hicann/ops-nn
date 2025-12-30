@@ -5,20 +5,16 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|昇腾910_95 AI处理器|√|
+|Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
-|Atlas 200I/500 A2推理产品|×|
-|Atlas 推理系列产品|x|
-|Atlas 训练系列产品|x|
-|Atlas 200/300/500 推理产品|×|
+|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
 
 ## 参数说明
 
 - 算子功能：完成量化的矩阵乘计算。
 - 计算公式：
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64，yOffset为FLOAT32，out为FLOAT16/BFLOAT16：
 
       $$
@@ -73,7 +69,7 @@
       out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
       $$
 
-  - <term>昇腾910_95 AI处理器</term>：
+  - <term>Ascend 950PR/Ascend 950DT</term>：
 
     - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，无x1Scale，x2Scale为INT64/UINT64，无x2Offset，可选参数bias的dtype为FLOAT32，out为FLOAT8_E4M3FN/HIFLOAT8/FLOAT16/BFLOAT16/FLOAT32：
 
@@ -201,7 +197,7 @@
   </tr>
 </tbody></table>
 
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
 
   | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
   | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
@@ -217,7 +213,7 @@
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
   | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
 
-- 昇腾910_95 AI处理器：
+- Ascend 950PR/Ascend 950DT：
   | x1                        | x2                        | x1Scale     | x2Scale     | x2Offset | yScale | bias    | out                                    |
   | ------------------------- | ------------------------- | ----------- | ----------- | -------- | -------| ------- | -------------------------------------- |
   | INT8                      | INT8                      | nullptr        | UINT64/INT64      | nullptr     | nullptr     | nullptr/INT32   | FLOAT16/BFLOAT16                       |
@@ -232,7 +228,7 @@
   | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
   | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16| BFLOAT16                               |
   | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16          | nullptr     | INT64/UINT64    | nullptr         | BFLOAT16                               |
-
+ 
 
 ## 约束说明
 

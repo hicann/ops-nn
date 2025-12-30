@@ -4,8 +4,9 @@
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 
 ## 功能说明
 
@@ -23,7 +24,7 @@
     out = (x1@x2 + bias) * scale + offset
     $$
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     支持bias BFLOAT16/FLOAT32（此场景无offset）。
 
     $$
@@ -31,71 +32,270 @@
     $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV3”接口执行计算。
 
-- `aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale, const aclTensor* offset, const aclTensor* bias, bool transposeX1, bool transposeX2, const aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
+```cpp
+aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(
+    const aclTensor *x1,
+    const aclTensor *x2,
+    const aclTensor *scale,
+    const aclTensor *offset,
+    const aclTensor *bias,
+    bool             transposeX1,
+    bool             transposeX2,
+    const aclTensor *out,
+    uint64_t        *workspaceSize,
+    aclOpExecutor   **executor)
+```
 
-- `aclnnStatus aclnnQuantMatmulV3(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnQuantMatmulV3(
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
+    aclrtStream    stream)
+```
 
 ## aclnnQuantMatmulV3GetWorkspaceSize
 
 - **参数说明：**
 
-  - x1（aclTensor*，计算输入）：公式中的输入x1，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。支持最后两根轴转置情况下的非连续tensor，其他场景的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)不支持。shape支持2~6维，在transposeX1为false情况下各个维度表示：（batch，m，k），在transposeX1为true情况下各个维度表示：（batch，k，m），batch可不存在。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、INT32、INT4。当数据类型为INT32、INT4时，为INT4量化场景，当前仅支持transposeX1为false情况。其中当x1数据类型为INT4时，维度表示：（batch，m，k），要求k为偶数，当x1数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
-  - x2（aclTensor*，计算输入）：公式中的输入x2，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND格式和AI处理器亲和数据排布格式。ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)不支持。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
-    - ND格式下，shape支持2~6维，在transposeX2为false情况下各个维度表示：（batch，k，n），在transposeX2为true情况下各个维度表示：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
-    - AI处理器亲和数据排布格式下，shape支持4~8维。在transposeX2为true情况下各个维度表示：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。在transposeX2为false情况下各个维度表示：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
-    可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到AI处理器亲和数据排布格式的转换。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT8、INT32、INT4。当数据类型为INT32、INT4时，为INT4量化场景，当前仅支持2维ND格式。
-      - 数据类型为INT4时，在transposeX2为true情况下各个维度表示：（n，k），要求k为偶数；在transposeX2为false情况下各个维度表示：（k，n），要求n为偶数。
-      - 数据类型为INT32时，每个INT32数据存放8个INT4数据，在transposeX2为true情况下各个维度表示：（n，k // 8），要求k为8的倍数；在transposeX2为false情况下各个维度表示：（k，n // 8），要求n为8的倍数。
-      - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
-  - scale（aclTensor*，计算输入）：表示量化参数，公式中的输入scale，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape是1维（t，），t = 1或n，其中n与x2的n一致。
+    <table style="undefined;table-layout: fixed; width: 1503px"><colgroup>
+    <col style="width: 130px">
+    <col style="width: 97px">
+    <col style="width: 308px">
+    <col style="width: 488px">
+    <col style="width: 197px">
+    <col style="width: 77px">
+    <col style="width: 115px">
+    <col style="width: 95px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>x1</td>
+        <td>输入</td>
+        <td>公式中的输入x1，device侧的aclTensor</td>
+        <td>
+        <li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
+        <li>在transposeX1为false时shape形如（batch，m，k）在transposeX1为true时shape形如（batch，k，m）batch可不存在
+        </li>
+        </td>
+        <td>INT8、INT32、INT4、</td>
+        <td>ND</td>
+        <td>2-6</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2</td>
+        <td>输入</td>
+        <td>公式中的输入x2，device侧的aclTensor</td>
+        <td>
+        <li>ND：支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
+        <li>ND：在transposeX1为false时shape形如（batch，n，k），在transposeX1为true时shape形如（batch，k，n），batch可不存在，其中k与x1的shape中的k一致</li>
+        <li>NZ：
+          <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul>
+          <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul>
+        </li></td>
+        <td>INT8、INT32、INT4、</td>
+        <td>ND、NZ</td>
+        <td>2-8（ND）、4-8（NZ）
+        </td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>scale</td>
+        <td>输入</td>
+        <td>表示量化参数，公式中的输入scale，device侧的aclTensor</td>
+        <td>
+        <li>（t，），t = 1或n，其中n与x2的n一致<br>当原始输入类型不满足[约束说明]中类型组合时，需提前调用TtransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64类型
+        </li>
+        </td>
+        <td>UINT64、INT64、FLOAT32、BFLOAT16、</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>offset</td>
+        <td>输入</td>
+        <td>公式中的输入offset，device侧的aclTensor</td>
+        <td>
+        <li>（t，），t = 1或n，其中n与x2的n一致<br>当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr</li></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>bias</td>
+        <td>可选输入</td>
+        <td>公式中的输入bias，device侧的aclTensor</td>
+        <td><li>shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。<br>当out的shape为2、4、5、6维时，bias的shape只支持1维</li></td>
+        <td>INT32、BFLOAT16、FLOAT32、</td>
+        <td>ND</td>
+        <td>1、3</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>transposeX1</td>
+        <td>输入</td>
+        <td>表示x1的输入shape是否包含transpose</td>
+        <td><li>在transposeX1为false时shape形如（batch，m，k）<br>在transposeX1为true时shape形如（batch，k，m）<br>batch可不存在</li></td>
+        <td>bool</td>
+        <td>-</td>
+        <td>-</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>transposeX2</td>
+        <td>输入</td>
+        <td>表示x2的输入shape是否包含transpose</td>
+        <td>
+        <li>ND：在transposeX2为false时shape形如（batch，k，n）<br>在transposeX2为true时shape形如（batch，n，k）<br>batch可不存在，其中k与x1的shape中的k一致</ul></li>
+        </li>
+        <li>NZ：
+        <ul>
+        <li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1
+        <li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1</li>
+        </ul>
+        </li>
+        </td>
+        <td>bool</td>
+        <td>-</td>
+        <td>-</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>out</td>
+        <td>输出</td>
+        <td>公式中的输出out，device侧的aclTensor</td>
+        <td><li>
+        （batch，m，n），batch可不存在，支持x1与x2的batch维度broadcast<br>输出batch与broadcast之后的batch一致，m与x1的m一致，n与x2的n一致</li></td>
+        <td>FLOAT16、INT8、BFLOAT16、INT32</td>
+        <td>ND</td>
+        <td>2-6</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT64、INT64、FLOAT32、BFLOAT16。
-    - 当原始输入类型不满足[约束说明](#约束说明)中类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。
-
-  - offset（aclTensor*，计算输入）：公式中的输入offset，device侧的aclTensor。数据类型支持FLOAT32，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape是1维（t，），t = 1或n，其中n与x2的n一致。当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr。
-
-  - bias（aclTensor*，计算输入）：公式中的输入bias，device侧的aclTensor。可选参数，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。当out的shape为2、4、5、6维时，bias的shape只支持1维（n，）。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持INT32、BFLOAT16、FLOAT32。当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）。
-  - transposeX1（bool，计算输入）：表示x1的输入shape是否包含transpose。在transposeX1为false情况下各个维度表示：（batch，m，k），在transposeX1为true情况下各个维度表示：（batch，k，m），batch可不存在。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1和x2为INT32、INT4时，transposeX1仅支持false。
-
-  - transposeX2（bool，计算输入）：表示x2的输入shape是否包含transpose。
-    - ND格式下，在transposeX2为false情况下各个维度表示：（batch，k，n），在transposeX2为true情况下各个维度表示：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。
-    - AI处理器亲和数据排布格式下，在transposeX2为true情况下各个维度表示：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。在transposeX2为false情况下各个维度表示：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。
-
-  - out（aclTensor*，计算输出）：公式中的输出out，device侧的aclTensor。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持2~6维，（batch，m，n），batch可不存在，支持x1与x2的batch维度broadcast，输出batch与broadcast之后的batch一致，m与x1的m一致，n与x2的n一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - x1、x2支持INT8、INT32、INT4
+    - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
+    - bias支持INT32、BFLOAT16、FLOAT32。当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）
+    - x1和x2为INT32、INT4时，transposeX1仅支持false
+    - out支持FLOAT16、INT8、BFLOAT16、INT32
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - x1、x2支持INT8
+    - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
+    - scale支持INT32、BFLOAT16、FLOAT32
+    - out支持FLOAT16、INT8、BFLOAT16、INT32
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
-  第一段接口完成入参校验，出现以下场景时报错：
-  - 161001(ACLNN_ERR_PARAM_NULLPTR)：
-  1. 传入的x1、x2、scale或out是空指针。
-  - 161002(ACLNN_ERR_PARAM_INVALID)：
-  1. x1、x2、bias、scale、offset或out的数据类型和数据格式不在支持的范围之内。
-  2. x1、x2、bias、scale、offset或out的shape不满足校验条件。
-  3. x1、x2、bias、scale、offset或out是空tensor。
-  ```
+    第一阶段接口完成入参校验，出现以下场景时报错:
+
+    <table style="undefined;table-layout: fixed; width: 791px"><colgroup>
+    <col style="width: 226px">
+    <col style="width: 101px">
+    <col style="width: 464px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回值</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的x1、x2、scale或out是空指针</td>
+      </tr>
+      <tr>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
+        <td>x1、x2、bias、scale、offset或out的数据类型和数据格式不在支持的范围之内</td>
+      </tr>
+      <tr>
+        <td>x1、x2、bias、scale、offset或out的shape不满足校验条件</td>
+      </tr>
+      <tr>
+        <td>x1、x2、bias、scale、offset或out是空tensor</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnQuantMatmulV3
 
 - **参数说明：**
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnQuantMatmulV3GetWorkspaceSize获取。
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
+    <table style="undefined;table-layout: fixed; width: 834px"><colgroup>
+      <col style="width: 118px">
+      <col style="width: 87px">
+      <col style="width: 629px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>参数说明</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+        </tr></thead>
+      <tbody>
+        <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址</td>
+        </tr>
+        <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnQuantMatmulV3GetWorkspaceSize获取</ td>
+        </tr>
+        <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td>op执行器，包含了算子计算流程</td>
+        </tr>
+        <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td>指定执行任务的Stream</td>
+        </tr>
+      </tbody>
+      </table>
 
 - **返回值：**
 
@@ -104,22 +304,48 @@
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV3默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnQuantMatmulV3默认确定性实现。
+
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。当x1数据类型为INT32、INT4时，为INT4量化场景，当前仅支持transposeX1为false情况。其中当x1数据类型为INT4时，维度表示：（batch，m，k），要求k为偶数，当x1数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
+  - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。当输入x2为NZ时，不支持transposeX2为false的场景
+    - 数据类型为INT4时，在transposeX2为true时shape形如（n，k），要求k为偶数；在transposeX2为false时shape形如（k，n），要求n为偶数。
+    - 数据类型为INT32时，每个INT32数据存放8个INT4数据，在transposeX2为true时shape形如（n，k // 8），要求k为8的倍数；在transposeX2为false时shape形如（k，n // 8），要求n为8的倍数。
+    - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见aclnnConvertWeightToINT4Pack接口。
+  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
   
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
+  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式。
+  - 当原始ND的后两维中存在某一维度为1时，不建议转NZ，默认x2为非连续，且仅支持x2为非连续的tensor。
+
 输入和输出支持以下数据类型组合，以下组合支持T-C && T-T[量化模式](../../../docs/zh/context/量化介绍.md)：
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
+  > 说明：当原始输入类型不满足下述类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。
+
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16	|
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8	|
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
   | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
 
+- <term>Ascend 950PR/Ascend 950DT</term>：
+
+  | x1 | x2 | scale | offset | bias | out |
+  | ------- | ------- | ------ | ------ | ------- | ------- |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16/BFLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
+
 ## 调用示例
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+通用场景示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```Cpp
   #include <iostream>
@@ -345,7 +571,8 @@
   }
   ```
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2为AI处理器亲和数据排布格式场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
   ```Cpp
   #include <iostream>
   #include <memory>
@@ -501,7 +728,7 @@
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x1TensorPtr(x1, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // 创建AI处理器亲和数据排布格式的x2 aclTensor
+      // 创建NZ的x2 aclTensor
       ret = CreateAclTensorX2(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_INT8, &x2);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x2HPTensorPtr(x2, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x2HPDeviceAddrPtr(x2DeviceAddr, aclrtFree);
@@ -622,7 +849,8 @@
       return 0;
   }
   ```
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
   ```Cpp
   #include <iostream>
   #include <memory>
