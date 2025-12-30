@@ -4,20 +4,22 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
 - 算子功能：对输入张量，通过给定的row_block_size和col_block_size将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scale，并根据scale对输入进行量化。输出最终的量化结果，以及每个块的量化参数scale。
 
 - 计算公式：
-
   $$
   input\_max = block\_reduce\_max(abs(x))
   $$
-
-
   $$
   scale = min((FP8\_MAX/HiF8\_MAX / INT8\_MAX) / input\_max, 1/min_scale)
   $$
@@ -105,12 +107,19 @@
   </tbody></table>
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 参数`min_scale`的值只支持0。
     - 参数`round_mode`只支持rint。
     - 参数`dst_type`仅支持取值2，代表ACL_INT8。
     - 参数`row_block_size`仅支持取值1。
     - 参数`y`的数据类型仅支持INT8。
     
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 参数`x`、`y`、`scale`的shape仅支持2维。
+    - 参数`round_mode`的取值与参数`y`的数据类型存在对应关系：
+      - 当输出`y`的数据类型是HIFLOAT8时，参数`round_mode`支持设置为round。
+      - 当输出`y`的数据类型是FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`round_mode`支持设置为rint。
+    - 参数`dst_type`支持取值34、35、36，分别代表HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
+    - 参数`y`的数据类型不支持INT8。 
+
 ## 约束说明
 
 无
@@ -120,3 +129,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_dynamic_block_quant](examples/test_aclnn_dynamic_block_quant.cpp) | 通过[aclnnDynamicBlockQuant](docs/aclnnDynamicBlockQuant.md)接口方式调用DynamicBlockQuant算子。 |
+| 图模式 | -  | 通过[算子IR](op_graph/dynamic_block_quant_proto.h)构图方式调用DynamicBlockQuant算子。         |
