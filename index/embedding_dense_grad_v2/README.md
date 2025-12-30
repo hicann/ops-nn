@@ -4,8 +4,9 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
-|Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -73,11 +74,11 @@
       </tr>
     </tbody></table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：grad不支持BFLOAT16、FLOAT16，indices不支持INT64。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：grad不支持BFLOAT16、FLOAT16，indices不支持INT64。
 
 ## 约束说明
 
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：
+- Atlas A3 训练系列产品/Atlas A3 推理系列产品、Atlas A2 训练系列产品/Atlas A2 推理系列产品：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能。
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)。
     - num_weights超过INT32_MAX(2147483647)。

@@ -4,8 +4,9 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>|√|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 - 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。  
@@ -213,21 +214,21 @@ aclnnStatus aclnnDequantSwigluQuant(
   </table>
 
     - weightScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，shape支持1维，shape表示为[H]，且取值H和x最后一维保持一致。可选参数，支持传空指针。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，shape支持1维，shape表示为[H]，且取值H和x最后一维保持一致。可选参数，支持传空指针。
     - activationScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，shape为[N..., 1]，最后一维为1，其余和x保持一致。可选参数，支持传空指针。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，shape为[N..., 1]，最后一维为1，其余和x保持一致。可选参数，支持传空指针。
     - quantScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT、FLOAT16，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
     - quantOffsetOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
     - groupIndexOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持INT32、INT64，shape支持1维Tensor。可选参数，支持传空指针。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持INT32、INT64，shape支持1维Tensor。可选参数，支持传空指针。
     - quantModeOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：支持“dynamic”和“static"。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持“dynamic”和“static"。
     - yOut参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持INT8。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持INT8。
     - scaleOut参数：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT。
+      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT。
 - **返回值：**
 
 aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -318,10 +319,10 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - 确定性计算：
   - aclnnDequantSwigluQuant默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 + （activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 + （activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 
 ## 调用示例
 
