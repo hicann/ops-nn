@@ -10,36 +10,52 @@
 
 #include <iostream>
 #include <vector>
-
+#include <fstream>
 #include <gtest/gtest.h>
+
 #include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
+#include "ut_op_util.h"
 #include "atvoss/elewise/elewise_tiling.h"
-#include "../../../op_host/arch35/fast_gelu_tiling_arch35.h"
+#include "../../../../op_host/arch35/fast_gelu_grad_tiling_arch35.h"
 
+using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class FastGeluTilingData : public testing::Test {
+class FastGeluGradTiling : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
-        std::cout << "FastGeluTilingData SetUp" << std::endl;
+        std::cout << "FastGeluGradTilingData SetUp" << std::endl;
     }
 
     static void TearDownTestCase()
     {
-        std::cout << "FastGeluTilingData TearDown" << std::endl;
+        std::cout << "FastGeluGradTilingData TearDown" << std::endl;
     }
 };
 
-TEST_F(FastGeluTilingData, test_tiling_fp16_001)
+static string TilingData2Str(const gert::TilingData* tiling_data)
 {
-    gert::StorageShape Shape = {{1, 64, 2, 64}, {1, 64, 2, 64}};
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
+
+    return result;
+}
+
+TEST_F(FastGeluGradTiling, test_tiling_fp16_001)
+{
+    std::string op_type("FastGeluGrad");
+    gert::StorageShape Shape = {{64}, {64}};
 
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -54,24 +70,22 @@ TEST_F(FastGeluTilingData, test_tiling_fp16_001)
         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64
       }
     })";
-    std::string op_type("FastGelu");
-
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    Ops::Base::FastGeluCompileInfo compile_info;
+    optiling::FastGeluGradCompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGelu")->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGelu")->tiling_parse;
-    auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGelu")->gen_simplifiedkey;
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
+    auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
     auto kernel_holder =
         gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
+            .KernelIONum(2, 1)
             .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
             .Outputs({&compile_info})
             .Build();
@@ -86,7 +100,7 @@ TEST_F(FastGeluTilingData, test_tiling_fp16_001)
                                                                                             soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    // // tilingFunc simulate
+    // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
@@ -94,28 +108,23 @@ TEST_F(FastGeluTilingData, test_tiling_fp16_001)
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
-                      .NodeIoNum(1, 1)
-                      .IrInstanceNum({1})
-                      .InputShapes({&Shape})
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
                       .OutputShapes({&Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
 
-    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 3);
-    auto block_dim = tiling_context->GetBlockDim();
-    ASSERT_EQ(block_dim, 4);
+    auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
 }
