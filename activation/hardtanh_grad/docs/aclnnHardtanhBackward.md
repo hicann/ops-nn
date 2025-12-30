@@ -1,9 +1,12 @@
 # aclnnHardtanhBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/hardtanh_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
@@ -13,16 +16,16 @@
 - 计算公式：
 
   $$
-  res_{i} = grad\_output_{i} \times grad\_self_{i}
-  $$
-
-  $$
   grad\_self_{i} = 
   \begin{cases}
     0,\ \ \ \ \ \ \ if \ \ self_{i}>max \\
     0,\ \ \ \ \ \ \  if\ \ self_{i}<min \\
     1,\ \ \ \ \ \ \ \ \ \ \ \ otherwise \\
   \end{cases}
+  $$
+
+  $$
+  res_{i} = grad\_output_{i} \times grad\_self_{i}
   $$
 
 ## 函数原型
@@ -51,7 +54,7 @@ aclnnStatus aclnnHardtanhBackward(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+<table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
   <col style="width: 171px">
   <col style="width: 115px">
   <col style="width: 220px">
@@ -71,9 +74,10 @@ aclnnStatus aclnnHardtanhBackward(
       <th>数据格式</th>
       <th>维度(shape)</th>
       <th>非连续Tensor</th>
-    </tr></thead>
-   <tbody>
-      <tr>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，公式中的grad\_output。</td>
@@ -144,7 +148,9 @@ aclnnStatus aclnnHardtanhBackward(
       <td>-</td>
     </tr>
   </tbody>
-  </table>
+</table>
+
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
 

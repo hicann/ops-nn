@@ -1,0 +1,161 @@
+{
+    "op_type": "HardtanhGrad",
+    "op_list": [
+      {
+        "bin_filename": "HardtanhGrad_bf16_ND",
+        "inputs": [
+          {
+            "name": "result",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_val",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "max_val",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "HardtanhGrad_fp16_ND",
+        "inputs": [
+          {
+            "name": "result",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_val",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "max_val",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "HardtanhGrad_fp32_ND",
+        "inputs": [
+          {
+            "name": "result",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_val",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "max_val",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }
