@@ -84,9 +84,8 @@ static inline bool CheckRange(int32_t value, int32_t valueLow, int32_t valueUp)
 
 bool Conv3DBackpropInputV2TilingArch35::CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t byteSize, uint32_t l0Pbuffer)
 {
-    int64_t l0aSize = static_cast<int64_t>(baseM) * static_cast<int64_t>(baseK) * static_cast<int64_t>(byteSize) * static_cast<int64_t>(l0Pbuffer);
-    int64_t l0bSize = static_cast<int64_t>(baseN) * static_cast<int64_t>(baseK) * static_cast<int64_t>(byteSize) * static_cast<int64_t>(l0Pbuffer);
-
+    uint64_t l0aSize = static_cast<uint64_t>(baseM) * baseK * byteSize * l0Pbuffer;
+    uint64_t l0bSize = static_cast<uint64_t>(baseN) * baseK * byteSize * l0Pbuffer;
     return l0aSize <= platformInfo_.l0_ab_size && l0bSize <= platformInfo_.l0_ab_size;
 }
 
