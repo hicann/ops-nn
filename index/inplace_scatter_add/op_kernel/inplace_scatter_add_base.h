@@ -75,7 +75,7 @@ public:
     PIPE_V_S();
   }
 
-  __aicore__ inline void CopyInIndices(uint32_t mte2Start, uint32_t mteNum) {
+  __aicore__ inline void CopyInIndices(int64_t mte2Start, uint32_t mteNum) {
     if (sizeof(IT) == sizeof(int32_t)) {
       this->indicesLocal = this->allUbLocal.template ReinterpretCast<int32_t>();
       DataCopyExtParams copyParams{1, static_cast<uint32_t>(mteNum * sizeof(int32_t)), 0, 0, 0};

@@ -112,13 +112,13 @@ private:
         SyncAll();
     }
 
-    __aicore__ inline void CopyIn(const int progress, const int curTimes, const bool formerFlag)
+    __aicore__ inline void CopyIn(const int64_t progress, const int curTimes, const bool formerFlag)
     {
         LocalTensor<T> indexLocal = indexInQue_.AllocTensor<T>();
         LocalTensor<int> strideLocal = strideQue_.AllocTensor<int>();
         LocalTensor<int> valueSizeLocal = valueSizeQue_.AllocTensor<int>();
         uint32_t copyNum = formerFlag ? formerDataNum_ : tailDataNum_;
-        uint32_t addrOffset =
+        int64_t addrOffset =
             formerFlag ? formerDataNum_ * curTimes : formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(copyNum * sizeof(T)), 0, 0, 0};
         DataCopyExtParams strideCopyParams{1, static_cast<uint32_t>(sizeof(int)), 0, 0, 0};
@@ -182,7 +182,7 @@ private:
     {
         LocalTensor<int> indexOutLocal = indexOutQue_.DeQue<int>();
         uint32_t copyNum = formerFlag ? formerDataNum_ : tailDataNum_;
-        uint32_t addrOffset =
+        int64_t addrOffset =
             formerFlag ? formerDataNum_ * curTimes : formerDataNum_ * formerTime_ + tailDataNum_ * curTimes;
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(copyNum * sizeof(int)), 0, 0, 0};
         SetAtomicAdd<int32_t>();
