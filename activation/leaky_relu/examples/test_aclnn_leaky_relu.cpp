@@ -90,7 +90,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建negativeSlope aclScalar
   negativeSlope = aclCreateScalar(&negativeSlopeValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n", negativeSlope); return false);
+  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n"); return false);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

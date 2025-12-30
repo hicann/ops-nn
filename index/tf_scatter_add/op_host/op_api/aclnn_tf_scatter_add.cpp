@@ -14,7 +14,7 @@
 
 #include "aclnn_tf_scatter_add.h"
 #include "tf_scatter_add.h"
-#include "index/scatter_nd_add/op_host/op_api/scatter_nd_add.h"
+#include "index/scatter_nd_add/op_api/scatter_nd_add.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/cast.h"

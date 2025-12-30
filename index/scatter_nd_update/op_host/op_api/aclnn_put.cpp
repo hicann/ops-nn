@@ -13,7 +13,7 @@
  */
 
 #include "aclnn_kernels/reshape.h"
-#include "index/scatter_nd_add/op_host/op_api/scatter_nd_add.h"
+#include "index/scatter_nd_add/op_api/scatter_nd_add.h"
 #include "scatter_nd_update.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
