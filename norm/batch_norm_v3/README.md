@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -16,7 +21,6 @@
   $$
   y = \frac{(x - E(x))}{\sqrt{Var(x) + ε}} * γ + β
   $$
-
   E(x)表示均值，Var(x)表示方差，均需要在算子内部计算得到；ε表示一个极小的浮点数，防止分母为0的情况。
 
   
@@ -140,11 +144,30 @@
     - 输入x和输出y的数据格式不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
   
+  - <term>Atlas 训练系列产品</term>：
+    - 数据类型：所有的输入和输出不支持BFLOAT16。
+    - 数据格式：输入x和输出y不支持NHWC、NDHWC。
+    - 输出参数`save_rstd`保存的是x方差。
+  
+  - <term>Atlas 推理系列产品</term>：
+    - 数据类型：所有的输入和输出不支持BFLOAT16。
+    - 数据格式：输入x和输出y不支持NHWC、NDHWC。
+    - 输出参数`save_rstd`保存的是x方差。
+  
+  - <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：
+  
+    输出参数`save_rstd`保存的是x标准差的倒数。
+  
 <!-- 
+- <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：
+  - 输入running_mean、running_var分别表示推理期使用的均值和方差。
+  - 输出running_mean、running_var不生效。
+  - 输出save_mean、save_var不生效。
 **/
 
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
+- <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：输出参数`save_rstd`保存的是x标准差倒数。
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
 -->
 
 ## 约束说明

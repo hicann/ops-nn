@@ -4,25 +4,25 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
+|昇腾Ascend 950PR/Ascend 950DT AI处理器|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|×|
+|Atlas 训练系列产品|×|
+|Atlas 200/300/500 推理产品|×|
 
 ## 功能说明
 
 - 算子功能：三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。
 
 - 计算公式：
-
 $$
 D_{out} = \left\lfloor \frac{D_{in} + 2 \times \text{pads}[0] - \text{ksize}[0]}{\text{strides}[0]} + 1 \right\rfloor
 $$
-
-
 $$
 H_{out} = \left\lfloor \frac{H_{in} + 2 \times \text{pads}[1] - \text{ksize}[1]}{\text{strides}[1]} + 1 \right\rfloor
 $$
-
-
 $$
 W_{out} = \left\lfloor \frac{W_{in} + 2 \times \text{pads}[2] - \text{ksize}[2]}{\text{strides}[2]} + 1 \right\rfloor
 $$

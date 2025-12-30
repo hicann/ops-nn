@@ -4,21 +4,26 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
 - 算子功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
 - 计算公式：
   - sqrt\_mode为false时，计算公式为：
-
+    
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrt\_mode为true时，计算公式为：
-
+    
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -99,10 +104,21 @@
     </tr>
   </tbody></table>
 
+- <term>Atlas 推理系列产品</term>：
+  - 数据类型：
+    - 输入Tensor数据类型不支持BFLOAT16。
+    - 输出Tensor数据类型仅支持INT8。
+  - round_mode，支持取值round，ceil，trunc，floor。
+  - dst_type：支持取值2，表示INT8。
+  - axis：只支持指定x的最后一个维度（假设输入x维度是xDimNum，axis取值是-1或xDimNum-1）。
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 输出Tensor数据类型仅支持INT8、INT4。<!--INT32 -->
   - dst_type：支持取值2，29，分别表示INT8、INT4。<!--INT32(3)aclnn中有这个类型-->
   - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
+- <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：
+   - round_mode：dst_type表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。dst_type表示HIFLOAT8时，支持round和hybrid。dst_type表示其他类型时，支持round，ceil，trunc和floor。
+   - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
+
 ## 约束说明
 
 无

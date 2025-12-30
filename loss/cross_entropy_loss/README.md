@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -13,33 +18,23 @@
 - 计算表达式：
   
   reductionOptional = mean时，交叉熵损失loss的计算公式为：
-
   $$
   l_n = -weight_{y_n}*log\frac{exp(x_{n,y_n})}{\sum_{c=1}^Cexp(x_{n,c})}*1\{y_n\ !=\ ignoreIndex \}
   $$
-
-
   $$
   loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reductionOptional = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reductionOptional = ‘sum’ }\\\{l_0,l_1,...,l_n\},&\text{if reductionOptional = ‘None’ }\end{cases}
   $$
-
   log\_prob计算公式为：
-
   $$
   lse_n = log*\sum_{c=1}^{C}exp(x_{n,c})
   $$
-
-
   $$
   logProb_{n,c} = x_{n,c} - lse_n
   $$
-
   zloss计算公式为：
-
   $$
   zloss_n = lseSquareScaleForZloss * （lse_n）^2 
   $$
-
   其中，N为batch数，C为标签数。
 
 ## 参数说明

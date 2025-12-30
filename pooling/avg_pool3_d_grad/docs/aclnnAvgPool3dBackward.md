@@ -1,89 +1,292 @@
 # aclnnAvgPool3dBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/avg_pool3_d_grad)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-- 算子功能：三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。
+- 接口功能：三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。
 
 - 计算公式：
   反向时的输出数据input($N,C,D_{in},H_{in},W_{in}$)、梯度gradOutput($N,C,D_{out},H_{out},W_{out}$)和池化步长($stride$)、池化窗口大小kernelSize($kD,kH,kW$)的关系是
 
-$$
-D_{in} = (D_{out} - 1) * {stride[0]} + kernel\_size[0] - 2 * padding[0]
-$$
+  $$
+  D_{in} = (D_{out} - 1) * {stride[0]} + kernel\_size[0] - 2 * padding[0]
+  $$
 
-$$
-H_{in} = (H_{out} - 1) * {stride[1]} + kernel\_size[1] - 2 * padding[1]
-$$
+  $$
+  H_{in} = (H_{out} - 1) * {stride[1]} + kernel\_size[1] - 2 * padding[1]
+  $$
 
-$$
-W_{in} = (W_{out} - 1) * {stride[2]} + kernel\_size[2] - 2 * padding[2]
-$$
+  $$
+  W_{in} = (W_{out} - 1) * {stride[2]} + kernel\_size[2] - 2 * padding[2]
+  $$
 
-若ceil_mode为true，且满足
+  若ceil_mode为true，且满足
 
-$$
-(D_{out} - 1) * stride[0] >= D_{in} + padding[0]
-$$
-
-则D_{out}的shape需减1。H_{out},W_{out}同理。
+  $$
+  (D_{out} - 1) * stride[0] >= D_{in} + padding[0]
+  $$
+  
+  则D_{out}的shape需减1。H_{out},W_{out}同理。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAvgPool3dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAvgPool3dBackward”接口执行计算。
 
-- `aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding, bool ceilMode, bool countIncludePad, int64_t divisorOverride, aclTensor* output, uint64_t* workspaceSize, aclOpExecutor** executor)`
-
-- `aclnnStatus aclnnAvgPool3dBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)`
-
+```Cpp
+aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
+  const aclTensor   *gradOutput,
+  const aclTensor   *self,
+  const aclIntArray *kernelSize,
+  const aclIntArray *stride,
+  const aclIntArray *padding,
+  bool               ceilMode,
+  bool               countIncludePad,
+  int64_t            divisorOverride,
+  aclTensor         *output,
+  uint64_t          *workspaceSize,
+  aclOpExecutor     **executor)
+```
+```Cpp
+aclnnStatus aclnnAvgPool3dBackward(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 ## aclnnAvgPool3dBackwardGetWorkspaceSize
 
 - **参数说明**：
-  - gradOutput(aclTensor*, 计算输入)：输入梯度，npu device侧的aclTensor，支持4维（$C,D_{out},H_{out},W_{out}$）或者5维（$N,C,D_{out},H_{out},W_{out}$）, N代表batch size，C代表通道数，D、H和W分别代表深度、高度和宽度, 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md),[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持BFLOAT16、FLOAT16、FLOAT32, 且需要与self一致。
-  - self(aclTensor*, 计算输入)：输入数据，npu device侧的aclTensor，正向过程中的输入，对应公式中的$input$，支持4维（$C,D_{in},H_{in},W_{in}$）或者5维（$N,C,D_{in},H_{in},W_{in}$）, 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md),[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持BFLOAT16、FLOAT16、FLOAT32，且需要与gradOutput一致。
-  - kernelSize（aclIntArray*,计算输入）: Host侧的aclIntArray，表示池化窗口大小，INT64类型数组，长度为1(KD = KH = KW)或3(KD, KH, KW)。数值必须大于0。
-  - stride（aclIntArray*,计算输入）: Host侧的aclIntArray，表示池化操作的步长，INT64类型数组，长度为0（数值与kernelSize数值保持一致）或者1(SD = SH = SW)或者3(SD, SH, SW)。数值必须大于0。
-  - padding（aclIntArray*,计算输入）: Host侧的aclIntArray，表示在输入的D、H、W方向上padding补0的层数，INT64类型数组，长度为1(PD = PH = PW)或3(PD, PH, PW)。数值在[0, kernelSize/2]的范围内。
-  - ceilMode（bool，计算输入）: 表示正向平均池化过程中推导的输出的shape是否向上取整（True表示向上取整）。数据类型支持BOOL。
-  - countIncludePad（bool，计算输入）: 计算正向平均池化时是否包括padding填充的0（True表示包括填充的0）。数据类型支持BOOL。
-  - divisorOverride（int64_t，计算输入）: 表示取平均的除数。如果指定，它将用作平均计算中的除数，当值为0时，该属性不生效，数据类型支持INT64。
-  - output（aclTensor *，计算输出）: Device侧的aclTensor，shape与入参self相同。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。 支持[数据格式](../../../docs/zh/context/数据格式.md)为ND。数据类型、[数据格式](../../../docs/zh/context/数据格式.md)需要与gradOutput一致, 数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-  - workspaceSize（uint64_t \*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+  <col style="width: 149px">
+  <col style="width: 121px">
+  <col style="width: 264px">
+  <col style="width: 253px">
+  <col style="width: 262px">
+  <col style="width: 148px">
+  <col style="width: 135px">
+  <col style="width: 146px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>gradOutput</td>
+      <td>输入</td>
+      <td>表示输入梯度。</td>
+      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>正向过程中的输入，对应公式中的input。</td>
+      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>kernelSize</td>
+      <td>输入</td>
+      <td>池化窗口大小，公式中的k。</td>
+      <td>长度为1(KD = KH = KW)或3(KD, KH, KW)，数值必须大于0。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>stride</td>
+      <td>输入</td>
+      <td>池化操作的步长，公式中的strides。</td>
+      <td>长度为0（数值与kernelSize数值保持一致）或者1(SD = SH = SW)或者3(SD, SH, SW)，数值必须大于0。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>padding</td>
+      <td>输入</td>
+      <td>在输入的D、H、W方向上padding补0的层数，公式中的paddings。</td>
+      <td>长度为1(PD = PH = PW)或3(PD, PH, PW)，数值在[0, kernelSize/2]的范围内。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>ceilMode</td>
+      <td>输入</td>
+      <td>推导的输出out的shape是否向上取整。</td>
+      <td>-</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>countIncludePad</td>
+      <td>输入</td>
+      <td>计算平均池化时是否包括padding填充的0。</td>
+      <td>-</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>divisorOverride</td>
+      <td>输入</td>
+      <td>取平均的除数。</td>
+      <td>当值为0时，该属性不生效。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>output</td>
+      <td>输出</td>
+      <td>输出的tensor。</td>
+      <td>shape与入参self相同</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的gradOutput、self、kernelSize、padding或output是空指针。
-  161002 (ACLNN_ERR_PARAM_INVALID): 1. 传入的gradOutput、self和output的数据类型/维度不在支持的范 围之内。
-                                    2. 传入kernelSize，stride, padding的维度不在支持的范围之内。
-                                    3. 传入的kernelSize、stride某个维度值小于等于0, padding某个维度值小于0。
-                                    4. 属性padding超过kernelSize对应位置的1/2,例如paddingH=2,kernelSizeH=2,paddingH>kernelSizeH*1/2。
-                                    5. output的shape与self的shape不一致。
-                                    6. 根据平均池化语义计算得到的gradOutput shape与接口传入的gradOutput shape不一致。
-  ```
-
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 124px">
+  <col style="width: 775px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的gradOutput、self、kernelSize、padding或output是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
+      <td>传入的gradOutput、self和output的数据类型/维度不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>传入kernelSize，stride, padding的维度不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>传入的kernelSize、stride某个维度值小于等于0，padding某个维度值小于0。</td>
+    </tr>
+    <tr>
+      <td>属性padding超过kernelSize对应位置的1/2，例如paddingH=2，kernelSizeH=2，paddingH>kernelSizeH*1/2。</td>
+    </tr>
+    <tr>
+      <td>output的shape与self的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>根据平均池化语义计算得到的gradOutput的shape与接口传入的gradOutput的shape不一致。</td>
+    </tr>
+  </tbody>
+  </table>
 ## aclnnAvgPool3dBackward
 
-- **参数说明**：
+- **参数说明：**
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAvgPool3dBackwardGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
+-  **返回值：**
 
-  - workspace(void\*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnAvgPool3dBackwardGetWorkspaceSize获取。
-  - executor(aclOpExecutor\*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-
-- **返回值**：
-
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - 确定性计算：

@@ -1,15 +1,22 @@
 # aclnnAscendQuantV3
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/ascend_quant_v2)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
-- 接口功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
+- 接口功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
 
@@ -52,6 +59,7 @@ aclnnStatus aclnnAscendQuantV3(
 ## aclnnAscendQuantV3GetWorkspaceSize
 
 - **参数说明：**
+
 
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
@@ -144,7 +152,7 @@ aclnnStatus aclnnAscendQuantV3(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
@@ -185,6 +193,21 @@ aclnnStatus aclnnAscendQuantV3(
     - 入参`roundMode`：支持取值round，ceil，trunc，floor。当输入`x`的数据格式为NZ时，支持取值round。
     - 入参`dstType`支持取值2，3，29，分别表示INT8、INT32、INT4。当输入`x`的数据格式为NZ时，支持取值3，表示INT32。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
+
+
+  - <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：
+    - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
+    - 入参`roundMode`：`dstType`表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。`dstType`表示HIFLOAT8时，支持round和hybrid。`dstType`表示其他类型时，支持round，ceil，trunc和floor。
+    - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
+
+
+  - <term>Atlas 推理系列产品</term>：
+    - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16，数据格式不支持NZ。
+    - 出参`y`数据类型仅支持INT8，数据格式不支持NZ。
+    - 入参`roundMode`：支持取值round，ceil，trunc，floor。
+    - 入参`dstType`仅支持取值2，表示INT8。
+    - 入参`axis`只支持指定x的最后一个维度（假设输入x维度是xDimNum，axis取值是-1或xDimNum-1）。
+
 
 - **返回值：**
 

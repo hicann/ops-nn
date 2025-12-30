@@ -1,11 +1,18 @@
 # aclnnAddLayerNorm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_layer_norm)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -214,6 +221,10 @@ aclnnStatus aclnnAddLayerNorm(
   </tbody>
   </table>
 
+  - <term>Atlas 推理系列产品</term>：
+    - 参数`x1`、`x2`、`beta`、`gamma`、`biasOptional`、`yOut`、`xOut`的数据类型不支持BFLOAT16。
+    - 参数`meanOut`、`rstdOut`在当前产品使用场景下无效。
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -274,6 +285,7 @@ aclnnStatus aclnnAddLayerNorm(
     </tr>
   </tbody></table>
 
+
 ## aclnnAddLayerNorm
 
 - **参数说明：**
@@ -313,6 +325,7 @@ aclnnStatus aclnnAddLayerNorm(
   </tbody>
   </table>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -321,9 +334,11 @@ aclnnStatus aclnnAddLayerNorm(
 
 - **功能维度**
   - 数据类型支持
+    - <term>Atlas 推理系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x1、x2、beta、gamma、biasOptional支持FLOAT32、FLOAT16、BFLOAT16。
     - rstdOut、meanOut支持：FLOAT32。
   - 数据格式支持：ND。
+  - <term>Atlas 推理系列产品</term>：x1、x2、beta、gamma、biasOptional五个输入的尾轴长度必须大于等于32Bytes。
 - **未支持类型说明**
   - DOUBLE：不支持DOUBLE。
 - **边界值场景说明**
@@ -342,6 +357,11 @@ aclnnStatus aclnnAddLayerNorm(
     | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT32  | FLOAT16  |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32  | FLOAT32  | BFLOAT16 |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
+  - <term>Atlas 推理系列产品</term>：
+    | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | biasOptional数据类型 | yOut数据类型 | meanOut数据类型 | rstdOut数据类型 | xOut数据类型 |
+    | -------- | -------- | ------------- | ------------- | ----------- | --------- | --------- | --------- | :-------- |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT16 |
 - 确定性计算：
   - aclnnAddLayerNorm默认确定性实现。
 

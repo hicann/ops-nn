@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -27,24 +32,18 @@
     y & \ \  smoothScale1Optional\ = null
     \end{cases}
   $$
-
-
   $$
   input2 =\begin{cases}
     y\cdot smoothScale2Optional & \ \ smoothScale2Optional\ != null  \\
     y & \ \ smoothScale2Optional\ = null
     \end{cases}
   $$
-
-
   $$
   scale1Out=\begin{cases}
     row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ outputMask\ = null \\
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
-
-
   $$
   y1Out=\begin{cases}
     round(input1/scale1Out) & outputMask[0]=True\ ||\ outputMask\ = null \\
@@ -59,8 +58,6 @@
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ = null)
     \end{cases}
   $$
-
-
   $$
   y2Out=\begin{cases}
     round(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
@@ -180,6 +177,8 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+  - <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：暂不支持入参`beta`和可选属性`output_mask`的配置。
 
 ## 约束说明
 
