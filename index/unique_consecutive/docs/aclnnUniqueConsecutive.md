@@ -3,6 +3,7 @@
 ## 产品支持情况
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term> |√|
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √       |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 ## 功能说明
@@ -20,12 +21,12 @@
 
 * **参数说明**：
   - self（aclTensor*, 计算输入）：Device侧的aclTensor，维度不能超过8维。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品/Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
   - returnInverse（bool, 计算输入）：表示是否返回self中各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。
   - returnCounts（bool, 计算输入）：表示是否返回valueOut中各元素在self中连续重复出现的次数，True时返回，False时不返回。
   - dim（int64_t, 计算输入）：表示进行去重的维度。
   - valueOut（aclTensor*，计算输出）：第一个输出张量，返回消除连续重复元素后的结果，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品/Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。
   - inverseOut（aclTensor*，计算输出）：第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中对应元素的位置下标，数据类型支持INT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - countsOut（aclTensor*，计算输出）：第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中连续重复出现的次数，数据类型支持INT64，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - workspaceSize（uint64_t*, 出参）：返回需要在Device侧申请的workspace大小。
