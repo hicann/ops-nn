@@ -73,7 +73,7 @@
 | [aclnnConvolution](../../conv/convolution_forward/docs/aclnnConvolution.md) |实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。|
 | [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md) |实现卷积的反向传播。|
 | [aclnnConvDepthwise2d](../../conv/convolution_forward/docs/aclnnConvDepthwise2d.md) |实现二维深度卷积（DepthwiseConv2D）计算。|
-| [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)|对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。|默认确定性实现|
+| [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)|对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。|默认确定性实现|
 | [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md) |实现时序（TBC）一维卷积。|
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) |用于计算时序卷积的反向传播|
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 |
