@@ -39,8 +39,16 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
+static inline bool CheckNotNull(const aclTensor* self, const aclTensor* out)
+{
+  // self、out不能为空指针
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(out, return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out) {
-  CHECK_RET(CheckNotNull2Tensor(self, out), ACLNN_ERR_PARAM_NULLPTR);
+  CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
   auto supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
   CHECK_RET(CheckDtypeValidActivation(self, out, supportList), ACLNN_ERR_PARAM_INVALID);
