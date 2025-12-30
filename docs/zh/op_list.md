@@ -1446,6 +1446,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/masked_scatter/README.md">masked_scatter</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/matrix_inverse/README.md">matrix_inverse</a></td>
     <td>✗</td>
     <td>✓</td>

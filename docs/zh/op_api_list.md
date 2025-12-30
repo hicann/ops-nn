@@ -218,6 +218,7 @@
 | [aclnnInplacePut](../../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 |
 | [aclnnIndexSelect](../../index/gather_v2/docs/aclnnIndexSelect.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 |
 | [aclnnInplaceAddRmsNorm](../../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md)|RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。|
+| [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) |根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。|默认确定性实现||
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md)|用于执行Instance Normalization（实例归一化）操作。|
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。 |
 | [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。 |
