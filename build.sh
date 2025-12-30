@@ -9,7 +9,7 @@
 # ============================================================================
 
 set -e
-RELEASE_TARGETS=("ophost" "opapi")
+RELEASE_TARGETS=("ophost" "opapi" "onnxplugin")
 
 SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910" "kirinx90")
 TRIGER_UTS=()
@@ -21,7 +21,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
-  "ophost" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom"
+  "ophost" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin"
 )
 
 in_array() {
@@ -223,6 +223,19 @@ usage() {
         echo "    bash build.sh --ophost --build-type=Debug"
         return
         ;;
+      onnxplugin)
+        echo "ONNXPlugin Build Options:"
+        echo $dotted_line
+        echo "    --onnxplugin           Build onnxplugin library"
+        echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
+        echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
+        echo "    --debug                Build with debug mode"
+        echo $dotted_line
+        echo "Examples:"
+        echo "    bash build.sh --onnxplugin -j16 -O3"
+        echo "    bash build.sh --onnxplugin --debug"
+        return
+        ;;
       opapi)
         echo "Opapi Build Options:"
         echo $dotted_line
@@ -299,6 +312,7 @@ usage() {
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
+  echo "    --onnxplugin build op_nn_onnx_plugin.so"
   echo "    --opapi build opapi_nn.so"
   echo "    --ophost build ophost_nn.so"
   echo "    --opkernel build binary kernel"
@@ -327,7 +341,7 @@ check_help_combinations() {
   for arg in "${args[@]}"; do
     case "$arg" in
       -u) has_u=true ;;
-      --ophost | --opapi)
+      --ophost | --opapi | --onnxplugin)
         has_test_command=true
         has_build_command=true
         ;;
@@ -433,7 +447,7 @@ set_create_libs() {
     return
   fi
   if [[ "$ENABLE_PACKAGE" == "TRUE" && "$ENABLE_CUSTOM" != "TRUE" ]]; then
-    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}")
+    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin")
     ENABLE_CREATE_LIB=TRUE
   else
     if [[ "$OP_HOST" == "TRUE" ]]; then
@@ -442,6 +456,10 @@ set_create_libs() {
     fi
     if [[ "$OP_API" == "TRUE" ]]; then
       BUILD_LIBS+=("opapi_${REPOSITORY_NAME}")
+      ENABLE_CREATE_LIB=TRUE
+    fi
+    if [[ "$ONNX_PLUGIN" == "TRUE" ]]; then
+      BUILD_LIBS+=("op_${REPOSITORY_NAME}_onnx_plugin")
       ENABLE_CREATE_LIB=TRUE
     fi
   fi
@@ -509,6 +527,11 @@ make_clean_all() {
     rm -rf ./*
   fi
   [ -d "$BUILD_OUT_PATH" ] && rm -rf $BUILD_OUT_PATH
+  THIRD_PARTY_PATH=${BASE_PATH}/third_party
+  if [ -d "${THIRD_PARTY_PATH}" ]; then
+    rm -rf ${THIRD_PARTY_PATH}/abseil-cpp
+    rm -rf ${THIRD_PARTY_PATH}/ascend_protobuf
+  fi
   print_success "make clean all success!"
 }
 
@@ -547,6 +570,7 @@ checkopts() {
   OP_API_UT=FALSE
   OP_HOST_UT=FALSE
   OP_GRAPH_UT=FALSE
+  ONNX_PLUGIN=FALSE
   OP_KERNEL_UT=FALSE
   OP_KERNEL_AICPU_UT=FALSE
   OP_API=FALSE
@@ -600,6 +624,7 @@ checkopts() {
           --make_clean_all | --make_clean) SHOW_HELP="clean" ;;
           --ophost) SHOW_HELP="ophost" ;;
           --opapi) SHOW_HELP="opapi" ;;
+          --onnxplugin) SHOW_HELP="onnxplugin" ;;
           --run_example) SHOW_HELP="run_example" ;;
           --genop) SHOW_HELP="genop" ;;
           --genop_aicpu) SHOW_HELP="genop_aicpu" ;;
@@ -743,6 +768,8 @@ checkopts() {
             OP_KERNEL=TRUE
           elif [[ "$OPTARG" == "opkernel_aicpu" ]]; then
             OP_KERNEL_AICPU=TRUE
+          elif [[ "$OPTARG" == "onnxplugin" ]]; then
+            ONNX_PLUGIN=TRUE
           else
             usage
             exit 1

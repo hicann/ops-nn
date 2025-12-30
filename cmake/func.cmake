@@ -594,3 +594,119 @@ function(get_target_dir compute_unit_long target_dir)
         set(${target_dir} "" PARENT_SCOPE)
     endif()
 endfunction()
+
+function(protobuf_generate_external comp c_var h_var)
+  if (NOT ARGN)
+    message(SEND_ERROR "Error: protobuf_generate_external() called without any proto files")
+    return()
+  endif()
+
+  set(${c_var})
+  set(${h_var})
+  set(_add_target FALSE)
+
+  set(extra_option "")
+  foreach(arg ${ARGN})
+    if ("${arg}" MATCHES "--proto_path")
+      set(extra_option ${arg})
+    endif()
+  endforeach()
+
+  foreach(file ${ARGN})
+    if ("${file}" STREQUAL "TARGET")
+      set(_add_target TRUE)
+      continue()
+    endif()
+
+    if ("${file}" MATCHES "--proto_path")
+      continue()
+    endif()
+
+    get_filename_component(abs_file ${file} ABSOLUTE)
+    get_filename_component(file_name ${file} NAME_WE)
+    get_filename_component(file_dir ${abs_file} PATH)
+    get_filename_component(parent_subdir ${file_dir} NAME)
+
+    if ("${parent_subdir}" STREQUAL "proto")
+      set(proto_output_path ${CMAKE_BINARY_DIR}/proto/${comp}/proto)
+    else()
+      set(proto_output_path ${CMAKE_BINARY_DIR}/proto/${comp}/proto/${parent_subdir})
+    endif()
+    list(APPEND ${c_var} "${proto_output_path}/${file_name}.pb.cc")
+    list(APPEND ${h_var} "${proto_output_path}/${file_name}.pb.h")
+
+    add_custom_command(
+      OUTPUT "${proto_output_path}/${file_name}.pb.cc" "${proto_output_path}/${file_name}.pb.h"
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${proto_output_path}"
+      COMMAND ${CMAKE_COMMAND} -E echo "generate proto cpp_out ${comp} by ${abs_file}"
+      COMMAND ${Protobuf_PROTOC_EXECUTABLE} -I${file_dir} ${extra_option} --cpp_out=${proto_output_path} ${abs_file}
+      DEPENDS ${abs_file} ascend_protobuf_build_nn json
+      COMMENT "Running C++ protocol buffer compiler on ${file}" VERBATIM)
+
+  endforeach()
+
+    if (_add_target)
+      add_custom_target(
+        ${comp} DEPENDS ${${c_var}} ${${h_var}}) 
+    endif()
+
+    set_source_files_properties(${${c_var}} ${${h_var}} PROPERTIES GENERATED TRUE)
+    set(${c_var} ${${c_var}} PARENT_SCOPE)
+    set(${h_var} ${${h_var}} PARENT_SCOPE)
+
+endfunction()
+
+function(add_onnx_plugin_modules)
+  if (NOT TARGET ${ONNX_PLUGIN_NAME}_obj)
+    set(ge_onnx_proto_srcs
+      ${ASCEND_DIR}/include/proto/ge_onnx.proto)
+    
+    protobuf_generate_external(onnx ge_onnx_proto_cc ge_onnx_proto_h ${ge_onnx_proto_srcs})
+
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      npu_op_library(${ONNX_PLUGIN_NAME}_obj GRAPH ${ge_onnx_proto_h} )
+    else()
+      add_library(${ONNX_PLUGIN_NAME}_obj OBJECT ${ge_onnx_proto_h})
+    endif()
+    # 为特定目标设置C++14标准
+    set_target_properties(${ONNX_PLUGIN_NAME}_obj PROPERTIES
+      CXX_STANDARD 14
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
+    )
+    target_include_directories(${ONNX_PLUGIN_NAME}_obj PRIVATE ${OP_PROTO_INCLUDE} ${Protobuf_INCLUDE} ${Protobuf_PATH} ${CMAKE_BINARY_DIR}/proto ${ONNX_PLUGIN_COMMON_INCLUDE} ${JSON_INCLUDE} ${ABSL_SOURCE_DIR})
+    target_compile_definitions(${ONNX_PLUGIN_NAME}_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="ONNX_PLUGIN" LOG_CPP)
+
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      target_compile_options(
+        ${ONNX_PLUGIN_NAME}_obj PRIVATE -Dgoogle=ascend_private -fvisibility=hidden -Wno-shadow -Wno-unused-parameter
+      )
+    else()
+      target_compile_options(
+        ${ONNX_PLUGIN_NAME}_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
+                                       -fvisibility=hidden -Wno-shadow -Wno-unused-parameter
+      )
+    endif()
+
+    target_link_libraries(
+      ${ONNX_PLUGIN_NAME}_obj
+      PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx14>>
+              $<BUILD_INTERFACE:dlog_headers>
+              $<$<TARGET_EXISTS:ops_base_util_objs>:$<TARGET_OBJECTS:ops_base_util_objs>>
+              $<$<TARGET_EXISTS:ops_base_infer_objs>:$<TARGET_OBJECTS:ops_base_infer_objs>>
+      )
+  endif()
+endfunction()
+
+macro(add_onnx_plugin_sources)
+  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+  file(GLOB ONNX_PLUGIN_SRCS ${SOURCE_DIR}/*_onnx_plugin.cpp)
+  if(ONNX_PLUGIN_SRCS)
+    add_onnx_plugin_modules()
+    target_sources(${ONNX_PLUGIN_NAME}_obj PRIVATE ${ONNX_PLUGIN_SRCS})
+  else()
+    message(STATUS "ONNX_PLUGIN_SRCS is empty")
+  endif()
+endmacro()

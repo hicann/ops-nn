@@ -13,3 +13,5 @@ foreach(SUB_DIR ${CURRENT_DIRS})
         add_subdirectory(${SUB_DIR})
     endif()
 endforeach()
+
+add_subdirectory(src/framework)

@@ -86,12 +86,16 @@ else()
   endif()
 endif()
 
+set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "cann third party lib path")
+
 # Cmake Compile配置
 set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "c++17 is needed for this project")
 include(cmake/dependencies.cmake)
 include(cmake/third_party/nlohmann_json.cmake)
+include(cmake/third_party/abseil-cpp.cmake)
+include(cmake/third_party/ascend_protobuf.cmake)
 include(cmake/variables.cmake)
 include(cmake/func.cmake)
 include(cmake/opbuild.cmake)

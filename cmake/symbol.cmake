@@ -248,6 +248,32 @@ function(gen_aicpu_kernel_symbol enable_built_in)
   )
 endfunction()
 
+function(gen_onnx_plugin_symbol)
+  add_library(
+    ${ONNX_PLUGIN_NAME} SHARED
+    $<$<TARGET_EXISTS:${ONNX_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${ONNX_PLUGIN_NAME}_obj>>
+  )
+
+  target_link_libraries(
+    ${ONNX_PLUGIN_NAME}
+    PRIVATE $<BUILD_INTERFACE:intf_pub_cxx14>
+            c_sec
+            -Wl,--no-as-needed
+            register
+            $<$<TARGET_EXISTS:opsbase>:opsbase>
+            -Wl,--as-needed
+            -Wl,--whole-archive
+            rt2_registry_static
+            -Wl,--no-whole-archive
+    )
+
+  install(
+    TARGETS ${ONNX_PLUGIN_NAME}
+    LIBRARY DESTINATION ${ONNX_PLUGIN_LIB_INSTALL_DIR}
+    )
+
+endfunction()
+
 function(gen_norm_symbol)
   gen_ophost_symbol()
 
@@ -258,6 +284,8 @@ function(gen_norm_symbol)
   gen_aicpu_json_symbol(TRUE)
 
   gen_aicpu_kernel_symbol(TRUE)
+
+  gen_onnx_plugin_symbol()
 endfunction()
 
 function(gen_cust_symbol)

@@ -16,6 +16,7 @@ set(OPHOST_NAME ophost_${PKG_NAME})
 set(OPSTATIC_NAME cann_${PKG_NAME}_static)
 set(OPAPI_NAME opapi_${PKG_NAME})
 set(OPGRAPH_NAME opgraph_${PKG_NAME})
+set(ONNX_PLUGIN_NAME op_${PKG_NAME}_onnx_plugin)
 set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
 set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
 
@@ -99,6 +100,7 @@ else()
   set(OPTILING_LIB_INSTALL_DIR        ${OPHOST_LIB_INSTALL_PATH})
   set(OPGRAPH_INC_INSTALL_DIR         opp/built-in/op_graph/inc)
   set(OPGRAPH_LIB_INSTALL_DIR         opp/built-in/op_graph/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
+  set(ONNX_PLUGIN_LIB_INSTALL_DIR     opp/built-in/framework/onnx)
   set(VERSION_INFO_INSTALL_DIR        ops_nn)
 endif()
 
@@ -186,6 +188,13 @@ set(AICPU_INCLUDE
   ${HCCL_EXTERNAL_INCLUDE}
   ${OPS_NN_DIR}/common/include/common
   ${METADEF_INCLUDE_DIRS}
+)
+
+set(ONNX_PLUGIN_COMMON_INCLUDE
+  ${OPS_NN_DIR}
+  ${OPS_NN_DIR}/common/inc/framework
+  ${OPS_NN_DIR}/common/stub/inc/framework
+  ${OPS_NN_DIR}/common/inc/op_graph
 )
 
 set(AICPU_DEFINITIONS
