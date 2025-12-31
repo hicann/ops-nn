@@ -24,7 +24,99 @@ CANN Simulator是一款面向算子开发场景的SoC级芯片仿真工具，用
 
 ## 环境准备
 
-CANN Simulator集成在CANN toolkit包里，参考[环境部署](../context/quick_install.md)中的软件包安装 -> 安装社区版CANN toolkit包章节
+CANN Simulator集成在CANN toolkit包里，参考[环境部署](../context/quick_install.md)完成软件包的安装
+
+# 快速开始
+
+下面以[add_examples](../../../examples/add_example/)为例，对算子仿真进行详细说明
+
+## 算子编译
+
+* 参考[算子调用](../invocation/quick_op_invocation.md)完成add_example的算子编译和安装
+```
+# 说明：进入项目根目录，执行如下编译命令，命令仅供参考，详细可以查看算子调用的说明。
+bash build.sh --pkg --soc=Ascend950 --vendor_name=custom --ops=add_example
+# 安装自定义算子包
+./build_out/cann-ops-math-${vendor_name}_linux-${arch}.run
+```
+
+* 参考[aclnn调用](../invocation/op_invocation.md#aclnn调用)完成test_aclnn_add_example.cpp的编译，编出可执行文件test_aclnn_add_example
+
+## 执行仿真命令
+
+```
+cannsim record ./test_aclnn_add_example -s Ascend950 --gen-report
+```
+
+仿真工具执行日志文件在examples/add_example/examples/build/bin/cannsim_*目录，执行日志文件为
+
+```
+cannsim.log
+```
+
+从仿真工具日志文件可以看到示例中的打印信息：
+
+```
+add_example result[2011] is: 2.000000
+add_example result[2012] is: 2.000000
+add_example result[2013] is: 2.000000
+add_example result[2014] is: 2.000000
+add_example result[2015] is: 2.000000
+add_example result[2016] is: 2.000000
+add_example result[2017] is: 2.000000
+add_example result[2018] is: 2.000000
+add_example result[2019] is: 2.000000
+add_example result[2020] is: 2.000000
+add_example result[2021] is: 2.000000
+```
+
+## 查看性能流水
+
+仿真性能流水文件在本项目`examples/add_example/examples/build/bin/cannsim_*/report目录，流水相关文件为：
+
+```
+trace_core0.json
+```
+
+在Chrome浏览器中输入“chrome://tracing”地址，并将生成的指令流水图文件（trace_core0.json）拖到空白处打开，具体参数介绍参考“仿真结果解析”章节。
+
+## 执行仿真命令
+
+```
+cannsim record ./ascendc_kernels_bbit -s Ascend950 --gen-report
+```
+
+仿真工具执行日志文件在add_example/build/cannsim_*目录，执行日志文件为
+
+```
+cannsim.log
+```
+
+从仿真工具日志文件可以看到示例中的前10结果打印信息：
+
+```
+First 10 output values:
+z[0] = 0.000000
+z[1] = 3.000000
+z[2] = 6.000000
+z[3] = 9.000000
+z[4] = 12.000000
+z[5] = 15.000000
+z[6] = 18.000000
+z[7] = 21.000000
+z[8] = 24.000000
+z[9] = 27.000000
+```
+
+## 查看性能流水
+
+仿真性能流水文件在本项目`examples/add_example/build/cannsim_*/report目录，流水相关文件为：
+
+```
+trace_core0.json
+```
+
+在Chrome浏览器中输入“chrome://tracing”地址，并将生成的指令流水图文件（trace_core0.json）拖到空白处打开，具体参数介绍参考“仿真结果解析”章节。
 
 # 仿真执行
 
@@ -65,6 +157,7 @@ cannsim record [options] user_app --user_options
 
     ```
     ├─cannsim_{timestamp}_${user_app}
+    ├── cannsim.log
     ├── log
     │   ├── AIC_0_0_0_0_ChiWrap.log0
     │   ├── ccum_0_0_2.txt0
@@ -89,7 +182,7 @@ cannsim record [options] user_app --user_options
     │   └── stars_log0_1.dump
     ```
 
-4. 用户可以获取算子执行结果，并进行精度的对比，结果示例如下
+4. 用户可以获取算子执行结果，并进行精度的对比，结果展示在cannsim.log，示例如下
 
     以下输出仅为AscendC单算子直调精度比较结果举例，因版本不同略有差异，请以实际输出为准。
 

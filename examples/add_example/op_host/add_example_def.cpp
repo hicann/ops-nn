@@ -48,6 +48,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "add_example");    // 这里制定的值会对应到kernel入口文件名.cpp
         this->AICore().AddConfig("ascend910b", aicoreConfig); // 其他的soc版本补充部分配置项
+        this->AICore().AddConfig("ascend910_95", aicoreConfig); // 其他的soc版本补充部分配置项
     }
 };
 OP_ADD(AddExample); // 添加算子信息库
