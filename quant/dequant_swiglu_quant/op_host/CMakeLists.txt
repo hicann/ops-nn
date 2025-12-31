@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 message(STATUS "=== Debug: start ops.quant.dequant_swiglu_quant.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dequant_swiglu_quant ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dequant_swiglu_quant ACLNNTYPE aclnn ACLNN_EXTRA_VERSION v2)
