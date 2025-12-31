@@ -82,11 +82,16 @@ bool LegacyCommonMgr::GetLegacyCommonSoPath(std::string& soPath) const
     return true;
 }
 
+static void* GetThisSoAddress()
+{
+    return reinterpret_cast<void*>(&GetThisSoAddress);
+}
+
 bool LegacyCommonMgr::GetParentPath(std::string& parentPath, std::string& currSoName) const
 {
     Dl_info dlInfo;
-    if (dladdr(reinterpret_cast<void*>(&LegacyCommonMgr::GetParentPath), &dlInfo) == 0 ||
-        dlInfo.dli_fname == nullptr) {
+    void* addr = GetThisSoAddress();
+    if (dladdr(addr, &dlInfo) == 0 || dlInfo.dli_fname == nullptr) {
         OP_LOGW("LegacyCommonMgr", "Fail to get current so path from dladdr.");
         return false;
     } else {

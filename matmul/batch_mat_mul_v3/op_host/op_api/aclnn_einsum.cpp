@@ -101,7 +101,7 @@ aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList *tensors, const aclTensor *
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    for (int64_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
+    for (uint64_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
         if (tensor0Shape.GetDim(i) == DIM_ZERO) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim%ld [0] should not be zero", i);
             return ACLNN_ERR_PARAM_INVALID;

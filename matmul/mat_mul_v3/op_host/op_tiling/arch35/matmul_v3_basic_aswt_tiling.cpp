@@ -135,10 +135,10 @@ void MatMulV3BasicAswtTiling::CalcTailBasicBlockAL1Full()
     }
 }
 
-void MatMulV3BasicAswtTiling::AdjustAL1Tiling91095Basic(uint64_t biasBatchDimAll /* args */) {
+void MatMulV3BasicAswtTiling::AdjustAL1Tiling91095Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */) {
+    //biasBatchDimAll 没有被使用，但是编译器不发出警告
     uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
     // aL1 LoadSize
     uint64_t aL1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
     // bl1 LoadSize
@@ -231,8 +231,9 @@ bool MatMulV3BasicAswtTiling::CheckBL1FullLoad()
     return CheckBL1FullLoad91095(kAlignedValue, nAlignedValue);
 }
 
-void MatMulV3BasicAswtTiling::AdjustBL1Tiling91095Basic(uint64_t biasBatchDimAll /* args */)
+void MatMulV3BasicAswtTiling::AdjustBL1Tiling91095Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */)
 {
+    //biasBatchDimAll 没有被使用，但是编译器不发出警告
     uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
     uint64_t bL1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;

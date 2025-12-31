@@ -20,6 +20,9 @@ set(ONNX_PLUGIN_NAME op_${PKG_NAME}_onnx_plugin)
 set(GRAPH_PLUGIN_NAME graph_plugin_${PKG_NAME})
 set(VENDOR_PACKAGE_NAME ${VENDOR_NAME}_nn)
 
+set(ACLNN_EXTRA_HEADERS "" CACHE STRING "Aclnn Extra Headers" FORCE)
+set(ACLNN_EXTRA_SRCS "" CACHE STRING "Aclnn Extra Sources" FORCE)
+
 if(NOT CANN_3RD_LIB_PATH)
   set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/build/third_party)
 endif()

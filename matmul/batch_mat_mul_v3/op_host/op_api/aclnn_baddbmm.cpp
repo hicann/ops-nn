@@ -72,31 +72,6 @@ static inline bool CheckSocVersionIsSupportBf16(void)
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclTensor* out)
-{
-    bool bf16flag = CheckSocVersionIsSupportBf16();
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    auto dtypeList = bf16flag ? dtypeSupportList : dtypeSupportListWithoutBf16;
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(batch1, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(batch2, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
-    if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || batch1->GetDataType() == op::DataType::DT_BF16 ||
-                      batch2->GetDataType() == op::DataType::DT_BF16 || out->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Bfloat16 is unsupported by the current SOC version [%s], self is %s, mat1 is %s, mat2 is %s, out is %s",
-            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
-            op::ToString(batch1->GetDataType()).GetString(), op::ToString(batch2->GetDataType()).GetString(),
-            op::ToString(out->GetDataType()).GetString());
-        return false;
-    }
-
-    return true;
-}
-
 static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tensor, const aclTensor* batch2Tensor)
 {
     // check bmm shape
@@ -195,32 +170,6 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
-}
-
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, const aclTensor* out, int8_t cubeMathType)
-{
-    // 1. 检查输入参数是否为空指针
-    CHECK_RET(CheckInputNotNull(self, batch1, batch2, beta, alpha), ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(CheckOutputNotNull(out), ACLNN_ERR_PARAM_NULLPTR);
-
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
-
-    // 3. 检查batch1和batch2是否满足条件
-    CHECK_RET(CheckShape(self, batch1, batch2), ACLNN_ERR_PARAM_INVALID);
-
-    // 4. 检查self和batch1@batch2是否能broadcast
-    CHECK_RET(CheckBroadCast(self, batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
-
-    // 5. 检查batch1, batch2和out的format是否一致，self存在与其他输入format不一样的情况
-    CHECK_RET(CheckFormat(batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
-
-    // 6. 检查cubeMathType
-    CHECK_RET(CheckMathType(batch1, batch2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-
-    return ACLNN_SUCCESS;
 }
 
 static aclnnStatus CheckInputParams(

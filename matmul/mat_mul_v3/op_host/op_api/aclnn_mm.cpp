@@ -104,23 +104,6 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static void UpdateCubeMathType(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t& cubeMathType)
-{
-    if (self->GetDataType() == op::DataType::DT_FLOAT16 && out->GetDataType() == op::DataType::DT_FLOAT) {
-        bool ndNdNd =
-            (self->GetStorageFormat() == op::Format::FORMAT_ND && mat2->GetStorageFormat() == op::Format::FORMAT_ND &&
-             out->GetStorageFormat() == op::Format::FORMAT_ND);
-        bool nzNzNz =
-            (self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ &&
-             mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ &&
-             out->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ);
-        if (ndNdNd || nzNzNz) {
-            OP_LOGI("Set cubeMathType for fp16 in fp32 out: %d, ori: %d", FP16FP32_KEEP_DTYPE, cubeMathType);
-            cubeMathType = FP16FP32_KEEP_DTYPE;
-        }
-    }
-}
-
 inline static bool CheckOutputDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     if (self->GetDataType() == op::DataType::DT_FLOAT16 && out->GetDataType() == op::DataType::DT_FLOAT) {

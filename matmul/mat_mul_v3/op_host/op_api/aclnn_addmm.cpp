@@ -151,31 +151,6 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-static aclnnStatus CheckParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType)
-{
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
-
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(
-        CheckDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out),
-        ACLNN_ERR_PARAM_INVALID);
-
-    // 3. 检查mat1和mat2是否满足matmul条件
-    CHECK_RET(CheckMatmul(addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
-
-    // 4. 检查self和mat1@mat2是否能broadcast
-    CHECK_RET(CheckBroadcast(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
-
-    // 5. 检查out必须和mat1@mat2的shape一致
-    CHECK_RET(CheckOutShape(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
-
-    // 6. 检查cubeMathType
-    CHECK_RET(CheckMathType(addmmTensor.mat1, addmmTensor.mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-
-    return ACLNN_SUCCESS;
-}
-
 static aclnnStatus CheckInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType)
 {
     // 1. 检查参数是否为空指针
@@ -277,11 +252,6 @@ static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* ma
 static const aclTensor* MatmulWithBiasProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
     return MatmulCommonProcess (mat1, mat2, self, out, cubeMathType, mmOpInfo, executor, false);
-}
-
-static const aclTensor* GemmV3Process(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
-{
-    return ExecGemmV3Op(mat1, mat2, self, mmOpInfo, executor);
 }
 
 // ============================================================================
@@ -453,50 +423,6 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
 
     // 6. 检查cubeMathType
     CHECK_RET(CheckMathType(addmmTensor.mat1, addmmTensor.mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-
-    return ACL_SUCCESS;
-}
-
-static aclnnStatus CheckWeightNzInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType)
-{
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
-            op::ToString(socVersion).GetString());
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
-
-    // 2. 仅支持 self ND， mat1 Nd，mat2 Nz排布
-    if (addmmTensor.mat2->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ ||
-        addmmTensor.self->GetStorageFormat() != Format::FORMAT_ND ||
-        addmmTensor.mat1->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Invalid format, Format of self is [%s], mat1 is [%s], mat2 is [%s].",
-            op::ToString(addmmTensor.self->GetStorageFormat()).GetString(),
-            op::ToString(addmmTensor.mat1->GetStorageFormat()).GetString(),
-            op::ToString(addmmTensor.mat2->GetStorageFormat()).GetString());
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto socRule = SocMatMulRule::getInstance();
-    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        socRule -> CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
-
-    // 4. 检查mat1和mat2是否满足matmulweightNz条件
-    CHECK_RET(CheckMatmulWeightNz(addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
-
-    // 5. 检查self和mat1@mat2是否能broadcast
-    CHECK_RET(CheckBroadcast(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
-
-    // 6. 检查out必须和mat1@mat2的shape一致
-    CHECK_RET(CheckOutShape(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
 
     return ACL_SUCCESS;
 }

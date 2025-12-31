@@ -2189,19 +2189,19 @@ std::initializer_list<op::DataType> Ascend910BMatMulRule::GetSupportedDTypes(){
 }
 
 SocMatMulRuleBase::PromoteResult Ascend910BMatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType) {
-        static constexpr char* WARN0 = "The cubeMathType USE_HF32 will be ignored when the input dtype is FP16 or BF16.";
+        static constexpr const char* WARN0 = "The cubeMathType USE_HF32 will be ignored when the input dtype is FP16 or BF16.";
 
-        static constexpr char*  WARN1 = "The cubeMathType KEEP_DTYPE will be ignored when the inputs dtype are BF16 and FP16.";
+        static constexpr const char*  WARN1 = "The cubeMathType KEEP_DTYPE will be ignored when the inputs dtype are BF16 and FP16.";
 
-        static constexpr char*  WARN2 = "The cubeMathType USE_FP16 will be ignored when all inputs dtype are BF16.";
+        static constexpr const char*  WARN2 = "The cubeMathType USE_FP16 will be ignored when all inputs dtype are BF16.";
 
-        static constexpr char*  WARN3 = "The inputs are BF16 and FP16 with cubeMathType USE_FP16.";
+        static constexpr const char*  WARN3 = "The inputs are BF16 and FP16 with cubeMathType USE_FP16.";
 
-        static constexpr char*  WARN4 = "The inputs are BF16 and FP16 with cubeMathType USE_HF32.";
+        static constexpr const char*  WARN4 = "The inputs are BF16 and FP16 with cubeMathType USE_HF32.";
 
-        static constexpr char*  WARN5 = "The inputs are BF16 and FP16 with cubeMathType ALLOW_FP32_DOWN_PRECISION.";
+        static constexpr const char*  WARN5 = "The inputs are BF16 and FP16 with cubeMathType ALLOW_FP32_DOWN_PRECISION.";
 
-        static constexpr char*  WARN6 = "The inputs are BF16 and FP32 with cubeMathType USE_FP16, BF16 will be cast to FP16 for computation.";
+        static constexpr const char*  WARN6 = "The inputs are BF16 and FP32 with cubeMathType USE_FP16, BF16 will be cast to FP16 for computation.";
 
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
             if (socVersion != op::SocVersion::ASCEND910B || socVersion != op::SocVersion::ASCEND910_93) {
@@ -2319,9 +2319,9 @@ std::initializer_list<op::DataType> Ascend310AMatMulRule::GetSupportedDTypes(){
     }
 
 SocMatMulRuleBase::PromoteResult Ascend310AMatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType){
-        static constexpr char*  WARN0 = "The cubeMathType is USE_HF32. For input FP16, it will not be enabled.";
+        static constexpr const char*  WARN0 = "The cubeMathType is USE_HF32. For input FP16, it will not be enabled.";
 
-        static constexpr char*  Err0 = "The soc version does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
+        static constexpr const char*  Err0 = "The soc version does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
                                         "please change the setting of cubeMathType or the Dtype of input tensor.";
         if (FP16FP32_KEEP_DTYPE == cubeMathType) {
             // 和cubeMathType为KEEP_DTYPE时保持一致
