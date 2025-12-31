@@ -199,10 +199,10 @@ static ge::graphStatus TilingPrepare4EmbeddingHashTableImport(gert::TilingParseC
 {
     OP_LOGD(context->GetNodeName(), "op [EmbeddingHashTableImport] tiling start.");
     fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"), ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<EmbeddingHashTableImportCompileInfo>();
-    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"), ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->aivNum = ascendcPlatform.GetCoreNumAiv();

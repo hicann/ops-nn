@@ -21,6 +21,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "aclnn_kernels/common/op_error_check.h"
 using namespace op;
 
 namespace l0op {
@@ -36,6 +37,8 @@ const aclTensor *IndexPutWithSortV2(const aclTensor *self, const aclTensor *line
                                          OP_INPUT(self, linearIndex, posIdx, values),
                                          OP_OUTPUT(out),
                                          OP_ATTR(indexed_sizes, accumulate));
+  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                       "IndexPutWithSortV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
   return out;
 }
 }  // namespace l0op
