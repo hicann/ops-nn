@@ -219,6 +219,7 @@
 | [aclnnIndexSelect](../../index/gather_v2/docs/aclnnIndexSelect.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 |
 | [aclnnInplaceAddRmsNorm](../../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md)|RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。|
 | [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) |根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。|默认确定性实现||
+| [aclnnInplaceUpdateScatter](../../index/quant_update_scatter/docs/aclnnInplaceQuantScatter.md) |先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。|默认确定性实现||
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md)|用于执行Instance Normalization（实例归一化）操作。|
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。 |
 | [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。 |
@@ -286,6 +287,7 @@
 | [aclnnRmsNormQuant]()|aclnnRmsNormQuant算子将aclnnRmsNorm前的Add算子以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。|
 | [aclnnRReluWithNoise&aclnnInplaceRReluWithNoise](../../activation/leaky_relu/docs/aclnnRReluWithNoise&aclnnInplaceRReluWithNoise.md) |实现了带噪声的随机修正线性单元激活函数，它在输入小于等于0时，斜率为a；输入大于0时斜率为1。|
 | [aclnnScatter&aclnnInplaceScatter](../../index/scatter_elements_v2/docs/aclnnScatter&aclnnInplaceScatter.md) |将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。 |
+| [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) |将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 |默认确定性实现|
 | [aclnnScatterNd](../../index/scatter_nd_update/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md)|将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。|

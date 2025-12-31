@@ -1476,6 +1476,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/quant_update_scatter/README.md">quant_update_scatter</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/repeat_interleave/README.md">repeat_interleave</a></td>
     <td>✗</td>
     <td>✓</td>
@@ -1503,6 +1513,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_add/README.md">scatter_add</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>将tensor src中的值按指定的轴和方向以及对应的位置关系逐个替换/累加/累乘至tensor self中。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1543,6 +1563,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>将稀疏矩阵更新应用到变量引用中。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_nd/README.md">scatter_nd</a></td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>算子功能：拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。</td>
   </tr>
   <tr>
     <td>index</td>
