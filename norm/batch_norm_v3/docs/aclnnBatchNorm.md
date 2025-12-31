@@ -1,18 +1,12 @@
 # aclnnBatchNorm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/batch_norm_v3)
-
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品 </term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -214,14 +208,10 @@ aclnnStatus aclnnBatchNorm(
   </tbody>
   </table>
 
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
-    - 参数`input`、`weight`、`bias`、`runningMean`、`runningVar`、`output`、`saveMean`、`saveInvstd`的数据类型不支持BFLOAT16。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
     - 参数`saveInvstd`表示input的方差。
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
-    - 参数`saveInvstd`表示input的方差。
-  - <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：参数`saveInvstd`表示input标准差的倒数。
+  - <term>Ascend 950PR/Ascend 950DT</term>：参数`saveInvstd`表示input标准差的倒数。
   
 - **返回值：**
 

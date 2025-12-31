@@ -1,18 +1,12 @@
 # aclnnAscendQuantV3
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/ascend_quant_v2)
-
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>   |     √    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品 </term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -186,7 +180,7 @@ aclnnStatus aclnnAscendQuantV3(
   </tbody>
   </table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
     - 出参`y`的数据类型仅支持INT8，INT32，INT4。当数据格式为NZ时，数据类型支持INT32。
@@ -195,19 +189,10 @@ aclnnStatus aclnnAscendQuantV3(
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 
 
-  - <term>昇腾Ascend 950PR/Ascend 950DT AI处理器</term>：
+  - <term>Ascend 950PR/Ascend 950DT</term>：
     - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
     - 入参`roundMode`：`dstType`表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。`dstType`表示HIFLOAT8时，支持round和hybrid。`dstType`表示其他类型时，支持round，ceil，trunc和floor。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
-
-
-  - <term>Atlas 推理系列产品</term>：
-    - 入参`x`、`scale`、`offset`的数据类型不支持BFLOAT16，数据格式不支持NZ。
-    - 出参`y`数据类型仅支持INT8，数据格式不支持NZ。
-    - 入参`roundMode`：支持取值round，ceil，trunc，floor。
-    - 入参`dstType`仅支持取值2，表示INT8。
-    - 入参`axis`只支持指定x的最后一个维度（假设输入x维度是xDimNum，axis取值是-1或xDimNum-1）。
-
 
 - **返回值：**
 
