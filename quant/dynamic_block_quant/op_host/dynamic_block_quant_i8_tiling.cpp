@@ -47,11 +47,11 @@ public:
     int64_t perCoreBlock = 0;
     int64_t tailBlock = 0;
     int64_t extraCoreBlock = 0;
-    RowTilingData(int64_t coreNum, int64_t totalBlock)
+    RowTilingData(int64_t inputCoreNum, int64_t totalBlock)
     {
-        this->coreNum = coreNum;
-        this->perCoreBlock = coreNum != 0 ? (totalBlock / coreNum) : totalBlock;
-        this->tailBlock = totalBlock - coreNum * this->perCoreBlock;
+        this->coreNum = inputCoreNum;
+        this->perCoreBlock = inputCoreNum != 0 ? (totalBlock / inputCoreNum) : totalBlock;
+        this->tailBlock = inputCoreNum != 0 ? (totalBlock - inputCoreNum * this->perCoreBlock) : totalBlock;
         this->extraCoreBlock = this->perCoreBlock + 1;
     }
     int64_t GetCurCoreBlockNum(int64_t coreIdx)
@@ -235,9 +235,6 @@ ge::graphStatus DynamicBlockQuantI8::DoTiling(DynamicBlockQuantTilingParam& tili
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto inDtype = inputXPtr->GetDataType();
-    auto outputYPtr = context->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
-    auto outDtype = outputYPtr->GetDataType();
     CalcTilingKey(inDtype, tilingParam);
     return ge::GRAPH_SUCCESS;
 }

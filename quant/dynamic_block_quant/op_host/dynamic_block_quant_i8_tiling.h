@@ -24,7 +24,7 @@ namespace dynamic_block_quant_i8 {
 
 class DynamicBlockQuantI8 {
 public:
-    explicit DynamicBlockQuantI8(gert::TilingContext* context) : context(context){};
+    explicit DynamicBlockQuantI8(gert::TilingContext* ctx) : context(ctx){};
     ge::graphStatus DoTiling(DynamicBlockQuantTilingParam& tilingParam);
     ge::graphStatus CheckParams(DynamicBlockQuantTilingParam& tilingParam);
     void SetTilingData(DynamicBlockQuantTilingData& tilingData, const DynamicBlockQuantTilingParam& tilingParam);
