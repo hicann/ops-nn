@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term> Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
@@ -131,7 +131,7 @@ aclnnStatus aclnnForeachAddScalarV2(
    - 当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
    - 当`x`的数据类型为INT32时，数据类型支持INT32、INT64。
 
-- <term> Ascend 950PR/Ascend 950DT</term>：
+- <term>Ascend 950PR/Ascend 950DT</term>：
     
   入参`scalar`与入参`x`的数据类型具有一定对应关系：
 
