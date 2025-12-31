@@ -13,25 +13,9 @@
  * \brief
  */
 #include "infershape_broadcast_util.h"
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;
-using namespace Ops::Base;
 namespace ops {
-static ge::graphStatus InferShape4Broadcast(gert::InferShapeContext* context) {
-  auto in_shape1 = context->GetInputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, in_shape1);
-  auto in_shape2 = context->GetInputShape(1);
-  OP_CHECK_NULL_WITH_CONTEXT(context, in_shape2);
-  auto out_shape = context->GetOutputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-
-  OP_CHECK_IF(!BroadcastShape(in_shape1, in_shape2, out_shape),
-           OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*in_shape2).c_str(), ToString(*in_shape1).c_str()),
-           return ge::GRAPH_FAILED);
-
-  return ge::GRAPH_SUCCESS;
-}
-IMPL_OP_INFERSHAPE(ReluGrad).InferShape(InferShape4Broadcast);
+IMPL_OP_INFERSHAPE(ReluGrad).InferShape(Ops::Base::InferShape4Broadcast);
 }  // namespace ops
