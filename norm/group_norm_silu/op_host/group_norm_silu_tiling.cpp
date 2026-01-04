@@ -24,6 +24,7 @@ static const uint64_t INDEX_ACTIVATE_SILU = 2;
 static const uint64_t DIM_0 = 0;
 static const uint64_t DIM_1 = 1;
 static const uint64_t DEFAULT_PROCESSSIZE = 8192;
+static const uint64_t DEFAULT_PROCESSSIZE_KIRINX90 = 5120;
 static const uint64_t DEFAULT_NUMGROUPS = 32;
 static const uint64_t RESERVED_WORKSPACE_SIZE_910B = static_cast<uint64_t>(16 * 1024 * 1024);
 static const uint64_t RESERVED_WORKSPACE_SIZE_310P = static_cast<uint64_t>(2 * 1024 * 1024);
@@ -230,7 +231,13 @@ static void SetTilingParams(const gert::TilingContext* context, GroupNormSiluTil
     tilingData.set_shapeD(tilingData.get_shapeC() / tilingData.get_numGroups());
     tilingData.set_hwNum(hwNum);
     tilingData.set_elemNum(tilingData.get_shapeD() * hwNum);
-    tilingData.set_processSize(DEFAULT_PROCESSSIZE);
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRINX90) {
+        tilingData.set_processSize(DEFAULT_PROCESSSIZE_KIRINX90);
+    } else {
+        tilingData.set_processSize(DEFAULT_PROCESSSIZE);
+    }
 }
 
 static void SetBlockTiling(const gert::TilingContext* context, GroupNormSiluTilingData& tilingData)

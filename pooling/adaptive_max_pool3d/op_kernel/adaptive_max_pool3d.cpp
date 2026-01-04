@@ -40,12 +40,14 @@ extern "C" __global__ __aicore__ void adaptive_max_pool3d(
         op.Process();
         return;
     } else if (TILING_KEY_IS(322000UL)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GET_TILING_DATA_WITH_STRUCT(AdaptiveMaxPool3dSmallPoolTilingData, tilingDataIn, tiling);
         const AdaptiveMaxPool3dSmallPoolTilingData* __restrict__ tilingData = &tilingDataIn;
         AdaptiveMaxPool3dSmallPool<bfloat16_t> op;
         op.Init(x, y, indices, user, &pipeBase, tilingData);
         op.Process();
         return;
+#endif
     } else if (TILING_KEY_IS(310000UL)) {
         GET_TILING_DATA_WITH_STRUCT(AdaptiveMaxPool3dBigPoolTilingData, tilingDataIn, tiling);
         const AdaptiveMaxPool3dBigPoolTilingData* __restrict tilingData = &tilingDataIn;
@@ -59,11 +61,13 @@ extern "C" __global__ __aicore__ void adaptive_max_pool3d(
         op.Init(x, y, indices, GetUserWorkspace(workspace), &pipeBase, tilingData, 1);
         op.Process();
     } else if (TILING_KEY_IS(312000UL)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GET_TILING_DATA_WITH_STRUCT(AdaptiveMaxPool3dBigPoolTilingData, tilingDataIn, tiling);
         const AdaptiveMaxPool3dBigPoolTilingData* __restrict tilingData = &tilingDataIn;
         AdaptiveMaxPool3dBigPool<bfloat16_t, float> op;
         op.Init(x, y, indices, GetUserWorkspace(workspace), &pipeBase, tilingData, 2);
         op.Process();
+#endif
     }
 
     return;

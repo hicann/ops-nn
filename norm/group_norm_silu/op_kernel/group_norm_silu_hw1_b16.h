@@ -615,7 +615,7 @@ __aicore__ inline void GroupNormSiluHW1B16<T1, T2>::CopyOutYWithPad(
 {
     LocalTensor<T1> outY = outQueueY.DeQue<T1>();
     LocalTensor<T1> tmpOut = tmpTensor.Get<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
     uint16_t blockCount = 1;
     uint16_t blockLen = dataCount * sizeof(T1);
@@ -661,7 +661,7 @@ __aicore__ inline void GroupNormSiluHW1B16<T1, T2>::CopyOutMeanAndRstd(const int
 {
     LocalTensor<T1> meanOut = outQueueMean.DeQue<T1>();
     LocalTensor<T1> rstdOut = outQueueRstd.DeQue<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     // when support DataCopyPad, use DataCopyPad
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
     uint16_t blockCount = 1;

@@ -19,7 +19,7 @@
 namespace DynamicQuantNDOpt {
 using namespace AscendC;
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 template <typename T1, typename T2, typename T3, typename yDtype>
 class DynamicQuantMoeLargeShape : public DynamicQuantBase
 {

@@ -17,7 +17,7 @@
 #define ADD_LAYER_NORM_BASE_H_
 
 #include "kernel_operator.h"
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #include "impl/dav_c220/kernel_operator_reg_others_impl.h"
 #endif
 
@@ -31,7 +31,7 @@ constexpr uint32_t BROADCAST_ND_DIM_NUM = 2;    // only support 1 or 2
 constexpr uint32_t BROADCAST_ND_LAST_INDEX = 1; // only support 0 or 1
 constexpr uint32_t LAYER_NUM_TWO = 2;
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #define OUTPUT_MEAN_RSTD 1
 #define SUPPORT_BF16 1
 #else
@@ -57,7 +57,7 @@ __aicore__ inline void DataCopyEx(
     const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
     const DataCopyPadParams& padParams = {})
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyParams copyParams;
     copyParams.blockLen = len * sizeof(T);
     copyParams.blockCount = count;

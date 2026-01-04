@@ -54,7 +54,8 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext *context)
         supportMmadS8S4 = compileInfoPtr->supportMmadS8S4;
     }
     if (socVersion == platform_ascendc::SocVersion::ASCEND910B ||
-            socVersion == platform_ascendc::SocVersion::ASCEND910_93) {
+            socVersion == platform_ascendc::SocVersion::ASCEND910_93 ||
+            socVersion == platform_ascendc::SocVersion::KIRINX90) {
         std::vector<int32_t> regitserList = {MSD_PRIORITY, PERBLOCK_PRIORITY, PERGROUP_PRIORITY};
         return TilingRegistry::GetInstance().DoTilingImpl(context, regitserList);
     } else if (supportMmadS8S4) {

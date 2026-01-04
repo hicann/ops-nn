@@ -17,7 +17,7 @@
 #define ADD_LAYER_NORM_QUANT_HELPER_H_
 
 #include "kernel_operator.h"
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #include "impl/dav_c220/kernel_operator_reg_others_impl.h"
 #endif
 
@@ -71,7 +71,7 @@ __aicore__ inline void DataCopyEx(
     const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
     const DataCopyPadParams& padParams = {})
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyParams copyParams;
     copyParams.blockLen = len * sizeof(T);
     copyParams.blockCount = count;

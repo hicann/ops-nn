@@ -412,7 +412,7 @@ private:
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -442,7 +442,7 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -888,7 +888,7 @@ private:
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         uint32_t offset2 = proc_id * row_step;
 
         DataCopyParams copyOutput;
@@ -938,7 +938,7 @@ private:
     {
         LocalTensor<T> x_local = x_que.AllocTensor<T>();
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
 
@@ -959,7 +959,7 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyParams;
 
@@ -1596,7 +1596,7 @@ private:
     __aicore__ inline void CommonCopyOutRes(int32_t offset, int32_t length)
     {
         LocalTensor<T> result = z_que.DeQue<T>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyParams copyParams;
         copyParams.blockLen = length * sizeof(T);
         copyParams.blockCount = 1;
@@ -1628,7 +1628,7 @@ private:
         LocalTensor<float> mean = mean_que_fp32.DeQue<float>();
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyParams copyParams;
 
         copyParams.blockLen = sizeof(float);
@@ -1702,6 +1702,7 @@ extern "C" __global__ __aicore__ void deep_norm(
     GET_TILING_DATA(tiling_data, tiling);
 
     if (TILING_KEY_IS(0)) { // bf16 && D <= 4096
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         KernelDeepNorm<bfloat16_t> op;
         op.Init(
             x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
@@ -1709,6 +1710,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBF16LELimit();
+#endif
     } else if (TILING_KEY_IS(1)) { // fp16 && D <= 4096
         KernelDeepNorm<half> op;
         op.Init(
@@ -1726,6 +1728,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32LELimit();
     } else if (TILING_KEY_IS(4)) { // bf16 && D > 4096
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         KernelDeepNorm<bfloat16_t> op;
         op.InitExtra(
             x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
@@ -1733,6 +1736,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16GTLimit();
+#endif
     } else if (TILING_KEY_IS(5)) { // fp16 && D > 4096
         KernelDeepNorm<half> op;
         op.InitExtra(
@@ -1750,6 +1754,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32GTLimit();
     } else if (TILING_KEY_IS(12)) { // bf16 && D in common (>15360)
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         KernelDeepNorm<bfloat16_t> op;
         op.InitCommon(
             x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
@@ -1757,6 +1762,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16Common();
+#endif
     } else if (TILING_KEY_IS(13)) { // fp16 && D in common (>15360)
         KernelDeepNorm<half> op;
         op.InitCommon(
@@ -1774,6 +1780,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32Common();
     } else if (TILING_KEY_IS(16)) { // bf16 && D <= 500
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         KernelDeepNorm<bfloat16_t> op;
         op.InitShort(
             x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
@@ -1781,6 +1788,7 @@ extern "C" __global__ __aicore__ void deep_norm(
             tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
             tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16Short();
+#endif
     } else if (TILING_KEY_IS(17)) { // fp16 && D <= 500
         KernelDeepNorm<half> op;
         op.InitShort(

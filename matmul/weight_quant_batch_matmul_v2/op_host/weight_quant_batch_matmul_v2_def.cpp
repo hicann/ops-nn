@@ -252,6 +252,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
         this->AICore().AddConfig("ascend310p", aicore_config);
+        this->AICore().AddConfig("kirinx90", aicore_config);
 
         OpAICoreConfig aicore_config_910_95;
         aicore_config_910_95.Input("x")

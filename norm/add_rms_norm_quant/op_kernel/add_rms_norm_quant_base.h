@@ -184,7 +184,7 @@ __aicore__ inline void doZeroPoints(
 template <typename T, typename U, typename R>
 __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, const uint32_t count)
 {
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyParams copyParams;
     copyParams.blockLen = count * sizeof(T);
     copyParams.blockCount = 1;

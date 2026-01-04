@@ -57,7 +57,7 @@ public:
         Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
         Ppipe->InitBuffer(inQueueGamma, BUFFER_NUM, ubFactor * sizeof(T));
         Ppipe->InitBuffer(outQueueY, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         Ppipe->InitBuffer(outQueueRstd, BUFFER_NUM, rowFactor * sizeof(float));
 #else
         Ppipe->InitBuffer(rstdBuf, rowFactor * sizeof(float));
@@ -91,7 +91,7 @@ public:
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(elementNum);
         CopyOutX(gm_bias, calc_row_num);
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num);
         outQueueRstd.EnQue<float>(rstdLocal);
@@ -262,7 +262,7 @@ private:
         outQueueY.FreeTensor(yLocal);
     }
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
@@ -277,7 +277,7 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueGamma;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER_NUM> inQueueX;
     // create queues for output, in this case depth is equal to buffer num
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueRstd;
 #else
     TBuf<TPosition::VECCALC> rstdBuf;

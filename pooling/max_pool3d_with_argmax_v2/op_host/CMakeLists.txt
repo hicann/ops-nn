@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 message(STATUS "=== Debug: start ops.pooling.max_pool3d_with_argmax_v2.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE max_pool3d_with_argmax_v2 ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE max_pool3d_with_argmax_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES max_pool_with_argmax_v3)

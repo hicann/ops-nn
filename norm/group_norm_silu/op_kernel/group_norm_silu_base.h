@@ -21,7 +21,7 @@
 namespace platform {
 __aicore__ inline constexpr bool IsDataCopyPadSupport()
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     return true;
 #else
     return false;
@@ -52,7 +52,7 @@ protected:
 
     __aicore__ inline RoundMode GetRoundMode()
     {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         return RoundMode::CAST_ROUND;
 #else
         return RoundMode::CAST_NONE;

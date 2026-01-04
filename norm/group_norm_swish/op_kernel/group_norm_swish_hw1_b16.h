@@ -382,7 +382,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualMeanSameType()
         xOffset += loopENum;
     }
     LocalTensor<T1> xUb = this->inQueueX.template AllocTensor<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(xUb, this->xGm[xOffset], {1, static_cast<uint16_t>(loopETail * sizeof(T1)), 0, 0}, {false, 0, 0, 0});
 #else
     int64_t copyNumAlign = this->CeilDiv(loopETail, this->elementsPerBlockT1) * this->elementsPerBlockT1;
@@ -391,7 +391,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualMeanSameType()
     PipeBarrier<PIPE_ALL>();
     this->inQueueX.template EnQue(xUb);
     LocalTensor<T2> meanUb = this->inQueueX.template DeQue<T2>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(this->meanGm[xOffset], meanUb, {1, static_cast<uint16_t>(loopETail * sizeof(T1)), 0, 0});
 #else
     this->CopyOutWithOutPadT1(this->meanGm[xOffset], meanUb, loopETail);
@@ -419,7 +419,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualMeanDiffType()
         xOffset += loopENum;
     }
     LocalTensor<T1> xUb = this->inQueueX.template AllocTensor<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(
         xUb[loopENum], this->xGm[xOffset], {1, static_cast<uint16_t>(loopETail * sizeof(T1)), 0, 0}, {false, 0, 0, 0});
 #else
@@ -432,7 +432,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualMeanDiffType()
     LocalTensor<T1> meanUbFp16 = meanUb.template ReinterpretCast<T1>();
     Cast(meanUb, meanUbFp16[loopENum], RoundMode::CAST_NONE, loopETail);
     PipeBarrier<PIPE_ALL>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(this->meanGm[xOffset], meanUb, {1, static_cast<uint16_t>(loopETail * sizeof(T2)), 0, 0});
 #else
     this->CopyOutWithOutPadT2(this->meanGm[xOffset], meanUb, loopETail);
@@ -453,7 +453,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualRstdSameType()
     for (int64_t i = 0; i < loopETimes - 1; i++) {
         DataCopy(this->rstdGm[i * loopENum], rstdUbFp16, loopENum);
     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(
         this->rstdGm[(loopETimes - 1) * loopENum], rstdUbFp16,
         {1, static_cast<uint16_t>(loopETail * sizeof(T2)), 0, 0});
@@ -475,7 +475,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualRstdDiffType()
     for (int64_t i = 0; i < loopETimes - 1; i++) {
         DataCopy(this->rstdGm[i * loopENum], rstdUb, loopENum);
     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(
         this->rstdGm[(loopETimes - 1) * loopENum], rstdUb, {1, static_cast<uint16_t>(loopETail * sizeof(T2)), 0, 0});
 #else
@@ -494,7 +494,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualYSameType(const
     int64_t movedNum = 0;
     while (movedNum < groupNum) {
         LocalTensor<T2> xUb = this->inQueueX.template AllocTensor<T2>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPad(
             xUb, this->betaGm[groupIdGlobal], {1, static_cast<uint16_t>(movingNum * sizeof(T2)), 0, 0},
             {false, 0, 0, 0});
@@ -518,7 +518,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualYSameType(const
             PipeBarrier<PIPE_ALL>();
         }
         LocalTensor<T1> xUbFp16 = xUb.template ReinterpretCast<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPad(this->yGm[movedNum], xUbFp16, {1, static_cast<uint16_t>(movingNum * sizeof(T2)), 0, 0});
 #else
         this->CopyOutWithOutPadT2(this->yGm[movedNum], xUbFp16, movingNum);
@@ -539,7 +539,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualYDiffType(const
     int64_t movedNum = 0;
     while (movedNum < groupNum) {
         LocalTensor<T2> xUb = this->inQueueX.template AllocTensor<T2>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPad(
             xUb, this->betaGm[groupIdGlobal], {1, static_cast<uint16_t>(movingNum * sizeof(T2)), 0, 0},
             {false, 0, 0, 0});
@@ -561,7 +561,7 @@ __aicore__ inline void GroupNormSwishHW1B16<T1, T2>::ComputeEqualYDiffType(const
         LocalTensor<T1> xUbFp16 = xUb.template ReinterpretCast<T1>();
         Cast(xUbFp16, xUb, this->GetRoundMode(), movingNum);
         PipeBarrier<PIPE_ALL>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPad(this->yGm[movedNum], xUbFp16, {1, static_cast<uint16_t>(movingNum * sizeof(T1)), 0, 0});
 #else
         this->CopyOutWithOutPadT1(this->yGm[movedNum], xUbFp16, movingNum);

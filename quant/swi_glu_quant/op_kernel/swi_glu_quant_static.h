@@ -55,7 +55,9 @@ private:
         // gm数据
         xGm.SetGlobalBuffer((__gm__ inType *)input_gm, SPLIT_NUM * tilingData_.rowLen * tilingData_.colLen);
         yGm.SetGlobalBuffer((__gm__ int8_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         yGmInt4.SetGlobalBuffer((__gm__ int4b_t *)y_gm, tilingData_.rowLen * tilingData_.colLen);
+#endif
         group_index_Gm.SetGlobalBuffer((__gm__ int32_t *)group_index, tilingData_.groupLen);
         if constexpr (quantType == QuantType::STATIC_PER_TENSOR) {
             smooth_scales_Gm.SetGlobalBuffer((__gm__ float *)smooth_scales, tilingData_.groupLen * tilingData_.colLen);

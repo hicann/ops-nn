@@ -732,8 +732,12 @@ bool QuantBatchMatmulV3TilingBase::SetPlatformInfoForTiling()
         compileInfo_ = *mmCompileInfo;
     }
     OP_LOGE_IF(compileInfo_.aicNum <= 0, false, inputParams_.opName, "coreNum <= 0");
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     aicoreParams_.aicNum = compileInfo_.aicNum;
-    OP_LOGE_IF(compileInfo_.l2Size <= 0, false, inputParams_.opName, "l2Size <= 0");
+    if (ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::KIRINX90) {
+        OP_LOGE_IF(compileInfo_.l2Size <= 0, false, inputParams_.opName, "l2Size <= 0");
+    }
     // 纠正L2实际物理大小
     compileInfo_.l2Size =
         compileInfo_.l2Size == L2_FAKE_SIZE * MB_SIZE ? L2_REAL_SIZE * MB_SIZE : compileInfo_.l2Size;

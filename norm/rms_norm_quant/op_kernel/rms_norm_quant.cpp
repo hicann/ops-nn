@@ -185,7 +185,11 @@ private:
         AscendC::PipeBarrier<PIPE_V>();
         Muls(sqx, sqx, avg_factor_, num_col_);
         AscendC::PipeBarrier<PIPE_V>();
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+        ReduceSum(sum, sqx, work, num_col_);
+#else
         ReduceSumCustom(sum, sqx, work, num_col_);
+#endif
         AscendC::PipeBarrier<PIPE_V>();
         Adds(sum, sum, epsilon_, 1);
         AscendC::PipeBarrier<PIPE_V>();
@@ -363,7 +367,7 @@ extern "C" __global__ __aicore__ void rms_norm_quant(
         RmsNormQuant<half, DTYPE_Y, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
-#if defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220)
+#if (defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (TILING_KEY_IS(283)) { // bf16, beta, gamma, beta, no slice  0b0_1_0_0_011011
         RmsNormQuant<bfloat16_t, DTYPE_Y, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();

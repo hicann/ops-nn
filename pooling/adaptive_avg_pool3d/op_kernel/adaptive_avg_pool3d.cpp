@@ -34,13 +34,13 @@ extern "C" __global__ __aicore__ void adaptive_avg_pool3d(GM_ADDR x, GM_ADDR y, 
     GET_TILING_DATA(tilingData, tiling);
     if (TILING_KEY_IS(11)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitC, half, 1);
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(10)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitC, bfloat16_t, 1);
 #endif
     } else if (TILING_KEY_IS(12)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitC, float, 1);
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(20)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitW, bfloat16_t, 1);
 #endif
@@ -48,7 +48,7 @@ extern "C" __global__ __aicore__ void adaptive_avg_pool3d(GM_ADDR x, GM_ADDR y, 
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitW, half, 1);
     } else if (TILING_KEY_IS(22)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dSplitW, float, 1);
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(30)) {
         DISPATCH_OP_IMPL(KernelAdaptiveAvgPool3dMultiW, bfloat16_t, 1);
 #endif

@@ -18,7 +18,7 @@
 namespace ops {
 
 class DequantBias : public OpDef {
- public:
+public:
   explicit DequantBias(const char* name) : OpDef(name) {
     this->Input("x")
         .ParamType(REQUIRED)
@@ -48,6 +48,47 @@ class DequantBias : public OpDef {
     this->Attr("output_dtype").AttrType(REQUIRED).Int();//输出类型，传入
     this->AICore().AddConfig("ascend910b");
     this->AICore().AddConfig("ascend910_93");
+
+    OpAICoreConfig config_kirin = GetKirinCoreConfig();
+    this->AICore().AddConfig("kirinx90", config_kirin);
+  }
+
+private:
+  OpAICoreConfig GetKirinCoreConfig() const
+  {
+    OpAICoreConfig config_kirin;
+    config_kirin.DynamicCompileStaticFlag(true)
+        .DynamicFormatFlag(true)
+        .DynamicRankSupportFlag(true)
+        .DynamicShapeSupportFlag(true)
+        .NeedCheckSupportFlag(false)
+        .PrecisionReduceFlag(true);
+    config_kirin.Input("x")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+    config_kirin.Input("weight_scale")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+    config_kirin.Input("activate_scale")
+        .ParamType(OPTIONAL)
+        .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+    config_kirin.Input("bias")
+        .ParamType(OPTIONAL)
+        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+    config_kirin.Output("y")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+    return config_kirin;
   }
 };
 

@@ -129,6 +129,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND});
         config310P.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config310P);
+        this->AICore().AddConfig("kirinx90", config310P);
 
         OpAICoreConfig config910_95;
         config910_95.Input("x")

@@ -55,6 +55,7 @@ public:
             .NeedCheckSupportFlag(false);
 
         this->AICore().AddConfig("ascend310p", ascend310p_config);
+        this->AICore().AddConfig("kirinx90", ascend310p_config);
     }
 };
 

@@ -38,9 +38,11 @@ extern "C" __global__ __aicore__ void ada_layer_norm(
             AdaLayerNormND<half, half, BASE_OP_CODE> op;
             INIT_AND_PROCESS;
         }
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if constexpr (std::is_same_v<DTYPE_X, bfloat16_t>) {
             AdaLayerNormND<bfloat16_t, bfloat16_t, BASE_OP_CODE> op;
             INIT_AND_PROCESS;
         }
+#endif
     }
 }

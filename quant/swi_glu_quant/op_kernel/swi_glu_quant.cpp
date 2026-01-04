@@ -33,7 +33,7 @@ extern "C" __global__ __aicore__ void swi_glu_quant(GM_ADDR x, GM_ADDR smooth_sc
     return;
   }
   TPipe pipe;
-
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
   #if ORIG_DTYPE_X == DT_BF16
      if (TILING_KEY_IS(206)) {
       SwiGluQuant<bfloat16_t, DTYPE_Y> op(&pipe);
@@ -48,6 +48,7 @@ extern "C" __global__ __aicore__ void swi_glu_quant(GM_ADDR x, GM_ADDR smooth_sc
       op.Init(x, smooth_scales, offsets, group_index, y, scale, workspace, &tiling_data);
       op.Process();
     }
+#endif
   #elif ORIG_DTYPE_X == DT_FLOAT16
     if (TILING_KEY_IS(106)) {
       SwiGluQuant<half, DTYPE_Y> op(&pipe);

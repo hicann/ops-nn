@@ -12,7 +12,6 @@
  * \file add_rms_norm_dynamic_quant_v2_def.cpp
  * \brief
  */
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -94,6 +93,94 @@ public:
             .AutoContiguous();
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
         this->AICore().AddConfig("ascend910b");
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("gamma")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("smooth_scale1")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("smooth_scale2")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("y1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("y2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("y3")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("y4")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("scale1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("scale2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        return config_kirin;
     }
 };
 OP_ADD(AddRmsNormDynamicQuantV2);

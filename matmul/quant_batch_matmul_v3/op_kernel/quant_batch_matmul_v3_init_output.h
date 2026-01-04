@@ -17,6 +17,10 @@
 
 #include "quant_batch_matmul_v3_base.h"
 
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#define SYNC_AIC_FLAG 1
+#endif
+
 namespace AscendC {
 template <typename yType>
 class BmmDequantInitOutput {

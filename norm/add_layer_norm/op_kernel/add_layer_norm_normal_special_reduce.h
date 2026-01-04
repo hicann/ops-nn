@@ -117,7 +117,7 @@ public:
 
         Ppipe->InitBuffer(xBufFp32, ROUND_UP32(rowStep * numLastDimAligned * sizeof(float)));
         Ppipe->InitBuffer(zBufFp32, ROUND_UP32(rowStep * numLastDimAligned * sizeof(float)));
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         uint32_t brcbRowStep = BlockAlign(rowStep, BRCB_BROADCAST_NUMBER);
         Ppipe->InitBuffer(yBufFp32, ROUND_UP32(brcbRowStep * ELEM_PER_REP_FP32 * sizeof(float)));
 #else
@@ -444,7 +444,7 @@ private:
     __aicore__ inline void PrecisionComputeBigN(
         int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
     {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         PrecisionComputeBigNBrcb(nums, gammaLocal, betaLocal);
 #else
         precisionComputeBigNTranspose(nums, gammaLocal, betaLocal);
@@ -551,7 +551,7 @@ private:
         yQue.EnQue(yLocal);
     }
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     __aicore__ inline void PrecisionComputeBigNBrcb(
         int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
     {

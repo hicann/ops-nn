@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 message(STATUS "=== Debug: start ops.pooling.adaptive_avg_pool3d.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE adaptive_avg_pool3d ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE adaptive_avg_pool3d ACLNNTYPE aclnn_exclude DEPENDENCIES batch_mat_mul_v3 max_pool3d_with_argmax_v2 max_pool_with_argmax_v3)

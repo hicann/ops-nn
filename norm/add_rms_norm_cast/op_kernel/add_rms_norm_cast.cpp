@@ -35,15 +35,21 @@ extern "C" __global__ __aicore__ void add_rms_norm_cast(
     if (TILING_KEY_IS(10)) {
         GENERAL_OP_IMPL(KernelAddRmsNormCast, half);
     } else if (TILING_KEY_IS(30)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormCast, bfloat16_t);
+#endif
     } else if (TILING_KEY_IS(11)) {
         GENERAL_OP_IMPL(KernelAddRmsNormCastSplitD, half);
     } else if (TILING_KEY_IS(31)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormCastSplitD, bfloat16_t);
+#endif
     } else if (TILING_KEY_IS(13)) {
         GENERAL_OP_IMPL(KernelAddRmsNormCastSingleN, half);
     } else if (TILING_KEY_IS(33)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormCastSingleN, bfloat16_t);
+#endif
     } else if (TILING_KEY_IS(14)) {
         GENERAL_OP_IMPL(KernelAddRmsNormCastMultiN, half);
     }

@@ -406,12 +406,12 @@ class MaskedSoftmaxWithRelPosBiasBBf16AndHalf
       LocalTensor<T> maskLocal = this->maskQueue.template AllocTensor<T>();
       DataCopyParams attenMaskCopyParamsLast(this->tilingData->ws1, this->s2DtypeSize, (uint16_t)(0), (uint16_t)(0));
       DataCopyPadParams padParamsNormal{false, 0, 0, 0};
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
       DataCopyPad(maskLocal, this->attenMaskGm, attenMaskCopyParamsLast, padParamsNormal);
 #endif
       auto biasLocal = maskLocal[ws1s2Alingned];
       DataCopyParams biasCopyParamsLast(this->tilingData->ns1, this->s2DtypeSize, (uint16_t)(0), (uint16_t)(0));
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
       DataCopyPad(biasLocal, this->biasGm, biasCopyParamsLast, padParamsNormal);
 #endif
       this->maskQueue.EnQue(maskLocal);

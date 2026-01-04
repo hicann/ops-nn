@@ -28,8 +28,10 @@ extern "C" __global__ __aicore__ void scaled_masked_softmax_v2(
         op.Init(x, mask, y, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(2)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         AscendC::ScaledMaskedSoftmaxV2<bfloat16_t> op;
         op.Init(x, mask, y, tilingData);
         op.Process();
+#endif
     }
 }

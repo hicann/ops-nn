@@ -1,0 +1,372 @@
+{
+    "op_type": "AddLayerNormQuant",
+    "optional_input_mode": "gen_placeholder",
+    "op_list": [
+        {
+            "bin_filename": "AddLayerNormQuant_fp16",
+            "inputs": [
+                {
+                    "name": "x1",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x2",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gamma",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "beta",
+                    "index": 3,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "bias",
+                    "index": 4,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scales1",
+                    "index": 5,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scales2",
+                    "index": 6,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "zero_points1",
+                    "index": 7,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "zero_points2",
+                    "index": 8,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y1",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y2",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "out_scales1",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "out_scales2",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "quant_mode",
+                    "dtype": "string",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "additional_output",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "div_mode",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "AddLayerNormQuant_fp32",
+            "inputs": [
+                {
+                    "name": "x1",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x2",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gamma",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "beta",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "bias",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scales1",
+                    "index": 5,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "scales2",
+                    "index": 6,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "zero_points1",
+                    "index": 7,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "zero_points2",
+                    "index": 8,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y1",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "y2",
+                    "index": 1,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "x",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "out_scales1",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "out_scales2",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "quant_mode",
+                    "dtype": "string",
+                    "value": null
+                },
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": null
+                },
+                {
+                    "name": "additional_output",
+                    "dtype": "bool",
+                    "value": null
+                },
+                {
+                    "name": "div_mode",
+                    "dtype": "bool",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

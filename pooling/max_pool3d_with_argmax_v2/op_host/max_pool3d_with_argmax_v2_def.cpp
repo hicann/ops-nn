@@ -60,6 +60,39 @@ public:
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
         this->AICore().AddConfig("ascend910_95", aicore_config);
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "max_pool3d_with_argmax_v2")
+            .ExtendCfgInfo("opInterface.value", "max_pool3d_with_argmax_v2");
+        config_kirin.Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW});
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW});
+        config_kirin.Output("argmax")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW});
+        return config_kirin;
     }
 };
 

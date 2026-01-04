@@ -51,7 +51,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("output_zero_point")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("weight")
@@ -74,6 +74,7 @@ public:
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("kirinx90");
     }
 };
 

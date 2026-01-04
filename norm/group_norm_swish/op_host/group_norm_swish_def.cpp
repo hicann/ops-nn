@@ -56,6 +56,7 @@ class GroupNormSwish : public OpDef {
     this->Attr("eps").AttrType(OPTIONAL).Float(1e-5);
     this->Attr("activate_swish").AttrType(OPTIONAL).Bool(true);
     this->Attr("swish_scale").AttrType(OPTIONAL).Float(1.0);
+    this->AICore().AddConfig("kirinx90");
 
     OpAICoreConfig aicore_config;
     aicore_config.DynamicCompileStaticFlag(true)

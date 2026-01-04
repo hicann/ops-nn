@@ -85,7 +85,11 @@ private:
     GlobalTensor<int8_t> gmY_;
 
     // Constants
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+    constexpr static int64_t UB_TENSOE_BUF = 16 * 1024;
+#else
     constexpr static int64_t UB_TENSOE_BUF = 32 * 1024;
+#endif
     constexpr static int64_t OFFEST_TENSOE_BUF = 256;
     constexpr static int64_t PEER_H = 8 * 1024;
     constexpr static int64_t BLOCK_SIZE = 32;

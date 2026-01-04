@@ -74,6 +74,7 @@ public:
         config_without_bf16.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config_without_bf16);
         this->AICore().AddConfig("ascend910", config_without_bf16);
+        this->AICore().AddConfig("kirinx90", config_without_bf16);
     }
 };
 OP_ADD(RmsNorm);

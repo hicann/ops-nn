@@ -65,7 +65,7 @@ constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams)
 constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
     GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false, true);
 constexpr MatmulConfig MM_DEFAULT_MDL_CFG =
@@ -275,7 +275,7 @@ __aicore__ inline constexpr bool IsFp4()
 }
 #endif
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 __aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams &dequantParams,
                                          bool needUpdate = true)
 {

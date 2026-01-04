@@ -61,6 +61,15 @@ class GroupNormSilu : public OpDef {
         .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
     this->AICore().AddConfig("ascend310p", ascend310p_config);
 
+    OpAICoreConfig config_kirin;
+    config_kirin.DynamicCompileStaticFlag(true)
+        .DynamicFormatFlag(true)
+        .DynamicRankSupportFlag(true)
+        .DynamicShapeSupportFlag(true)
+        .NeedCheckSupportFlag(false)
+        .PrecisionReduceFlag(true);
+    this->AICore().AddConfig("kirinx90", config_kirin);
+
     OpAICoreConfig aicore_config;
     aicore_config.DynamicCompileStaticFlag(true)
         .DynamicFormatFlag(false)

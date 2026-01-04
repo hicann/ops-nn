@@ -51,6 +51,46 @@ public:
             .Bool(false);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("a")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND});
+        config_kirin.Input("b")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND});
+        config_kirin.Input("alpha")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND});
+        config_kirin.Input("beta")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND});
+        config_kirin.Input("c")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND});
+        config_kirin.Output("c")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND});
+        return config_kirin;
     }
 };
 

@@ -79,7 +79,7 @@ protected:
     };
     __aicore__ inline RoundMode GetRoundMode()
     {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         return RoundMode::CAST_RINT;
 #else
         return RoundMode::CAST_NONE;
@@ -195,7 +195,7 @@ template <typename T1, typename T2>
 __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyInX(const int64_t xOffset, const int64_t copyNum)
 {
     LocalTensor<T1> xUb = inQueueX.AllocTensor<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(xUb, xGm[xOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T1)), 0, 0}, {false, 0, 0, 0});
 #else
     int64_t copyNumAlign = CeilDiv(copyNum, elementsPerBlockT1) * elementsPerBlockT1;
@@ -208,7 +208,7 @@ template <typename T1, typename T2>
 __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutY(const int64_t yOffset, const int64_t copyNum)
 {
     LocalTensor<T1> yUb = outQueueY.DeQue<T1>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(yGm[yOffset], yUb, {1, static_cast<uint16_t>(copyNum * sizeof(T1)), 0, 0});
 #else
     CopyOutWithOutPadT1(yGm[yOffset], yUb, copyNum);
@@ -301,7 +301,7 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutMeanAndRstdWithOffset(
 {
     LocalTensor<T2> meanOutT2 = outQueueMean.DeQue<T2>();
     LocalTensor<T2> rstdOutT2 = outQueueRstd.DeQue<T2>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     uint16_t blockCount = 1;
     uint16_t blockLen = copyNum * sizeof(T2);
     uint16_t srcStride = 0;
@@ -323,7 +323,7 @@ template <typename T1, typename T2>
 __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyInGammaAndBeta(
     const int64_t gmOffset, const int64_t localOffset, const int64_t copyNum)
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if constexpr (std::is_same_v<T2, float>) {
         LocalTensor<T2> gammaLocal = inQueueGamma.AllocTensor<T2>();
         DataCopyPad(

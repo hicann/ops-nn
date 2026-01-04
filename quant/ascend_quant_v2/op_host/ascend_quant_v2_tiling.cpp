@@ -741,7 +741,7 @@ static ge::graphStatus TilingPrepare4AscendQuantV2(gert::TilingParseContext* con
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
     auto socVersion = ascendcPlatform.GetSocVersion();
-    compileInfo->isAscend910B = socVersion == platform_ascendc::SocVersion::ASCEND910B;
+    compileInfo->isAscend910B = ((socVersion == platform_ascendc::SocVersion::ASCEND910B) || (socVersion == platform_ascendc::SocVersion::KIRINX90));
 
     return ge::GRAPH_SUCCESS;
 }

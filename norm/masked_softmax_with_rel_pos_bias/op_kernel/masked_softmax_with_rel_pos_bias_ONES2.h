@@ -70,7 +70,7 @@ private:
   __aicore__ inline void CopyOut(int32_t i, uint32_t num) {
     LocalTensor<T> yLocal = vecOutQueue.DeQue<T>();
     DataCopyParams copyParamsLast{(uint16_t)(1), (uint16_t)(num * typeSize), (uint16_t)(0), (uint16_t)(0)};
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     DataCopyPad(yGm[static_cast<int64_t>(i) * stackNum], yLocal, copyParamsLast);
 #endif
     vecOutQueue.FreeTensor(yLocal);

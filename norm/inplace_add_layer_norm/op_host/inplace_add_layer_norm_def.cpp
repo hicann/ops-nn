@@ -130,6 +130,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend310p", config_310p);
+        this->AICore().AddConfig("kirinx90", config_310p);
     }
 };
 

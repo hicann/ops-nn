@@ -15,7 +15,7 @@
 
 #include "quant_batch_matmul_v3.h"
 #include "quant_batch_matmul_v3_init_output.h"
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #include "quant_batch_matmul_v3_cube_basic.h"
 #if (ORIG_DTYPE_Y == DT_BF16 || ORIG_DTYPE_SCALE == DT_FLOAT)
 #include "quant_batch_matmul_v3_bf16_basic.h"
@@ -206,7 +206,7 @@ __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     }
 #endif
 #endif
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if constexpr (TRANS == QUANT_BATCH_MATMUL_V3_B_TRANS && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUl_V3_KERNEL_TEMPLATE_TYPE_TBE &&
         PERTOKEN == QUANT_BATCH_MATMUL_V3_NOT_PERTOKEN && OPTIONATTR == QUANT_BATCH_MATMUL_V3_OPTION_ATTR_NONE) {  // false true
         BmmDequant<DTYPE_X1, DTYPE_X2, FORMAT_X1, FORMAT_X2, int32_t, uint64_t, DTYPE_Y, false, true> op;

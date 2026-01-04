@@ -106,6 +106,7 @@ public:
         config_310p.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
         this->AICore().AddConfig("ascend310p", config_310p);
+        this->AICore().AddConfig("kirinx90", config_310p);
     }
 };
 

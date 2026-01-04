@@ -12,7 +12,6 @@
  * \file add_rms_norm_def.cpp
  * \brief
  */
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -100,6 +99,7 @@ public:
             .AutoContiguous();
         config310P.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config310P);
+        this->AICore().AddConfig("kirinx90", config310P);
 
         OpAICoreConfig config_910_95;
         config_910_95.Input("x1")

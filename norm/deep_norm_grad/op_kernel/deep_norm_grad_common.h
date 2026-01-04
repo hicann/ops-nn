@@ -47,7 +47,7 @@ inline volatile __gm__ uint32_t g_FixedOutputSync[16] = {0, 0, 0, 0, 0, 0, 0, 0,
 
 __aicore__ inline constexpr bool IsDataCopyPadSupport()
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     return true;
 #else
     return false;

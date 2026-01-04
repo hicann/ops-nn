@@ -58,7 +58,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, atten_mask, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(5021)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBBf16AndHalf<bfloat16_t, true, true, true> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();
@@ -108,7 +108,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, atten_mask, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(5121)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBBf16AndHalf<bfloat16_t, true, true, false> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();
@@ -158,7 +158,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, atten_mask, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(421)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBW<bfloat16_t, true, true> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();
@@ -208,7 +208,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(221)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBWNS1<bfloat16_t, true, true> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();
@@ -242,7 +242,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(2123)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBS1Bias<bfloat16_t, true, false> op(&tiling_data);
     op.Init(x, bias, y);
     op.Process();
@@ -284,7 +284,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, atten_mask, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(321)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasBWN<bfloat16_t, true, true> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();
@@ -310,7 +310,7 @@ extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x
     op.Init(x, atten_mask, bias, y);
     op.Process();
   } else if (TILING_KEY_IS(120)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     MaskedSoftmaxWithRelPosBiasONES2<bfloat16_t> op(&tiling_data);
     op.Init(x, atten_mask, bias, y);
     op.Process();

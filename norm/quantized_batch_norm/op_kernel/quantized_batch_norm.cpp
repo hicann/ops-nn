@@ -31,9 +31,11 @@ extern "C" __global__ __aicore__ void quantized_batch_norm(
     GM_ADDR x, GM_ADDR mean, GM_ADDR var, GM_ADDR input_scale, GM_ADDR input_zero_point, GM_ADDR output_scale,
     GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (g_coreType == AIC) {
         return;
     }
+#endif
     TPipe pipe;
     GET_TILING_DATA_WITH_STRUCT(QuantizedBatchNormWelfordTilingData, tiling_data_in, tiling);
     const QuantizedBatchNormWelfordTilingData* __restrict tilingData = &tiling_data_in;

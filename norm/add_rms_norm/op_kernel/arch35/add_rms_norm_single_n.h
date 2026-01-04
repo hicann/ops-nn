@@ -114,7 +114,7 @@ private:
         PipeBarrier<PIPE_V>();
 
         // copyout rstd
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
         DataCopyCustom<float>(rstdGm, sqxLocal, 1);
@@ -189,7 +189,7 @@ private:
         PipeBarrier<PIPE_V>();
 
         // copyout rstd
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
         DataCopyCustom<float>(rstdGm, sqxLocal, 1);
@@ -269,7 +269,7 @@ private:
         PipeBarrier<PIPE_V>();
 
         // copyout rstd
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
         DataCopyCustom<float>(rstdGm, sqxLocal, 1);
@@ -291,7 +291,7 @@ private:
         Cast(xFp32Local, x1Local, RoundMode::CAST_NONE, numCol);
         PipeBarrier<PIPE_V>();
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V2);
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         WaitFlag<HardEvent::MTE3_V>(eventMTE3V2);
 #endif
         Cast(sqxLocal, x2Local, RoundMode::CAST_NONE, numCol);

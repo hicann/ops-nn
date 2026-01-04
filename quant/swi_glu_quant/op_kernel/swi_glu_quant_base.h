@@ -145,12 +145,16 @@ protected:
     {
         LocalTensor<int8_t> outLocal = outQueueY.DeQue<int8_t>();
 
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if (tilingData_.dstType == DT_INT4) {
             LocalTensor<int4b_t> outLocalInt4 = outLocal.template ReinterpretCast<int4b_t>();
             DataCopyPad(yGmInt4[splitCopyoutOffset], outLocalInt4, splitCopyoutParams);
         } else {
             DataCopyPad(yGm[splitCopyoutOffset], outLocal, splitCopyoutParams);
         }
+#else
+        DataCopyPad(yGm[splitCopyoutOffset], outLocal, splitCopyoutParams);
+#endif
 
         outQueueY.FreeTensor(outLocal);
 
@@ -169,12 +173,16 @@ protected:
         PipeBarrier<PIPE_V>();
         Cast(tempHalf, tempInt32, RoundMode::CAST_ROUND, basicColLen);
         PipeBarrier<PIPE_V>();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if (tilingData_.dstType == DT_INT4) {
             LocalTensor<int4b_t> outLocalInt4 = outLocal[i * outAlignLen].template ReinterpretCast<int4b_t>();
             Cast(outLocalInt4, tempHalf, RoundMode::CAST_NONE, basicColLen);
         } else {
             Cast(outLocal[i * outAlignLen], tempHalf, RoundMode::CAST_TRUNC, basicColLen);
         }
+#else
+        Cast(outLocal[i * outAlignLen], tempHalf, RoundMode::CAST_TRUNC, basicColLen);
+#endif
     }
 
 protected:
@@ -236,7 +244,9 @@ protected:
     TBuf<TPosition::VECCALC> tempYUnit;
 
     GlobalTensor<int8_t> yGm;
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     GlobalTensor<int4b_t> yGmInt4;
+#endif
     GlobalTensor<float> smooth_scales_Gm;
     GlobalTensor<float> offsetsGm;
     GlobalTensor<float> scale_Gm;

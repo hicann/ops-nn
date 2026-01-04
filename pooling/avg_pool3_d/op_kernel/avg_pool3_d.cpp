@@ -79,7 +79,7 @@ extern "C" __global__ __aicore__ void avg_pool3_d(
     }
 #endif
 
-#if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_BF16 && (__CCE_AICORE__ >= 220)
+#if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_BF16 && (__CCE_AICORE__ >= 220) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (TILING_KEY_IS(12)) {
         DISPATCH_OP_IMPL(KernelAvgPool3dSplitC, bfloat16_t, 1);
     }

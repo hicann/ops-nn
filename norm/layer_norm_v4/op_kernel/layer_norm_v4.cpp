@@ -68,9 +68,11 @@ extern "C" __global__ __aicore__ void layer_norm_v4(
         return;
     }
 #else
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (g_coreType == AIC) {
         return;
     }
+#endif
     if (TILING_KEY_IS(100)) {
         INVOKE_LAYER_NORM_V4_SINGLE_READ_IMPL(float, float);
         return;
@@ -80,12 +82,14 @@ extern "C" __global__ __aicore__ void layer_norm_v4(
     } else if (TILING_KEY_IS(111)) {
         INVOKE_LAYER_NORM_V4_SINGLE_READ_IMPL(half, half);
         return;
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(120)) {
         INVOKE_LAYER_NORM_V4_SINGLE_READ_IMPL(bfloat16_t, float);
         return;
     } else if (TILING_KEY_IS(122)) {
         INVOKE_LAYER_NORM_V4_SINGLE_READ_IMPL(bfloat16_t, bfloat16_t);
         return;
+#endif
     } else if (TILING_KEY_IS(LNV4_TRANSPOSE_FLOAT_FLOAT)) {
         INVOKE_LAYER_NORM_V4_TRANSPOSE_IMPL(float, float);
         return;
@@ -95,12 +99,14 @@ extern "C" __global__ __aicore__ void layer_norm_v4(
     } else if (TILING_KEY_IS(LNV4_TRANSPOSE_HALF_HALF)) {
         INVOKE_LAYER_NORM_V4_TRANSPOSE_IMPL(half, half);
         return;
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(LNV4_TRANSPOSE_BF16_FLOAT)) {
         INVOKE_LAYER_NORM_V4_TRANSPOSE_IMPL(bfloat16_t, float);
         return;
     } else if (TILING_KEY_IS(LNV4_TRANSPOSE_BF16_BF16)) {
         INVOKE_LAYER_NORM_V4_TRANSPOSE_IMPL(bfloat16_t, bfloat16_t);
         return;
+#endif
     }
 #endif
 }
