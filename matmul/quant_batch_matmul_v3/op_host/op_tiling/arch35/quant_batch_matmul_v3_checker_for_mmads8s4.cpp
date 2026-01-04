@@ -214,7 +214,7 @@ the size of k dimension of x2[%lu]",
     OP_TILING_CHECK(
         biasShape != nullptr && static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "Input bias dimension shape should equal n, but it is %zu while n is %lu.",
+                              "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
                               biasShape->GetStorageShape().GetDim(0), inputParams_.nSize),
         return false);
     // offset shape必须是1或shapeN
@@ -222,7 +222,7 @@ the size of k dimension of x2[%lu]",
         offsetShape != nullptr &&
             !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
               static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %zu.",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %ld.",
                               inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
         return false);
     // scale维数必须是1维
@@ -246,7 +246,7 @@ the size of k dimension of x2[%lu]",
         inputParams_.aDtype == ge::DT_INT4 && (x1Inner < 0 || x1Inner % 2 != 0),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "if x1 dtype is int4, last axis of input x1 has to be a positive even number, but actual is [%lu].",
+            "if x1 dtype is int4, last axis of input x1 has to be a positive even number, but actual is [%ld].",
             x1Inner),
         return false);
     // 当x2为int4时，x2内轴必须是偶数
@@ -254,16 +254,15 @@ the size of k dimension of x2[%lu]",
         inputParams_.bDtype == ge::DT_INT4 && (x2Inner < 0 || x2Inner % 2 != 0),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "if x2 dtype is int4, last axis of input x2 has to be a positive even number, but actual is [%lu].",
+            "if x2 dtype is int4, last axis of input x2 has to be a positive even number, but actual is [%ld].",
             x2Inner),
         return false);
     return true;
 }
 
-bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                                    const gert::StorageShape *biasShape,
-                                                    const gert::StorageShape *pertokenShape,
-                                                    const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShape(
+    const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+    const gert::StorageShape* /* pertokenShape */, const std::vector<int64_t>& dimValueOfMKN) const
 {
     auto &x1Shape = *mandtoryShape[0];     // using index 0 to get x1Shape
     auto &x2Shape = *mandtoryShape[1];     // using index 1 to get x2Shape

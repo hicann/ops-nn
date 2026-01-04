@@ -205,7 +205,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
     OP_TILING_CHECK(
         biasShape != nullptr && static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "Input bias dimension shape should equal n, but it is %zu while n is %lu.",
+                              "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
                               biasShape->GetStorageShape().GetDim(0), inputParams_.nSize),
         return false);
     // offset shape必须是1或shapeN
@@ -213,7 +213,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
         offsetShape != nullptr &&
             !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
               static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %zu.",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %ld.",
                               inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
         return false);
     // scale维数必须存在
@@ -258,10 +258,9 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
     return true;
 }
 
-bool QuantBatchMatmulV4Checker4MmadS8S4::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                                    const gert::StorageShape *biasShape,
-                                                    const gert::StorageShape *pertokenShape,
-                                                    const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV4Checker4MmadS8S4::CheckShape(
+    const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+    const gert::StorageShape* /* pertokenShape */, const std::vector<int64_t>& dimValueOfMKN) const
 {
     auto &x1Shape = *mandtoryShape[0];     // using index 0 to get x1Shape
     auto &x2Shape = *mandtoryShape[1];     // using index 1 to get x2Shape

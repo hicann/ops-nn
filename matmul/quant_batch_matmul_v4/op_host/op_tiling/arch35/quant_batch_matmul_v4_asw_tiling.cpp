@@ -147,7 +147,6 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     auto biasShape = context_->GetOptionalInputShape(GetBiasIdx());
     inputParams_.hasBias = biasShape != nullptr;
     inputParams_.batchBias = inputParams_.hasBias ? GetBatchSize(biasShape->GetStorageShape()) : 1;
-    auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     auto x2TableShape = context_->GetOptionalInputShape(GetX2TableIdx());
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
@@ -288,7 +287,7 @@ bool AdaptiveSlidingWindowTilingV4::IsCalL1TilingDepth4MmadS8S4() const
     return true;
 }
 
-void AdaptiveSlidingWindowTilingV4::CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size)
+void AdaptiveSlidingWindowTilingV4::CalL1TilingDepth4MmadS8S4(uint64_t /* leftL1Size */)
 {
     basicTiling_.stepKa = 1U;
     basicTiling_.stepKb = 1U;

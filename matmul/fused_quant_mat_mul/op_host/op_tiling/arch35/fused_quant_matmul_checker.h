@@ -45,7 +45,7 @@ protected:
     bool CheckShapeInRangeForOptionalInputs(const gert::StorageShape *scaleShape, const gert::StorageShape *biasShape,
                                             const gert::StorageShape *offsetShape) const;
     bool CheckDimValue(const gert::StorageShape *scaleShape, const gert::StorageShape *biasShape,
-                       const gert::StorageShape *offsetShape, const std::vector<int64_t> &DimValueOfMKN) const;
+                       const gert::StorageShape *offsetShape, const std::vector<int64_t> &dimValueOfMKN) const;
 };
 } // namespace optiling
 #endif // FUSED_QUANT_MATMUL_CHECKER_H
