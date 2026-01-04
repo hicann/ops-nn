@@ -36,7 +36,7 @@
 1. **安装社区版CANN toolkit包**
 
     根据实际产品型号和环境架构，获取对应的`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`包。
-    - Atlas A2/A3系列产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/8.5.0-20251226000923458/)获取软件包。
+    - Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)获取软件包。
     - Ascend 950PR/Ascend 950DT产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0-alpha.1/)获取软件包。
     
     ```bash
@@ -54,7 +54,7 @@
     运行算子时必须安装本包，若仅编译算子，可跳过本操作。
 
     根据实际产品型号和环境架构，获取对应的`Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run`包。
-    - Atlas A2/A3系列产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/8.5.0-20251226000923458/)获取软件包。
+    - Atlas A2/A3系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)获取软件包。
     - Ascend 950PR/Ascend 950DT产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0-alpha.1/)获取软件包。
 
     ```bash
