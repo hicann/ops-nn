@@ -24,7 +24,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
-#include "pooling/pool_3d/op_host/arch35/max_pool_3d_tiling_common.h"
+#include "pooling/pool_3d_common/op_host/arch35/max_pool_3d_tiling_common.h"
 
 using namespace ut_util;
 using namespace std;

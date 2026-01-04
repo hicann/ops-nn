@@ -89,7 +89,7 @@ static ge::graphStatus InferShapePaddingCalculated(
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(
-            context->GetNodeName(), "%s h %lld and w %lld must be greater than 0.",
+            context->GetNodeName(), "%s h %ld and w %ld must be greater than 0.",
             Int64ToString(strides_data, strides->GetSize()).c_str(), strides_data[d_dim], strides_data[h_dim],
             strides_data[w_dim]),
         return GRAPH_FAILED);
@@ -157,7 +157,7 @@ static ge::graphStatus InferShapePaddingValid(
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(
-            context->GetNodeName(), "%s h %lld and w %lld must be greater than 0.",
+            context->GetNodeName(), "%s h %ld and w %ld must be greater than 0.",
             Int64ToString(strides_data, strides->GetSize()).c_str(), strides_data[d_dim], strides_data[h_dim],
             strides_data[w_dim]),
         return GRAPH_FAILED);
@@ -191,7 +191,7 @@ static ge::graphStatus InferShapePaddingSame(
     OP_CHECK_IF(
         strides_data[d_dim] <= 0 || strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0,
         OP_LOGE(
-            context->GetNodeName(), "%s h %lld and w %lld must be greater than 0.",
+            context->GetNodeName(), "%s h %ld and w %ld must be greater than 0.",
             Int64ToString(strides_data, strides->GetSize()).c_str(), strides_data[d_dim], strides_data[h_dim],
             strides_data[w_dim]),
         return GRAPH_FAILED);

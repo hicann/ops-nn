@@ -13,8 +13,8 @@
  * \brief
  */
 
-#include "pooling/pool_3d/op_host/arch35/pool_tiling_templates_registry.h"
-#include "pooling/pool_3d/op_host/arch35/max_pool_3d_tiling_common.h"
+#include "pooling/pool_3d_common/op_host/arch35/pool_tiling_templates_registry.h"
+#include "pooling/pool_3d_common/op_host/arch35/max_pool_3d_tiling_common.h"
 #include "log/log.h"
 
 using namespace AscendC;

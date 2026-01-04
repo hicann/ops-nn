@@ -14,16 +14,16 @@
 
 #include <cstdint>
 #include "kernel_operator.h"
-#include "../pool_3d/arch35/max_pool_3d_simt.h"
-#include "../pool_3d/arch35/pool_3d_ncdhw_small_kernel.h"
-#include "../pool_3d/arch35/pool_3d_ncdhw_small_kernel_pad.h"
-#include "../pool_3d/arch35/pool_3d_ncdhw_big_kernel.h"
-#include "../pool_3d/arch35/pool_3d_big_kernel_ndhwc.h"
-#include "../pool_3d/arch35/pool_3d_ndhwc_small_kernel.h"
-#include "../pool_3d/arch35/pool_3d_ndhwc_small_kernel_pad.h"
-#include "../pool_3d/arch35/pool_3d_ndhwc_big_channel.h"
-#include "../pool_3d/arch35/pool_3d_ndhwc_big_channel_pad.h"
-#include "../pool_3d/arch35/pool_3d_ksize_one_kernel.h"
+#include "../pool_3d_common/arch35/max_pool_3d_simt.h"
+#include "../pool_3d_common/arch35/pool_3d_ncdhw_small_kernel.h"
+#include "../pool_3d_common/arch35/pool_3d_ncdhw_small_kernel_pad.h"
+#include "../pool_3d_common/arch35/pool_3d_ncdhw_big_kernel.h"
+#include "../pool_3d_common/arch35/pool_3d_big_kernel_ndhwc.h"
+#include "../pool_3d_common/arch35/pool_3d_ndhwc_small_kernel.h"
+#include "../pool_3d_common/arch35/pool_3d_ndhwc_small_kernel_pad.h"
+#include "../pool_3d_common/arch35/pool_3d_ndhwc_big_channel.h"
+#include "../pool_3d_common/arch35/pool_3d_ndhwc_big_channel_pad.h"
+#include "../pool_3d_common/arch35/pool_3d_ksize_one_kernel.h"
 
 using namespace MaxPool3DSimt;
 

@@ -115,4 +115,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_max_pool](examples/test_aclnn_amx_pool.cpp) | 通过[aclnnMaxPool](docs/aclnnMaxPool.md)接口方式调用MaxPoolV3算子。 |
+| aclnn接口 | [test_aclnn_max_pool](examples/test_aclnn_max_pool.cpp) | 通过[aclnnMaxPool](docs/aclnnMaxPool.md)接口方式调用MaxPoolV3算子。 |

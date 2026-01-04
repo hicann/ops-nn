@@ -18,7 +18,6 @@
 #include "pool_3d_common.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
-#include "./../rms_norm/rms_norm_base.h"
 
 namespace Pool3D
 {
