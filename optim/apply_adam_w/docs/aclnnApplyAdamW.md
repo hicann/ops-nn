@@ -1,10 +1,12 @@
 # aclnnApplyAdamW
-## 产品支持情况
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
 
+
+## 产品支持情况
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+| <term>Ascend 950PR/Ascend 950DT</term>                             |     ×       |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 
 ## 功能说明
@@ -12,53 +14,36 @@
 - **算子功能：** 实现adamW优化器功能。
 
 - **计算公式：**
-
   $$
   g_t=\begin{cases}-g_t
   & \text{ if } maxmize= true\\
   g_t  & \text{ if } maxmize=false
   \end{cases}
   $$
-
-
   $$
   m_{t}=\beta_{1} m_{t-1}+\left(1-\beta_{1}\right) g_{t} \\
   $$
-
-
   $$
   v_{t}=\beta_{2} v_{t-1}+\left(1-\beta_{2}\right) g_{t}^{2}
   $$
-
-
   $$
   \beta_{1}^{t}=\beta_{1}^{t-1}\times\beta_{1}
   $$
-
-
   $$
   \beta_{2}^{t}=\beta_{2}^{t-1}\times\beta_{2}
   $$
-
-
   $$
   v_t=\begin{cases}\max(maxGradNorm, v_t)
   & \text{ if } amsgrad = true\\
   v_t  & \text{ if } amsgrad = false
   \end{cases}
   $$
-
-
   $$
   \hat{m}_{t}=\frac{m_{t}}{1-\beta_{1}^{t}} \\
   $$
-
-
   $$
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}} \\
   $$
-
-
   $$
   \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}
   $$

@@ -34,15 +34,15 @@
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
-  <tr>
+<tr>
     <td>activation</td>
     <td><a href="../../activation/elu/README.md">elu</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1467,12 +1467,12 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/non_zero/README.md">non_zero</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>找出`self`中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回`out`的shape为N * D，每一列表示一个非零元素的位置坐标。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2504,6 +2504,16 @@
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
+    <tr>
+    <td>quant</td>
+    <td><a href="../../quant/ascend_quant/README.md">ascend_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。</td>
+  </tr>
   <tr>
     <td>quant</td>
     <td><a href="../../quant/ascend_quant_v2/README.md">ascend_quant_v2</a></td>
@@ -2733,6 +2743,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。</td>
+  </tr>
+    <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adam_w/README.md">apply_adam_w</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现adamW优化器功能。</td>
   </tr>
 </tbody>
 </table>

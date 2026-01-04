@@ -1,15 +1,17 @@
 # aclnnAddRelu&aclnnInplaceAddRelu
 
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |     ×       |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
-- 算子功能：完成加法计算后得到结果再进行激活。
+- 接口功能：完成加法计算后得到结果再进行激活。
 - 计算公式：
 
   $$
@@ -29,52 +31,207 @@
 
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddReluGetWorkspaceSize”或者“aclnnInplaceAddReluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddRelu”或者“aclnnInplaceAddRelu”接口执行计算。
 
-  - `aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor* other, aclScalar* alpha, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnAddRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
-  - `aclnnStatus aclnnInplaceAddReluGetWorkspaceSize(aclTensor* selfRef, const aclTensor* other, aclScalar* alpha, uint64_t* workspaceSize, aclOpExecutor** executor)`
-  - `aclnnStatus aclnnInplaceAddRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
-
+  ```Cpp
+  aclnnStatus aclnnAddReluGetWorkspaceSize(
+    const aclTensor   *self,
+    const aclTensor   *other,
+    aclScalar         *alpha,
+    aclTensor         *out,
+    uint64_t          *workspaceSize,
+    aclOpExecutor    **executor)
+  ```
+  ```Cpp
+  aclnnStatus aclnnAddRelu(
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
+    aclrtStream       stream)
+  ```
+  ```Cpp
+  aclnnStatus aclnnInplaceAddReluGetWorkspaceSize(
+    aclTensor         *selfRef,
+    const aclTensor   *other,
+    aclScalar         *alpha,
+    uint64_t          *workspaceSize,
+    aclOpExecutor    **executor)
+  ```
+  ```Cpp
+  aclnnStatus aclnnInplaceAddRelu(
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
+    aclrtStream       stream)
+  ```
 
 ## aclnnAddReluGetWorkspaceSize
 
 - **参数说明：**
-  - self(aclTensor*，计算输入)：公式中的输入`self`，表示待转换的目标张量，Device侧的aclTensor，数据类型与other的数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），shape需要与other满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
-
-  - other(aclTensor*，计算输入)：公式中的输入`other`，数据类型与self的数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），shape需要与self满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
-
-  - alpha(aclScalar*，计算输入)：公式中的`alpha`，数据类型需要可转换成self与other推导后的数据类型。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
   
-  - out(aclTensor*，计算输出)：公式中的`out`，数据类型需要是self与other推导之后可转换的数据类型，shape需要是self与other broadcast之后的shape。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+    <col style="width: 149px">
+    <col style="width: 121px">
+    <col style="width: 264px">
+    <col style="width: 253px">
+    <col style="width: 262px">
+    <col style="width: 148px">
+    <col style="width: 135px">
+    <col style="width: 146px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self</td>
+        <td>输入</td>
+        <td>公式中的输入self，表示待转换的目标张量。</td>
+        <td><ul><li>shape需要与other满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>other</td>
+        <td>输入</td>
+        <td>公式中的输入other。</td>
+        <td><ul><li>shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>alpha</td>
+        <td>输入</td>
+        <td>公式中的alpha。</td>
+        <td>数据类型需要可转换成self与other推导后的数据类型。</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out</td>
+        <td>输出</td>
+        <td>公式中的out。</td>
+        <td>数据类型需要是self与other推导之后可转换的数据类型，shape需要是self与other broadcast之后的shape。</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-  - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的self、other、alpha或out是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID)：1. self和other的数据类型不在支持的范围之内。
-                                       2. self和other无法做数据类型推导。
-                                       3. 推导出的数据类型无法转换为指定输出out的类型。
-                                       4. self和other的shape无法做broadcast。
-                                       5. alpha无法转换为self和other推导后的数据类型。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+    <col style="width: 267px">
+    <col style="width: 124px">
+    <col style="width: 775px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回码</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的self、other、alpha或out是空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="10">161002</td>
+        <td>self和other的数据类型不在支持的范围之内。</td>
+      </tr>
+      <tr>
+        <td>self和other无法做数据类型推导。</td>
+      </tr>
+      <tr>
+        <td>推导出的数据类型无法转换为指定输出out的类型。</td>
+      </tr>
+      <tr>
+        <td>self和other的shape无法做broadcast。</td>
+      </tr>
+      <tr>
+        <td>alpha无法转换为self和other推导后的数据类型。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnAddRelu
 
 - **参数说明：**
-  - workspace(void*，入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnAddReluGetWorkspaceSize获取。
-  - executor(aclOpExecutor*，入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream，入参)：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAddReluGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 
@@ -84,46 +241,162 @@
 
 - **参数说明：**
 
-  - selfRef(aclTensor*，计算输入|计算输出)：输入输出tensor，即公式中的self与out，表示待转换的目标张量，Device侧的aclTensor，数据类型与other的数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），且需要是推导之后可转换的数据类型。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
-
-  - other(aclTensor*，计算输入)：公式中的输入`other`，数据类型与selfRef的数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），shape需要与selfRef满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
-
-  - alpha(aclScalar*，计算输入)：公式中的`alpha`，数据类型需要可转换成selfRef与other推导后的数据类型。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64。
-
-  - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
-
-  - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+    <col style="width: 149px">
+    <col style="width: 121px">
+    <col style="width: 264px">
+    <col style="width: 253px">
+    <col style="width: 262px">
+    <col style="width: 148px">
+    <col style="width: 135px">
+    <col style="width: 146px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>selfRef</td>
+        <td>输入|输出</td>
+        <td>公式中的self与out，表示待转换的目标张量。</td>
+        <td>与other的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>），且需要是推导之后可转换的数据类型。</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>other</td>
+        <td>输入</td>
+        <td>公式中的输入other。</td>
+        <td><ul><li>shape需要与selfRef满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>与selfRef的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>ND</td>
+        <td>0-8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>alpha</td>
+        <td>输入</td>
+        <td>公式中的alpha。</td>
+        <td>数据类型需要可转换成selfRef与other推导后的数据类型。</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32、INT8、UINT8、INT16、INT32、INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的selfRef、other或alpha是空指针。
-  161002 (ACLNN_ERR_PARAM_INVALID)：1. selfRef和other的数据类型不在支持的范围之内。
-                                    2. selfRef和other无法做数据类型推导。
-                                    3. 推导出的数据类型无法转换为selfRef的类型。
-                                    4. selfRef和other的shape无法做broadcast。
-                                    5. broadcast后的shape不等于selfRef的shape。
-                                    6. alpha无法转换为selfRef和other推导后的数据类型。
-  ```
+
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+    <col style="width: 267px">
+    <col style="width: 124px">
+    <col style="width: 775px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回码</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的selfRef、other或alpha是空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="10">161002</td>
+        <td>selfRef和other的数据类型不在支持的范围之内。</td>
+      </tr>
+      <tr>
+        <td>selfRef和other无法做数据类型推导。</td>
+      </tr>
+      <tr>
+        <td>推导出的数据类型无法转换为selfRef的类型。</td>
+      </tr>
+      <tr>
+        <td>selfRef和other的shape无法做broadcast。</td>
+      </tr>
+      <tr>
+        <td>alpha无法转换为selfRef和other推导后的数据类型。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnInplaceAddRelu
 
 - **参数说明：**
 
-  - workspace(void*，入参)：在Device侧申请的workspace内存地址。
-
-  - workspaceSize(uint64_t，入参)：在Device侧申请的workspace大小，由第一段接口aclnnInplaceAddReluGetWorkspaceSize获取。
-
-  - executor(aclOpExecutor*，入参)：op执行器，包含了算子计算流程。
-
-  - stream(aclrtStream，入参)：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnInplaceAddReluGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 
 - **返回值：**

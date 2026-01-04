@@ -46,7 +46,7 @@ inline static const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 
 ge::graphStatus TilingPrepareForElu(gert::TilingParseContext* context)
 {
-    auto compileInfoPtr = context->GetCompiledInfo<ElewiseCompileInfo>();
+    auto compileInfoPtr = context->GetCompiledInfo<EluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
