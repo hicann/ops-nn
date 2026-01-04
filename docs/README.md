@@ -38,7 +38,6 @@
 | [算子开发](zh/develop/aicore_develop_guide.md)   | 介绍自定义算子的开发流程，包括算子原型定义、Tiling实现、Kernel实现等。 |
 | [算子调用方式](zh/invocation/op_invocation.md)   | 介绍不同算子调用方式，包括aclnn调用、图模式调用等，方便算子快速应用于AI业务中。 |
 | [算子调试调优](zh/debug/op_debug_prof.md)        | 介绍常见的算子调试、调优方法。                               |
-| [图融合Pass列表](zh/op_pass_list.md)               | 介绍项目支持的所有图融合规则。                               |
 
 ## 附录
 | 文档                                | 说明                                                         |

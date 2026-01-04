@@ -69,16 +69,16 @@ $$
     <th>调用方式</th>
     <th>调用样例</th>
     <th>说明</th>
-  </tr><thrad>
-  <tbody>
-    <tr>
-      <td>aclnn调用</td>
-      <td><a href="./examples/test_aclnn_add_example.cpp">test_aclnn_add_example</a></td>
-      <td rowspan="2">参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
-    </tr>
-    <tr>
-      <td>图模式调用</td>
-      <td><a href="./examples/test_geir_add_example.cpp">test_geir_add_example</a></td>
-    </tr>
-  </tbody>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>aclnn调用</td>
+    <td><a href="./examples/test_aclnn_add_example.cpp">test_aclnn_add_example</a></td>
+    <td rowspan="2">参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
+  </tr>
+  <tr>
+    <td>图模式调用</td>
+    <td><a href="./examples/test_geir_add_example.cpp">test_geir_add_example</a></td>
+  </tr>
+</tbody>
 </table>

@@ -101,7 +101,7 @@
 
 - **执行算子样例**
 
-    > **说明**：Ascend 950PR/Ascend 950DT产品使用仿真执行算子样例，请见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
+    > **说明**：Ascend 950PR产品使用仿真执行算子样例，请见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
   
     - 完成自定义算子包安装后，执行如下命令：
         ```bash
