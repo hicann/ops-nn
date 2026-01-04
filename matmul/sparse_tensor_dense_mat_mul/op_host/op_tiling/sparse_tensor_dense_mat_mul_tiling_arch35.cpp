@@ -409,7 +409,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     OP_CHECK_IF(
         x1IndicesRanks != RANKS_X1_INDICES,
         OP_LOGE(
-            context_->GetNodeName(), "Invalid ranks of input x1_indices: %lld, should be: %lld.", x1IndicesRanks,
+            context_->GetNodeName(), "Invalid ranks of input x1_indices: %ld, should be: %ld.", x1IndicesRanks,
             RANKS_X1_INDICES),
         return ge::GRAPH_FAILED);
     auto x1IndicesDim0 = static_cast<int64_t>(x1IndicesShape_.GetDim(0));
@@ -417,7 +417,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     OP_CHECK_IF(
         x1IndicesDim1 != DIM1_X1_INDICES,
         OP_LOGE(
-            context_->GetNodeName(), "Invalid length of input x1_indices' dim1: %lld, should be: %lld.", x1IndicesDim1,
+            context_->GetNodeName(), "Invalid length of input x1_indices' dim1: %ld, should be: %ld.", x1IndicesDim1,
             DIM1_X1_INDICES),
         return ge::GRAPH_FAILED);
 
@@ -426,7 +426,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     OP_CHECK_IF(
         x1ValuesRanks != RANKS_X1_VALUES,
         OP_LOGE(
-            context_->GetNodeName(), "Invalid ranks of input x1_values: %lld, should be: %lld.", x1ValuesRanks,
+            context_->GetNodeName(), "Invalid ranks of input x1_values: %ld, should be: %ld.", x1ValuesRanks,
             RANKS_X1_VALUES),
         return ge::GRAPH_FAILED);
     auto x1valuesDim0 = static_cast<int64_t>(x1ValuesShape_.GetDim(0));
@@ -434,7 +434,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
         x1valuesDim0 != x1IndicesDim0,
         OP_LOGE(
             context_->GetNodeName(),
-            "Mismatch length of input x1_values' dim0: %lld, should equals to x1_indices' dim0: %lld.", x1valuesDim0,
+            "Mismatch length of input x1_values' dim0: %ld, should equals to x1_indices' dim0: %ld.", x1valuesDim0,
             x1IndicesDim0),
         return ge::GRAPH_FAILED);
 
@@ -443,14 +443,14 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     OP_CHECK_IF(
         x1ShapeRanks != RANKS_X1_SHAPE,
         OP_LOGE(
-            context_->GetNodeName(), "Invalid ranks of input x1_shape: %lld, should be: %lld.", x1ShapeRanks,
+            context_->GetNodeName(), "Invalid ranks of input x1_shape: %ld, should be: %ld.", x1ShapeRanks,
             RANKS_X1_SHAPE),
         return ge::GRAPH_FAILED);
     auto x1ShapeDim0 = static_cast<int64_t>(x1ShapeShape_.GetDim(0));
     OP_CHECK_IF(
         x1ShapeDim0 != DIM0_x1_SHAPE,
         OP_LOGE(
-            context_->GetNodeName(), "Invalid length of input x1_shape's dim0: %lld, should be: %lld.", x1ShapeDim0,
+            context_->GetNodeName(), "Invalid length of input x1_shape's dim0: %ld, should be: %ld.", x1ShapeDim0,
             DIM0_x1_SHAPE),
         return ge::GRAPH_FAILED);
 
@@ -458,7 +458,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     auto x2Ranks = static_cast<int64_t>(x2Shape_.GetDimNum());
     OP_CHECK_IF(
         x2Ranks != RANKS_X2,
-        OP_LOGE(context_->GetNodeName(), "Invalid ranks of input x2: %lld, should be: %lld.", x2Ranks, RANKS_X2),
+        OP_LOGE(context_->GetNodeName(), "Invalid ranks of input x2: %ld, should be: %ld.", x2Ranks, RANKS_X2),
         return ge::GRAPH_FAILED);
     // 对x2的dim0、dim1的check延后到GetAndCheckInputParams，因为要先取得m、n的值
 
@@ -525,14 +525,14 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
         OP_CHECK_IF(
             x2Col != n_,
             OP_LOGE(
-                context_->GetNodeName(), "Invalid col(dim1) of input x2: %lld, should equals to n: %lld", x2Col, n_),
+                context_->GetNodeName(), "Invalid col(dim1) of input x2: %ld, should equals to n: %ld", x2Col, n_),
             return ge::GRAPH_FAILED);
         p_ = static_cast<int64_t>(x2Row);
     } else {
         OP_CHECK_IF(
             x2Row != n_,
             OP_LOGE(
-                context_->GetNodeName(), "Mismatch row(dim0) of input x2: %lld, should equals to n: %lld", x2Row, n_),
+                context_->GetNodeName(), "Mismatch row(dim0) of input x2: %ld, should equals to n: %ld", x2Row, n_),
             return ge::GRAPH_FAILED);
         p_ = static_cast<int64_t>(x2Col);
     }
@@ -540,13 +540,13 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     OP_CHECK_IF(
         (m_ < 0 || n_ < 0 || p_ < 0 || nnz_ < 0),
         OP_LOGE(
-            context_->GetNodeName(), "Some of params (m: %lld, n: %lld, p:%lld, nnz:%lld) belows 0.", m_, n_, p_, nnz_),
+            context_->GetNodeName(), "Some of params (m: %ld, n: %ld, p:%ld, nnz:%ld) belows 0.", m_, n_, p_, nnz_),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         (m_ >= INT32_MAX_INTEGER || n_ >= INT32_MAX_INTEGER || p_ >= INT32_MAX_INTEGER || nnz_ >= INT32_MAX_INTEGER),
         OP_LOGE(
-            context_->GetNodeName(), "Some of params (m: %lld, n: %lld, p:%lld, nnz:%lld) exceeds INT32_MAX.", m_, n_,
+            context_->GetNodeName(), "Some of params (m: %ld, n: %ld, p:%ld, nnz:%ld) exceeds INT32_MAX.", m_, n_,
             p_, nnz_),
         return ge::GRAPH_FAILED);
 
@@ -555,15 +555,15 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
             ((m_ >= INT32_MAX_FLOATING / p_) || (n_ >= INT32_MAX_FLOATING / p_) || (nnz_ >= INT32_MAX_INTEGER / p_)),
         OP_LOGE(
             context_->GetNodeName(),
-            "Some multiplications (m*p, n*p, nnz*p) of params (m: %lld, n: %lld, p:%lld, nnz:%lld) is calculated "
-            "exceeds INT32_MAX.",
+            "Some multiplications (m*p, n*p, nnz*p) of params (m: %ld, n: %ld, p:%ld, nnz:%ld) calculated to "
+            "exceed INT32_MAX.",
             m_, n_, p_, nnz_),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         ((m_ > 0 && static_cast<double>(nnz_) / m_ > n_) || (n_ > 0 && static_cast<double>(nnz_) / n_ > m_)),
         OP_LOGE(
-            context_->GetNodeName(), "Param nnz: %lld should not be greater than m * n (%lld * %lld).", nnz_, m_, n_),
+            context_->GetNodeName(), "Param nnz: %ld should not be greater than m * n (%ld * %ld).", nnz_, m_, n_),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -577,20 +577,20 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputShapes()
     auto yRanks = static_cast<int64_t>(yShape_.GetDimNum());
     OP_CHECK_IF(
         yRanks != RANKS_Y,
-        OP_LOGE(context_->GetNodeName(), "Invalid ranks of output y: %lld, should be: %lld.", yRanks, RANKS_Y),
+        OP_LOGE(context_->GetNodeName(), "Invalid ranks of output y: %ld, should be: %ld.", yRanks, RANKS_Y),
         return ge::GRAPH_FAILED);
 
     // y dims
     auto yDim0 = static_cast<int64_t>(yShape_.GetDim(0));
     OP_CHECK_IF(
         yDim0 != m_,
-        OP_LOGE(context_->GetNodeName(), "Mismatch row(dim0) of output y: %lld, should equals to m: %lld.", yDim0, m_),
+        OP_LOGE(context_->GetNodeName(), "Mismatch row(dim0) of output y: %ld, should equals to m: %ld.", yDim0, m_),
         return ge::GRAPH_FAILED);
 
     auto yDim1 = static_cast<int64_t>(yShape_.GetDim(1));
     OP_CHECK_IF(
         yDim1 != p_,
-        OP_LOGE(context_->GetNodeName(), "Mismatch col(dim1) of output y: %lld, should equals to p: %lld.", yDim1, p_),
+        OP_LOGE(context_->GetNodeName(), "Mismatch col(dim1) of output y: %ld, should equals to p: %ld.", yDim1, p_),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
