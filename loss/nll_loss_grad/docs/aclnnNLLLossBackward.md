@@ -1,15 +1,18 @@
 # aclnnNLLLossBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/nll_loss_grad)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
-- 算子功能：负对数似然损失函数的反向传播。
+- 接口功能：负对数似然损失函数的反向传播。
 - 计算公式：
   - reduction=mean：
     
@@ -42,61 +45,237 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnNLLLossBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNLLLossBackward”接口执行计算。
 
-- `aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target, const aclTensor *weight, int64_t reduction, int64_t ignoreIndex, const aclTensor *totalWeight, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnNLLLossBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
+  const aclTensor *gradOutput,
+  const aclTensor *self,
+  const aclTensor *target,
+  const aclTensor *weight,
+  int64_t          reduction,
+  int64_t          ignoreIndex,
+  const aclTensor *totalWeight,
+  aclTensor       *out,
+  uint64_t        *workspaceSize,
+  aclOpExecutor  **executor)
+```
+
+```cpp
+aclnnStatus aclnnNLLLossBackward(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 
 ## aclnnNLLLossBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-  - gradOutput（aclTensor*，计算输入）：正向输出的梯度，公式中的gradOutput，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape为(N)、一维（且元素个数为1）或()。
-    - 数据类型：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，FLOAT16，BFLOAT16。
-    - shape：
-      - 当`reduction`为0，且`self`的shape为(N,C)时，shape支持(N)。
-      - 当`reduction`为0，且`self`的shape为(C)时，shape支持一维（且元素个数为1）或()。
-      - 当`reduction`不为0，shape支持一维（且元素个数为1）或()。
-  - self（aclTensor*，计算输入）：Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型与出参`out`的数据类型一致，shape与出参`out`的shape一致。
-    - 数据类型：
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，FLOAT16，BFLOAT16。
-    - shape：
-      - shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。
-      - 当`target`的shape为(N)时，`self`的shape需为(N,C)。
-      - 当`target`的shape为()，`self`的shape需为(C)。
+  <table style="undefined;table-layout: fixed; width: 1349px"><colgroup>
+      <col style="width: 158px">
+      <col style="width: 120px">
+      <col style="width: 253px">
+      <col style="width: 283px">
+      <col style="width: 218px">
+      <col style="width: 110px">
+      <col style="width: 102px">
+      <col style="width: 145px">
+      </colgroup>
+      <thead>
+        <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>gradOutput</td>
+        <td>输入</td>
+        <td>输入aclTensor。</td>
+        <td>shape为(N)、一维（且元素个数为1）或()。<ul><li>当reduction为0，且self的shape为(N,C)时，shape支持(N)。</li><li>当reduction为0，且self的shape为(C)时，shape支持一维（且元素个数为1）或()。</li><li>当reduction不为0，shape支持一维（且元素个数为1）或()。</li></ul></td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>-</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>self</td>
+        <td>输入</td>
+        <td>输入aclTensor。</td>
+        <td>数据类型与出参out的数据类型一致，shape与出参out的shape一致。<ul><li>shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。</li><li>当target的shape为(N)时，self的shape需为(N,C)。</li><li>当target的shape为()，self的shape需为(C)。</li></ul></td>
+        <td>FLOAT、FLOAT16、BFLOAT16</td>
+        <td>ND</td>
+        <td>-</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>target</td>
+        <td>输入</td>
+        <td>表示真实标签。</td>
+        <td>shape为(N) 或者()，其中每个元素的取值范围是[0, C - 1]。</td>
+        <td>INT64、UINT8、INT32</td>
+        <td>ND</td>
+        <td>-</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>weight</td>
+        <td>输入</td>
+        <td>表示每个类别的缩放权重。</td>
+        <td>公式中的w，shape为(C,)。</td>
+        <td>数据类型和self保持一致。</td>
+        <td>ND</td>
+        <td>(C)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>reduction</td>
+        <td>输入</td>
+        <td>指定损失函数的计算方式。</td>
+        <td><ul>支持 0('none') | 1('mean') | 2('sum')。<li>'none'表示不应用缩减</li><li>'mean'表示输出的总和将除以输出中的元素数</li><li>'sum'表示输出将被求和</li></ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>ignoreIndex</td>
+        <td>输入</td>
+         <td>指定一个被忽略且不影响输入梯度的目标值。
+        </td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+          <tr>
+        <td>totalWeight</td>
+        <td>输入</td>
+        <td>公式中的totalWeight。</td>
+        <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
+        <td>数据类型与weight相同。</td>
+        <td>ND</td>
+        <td>(1，)</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out</td>
+        <td>输出</td>
+        <td>公式中的out。</td>
+        <td>shape与self相同。</td>
+        <td>数据类型和self一致。</td>
+        <td>ND</td>
+        <td>-</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      </tbody>
+      </table>
 
-  - target（aclTensor*，计算输入）：Device侧的aclTensor，表示真实标签，公式中的target。数据类型支持INT64、UINT8、INT32 ，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape为(N) 或者()，其中每个元素的取值范围是[0, C - 1]。
-  - weight（aclTensor*，计算输入）：Device侧的aclTensor，公式中的w。表示各个类别的权重。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape为(C)。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，FLOAT16，BFLOAT16。
-   - reduction（int64_t*，计算输入）：Host侧的整型，公式中的reduction。指定损失函数的计算方式，支持`0('none') | 1('mean') | 2('sum')`。'none' 表示不应用减少，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
-  - ignoreIndex（int64_t*，计算输入）：Host侧的整型。指定一个被忽略且不影响输入梯度的目标值。
-  - totalWeight（aclTensor*，计算输入）：Device侧的aclTensor，公式中的totalWeight。仅当`reduction`为`mean`时，`totalWeight`是通过`target`取相应位置的`weight`，然后去除掉`ignoreIndex`对应的`weight`，将剩下的`weight`求和；当`reduction`为其他值时，该参数默认不处理。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape为(1，)。数据类型与入参`weight`的数据类型相同。
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，FLOAT16，BFLOAT16。
-  - out（aclTensor*，计算输出）：Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。shape需要与入参`self`的shape一致。
-      - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT，FLOAT16，BFLOAT16。
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-```
-第一段接口完成入参校验，出现以下场景时报错：
-返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的gradOutput、self、target、weight、out、reduction、totalWeight为空指针。
-返回161002 (ACLNN_ERR_PARAM_INVALID): 1. gradOutput、self、target、weight、totalWeight的数据类型不在支持的范围之内。
-                                     2. gradOutput、self、weight、totalWeight的数据类型不一致。
-                                     3. gradOutput、self、weight、out、totalWeight的shape不正确。
-                                     4. reduction值不在0~2范围之内。
-```
+  第一段接口完成入参校验，出现以下场景时报错：
+
+    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 276px">
+      <col style="width: 132px">
+      <col style="width: 836px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的gradOutput、self、target、weight、out、reduction、totalWeight为空指针。</td>
+      </tr>
+      <tr>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td> gradOutput、self、target、weight、totalWeight的数据类型不在支持的范围之内。</td>
+      </tr>
+      <tr>
+      <td>gradOutput、self、weight、totalWeight的数据类型不一致。</td>
+      </tr>
+       <tr>
+      <td>gradOutput、self、weight、out、totalWeight的shape不正确。</td>
+      </tr>
+      <tr>
+      <td> reduction值不在0~2范围之内。</td>
+      </tr>
+      </tbody>
+      </table>
 
 ## aclnnNLLLossBackward
 
 - **参数说明：**
 
-  - workspace（void*，入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnNLLLossBackwardGetWorkspaceSize获取。
-  - executor（aclOpExecutor*，入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream，入参）：指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnNLLLossGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+    </tbody>
+     </table>
 
 - **返回值：**
 

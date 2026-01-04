@@ -1,11 +1,14 @@
 # aclnnNonzeroV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/non_zero)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -22,7 +25,7 @@
 
 - **参数说明**：
   - self（aclTensor*, 计算输入）：Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、DOUBLE、INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、FLOAT16、BOOL、BFLOAT16。  
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、DOUBLE、INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、FLOAT16、BOOL、BFLOAT16。
   - out（aclTensor*, 计算输出）：Device侧的aclTensor，数据类型为INT64。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - workspaceSize（uint64_t*, 出参）：返回用户需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor**, 出参）：返回op执行器，包含了算子计算流程。
@@ -36,6 +39,7 @@
   返回161002 (ACLNN_ERR_PARAM_INVALID)：1. self或out的数据类型不在支持的范围之内。
                                         2. self的shape某一维超出int32表示范围。
   ```
+
 
 ## aclnnNonzeroV2
 
