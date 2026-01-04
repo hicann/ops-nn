@@ -24,8 +24,14 @@ namespace FatreluMul {
 
 using namespace AscendC;
 
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+constexpr int32_t MAX_UB_SIZE = 120 * 1024;
+constexpr int32_t PP_ELEMENT_NUM = 6 * 1024;
+#else
 constexpr int32_t MAX_UB_SIZE = 192 * 1024;
 constexpr int32_t PP_ELEMENT_NUM = 10 * 1024;
+#endif
+
 constexpr int32_t ONE_REPEAT_ELE_NUM_FP32 = 64;
 constexpr int32_t ONE_REPEAT_ELE_NUM_FP16 = 128;
 constexpr int32_t ONE_BLOCK_SIZE = 32;

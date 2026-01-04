@@ -38,7 +38,7 @@ extern "C" __global__ __aicore__ void foreach_non_finite_check_and_unscale(
         op.Init(scaled_grads, found_inf, inv_scale, userWS, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(3)) {
-#if (__CCE_AICORE__ > 200)
+#if (__CCE_AICORE__ > 200) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         ForeachNonFiniteCheckAndUnscaleND<bfloat16_t> op;
         op.Init(scaled_grads, found_inf, inv_scale, userWS, &tilingData);
         op.Process();

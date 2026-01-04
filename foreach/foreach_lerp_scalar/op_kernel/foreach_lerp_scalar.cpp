@@ -35,7 +35,7 @@ extern "C" __global__ __aicore__ void foreach_lerp_scalar(
         op.Init(x1, x2, weight, y, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     else if (TILING_KEY_IS(4)) {
         ForeachLerpScalarND<bfloat16_t> op;
         op.Init(x1, x2, weight, y, userWS, &tilingData);

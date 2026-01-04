@@ -1,0 +1,77 @@
+{
+    "op_type": "ForeachZeroInplace",
+    "op_list": [
+        {
+            "bin_filename": "ForeachZeroInplace_2ac334df450e4b5d713979b76a9d17fa",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": []
+        },
+        {
+            "bin_filename": "ForeachZeroInplace_2f745510bc3e9a51d014993a0de1664f",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": []
+        },
+        {
+            "bin_filename": "ForeachZeroInplace_3a055884adb2b306c861a643b92162ad",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": []
+        },
+        {
+            "bin_filename": "ForeachZeroInplace_226aad6308e394da4825f6e509d8d2b6",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": []
+        }
+    ]
+}

@@ -71,6 +71,19 @@ static ge::graphStatus InferDataType4ForeachCommon(gert::InferDataTypeContext* c
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus InferShape4ForeachInplace(gert::InferShapeContext* context)
+{
+    (void)context;
+    return ge::GRAPH_SUCCESS;
+}
+
+
+static ge::graphStatus InferDataType4ForeachInplace(gert::InferDataTypeContext* context)
+{
+    (void)context;
+    return ge::GRAPH_SUCCESS;
+}
+
 IMPL_OP_INFERSHAPE(ForeachAbs)
     .InferShape(ops::InferShape4ForeachCommon)
     .InferDataType(ops::InferDataType4ForeachCommon);
@@ -224,8 +237,12 @@ IMPL_OP_INFERSHAPE(ForeachTanh)
     .InferDataType(ops::InferDataType4ForeachCommon);
 
 IMPL_OP_INFERSHAPE(ForeachZeroInplace)
-    .InferShape(ops::InferShape4ForeachCommon)
-    .InferDataType(ops::InferDataType4ForeachCommon);
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachNonFiniteCheckAndUnscale)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
 
 IMPL_OP_INFERSHAPE(ForeachSigmoid)
     .InferShape(InferShape4ForeachCommon)

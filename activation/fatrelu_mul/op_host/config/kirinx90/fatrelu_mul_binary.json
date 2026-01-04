@@ -1,0 +1,85 @@
+{
+    "op_type": "FatreluMul",
+    "op_list": [
+        {
+            "bin_filename": "FatreluMul_41aaf1deaff69277f72c0e8e90c3bc6f",
+            "inputs": [
+              {
+                "name": "input",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "threshold",
+                "index": 1,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "output",
+                "index": 0,
+                "dtype": "float16",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ]
+        },
+        {
+            "bin_filename": "FatreluMul_42979a23f7530abf3db7300f99433011",
+            "inputs": [
+              {
+                "name": "input",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              },
+              {
+                "name": "threshold",
+                "index": 1,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "output",
+                "index": 0,
+                "dtype": "float32",
+                "format": "ND",
+                "paramType": "required",
+                "shape": [
+                  -2
+                ],
+                "format_match_mode": "FormatAgnostic"
+              }
+            ]
+        }
+    ]
+}

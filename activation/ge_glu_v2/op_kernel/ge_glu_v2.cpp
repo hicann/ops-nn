@@ -85,6 +85,7 @@ extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR ge
         GeGluV2::GeGluV2Fp16AlignLastAxisBig<half> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(201)) {
         GeGluV2::GeGluV2Bf16Align<bfloat16_t> op;
         op.Init(x, y, gelu, userWS, &tilingData);
@@ -97,6 +98,7 @@ extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR ge
         GeGluV2::GeGluV2Bf16AlignLastAxisBig<bfloat16_t> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
+#endif
     } else if (TILING_KEY_IS(301)) {
         GeGluV2::GeGluV2Fp32Align<float> op;
         op.Init(x, y, gelu, userWS, &tilingData);
@@ -121,6 +123,7 @@ extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR ge
         GeGluV2::GeGluV2Fp16AlignLastAxisBigErf<half> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(211)) {
         GeGluV2::GeGluV2Bf16AlignErf<bfloat16_t> op;
         op.Init(x, y, gelu, userWS, &tilingData);
@@ -133,6 +136,7 @@ extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR ge
         GeGluV2::GeGluV2Bf16AlignLastAxisBigErf<bfloat16_t> op;
         op.Init(x, y, gelu, userWS, &tilingData);
         op.Process();
+#endif
     } else if (TILING_KEY_IS(311)) {
         GeGluV2::GeGluV2Fp32AlignErf<float> op;
         op.Init(x, y, gelu, userWS, &tilingData);

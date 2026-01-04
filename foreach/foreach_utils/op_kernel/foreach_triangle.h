@@ -39,7 +39,7 @@ public:
     }
 };
 
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003))
 template <TriangleOp<float>* op, uint8_t paramsCount>
 class InnerComputer<bfloat16_t, float, op, paramsCount>
 {

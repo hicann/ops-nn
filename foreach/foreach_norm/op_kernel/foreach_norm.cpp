@@ -78,6 +78,7 @@ extern "C" __global__ __aicore__ void foreach_norm(
             op.Process();
         }
     } else if (TILING_KEY_IS(4)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if (modelCode == ONE_SCALAR_NORM_MODEL_CODE) {
             ForeachNormND<bfloat16_t, float, ONE_SCALAR_NORM_MODEL_CODE> op;
             op.Init(inputs, output, userWS, &tilingData);
@@ -87,5 +88,6 @@ extern "C" __global__ __aicore__ void foreach_norm(
             op.Init(inputs, output, userWS, &tilingData);
             op.Process();
         }
+#endif
     }
 }

@@ -35,9 +35,9 @@ public:
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+
         OpAICoreConfig config310p;
         config310p.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
@@ -62,6 +62,9 @@ public:
             .AutoContiguous();
         this->AICore().AddConfig("ascend310p", config310p);
 
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+
         OpAICoreConfig config_910d;
         config_910d.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
@@ -69,6 +72,34 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_non_finite_check_and_unscale_apt");
         this->AICore().AddConfig("ascend910_95", config_910d);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("scaled_grads")
+            .ParamType(DYNAMIC)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("found_inf")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("inv_scale")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        return config_kirin;
     }
 };
 

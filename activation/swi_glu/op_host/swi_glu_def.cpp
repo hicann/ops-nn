@@ -48,6 +48,7 @@ public:
         .DynamicRankSupportFlag(true)
         .DynamicShapeSupportFlag(true);
       this->AICore().AddConfig("ascend310p", config_without_bf16);
+      this->AICore().AddConfig("kirinx90", config_without_bf16);
 
       OpAICoreConfig regbaseCfg;
       regbaseCfg.DynamicCompileStaticFlag(true)

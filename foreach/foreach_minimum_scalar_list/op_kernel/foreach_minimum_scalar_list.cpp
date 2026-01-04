@@ -50,7 +50,7 @@ extern "C" __global__ __aicore__ void foreach_minimum_scalar_list(
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     else if (TILING_KEY_IS(4)) {
         ForeachOneScalarListBinary<bfloat16_t, float, MinsAdapter<float>, 2, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);

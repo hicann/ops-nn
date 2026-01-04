@@ -36,10 +36,12 @@ extern "C" __global__ __aicore__ void foreach_sign(GM_ADDR x, GM_ADDR y, GM_ADDR
         ForeachSignND<int32_t> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachSignND<bfloat16_t> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
+#endif
     } else if (TILING_KEY_IS(7)) {
         ForeachSignND<int8_t> op;
         op.Init(x, y, userWS, &tilingData);

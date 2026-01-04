@@ -38,9 +38,11 @@ extern "C" __global__ __aicore__ void foreach_cos(GM_ADDR x, GM_ADDR y, GM_ADDR 
         ForeachTriangle<float, float, Cos<float, false>> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachTriangle<bfloat16_t, float, Cos<float, false>> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
+#endif
     }
 }

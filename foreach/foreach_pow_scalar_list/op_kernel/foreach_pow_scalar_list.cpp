@@ -37,9 +37,11 @@ extern "C" __global__ __aicore__ void foreach_pow_scalar_list(
         ForeachPowScalarListND<int> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachPowScalarListND<bfloat16_t> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
+#endif
     }
 }

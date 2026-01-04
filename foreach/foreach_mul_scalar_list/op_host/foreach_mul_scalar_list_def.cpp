@@ -16,21 +16,82 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-// FOREACH_OPDEF(Atlas_A2_AND_910_93_AND_A5, BINARY_SCALARLIST, MulScalarList, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32,
-// ge::DT_BF16)
-FOREACH_OPDEF_BEGIN(MulScalarList)
-FOREACH_TENSOR_DTYPE_AND_FORMAT_PREPARE(ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32);
-std::vector<ge::DataType> scalar_dtype_list{ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64};
-FOREACH_OPDEF_PARAM_TENSORLIST(Input, x)
-FOREACH_OPDEF_PARAM_SCALARLIST(Input, scalars)
-FOREACH_OPDEF_PARAM_TENSORLIST(Output, y)
+class ForeachMulScalarList : public OpDef {
+public:
+    explicit ForeachMulScalarList(const char* name) : OpDef(name)
+    {
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32};
+        std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
+        std::vector<ge::DataType> scalar_dtype_list{ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64};
+        this->Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
+        this->Input("scalars")
+            .ScalarList()
+            .ParamType(REQUIRED)
+            .DataType(scalar_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
+        this->Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
 
-OpAICoreConfig regbaseCfg;
-regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true).ExtendCfgInfo(
-    "opFile.value", "foreach_mul_scalar_list_apt");
-this->AICore().AddConfig("ascend910_95", regbaseCfg);
+        OpAICoreConfig regbaseCfg;
+        regbaseCfg.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_mul_scalar_list_apt");
+        this->AICore().AddConfig("ascend910_95", regbaseCfg);
 
-FOREACH_OPDEF_END_Atlas_A2_AND_910_93(MulScalarList);
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
 
-    OP_ADD(ForeachMulScalarList);
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32};
+        std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
+        std::vector<ge::DataType> scalar_dtype_list_kirin{ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64};
+        config_kirin.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Input("scalars")
+            .ScalarList()
+            .ParamType(REQUIRED)
+            .DataType(scalar_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        return config_kirin;
+    }
+};
+
+OP_ADD(ForeachMulScalarList);
 } // namespace ops

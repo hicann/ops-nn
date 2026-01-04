@@ -25,7 +25,7 @@
 
      GM_ADDR userWs = nullptr;
 
- #if __CCE_AICORE__ == 220
+ #if __CCE_AICORE__ == 220|| (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
      if (TILING_KEY_IS(1)) {
          SquaredReluND<half> op;
          op.Init(input, output, userWs, &tilingData);
@@ -34,10 +34,12 @@
          SquaredReluND<float> op;
          op.Init(input, output, userWs, &tilingData);
          op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
      } else if (TILING_KEY_IS(3)) {
          SquaredReluND<bfloat16_t> op;
          op.Init(input, output, userWs, &tilingData);
          op.Process();
+#endif
      }
  #else
  #endif

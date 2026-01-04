@@ -127,6 +127,8 @@ constexpr uint8_t UB_DIVIDER_FOR_TEMP_CASTING = 10;
 
 constexpr int32_t MAX_SUPPORT_DIMS_NUMS = 8;
 
+constexpr uint32_t BUFFER_ATTENUATION = 2;
+
 enum class ForeachInputType : uint8_t
 {
     TYPE_TENSORS = 0,        // only tensor type
@@ -860,6 +862,9 @@ private:
                 calcPro = TAN_FLOAT_CALC_PROC;
             }
             uint32_t extraBuffer = calcPro * static_cast<uint32_t>(dataTypeSize) * TAN_BASIC_BLOCK_SIZE * 8U;
+            while (static_cast<uint32_t>(ubSizePlatForm) <= static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
+                extraBuffer = extraBuffer / BUFFER_ATTENUATION;
+            }
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize() - extraBuffer);
             if (dataType == ge::DT_BF16) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
@@ -910,6 +915,9 @@ private:
                 calcPro = ATAN_FLOAT_CALC_PROC;
             }
             uint32_t extraBuffer = calcPro * static_cast<uint32_t>(dataTypeSize) * ATAN_BASIC_BLOCK_SIZE * 8U;
+            while (static_cast<uint32_t>(ubSizePlatForm) <= static_cast<uint32_t>(tilingData.GetDataSize() + extraBuffer)) {
+                extraBuffer = extraBuffer / BUFFER_ATTENUATION;
+            }
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize() - extraBuffer);
             if (dataType == ge::DT_BF16) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;

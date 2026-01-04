@@ -73,10 +73,12 @@ extern "C" __global__ __aicore__ void foreach_sub_list(
         ForeachOneScalarTernary<int, int, SubListNormalAdapter<int>> op;
         op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarTernary<bfloat16_t, float, SubListFloatAdapter<float>> op;
         op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
         op.Process();
+#endif
     }
 #endif
 }

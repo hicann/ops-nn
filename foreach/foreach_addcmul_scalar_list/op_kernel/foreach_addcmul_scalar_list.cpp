@@ -111,10 +111,12 @@ extern "C" __global__ __aicore__ void foreach_addcmul_scalar_list(
         ForeachOneScalarListQuaternaryImplictOutput<int, AddcMulScalarListAdapterForInt<int>, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarListQuaternaryImplictOutput<bfloat16_t, AddcMulScalarListAdapter<bfloat16_t>, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);
         op.Process();
+#endif
     }
 #endif
 }

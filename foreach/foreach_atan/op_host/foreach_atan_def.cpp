@@ -16,5 +16,59 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-FOREACH_OPDEF(Atlas_A2_AND_910_93_AND_A5, UNARY, Atan, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16);
+class ForeachAtan: public OpDef {
+public:
+    explicit ForeachAtan(const char* name) : OpDef(name)
+    {
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+        std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
+        this->Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
+        this->Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
+        this->AICore().AddConfig("ascend910_95");
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT};
+        std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        return config_kirin;
+    }
+};
+
+OP_ADD(ForeachAtan);
 } // namespace ops

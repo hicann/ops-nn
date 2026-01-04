@@ -68,13 +68,13 @@ TEST_F(ForeachZeroInplaceTest, infer_shape_known_success)
     ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
 
     auto output_shape_0 = context->GetOutputShape(0);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_0), "[1]");
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_0), "[]");
 
     auto output_shape_1 = context->GetOutputShape(1);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_1), "[2]");
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_1), "[]");
 
     auto output_shape_2 = context->GetOutputShape(2);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[3]");
+    EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[]");
 }
 
 TEST_F(ForeachZeroInplaceTest, infer_dtype_test_1)
@@ -104,7 +104,7 @@ TEST_F(ForeachZeroInplaceTest, infer_dtype_test_1)
     ASSERT_NE(context, nullptr);
     ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
 
-    ge::DataType expected_datatype = ge::DT_FLOAT16;
+    ge::DataType expected_datatype = ge::DT_MAX;
     auto output_dtype_0 = context->GetOutputDataType(0);
     EXPECT_EQ(output_dtype_0, expected_datatype);
 

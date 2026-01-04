@@ -51,10 +51,12 @@ extern "C" __global__ __aicore__ void foreach_mul_scalar(
         ForeachOneScalarBinary<int, int, MulsAdapter<int>, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     } else if (TILING_KEY_IS(4)) {
         ForeachOneScalarBinary<bfloat16_t, float, MulsAdapter<float>, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
+#endif
     }
 #endif
 }

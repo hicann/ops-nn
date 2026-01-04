@@ -44,7 +44,7 @@ extern "C" __global__ __aicore__ void foreach_abs(GM_ADDR x, GM_ADDR y, GM_ADDR 
         op.Init(x, y, userWS, &tilingData);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     else if (TILING_KEY_IS(4)) {
         ForeachTriangle<bfloat16_t, float, AbsAdapter<float>, 2, 1> op;
         op.Init(x, y, userWS, &tilingData);
