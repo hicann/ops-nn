@@ -823,7 +823,8 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
 
             uint64_t mIndex = orderNMFlag ? inIndex : outIndex;
             uint64_t nIndex = orderNMFlag ? outIndex : inIndex;
-
+            mCoreUse = tiling.singleCoreM;
+            nCoreUse = tiling.singleCoreN;
             if (mIndex == mCnt - 1 || nIndex == nCnt -1) {
                 // 重新计算尾列参数
                 mCoreUse = (mIndex == mCnt -1) ?  mCoreTail : tiling.singleCoreM;
@@ -849,7 +850,7 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
 
             uint64_t actualM = mCoreUse; // 63
             uint64_t actualN = nCoreUse; // 64
-            if (orderNMFlag && outIndex == outCnt - 1) {
+            if ((orderNMFlag && outIndex == outCnt - 1) || (!orderNMFlag && inIndex == inCnt - 1)) {
                 actualN = nCoreTail;
             }
 
