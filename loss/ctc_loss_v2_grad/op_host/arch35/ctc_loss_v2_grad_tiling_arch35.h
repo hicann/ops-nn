@@ -53,11 +53,6 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(CTCLossV2Grad, CTCLossV2GradTilingData4AscnedC)
 
-struct CTCLossV2GradCompileInfo {
-    int32_t coreNum = 1;
-    int32_t ubSize = 1;
-};
-
 struct CTCLossV2GradForCompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSize = 0;

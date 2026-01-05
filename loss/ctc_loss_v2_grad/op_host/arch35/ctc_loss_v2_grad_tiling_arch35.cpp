@@ -235,6 +235,7 @@ ge::graphStatus CTCLossV2GradTiling4AscendC::RunKernelTiling()
         context_->SetTilingKey(TILING_KEY_INT32);
     }
     context_->SetBlockDim(coreNum);
+    context_->SetScheduleMode(1);   // 全核同步
     tilingData.set_alphaLength(alphaLength);
     tilingData.set_maxInputLength(maxInputLength);
     tilingData.set_symbolSet(symbolSet);
@@ -498,11 +499,21 @@ static ge::graphStatus Tiling4CTCLossV2Grad(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4CTCLossV2Grad([[maybe_unused]] gert::TilingParseContext* context)
 {
+    auto compileInfo4AscendC = context->GetCompiledInfo<CTCLossV2GradForCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo4AscendC);
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo4AscendC->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(
+        (compileInfo4AscendC->totalCoreNum <= 0),
+        OP_LOGE(context->GetNodeName(), "TilingPrepare4CTCLossV2Grad fail to get core num."),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(CTCLossV2Grad)
     .Tiling(Tiling4CTCLossV2Grad)
-    .TilingParse<CTCLossV2GradCompileInfo>(TilingPrepare4CTCLossV2Grad)
+    .TilingParse<CTCLossV2GradForCompileInfo>(TilingPrepare4CTCLossV2Grad)
     .InputsDataDependency({INPUT_LENGTHS_IDX, TARGET_LENGTHS_IDX});
 } // namespace optiling
