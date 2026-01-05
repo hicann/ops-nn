@@ -24,7 +24,6 @@
 #include "tiling_base/tiling_templates_registry.h"
 
 using namespace Ops::Base;
-using namespace AscendC;
 using namespace ge;
 using namespace ReluGradOp;
 

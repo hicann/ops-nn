@@ -22,8 +22,6 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
-#include <iostream>
-
 using namespace ge;
 using namespace EluGradV2Op;
 
@@ -161,6 +159,8 @@ ge::graphStatus EluGradV2Tiling::RunTiling()
     OP_LOGD(tilingContext->GetNodeName(), "EluGradV2Tiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     ge::graphStatus status = ge::GRAPH_FAILED;
+    tiling = tilingContext->GetTilingData<EluGradV2TilingData>();
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"), return ge::GRAPH_FAILED);
     status = CalcInputDtype();
     OP_CHECK_IF(status == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "Get input dtype failed"), return ge::GRAPH_FAILED);
     status = CalcOutputDtype();
@@ -227,4 +227,3 @@ IMPL_OP_OPTILING(EluGradV2)
     .Tiling(Tiling4EluGradV2)
     .TilingParse<EluGradV2CompileInfo>(TilingPrepareForEluGradV2);
 }  // namespace optiling
- 

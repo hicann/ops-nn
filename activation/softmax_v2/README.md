@@ -71,4 +71,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_softmax_v2](examples/arch35/test_aclnn_softmax_v2.cpp) | 通过[aclnnSoftmax](docs/aclnnSoftmax.md)接口方式调用SoftmaxV2算子。 |
+| aclnn接口 | [test_aclnn_softmax_v2](examples/test_aclnn_softmax_v2.cpp) | 通过[aclnnSoftmax](docs/aclnnSoftmax.md)接口方式调用SoftmaxV2算子。 |
