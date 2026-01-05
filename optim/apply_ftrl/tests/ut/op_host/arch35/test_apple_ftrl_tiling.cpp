@@ -19,7 +19,7 @@
 #include <iostream>
 #include <vector>
 
-#include "../../../op_host/apply_ftrl_tiling.h"
+#include "../../../../op_host/apply_ftrl_tiling.h"
 #include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"

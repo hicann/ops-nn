@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
@@ -27,8 +26,6 @@
 using namespace std;
 using namespace ge;
 using namespace optiling;
-
-#ifdef USE_LEGACY_COMMON
 
 namespace {
 struct WeightQuantBatchMatmulV2WeightNzTilingTestParam {
@@ -260,5 +257,3 @@ TEST_F(TestWeightQuantBatchMatmulV2WeightNzTiling, multi_thread)
     TestMultiThread(casesParams, sizeof(casesParams) / sizeof(WeightQuantBatchMatmulV2WeightNzTilingTestParam), 3);
 }
 } // namespace
-
-#endif

@@ -20,7 +20,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
-#include "../../../op_host/op_tiling/arch35/swish_tiling_arch35.h"
+#include "../../../op_host/arch35/swish_tiling_arch35.h"
 
 using namespace ut_util;
 using namespace std;

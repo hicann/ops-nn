@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
@@ -26,8 +25,6 @@
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 
 using namespace std;
-
-#ifdef USE_LEGACY_COMMON
 
 struct WeightQuantBatchMatmulV2TilingCustomTestParam {
     string caseName;
@@ -411,4 +408,3 @@ TEST_F(TestWeightQuantBatchMatmulV2TilingCustom, multi_thread_2448)
         casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingCustomTestParam), 3);
 }
 
-#endif

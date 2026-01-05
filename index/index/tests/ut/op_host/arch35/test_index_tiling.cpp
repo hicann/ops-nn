@@ -24,8 +24,8 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
-#include "../../../op_host/arch35/index_tiling.h"
-#include "../../../op_graph/index_proto.h"
+#include "../../../../op_host/arch35/index_tiling.h"
+#include "../../../../op_graph/index_proto.h"
 
 using namespace std;
 using namespace ge;

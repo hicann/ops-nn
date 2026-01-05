@@ -20,7 +20,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
-#include "../../../op_host/arch35/mse_loss_grad_tiling_arch35.h"
+#include "../../../../op_host/arch35/mse_loss_grad_tiling_arch35.h"
 
 using namespace ut_util;
 using namespace std;

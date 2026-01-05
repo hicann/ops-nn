@@ -108,7 +108,7 @@ vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape, cons
 vector<vector<int64_t>> BroadcastAllShapes(const vector<vector<int64_t>>& shapes)
 {
     if (shapes.empty()) {
-        return {};
+        return {{}};
     }
     vector<int64_t> target_shape = ComputeBroadcastShape(shapes);
     vector<vector<int64_t>> broadcasted_shapes;
