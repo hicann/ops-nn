@@ -67,4 +67,5 @@
 
 | 调用方式   | 样例代码                                                                         | 说明                                                                                 |
 | ---------------- |------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| aclnn接口  | [test_aclnn_leaky_relu.cpp](examples/test_aclnn_leaky_relu.cpp) | 通过[aclnnLeakyRelu](docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md)接口方式调用LeakyRelu算子。 |
+| aclnn接口  | [test_aclnn_leaky_relu.cpp](examples/test_aclnn_leaky_relu.cpp) | 通过[aclnnLeakyRelu&aclnnInplaceLeakyRelu](docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md)接口方式调用LeakyRelu算子。 |
+| aclnn接口  | [test_aclnn_inplace_leaky_relu.cpp](examples/test_aclnn_inplace_leaky_relu.cpp) | 通过[aclnnLeakyRelu&aclnnInplaceLeakyRelu](docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md)接口方式调用LeakyRelu算子。 |

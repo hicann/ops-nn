@@ -431,7 +431,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -454,7 +454,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建negativeSlope aclScalar
   negativeSlope = aclCreateScalar(&negativeSlopeValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n", negativeSlope); return false);
+  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n"); return false);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -493,7 +493,7 @@ int main() {
   aclDestroyTensor(self);
   aclDestroyScalar(negativeSlope);
   aclDestroyTensor(out);
-    
+
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
@@ -569,7 +569,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -588,7 +588,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建negativeSlope aclScalar
   negativeSlope = aclCreateScalar(&negativeSlopeValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n", negativeSlope); return false);
+  CHECK_RET(negativeSlope != nullptr, LOG_PRINT("negativeSlope is null!\n"); return false);
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
