@@ -37,7 +37,7 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     } else if (TILING_KEY_IS(20)) {
         GENERAL_OP_IMPL(KernelAddRmsNorm, float);
     } else if (TILING_KEY_IS(30)) {
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNorm, bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(11)) {
@@ -45,7 +45,7 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     } else if (TILING_KEY_IS(21)) {
         GENERAL_OP_IMPL(KernelAddRmsNormSplitD, float);
     } else if (TILING_KEY_IS(31)) {
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormSplitD, bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(12)) {
@@ -53,7 +53,7 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     } else if (TILING_KEY_IS(22)) {
         GENERAL_OP_IMPL(KernelAddRmsNormMergeN, float);
     } else if (TILING_KEY_IS(32)) {
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormMergeN, bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(13)) {
@@ -61,7 +61,7 @@ extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     } else if (TILING_KEY_IS(23)) {
         GENERAL_OP_IMPL(KernelAddRmsNormSingleN, float);
     } else if (TILING_KEY_IS(33)) {
-#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         GENERAL_OP_IMPL(KernelAddRmsNormSingleN, bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(14)) {
