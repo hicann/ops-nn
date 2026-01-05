@@ -24,14 +24,14 @@
 #include "opdev/shape_utils.h"
 using namespace op;
 
-static const uint64_t INT32_MAX_LIMIT = 2147483647;
-static const uint64_t CAST_MAX_NUM = 16777216;
-static const uint64_t INDICES_BASE = 20000;
-static const uint64_t INDICES_LIMIT = 100000;
-static const uint64_t SLICESIZE_LIMIT = 1024;
-static const uint64_t SLICESIZE_BASE = 128;
-static const uint64_t INDICES_MIN_LIMIT = 100;
-static const uint64_t SLICESIZE_FP16_LIMIT = 30000;
+static const int64_t INT32_MAX_LIMIT = 2147483647;
+static const int64_t CAST_MAX_NUM = 16777216;
+static const int64_t INDICES_BASE = 20000;
+static const int64_t INDICES_LIMIT = 100000;
+static const int64_t SLICESIZE_LIMIT = 1024;
+static const int64_t SLICESIZE_BASE = 128;
+static const int64_t INDICES_MIN_LIMIT = 100;
+static const int64_t SLICESIZE_FP16_LIMIT = 30000;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDEX_PUT_WITH_SORT = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -124,7 +124,7 @@ static bool CheckIndicesDtypeAndShape(const aclTensorList *indices) {
 }
 
 static bool CheckValuesShape(const aclTensorList *indices, const aclTensor *values) {
-  int64_t valuesSize = values->GetViewShape().GetDimNum();
+  auto valuesSize = values->GetViewShape().GetDimNum();
   if (valuesSize < (*indices)[0]->GetViewShape().GetDimNum()) {
       OP_LOGD("IndexPutWithSort Op not support dims of values smaller than dims of indices!");
       return false;
@@ -142,7 +142,6 @@ static bool CheckValuesShape(const aclTensorList *indices, const aclTensor *valu
 static bool CheckSliceSize(aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values) {
   int64_t indicesSize = static_cast<int64_t>(indices->Size());
   int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
-  int64_t valuesSize = values->GetViewShape().GetDimNum();
 
   int64_t SliceDims = selfRefSize - indicesSize;
   auto indexDims = (*indices)[0]->GetViewShape().GetDimNum();
@@ -157,8 +156,8 @@ static bool CheckSliceSize(aclTensor *selfRef, const aclTensorList *indices, con
   return true;
 }
 
-static bool CheckDataSize(aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values) {
-  int64_t indicesSize = static_cast<int64_t>(indices->Size());
+static bool CheckDataSize(aclTensor *selfRef, const aclTensorList *indices) {
+  auto indicesSize = indices->Size();
   int64_t shapeProd = 1;
   for (size_t i = 0; i < indicesSize; i++) {
     if (selfRef->GetViewShape().GetDim(i) > CAST_MAX_NUM) {
@@ -174,15 +173,15 @@ static bool CheckDataSize(aclTensor *selfRef, const aclTensorList *indices, cons
   return true;
 }
 
-static bool IndexPutWithSortBetter(aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values) {
-  auto indicesNums = (*indices)[0]->GetViewShape().GetShapeSize();
+static bool IndexPutWithSortBetter(aclTensor *selfRef, const aclTensorList *indices) {
+  int64_t indicesNums = static_cast<int64_t>((*indices)[0]->GetViewShape().GetShapeSize());
   int64_t sliceSize = 1;
-  int64_t indicesSize = static_cast<int64_t>(indices->Size());
-  int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
+  auto indicesSize = indices->Size();
+  auto selfRefSize = selfRef->GetViewShape().GetDimNum();
   auto selfShape = selfRef->GetViewShape();
   if (selfRefSize > indicesSize) {
       for (size_t i = indicesSize; i < selfRefSize; i++) {
-          sliceSize *= selfShape.GetDim(i);
+          sliceSize *= static_cast<int64_t>(selfShape.GetDim(i));
       }
   }
   OP_LOGD("IndexPutWitSort Op indicesNums %ld, sliceSize %ld", indicesNums, sliceSize);
@@ -236,11 +235,11 @@ bool IsIndexPutWithSortSupport(aclTensor *selfRef, const aclTensorList *indices,
     return false;
   }
   // 7. 数据量限制，每个索引的取值范围不超过CAST_MAX_NUM，且self尾轴个数不超过INT32_MAX_LIMIT
-  if(!CheckDataSize(selfRef, indices, values)) {
+  if(!CheckDataSize(selfRef, indices)) {
     return false;
   }
   // 8. indexputv2优势限制
-  if(deterministicValue == 0 && (!IndexPutWithSortBetter(selfRef, indices, values))) {
+  if(deterministicValue == 0 && (!IndexPutWithSortBetter(selfRef, indices))) {
     return false;
   }
   // 9. 非确定性计算的替换模式不走indexputwithsort
