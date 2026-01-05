@@ -2,7 +2,6 @@
 
 ## 产品支持情况
 
-
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>昇腾910_95 AI处理器</term>                             |    √     |
@@ -16,6 +15,8 @@
 ## 功能说明
 
 - 算子功能：执行scatter操作，根据pos_idx的值循环对应的values，累加/替换到linear_index指向的self的位置。
+
+## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
   <col style="width: 170px">

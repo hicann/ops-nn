@@ -1,36 +1,59 @@
-# FastGeluGrad
+# aclnnFastGeluBackward
+
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/fast_gelu_grad)
 
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT9</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √      |
+| <term>Ascend 950PR/Ascend 950DT</term>                     |     √    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
-
-算子功能：aclnnFastGelu的反向计算。
-
+[FastGelu](../../fast_gelu/docs/aclnnFastGelu.md)的反向计算。
+FastGeluBackward定义如下：
+$$
+dx = dy * ((\frac{1}{e^{-1.702 x}+1} - 1) * -1.702x + 1) * \frac{1}{(e^{-1.702 x}+1)}
+$$                   
+ 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFastGeluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFastGeluBackward”接口执行计算。
+
+```Cpp
+aclnnStatus aclnnFastGeluBackwardGetWorkspaceSize(
+  const aclTensor *gradOutput,
+  const aclTensor *self,
+  aclTensor       *gradInput,
+  uint64_t        *workspaceSize,
+  aclOpExecutor  **executor)
+```
+
+```Cpp
+aclnnStatus aclnnFastGeluBackward(
+  void           *workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor  *executor,
+  aclrtStream     stream)
+```
 
 ## aclnnFastGeluBackwardGetWorkspaceSize
 
 - **参数说明：**
 
-    <table style="undefined;table-layout: fixed; width: 1420px"><colgroup>
-    <col style="width: 173px">
-    <col style="width: 120px">
-    <col style="width: 222px">
-    <col style="width: 338px">
-    <col style="width: 156px">
-    <col style="width: 104px">
-    <col style="width: 162px">
-    <col style="width: 145px">
-    </colgroup>
-    <thead>
-      <tr>
+  <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
+  <col style="width: 171px">
+  <col style="width: 115px">
+  <col style="width: 220px">
+  <col style="width: 280px">
+  <col style="width: 177px">
+  <col style="width: 104px">
+  <col style="width: 238px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
       <th>参数名</th>
       <th>输入/输出</th>
       <th>描述</th>
@@ -39,29 +62,39 @@
       <th>数据格式</th>
       <th>维度(shape)</th>
       <th>非连续Tensor</th>
-      </tr></thead>
-    <tbody>
+    </tr></thead>
+  <tbody>
+       <tr>
+      <td>gradOutput</td>
+      <td>输入</td>
+      <td>反向传播的梯度数据，公式中的dy。</td>
+      <td><ul><li>与self、gradInput的数据格式一致。</li><li>与self、gradInput的shape一致。</li><li>与self、gradInput的数据类型一致。</li></ul></td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr>
       <tr>
       <td>self</td>
       <td>输入</td>
-      <td>输入张量。</td>
-      <td>数据类型支持FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>表示输入张量，与正向的self相同，公式中的x。</td>
+      <td><ul><li>与gradOutput、gradInput的数据格式一致。</li><li>与gradOutput、gradInput的shape一致。</li><li>与gradOutput、gradInput的数据类型一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
-      <td>(N)</td>
+      <td>0-8</td>
       <td>√</td>
-      </tr>
-      <tr>
-      <td>out</td>
+    </tr>
+    <tr>
+      <td>gradInput</td>
       <td>输出</td>
-      <td>输出张量。</td>
-      <td>数据类型支持FLOAT16、FLOAT32、BFLOAT16</td>
+      <td>表示输出张量，公式中的dx。</td>
+      <td><ul><li>与gradOutput、self的数据格式一致。</li><li>与gradOutput、self的shape一致。</li><li>与gradOutput、self的数据类型一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
-      <td>(N)</td>
+      <td>0-8</td>
       <td>√</td>
-      </tr>
-      <tr>
+    </tr>
+     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
@@ -70,70 +103,108 @@
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      </tr>
+    </tr>
       <tr>
       <td>executor</td>
       <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      </tr>
-    </tbody></table>
+    </tr>
+  </tbody>
+  </table>
+
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  第一段接口会完成入参校验，出现以下场景时报错：
+  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
+  <col style="width: 272px">
+  <col style="width: 103px">
+  <col style="width: 604px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>gradOutput、self或gradInput是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
+      <td>gradOutput、self和gradInput的数据类型、数据格式不一致。</td>
+    </tr>
+    <tr>
+      <td>gradInput的数据类型不在支持范围内。</td>
+    </tr>
+    <tr>
+      <td>gradOutput、self和gradInput的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>self的shape维度大于8维。</td>
+    </tr>
+  </tbody></table>
 
 
 ## aclnnFastGeluBackward
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
-      <col style="width: 200px">
-      <col style="width: 162px">
-      <col style="width: 882px">
-      </colgroup>
-      <thead>
-      <tr>
+  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 112px">
+  <col style="width: 668px">
+  </colgroup>
+  <thead>
+    <tr>
       <th>参数名</th>
       <th>输入/输出</th>
       <th>描述</th>
-      </tr></thead>
-      <tbody>
-      <tr>
+    </tr></thead>
+  <tbody>
+    <tr>
       <td>workspace</td>
       <td>输入</td>
       <td>在Device侧申请的workspace内存地址。</td>
-      </tr>
-      <tr>
+    </tr>
+    <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnFastGeluGetWorkspaceSize获取。</td>
-      </tr>
-      <tr>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnFastGeluBackwardGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
       <td>executor</td>
       <td>输入</td>
       <td>op执行器，包含了算子计算流程。</td>
-      </tr>
-      <tr>
+    </tr>
+    <tr>
       <td>stream</td>
       <td>输入</td>
       <td>指定执行任务的Stream。</td>
-      </tr>
-      </tbody>
-    </table>
+    </tr>
+  </tbody>
+  </table>
+
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-无。
+- 确定性计算：
+  - aclnnFastGeluBackward默认确定性实现。
 
 ## 调用示例
 
@@ -273,3 +344,4 @@ int main() {
   return 0;
 }
 ```
+
