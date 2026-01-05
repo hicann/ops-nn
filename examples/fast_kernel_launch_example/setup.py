@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
@@ -11,18 +11,23 @@
 # ----------------------------------------------------------------------------
 
 import os
-import sys
-import glob
 import shutil
 import subprocess
-import sysconfig
-from pathlib import Path
-from setuptools import setup, find_packages, Extension
-from setuptools.command.build_ext import build_ext
-from setuptools import Command
+import logging
+from setuptools import setup, find_packages, Distribution, Command
+from wheel.bdist_wheel import bdist_wheel
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+PACKAGE_NAME = "ascend_ops"
+VERSION = "1.0.0"
+DESCRIPTION = "Example of PyTorch C++ and Ascend extensions"
 
 
 class CleanCommand(Command):
+    """
+    usage: python setup.py clean
+    """
+    description = "Clean build artifacts from the source tree"
     user_options = []
     
     def initialize_options(self):
@@ -32,89 +37,118 @@ class CleanCommand(Command):
         pass
     
     def run(self):
-        # 删除构建目录
-        if os.path.exists('build'):
-            shutil.rmtree('build')
-            print("Removed build/")
-        
-        # 删除dist目录
-        if os.path.exists('dist'):
-            shutil.rmtree('dist')
-            print("Removed dist/")
-        
-        # 删除egg-info目录
-        egg_info_dir = f"{self.distribution.get_name().replace('-', '_')}.egg-info"
-        if os.path.exists(egg_info_dir):
-            shutil.rmtree(egg_info_dir)
-            print(f"Removed {egg_info_dir}/")
-        
-        # 删除.pyc文件和__pycache__目录
-        for root, dirs, files in os.walk('.'):
+        folders_to_remove = ['build', 'dist', f'{PACKAGE_NAME}.egg-info']
+        for folder in folders_to_remove:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+                logging.info(f"Removed folder: {folder}")
+        for root, _, files in os.walk('.'):
             for file in files:
-                if file.endswith('.pyc'):
-                    os.remove(os.path.join(root, file))
-                    print(f"Removed {os.path.join(root, file)}")
-            
-            for dir in dirs:
-                if dir == '__pycache__':
-                    shutil.rmtree(os.path.join(root, dir))
-                    print(f"Removed {os.path.join(root, dir)}/")
+                if file.endswith(('.pyc', '.pyo')):
+                    file_path = os.path.join(root, file)
+                    os.remove(file_path)
+                    logging.info(f"Removed file: {file_path}")
+        logging.info("Cleaned build artifacts.")
 
 
-class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=""):
-        super().__init__(name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
+class BinaryDistribution(Distribution):
+    """
+    Make this wheel not a pure python package
+    """
+    def is_pure(self):
+        return False
+
+    def has_ext_modules(self):
+        return True
 
 
-class CMakeBuild(build_ext):
+class ABI3Wheel(bdist_wheel):
+    """
+    Force to use abi3 tag for wheel, this wheel supports multiple python versions >= 3.8
+    """
+    def get_tag(self):
+        python, abi, plat = super().get_tag()
+        python = "cp38"
+        abi = "abi3"
+        return python, abi, plat
+
     def run(self):
-        try:
-            subprocess.check_output(["cmake", "--version"])
-        except OSError:
-            raise RuntimeError("CMake must be installed to build the extensions")
+        self.run_command('cmake_build')
+        super().run()
 
-        for ext in self.extensions:
-            self.build_cmake(ext)
 
-    def build_cmake(self, ext):
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        python_include = sysconfig.get_path('include')
-        python_libs = sysconfig.get_config_var('LIBDIR')
+class CMakeBuildCommand(Command):
+    """
+    Custom command to build CMake extensions
+    """
+    description = "Build CMake extensions"
+    user_options = []
 
-        cmake_args = [
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
-            f"-DBUILD_TORCH_OPS=ON",
-            f"-DPYTHON_EXTENSION_USE_ABI3=ON",
-            f"-DPYTHON_INCLUDE_DIR={python_include}",
-            f"-DPYTHON_LIBRARIES={python_libs}",
-            f"-DPy_LIMITED_API_VERSION=0x03080000",
+    def initialize_options(self):
+        pass
 
-        ]
+    def finalize_options(self):
+        pass
 
-        build_type = "Debug" if self.debug else "Release"
-        build_args = ["--config", build_type]
+    def run(self):
+        """
+        This file `setup.py` and the CMakeLists.txt are in the same directory.
+        Use multi-core to speed up compilation.
+        """
+        cpu_count = os.cpu_count() or 2
+        num_jobs = str(cpu_count)
+        # Get Torch and Torch NPU paths
+        import torch
+        TORCH_CMAKE_PATH = torch.utils.cmake_prefix_path
+        Torch_DIR = os.path.join(TORCH_CMAKE_PATH, "Torch")
+        logging.info(f"Using Torch path: {Torch_DIR}")
+        import torch_npu
+        TORCH_NPU_PATH = os.path.dirname(torch_npu.__file__)
+        logging.info(f"Using Torch NPU path: {TORCH_NPU_PATH}")
 
-        cpu_count = os.cpu_count() or 1
-        parallel_jobs = max(16, cpu_count // 2)
-        build_args += ["--", f"-j{parallel_jobs}"]
+        # Get NPU_ARCH from environment variable or set default
+        NPU_ARCH = os.environ.get('NPU_ARCH', 'ascend910b')
+        logging.info(f"Using NPU_ARCH: {NPU_ARCH}")
 
-        build_temp = Path(self.build_temp) / ext.name
-        build_temp.mkdir(parents=True, exist_ok=True)
+        # Build the CMake project
+        build_temp = os.path.join(os.getcwd(), 'build')
+        cmake_config_command = ['cmake', '-S', os.getcwd(), '-B', build_temp,
+                                '-DCMAKE_BUILD_TYPE=Release',
+                                f'-DTorch_DIR={Torch_DIR}',
+                                f'-DTORCH_NPU_PATH={TORCH_NPU_PATH}',
+                                f'-DNPU_ARCH={NPU_ARCH}'
+                                ]
+        subprocess.check_call(cmake_config_command, cwd=os.getcwd())
+        subprocess.check_call(['cmake', '--build', build_temp, '--config', 'Release', '--parallel', num_jobs], cwd=os.getcwd())
+        logging.info("CMake extensions built successfully.")
 
-        subprocess.check_call(["cmake", ext.sourcedir] + cmake_args, cwd=build_temp)
-        subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
+
+cmdclass = {
+    'clean': CleanCommand,
+    'bdist_wheel': ABI3Wheel,
+    'cmake_build': CMakeBuildCommand,
+}
 
 
 setup(
-    name='ascend_ops',
-    version='0.0.1',
+    name=PACKAGE_NAME,
+    version=VERSION,
+    description=DESCRIPTION,
     packages=find_packages(),
-    ext_modules=[CMakeExtension("ascend_ops._C", sourcedir=".")],
-    cmdclass={'build_ext': CMakeBuild, 'clean': CleanCommand},
+    package_data={PACKAGE_NAME: ['*.so']},
+    distclass=BinaryDistribution,
+    cmdclass=cmdclass,
     zip_safe=False,
-    install_requires=["torch"],
-    options={"bdist_wheel": {"py_limited_api": "cp38"}},
-    description="Example of PyTorch C++ and Ascend extensions (with CMake)",
+    install_requires=[
+        "torch",
+        "torch_npu"
+    ],
+    classifiers=[
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Operating System :: POSIX :: Linux",
+    ],
+    python_requires='>=3.8',
 )

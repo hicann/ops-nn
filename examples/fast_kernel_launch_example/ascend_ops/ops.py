@@ -19,6 +19,9 @@ __all__ = ["conv3d_custom", ]
 
 def conv3d_custom(input: Tensor, weight: Tensor, strides: list, pads: list, dilations: list,
                   bias: Tensor = None, enable_hf32: bool = False) -> Tensor:
+    print(torch.ops.ascend_ops.conv3d_custom)
+    assert hasattr(torch.ops.ascend_ops, "conv3d_custom"), "The 'conv3d_custom' operator is not registered in the 'torch.ops.ascend_ops' namespace."
+    
     origin_input_shape = list(input.shape)
     origin_weight_shape = list(weight.shape)
     origin_cout = origin_weight_shape[0]

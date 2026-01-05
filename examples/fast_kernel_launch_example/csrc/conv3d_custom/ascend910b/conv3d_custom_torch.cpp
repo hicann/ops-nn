@@ -411,8 +411,15 @@ torch::Tensor Conv3dCustomNpu(
     return output;
 }
 
+TORCH_LIBRARY_FRAGMENT(EXTENSION_MODULE_NAME, m)
+{
+    m.def(
+        "conv3d_custom(Tensor input, Tensor weight, int[3] stride, int[3] padding, int[3] dilation, int[5] "
+        "oriInputShape, int[5] oriWeightShape, Tensor? bias, bool enable_hf32 = False) -> Tensor");
+}
+
 // Register Ascend implementations for conv3dv2
-TORCH_LIBRARY_IMPL(ascend_ops, PrivateUse1, m)
+TORCH_LIBRARY_IMPL(EXTENSION_MODULE_NAME, PrivateUse1, m)
 {
     m.impl("conv3d_custom", Conv3dCustomNpu);
 }

@@ -1,200 +1,188 @@
 # AscendOps
 
-**AscendOps** - 一个轻量级，高性能的算子开发工程模板
+## 环境部署 | Prerequisites
 
-## 项目简介 | Introduction
-AscendOps 是一个轻量级，高性能的算子开发工程模板，它集成了PyTorch、PyBind11和昇腾CANN工具链，提供了从算子内核编写，编译到Python封装的完整工具链。
+- 请先参考[环境部署](../../docs/zh/context/quick_install.md)完成基础环境搭建
+- GCC 9.4.0+
+- Python 3.8+
+- PyTorch>=2.6.0
+- 对应版本的[TorchNPU](https://gitcode.com/Ascend/pytorch/releases)
 
-## 核心特性 | Features
-🚀 开箱即用 (Out-of-the-Box): 预置完整的昇腾NPU算子开发环境配置，克隆后即可开始开发。
+## 安装步骤 | Installation Steps
 
-🧩 极简设计 (Minimalist Design): 代码结构清晰直观，专注于核心算子开发流程。
-
-⚡ 高性能 (High Performance): 基于AscendC编程模型，充分发挥昇腾NPU硬件能力。
-
-📦 一键部署 (One-Click Deployment): 集成setuptools构建系统，支持一键编译和安装。
-
-🔌 PyTorch集成 (PyTorch Integration): 无缝集成PyTorch张量操作，支持自动微分和GPU/NPU统一接口。
-
-## 核心交付件 | Core Deliverables
-1. `csrc/xxx/xxx_torch.cpp` 算子Kernel实现
-2. `csrc/xxx/CMakeLists.txt` 算子cmake配置
-3. `csrc/npu_ops_def.cpp` 注册算子接口
-
-## 环境要求 | Prerequisites
-*   Python: 3.8+
-*   CANN Ascend Toolkit
-*   CANN Ascend Legacy
-*   PyTorch: 2.1.0+
-*   PyTorchAdapter 7.1.0+
-
-## 环境准备 | Preparation
-
-1. **安装社区版CANN toolkit包和社区版CANN legacy包**
-
-    根据实际环境，安装社区版CANN toolkit包和社区版CANN legacy包，社区包的安装部署参考[算子调用](../../docs/zh/invocation/quick_op_invocation.md)环境准备章节。
-
-2. **配置环境变量**
-
-	根据实际场景，选择合适的命令。
-
-    ```bash
-   # 默认路径安装，以root用户为例（非root用户，将/usr/local替换为${HOME}）
-   source /usr/local/Ascend/set_env.sh
-   # 指定路径安装
-   # source ${install-path}/set_env.sh
+1. 安装依赖 | Install Dependencies:
+    ```sh
+    python3 -m pip install -r requirements.txt
     ```
 
-3. **安装torch与torch_npu包**
-
-   根据实际环境，下载对应 torch 包，常见的 wheel 文件名示例如下：
-
-   - x86_64 Linux 版本：`torch-${torch_version}+cpu-${python_version}-linux_x86_64.whl`
-   - ARM Linux（旧版本通常无 `+cpu` 后缀）：`torch-${torch_version}-${python_version}-linux_aarch64.whl`
-
-   说明：上面示例中的版本号及 `+cpu` 后缀仅作为示例。不同操作系统和架构（尤其是 ARM Linux）对应的 wheel 名称可能没有 `+cpu` 后缀，请以 PyTorch 官方下载页面或 `pip` 实际可用的包名为准。
-
-   下载链接为：[官网地址](http://download.pytorch.org/whl/torch)
-
-   安装命令如下（将 `<torch_whl>` 替换为实际下载的文件名）：
-
+2. 构建Wheel包 | Build the Wheel:
     ```sh
-    pip3 install <torch_whl>
-    ```
-
-   根据实际环境，安装对应 torch-npu 包，例如：`torch_npu-${torch_version}-${python_version}-linux_${arch}.whl`，下载链接：[官网地址](https://www.hiascend.com/document/detail/zh/Pytorch/710/configandinstg/instg/insg_0004.html)
-
-   可以直接使用 pip 命令下载安装（将 `<torch_npu_whl>` 替换为实际下载的文件名），命令如下：
-
-    ```sh
-    pip3 install <torch_npu_whl>
-    ```
-
-    - ${torch_version}：表示 torch 包版本号。
-    - ${python_version}：表示 python 版本号。
-    - ${arch}：表示 CPU 架构，如 aarch64、x86_64。
-
-## 安装步骤 | Installation
-
-1. 进入目录，安装依赖
-    ```sh
-    cd ./examples/fast_kernel_launch_example
-    pip3 install -r requirements.txt
-    ```
-
-2. 从源码构建.whl包
-    ```sh
+    # -n: non-isolated build (uses existing environment)
     python3 -m build --wheel -n
     ```
 
-3. 安装构建好的.whl包
+3. 安装 | Install Package:
     ```sh
-    pip3 install dist/xxx.whl
+    python3 -m pip install dist/*.whl --force-reinstall --no-deps
     ```
 
-    重新安装请使用以下命令覆盖已安装过的版本：
-    ```sh
-    pip3 install dist/xxx.whl --force-reinstall --no-deps
-    ```
+4. （可选）再次构建前建议先执行以下命令清理编译缓存
+   ```sh
+   python3 setup.py clean
+   ```
 
-4. (可选)再次构建前建议先执行以下命令清理编译缓存
-    ```sh
-    python3 setup.py clean
-    ```
+## 快速开始 | Quick Start
+安装完成后，您可以像使用普通PyTorch操作一样使用NPU算子
 
-## 开发模式构建 | Developing Mode
+```python
+import torch
+import torch_npu
+import ascend_ops
 
-此命令实现即时生效的开发环境配置，执行后即可使源码修改生效，省略了构建完整whl包和安装的过程，适用于需要多次修改验证算子的场景：
-  ```sh
-  pip3 install --no-build-isolation -e .
-  ```
+# Initialize data on NPU
+x = torch.randn(10, 32, dtype=torch.float32).npu()
+y = torch.randn(10, 32, dtype=torch.float32).npu()
 
-## 使用示例 | Usage Example
+# Call the custom NPU operator
+npu_result = torch.ops.ascend_ops.add(x, y)
 
-安装完成后，您可以像使用普通PyTorch操作一样使用NPU算子，以conv3d算子为例，您可以在`ascend_ops/csrc/conv3d_custom/test`目录下找到并执行这个脚本:
+# Verify against CPU ATen implementation
+cpu_x = x.cpu()
+cpu_y = y.cpu()
+cpu_result = cpu_x + cpu_y
 
-```bash
-cd ./ascend_ops/csrc/conv3d_custom/test/
-python3 test_conv3d_custom.py
+assert torch.allclose(cpu_result, npu_result.cpu(), rtol=1e-6)
+print("Verification successful!")
 ```
 
-最终看到如下输出，即为执行成功：
-```bash
-compare CPU Result vs NPU Result: True
-```
+## 开发指南：新增一个算子 | Developer Guide: Adding a New Operator
 
+为了实现一个新算子(如`add`)，你只需要提供一个C++实现即可。
 
-## 开发新算子 | Developing New Operators
-1. 编写算子调用文件
+1. 首先你需要在csrc目录下使用算子名`add`建立一个文件夹，在此文件夹内使用你当前想要开发的soc名建立一个子文件夹`ascend910b`.
 
-    在 `ascend_ops/csrc/` 目录下添加新的算子目录 `mykernel`，在 `mykernel` 目录下添加新的算子调用文件 `mykernel_torch.cpp`
-    ```c++
-    __global__ __aicore__ void mykernel(GM_ADDR input, GM_ADDR output, int64_t num_element) {
-        // 您的算子kernel实现
-    }
+2. 在soc目录下新建一个`CMakeLists.txt`
+    ```
+    add_sources("--npu-arch=dav-2201")
+    ```
+    这里`dav-2201`为ascend910b芯片对应的编译参数
 
-    void mykernel_api(aclrtStream stream, const at::Tensor& x, const at::Tensor& y) {
-        // 您的算子入口实现，在该方法中使用<<<>>>的方式调用算子kernel
-        mykernel<<<blockDim, nullptr, stream>>>(x, y, num_element);
-    }
+3. 在soc目录下新建一个`add.cpp`(建议使用算子名为文件名)。这个文件包含了开发一个AICORE算子所需要的全部模块。
+    - 算子Schema注册
+    - 算子Meta Function实现 & 注册
+    - 算子Kernel实现 (AscendC)
+    - 算子NPU调用实现 & 注册
 
-    torch::Tensor mykernel_npu(torch::Tensor x, torch::Tensor y) {
-        // 您的算子wrapper接口，用于向pytorch注册自定义接口
-        AT_DISPATCH_FLOATING_TYPES_AND2(
-            at::kHalf, at::kBFloat16, x.scalar_type(), "mykernel_npu", [&] { mykernel_api(stream, x, y); });
-    }
+    ```cpp
+    #include <ATen/Operators.h>
+    #include <torch/all.h>
+    #include <torch/library.h>
+    #include "torch_npu/csrc/core/npu/NPUStream.h"
+    #include "torch_npu/csrc/framework/OpCommand.h"
+    #include "kernel_operator.h"
+    #include "platform/platform_ascendc.h"
+    #include <type_traits>
 
-    // PyTorch提供的宏，用于在特定后端注册算子
-    TORCH_LIBRARY_IMPL(ascend_ops, PrivateUse1, m)
+    namespace ascend_ops {  // 当前项目为一个命名空间
+    namespace Add {         // 建议每个算子自己有一个独立的namespace，防止全局变量污染
+
+    /**
+     * 将算子schema注册给PyTorch框架
+     * 框架知道有这样一个算子
+     */
+    // Register the operator's schema
+    TORCH_LIBRARY_FRAGMENT(EXTENSION_MODULE_NAME, m)
     {
-        m.impl("mykernel", mykernel_npu);
+        m.def("add(Tensor x, Tensor y) -> Tensor");
     }
-    ```
 
-2. 在`mykernel`目录下创建`CMakeLists.txt`
-
-    将如下样例中的mykernel，替换为自己的算子名称
-    ```cmake
-    message(STATUS "BUILD_TORCH_OPS ON in mykernel")
-    # MYKERNEL operation sources
-    file(GLOB MYKERNEL_NPU_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
-
-    set(MYKERNEL_SOURCES ${MYKERNEL_NPU_SOURCES})
-    # Mark .cpp files with special properties
-    set_source_files_properties(
-        ${MYKERNEL_NPU_SOURCES} PROPERTIES
-        LANGUAGE CXX
-        COMPILE_FLAGS "--cce-soc-version=Ascend910B1 --cce-soc-core-type=CubeCore --cce-auto-sync -xcce"
-    )
-
-    # Create object library
-    add_library(mykernel_objects OBJECT ${MYKERNEL_SOURCES})
-
-    target_compile_options(mykernel_objects PRIVATE ${COMMON_COMPILE_OPTIONS})
-    target_include_directories(mykernel_objects PRIVATE ${COMMON_INCLUDE_DIRS})
-    return()
-    ```
-
-3. 在 `ascend_ops/csrc/npu_ops_def.cpp`中添加TORCH_LIBRARY_IMPL定义
-
-    ```c++
-    TORCH_LIBRARY(ascend_ops, m) {
-        m.def("mykernel(Tensor x) -> Tensor");
+    /**
+     * 实现算子的Meta函数，即InferShape+InferDtype
+     * 根据输入推导出这个算子的输出是什么样子，需要多少空间，不需要实际计算这个算子
+     */
+    // Meta function implementation of Add
+    torch::Tensor add_meta(const torch::Tensor &x, const torch::Tensor &y)
+    {
+        TORCH_CHECK(x.sizes() == y.sizes(), "The shapes of x and y must be the same.");
+        auto z = torch::empty_like(x);
+        return z;
     }
-    ```
 
-4. (可选)在 `ascend_ops/ops.py`中封装自定义接口
-    ```python
-    def mykernel(x: Tensor) -> Tensor:
-        return torch.ops.ascend_ops.mykernel(x)
-    ```
+    /**
+     * 将算子的Meta函数注册给框架
+     * 框架可以调用这个Meta函数，在真正执行这个算子计算前知道需要多大空间
+     * 后续可以支持torch.compile/AutoGrad/AclGraph等图加速
+     */
+    // Register the Meta implementation
+    TORCH_LIBRARY_IMPL(EXTENSION_MODULE_NAME, Meta, m)
+    {
+        m.impl("add", add_meta);
+    }
 
-5. 使用开发模式进行编译
-    ```bash
-    pip install --no-build-isolation -e .
-    ```
+    /**
+     * NPU算子Kernel实现，使用AscendC API，面向当前的soc编写
+     */
+    template <typename T>
+    __global__ __aicore__ void add_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR z, int64_t totalLength, int64_t blockLength, uint32_t tileSize)
+    {
+        // kernel implementation
+    }
 
-6. 编写测试脚本并测试新算子
-    ```python
-    torch.ops.ascend_ops.mykernel(x)
+    /**
+     * 实现算子调用接口
+     * 在这个接口中, 需要完成NPU Kernel的调用
+     * 1. 计算出输出的Tensor的个数/Shape/Dtype(可以调用Meta函数实现，也可以直接实现)
+     * 2. 计算Tiling：根据Shape得到如何分块计算
+     * 3. 调用NPU Kernel
+     *
+     */
+    torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
+    {
+        auto z = add_meta(x, y);
+        auto stream = c10_npu::getCurrentNPUStream().stream(false);
+        int64_t totalLength, blockDim, blockLength, tileSize;
+        totalLength = x.numel();
+        std::tie(blockDim, blockLength, tileSize) = calc_tiling_params(totalLength);
+        auto x_ptr = (GM_ADDR)x.data_ptr();
+        auto y_ptr = (GM_ADDR)y.data_ptr();
+        auto z_ptr = (GM_ADDR)z.data_ptr();
+        auto acl_call = [=]() -> int {
+            AT_DISPATCH_SWITCH(
+                x.scalar_type(), "add_npu",
+                // 根据不同的数据类型，调用不同的NPU Kernel
+                AT_DISPATCH_CASE(torch::kFloat32, [&] {
+                    using scalar_t = float;
+                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                })
+                AT_DISPATCH_CASE(torch::kFloat16, [&] {
+                    using scalar_t = half;
+                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                })
+                AT_DISPATCH_CASE(torch::kInt32, [&] {
+                    using scalar_t = int32_t;
+                    add_kernel<scalar_t><<<blockDim, nullptr, stream>>>(x_ptr, y_ptr, z_ptr,     totalLength, blockLength, tileSize);
+                })
+            );
+            return 0;
+        };
+        // 需要使用RunOpApi/RunOpApiV2接口调用，保证时序与TorchNPU调用aclnn接口一致。
+        at_npu::native::OpCommand::RunOpApi("Add", acl_call);
+        return z;
+    }
+
+    /**
+     * 将算子的调用函数注册给框架，Device为PrivateUse1
+     * 框架知道当输入均在NPU Device上时，Dispatch到这个算子实现
+     */
+    // Register the NPU implementation
+    TORCH_LIBRARY_IMPL(EXTENSION_MODULE_NAME, PrivateUse1, m)
+    {
+        m.impl("add", add_npu);
+    }
+
+    }  // namespace Add
+    }  // namespace ascend_ops
+
     ```
+4. 使用[安装步骤](#安装步骤--installation-steps)章节构建Wheel包，安装并测试
+5. 测试算子API请参考[test_add.py](tests/add/test_add.py)的实现

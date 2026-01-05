@@ -8,9 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "BUILD_TORCH_OPS ON in conv3d_custom")
-# CONV3D_CUSTOM operation sources
-file(GLOB CONV3D_CUSTOM_NPU_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 set(CONV3D_TILING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../conv/conv3d_v2/op_host/op_tiling")
 set(CONV3D_TILING_SOURCES 
     "${CONV3D_TILING_DIR}/conv3d_api_tiling_algorithm.cpp"
@@ -22,17 +19,5 @@ set(CONV3D_TILING_SOURCES
     "${CONV3D_TILING_DIR}/conv3d_tiling_engine.cpp"
     "${CONV3D_TILING_DIR}/conv3d_tiling_utils.cpp"
 )
-set(CONV3D_CUSTOM_SOURCES ${CONV3D_CUSTOM_NPU_SOURCES} ${CONV3D_TILING_SOURCES})
-# Mark .cpp files with special properties
-set_source_files_properties(
-    ${CONV3D_CUSTOM_NPU_SOURCES} PROPERTIES
-    LANGUAGE CXX
-    COMPILE_FLAGS "--cce-soc-version=Ascend910B1 --cce-soc-core-type=CubeCore --cce-auto-sync -xcce"
-)
 
-# Create object library
-add_library(conv3d_custom_objects OBJECT ${CONV3D_CUSTOM_SOURCES})
-
-target_compile_options(conv3d_custom_objects PRIVATE ${COMMON_COMPILE_OPTIONS})
-target_include_directories(conv3d_custom_objects PRIVATE ${COMMON_INCLUDE_DIRS})
-return()
+add_sources("--npu-arch=dav-2201" "${CONV3D_TILING_SOURCES}")
