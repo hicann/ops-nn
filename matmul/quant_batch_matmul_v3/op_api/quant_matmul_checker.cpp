@@ -836,8 +836,6 @@ bool QuantMatmulChecker::CheckShape() const
 {
     auto x1DimNum = x1_->GetViewShape().GetDimNum();
     auto x2DimNum = x2_->GetViewShape().GetDimNum();
-    const op::Shape x1Shape = x1_->GetViewShape();
-    const op::Shape x2Shape = x2_->GetViewShape();
 
     CHECK_RET(CheckScaleDimRange(), false);
     CHECK_RET(CheckGroupSize(), false);
