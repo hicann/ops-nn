@@ -134,6 +134,47 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend310p", config310p);
+
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
+    }
+
+private:
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("var")
+            .ParamType(DYNAMIC)
+            .DataType(varDataType310p)
+            .Format(format310p)
+            .UnknownShapeFormat(format310p);
+        config_kirin.Input("indice")
+            .ParamType(REQUIRED)
+            .DataType(indiceDataType310p)
+            .Format(format310p)
+            .UnknownShapeFormat(format310p);
+        config_kirin.Input("updates")
+            .ParamType(REQUIRED)
+            .DataType(varDataType310p)
+            .Format(format310p)
+            .UnknownShapeFormat(format310p);
+        config_kirin.Input("mask")
+            .ParamType(OPTIONAL)
+            .DataType(maskDataType310p)
+            .Format(format310p)
+            .UnknownShapeFormat(format310p);
+        config_kirin.Output("var")
+            .ParamType(DYNAMIC)
+            .DataType(varDataType310p)
+            .Format(format310p)
+            .UnknownShapeFormat(format310p);
+        return config_kirin;
     }
 };
 

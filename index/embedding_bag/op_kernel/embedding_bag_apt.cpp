@@ -137,7 +137,7 @@ extern "C" __global__ __aicore__ void embedding_bag(
         EmbeddingBagFP16<half, int> op(gmTensor, tilingData, pipe);
         op.Process();
     }
-#if __CCE_AICORE__ >= 220
+#if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (TILING_KEY_IS(3)) {
         EmbeddingBagFP16<bfloat16_t, int> op(gmTensor, tilingData, pipe);
         op.Process();

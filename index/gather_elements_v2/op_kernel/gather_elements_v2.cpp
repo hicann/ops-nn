@@ -33,6 +33,7 @@ extern "C" __global__ __aicore__ void gather_elements_v2(
         AscendC::GatherElementsV2ScalarKernel<DTYPE_X, int32_t> op(x, index, y, workspace, tilingData, tpipe);
         op.Process();
     } else if (TILING_KEY_IS(1)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if constexpr (std::is_same<DTYPE_X, bfloat16_t>::value) {
             AscendC::GatherElementsV2TransposeKernel<half, int32_t> op(x, index, y, workspace, tilingData, tpipe);
             op.Process();
@@ -40,7 +41,12 @@ extern "C" __global__ __aicore__ void gather_elements_v2(
             AscendC::GatherElementsV2TransposeKernel<DTYPE_X, int32_t> op(x, index, y, workspace, tilingData, tpipe);
             op.Process();
         }
+#else
+        AscendC::GatherElementsV2TransposeKernel<DTYPE_X, int32_t> op(x, index, y, workspace, tilingData, tpipe);
+        op.Process();
+#endif
     } else if (TILING_KEY_IS(2)) {
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         if constexpr (
             std::is_same_v<DTYPE_X, bfloat16_t> || std::is_same_v<DTYPE_X, half> || std::is_same_v<DTYPE_X, int16_t>) {
             AscendC::GatherElementsV2LastDim<half, int32_t> op(x, index, y, tilingData, &tpipe);
@@ -49,5 +55,14 @@ extern "C" __global__ __aicore__ void gather_elements_v2(
             AscendC::GatherElementsV2LastDim<float, int32_t> op(x, index, y, tilingData, &tpipe);
             op.Process();
         }
+#else
+        if constexpr (std::is_same_v<DTYPE_X, half> || std::is_same_v<DTYPE_X, int16_t>) {
+            AscendC::GatherElementsV2LastDim<half, int32_t> op(x, index, y, tilingData, &tpipe);
+            op.Process();
+        } else if constexpr (std::is_same_v<DTYPE_X, float> || std::is_same_v<DTYPE_X, int32_t>) {
+            AscendC::GatherElementsV2LastDim<float, int32_t> op(x, index, y, tilingData, &tpipe);
+            op.Process();
+        }
+#endif
     }
 }
