@@ -93,6 +93,7 @@ function(add_ops_info_target_v1)
             ${OPINFO_OPS_INFO_DIR}/inner/aic-${OPINFO_COMPUTE_UNIT}-ops-info.ini
             ${OPINFO_OPS_INFO_DIR}/exc/aic-${OPINFO_COMPUTE_UNIT}-ops-info.ini
             ${OPINFO_OUTPUT}
+    DEPENDS opbuild_custom_gen_aclnn_all
   )
   add_custom_target(${OPINFO_TARGET} ALL
     DEPENDS ${OPINFO_OUTPUT}
@@ -121,6 +122,7 @@ function(merge_ini_files)
                             ${MGINI_OPS_INFO_DIR}/inner/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
                             ${MGINI_OPS_INFO_DIR}/exc/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
                             --output-file ${ASCEND_KERNEL_CONF_DST}/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
+                    DEPENDS opbuild_custom_gen_aclnn_all
     )
   add_custom_target(${MGINI_TARGET} ALL
                     DEPENDS ${ASCEND_KERNEL_CONF_DST}/aic-${MGINI_COMPUTE_UNIT}-ops-info.ini
