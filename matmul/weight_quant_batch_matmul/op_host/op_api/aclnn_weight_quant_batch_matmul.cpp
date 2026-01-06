@@ -58,6 +58,8 @@ inline static bool CheckNotNull(const aclTensor *x1, const aclTensor *x2,
                                 const aclTensor *diagonalMatrix, const aclTensor *deqOffset,
                                 const aclTensor *deqScale, const aclTensor *out, bool transposeX1)
 {
+  (void) addOffset;
+  (void) mulScale;
   int64_t dimTensor1 = x1->GetViewShape().GetDimNum();
   int64_t M = transposeX1 ?  x1->GetViewShape().GetDim(dimTensor1 - 1) : x1->GetViewShape().GetDim(dimTensor1 - 2);
   if (SelectFixPipe(M)) {
@@ -141,7 +143,7 @@ static bool CheckAntiQuantTensorValid(const aclTensor *addOffset, const aclTenso
       return false;
     }
     // diagmatrix check shape need equal to [32, 32], length = 2
-    int64_t diagDim = 2;
+    size_t diagDim = 2;
     int64_t diagSize = 32;
     if ((diagonalMatrix->GetViewShape().GetDimNum() != diagDim) ||
         (diagonalMatrix->GetViewShape().GetDim(0) != diagSize) ||
@@ -243,9 +245,8 @@ inline static aclnnStatus CheckParam(const aclTensor *x1, const aclTensor *x2, c
 static const aclTensor* ProcessEmptyTensor(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                            const aclTensor* out, aclOpExecutor* executor)
 {
+  (void) x2;
   // 获取shape信息
-  op::Shape x1Shape = x1->GetViewShape();
-  op::Shape x2Shape = x2->GetViewShape();
   op::Shape outShape = out->GetViewShape();
   auto output = executor->AllocTensor(outShape, x1->GetDataType());
   if (output->IsEmpty()) {
