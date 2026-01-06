@@ -296,7 +296,7 @@ public:
         const LocalTensor<float>& outBuffer, const GlobalTensor<float>& workspace)
     {
         ReduceSum256(outBuffer, outBuffer, 0);
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
 
         AscendC::Simt::VF_CALL<GetReduceValueGm>(
             AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, blockId_, (__ubuf__ float*)outBuffer.GetPhyAddr(),
@@ -312,24 +312,24 @@ public:
             AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)weightUB_.GetPhyAddr(),
             (__ubuf__ float*)level1WeightUB_.GetPhyAddr());
         ++level1Idx;
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
         if (level1Idx == MAX_UINT8) {
             ReduceSum256(level1OutUB_, level2OutUB_, level2Idx);
             ReduceSum256(level1WeightUB_, level2WeightUB_, level2Idx);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             Duplicate(level1OutUB_, (float)0, REDUCE_256);
             Duplicate(level1WeightUB_, (float)0, REDUCE_256);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             ++level2Idx;
             level1Idx = 0;
         }
         if (level2Idx == MAX_UINT8) {
             ReduceSum256(level2OutUB_, level3OutUB_, level3Idx);
             ReduceSum256(level2WeightUB_, level3WeightUB_, level3Idx);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             Duplicate(level2OutUB_, (float)0, REDUCE_256);
             Duplicate(level2WeightUB_, (float)0, REDUCE_256);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             ++level3Idx;
             level2Idx = 0;
         }
@@ -341,20 +341,20 @@ public:
             AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
             (__ubuf__ float*)level1OutUB_.GetPhyAddr());
         ++level1Idx;
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
         if (level1Idx == MAX_UINT8) {
             ReduceSum256(level1OutUB_, level2OutUB_, level2Idx);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             Duplicate(level1OutUB_, (float)0, REDUCE_256);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             ++level2Idx;
             level1Idx = 0;
         }
         if (level2Idx == MAX_UINT8) {
             ReduceSum256(level2OutUB_, level3OutUB_, level3Idx);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             Duplicate(level2OutUB_, (float)0, REDUCE_256);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             ++level3Idx;
             level2Idx = 0;
         }
@@ -400,10 +400,10 @@ public:
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, mainReduceLen, tailLen);
                 ReduceSumInCore(weightUB_, midWeightResUB_, mainReduceLen, tailLen);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else if (blockId_ < fullIndex_ - 1) {
@@ -419,10 +419,10 @@ public:
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, simtMoveSize, 0);
                 ReduceSumInCore(weightUB_, midWeightResUB_, simtMoveSize, 0);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else {
@@ -439,10 +439,10 @@ public:
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, simtMoveSize, 0);
                 ReduceSumInCore(weightUB_, midWeightResUB_, simtMoveSize, 0);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         }
@@ -456,7 +456,7 @@ public:
             FinalCoreRes2Worksapce(level1OutUB_, workspaceOutGm_);
             FinalCoreRes2Worksapce(level1WeightUB_, workspaceWeightGm_);
         }
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
         SyncAll();
     }
 
@@ -501,10 +501,10 @@ public:
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, mainReduceLen, tailLen);
                 ReduceSumInCore(weightUB_, midWeightResUB_, mainReduceLen, tailLen);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else if (blockId_ < fullIndex_ - 1) {
@@ -521,10 +521,10 @@ public:
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, simtMoveSize, 0);
                 ReduceSumInCore(weightUB_, midWeightResUB_, simtMoveSize, 0);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else {
@@ -542,10 +542,10 @@ public:
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
                 offset += simtMoveSize;
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 ReduceSumInCore(outUB_, midOutResUB_, simtMoveSize, 0);
                 ReduceSumInCore(weightUB_, midWeightResUB_, simtMoveSize, 0);
-                pipe_barrier(PIPE_ALL);
+                PipeBarrier<PIPE_ALL>();
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         }
@@ -559,7 +559,7 @@ public:
             FinalCoreRes2Worksapce(level1OutUB_, workspaceOutGm_);
             FinalCoreRes2Worksapce(level1WeightUB_, workspaceWeightGm_);
         }
-        pipe_barrier(PIPE_ALL);
+        PipeBarrier<PIPE_ALL>();
         SyncAll();
     }
 
@@ -586,7 +586,7 @@ public:
         if (blockId_ == 0) {
             ReduceSumAmongCores(midOutResUB_, level2OutUB_, workspaceOutGm_);
             ReduceSumAmongCores(midWeightResUB_, level3OutUB_, workspaceWeightGm_);
-            pipe_barrier(PIPE_ALL);
+            PipeBarrier<PIPE_ALL>();
             AscendC::Simt::VF_CALL<GetRes<T>>(
                 AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, reduction_, (__gm__ T*)yGm_.GetPhyAddr(),
                 (__gm__ T*)totalWeight_.GetPhyAddr(), (__ubuf__ float*)midOutResUB_.GetPhyAddr(),
