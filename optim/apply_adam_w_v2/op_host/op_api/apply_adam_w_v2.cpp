@@ -30,7 +30,6 @@ void ApplyAdamWV2(
     L0_DFX(
         ApplyAdamWV2, varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, lr, beta1, beta2, weightDecay, eps,
         amsgrad, maximize);
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto retAicore = ACL_SUCCESS;
     retAicore =
         ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamWV2, OP_INPUT(varRef, mRef, vRef, grad, step, maxGradNormOptionalRef),
