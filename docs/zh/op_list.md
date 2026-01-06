@@ -1406,6 +1406,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/index_put_with_sort_v2/README.md">index_put_with_sort_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行scatter操作，根据pos_idx的值循环对应的values，累加/替换到linear_index指向的self的位置。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/inplace_index_add_with_sorted/README.md">inplace_index_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1777,12 +1787,12 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/mse_loss/README.md">mse_loss</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算输入和目标中每个元素之间的均方误差。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2476,6 +2486,46 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool3d/README.md">max_pool3d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于输入信号的输入通道，提供3维最大池化（Max pooling）操作。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/max_pool_v3/README.md">max_pool_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于3维或4维的输入张量，进行最大池化（max pooling）操作。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/max_pool_with_argmax_v3/README.md">max_pool_with_argmax_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于输入数据计算2维最大池化操作。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/max_pool_grad_with_argmax_v3/README.md">max_pool_grad_with_argmax_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>正向最大池化MaxPoolGradWithArgmaxV3的反向梯度。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool3d_grad_with_argmax/README.md">max_pool3d_grad_with_argmax</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2744,7 +2794,7 @@
     <td>AI Core</td>
     <td>将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。</td>
   </tr>
-    <tr>
+  <tr>
     <td>optim</td>
     <td><a href="../../optim/apply_adam_w/README.md">apply_adam_w</a></td>
     <td>✓</td>
@@ -2753,6 +2803,56 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现adamW优化器功能。</td>
+  </tr>
+  <tr>
+    <td>hash</td>
+    <td><a href="../../hash/embedding_hash_table_apply_adam_w/README.md">embedding_hash_table_apply_adam_w</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>查询hash表是否存在key，如果存在，则更新其value，如果不存在，则插入key。</td>
+  </tr>
+  <tr>
+    <td>hash</td>
+    <td><a href="../../hash/embedding_hash_table_export/README.md">embedding_hash_table_export</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>导出整个table表。</td>
+  </tr>
+  <tr>
+    <td>hash</td>
+    <td><a href="../../hash/embedding_hash_table_import/README.md">embedding_hash_table_import</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将输入的key和value插入hash表。</td>
+  </tr>
+  <tr>
+    <td>hash</td>
+    <td><a href="../../hash/embedding_hash_table_lookup_or_insert/README.md">embedding_hash_table_lookup_or_insert</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据key值查看table中是否存在key；如果存在则不插入value值，并且导出key当前位置上的值；如果不存在则对对key进行hash，找到位置后插入value。</td>
+  </tr>
+  <tr>
+    <td>hash</td>
+    <td><a href="../../hash/init_embedding_hash_table/README.md">init_embedding_hash_table</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>初始化hash表。</td>
   </tr>
 </tbody>
 </table>

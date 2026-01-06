@@ -241,6 +241,7 @@
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) |替换在swinTransformer中使用window attention计算softmax的部分。|默认确定性实现|
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) |完成1到6维张量self与张量mat2的矩阵乘计算。|默认确定性实现|
 | [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) |完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。|默认确定性实现|
+| [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md)|对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。|默认确定性实现|
 | [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)|对于输入信号的输入通道，提供2维（H，W维度）最大池化（max pooling）操作，输出池化后的值out和索引indices。|默认确定性实现|
 | [aclnnMaxPool2dWithIndicesBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md)|正向最大池化aclnnMaxPool2dWithIndices的反向传播。|默认非确定性实现，支持配置开启。|
 | [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md)|对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。|默认确定性实现|
