@@ -343,8 +343,8 @@ static bool TransNdToNz(std::vector<int8_t>& weightArray, const Shape& weightSha
      weightNzSize = g * weightNzSize;   
     }
     std::vector<int8_t> weightNzArray(weightNzSize, 0);
-    for (size_t idxG = 0; idxG < g; idxG++) {
-     for (size_t idx = 0; idx < k * n; idx++) {
+    for (size_t idxG = 0; idxG < static_cast<size_t>(g); idxG++) {
+     for (size_t idx = 0; idx < static_cast<size_t>(k * n); idx++) {
             size_t idxK = idx / n;
             size_t idxN = idx % n;
             size_t idxK0 = idxK % CUBE_BLOCK_SIZE;
@@ -368,7 +368,7 @@ static void TransOriginalShape(aclTensor *weightInt4Pack)
 }
 
 aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight, aclTensor *weightInt4Pack,
-    uint64_t *workspaceSize, aclOpExecutor **executor)
+    [[maybe_unused]] uint64_t *workspaceSize, [[maybe_unused]] aclOpExecutor **executor)
 {
     auto checkRet = ParamsCheck(weight, weightInt4Pack);
     CHECK_RET(checkRet == ACLNN_SUCCESS, checkRet);
@@ -406,8 +406,8 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnConvertWeightToINT4Pack(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnConvertWeightToINT4Pack([[maybe_unused]] void *workspace, [[maybe_unused]] uint64_t workspaceSize, [[maybe_unused]] aclOpExecutor *executor,
+    [[maybe_unused]] aclrtStream stream)
 {
     return ACLNN_SUCCESS;
 }
