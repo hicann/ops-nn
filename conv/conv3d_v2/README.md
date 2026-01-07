@@ -118,7 +118,7 @@
 <tr>
 <td>pads</td>
 <td>可选属性</td>
-<td>对输入的填充，pad_h, pad_w ∈ [0,255]，paddingD ∈ [0,1000000]。</td>>
+<td>对输入的填充，pad_top, pad_bottom, pad_left, pad_right ∈ [0,255]，pad_head, pad_tail ∈ [0,1000000]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
