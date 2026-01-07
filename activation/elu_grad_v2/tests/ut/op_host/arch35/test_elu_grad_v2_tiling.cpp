@@ -100,12 +100,16 @@ TEST_F(EluGradV2TilingUT, test_tiling_failed_dtype_input_output_diff_007) {
                       .Workspace(ws_size)
                       .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     ASSERT_NE(tiling_context, nullptr);
     // workspaces nullptr return failed
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-/*
 void TestEluGradV2TilingWithResult(const ge::DataType Dtype, const bool result, const int tiling_key_, const std::string& tiling_data_target){
     std::string op_type("EluGradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -161,7 +165,11 @@ void TestEluGradV2TilingWithResult(const ge::DataType Dtype, const bool result, 
                       .Workspace(ws_size)
                       .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
@@ -173,7 +181,6 @@ void TestEluGradV2TilingWithResult(const ge::DataType Dtype, const bool result, 
 }
 
 TEST_F(EluGradV2TilingUT, test_tiling_fp16_isresult_001) {
-    std::string tiling_data_target = "8192 25288767438850 4096 2 1 1 4096 4096 5888 1 4575657222473777152 1065353216 ";
+    std::string tiling_data_target = "8192 23089744183298 4096 2 1 1 4096 4096 5376 1 4575657222473777152 1065353216 ";
     TestEluGradV2TilingWithResult(ge::DT_FLOAT16, true, 3, tiling_data_target);
 }
-*/

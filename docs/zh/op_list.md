@@ -46,13 +46,23 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/elu_grad_v2/README.md">elu_grad_v2</a></td>
-    <td>✗</td>
+    <td><a href="../../activation/elu_grad/README.md">elu_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对应Elu操作的反向传播梯度。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/elu_grad_v2/README.md">elu_grad_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>激活函数的反向计算，输出ELU激活函数正向输入的梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -377,12 +387,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/relu_grad/README.md">relu_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对应Relu操作的反向传播梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -467,12 +477,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/softmax_v2/README.md">softmax_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对输入张量计算Softmax值。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -2406,6 +2416,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_adagrad_d/README.md">advance_step</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ApplyAdagrad是自适应梯度算法的核心更新操作，主要用于在优化器（如随机梯度下降）中更新模型参数。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adam_w_v2/README.md">apply_adam_w_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2690,9 +2710,9 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对输入张量x进行量化处理。</td>
   </tr>
   <tr>
     <td>quant</td>

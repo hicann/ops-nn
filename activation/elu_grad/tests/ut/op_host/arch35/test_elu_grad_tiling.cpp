@@ -1,3 +1,13 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
 #include <iostream>
 #include <vector>
 #include <gtest/gtest.h>
@@ -92,6 +102,11 @@ void TestEluGradTilingTest(const ge::DataType Dtype, const int tiling_key_,
             .Workspace(ws_size)
             .Build();
     gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
@@ -161,27 +176,30 @@ void TestEluGradTilingTestFailed(gert::StorageShape &InShape_0,
             .Workspace(ws_size)
             .Build();
     gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-/*
 TEST_F(EluGradTilingTest, test_tiling_fp16_001) {
     TestEluGradTilingTest(ge::DT_FLOAT16, 3,
-                          "1 8192 4096 2 6400 1 1 4096 4096 6400 ");
+                          "8192 26388279066626 4096 2 1 1 4096 4096 6144 1 ");
 }
 
 TEST_F(EluGradTilingTest, test_tiling_bf16_002) {
     TestEluGradTilingTest(ge::DT_BF16, 5,
-                          "1 8192 4096 2 6400 1 1 4096 4096 6400 ");
+                          "8192 26388279066626 4096 2 1 1 4096 4096 6144 1 ");
 }
 
 TEST_F(EluGradTilingTest, test_tiling_fp32_003) {
     TestEluGradTilingTest(ge::DT_FLOAT, 7,
-                          "1 8192 4096 2 7168 1 1 4096 4096 7168 ");
+                          "8192 28587302322178 4096 2 1 1 4096 4096 6656 1 ");
 }
-*/
 
 TEST_F(EluGradTilingTest, test_tiling_failed_dtype_input_output_diff_004) {
     gert::StorageShape shape = {{1, 64, 2, 64}, {1, 64, 2, 64}};
