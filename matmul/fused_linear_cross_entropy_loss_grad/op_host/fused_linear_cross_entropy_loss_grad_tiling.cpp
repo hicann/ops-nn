@@ -584,7 +584,7 @@ static ge::graphStatus FusedLinearCrossEntropyLossGradTilingFunc(gert::TilingCon
     }
 }
 
-static ge::graphStatus FusedLinearCrossEntropyLossGradTilingParseFunc(gert::TilingParseContext *context)
+static ge::graphStatus FusedLinearCrossEntropyLossGradTilingParseFunc([[maybe_unused]] gert::TilingParseContext *context)
 {
     return ge::GRAPH_SUCCESS;
 }

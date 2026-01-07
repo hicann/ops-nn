@@ -44,8 +44,8 @@ static constexpr size_t EXPECTED_DIM_ONE = 1;
 static constexpr size_t EXPECTED_DIM_TWO = 2;
 static constexpr size_t DIM_NUM_ZERO = 0;
 static constexpr size_t DIM_NUM_ONE = 1;
-static constexpr size_t SIZE_8 = 8;
-static constexpr size_t SIZE_128 = 128;
+static constexpr int64_t SIZE_8 = 8;
+static constexpr int64_t SIZE_128 = 128;
 
 static const std::initializer_list<op::DataType> FLOAT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> HALF_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_BF16};
@@ -132,8 +132,7 @@ inline static bool CheckFormatValid(FusedLinearCrossEntropyLossGradInputs& input
     return true;
 }
 
-inline static bool CheckAttrValid(FusedLinearCrossEntropyLossGradInputs& inputs,
-                                  FusedLinearCrossEntropyLossGradOutputs& outputs)
+inline static bool CheckAttrValid(FusedLinearCrossEntropyLossGradInputs& inputs)
 {
     if (inputs.labelSmoothing != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
@@ -167,8 +166,6 @@ inline static bool CheckShapeValid(FusedLinearCrossEntropyLossGradInputs& inputs
     op::Shape weightShape = inputs.weight->GetViewShape();
     op::Shape targetMaskShape = inputs.targetMask->GetViewShape();
     op::Shape maskedTargetShape = inputs.maskedTarget->GetViewShape();
-    op::Shape inputGradOutShape = outputs.inputGradOut->GetViewShape();
-    op::Shape weightGradOutShape = outputs.weightGradOut->GetViewShape();
     auto BT = gradShape.GetDim(DIM_NUM_ZERO);
     auto H = inputShape.GetDim(DIM_NUM_ONE);
     auto V = weightShape.GetDim(DIM_NUM_ZERO);
@@ -235,7 +232,7 @@ inline static aclnnStatus CheckParam(FusedLinearCrossEntropyLossGradInputs& inpu
     // 3. 检查Format是否支持
     CHECK_RET(CheckFormatValid(inputs, outputs), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查属性取值是否支持
-    CHECK_RET(CheckAttrValid(inputs, outputs), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAttrValid(inputs), ACLNN_ERR_PARAM_INVALID);
     // 5. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(inputs, outputs), ACLNN_ERR_PARAM_INVALID);
 

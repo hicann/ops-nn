@@ -25,6 +25,7 @@ using namespace op;
 namespace l0op {
 
 OP_TYPE_REGISTER(FusedLinearCrossEntropyLossGrad);
+static std::tuple<aclTensor *, aclTensor *> errorRes = {nullptr, nullptr};
 
 static std::tuple<aclTensor *, aclTensor *> GetOutTensor(
     const aclTensor *grad, const aclTensor *weight, aclOpExecutor *executor)
@@ -68,6 +69,12 @@ const std::tuple<aclTensor *, aclTensor *> FusedLinearCrossEntropyLossGrad(
         OP_INPUT(grad, input, weight, targetMask, maskedTarget, logitsMax, sumExpLogits, softmax),
         OP_OUTPUT(std::get<0>(out), std::get<1>(out)),
         OP_ATTR(labelSmoothing)
+    );
+
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FusedLinearCrossEntropyLossGrad ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        return errorRes
     );
 
     return out;
