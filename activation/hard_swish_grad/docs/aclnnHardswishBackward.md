@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnHardswish](../../hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md)的反向传播，完成张量self的梯度计算。
+- 接口功能：[aclnnHardswish](../../hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md)的反向传播，完成张量self的梯度计算。
 - 计算公式：
 
   $$

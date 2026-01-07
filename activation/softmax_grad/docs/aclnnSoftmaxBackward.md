@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[softmax](../../softmax_v2/docs/aclnnSoftmax.md)的反向传播。
+- 接口功能：完成[softmax](../../softmax_v2/docs/aclnnSoftmax.md)的反向传播。
 - 计算公式：对于Softmax函数的求导，可以使用以下公式：
   out（输入梯度值）和gradOutput（上一层输出梯度）、output（Softmax正向输出）的关系可表示如下：
 

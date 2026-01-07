@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能: aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。aclnnInplaceCelu对输入张量selfRef中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输入张量selfRef中。
+- 接口功能: aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。aclnnInplaceCelu对输入张量selfRef中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输入张量selfRef中。
 
 - 计算公式：
 

@@ -8,7 +8,7 @@
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
 ## 功能说明
-算子功能：完成[aclnnPreluBackward](../../prelu_grad_update/docs/aclnnPreluBackward.md)的反向函数。
+接口功能：完成[aclnnPreluBackward](../../prelu_grad_update/docs/aclnnPreluBackward.md)的反向函数。
 gradInput的计算公式如下：
 
 $$

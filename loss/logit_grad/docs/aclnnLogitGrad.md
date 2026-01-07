@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
 
   完成[aclnnLogit](../../logit/docs/aclnnLogit.md)的反向传播。
 

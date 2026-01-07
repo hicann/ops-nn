@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
 
   `SquaredReLU` 函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。
 
@@ -30,6 +30,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSquaredReluGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSquaredRelu”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSquaredReluGetWorkspaceSize(
     const aclTensor *input,

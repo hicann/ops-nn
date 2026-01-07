@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[aclnnLogSoftmax](../../logsoftmax_v2/docs/aclnnLogSoftmax.md)的反向传播。
+- 接口功能：完成[aclnnLogSoftmax](../../logsoftmax_v2/docs/aclnnLogSoftmax.md)的反向传播。
 - 计算公式：
 
 $$

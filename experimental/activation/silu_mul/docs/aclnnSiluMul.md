@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
 
   对输入Tensor x进行Silu激活计算，将计算结果与输入Tensor y相乘。
 
@@ -30,6 +30,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSiluMulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSiluMul”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSiluMulGetWorkspaceSize(
   const aclTensor *x,
@@ -200,7 +201,7 @@ aclnnStatus：返回状态码，具体参见[可疑链接已删除]。
 
 ## 约束说明
 
-无。
+无
 
 ## 调用示例
 

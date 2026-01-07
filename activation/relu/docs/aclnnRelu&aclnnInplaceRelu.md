@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
+- 接口功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
 - 计算公式：
 $$
 relu(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}

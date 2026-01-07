@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnSoftplus](../../softplus_v2/docs/aclnnSoftplus.md)的反向传播。
+- 接口功能：[aclnnSoftplus](../../softplus_v2/docs/aclnnSoftplus.md)的反向传播。
 
 - 计算公式：
 

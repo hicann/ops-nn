@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[aclnnGelu](../../gelu/docs/aclnnGelu.md)的反向。
+- 接口功能：完成[aclnnGelu](../../gelu/docs/aclnnGelu.md)的反向。
 
 - 计算公式：
 

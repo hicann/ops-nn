@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：Swish激活函数，对输入Tensor逐元素进行Swish函数运算并输出结果Tensor。
+- 接口功能：Swish激活函数，对输入Tensor逐元素进行Swish函数运算并输出结果Tensor。
 
 - 计算公式：
 

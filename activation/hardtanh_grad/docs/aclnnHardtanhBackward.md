@@ -12,7 +12,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数aclnnHardtanh的反向。
+- 接口功能：激活函数aclnnHardtanh的反向。
 - 计算公式：
 
   $$

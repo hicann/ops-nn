@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[aclnnThreshold](../../threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)的反向。
+- 接口功能：完成[aclnnThreshold](../../threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)的反向。
 - 计算公式：
 
   $$
@@ -21,6 +21,7 @@
   $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnThresholdBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnThresholdBackward”接口执行计算。
 
 ```Cpp

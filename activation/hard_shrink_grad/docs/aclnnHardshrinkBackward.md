@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnHardshrink](../../hard_shrink/docs/aclnnHardshrink.md)的反向接口，计算反向传播的梯度gradInput。
+- 接口功能：[aclnnHardshrink](../../hard_shrink/docs/aclnnHardshrink.md)的反向接口，计算反向传播的梯度gradInput。
 - 计算公式：
 
   $$
