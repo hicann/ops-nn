@@ -113,6 +113,7 @@ function(add_opapi_ut_modules OP_API_MODULE_NAME)
     add_dependencies(${OP_API_MODULE_NAME}_cases_obj json)
     target_sources(${OP_API_MODULE_NAME}_cases_obj PRIVATE
                     ${UT_PATH}/op_api/stub/opdev/platform.cpp
+                    ${UT_PATH}/op_api/stub/opdev/op_executor.cpp
                     )
     target_include_directories(${OP_API_MODULE_NAME}_cases_obj PRIVATE
             ${JSON_INCLUDE}
@@ -124,7 +125,6 @@ function(add_opapi_ut_modules OP_API_MODULE_NAME)
             ${ASCEND_DIR}/include/aclnn
             ${ASCEND_DIR}/include/aclnnop
             )
-    set_source_files_properties(${ASCEND_DIR}/include/aclnn/opdev/make_op_executor.h PROPERTIES HEAD_FILE_ONLY TRUE)
     target_link_libraries(${OP_API_MODULE_NAME}_cases_obj PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
             $<BUILD_INTERFACE:dlog_headers>
