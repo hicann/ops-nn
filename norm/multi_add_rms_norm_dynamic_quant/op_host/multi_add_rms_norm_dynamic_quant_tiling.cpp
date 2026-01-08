@@ -668,9 +668,9 @@ ge::graphStatus TilingPrepare4MultiAddRmsNormDynamicQuant(gert::TilingParseConte
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "Enter TilingPrepare4MultiAddRmsNormDynamicQuant.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context, "PlatformInfoPtr is null"), ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context, "PlatformInfoPtr is null"), return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompiledInfo<MultiAddRmsNormDynamicQuantCompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context, "CompileInfoPtr is null"), ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context, "CompileInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->curSocVersion = ascendcPlatform.GetSocVersion();
