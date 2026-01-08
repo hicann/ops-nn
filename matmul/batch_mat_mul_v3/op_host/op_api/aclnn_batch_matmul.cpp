@@ -699,11 +699,9 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
 
     bool ifKEqual1 = false;
     if (!isTransposeMat2Contiguous) {
-        CHECK_RET(
-            ProcessEqual1Cases(
-                selfCast, mat2Cast, matmulOpInfo, bias, adjX1, adjX2, selfReshape, mat2Reshape, executor, ifKEqual1) !=
-                -1,
-            nullptr);
+        CHECK_RET(ProcessEqual1Cases(
+            selfCast, mat2Cast, matmulOpInfo, bias, adjX1, adjX2, selfReshape, mat2Reshape, executor, ifKEqual1
+        ) != -1, nullptr);
     }
 
     auto selfTransdata = l0op::TransData(selfReshape, matmulOpInfo.support_info.self_format, 0, executor);
@@ -729,7 +727,14 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
     CHECK_RET(transdataOut != nullptr, nullptr);
 
     // 固定写法，将计算结果转换成输出out的数据类型
-    auto castOut = l0op::Cast(transdataOut, out->GetDataType(), executor);
+    const aclTensor* castOut = nullptr;
+    if (matmulOpInfo.enableFp16Bf16InFp32Out) {
+        // aclnnbaddbmm + 910B/910C + fp16/bf16 input + CubeMathType==KEEP_DTYPE
+        // 走入混精度接口，transdataOut输出类型为FP32，此处Cast不处理
+        castOut = l0op::Cast(transdataOut, op::DataType::DT_FLOAT, executor);
+    } else {
+        castOut = l0op::Cast(transdataOut, out->GetDataType(), executor);
+    }
     CHECK_RET(castOut != nullptr, nullptr);
 
     return castOut;
