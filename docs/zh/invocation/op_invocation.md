@@ -293,6 +293,9 @@ int main() {
    # 设置工程名
    project(GE_IR_EXAMPLE)
    
+   # 设置编译输出目录为当前目录下的bin文件夹
+   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "./bin")
+
    if(NOT "$ENV{ASCEND_OPP_PATH}" STREQUAL "")
        get_filename_component(ASCEND_PATH $ENV{ASCEND_OPP_PATH} DIRECTORY)
    elseif(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
@@ -312,15 +315,17 @@ int main() {
    # 添加可执行文件（请替换为实际算子可执行文件）
    add_executable(test_geir_add_example ${files})      
    
-   find_library(GRAPH_LIBRARY_DIR libgraph.so "${ASCEND_PATH}/compiler/lib64/stub")
-   find_library(GE_RUNNER_LIBRARY_DIR libge_runner.so "${ASCEND_PATH}/compiler/lib64/stub")
-   find_library(GRAPH_BASE_LIBRARY_DIR libgraph_base.so "${ASCEND_PATH}/compiler/lib64")
+   find_library(GRAPH_LIBRARY_DIR libgraph.so "${ASCEND_PATH}/lib64")
+   find_library(GE_RUNNER_LIBRARY_DIR libge_runner.so "${ASCEND_PATH}/lib64")
+   find_library(GRAPH_BASE_LIBRARY_DIR libgraph_base.so "${ASCEND_PATH}/lib64")
+   find_library(GE_COMPILER_DIR libge_compiler.so "${ASCEND_PATH}/lib64")
    
    # 链接所需的动态库
    target_link_libraries(test_geir_add_example PRIVATE      
         ${GRAPH_LIBRARY_DIR}
         ${GE_RUNNER_LIBRARY_DIR}
         ${GRAPH_BASE_LIBRARY_DIR}
+        ${GE_COMPILER_DIR}
    )
    
    # 设置头文件路径
@@ -330,7 +335,13 @@ int main() {
         ${ASCEND_PATH}/opp/built-in/op_proto/inc/
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${ASCEND_PATH}/compiler/include
+        ${ASCEND_PATH}/include/graph/
+        ${ASCEND_PATH}/include/ge/
+        ${ASCEND_PATH}/include/
    )
+
+   # 安装目标文件到bin目录
+   install(TARGETS test_geir_add_example DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
     ```
 
 3. 创建run.sh脚本。
@@ -353,6 +364,7 @@ int main() {
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE
     make
+    cd bin
     ./test_geir_add_example                  # 替换为实际算子可执行文件名
     ```
 
