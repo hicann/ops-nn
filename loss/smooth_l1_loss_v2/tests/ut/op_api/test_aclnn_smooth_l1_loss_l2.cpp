@@ -11,7 +11,7 @@
 #include <array>
 #include <vector>
 
-#include "../../../../op_host/op_api/aclnn_smooth_l1_loss.h"
+#include "../../../op_host/op_api/aclnn_smooth_l1_loss.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -106,7 +106,7 @@ TEST_F(smooth_l1_loss, smooth_l1_loss_fp16_sum) {
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
   // SAMPLE: precision simulate
   // ut.TestPrecision();

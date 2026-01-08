@@ -162,30 +162,30 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
 {
     auto shapeInput = context->GetInputShape(INPUT_GRAD_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
-    auto gradSize = shapeInput->GetStorageShape().GetShapeSize();
+    auto gradShape = shapeInput->GetStorageShape();
 
     shapeInput = context->GetInputShape(INPUT_VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
-    auto varSize = shapeInput->GetStorageShape().GetShapeSize();
+    auto varShape = shapeInput->GetStorageShape();
 
     shapeInput = context->GetInputShape(INPUT_M_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
-    auto mSize = shapeInput->GetStorageShape().GetShapeSize();
+    auto mShape = shapeInput->GetStorageShape();
 
     shapeInput = context->GetInputShape(INPUT_V_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
-    auto vSize = shapeInput->GetStorageShape().GetShapeSize();
+    auto vShape = shapeInput->GetStorageShape();
 
     shapeInput = context->GetInputShape(INPUT_S_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
-    auto sSize = shapeInput->GetStorageShape().GetShapeSize();
+    auto sShape = shapeInput->GetStorageShape();
 
     shapeInput = context->GetInputShape(INPUT_STEP_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
 
-    bool isDiffSize = gradSize != varSize || gradSize != mSize || gradSize != vSize || gradSize != sSize;
+    bool isDiffSize = gradShape != varShape || gradShape != mShape || gradShape != vShape || gradShape != sShape;
     OP_CHECK_IF(
-        isDiffSize, OP_LOGE(context, "Input grad, var, m, v, s should keep equal data."),
+        isDiffSize, OP_LOGE(context, "Input grad, var, m, v, s should keep equal shape."),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
