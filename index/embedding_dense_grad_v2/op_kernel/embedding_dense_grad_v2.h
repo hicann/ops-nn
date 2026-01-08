@@ -61,31 +61,46 @@ public:
         InitQue();
         firstIndex_ = indiceGm_.GetValue(0);
         endIndex_ = indiceGm_.GetValue(rowNum_ - 1);
+        if (isDifferentDtype_) {
+            ProcessForHalf();
+        }else {
+            ProcessForFp32();
+        }
+        FreeQue();
+    }
+
+    __aicore__ inline void ProcessForFp32()
+    {
         for (uint64_t dimJ = 0; dimJ <= formerDimRepTime_; dimJ++) {
             UpdateParams(dimJ);
             if (curEmbeddingDim_ == 0) continue;
             for (uint64_t i = 0; i < rowNum_; i++) {
                 CopyIn(i, dimJ);
-                if (isDifferentDtype_) {
-                    if (paddingIdx_ == firstIndex_) {
-                        CopyToOutStage(paddingIdx_, false);
-                    }
-                    if (paddingIdx_ == endIndex_) {
-                        CopyToOutStage(paddingIdx_, true);
-                    }
-                    ComputeUbCache(i, dimJ);
-                }else {
-                    ComputeAndCopyOut(i, dimJ);
-                }
-            }
-            if (isDifferentDtype_) {
-                PIPE_MTE3_S();
-                SyncAll();
-                ProcessGmData(dimJ);
-                SyncAll();
+                ComputeAndCopyOut(i, dimJ);
             }
         }
-        FreeQue();
+    }
+
+    __aicore__ inline void ProcessForHalf()
+    {
+        for (uint64_t dimJ = 0; dimJ <= formerDimRepTime_; dimJ++) {
+            UpdateParams(dimJ);
+            if (curEmbeddingDim_ == 0) continue;
+            for (uint64_t i = 0; i < rowNum_; i++) {
+                CopyIn(i, dimJ);
+                if (paddingIdx_ == firstIndex_) {
+                    CopyToOutStage(paddingIdx_, false);
+                }
+                if (paddingIdx_ == endIndex_) {
+                    CopyToOutStage(paddingIdx_, true);
+                }
+                ComputeUbCache(i, dimJ);
+            }
+            PIPE_MTE3_S();
+            SyncAll();
+            ProcessGmData(dimJ);
+            SyncAll();
+        }
     }
 
 private:

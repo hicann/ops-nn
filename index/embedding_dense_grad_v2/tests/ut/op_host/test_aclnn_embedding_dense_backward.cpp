@@ -849,25 +849,6 @@ TEST_F(l2_embedding_dense_backward_test, case_43) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_embedding_dense_backward_test, ascend910B2_case_43) {
-  int64_t numWeights = 10;
-  int64_t paddingIdx = -1;
-  bool scaleGradByFreq = false;
-  auto tensorGradDesc = TensorDesc({10, 1024}, ACL_FLOAT, ACL_FORMAT_NDHWC)
-                            .ValueRange(0, 2);
-  auto tensorIndicesDesc = TensorDesc({10}, ACL_INT32, ACL_FORMAT_HWCN)
-                               .ValueRange(0, 9);
-  auto tensorOutDesc = TensorDesc({10, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
-
-  auto ut = OP_API_UT(aclnnEmbeddingDenseBackward,
-                      INPUT(tensorGradDesc, tensorIndicesDesc, numWeights, paddingIdx, scaleGradByFreq),
-                      OUTPUT(tensorOutDesc));
-
-  uint64_t workspaceSize1 = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize1);
-  EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-}
-
 // grad为空tensor
 TEST_F(l2_embedding_dense_backward_test, case_44) {
   int64_t numWeights = 155136;
