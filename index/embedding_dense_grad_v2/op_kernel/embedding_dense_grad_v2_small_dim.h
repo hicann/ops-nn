@@ -113,11 +113,15 @@ __aicore__ inline void SetGmAddr(GM_ADDR grad, GM_ADDR indices, GM_ADDR backProp
     idxNumGm_.SetGlobalBuffer((__gm__ float*)workSpace);
     if (isDifferentDtype_) {
         outCastedGm_.SetGlobalBuffer((__gm__ CT*)workSpace + scaleWorkspaceLength_);
-        if (coreIdx_ == 0) {
-            InitOutput(outCastedGm_, outCastedWorkspaceLength_, (CT)(0.0f));
+        uint64_t blockLength = outCastedWorkspaceLength_ / coreNum_;
+        uint64_t blockLeft = outCastedWorkspaceLength_ % coreNum_;
+        uint64_t offset = blockLength * coreIdx_;
+        InitOutput(outCastedGm_[offset], blockLength, (CT)(0.0f));
+        if (coreIdx_ == 0 && blockLeft != 0) {
+            InitOutput(outCastedGm_[blockLength * coreNum_], blockLeft, (CT)(0.0f));
         }
-        SyncAll();
         PIPE_S_MTE3();
+        SyncAll();
     }
 }
 

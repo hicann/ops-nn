@@ -43,6 +43,8 @@ static const int64_t LIMIT_EMBEDDING_DIM_SIZE = 2048;
 static const uint64_t MULTIPLES = 5;
 static const int64_t GRAD_ROW_LIMIT = 512;
 static const int64_t SCALE_LIMIT_RATIO = 2;
+static const int64_t MEMORY_THRESHOLD = 100 * 1024 * 1024; // 100MB
+static const int64_t SIZE_OF_HALF = 2;
 
 static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST_910 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
@@ -173,12 +175,16 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static bool CheckIsSmallDimMode(const uint64_t embeddingDim, const uint64_t numWeights)
+static bool CheckIsSmallDimMode(const aclTensor* grad, const uint64_t embeddingDim, const uint64_t numWeights)
 {
     int64_t deterministicValue = 0;
     rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != ACL_ERROR_NONE) {
         deterministicValue = 0;
+    }
+    // 确定性场景下bf16、fp16不走小尾轴分支
+    if (deterministicValue != 0 && grad->GetDataType() != ge::DT_FLOAT) {
+        return false;
     }
     return deterministicValue == 0 && embeddingDim <= SMALL_DIM_THRESH && numWeights <= CAST_MAX_NUM;
 }
@@ -219,6 +225,16 @@ static int64_t ComputeGradRow(const aclTensor* grad)
         gradRow *= gradShape.GetDim(i);
     }
     return gradRow;
+}
+
+static bool IsNeedCast(const aclTensor* grad, const aclTensor* out, bool scaleGradByFreq)
+{
+    int64_t inputLength = grad->GetViewShape().GetShapeSize();
+    int64_t outLength = out->GetViewShape().GetShapeSize();
+    int64_t gradRow = ComputeGradRow(grad);
+
+    // 升精度总内存低于100MB或索引个数小于512走原有分支
+    return ((inputLength + outLength) * SIZE_OF_HALF < MEMORY_THRESHOLD) || gradRow < GRAD_ROW_LIMIT || scaleGradByFreq;
 }
 
 static void ViewDataType(const aclTensor* input, const op::DataType dtype)
@@ -317,12 +333,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
 
     auto gradCasted = gradContiguous;
     bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
-    int64_t deterministicValue = 0;
-    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-    if (retRts != ACL_ERROR_NONE) {
-        deterministicValue = 0;
-    }
-    bool needCast = scaleGradByFreq || deterministicValue != 0;
+    bool needCast = IsNeedCast(grad, out, scaleGradByFreq);
     bool is910BSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
@@ -360,7 +371,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
         CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto gradShape = gradCasted->GetViewShape();
         auto embeddingDim = gradShape.GetDim(gradShape.GetDimNum() - 1);
-        if (is910D || !CheckIsSmallDimMode(embeddingDim, numWeights)) {
+        if (is910D || !CheckIsSmallDimMode(grad, embeddingDim, numWeights)) {
             auto result = PorcessIndices(indicesContiguous, gradCasted, uniqueExecutor.get());
             auto sortIndice = result.first;
             auto posIdx = result.second;

@@ -274,7 +274,8 @@ inline void EmbeddingDenseGradV2Tiling::Tiling4SmallDim(const int64_t gradRow)
 ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
 {
     OP_LOGD(tilingContext_, "Tiling initing");
-    isDeterministMode_ = (tilingContext_->GetDeterministic() == 1);
+    SetDtypeSize();
+    isDeterministMode_ = (tilingContext_->GetDeterministic() == 1) && dataTypeSize_ == sizeof(float);
     auto compileInfo = static_cast<const EmbeddingDenseGradV2CompileInfo*>(tilingContext_->GetCompileInfo());
     auto attrs = tilingContext_->GetAttrs();
     auto selfShape = tilingContext_->GetInputShape(0)->GetStorageShape();
@@ -296,7 +297,6 @@ ge::graphStatus EmbeddingDenseGradV2Tiling::Init()
         OP_LOGE(tilingContext_, "coreNum %lu, embeddingDim %lu", coreNum_, embeddingDim_);
         return ge::GRAPH_FAILED;
     }
-    SetDtypeSize();
     CalMaxFormerNum(ubSize_);
     OP_CHECK_IF((maxFormerNum == 0), OP_LOGE(tilingContext_, "Do not have enough ub size."), return ge::GRAPH_FAILED);
     SetTilingKeyMode();
@@ -335,6 +335,10 @@ void EmbeddingDenseGradV2Tiling::SetDtypeSize()
 
 bool EmbeddingDenseGradV2Tiling::CheckIsSmallDim(const uint64_t gradLastDim) const
 {
+    // 确定性场景下bf16、fp16不走小尾轴分支
+    if (tilingContext_->GetDeterministic() == 1 && dataTypeSize_ != sizeof(float)) {
+        return false;
+    }
     return !isDeterministMode_ && gradLastDim <= SMALL_DIM_THRESHOLD && numWeights_ <= CAST_MAX_NUM;
 }
 
