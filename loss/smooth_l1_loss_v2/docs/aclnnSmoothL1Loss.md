@@ -55,7 +55,7 @@
 
   - reduction（int64_t，计算输入）：用于指定要应用到输出的缩减公式中的输入，公式中的`reduction`，Host侧的整型。取值支持0('none')|1('mean')|2('sum')，其中'none'表示不应用缩减，'mean'表示输出的总和将除以输出中的元素数，'sum'表示输出将被求和。
 
-  - beta（float，计算输入）：数据类型支持FLOAT。
+  - beta（float，计算输入）：数据类型支持FLOAT，该值必须是非负的。
 
   - result（aclTensor*，计算输出）：公式中输出的损失函数$\ell$，当`reduction`为`none`时，shape与self和target的broadcast结果一致，当`reduction`为`mean`或`sum`时为[ ]，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
 

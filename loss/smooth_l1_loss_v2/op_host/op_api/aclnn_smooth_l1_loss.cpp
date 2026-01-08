@@ -33,6 +33,9 @@ extern "C" {
 static const std::string REDUCTION_NONE = "none";
 static const std::string REDUCTION_MEAN = "mean";
 static const std::string REDUCTION_SUM = "sum";
+static const int64_t REDUCTION_NONE_NUM = 0;
+static const int64_t REDUCTION_MEAN_NUM = 1;
+static const int64_t REDUCTION_SUM_NUM = 2;
 static const size_t NC1HWC0_DIM = 5;
 
 // 根据API定义，需要列出所能支持的所有dtype
@@ -79,6 +82,24 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *target) {
   return true;
 }
 
+static bool CheckReduction(int64_t reduction) {
+  // 检查reduction不能超过范围
+  if (reduction > REDUCTION_SUM_NUM || reduction < REDUCTION_NONE_NUM) {
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld.", reduction);
+      return false;
+  }
+  return true;
+}
+
+static void CheckFormat(const aclTensor* self) {
+  // 检查self的format类型，NZ添加告警
+  if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+      OP_LOGW(
+          "Format of self gets [%s], this format may lead to precision failure.",
+          op::ToString(self->GetStorageFormat()).GetString());
+  }
+}
+
 static bool CheckNotNullTensor(const aclTensor *self, const aclTensor *target, const aclTensor *result) {
   OP_CHECK_NULL(self, return false);
   OP_CHECK_NULL(target, return false);
@@ -120,8 +141,14 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target,
   CHECK_RET(CheckPromoteType(self->GetDataType(), target->GetDataType(), result->GetDataType(), promoteType),
             ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查tensor的shape是否合理
+  // 4. 检查reduction是否符合规则
+  CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
+  
+  // 5. 检查tensor的shape是否合理
   CHECK_RET(CheckShape(self, target, reduction, result), ACLNN_ERR_PARAM_INVALID);
+  
+  // 6. 检查tensor的format是否合理，nz添加warning打印
+  CheckFormat(self);
 
   return ACLNN_SUCCESS;
 }
