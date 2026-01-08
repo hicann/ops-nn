@@ -1142,7 +1142,7 @@ build_example() {
 
   OLDIFS=$IFS
   IFS=$'\n'
-  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp"))
+  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*"))
   if [[ "$COMPUTE_UNIT" == "ascend910_95" ]]; then
     files+=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp"))
   fi
