@@ -13,7 +13,7 @@
 - 计算公式：
 
   $$
-  gradInput = ({gradOut} - \frac{sumDy}{ {counter}}) - ((input - mean) * (invstd^{ 2} *   (\frac{sumDyXmu}{ {counter}}))) * invstd * weight
+  gradInput = ({gradOut} - \frac{sumDy}{ {counter}}) - ((input - mean) * (invstd^{2} *   (\frac{sumDyXmu}{ {counter}}))) * invstd * weight
   $$
 
 ## 函数原型

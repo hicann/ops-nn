@@ -74,14 +74,14 @@
     <tr>
       <td>weight</td>
       <td>可选输入</td>
-      <td>表示归一化缩放参数。对应公式中的`weight`。shape为[H]，H与`x`中H维一致。数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`bias`存在时`weight`与`bias`的数据类型相同。shape为[H]，H与`x`中H维一致。</td>
+      <td>表示归一化缩放参数。对应公式中的`weight`。shape为[H]，H与`x`中H维一致。数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`bias`存在时，`weight`与`bias`的数据类型相同。shape为[H]，H与`x`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias</td>
       <td>可选输入</td>
-      <td>表示归一化偏移参数。对应公式中的`bias`。数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`bias`存在时`weight`与`bias`的数据类型相同。shape为[H]，H与`x`中H维一致。</td>
+      <td>表示归一化偏移参数。对应公式中的`bias`。数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`bias`存在时，`weight`与`bias`的数据类型相同。shape为[H]，H与`x`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

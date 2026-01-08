@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以$scalars_{i}$，再与$x1_{i}$相加。
+- 接口功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以$scalars_{i}$，再与$x1_{i}$相加。
 - 计算公式：
   
   $$
@@ -269,7 +269,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

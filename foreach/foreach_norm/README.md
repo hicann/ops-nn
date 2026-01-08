@@ -43,7 +43,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示进行范数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td><!--aclnn中最大长度仅910D，待确认-->
+      <td>表示进行范数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -51,13 +51,13 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示进行范数运算的阶数，对应公式中的`p`。</td>
-      <td>FLOAT32、INT64</td><!--aclnn多了一个double，待确认-->
+      <td>FLOAT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行范数运算的输出张量列表，对应公式中的`y`。数据类型、数据格式与入参`x`的数据类型、数据格式一致。shape size为1。</td><!--aclnn中最大长度仅910D，待确认-->
+      <td>表示进行范数运算的输出张量列表，对应公式中的`y`。数据类型、数据格式与入参`x`的数据类型、数据格式一致。shape size为1。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

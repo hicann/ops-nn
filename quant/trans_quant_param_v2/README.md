@@ -24,7 +24,7 @@
   3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
      
      $$
-     out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   4. 根据`offset`取值进行后续计算：
@@ -39,7 +39,7 @@
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
 
           $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
+          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
           $$
 
 
@@ -78,8 +78,8 @@
     <tr>
       <td>round_mode</td>
       <td>可选属性</td>
-      <td><ul><li>量化计算中FP32填充到FP19的round模式，支持以下取值：0（aclnn
-      的V3兼容V2），1（提升计算精度）。其他值非法。对应公式中描述中的`round_mode`。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>量化计算中FP32填充到FP19的round模式，仅支持以下取值：0（aclnn
+      的V3兼容V2），1（提升计算精度）。对应公式中描述中的`round_mode`。</li><li>默认值为0。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -87,7 +87,7 @@
       <td>y</td>
       <td>输出</td>
       <td>量化后的输出结果，对应公式中的`out`。当输入scale的shape为1维时，y的shape也为1维，该维度的shape大小为scale与offset(若不为nullptr)单维shape大小的最大值，当输入scale的shape为2维时，y的shape与输入scale的shape维度和大小完全一致。</td>
-      <td>UINT64</td><!--opdef只有一个数据类型，aclnn有两个，多了一个INT64-->
+      <td>UINT64</td>
       <td>ND</td>
     </tr>
   </tbody></table>

@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：将指定的标量值加到张量列表中的每个张量中。本接口相较于[aclnnForeachAddScalar](aclnnForeachAddScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：将指定的标量值加到张量列表中的每个张量中。本接口相较于[aclnnForeachAddScalar](aclnnForeachAddScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
   
   $$

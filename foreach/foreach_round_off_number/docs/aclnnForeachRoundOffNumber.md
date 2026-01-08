@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。
+- 接口功能：对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。
 - 计算公式：
 
   $$
@@ -82,7 +82,7 @@ aclnnStatus aclnnForeachRoundOffNumber(
       <td>roundMode</td>
       <td>输入</td>
       <td>表示进行舍入计算的输入张量。对应公式中的`roundMode`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>roundMode的取值及对应的舍入策略如下：<ul><li>当roundmode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundmode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundmode=3，表示对输入进行向正无穷舍入取整操作。</li><li>当roundmode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundmode=5，表示对输入进行向零舍入操作。</li><li>当roundmode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundmode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</li></ul></li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数为1。</li><li>roundMode的取值及对应的舍入策略如下：<ul><li>当roundMode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundMode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundMode=3，表示对输入进行向正无穷舍入取整操作。</li><li>当roundMode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundMode=5，表示对输入进行向零舍入操作。</li><li>当roundMode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundMode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</li></ul></li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -249,7 +249,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

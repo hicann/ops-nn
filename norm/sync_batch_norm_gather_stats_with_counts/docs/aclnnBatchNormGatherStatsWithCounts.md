@@ -11,7 +11,7 @@
 
 - 接口功能：
   
-  收集所有device的均值和方差，更新全局的均值和标准差的倒数。BatchNorm的性能和BatchSize相关，BatchSize越大，BatchNorm的统计量也会越准。然而像检测这样的任务，占用显存较高，一张显卡往往只拿较少的图片，比如两张来训练，这就导致BN的表现变差。一个解决方式就是SyncBatchNorm，所有卡共享同一个BatchNorm，得到全局的统计量。
+  收集所有device的均值和方差，更新全局的均值和标准差的倒数。BatchNorm的性能和BatchSize相关，BatchSize越大，BatchNorm的统计量也会越准。然而像检测这样的任务，占用显存较高，一张显卡往往只使用较少的图片，比如两张来训练，这就导致BatchNorm的表现变差。一个解决方式就是SyncBatchNorm，所有卡共享同一个BatchNorm，得到全局的统计量。
 
   aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/API/aolapi/context/aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。
   <!--aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](../../ReduceMean?ReduceStdWithMean/docs/aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。-->
@@ -25,11 +25,11 @@
   其中，runningMean和runningVar更新公式如下：
   
   $$
-      runningMean=runningMean*(1-momentum) + E[x]*runningMean
+      runningMean=runningMean*(1-momentum) + E[x]*momentum
   $$
   
   $$
-      runningVar=runningVar*(1-momentum) + E[x]*runningVar
+      runningVar=runningVar*(1-momentum) + E[x]*momentum
   $$
   
 ## 函数原型

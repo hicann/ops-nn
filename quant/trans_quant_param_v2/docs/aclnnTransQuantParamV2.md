@@ -16,7 +16,7 @@
   2. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
 
      $$
-     out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   3. 根据`offset`取值进行后续计算：
@@ -31,7 +31,7 @@
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
 
           $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
+          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
           $$
 
 ## 函数原型
@@ -168,7 +168,8 @@ aclnnStatus aclnnTransQuantParamV2(
       <td>若offset的shape不是(t,)或(1, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）。</td>
     </tr>
     <tr>
-      <td>若scale的shape不是一维(t,)、(g,)或二维(1, n)、(g, 1)、(g, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致），g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。</tr>
+      <td>若scale的shape不是一维(t,)、(g,)或二维(1, n)、(g, 1)、(g, n)，则会报错。其中：t=1或n；n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）；g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。</td>
+    </tr>
   </tbody></table>
 
 ## aclnnTransQuantParamV2

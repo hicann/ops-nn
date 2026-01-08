@@ -207,7 +207,7 @@ aclnnStatus aclnnAddRmsNormCast(
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>输入和输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>

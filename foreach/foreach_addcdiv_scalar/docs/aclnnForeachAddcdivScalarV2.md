@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。本接口相较于[aclnnForeachAddcdivScalar](aclnnForeachAddcdivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。本接口相较于[aclnnForeachAddcdivScalar](aclnnForeachAddcdivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
   
   $$
@@ -84,7 +84,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>x2</td>
       <td>输入</td>
       <td>表示混合运算中除法的第一个输入张量列表。对应公式中的`x2`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
       <td>x3</td>
       <td>输入</td>
       <td>表示混合运算中除法的第二个输入张量列表。对应公式中的`x3`。</td>
-     <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
+     <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnForeachAddcdivScalarV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x1、x2、x3，scalar，out是空指针。</td>
+      <td>传入的x1、x2、x3、scalar、out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
@@ -266,7 +266,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

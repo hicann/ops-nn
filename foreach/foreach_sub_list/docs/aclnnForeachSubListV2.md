@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。
+- 接口功能：对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。
   本接口相较于[aclnnForeachSubList](aclnnForeachSubList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 

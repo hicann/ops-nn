@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma做了+1操作。
+- 算子功能：GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。
 - 计算公式：
 
   $$

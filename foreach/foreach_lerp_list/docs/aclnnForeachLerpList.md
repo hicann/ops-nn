@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对两个张量列表对应位置元素执行插值计算，其中张量列表weight是插值系数。
+- 接口功能：对两个张量列表对应位置元素执行插值计算，其中张量列表weight是插值系数。
 - 计算公式：
 
   $$
@@ -258,7 +258,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

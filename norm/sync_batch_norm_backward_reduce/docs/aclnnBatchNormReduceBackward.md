@@ -12,9 +12,9 @@
 - 接口功能：
   
   主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。计算结果如下：
-  - 计算损失函数L对缩放权重γ的梯度($\frac{\partial L}{\partial γ}$)。
-  - 计算损失函数L对偏移量β的梯度($\frac{\partial L}{\partial β}$)。
-  - 以损失函数L相对于输出(y<sub>i</sub>)的偏差d<sub>yi</sub>推导计算$\frac{\partial L}{\partial x_i}$所需的中间量sumDy和sumDyXmu。其中($\frac{\partial L}{\partial x_i}$)为损失函数L相对于对应层各输入(x<sub>i</sub>)的梯度。
+  - 计算损失函数l对缩放权重γ的梯度($\frac{\partial l}{\partial γ}$)。
+ 	- 计算损失函数l对偏移量β的梯度($\frac{\partial l}{\partial β}$)。
+ 	- 以损失函数l相对于输出(y<sub>i</sub>)的偏差d<sub>yi</sub>推导计算$\frac{\partial l}{\partial x_i}$所需的中间量sumDy和sumDyXmu。其中($\frac{\partial l}{\partial x_i}$)为损失函数l相对于对应层各输入(x<sub>i</sub>)的梯度。
   
 - 计算公式：
   
@@ -351,7 +351,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
 
 ## 约束说明
 
-- 当任一输入的为空Tensor时，输出为空Tensor。
+- 当任一输入为空Tensor时，输出为空Tensor。
 - 确定性计算：
   - aclnnBatchNormReduceBackward默认确定性实现。
 

@@ -51,7 +51,7 @@
       <td>roundMode</td>
       <td>输入</td>
       <td>表示进行舍入计算的输入张量，对应公式中的`roundMode`。元素个数为1。roundMode的取值及对应的舍入策略如下：当roundMode=1，表示对输入进行四舍六入五成双舍入操作；当roundMode=2，表示对输入进行向负无穷舍入取整操作；当roundMode=3，表示对输入进行向正无穷舍入取整操作；当roundMode=4，表示对输入进行四舍五入舍入操作；当roundMode=5，表示对输入进行向零舍入操作；当roundMode=6，表示对输入进行最近邻奇数舍入操作；当roundMode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</td>
-      <td>INT8、INT64</td><!--V2多了INT64，原型原来也没有INT64-->
+      <td>INT8、INT64</td>
       <td>ND</td>
     </tr>
     <tr>

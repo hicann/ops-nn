@@ -50,7 +50,7 @@
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示进行线性插值计算的第二个输入张量列表，对应公式中的`x2`。数据类型、数据格式和shape跟入参`x1`的数据类型、数据格式和shape一致。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行线性插值计算的第二个输入张量列表，对应公式中的`x2`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -58,7 +58,7 @@
       <td>weight</td>
       <td>输入</td>
       <td>表示进行线性插值计算的插值系数，对应公式中的`weight`。</td>
-      <td>FLOAT32</td><!--aclnn中还有double，看一下算子是不是少了？-->
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

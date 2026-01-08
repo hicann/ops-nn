@@ -37,7 +37,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>需要做量化的输入，对应公式中的`x`。shape支持2维。</td>
+      <td>需要执行量化的输入，对应公式中的`x`。shape支持2维。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

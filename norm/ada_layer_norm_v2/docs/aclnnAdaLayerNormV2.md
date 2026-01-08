@@ -121,7 +121,7 @@ aclnnStatus aclnnAdaLayerNormV2(
       <td>weightOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化缩放参数。对应公式中的`weightOptional`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnAdaLayerNormV2(
       <td>biasOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化偏移参数。对应公式中的`biasOptional`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致或为FLOAT32类型，且当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -230,10 +230,10 @@ aclnnStatus aclnnAdaLayerNormV2(
       <td>x、scale、shift、out的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>weightOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>weightOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>biasOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>biasOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>scale、shift、out、meanOutOptional、rstdOutOptional与x的数据类型不一致。</td>

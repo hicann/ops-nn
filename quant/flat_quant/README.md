@@ -19,7 +19,7 @@
     x' = x @ kroneckerP2
     $$
 
-  2.kroneckerP1左乘x':
+  2.kroneckerP1左乘x'：
 
     $$
     x'' = kroneckerP1@x'

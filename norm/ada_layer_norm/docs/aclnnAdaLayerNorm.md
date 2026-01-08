@@ -199,10 +199,10 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>x、scale、shift、out的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>weightOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>weightOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>biasOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>biasOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>scale、shift、weightOptional、biasOptional、out与x的数据类型不一致。</td>

@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以标量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。本接口相较于[aclnnForeachAddcmulScalar](aclnnForeachAddcmulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以标量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。本接口相较于[aclnnForeachAddcmulScalar](aclnnForeachAddcmulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$
@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>x3</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第三个输入张量列表。对应公式中的`x3`。</td>
-     <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
+     <td><ul><li>不支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -150,10 +150,12 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
     - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-  
-    `scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
-    - 当`x1`的数据类型为FLOAT32、INT32时，数据类型与`x1`的数据类型保持一致。
-    - 当`x1`的数据类型为BFLOAT16、FLOAT16时，数据类型支持FLOAT32。
+    - `scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
+ 	    - 当`x1`的数据类型为BFLOAT16、FLOAT32时，数据类型支持FLOAT32、DOUBLE。
+ 	    - 当`x1`的数据类型为FLOAT16，数据类型支持FLOAT16、FLOAT32、DOUBLE。
+ 	    - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
+ 	  - 入参`x1`、`x2`、`x3`和出参`y`支持包含的最大Tensor个数均为50。
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -277,7 +279,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 
 int Init(int32_t deviceId, aclrtStream *stream)
 {
-    // 固定写法，acl初始化
+    // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);

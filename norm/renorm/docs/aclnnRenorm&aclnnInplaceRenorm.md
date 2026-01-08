@@ -23,7 +23,7 @@
   $$
 
   其中：
-  $i$ 维dim确定的某维度张量切片：
+  $i$为dim确定的某维度张量切片：
 
   $$
   ||input_i||_p = (\sum_{i=0}^{n}{input_i^p}^\frac{1}{p})
@@ -334,7 +334,7 @@
       <td>dim</td>
       <td>输入</td>
       <td>表示指定求norm的维度方向。对应公式中的`i`。</td>
-      <td>取值范围为：[-self的维度数量，self的维度数量-1]。</td>
+      <td>取值范围为：[-selfRef的维度数量，selfRef的维度数量-1]。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -406,13 +406,13 @@
       <td>p < 0。</td>
     </tr>
     <tr>
-      <td>dim的值不在[-self的维度数量，self的维度数量-1]范围内。</td>
+      <td>dim的值不在[-selfRef的维度数量，selfRef的维度数量-1]范围内。</td>
     </tr>
     <tr>
       <td>maxNorm < 0。</td>
     </tr>
     <tr>
-      <td>当输入self的维度不在[2,8]范围内。</td>
+      <td>当输入selfRef的维度不在[2,8]范围内。</td>
     </tr>
   </tbody></table>
 
