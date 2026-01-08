@@ -102,7 +102,7 @@ int main() {
   std::vector<float> meanData = {400, 400}; 
   std::vector<float> varData = {400, 400}; 
   std::vector<float> batchMeanData = {0, 0}; 
-  std::vector<float> batcInvstdData = {0, 0};
+  std::vector<float> batchInvstdData = {0, 0};
   float momentum = 1e-1;
   float eps = 1e-5;
   // 创建input totalSum aclTensor
@@ -123,8 +123,8 @@ int main() {
   // 创建input batchMeanData aclTensor
   ret = CreateAclTensor(batchMeanData, batchMeanShape, &batchMeanDeviceAddr, aclDataType::ACL_FLOAT, &batchMean);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建input batcInvstdData aclTensor
-  ret = CreateAclTensor(batcInvstdData, batchInvstdShape, &batchInvstdDeviceAddr, aclDataType::ACL_FLOAT, &batchInvstd);
+  // 创建input batchInvstdData aclTensor
+  ret = CreateAclTensor(batchInvstdData, batchInvstdShape, &batchInvstdDeviceAddr, aclDataType::ACL_FLOAT, &batchInvstd);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
