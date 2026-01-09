@@ -2731,6 +2731,17 @@ void MatmulV3BaseTiling::DoTilingKey()
     OP_LOGI(args_.opName, "Tiling Key is 0x%x", tilingKey_);
 }
 
+uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t alignedM, uint64_t alignedN)
+{
+    uint64_t singleSize = tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE ?
+                              (static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreN) *
+                               static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreM)) :
+                              (alignedM * alignedN);
+
+    return static_cast<uint64_t>(tilingData_.matmulTiling.usedCoreNum) * singleSize * DB_SIZE * DATA_SIZE_FP32 +
+           RPC_WORKSIZE * MB_SIZE;
+}
+
 ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
 {
     uint64_t align256Byte = 256 / aDtypeSize_;  // 256B 对齐shape
@@ -2748,10 +2759,7 @@ ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
     }
      OP_LOGI(args_.opName, "if tiling enable is deterministic splitk, workspace size is %lu", workspaceSize_);
     if (tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::DETERMINISTIC_SPLIT_K) {
-        uint64_t singleSize = alignedM * alignedN;
-        workspaceSize_ =
-            static_cast<uint64_t>(tilingData_.matmulTiling.usedCoreNum) * singleSize * DB_SIZE * DATA_SIZE_FP32 +
-            RPC_WORKSIZE * MB_SIZE;
+        workspaceSize_ = GetDeterministicSplitKWorkspaceSize(alignedM, alignedN);
     }
     if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE_ENABLE_ALIGNOUT) {
         workspaceSize_ += ops::CeilAlign(args_.nValue, CACHELINE / cDtypeSize_) * tilingData_.matmulTiling.baseM *
