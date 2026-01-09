@@ -13,6 +13,7 @@
 - 算子功能：
   输入fast_gelu的计算结果。
 - 计算公式：
+
  $$ FastGelu(x_i) = \frac {x_i} {1 + \exp(-1.702 * \left| x_i \right|)} * \exp(0851 * (x_i - \left| x_i \right|)) $$
  
 ## 参数说明

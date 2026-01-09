@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。
+- 接口功能：计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。
 - 计算公式：
   
   $$

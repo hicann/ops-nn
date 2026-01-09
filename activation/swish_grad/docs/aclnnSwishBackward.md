@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：aclnnSwishBackward是[aclnnSwish](../../swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。 
+- 接口功能：aclnnSwishBackward是[aclnnSwish](../../swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。 
 - 计算公式：
   
   - Swish函数公式
@@ -24,7 +24,7 @@
 
   s^\prime(x)= \beta s(x)+\sigma(\beta x)(1-\beta s(x))= \sigma(\beta x)*(1+\beta x(1-\sigma(\beta x)))
 
-  $$    
+  $$
 
   $$
   gradInput = gradOutput * s^\prime(x)

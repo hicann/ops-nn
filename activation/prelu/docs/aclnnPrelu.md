@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。
+- 接口功能：激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。
 - 计算公式：
 
   $$

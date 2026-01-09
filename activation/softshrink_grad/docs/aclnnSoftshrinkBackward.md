@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[Softshrink](../../softshrink/docs/aclnnSoftshrink.md)函数的反向接口。
+- 接口功能：完成[Softshrink](../../softshrink/docs/aclnnSoftshrink.md)函数的反向接口。
 - 计算公式：
   - Softshrink正向计算公式：
 
@@ -33,6 +33,7 @@
     $$
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftshrinkBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftshrinkBackward”接口执行计算。
 
 ```Cpp

@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-算子功能：[aclnnLeakyRelu](../../leaky_relu/docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md)激活函数反向。
+接口功能：[aclnnLeakyRelu](../../leaky_relu/docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md)激活函数反向。
 计算公式：
 
 $$

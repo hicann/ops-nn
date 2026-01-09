@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：[aclnnLogSigmoid](../../logsigmoid/docs/aclnnLogSigmoid.md)的反向传播，根据上一层传播的梯度与LogSigmoid正向输入计算其梯度输入。
+- 接口功能：[aclnnLogSigmoid](../../logsigmoid/docs/aclnnLogSigmoid.md)的反向传播，根据上一层传播的梯度与LogSigmoid正向输入计算其梯度输入。
 
 - 计算公式：
 

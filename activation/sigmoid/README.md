@@ -59,8 +59,7 @@ $$
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnSigmoid&aclnnInplaceSigmoid默认确定性实现。
+无
 
 ## 调用说明
 

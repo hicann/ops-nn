@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。
+- 接口功能：激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。
 - 计算公式：
 
   $$

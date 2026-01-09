@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
   
   vLLM是一个高性能的LLM推理和服务框架，专注于优化大规模语言模型的推理效率。它的核心特点包括PageAttention和高效内存管理。advance_step算子的主要作用是推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。
 
@@ -42,6 +42,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdvanceStepV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAdvanceStepV2”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnAdvanceStepV2GetWorkspaceSize(
   const aclTensor *inputTokens, 

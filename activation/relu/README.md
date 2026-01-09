@@ -53,8 +53,7 @@ $$
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnRelu&aclnnInplaceRelu默认确定性实现。
+无
 
 ## 调用说明
 

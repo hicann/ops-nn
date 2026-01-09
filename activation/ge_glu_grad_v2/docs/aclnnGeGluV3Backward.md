@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-算子功能：完成[aclnnGeGluV3](../../ge_glu_v2/docs/aclnnGeGluV3.md)的反向。
+接口功能：完成[aclnnGeGluV3](../../ge_glu_v2/docs/aclnnGeGluV3.md)的反向。
 
 ## 函数原型
 

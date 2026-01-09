@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入Tensor完成Sigmoid运算。
+- 接口功能：对输入Tensor完成Sigmoid运算。
 
 - 计算公式：
 
@@ -19,6 +19,7 @@ out = {\frac{1} {1+{e}^{-input}}}
 $$
 
 ## 函数原型
+
 - aclnnSigmoid和aclnnInplaceSigmoid实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSigmoid：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSigmoid：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。

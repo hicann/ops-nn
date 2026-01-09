@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-算子功能：[aclnnHardsigmoid](../../hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)的反向传播。
+接口功能：[aclnnHardsigmoid](../../hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)的反向传播。
 
 ## 函数原型
 

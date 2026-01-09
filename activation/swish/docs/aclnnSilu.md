@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：该算子也被称为Swish函数（$\beta = 1$），对输入tensor逐元素进行Silu函数运算并输出结果tensor。
+- 接口功能：该算子也被称为Swish函数（$\beta = 1$），对输入tensor逐元素进行Silu函数运算并输出结果tensor。
 
 - 计算公式：
 

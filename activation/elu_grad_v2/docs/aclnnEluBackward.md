@@ -9,7 +9,7 @@
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 ## 功能说明
 
-- 算子功能：[aclnnElu](../../elu/docs/aclnnElu&aclnnInplaceElu.md)激活函数的反向计算，输出ELU激活函数正向输入的梯度。
+- 接口功能：[aclnnElu](../../elu/docs/aclnnElu&aclnnInplaceElu.md)激活函数的反向计算，输出ELU激活函数正向输入的梯度。
 
 - 计算公式：$x$是selfOrResult中的某个元素。
 
