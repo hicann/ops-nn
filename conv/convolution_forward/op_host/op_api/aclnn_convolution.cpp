@@ -3082,7 +3082,7 @@ static bool IsSupportConvToBmm(ConvEngine engine)
     }
 
     if ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) &&
-        engine.meta.input.format != op::Format::FORMAT_NCDHW) {
+        engine.meta.input.format != op::Format::FORMAT_NCDHW && engine.meta.input.format != op::Format::FORMAT_NCHW) {
         return false;
     }
 
