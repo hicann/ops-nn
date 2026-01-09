@@ -75,6 +75,7 @@ protected:
     bool TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
     ge::graphStatus SelectNZTiling();
     void DoTilingKey();
+    uint64_t GetDeterministicSplitKWorkspaceSize(uint64_t alignedM, uint64_t alignedN);
     void DoBasicTiling();
     void FormulaicBaseBlockTiling();
     void FormulaicTilingNoTrans();
