@@ -17,7 +17,7 @@
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon], i=0 \\
     Y_{tmp}[g[i]\colon g[i+1], \colon] = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[i+1, \colon], i \in (0, G) \cap \mathbb{Z}\\
-    scale=row\_max(abs(Y_{tmp}))/127
+    scale=127/row\_max(abs(Y_{tmp}))
   $$
 
   $$
@@ -99,7 +99,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>smoothScalesOptional</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
      <tr>
       <td>offsetsOptional</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>groupIndexOptional</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
       <tr>
       <td>activateLeft</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>INT8</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
       <tr>
       <td>scaleOut</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
       <tr>
       <td>workspaceSize</td>

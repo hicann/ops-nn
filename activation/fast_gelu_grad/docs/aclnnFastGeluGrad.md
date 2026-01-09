@@ -11,12 +11,14 @@
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
+
 [FastGelu](../../fast_gelu/docs/aclnnFastGelu.md)的反向计算。
 FastGeluBackward定义如下：
+
 $$
 dx = dy * ((\frac{1}{e^{-1.702 x}+1} - 1) * -1.702x + 1) * \frac{1}{(e^{-1.702 x}+1)}
-$$                   
- 
+$$
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFastGeluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFastGeluBackward”接口执行计算。

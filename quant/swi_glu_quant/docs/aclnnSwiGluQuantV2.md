@@ -18,7 +18,7 @@
     Act = SwiGlu(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act[0\colon g[0],\colon] * smooth\_scales[0\colon g[0],\colon], i=0 \\
     Y_{tmp}^i = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[g[i]\colon g[i+1], \colon], i \in (0, G) \cap \mathbb{Z}\\
-    scale=row\_max(abs(Y_{tmp}))/dstTypeScale
+    scale=dstTypeScale/row\_max(abs(Y_{tmp}))
   $$
 
   $$
@@ -46,7 +46,7 @@
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp} = Act* smooth\_scales(0,\colon)\\
-    scale=row\_max(abs(Y_{tmp}))/dstTypeScale
+    scale=dstTypeScale/row\_max(abs(Y_{tmp}))
   $$
 
   $$
@@ -71,6 +71,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwiGluQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwiGluQuantV2”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSwiGluQuantV2GetWorkspaceSize(
   const aclTensor *x,
@@ -129,7 +130,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>smoothScalesOptional</td>
@@ -139,7 +140,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
      <tr>
       <td>offsetsOptional</td>
@@ -149,7 +150,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>groupIndexOptional</td>
@@ -159,7 +160,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>INT32</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr> 
       <tr>
       <td>activateLeft</td>
@@ -209,7 +210,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>INT8、INT4</td>
       <td>ND</td>
       <td>-</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
       <tr>
       <td>workspaceSize</td>
