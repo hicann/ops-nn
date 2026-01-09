@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 接口功能：对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
+- 接口功能：对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。
 
 - 计算公式：
 
@@ -159,7 +159,7 @@ aclnnStatus aclnnBatchNorm(
       <td>output</td>
       <td>输出</td>
       <td>表示BatchNorm的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`input`的数据类型一致。</li><li>shape和格式与`input`入参的shape和格式相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、数据格式、shape与入参`input`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NC、NCL、NCHW、NHWC、NCDHW、NDHWC、ND</td>
       <td>2-8</td>

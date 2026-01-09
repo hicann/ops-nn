@@ -11,7 +11,7 @@
 
 - 接口功能：
   
-  将输入Tensor做一个反量化的计算，再根据输入的weight、bias、epsilon做归一化，最后根据输出的outputScale以及outputZeroPoint做量化。
+  将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。
 - 计算公式：
   
   1.反量化计算：

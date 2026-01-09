@@ -714,6 +714,16 @@
     <td>AI Core</td>
     <td>实现卷积功能，支持 1D 卷积、2D 卷积、3D 卷积，同时支持转置卷积、空洞卷积、分组卷积。</td>
   </tr>
+   <tr>	 
+     <td>conv</td>
+     <td><a href="../../conv/deformable_conv2d/README.md">deformable_conv2d</a></td>
+     <td>✓</td>	 
+     <td>✓</td>	 
+     <td>✓</td>	 
+     <td>✗</td>	 
+     <td>AI Core</td>	 
+     <td>实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。</td>
+   </tr>
   <tr>
     <td>foreach</td>
     <td><a href="../../foreach/foreach_abs/README.md">foreach_abs</a></td>
@@ -832,7 +842,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>按元素做反正弦函数运算。</td>
+    <td>按元素进行反正弦函数运算。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -842,7 +852,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>按元素做反正切函数运算。</td>
+    <td>按元素进行反正切函数运算。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -862,7 +872,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>按元素做余弦函数运算。</td>
+    <td>按元素进行余弦函数运算。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -872,7 +882,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>按元素做双曲余弦函数运算。</td>
+    <td>按元素进行双曲余弦函数运算。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -912,7 +922,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>按元素做误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。</td>
+    <td>按元素进行误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -2046,6 +2056,36 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/ada_layer_norm/README.md">ada_layer_norm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/ada_layer_norm_quant/README.md">ada_layer_norm_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>AdaLayerNormQuant算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/ada_layer_norm_v2/README.md">ada_layer_norm_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>AdaLayerNormV2算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。相比AdaLayerNorm算子，输出新增2个参数（输入的均值和输入的标准差的倒数）；weight和bias支持的数据类型增加对应约束。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/add_layer_norm/README.md">add_layer_norm</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2053,6 +2093,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现AddLayerNorm功能。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/add_layer_norm_grad/README.md">add_layer_norm_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2116,6 +2166,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/add_rms_norm_quant_v2/README.md">add_rms_norm_quant_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项bias参数，即计算公式中的`bias`。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/batch_norm_elemt/README.md">batch_norm_elemt</a></td>
     <td>✗</td>
     <td>✓</td>
@@ -2142,7 +2202,17 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对一个批次的数据做正则化处理，正则化之后生成的数据的统计结果为0均值、1标准差。</td>
+    <td>对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2182,7 +2252,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma做了+1操作。</td>
+    <td>GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2322,7 +2392,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>将输入Tensor做一个反量化的计算，再根据输入的weight、bias、epsilon做归一化，最后根据输出的outputScale以及outputZeroPoint做量化。</td>
+    <td>将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2377,6 +2447,16 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_backward_reduce/README.md">sync_batch_norm_backward_reduce</a></td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/sync_batch_norm_gather_stats/README.md">sync_batch_norm_gather_stats</a></td>
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
@@ -2562,7 +2642,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对输入x进行量化操作，且scale和offset的size需要是x的最后一维或1。</td>
+    <td>根据输入的sacle和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。</td>
   </tr>
   <tr>
     <td>quant</td>
@@ -2593,6 +2673,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/dynamic_block_quant/README.md">dynamic_block_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量，通过给定的row_block_size和col_block_size将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scale，并根据scale对输入进行量化。输出最终的量化结果，以及每个块的量化参数scale。</td>
   </tr>
   <tr>
     <td>quant</td>
@@ -2703,6 +2793,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/trans_quant_param/README.md">trans_quant_param</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>quant</td>

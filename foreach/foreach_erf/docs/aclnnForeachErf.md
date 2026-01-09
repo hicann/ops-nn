@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：按元素做误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。
+- 接口功能：按元素进行误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。
 - 计算公式：
 
   $$

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 接口功能：对输入x进行反量化操作。
+- 接口功能：根据输入的sacle和offset对输入x进行反量化。
 - 计算公式：
   - sqrtMode为false时，计算公式为：
 
@@ -77,7 +77,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>x</td>
       <td>输入</td>
       <td>表示需要做反量化的输入。对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用。</li><li>当数据类型是INT4时，shape的尾轴为偶数。</li></ul></td>
       <td>INT4、INT8、INT32</td>
       <td>ND</td>
       <td>0-8</td>

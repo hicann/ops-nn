@@ -10,9 +10,9 @@
 
 ## 功能说明
 
-- **算子功能**：对输入张量列表的每个张量与张量scalar执行相乘运算。本接口相较于[aclnnForeachMulScalar](aclnnForeachMulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：对输入张量列表的每个张量与张量scalar执行相乘运算。本接口相较于[aclnnForeachMulScalar](aclnnForeachMulScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 
-- **计算公式**：
+- 计算公式：
 
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachMulScalarV2(
       <td>out</td>
       <td>输出</td>
       <td>对应公式中的`y`，表示x乘以scalar的输出张量列表。</td>
-      <td><ul><li>支持空Tensor。</li><li>支持的最大长度为50个。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>支持包含的最大Tensor个数均为50。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -134,6 +134,7 @@ aclnnStatus aclnnForeachMulScalarV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

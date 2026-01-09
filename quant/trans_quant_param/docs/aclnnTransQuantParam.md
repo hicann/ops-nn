@@ -9,14 +9,14 @@
 
 ## 功能说明
 
-- 接口功能：将输入scale数据从FLOAT32类型转换为硬件需要的UNINT64类型，并存储到quantParam中。
+- 接口功能：将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。
 - 计算公式：
   1. `out`为64位格式，初始为0。
 
   2. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
 
      $$
-     out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   3. 根据`offset`取值进行后续计算：
@@ -31,7 +31,7 @@
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
 
           $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
+          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
           $$
 
 ## 函数原型
@@ -174,12 +174,12 @@ aclnnStatus aclnnTransQuantParam(
       <td>当offsetArray不为空指针时，参数offsetSize < 1。</td>
     </tr>
     <tr>
-      <td>当offsetArray为空指针时，参数offsetSize != 0。</td>
+      <td>当offsetArray为空指针时，参数offsetSize不等于0。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_NULLPTR</td>
       <td>561103</td>
-      <td>*quantParam为空指针。</td>
+      <td>quantParam为空指针。</td>
     </tr>
   </tbody></table>
 

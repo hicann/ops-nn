@@ -9,8 +9,8 @@
 
 ## 功能说明
 
-- **算子功能**：对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
-- **计算公式**：
+- 接口功能：对张量列表x和标量值scalar执行逐元素比较，计算每个元素对应的最小值。本接口相较于[aclnnForeachMinimumScalar](aclnnForeachMinimumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 计算公式：
 
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
@@ -82,7 +82,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>scalar</td>
       <td>输入</td>
       <td>对应公式中的`scalar`，表示取最小值运算的输入标量。</td>
-      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16, DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></li></ul></td>
+      <td>数据类型与入参`x`的数据类型具有一定对应关系，且数值不超过入参`x`对应数据类型的数值范围：<ul><li>当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT32、INT64。</li></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -126,6 +126,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -142,7 +143,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
+      <td>如果传入参数是必选输入，输出或必选属性，且是空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>

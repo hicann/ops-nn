@@ -9,8 +9,8 @@
 
 ## 功能说明
 
-- **算子功能**：对输入张量列表的每个张量进行n次方运算。本接口相较于[aclnnForeachPowScalar](aclnnForeachPowScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
-- **计算公式**：
+- 接口功能：对输入张量列表的每个张量进行n次方运算。本接口相较于[aclnnForeachPowScalar](aclnnForeachPowScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 计算公式：
 
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
@@ -123,7 +123,9 @@ aclnnStatus aclnnForeachPowScalarV2(
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

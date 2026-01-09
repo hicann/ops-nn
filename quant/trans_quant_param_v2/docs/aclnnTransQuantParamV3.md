@@ -23,7 +23,7 @@
   3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将46位修改为1。
 
      $$
-     out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   4. 根据`offset`取值进行后续计算：
@@ -38,7 +38,7 @@
        2. 再将`offset`按bit位保留9位并存储于out的37到45位。
 
           $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
+          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
           $$
 
 ## 函数原型
@@ -93,7 +93,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>scale</td>
       <td>输入</td>
       <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape是1维（t，），t = 1或n，以及2维（1，n）其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape是1维（t,），t = 1或n，以及2维（1, n）其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>offset</td>
       <td>输入</td>
       <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape是1维（t，），以及2维（1，n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape是1维（t,），以及2维（1, n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>roundMode</td>
       <td>输入</td>
       <td>量化计算中FP32填充到FP19的round模式。对应公式描述中的`roundMode`。</td>
-      <td>支持以下取值：0（兼容V2），1（提升计算精度）。其他值非法。</td>
+      <td>支持以下取值：0（兼容V2），1（提升计算精度）。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

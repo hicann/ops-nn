@@ -68,7 +68,7 @@
     <tr>
       <td>smooth_scales</td>
       <td>可选输入</td>
-      <td><ul><li>算子输入的Tensor，对应公式中的`smoothScalesOptional`。</li><li>shape维度是x的最后一维。</li></ul></td>
+      <td><ul><li>算子输入的Tensor，对应公式中的`smoothScalesOptional`。</li><li>shape维度与`x`的最后一维相同。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

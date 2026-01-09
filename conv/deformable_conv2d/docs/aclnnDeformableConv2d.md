@@ -202,7 +202,7 @@ aclnnStatus aclnnDeformableConv2d(
     <tr>
       <td>groups</td>
       <td>输入</td>
-      <td>表示从输入通道到输出通道的阻塞连接数。</td>
+      <td>表示从输入通道到输出通道的分组连接数。</td>
       <td>inC和outC需都可被groups数整除，groups数大于零。</td>
       <td>INT64</td>
       <td>-</td>
@@ -302,10 +302,10 @@ aclnnStatus aclnnDeformableConv2d(
       <td>x、weight、offset、out的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>deformOutOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>deformOutOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>biasOptional不为空指针场景，数据类型或数据格式不在支持的范围之内。</td>
+      <td>biasOptional不为空指针时，数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x、weight、offset、biasOptional、out、deformOutOptional的shape与参数说明中不一致。</td>

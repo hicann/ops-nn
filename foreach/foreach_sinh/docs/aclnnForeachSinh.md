@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量列表的每个张量进行双曲正弦函数运算。
+- 接口功能：对输入张量列表的每个张量进行双曲正弦函数运算。
 - 计算公式：
   
   $$
@@ -115,8 +115,8 @@ aclnnStatus aclnnForeachSinh(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
- 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

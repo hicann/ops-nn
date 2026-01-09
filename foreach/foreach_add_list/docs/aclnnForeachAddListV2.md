@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。本接口相较于[aclnnForeachAddList](aclnnForeachAddList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。本接口相较于[aclnnForeachAddList](aclnnForeachAddList.md)，修改入参alpha的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$
@@ -18,7 +18,7 @@
   $$
 
   $$
-  y_i = {x1}_{i}+{x2}_{i}*{alpha} (i=0,1,...n-1)
+  y_i = x1_i + x2_i * alpha (i=0,1,...n-1)
   $$
 
 ## 函数原型
@@ -34,6 +34,7 @@ aclnnStatus aclnnForeachAddListV2GetWorkspaceSize(
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnForeachAddListV2(
   void          *workspace,

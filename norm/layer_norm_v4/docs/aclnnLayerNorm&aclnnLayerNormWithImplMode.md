@@ -119,7 +119,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>weightOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的权重。对应公式中的`weightOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>biasOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的偏移量。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -347,7 +347,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>weightOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的权重。对应公式中的`weightOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -357,7 +357,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>biasOptional</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的偏移量。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

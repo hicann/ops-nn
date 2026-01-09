@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
+- 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
 
 - 计算公式：
   
@@ -151,10 +151,10 @@ aclnnStatus aclnnForeachAddcmulScalar(
     - 当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。
     - 当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    
-    参数`scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
-    - 当`x1`的数据类型为FLOAT32、INT32时，数据类型与`x1`的数据类型保持一致。
-    - 当`x1`的数据类型为BFLOAT16、FLOAT16时，数据类型支持FLOAT32。
+    - 参数`x1`、`x2`、`x3`、`out`支持包含的最大Tensor个数均为50。
+    - 参数`scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
+      - 当`x1`的数据类型为FLOAT32、INT32时，数据类型与`x1`的数据类型保持一致。
+      - 当`x1`的数据类型为BFLOAT16、FLOAT16时，数据类型支持FLOAT32。
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

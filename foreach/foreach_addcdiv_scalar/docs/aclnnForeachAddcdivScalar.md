@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。
+- 接口功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。
 
 - 计算公式：
 
@@ -85,7 +85,7 @@ aclnnStatus aclnnForeachAddcdivScalar(
       <td>x2</td>
       <td>输入</td>
       <td>表示混合运算中除法的第一个输入张量列表。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachAddcdivScalar(
       <td>x3</td>
       <td>输入</td>
       <td>表示混合运算中除法的第二个输入张量列表。对应公式中的`x3`。</td>
-     <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与`x1`入参一致。</li></ul></td>
+     <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

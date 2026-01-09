@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。
+- 接口功能：两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。
 
 - 计算公式：
 
@@ -19,7 +19,7 @@
   $$
 
   $$
-  y_i = {x1}_{i}+{x2}_{i}*{alpha} (i=0,1,...n-1)
+  y_i = x1_i + x2_i * alpha (i=0,1,...n-1)
   $$
 
 ## 函数原型
@@ -37,7 +37,7 @@ aclnnStatus aclnnForeachAddListGetWorkspaceSize(
 ```
 
 ```Cpp
-aclnnStatus aclnnForeachAddcmulScalarV2(
+aclnnStatus aclnnForeachAddList(
   void          *workspace,
   uint64_t       workspaceSize,
   aclOpExecutor *executor,

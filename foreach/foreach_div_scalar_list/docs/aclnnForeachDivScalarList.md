@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：对张量列表x和标量列表scalars执行逐元素除法。
+- 接口功能：对张量列表x和标量列表scalars执行逐元素除法。
 
 - 计算公式：
 
@@ -75,7 +75,7 @@ aclnnStatus aclnnForeachDivScalarList(
       <td>x</td>
       <td>输入</td>
       <td>表示进行除法运算的第一个输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>TensorList支持的长度为1-50个。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>TensorList包含的最大Tensor个数为50。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>

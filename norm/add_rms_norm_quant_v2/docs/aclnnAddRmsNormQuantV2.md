@@ -304,7 +304,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>输入和输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
@@ -358,11 +358,16 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 ## 约束说明
 
-- 可选输出`xOut`和`rmsNormOut`，必须且只能选择其一进行输出。
-- 当需要输出`y2`时，此时要求`gamma`与`scale`的shape保持一致，且需要与`x1`需要norm的维度保持一致，可选输出只能输出`xOut`。
-- 当需要输出`xOut`时，且参数`scales1`和`zeroPoints1Optional`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维时，此时`scales2Optional`和`zeroPoints2Optional`不生效。
-- 当需要输出`rmsNormOut`时，参数`scales1`和`zeroPoints1Optional`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维，且`betaOptional`和`xOut`必须传空指针，此时`scales2Optional`和`zeroPoints2Optional`不生效。
-
+- 输入gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional、betaOptional、divMode、y1Out、y2Out、xOut、rmsNormOut支持的场景和组合如下所示：
+ 	 
+ 	- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+ 	 
+ 	  | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
+ 	  | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
+ 	  | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 必传且shape与gamma保持一致 |True | 必传 | 输出无效 |  必传 | 空指针 |
+ 	  | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 空指针 |True | 必传 | 输出无效 | 空指针 | 必传 |
+ 	  | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选  shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
+ 	 
 - 边界值场景说明：
 
   - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。

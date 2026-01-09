@@ -258,7 +258,6 @@ aclnnStatus aclnnAddRmsNormQuant(
       - 入参`scales1`、`scales2Optional`仅支持FLOAT32、BFLOAT16。
       - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32、BFLOAT16。
       - 出参`y1Out`、`y2Out`仅支持INT8。
-    - 出参`y2Out`为预留参数，实际未使用，输出为随机值。
     - 入参`divMode`仅支持True。
 
 - **返回值：**
@@ -293,7 +292,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     </tr>
     <tr>
       <td>
-      输入和输出的数据类型不在支持的范围之内。
+      输入或输出的数据类型不在支持的范围之内。
       </td>
     </tr>
     <tr>

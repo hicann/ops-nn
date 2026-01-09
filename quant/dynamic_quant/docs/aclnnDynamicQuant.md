@@ -101,7 +101,7 @@ aclnnStatus aclnnDynamicQuant(
       <td>smoothScalesOptional</td>
       <td>输入</td>
       <td>算子输入的smoothScales。对应公式描述中的`smoothScalesOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>shape维度是x的最后一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型要和x保持一致。</li><li>shape维度与`x`的最后一维相同。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -178,10 +178,16 @@ aclnnStatus aclnnDynamicQuant(
       <td>传入的x或out参数是空指针。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
-      <td>参数的数据类型、数据格式、维度等不在支持范围内。</td>
-    </tr>
+ 	    <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+ 	    <td rowspan="3">161002</td>
+ 	    <td>参数的数据类型、数据格式、维度等不在支持范围内。</td>
+ 	    </tr>
+ 	    <tr>
+ 	      <td>yOut的数据类型为INT4时，x或yOut的最后一维不是偶数。</td>
+ 	    </tr>
+ 	    <tr>
+ 	      <td>yOut的数据类型为INT32时，x的最后一维不能被8整除。</td>
+ 	    </tr>
     <tr>
       <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
       <td>561001</td>

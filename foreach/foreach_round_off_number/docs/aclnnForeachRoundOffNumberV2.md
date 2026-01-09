@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。本接口相较于[aclnnForeachRoundOffNumber](aclnnForeachRoundOffNumber.md)，修改入参roundMode的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。本接口相较于[aclnnForeachRoundOffNumber](aclnnForeachRoundOffNumber.md)，修改入参roundMode的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$

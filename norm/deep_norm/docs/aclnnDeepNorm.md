@@ -213,7 +213,7 @@ aclnnStatus aclnnDeepNorm(
     <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>输入和输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>输入和输出的shape不匹配或者不在支持的维度范围内。</td>

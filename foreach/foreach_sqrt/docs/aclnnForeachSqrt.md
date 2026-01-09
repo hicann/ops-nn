@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量列表的每个张量进行平方根运算。
+- 接口功能：对输入张量列表的每个张量进行平方根运算。
 - 计算公式：
   
   $$
@@ -32,15 +32,14 @@ aclnnStatus aclnnForeachSqrtGetWorkspaceSize(
   const aclTensorList    *out,
   uint64_t               *workspaceSize,
   aclOpExecutor         **executor)
-
 ```
+
 ```cpp
 aclnnStatus aclnnForeachSqrt(
   void            *workspace,
   uint64_t         workspaceSize,
   aclOpExecutor  *executor,
   aclrtStream     stream)
-
 ```
 
 ## aclnnForeachSqrtGetWorkspaceSize
@@ -112,11 +111,13 @@ aclnnStatus aclnnForeachSqrt(
   </table>
 
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：入参`x`的shape size小于等于出参`out`的shape size。
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

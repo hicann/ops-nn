@@ -139,7 +139,7 @@
     <tr>
       <td>groups</td>
       <td>属性</td>
-      <td><ul><li>表示从输入通道到输出通道的阻塞连接数。inC和outC需都可被`groups`数整除，`groups`数大于零。</li><li>默认值为1。</li></ul></td>
+      <td><ul><li>表示从输入通道到输出通道的分组连接数。inC和outC需都可被`groups`数整除，`groups`数大于零。</li><li>默认值为1。</li></ul></td>
       <td>INT32</td>
       <td>-</td>
     </tr>

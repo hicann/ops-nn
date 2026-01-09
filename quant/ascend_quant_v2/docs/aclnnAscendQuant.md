@@ -78,7 +78,7 @@ aclnnStatus aclnnAscendQuant(
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>需要做量化的输入。对应公式中的`x`。</td>
+      <td>需要执行量化的输入。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

@@ -7,7 +7,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
 
-- 接口功能：将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。该算子是一个元素级别的BatchNorm操作函数，通常用于在某些特定场景下对输入数据进行归一化处理。与[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)相比，aclnnBatchNormElemt可能会针对特定的硬件或优化需求进行调整。
+- 接口功能：将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。该算子是一个元素级别的BatchNorm操作函数，用于在某些特定场景下对输入数据进行归一化处理。与[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)相比，aclnnBatchNormElemt可能会针对特定的硬件或优化需求进行调整。
 
 - 计算公式：
   
@@ -137,12 +137,12 @@ aclnnStatus aclnnBatchNormElemt(
       <td>output</td>
       <td>输出</td>
       <td>表示最终的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型、shape与输入`input`的数据类型、shape保持一致。</li><li>shape与`input`入参的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、shape与输入`input`的数据类型、shape保持一致。</li><li>shape与入参`input`的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NC、NCL、NCHW、NCDHW、ND</td>
       <td>2-8</td>
       <td>√</td>
-    </tr>            
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>

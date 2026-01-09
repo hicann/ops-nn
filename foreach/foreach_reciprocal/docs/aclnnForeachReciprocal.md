@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入张量列表的每个张量进行倒数运算。
+- 接口功能：对输入张量列表的每个张量进行倒数运算。
 - 计算公式：
 
   $$
@@ -26,7 +26,7 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachReciprocalGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachReciprocal”接口执行计算。
 
 ```Cpp
-aclnnForeachReciprocalGetWorkspaceSize(
+aclnnStatus aclnnForeachReciprocalGetWorkspaceSize(
   const aclTensorList *x,
   const aclTensorList *out,
   uint64_t            *workspaceSize,

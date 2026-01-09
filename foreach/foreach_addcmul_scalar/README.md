@@ -65,7 +65,7 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第一个输入张量，对应公式中的`scalar`。元素个数为1。</td>
-      <td>FLOAT32、FLOAT16、INT32</td><!--v2的aclnn多了DOUBLE和INT64数据类型，待确认-->
+      <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -82,10 +82,9 @@
   - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  
-  参数`scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
-  - 当`x1`的数据类型为FLOAT32、INT32时，数据类型与`x1`的数据类型保持一致。
-  - 当`x1`的数据类型为BFLOAT16、FLOAT16时，数据类型支持FLOAT32。
+  - 当`x1`的数据类型为FLOAT32、INT32时，`scalar`数据类型与`x1`的数据类型保持一致。
+  - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
+  - 当`x1`的数据类型为FLOAT16时，`scalar`数据类型支持FLOAT16, FLOAT32。
 
 ## 约束说明
 

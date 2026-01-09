@@ -69,7 +69,7 @@ aclnnStatus aclnnGroupQuant(
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示需要做量化的输入，对应公式中的`x`。</td>
+      <td>表示需要执行量化的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>如果`dstType`为3(INT32)，shape的最后一维需要能被8整除。<li>如果`dstType`为29(INT4)，shape的最后一维需要能被2整除。</li></ul></td>
       <td>FLOAT32，FLOAT16，BFLOAT16</td>
       <td>ND</td>
@@ -237,9 +237,6 @@ aclnnStatus aclnnGroupQuant(
 
 ## 约束说明
 
-- 输入`scale`与输入`offsetOptional`的数据类型一致。
-- 如果属性`dstType`为29(INT4)，那么输入`x`的shape的最后一维需要能被2整除。
-- 如果属性`dstType`为3(INT32)，那么输入`x`的shape的最后一维需要能被8整除，输入`x`的shape尾轴是输出`y`的shape尾轴大小的8倍。
 - 输入`groupIndex`必须是非递减序列，最小值不能小于0，最大值必须与输入`x`的shape的第0维大小相等；当不满足约束限制时，参数`groupIndex`不校验。
 - 输入`scale`的第0维大小不支持为0。
 - 输入`offsetOptional`的shape当前仅支持[1, ]或[]。

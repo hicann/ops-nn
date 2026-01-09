@@ -218,7 +218,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、yOut或scaleOut的参数是空指针。</td>
+      <td>传入的x、yOut或scaleOut为空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>

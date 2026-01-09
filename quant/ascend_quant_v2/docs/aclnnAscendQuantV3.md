@@ -80,7 +80,7 @@ aclnnStatus aclnnAscendQuantV3(
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>需要做量化的输入。对应公式中的`x`。</td>
+      <td>需要执行量化的输入。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据格式为ND时，如果`dstType`为3，shape的最后一维需要能被8整除；如果`dstType`为29，shape的最后一维需要能被2整除。</li><li>数据格式为NZ时，shape只支持3维，shape的最后一维需要能被8整除。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnAscendQuantV3(
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
-    - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
+    - 参数`x`、`scale`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
     - 出参`y`的数据类型仅支持INT8，INT32，INT4。当数据格式为NZ时，数据类型支持INT32。
     - 入参`roundMode`：支持取值round，ceil，trunc，floor。当输入`x`的数据格式为NZ时，支持取值round。
     - 入参`dstType`支持取值2，3，29，分别表示INT8、INT32、INT4。当输入`x`的数据格式为NZ时，支持取值3，表示INT32。
@@ -190,7 +190,7 @@ aclnnStatus aclnnAscendQuantV3(
 
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`、`scalar`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
+    - 参数`x`、`scale`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32时。
     - 入参`roundMode`：`dstType`表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。`dstType`表示HIFLOAT8时，支持round和hybrid。`dstType`表示其他类型时，支持round，ceil，trunc和floor。
     - 入参`axis`支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 

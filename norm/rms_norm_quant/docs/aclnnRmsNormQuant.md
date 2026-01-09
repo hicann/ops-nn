@@ -84,7 +84,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>gamma</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnRmsNormQuant(
       <td>beta</td>
       <td>输入</td>
       <td>表示标准化过程中的偏移张量。对应公式中的`beta`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x`保持一致。</li><li>如果shape为1维，shape需要与`x`最后一维的维度保持一致。</li><li>如果shape为2维，则第一维必须为1，第二维需要与`x`最后一维的维度保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-2</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnRmsNormQuant(
     <tr>
       <td>epsilon</td>
       <td>输入</td>
-      <td>公式中的输入`epsilon`，用于防止除0错误，数据类型为double。</td>
+      <td>公式中的输入`epsilon`，用于防止除0错误，数据类型为DOUBLE。</td>
       <td>建议传较小的正数。</td>
       <td>DOUBLE</td>
       <td>-</td>
@@ -190,7 +190,7 @@ aclnnStatus aclnnRmsNormQuant(
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>输入和输出的数据类型不在支持的范围之内，输入和输出的数据类型不满足约束说明中的对应关系。</td>
+      <td>输入或输出的数据类型不在支持的范围之内，输入和输出的数据类型不满足约束说明中的对应关系。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>

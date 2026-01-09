@@ -9,9 +9,9 @@
 
 ## 功能说明
 
-- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
+- 接口功能：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
 
-- **计算公式**：
+- 计算公式：
   
   1.输入x右乘kroneckerP2：
   
@@ -19,7 +19,7 @@
     x' = x @ kroneckerP2
     $$
 
-  2.kroneckerP1左乘x':
+  2.kroneckerP1左乘x'：
 
     $$
     x'' = kroneckerP1@x'
@@ -174,6 +174,7 @@ aclnnStatus aclnnFlatQuant(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

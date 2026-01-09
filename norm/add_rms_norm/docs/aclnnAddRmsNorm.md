@@ -192,7 +192,7 @@ aclnnStatus aclnnAddRmsNorm(
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>输入和输出的数据类型不在支持的范围之内。</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>输入和输出参数不满足参数说明中的约束。</td>
