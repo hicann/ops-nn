@@ -227,9 +227,9 @@ __aicore__ inline void ForeachPowScalarAndTensorND<T>::CopyIn(uint16_t index, in
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-        DataCopyPad(dataLocal, inTensorGM[index * maxDataCount], copyParams, padParams);
+        DataCopyPad(dataLocal, inTensorGM[1ULL * index * maxDataCount], copyParams, padParams);
     } else {
-        DataCopy(dataLocal, inTensorGM[index * maxDataCount], dataCount);
+        DataCopy(dataLocal, inTensorGM[1ULL * index * maxDataCount], dataCount);
     }
     dataQueue.EnQue(dataLocal);
 }
@@ -251,9 +251,9 @@ __aicore__ inline void ForeachPowScalarAndTensorND<T>::ComputeAndCopyOut(
 
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-        DataCopyPad(outTensorGM[index * maxDataCount], retLocal, copyParams);
+        DataCopyPad(outTensorGM[1ULL * index * maxDataCount], retLocal, copyParams);
     } else {
-        DataCopy(outTensorGM[index * maxDataCount], retLocal, dataCount);
+        DataCopy(outTensorGM[1ULL * index * maxDataCount], retLocal, dataCount);
     }
     outQueue.FreeTensor(retLocal);
 }

@@ -85,11 +85,11 @@ private:
         if (isRemainder) {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
             DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-            DataCopyPad(inLocal2, inTensorsGM_2[index * Base::maxDataCount], copyParams, padParams);
-            DataCopyPad(inLocal3, inTensorsGM_3[index * Base::maxDataCount], copyParams, padParams);
+            DataCopyPad(inLocal2, inTensorsGM_2[1ULL * index * Base::maxDataCount], copyParams, padParams);
+            DataCopyPad(inLocal3, inTensorsGM_3[1ULL * index * Base::maxDataCount], copyParams, padParams);
         } else {
-            DataCopy(inLocal2, inTensorsGM_2[index * Base::maxDataCount], dataCount);
-            DataCopy(inLocal3, inTensorsGM_3[index * Base::maxDataCount], dataCount);
+            DataCopy(inLocal2, inTensorsGM_2[1ULL * index * Base::maxDataCount], dataCount);
+            DataCopy(inLocal3, inTensorsGM_3[1ULL * index * Base::maxDataCount], dataCount);
         }
         InQueue_2.EnQue(inLocal2);
         InQueue_3.EnQue(inLocal3);

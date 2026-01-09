@@ -139,9 +139,9 @@ __aicore__ inline void ForeachZeroInplaceND<T>::ComputeAndCopyOut(uint16_t index
     WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-        DataCopyPad(inTensorsGM[index * maxDataCount], dataLocal, copyParams);
+        DataCopyPad(inTensorsGM[1ULL * index * maxDataCount], dataLocal, copyParams);
     } else {
-        DataCopy(inTensorsGM[index * maxDataCount], dataLocal, dataCount);
+        DataCopy(inTensorsGM[1ULL * index * maxDataCount], dataLocal, dataCount);
     }
     event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);

@@ -166,9 +166,9 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleND<T>::CopyIn(uint16_t ind
         DataCopyPadParams padParams{true, 0, 0, 0};
         int64_t alignDataCount = CeilA2B(dataCount, perBlockCount) * perBlockCount;
         padParams.rightPadding = alignDataCount - dataCount;
-        DataCopyPad(copyInLT, scaledGradsGM[index * maxDataCount], copyParams, padParams);
+        DataCopyPad(copyInLT, scaledGradsGM[1ULL * index * maxDataCount], copyParams, padParams);
     } else {
-        DataCopy(copyInLT, scaledGradsGM[index * maxDataCount], dataCount);
+        DataCopy(copyInLT, scaledGradsGM[1ULL * index * maxDataCount], dataCount);
     }
     event_t eventIDMTE2ToMTES = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToMTES);
@@ -227,9 +227,9 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleND<T>::CopyOut(uint16_t in
     if (dataCount % perBlockCount) {
         struct DataCopyParams copyParams = {1, 0, 0, 0};
         copyParams.blockLen = dataCount * sizeof(T);
-        DataCopyPad(scaledGradsGM[index * maxDataCount], copyOutLT, copyParams);
+        DataCopyPad(scaledGradsGM[1ULL * index * maxDataCount], copyOutLT, copyParams);
     } else {
-        DataCopy(scaledGradsGM[index * maxDataCount], copyOutLT, dataCount);
+        DataCopy(scaledGradsGM[1ULL * index * maxDataCount], copyOutLT, dataCount);
     }
 
     copyOutQueue.FreeTensor(copyOutLT);

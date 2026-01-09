@@ -95,7 +95,7 @@ public:
 
         uint16_t tensorNum = tensorEnd_ - tensorStart_ + 1;
         DataCopyExtParams copyParams{1, tensorNum * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
-        DataCopyPad(workTensorGM_[coreMiddleOffset_], outLocal, copyParams);
+        DataCopyPad(workTensorGM_[1ULL * coreMiddleOffset_], outLocal, copyParams);
 
         outQueue_.FreeTensor(outLocal);
 
@@ -119,7 +119,7 @@ public:
         // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(float)), 0, 0, 0};
         DataCopyPadExtParams<float> padParams{true, 0, 0, 0};
-        DataCopyPad(dataLocal, workTensorGM_[offset], copyParams, padParams);
+        DataCopyPad(dataLocal, workTensorGM_[1ULL * offset], copyParams, padParams);
 
         inQueue_.EnQue(dataLocal);
         dataLocal = inQueue_.DeQue<float>();
@@ -300,7 +300,7 @@ public:
         copyInParams.blockLen = dataCount * sizeof(T);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
-        DataCopyPad(dataLocal, inTensorGM_[index * maxDataCount_], copyInParams, dataCopyPadExtParams);
+        DataCopyPad(dataLocal, inTensorGM_[1ULL * index * maxDataCount_], copyInParams, dataCopyPadExtParams);
         inQueue_.EnQue(dataLocal);
     }
 

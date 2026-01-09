@@ -293,11 +293,11 @@ __aicore__ inline void ForeachLerpScalarND<T>::CopyIn(uint16_t index, int64_t da
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-        DataCopyPad(x1Local, x1TensorGM[index * maxDataCount], copyParams, padParams);
-        DataCopyPad(x2Local, x2TensorGM[index * maxDataCount], copyParams, padParams);
+        DataCopyPad(x1Local, x1TensorGM[1ULL * index * maxDataCount], copyParams, padParams);
+        DataCopyPad(x2Local, x2TensorGM[1ULL * index * maxDataCount], copyParams, padParams);
     } else {
-        DataCopy(x1Local, x1TensorGM[index * maxDataCount], dataCount);
-        DataCopy(x2Local, x2TensorGM[index * maxDataCount], dataCount);
+        DataCopy(x1Local, x1TensorGM[1ULL * index * maxDataCount], dataCount);
+        DataCopy(x2Local, x2TensorGM[1ULL * index * maxDataCount], dataCount);
     }
     x1Queue.EnQue(x1Local);
     x2Queue.EnQue(x2Local);
@@ -320,9 +320,9 @@ __aicore__ inline void ForeachLerpScalarND<T>::ComputeAndCopyOut(
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         if (isRemainder) {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-            DataCopyPad(yTensorGM[index * maxDataCount], x1Local, copyParams);
+            DataCopyPad(yTensorGM[1ULL * index * maxDataCount], x1Local, copyParams);
         } else {
-            DataCopy(yTensorGM[index * maxDataCount], x1Local, dataCount);
+            DataCopy(yTensorGM[1ULL * index * maxDataCount], x1Local, dataCount);
         }
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);

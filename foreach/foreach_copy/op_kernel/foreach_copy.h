@@ -149,9 +149,9 @@ __aicore__ inline void ForeachCopyND<T>::CopyIn(uint16_t index, int64_t dataCoun
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-        DataCopyPad(dataLocal, inTensorsGM[index * maxDataCount], copyParams, padParams);
+        DataCopyPad(dataLocal, inTensorsGM[1ULL * index * maxDataCount], copyParams, padParams);
     } else {
-        DataCopy(dataLocal, inTensorsGM[index * maxDataCount], dataCount);
+        DataCopy(dataLocal, inTensorsGM[1ULL * index * maxDataCount], dataCount);
     }
     dataQueue.EnQue(dataLocal);
 }
@@ -168,9 +168,9 @@ __aicore__ inline void ForeachCopyND<T>::ComputeAndCopyOut(
 
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-        DataCopyPad(outTensorsGM[index * maxDataCount], dataLocal, copyParams);
+        DataCopyPad(outTensorsGM[1ULL * index * maxDataCount], dataLocal, copyParams);
     } else {
-        DataCopy(outTensorsGM[index * maxDataCount], dataLocal, dataCount);
+        DataCopy(outTensorsGM[1ULL * index * maxDataCount], dataLocal, dataCount);
     }
 
     event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));

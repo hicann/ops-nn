@@ -266,11 +266,11 @@ __aicore__ inline void ForeachPowList<T>::CopyIn(uint32_t offset, int64_t dataCo
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-        DataCopyPad(inLocal_1, inTensorsGM_1[offset], copyParams, padParams);
-        DataCopyPad(inLocal_2, inTensorsGM_2[offset], copyParams, padParams);
+        DataCopyPad(inLocal_1, inTensorsGM_1[1ULL * offset], copyParams, padParams);
+        DataCopyPad(inLocal_2, inTensorsGM_2[1ULL * offset], copyParams, padParams);
     } else {
-        DataCopy(inLocal_1, inTensorsGM_1[offset], dataCount);
-        DataCopy(inLocal_2, inTensorsGM_2[offset], dataCount);
+        DataCopy(inLocal_1, inTensorsGM_1[1ULL * offset], dataCount);
+        DataCopy(inLocal_2, inTensorsGM_2[1ULL * offset], dataCount);
     }
 
     InQueue_1.EnQue(inLocal_1);
@@ -300,9 +300,9 @@ __aicore__ inline void ForeachPowList<T>::CopyOut(uint32_t offset, int64_t dataC
 
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-        DataCopyPad(outTensorsGM[offset], outLocal, copyParams);
+        DataCopyPad(outTensorsGM[1ULL * offset], outLocal, copyParams);
     } else {
-        DataCopy(outTensorsGM[offset], outLocal, dataCount);
+        DataCopy(outTensorsGM[1ULL * offset], outLocal, dataCount);
     }
 
     OutQueue.FreeTensor(outLocal);

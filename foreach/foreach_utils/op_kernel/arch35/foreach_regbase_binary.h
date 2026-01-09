@@ -96,8 +96,8 @@ public:
         copyInParams.blockLen = dataCount * sizeof(T);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
-        DataCopyPad(dataLocalTensorOne, tensorOneGM_[index * maxDataCount_], copyInParams, dataCopyPadExtParams);
-        DataCopyPad(dataLocalTensorTwo, tensorTwoGM_[index * maxDataCount_], copyInParams, dataCopyPadExtParams);
+        DataCopyPad(dataLocalTensorOne, tensorOneGM_[1ULL * index * maxDataCount_], copyInParams, dataCopyPadExtParams);
+        DataCopyPad(dataLocalTensorTwo, tensorTwoGM_[1ULL * index * maxDataCount_], copyInParams, dataCopyPadExtParams);
 
         tensorOneQueue_.EnQue(dataLocalTensorOne);
         tensorTwoQueue_.EnQue(dataLocalTensorTwo);
@@ -123,7 +123,7 @@ public:
         copyInParams.blockLen = dataCount * sizeof(T);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
-        DataCopyPad(outTensorGM_[index * maxDataCount_], retLocal, copyInParams);
+        DataCopyPad(outTensorGM_[1ULL * index * maxDataCount_], retLocal, copyInParams);
         outQueue_.FreeTensor(retLocal);
     }
 

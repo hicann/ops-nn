@@ -338,7 +338,7 @@ private:
 
         DataCopyExtParams copyParams{
             1, static_cast<uint32_t>(sizeof(P)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
-        DataCopyPad(workTensorGM[offset], tempLocal, copyParams);
+        DataCopyPad(workTensorGM[1ULL * offset], tempLocal, copyParams);
 
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
@@ -353,7 +353,7 @@ private:
         DataCopyExtParams copyParams{
             1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
-        DataCopyPad(dataLocal, inTensorGM[index * maxDataCount], copyParams, padParams);
+        DataCopyPad(dataLocal, inTensorGM[1ULL * index * maxDataCount], copyParams, padParams);
 
         dataQueue.EnQue(dataLocal);
     }
@@ -375,7 +375,7 @@ private:
         DataCopyExtParams copyParams{
             1, static_cast<uint32_t>(dataCount * sizeof(P)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPadExtParams<P> padParams{true, 0, 0, 0};
-        DataCopyPad(dataLocal, workTensorGM[offset], copyParams, padParams);
+        DataCopyPad(dataLocal, workTensorGM[1ULL * offset], copyParams, padParams);
 
         dataQueue.EnQue(dataLocal);
     }

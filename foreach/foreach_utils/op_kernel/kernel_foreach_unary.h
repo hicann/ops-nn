@@ -174,9 +174,9 @@ __aicore__ inline void KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
     if (isRemainder) {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-        DataCopyPad(dataLocal, inTensorsGM[index * Base::maxDataCount], copyParams, padParams);
+        DataCopyPad(dataLocal, inTensorsGM[1ULL * index * Base::maxDataCount], copyParams, padParams);
     } else {
-        DataCopy(dataLocal, inTensorsGM[index * Base::maxDataCount], dataCount);
+        DataCopy(dataLocal, inTensorsGM[1ULL * index * Base::maxDataCount], dataCount);
     }
     dataQueue.EnQue(dataLocal);
 }
@@ -190,9 +190,9 @@ __aicore__ inline bool KernelForeachUnary<T, Predicate, bufferNum, paramsCount, 
         LocalTensor<T> outLocal = outQueue.template DeQue<T>();
         if (isRemainder) {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-            DataCopyPad(outTensorsGM[index * Base::maxDataCount], outLocal, copyParams);
+            DataCopyPad(outTensorsGM[1ULL * index * Base::maxDataCount], outLocal, copyParams);
         } else {
-            DataCopy(outTensorsGM[index * Base::maxDataCount], outLocal, dataCount);
+            DataCopy(outTensorsGM[1ULL * index * Base::maxDataCount], outLocal, dataCount);
         }
 
         outQueue.FreeTensor(outLocal);

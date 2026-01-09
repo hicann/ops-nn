@@ -181,9 +181,9 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyIn(uint1
         struct DataCopyPadParams padParams = {true, 0, 0, 0};
         int64_t alignDataCount = CeilDivision(dataCount, static_cast<int64_t>(perBlockCount_)) * perBlockCount_;
         padParams.rightPadding = alignDataCount - dataCount;
-        DataCopyPad(copyInLT, scaledGradsGM_[index * maxDataCount_], copyParams, padParams);
+        DataCopyPad(copyInLT, scaledGradsGM_[1ULL * index * maxDataCount_], copyParams, padParams);
     } else {
-        DataCopy(copyInLT, scaledGradsGM_[index * maxDataCount_], dataCount);
+        DataCopy(copyInLT, scaledGradsGM_[1ULL * index * maxDataCount_], dataCount);
     }
     copyInQueue_.EnQue(copyInLT);
 }
@@ -254,9 +254,9 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyOut(uint
     if (dataCount % perBlockCount_) {
         struct DataCopyParams copyParams = {1, 0, 0, 0};
         copyParams.blockLen = dataCount * sizeof(T);
-        DataCopyPad(scaledGradsGM_[index * maxDataCount_], copyOutLT, copyParams);
+        DataCopyPad(scaledGradsGM_[1ULL * index * maxDataCount_], copyOutLT, copyParams);
     } else {
-        DataCopy(scaledGradsGM_[index * maxDataCount_], copyOutLT, dataCount);
+        DataCopy(scaledGradsGM_[1ULL * index * maxDataCount_], copyOutLT, dataCount);
     }
 
     copyOutQueue_.FreeTensor(copyOutLT);
