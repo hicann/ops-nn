@@ -29,7 +29,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
-#include "index/gather_v2/op_host/op_api/gather_v2.h"
+#include "index/gather_v2/op_api/gather_v2.h"
 
 /* AdvancedIndex operator's flow as:
  *      self          indexed_sizes     indexed_strides     indices_0                 indices_1   ...

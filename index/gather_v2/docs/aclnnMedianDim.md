@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -23,11 +24,11 @@
 - **参数说明**
 
   - self（aclTensor\*, 计算输入）：输入tensor，Device侧的aclTensor，且数据类型与valuesOut相同。支持[非连续的Tensor](./../../../docs/zh/context/非连续的Tensor.md), [数据格式](./../../../docs/zh/context/数据格式.md)支持ND。
-     * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、BFLOAT16
+     * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、BFLOAT16
   - dim（int64_t, 计算输入）：Host侧的整型，指定的维度，数据类型支持INT64。
   - keepDim（bool, 计算输入）：Host侧的布尔型，reduce轴的维度是否保留。若为True，则输出valuesOut、indicesOut与输入self维度相同，但输出aclTensor的dim对应维度shape为1，否则，dim对应维度会被压缩，导致输出比输入少一维。数据类型支持BOOL。
   - valuesOut（aclTensor\*, 计算输出）：输出tensor，在指定的维度上的中位数，Device侧的aclTensor，且数据类型与self相同，shape需要依据keepDim与self相对应。支持[非连续的Tensor](./../../../docs/zh/context/非连续的Tensor.md), [数据格式](./../../../docs/zh/context/数据格式.md)支持ND。
-     * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、BFLOAT16
+     * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、UINT8、INT8、INT16、INT32、INT64、BFLOAT16
   - indicesOut（aclTensor\*, 计算输出）：输出tensor，在指定的维度上的中位数的位置，Device侧的aclTensor，数据类型支持INT64，shape需要依据keepDim与self相对应。支持[非连续的Tensor](./../../../docs/zh/context/非连续的Tensor.md), [数据格式](./../../../docs/zh/context/数据格式.md)支持ND。
   - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。

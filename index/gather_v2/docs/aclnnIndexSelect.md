@@ -4,70 +4,218 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
-**算子功能：**
-从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。
-例如，对于输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量 index=[1, 0]，
-self.index_select(0, index)的结果： $y=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$;
+- 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。
+    例如，对于输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量 index=[1, 0]，
+    self.index_select(0, index)的结果： $y=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$;
 
-x.index_select(1, index)的结果： $y=\begin{bmatrix}2 & 1\\ 5 & 4\\8 & 7\end{bmatrix}$;
+    x.index_select(1, index)的结果： $y=\begin{bmatrix}2 & 1\\ 5 & 4\\8 & 7\end{bmatrix}$;
 
-**具体计算过程如下：**
-以三维张量为例, shape为(3,2,2)的张量 **self** =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   **index**=[1, 0], self张量dim=0、1、2对应的下标分别是$l、m、n$,  index是一维
+- 计算公式：
 
-dim为0, index_select(0, index)：   I=index[i];  &nbsp;&nbsp;   out$[i][m][n]$ = self$[I][m][n]$
+    以三维张量为例, shape为(3,2,2)的张量 **self** =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   **index**=[1, 0], self张量dim=0、1、2对应的下标分别是$l、m、n$,  index是一维
 
-dim为1, index_select(1, index)：   J=index[j];  &nbsp;&nbsp;&nbsp;    out$[l][j][n]$ = self$[l][J][n]$
+    dim为0, index_select(0, index)：   I=index[i];  &nbsp;&nbsp;   out$[i][m][n]$ = self$[I][m][n]$
 
-dim为2, index_select(2, index)：   K=index[k]; &nbsp;  out$[l][m][k]$ = self$[l][m][K]$
+    dim为1, index_select(1, index)：   J=index[j];  &nbsp;&nbsp;&nbsp;    out$[l][j][n]$ = self$[l][J][n]$
+
+    dim为2, index_select(2, index)：   K=index[k]; &nbsp;  out$[l][m][k]$ = self$[l][m][K]$
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnIndexSelectGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnIndexSelect”接口执行计算。
 
-- `aclnnStatus aclnnIndexSelectGetWorkspaceSize(const aclTensor *self, int64_t dim, const aclTensor *index,  aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnIndexSelect(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnIndexSelectGetWorkspaceSize(
+ const aclTensor *self,
+ int64_t          dim,
+ const aclTensor *index,
+ aclTensor       *out,
+ uint64_t        *workspaceSize,
+ aclOpExecutor  **executor)
+```
+
+```Cpp
+aclnnStatus aclnnIndexSelect(
+ void             *workspace,
+ uint64_t          workspaceSize,
+ aclOpExecutor    *executor,
+ const aclrtStream stream)
+```
 
 ## aclnnIndexSelectGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。维度不大于8。
-     * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128
-  - dim(int64_t, 计算输入)：指定的维度，int64类型，范围[-self.dim(), self.dim() - 1]。
-  - index(aclTensor*, 计算输入)：索引，Device侧的aclTensor，数据类型支持INT64、INT32。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW，且只能是0D或1D（零维的情况：当成是size为1的一维）。index中的索引数据的取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。<。
-  - out(aclTensor*, 计算输出)：输出Tensor，Device侧的aclTensor，数据类型同self。维数与self一致。**除dim维长度等于index长度外，其他维长度与self相应维一致**。[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。
-     * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
+    <table style="undefined;table-layout: fixed; width: 1519px"><colgroup>
+    <col style="width: 147px">
+    <col style="width: 120px">
+    <col style="width: 233px">
+    <col style="width: 257px">
+    <col style="width: 270px">
+    <col style="width: 183px">
+    <col style="width: 164px">
+    <col style="width: 145px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>self</td>
+        <td>输入</td>
+        <td>输入Tensor。</td>
+        <td>-</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128</td>
+        <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
+        <td>不大于8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>dim</td>
+        <td>输入</td>
+        <td>指定的维度。</td>
+        <td>范围[-self.dim(), self.dim() - 1]。</td>
+        <td>INT64</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>index</td>
+        <td>输入</td>
+        <td>索引。只能是0D或1D（零维的情况：当成是size为1的一维）。</td>
+        <td>index中的索引数据的取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。</td>
+        <td>INT64、INT32</td>
+        <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out</td>
+        <td>输出</td>
+        <td>输出Tensor。</td>
+        <td>除dim维长度等于index长度外，其他维长度与self相应维一致。</td>
+        <td>与self一致</td>
+        <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
+        <td>与self一致</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody></table>
 
-- **返回值：**
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT。
+
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001（ACLNN_ERR_PARAM_NULLPTR）：1. 参数self、index、out是空指针。
-  返回161002（ACLNN_ERR_PARAM_INVALID）：1. 参数self、index的数据类型不在支持的范围内。
-                                        2. dim >= self.dim() 或者 dim < -self.dim()。
-                                        3. index维度大于1，报错。
-                                        4. self维度大于8，报错。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <col style="width: 276px">
+    <col style="width: 132px">
+    <col style="width: 836px">
+    </colgroup>
+    <thead>
+      <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>参数self、index、out是空指针。</td>
+      </tr>
+      <tr>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>参数self、index的数据类型不在支持的范围内。</td>
+      </tr>
+      <tr>
+      <td>dim >= self.dim() 或者 dim < -self.dim()。</td>
+      </tr>
+      <tr>
+      <td>index维度大于1。</td>
+      </tr>
+      <tr>
+      <td>self维度大于8。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnIndexSelect
 
-- **参数说明：**
+- **参数说明**
+   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+      <col style="width: 200px">
+      <col style="width: 162px">
+      <col style="width: 882px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnIndexSelectGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+      </tr>
+      </tbody>
+    </table>
 
-  - workspace(void \*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnIndexSelectGetWorkspaceSize获取。
-  - executor(aclOpExecutor \*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -221,4 +369,3 @@ int main() {
   return 0;
 }
 ```
-

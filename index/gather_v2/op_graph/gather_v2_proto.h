@@ -8,12 +8,18 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_GATHER_V2_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_GATHER_V2_OPS_H_
+/*!
+ * \file gather_v2_proto.h
+ * \brief
+ */
+#ifndef OPS_OP_PROTO_INC_GATHER_V2_H_
+#define OPS_OP_PROTO_INC_GATHER_V2_H_
 
 #include "graph/operator_reg.h"
+#include "graph/types.h"
 
 namespace ge {
+
 /**
 * @brief Gather slices from "x" according to "indices" by corresponding axis, produces a output tensor
 * with shape(x.shape[:axis]+indices.shape[batch_dims:]+x.shape[axis+1:]). When the impl_mode is set
@@ -60,5 +66,8 @@ REG_OP(GatherV2)
     .ATTR(is_preprocessed, Bool, false)
     .ATTR(negative_index_support, Bool, false)
     .OP_END_FACTORY_REG(GatherV2)
+
 } // namespace ge
-#endif // OPS_BUILT_IN_OP_PROTO_INC_GATHER_V2_OPS_H_
+
+#endif // OPS_OP_PROTO_INC_GATHER_V2_H_
+

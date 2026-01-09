@@ -4,8 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -39,7 +40,7 @@
 - **参数说明：**
 
   - selfRef（aclTensor\*，计算输入/输出）：待进行renorm计算的入参，公式中的x，dim必须为2。Device侧的aclTensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
   - indices（aclTensor\*，计算输入）：selfRef中第0维上待进行renorm计算的索引。Device侧的aclTensor，shape不超过8维，数据类型支持int32、int64类型，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。indices中的索引数据不支持越界。
   - maxNorm（double，计算输入）：指定范数的最大值，超出此值需要对embedding的结果进行归一化处理，仅支持double类型。
   - normType（double，计算输入）：指定L_P范数的类型，公式中的p，仅支持double类型。

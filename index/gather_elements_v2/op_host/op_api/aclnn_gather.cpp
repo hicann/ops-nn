@@ -16,7 +16,7 @@
 #include "aclnn_kernels/cast.h"
 #include "level0/gather_elements.h"
 #include "gather_elements_v2.h"
-#include "index/gather_v2/op_host/op_api/gather_v2.h"
+#include "index/gather_v2/op_api/gather_v2.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/slice.h"
