@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 message(STATUS "=== Debug: start ops.pooling.avg_pool3_d.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE avg_pool3_d ACLNNTYPE aclnn_exclude DEPENDENCIES pool_3d_common rms_norm norm_common matmul.common batch_mat_mul_v3 mat_mul_v3)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE avg_pool3_d ACLNNTYPE aclnn_exclude DEPENDENCIES pool_3d_common rms_norm norm_common)

@@ -138,6 +138,9 @@ __aicore__ inline void KernelAvgPool3DGradCast<T>::ProcessAndCopyout()
         for (auto i = index; i < indexEnd; ++i) {
             auto ubIndex = i - index;
             this->ProcessPerLine(i, ubIndex);
+#if defined(DETERMINISTIC_MODE) && DETERMINISTIC_MODE == 1
+            PipeBarrier<PIPE_MTE3>();
+#endif
         }
         SetFlag<HardEvent::V_MTE2>(this->eventIdV2Mte2);
         SetFlag<HardEvent::MTE3_V>(this->eventIdMte3ToV);

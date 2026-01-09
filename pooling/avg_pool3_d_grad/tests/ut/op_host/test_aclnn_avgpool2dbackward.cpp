@@ -16,6 +16,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 #include "../../../op_host/op_api/aclnn_avgpool2d_backward.h"
 
@@ -230,6 +231,7 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_kernel_size
 // BF16，输入是四维，不支持的芯片插Mul, cubeMathType = 0 支持的走3d
 TEST_F(l2_avgpool2dbackward_test, ascend310P_test_avgpool2dbackwardbackward_global_avg_pool_bf16)
 {
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310P);
     vector<int64_t> vector_grad_output = {5, 4, 6, 6};
     vector<int64_t> vector_self = {5, 4, 13, 13};
     vector<int64_t> vector_kernel_size = {3, 3};

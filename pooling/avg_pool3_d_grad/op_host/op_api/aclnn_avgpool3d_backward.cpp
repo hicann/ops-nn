@@ -19,6 +19,8 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/framework_op.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/platform.h"
+#include "runtime/context.h"
 
 #include "aclnn_kernels/contiguous.h"
 #include "level0/padv3.h"
@@ -313,7 +315,23 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
     int64_t depth = gradShape.GetDim(gradDimNum - 3);
     int64_t height = gradShape.GetDim(gradDimNum - 2);
     int64_t weight = gradShape.GetDim(gradDimNum - 1);
-    FVector<int64_t> reshapeVec = {num, mergeNC, depth, height, weight};
+
+    uint32_t coreNum = GetCurrentPlatformInfo().GetVectorCoreNum();
+    int64_t usedCoreNum = 1;
+    int64_t deterministicValue = 0;
+    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != RT_ERROR_NONE) {
+        deterministicValue = 0;
+    }
+    if (deterministicValue != 0) {
+        for (size_t i = coreNum;i >= 1;i--) {
+            if (mergeNC % i == 0) {
+                usedCoreNum = i;
+                break;
+            }
+        }
+    }
+    FVector<int64_t> reshapeVec = {usedCoreNum, mergeNC / usedCoreNum, depth, height, weight};
     aclIntArray* reshapeArray = executor->AllocIntArray(reshapeVec.data(), reshapeVec.size());
     CHECK_RET(reshapeArray != nullptr, nullptr);
     auto grad5hd = l0op::Reshape(gradOutput, reshapeArray, executor);

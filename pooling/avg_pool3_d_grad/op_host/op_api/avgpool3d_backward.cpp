@@ -55,11 +55,12 @@ const aclTensor* AvgPool3DGrad(
     op::Shape outShape;
     outShape.SetDimNum(EXPECT_GRAD_SHAPE);
     if (dataFormat == "NDHWC") {
+        auto nSize = gradShape.GetDim(0);
         auto ncSize = gradShape.GetDim(gradSize - 1);
         auto depth = selfShape.GetDim(selfSize - D_DIM_OFFSET);
         auto height = selfShape.GetDim(selfSize - H_DIM_OFFSET);
         auto weight = selfShape.GetDim(selfSize - W_DIM_OFFSET);
-        outShape.SetDim(0, 1);
+        outShape.SetDim(0, nSize);
         outShape.SetDim(1, depth);
         outShape.SetDim(OUTD_DIM, height);
         outShape.SetDim(OUTH_DIM, weight);
