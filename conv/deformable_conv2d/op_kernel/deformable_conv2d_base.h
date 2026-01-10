@@ -15,6 +15,7 @@
 #ifndef DEFORMABLE_CONV2D_BASE_H
 #define DEFORMABLE_CONV2D_BASE_H
 
+#include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
 namespace DeformableConv2dNS
