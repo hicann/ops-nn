@@ -9,6 +9,7 @@
 开发指南以`AddExample`算子开发为例，介绍新算子开发流程以及涉及的交付件，完整样例代码请访问项目`examples`目录。
 
 1. [工程创建](#工程创建)：开发算子前，需完成环境部署并创建算子目录，方便后续算子编译和部署。
+
 2. [算子定义](#算子定义)：确定算子功能与原型定义。
 
 3. [Tiling实现](#Tiling实现)：实现Host侧算子Tiling函数。
@@ -35,7 +36,7 @@
 ```bash
 # 创建指定算子目录，如bash build.sh --genop=examples/add_example
 # ${op_class}表示算子类型，如matmul类。
-# ${op_name}表示算子名的小写下划线形式，如`AddExample`算子对应为add_example。
+# ${op_name}表示算子名的小写下划线形式，如`AddExample`算子对应为add_example，新增算子不允许与已有算子重名。
 bash build.sh --genop=${op_class}/${op_name}
 ```
 
@@ -49,23 +50,23 @@ Create the initial directory for ${op_name} under ${op_class} success
 ```
 ${op_name}                              # 替换为实际算子名的小写下划线形式
 ├── examples                            # 算子调用示例
-│   ├── test_aclnn_${op_name}.cpp       # 算子aclnn调用示例
+│   └── test_aclnn_${op_name}.cpp       # 算子aclnn调用示例
 ├── op_host                             # Host侧实现
 │   ├── ${op_name}_def.cpp              # 算子信息库，定义算子基本信息，如名称、输入输出、数据类型等
 │   ├── ${op_name}_infershape.cpp       # InferShape实现，实现算子形状推导，在运行时推导输出shape
-│   ├── ${op_name}_tiling.cpp           # Tiling实现，将张量划分为多个小块，区分数据类型进行并行计算
-│   └── CMakeLists.txt                  # Host侧cmakelist文件
-└── op_kernel                           # Device侧Kernel实现
+│   └── ${op_name}_tiling.cpp           # Tiling实现，将张量划分为多个小块，区分数据类型进行并行计算
+├── op_kernel                           # Device侧Kernel实现
 │   ├── ${op_name}_tiling_key.h         # Tilingkey文件，定义Tiling策略的Key，标识不同的划分方式
 │   ├── ${op_name}_tiling_data.h        # Tilingdata文件，存储Tiling策略相关的配置数据，如块大小、并行度
 │   ├── ${op_name}.cpp                  # Kernel入口文件，包含主函数和调度逻辑
 │   └── ${op_name}.h                    # Kernel实现文件，定义Kernel头文件，包含函数声明、结构定义、逻辑实现
 ├── tests                               # UT实现
-│   ├── ut                              # tiling/kernel/aclnn UT实现
+│   └── ut                              # tiling/kernel/aclnn UT实现
 └── CMakeLists.txt                      # 算子cmakelist入口
 ```
 
-使用上述命令行创建算子工程后，若要手动删除新创建出的算子工程，需要同时删除与算子工程同目录CMakeLists.txt中新添加的add_subdirectory(${op_class})。
+若`${op_class}`为全新算子分类，需额外在`cmake/variables.cmake`的`OP_CATEGORY_LIST`中添加`${op_class}`，否则无法正常编译。
+
 ## 算子定义
 算子定义需要完成两个交付件：`README.md` `${op_name}_def.cpp`
 
@@ -356,10 +357,14 @@ __aicore__ inline void AddExample<T>::Process()
     > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[离线编译](../context/build_offline.md)。
 
     ```bash
-    # 编译指定算子，如--ops=add_example
-    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list}
+    # 编译指定算子，如bash build.sh --pkg --ops=add_example
+    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list} [--experimental]
     ```
-   
+    - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
+    - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
+    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"--ops=add_example"。
+    - --experimental（可选）：若编译的算子为贡献算子，需配置--experimental。
+    
     若提示如下信息，说明编译成功：
     
     ```bash
@@ -373,7 +378,7 @@ __aicore__ inline void AddExample<T>::Process()
     ./build_out/cann-ops-nn-${vendor_name}-linux.${arch}.run
     ```
     自定义算子包安装在`${ASCEND_HOME_PATH}/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录，可提前在环境变量中配置。
-    
+
 4. **（可选）卸载自定义算子包。**
 
     自定义算子包安装后在`${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts`目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：

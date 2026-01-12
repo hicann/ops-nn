@@ -33,7 +33,7 @@
 ```bash
 # 创建指定算子目录，如bash build.sh --genop_aicpu=examples/add_example
 # ${op_class}表示算子类型，如matmul类。
-# ${op_name}表示算子名的小写下划线形式，如`AddExample`算子对应为add_example。
+# ${op_name}表示算子名的小写下划线形式，如`AddExample`算子对应为add_example，新增算子不允许与已有算子重名。
 bash build.sh --genop_aicpu=${op_class}/${op_name}
 ```
 
@@ -58,7 +58,8 @@ ${op_name}                              # 替换为实际算子名的小写下�
 │   └── ut                              # Kernel/aclnn UT实现
 └── CMakeLists.txt                      # 算子Cmakelist入口
 ```
-使用上述命令行创建算子工程后，若要手动删除新创建出的算子工程，需要同时删除与算子工程同目录CMakeLists.txt中新添加的add_subdirectory(${op_class})。
+
+若`${op_class}`为全新算子分类，需额外在`cmake/variables.cmake`的`OP_CATEGORY_LIST`中添加`${op_class}`，否则无法正常编译。
 
 ## 算子定义
 算子定义需要完成两个交付件：`README.md` `${op_name}.json`
@@ -190,9 +191,13 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
     以`AddExample`算子为例，假设开发交付件在`examples`目录，完整代码参见[add_example](../../../examples/add_example_aicpu)目录。
 
     ```bash
-    # 编译指定算子，如--ops=add_example
-    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list}
+    # 编译指定算子，如bash build.sh --pkg --ops=add_example
+    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list} [--experimental]
     ```
+   - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
+   - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
+   - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"--ops=add_example"。
+   - --experimental（可选）：若编译的算子为贡献算子，需配置--experimental。
    
     若提示如下信息，说明编译成功：
     
@@ -220,7 +225,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
 
 验证算子前需确保已配置了环境变量，命令如下：
 ```bash
-export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}/op_api/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/op_api/lib:${LD_LIBRARY_PATH}
 ```
 - **UT验证**
 
