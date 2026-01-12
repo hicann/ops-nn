@@ -234,7 +234,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
             .Build();
 
     map<string, string> soc_version_infos;
-    soc_version_infos.insert(make_pair("Short_SoC_version", "MC62CM12AA"));
+    soc_version_infos.insert(make_pair("Short_SoC_version", "RESERVED_VERSION"));
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -266,7 +266,7 @@ TEST_P(TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTiling, generalTest)
 // Note: group value
 //       -1: per channel, 0: per tensor, > 0: per group
 // Note: socversion
-//        0: MC62CM12AA
+//        0: RESERVED
 static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"Case_64_64_64_0_0_0_0_0_0_0_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 285229571UL},
     {"Case_64_64_64_0_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_FLOAT16_16_16_0_0", 16, 302006787UL},

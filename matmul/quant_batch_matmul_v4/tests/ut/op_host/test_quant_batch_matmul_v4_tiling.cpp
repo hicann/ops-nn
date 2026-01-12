@@ -169,7 +169,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": aicNum,
                            "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"}
                             })";
-    if (socVersion.find("MC62CM12AA") != string::npos) {
+    if (socVersion.find("RESERVED") != string::npos) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -459,10 +459,10 @@ static QuantBatchMatmulV4TilingTestParam casesParams[] = {
     // GroupNum 不为偶数倍
     {"UT-A8W4-MX-NZ-Testcase-error-14_Ascend910D_16_80_64_0_1_32_ND_NZ_FP8-E4M3_FP4-E1M2_BF16_FP8-E8M0_FP32_NULL_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 273UL},
 
-    // MC62CM12AA
-    {"A8W2-LUT-Testcase-0_MC62CM12AA_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
-    {"A8W2-LUT-Testcase-1_MC62CM12AA_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
-    {"A8W4-LUT-Testcase-2_MC62CM12AA_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
-    {"A8W4-LUT-Testcase-3_MC62CM12AA_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
+    // RESERVED
+    {"A8W2-LUT-Testcase-0_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
+    {"A8W2-LUT-Testcase-1_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
+    {"A8W4-LUT-Testcase-2_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
+    {"A8W4-LUT-Testcase-3_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
  };
 INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4Tiling, testing::ValuesIn(casesParams));

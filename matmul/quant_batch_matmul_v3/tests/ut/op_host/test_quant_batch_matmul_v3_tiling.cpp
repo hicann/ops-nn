@@ -181,7 +181,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
                           })";
-    } else if (socVersion.compare("MC62CM12AA") == 0) {
+    } else if (socVersion.compare("RESERVED") == 0) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                         "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -686,7 +686,7 @@ INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::Valu
 INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B4")));
 INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend310P3")));
 INSTANTIATE_TEST_CASE_P(QUANTMM910_95, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910_95")));
-INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("MC62CM12AA")));
+INSTANTIATE_TEST_CASE_P(QUANTMMRESERVED, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("RESERVED")));
 
 static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)

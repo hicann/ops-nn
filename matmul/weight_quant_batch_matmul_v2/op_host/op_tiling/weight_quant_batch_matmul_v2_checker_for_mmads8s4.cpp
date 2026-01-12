@@ -335,7 +335,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Checker4MmadS8S4::Check()
         return ret;
     }
     // check the input and output dtype: x, weight, antiquant_scale, y.
-    // In MC62CM12AA, antiquant_offset, quant_scale, quant_offset don't need to check, cause they are nullptr
+    // In RESERVED, antiquant_offset, quant_scale, quant_offset don't need to check, cause they are nullptr
     OP_TILING_CHECK(!CheckDtype(),
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check input dtype failed"),
                     return ge::GRAPH_FAILED);
