@@ -100,4 +100,4 @@ gradOutput、self和out的shape和数据类型需要一致。
 
 | 调用方式 | 调用样例 | 说明 |
 | ---- |---- | ---- |
-| aclnn调用 | [test_aclnn_hardtanh_grad](examples/arch35/test_aclnn_hardtanh_grad.cpp) | 通过[aclnnHardtanhBackWard](docs/aclnnHardtanhBackward.md)方式调用hardtanh_grad算子。|
+| aclnn调用 | [test_aclnn_hardtanh_grad](examples/test_aclnn_hardtanh_grad.cpp) | 通过[aclnnHardtanhBackWard](docs/aclnnHardtanhBackward.md)方式调用hardtanh_grad算子。|

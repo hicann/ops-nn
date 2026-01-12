@@ -61,4 +61,4 @@
 ## 调用说明
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_fast_gelu_backward](examples/arch35/test_aclnn_fast_gelu_backward.cpp) | 通过[aclnnFastGeluGrad](docs/aclnnFastGeluGrad.md)接口方式调用fast_gelu_grad算子。 |
+| aclnn调用 | [test_aclnn_fast_gelu_backward](examples/test_aclnn_fast_gelu_backward.cpp) | 通过[aclnnFastGeluGrad](docs/aclnnFastGeluGrad.md)接口方式调用fast_gelu_grad算子。 |

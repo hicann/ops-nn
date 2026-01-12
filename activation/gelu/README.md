@@ -75,4 +75,4 @@
 ## 调用说明
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_gelu](examples/arch35/test_aclnn_gelu.cpp) | 通过[aclnnGelu](docs/aclnnGelu.md)接口方式调用gelu算子。 |
+| aclnn调用 | [test_aclnn_gelu](examples/test_aclnn_gelu.cpp) | 通过[aclnnGelu](docs/aclnnGelu.md)接口方式调用gelu算子。 |
