@@ -567,12 +567,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/swish_grad/README.md">swish_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>Swish激活函数的反向传播，用于计算Swish激活函数的梯度。</a>。</td>
   </tr>
   <tr>
     <td>activation</td>

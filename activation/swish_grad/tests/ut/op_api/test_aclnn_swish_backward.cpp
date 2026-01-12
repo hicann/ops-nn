@@ -17,21 +17,27 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 
-#include "../../../../op_host/op_api/aclnn_swish_backward.h"
+#include "../../../op_api/aclnn_swish_backward.h"
 
 using namespace op;
 using namespace std;
 
-
 class l2_swish_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "swish_backward Test Setup" << std::endl; }
-    static void TearDownTestCase() { std::cout << "swish_backward Test TearDown" << std::endl; }
+    static void SetUpTestCase()
+    {
+        std::cout << "swish_backward Test Setup" << std::endl;
+    }
+    static void TearDownTestCase()
+    {
+        std::cout << "swish_backward Test TearDown" << std::endl;
+    }
 };
 
 TEST_F(l2_swish_backward_test, swish_backward_testcase_001_normal_float32)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -49,7 +55,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_001_normal_float32)
 // float16
 TEST_F(l2_swish_backward_test, swish_backward_testcase_002_normal_float16)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto betaDesc = ScalarDesc(0.01f, ACL_FLOAT16);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -67,7 +74,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_002_normal_float16)
 // bf16
 TEST_F(l2_swish_backward_test, Ascend910B2_swish_backward_testcase_002_normal_bf16)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto betaDesc = (aclScalar*)nullptr;
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -119,7 +127,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_005_exception_null_self)
     auto selfDesc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT);
     auto gradInputDesc = TensorDesc(gradOutputDesc);
-    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, betaDesc), OUTPUT(gradInputDesc));
+    auto ut =
+        OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, betaDesc), OUTPUT(gradInputDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -207,7 +216,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_010_normal_dtype_not_the_
 // CheckFormat 含ND不校验格式 TODO
 TEST_F(l2_swish_backward_test, swish_backward_testcase_011_normal_float32)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto betaDesc = ScalarDesc(static_cast<uint8_t>(1));
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -257,8 +267,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_013_exception_different_s
 // not contiguous
 TEST_F(l2_swish_backward_test, swish_backward_testcase_014_normal_not_contiguous_float)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND,
-        {1, 2}, 0, {5, 2}).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {5, 2})
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {5, 2}).ValueRange(-1, 1);
     auto betaDesc = ScalarDesc(static_cast<int8_t>(-1));
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -274,8 +284,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_014_normal_not_contiguous
 // not contiguous
 TEST_F(l2_swish_backward_test, swish_backward_testcase_015_normal_not_contiguous_float16)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND,
-        {1, 2}, 0, {5, 2}).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2})
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2}).ValueRange(-1, 1);
     auto betaDesc = ScalarDesc(static_cast<int8_t>(-1));
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -321,8 +331,8 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_017_exception_complex128_
 // largeDim
 TEST_F(l2_swish_backward_test, swish_backward_testcase_018_normal_large_dims)
 {
-    auto gradOutputDesc = TensorDesc({1,2,2,2,2,2,2,2,2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1,1);
-    auto selfDesc = TensorDesc({1,2,2,2,2,2,2,2,2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto gradOutputDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 1);
+    auto selfDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto betaDesc = ScalarDesc(static_cast<bool>(false));
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
     auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
