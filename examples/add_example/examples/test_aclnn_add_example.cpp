@@ -34,7 +34,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
+void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
+ 	                const std::vector<float>& selfXHostData, const std::vector<float>& selfYHostData)
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
@@ -43,7 +44,7 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);
+        LOG_PRINT("add_example first input[%ld] is: %f, second input[%ld] is: %f, result[%ld] is: %f\n", i, selfXHostData[i], i, selfYHostData[i], i, resultData[i]);
     }
 }
 
@@ -139,7 +140,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    PrintOutResult(outShape, &outDeviceAddr);
+    PrintOutResult(outShape, &outDeviceAddr, selfXHostData, selfYHostData);
 
     // 7. 释放aclTensor，需要根据具体API的接口定义修改
     aclDestroyTensor(selfX);
