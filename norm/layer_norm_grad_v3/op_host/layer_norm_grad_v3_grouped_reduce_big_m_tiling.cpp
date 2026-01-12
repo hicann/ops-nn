@@ -50,7 +50,6 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t blockNum = static_cast<int64_t>(commonParams.coreNum);
     // 受二分累加存活空间计算限制
     blockNum = std::min(MAX_CORE_NUM, blockNum);
-    int64_t maxBlocks = commonParams.coreNum;  // Hardware max blocks
     int64_t blocksNeeded = ops::CeilDiv(row, gammaBetaMfactor);
     int64_t usableBlocks = std::min(blocksNeeded, blockNum);
 
@@ -111,10 +110,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t mTailStg2 = usableBlocks - mLoopStg2 * gammaBetaMfactor;
     int64_t mBasicBlockLoopStg2 = FindNearestPower2(mTotalLoopStg2);
     int64_t mMainFoldCountStg2 = mTotalLoopStg2 - mBasicBlockLoopStg2;
-    int64_t mCacheBufferCountStg2 = 1;
     int64_t mResultCacheIDStg2 = 0;
     if (mBasicBlockLoopStg2 != 0) {
-        mCacheBufferCountStg2 = ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(mBasicBlockLoopStg2)));
         mResultCacheIDStg2 = GetCacheID(mBasicBlockLoopStg2 - 1);
     }
     // stage2 核间二分计算复用核内二分存活空间大小
