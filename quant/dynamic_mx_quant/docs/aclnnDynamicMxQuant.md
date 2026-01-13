@@ -6,7 +6,7 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
 
 ## 功能说明
 
@@ -21,11 +21,11 @@
     mxscale = 2^{shared\_exp}\\
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
     $$
-    
+
     - ​量化后的P<sub>i</sub>按对应的V<sub>i</sub>的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
-    
+
     - emax: 对应数据类型的最大正则数的指数位。
-    
+
         |   DataType    | emax |
         | :-----------: | :--: |
         |  FLOAT4_E2M1  |  2   |
@@ -58,30 +58,30 @@
 
 ```cpp
 aclnnStatus aclnnDynamicMxQuantGetWorkspaceSize(
-  const aclTensor *x, 
-  int64_t          axis, 
-  char            *roundModeOptional, 
-  int64_t          dstType, 
-  int64_t          blocksize, 
-  int64_t          scaleAlg, 
-  aclTensor       *yOut, 
-  aclTensor       *mxscaleOut, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  int64_t          axis,
+  char            *roundModeOptional,
+  int64_t          dstType,
+  int64_t          blocksize,
+  int64_t          scaleAlg,
+  aclTensor       *yOut,
+  aclTensor       *mxscaleOut,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnDynamicMxQuant(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
 ## aclnnDynamicMxQuantGetWorkspaceSize
 
 - **参数说明：**
-  | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度（shape）| 非连续Tensor |  
+  | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度（shape）| 非连续Tensor |
   | ----- | ----- |----- |----- |----- |----- |----- |----- |
   | x (aclTensor\*) | 输入 | 表示输入x，对应公式中$V_i$和$d_i$。 | 目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。 | FLOAT16、BFLOAT16 | ND | 1-7 | √ |
   | axis (int64_t) | 输入 | 表示量化发生的轴，对应公式中的axis。 | 取值范围为[-D, D-1]，D为x的shape的维数。 | INT64 | - | - | - |
@@ -91,10 +91,10 @@ aclnnStatus aclnnDynamicMxQuant(
   | scaleAlg (int64_t) | 输入 | 表示mxscaleOut的计算方法，对应公式中的scaleAlg。 | 支持取值0和1，取值为0代表场景1，为1代表场景2。当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。 | INT64 | - | - | √ |
   | yOut (aclTensor\*) | 输出 | 表示输入x量化后的对应结果，对应公式中的$P_i$和$[d^i]_{i=1}^{k}$。 | shape和输入x一致。 | FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2 | ND | 1-7 | - |
   | mxscaleOut (aclTensor*) | 输出 | 表示每个分组对应的量化尺度，对应公式中的mxscale和$S^b$。 | shape在axis轴上为x对应轴的值除以blocksize向上取整，并对其进行偶数pad，pad填充值为0； <br>  当axis为非尾轴时，mxscaleOut输出需要对每两行数据进行交织处理。 | FLOAT8_E8M0 | ND | 1-8 | - |
-  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |     
-  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |     
-   
-  
+  | workspaceSize (uint64_t\*)  | 输出 | 返回需要在Device侧申请的workspace大小。 | - | - | - | - | - |
+  | executor (aclOpExecutor\*\*)  | 输出 | 返回op执行器，包含了算子计算流程。 | - | - | - | - | - |
+
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -201,17 +201,17 @@ aclnnStatus aclnnDynamicMxQuant(
   #include <iostream>
   #include <memory>
   #include <vector>
-  
+
   #include "acl/acl.h"
   #include "aclnnop/aclnn_dynamic_mx_quant.h"
-  
+
   #define CHECK_RET(cond, return_expr) \
       do {                             \
           if (!(cond)) {               \
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \
@@ -219,12 +219,12 @@ aclnnStatus aclnnDynamicMxQuant(
               return_expr;                  \
           }                                 \
       } while (0)
-  
+
   #define LOG_PRINT(message, ...)         \
       do {                                \
           printf(message, ##__VA_ARGS__); \
       } while (0)
-  
+
       int64_t
       GetShapeSize(const std::vector<int64_t>& shape)
   {
@@ -234,7 +234,7 @@ aclnnStatus aclnnDynamicMxQuant(
       }
       return shapeSize;
   }
-  
+
   int Init(int32_t deviceId, aclrtStream* stream)
   {
       // 固定写法，资源初始化
@@ -246,7 +246,7 @@ aclnnStatus aclnnDynamicMxQuant(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
       return 0;
   }
-  
+
   template <typename T>
   int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                       aclDataType dataType, aclTensor** tensor)
@@ -258,31 +258,31 @@ aclnnStatus aclnnDynamicMxQuant(
       // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
       // 计算连续tensor的strides
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
       }
-  
+
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
       return 0;
   }
-  
+
   void Finalize(int32_t deviceId, aclrtStream stream)
   {
       aclrtDestroyStream(stream);
       aclrtResetDevice(deviceId);
       aclFinalize();
   }
-  
+
   int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> xShape = {1, 4};
       std::vector<int64_t> yOutShape = {1, 4};
@@ -319,11 +319,11 @@ aclnnStatus aclnnDynamicMxQuant(
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscaleOutTensorPtr(mxscaleOut, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> mxscaleOutDeviceAddrPtr(mxscaleOutDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-     
+
       // 调用CANN算子库API，需要修改为具体的Api名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
-   
+
       // 调用aclnnDynamicMxQuant第一段接口
       ret = aclnnDynamicMxQuantGetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, yOut, mxscaleOut, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -339,11 +339,11 @@ aclnnStatus aclnnDynamicMxQuant(
       // 调用aclnnDynamicMxQuant第二段接口
       ret = aclnnDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuant failed. ERROR: %d\n", ret); return ret);
-  
+
       //（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
       // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(yOutShape);
       std::vector<uint8_t> yOutData(
@@ -367,7 +367,7 @@ aclnnStatus aclnnDynamicMxQuant(
       }
       return ACL_SUCCESS;
   }
-  
+
   int main()
   {
       // 1. （固定写法）device/stream初始化，参考acl API手册
@@ -376,7 +376,7 @@ aclnnStatus aclnnDynamicMxQuant(
       aclrtStream stream;
       auto ret = aclnnDynamicMxQuantTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantTest failed. ERROR: %d\n", ret); return ret);
-  
+
       Finalize(deviceId, stream);
       return 0;
   }

@@ -5,7 +5,7 @@
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 
 ## 功能说明
 
@@ -38,28 +38,28 @@
 
 ```cpp
 aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
-    aclTensor       *varRef, 
-    aclTensor       *mRef, 
-    aclTensor       *vRef, 
-    aclTensor       *maxGradNormOptionalRef, 
-    const aclTensor *grad, 
-    const aclTensor *step, 
-    float            lr, 
-    float            beta1, 
-    float            beta2, 
-    float            weightDecay, 
-    float            eps, 
-    bool             amsgrad, 
-    bool             maximize, 
-    uint64_t        *workspaceSize, 
+    aclTensor       *varRef,
+    aclTensor       *mRef,
+    aclTensor       *vRef,
+    aclTensor       *maxGradNormOptionalRef,
+    const aclTensor *grad,
+    const aclTensor *step,
+    float            lr,
+    float            beta1,
+    float            beta2,
+    float            weightDecay,
+    float            eps,
+    bool             amsgrad,
+    bool             maximize,
+    uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnApplyAdamWV2(
-    void          *workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 ## aclnnApplyAdamWV2GetWorkspaceSize
@@ -329,7 +329,7 @@ aclnnStatus aclnnApplyAdamWV2(
 ## 约束说明
 输入张量中varRef、mRef、vRef的数据类型一致时，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
 
-- 确定性计算： 
+- 确定性计算：
   - aclnnApplyAdamWV2默认确定性实现。
 
 ## 调用示例

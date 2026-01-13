@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -54,13 +54,13 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
 - **参数说明**
 
   - self（aclTensor\*, 计算输入）：公式中的输入`self`，Device侧的aclTensor，shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。self与out、isTarget的数据类型一致，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md), [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。当 `self`中元素个数大于15000\*20000时可能出现507034 Vector Core运行超时。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。当 `self`中元素个数大于15000\*20000时可能出现507034 Vector Core运行超时。
   - target（aclTensor\*, 计算输入）：公式中的输入`target`，Device侧的aclTensor，表示真实标签，shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。数据类型支持INT64、INT32 ，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - reduction（int64_t, 计算输入）：公式中的`reduction`，Host侧的整型，指定要应用到输出的缩减，支持 0(none) | 1(mean) | 2(sum)。none表示不应用reduce，mean表示输出的总和将除以输出中的样本数，sum表示输出将被求和。
   - out（aclTensor\*, 计算输出）：公式中的`out`，Device侧的aclTensor，self与out、isTarget的数据类型一致，shape(N)为或者()。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
   - isTarget（aclTensor\*, 计算输出）：公式中的输出`istarget`，Device侧的aclTensor，self与out、isTarget的数据类型一致，shape为(N，C) 或者(C)，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
   - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
 
@@ -93,7 +93,7 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
     - aclnnMultilabelMarginLoss默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例

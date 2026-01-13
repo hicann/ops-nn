@@ -4,7 +4,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -19,13 +19,13 @@
 ## aclnnAdaptiveAvgPool3dGetWorkspaceSize
 
 - **参数说明：**
-  
+
   - self（aclTensor*，计算输入）：表示待计算的目标张量，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，不支持空tensor，shape支持4-5维。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
   - outputSize(aclIntArray\*, 计算输入)：指定输出在DHW维度上的shape大小，Device侧的aclIntArray。数据类型支持INT64，数组长度恒为3。
   - out(aclTensor\*, 计算输出)：Device侧的aclTensor，与self的数据类型一致；out的shape需要与self的shape和outputSize推导出的shape结果一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND，与self一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
   - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
@@ -46,7 +46,7 @@
 ## aclnnAdaptiveAvgPool3d
 
 - **参数说明：**
-  
+
   - workspace（void*，入参）：在Device侧申请的workspace内存地址。
   - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool3dGetWorkspaceSize获取。
   - executor（aclOpExecutor*，入参）：op执行器，包含了算子计算流程。

@@ -5,20 +5,20 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √       |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 ## 功能说明
 
 - 算子功能：计算SmoothL1损失函数。
 - 计算公式:
-  
+
   Batch为N的损失函数，当`reduction`为none时，此函数定义为：
 
   $$
   \ell(self,target) = L = \{l_1,\dots,l_N\}^\top
   $$
-  
+
   其中的$l_n$为：
-  
+
   $$
   l_n = \begin{cases}
   0.5(self_n-target_n)^2/beta, & if |self_n-target_n| < beta \\
@@ -47,11 +47,11 @@
 
   - self（aclTensor*，计算输入）：公式中的`self`，Device侧的aclTensor。shape需要与target满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)且最高支持8维，数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
 
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
   - target（aclTensor*，计算输入）：公式中的`target`，Device侧的aclTensor。shape需要与self满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)且最高支持8维，数据类型需满足数据类型推导规则（参见[互推导关系](../../../docs/zh/context/互推导关系.md)），支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)， [数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
 
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
   - reduction（int64_t，计算输入）：用于指定要应用到输出的缩减公式中的输入，公式中的`reduction`，Host侧的整型。取值支持0('none')|1('mean')|2('sum')，其中'none'表示不应用缩减，'mean'表示输出的总和将除以输出中的元素数，'sum'表示输出将被求和。
 
@@ -59,14 +59,14 @@
 
   - result（aclTensor*，计算输出）：公式中输出的损失函数$\ell$，当`reduction`为`none`时，shape与self和target的broadcast结果一致，当`reduction`为`mean`或`sum`时为[ ]，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCL、NCHW、NHWC。
 
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
 
   - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
 
   - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
 
 - **返回值：**
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   ```
@@ -97,7 +97,7 @@
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)
 
 ## 约束说明
-- 确定性计算： 
+- 确定性计算：
   - aclnnSmoothL1Loss默认确定性实现。
 
 ## 调用示例

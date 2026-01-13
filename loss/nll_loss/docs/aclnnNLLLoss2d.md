@@ -1,6 +1,6 @@
 # aclnnNLLLoss2d
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/nll_loss)
+
 
 ## 产品支持情况
 
@@ -265,7 +265,7 @@ aclnnStatus aclnnNLLLoss2d(
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
     - aclnnNLLLoss2d默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例

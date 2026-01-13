@@ -5,13 +5,13 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 算子功能：完成Modulate反向传播中参数的计算，进行梯度更新。
 - 计算公式：
-    
+
     设输入self的shape为[B, L, D]计算公式如下：
     公式：
 
@@ -26,7 +26,7 @@
     符号说明：
     - $\odot$: 表示逐元素乘法；
     - $\sum_{l=1}^{L}$: 求和操作，沿序列维度$L$(即dim=1)进行
-    -  $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension） 
+    -  $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
     - $\text{scale}^{\uparrow L}$： 表示将scale张量在序列维度 $L$ 上进行广播（扩展）
 
 ## 参数说明

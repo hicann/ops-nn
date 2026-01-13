@@ -5,13 +5,13 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 - 算子功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
-- 计算流程：  
-  
+- 计算流程：
+
   对给定的输入张量 x ，其维度为[a,b,c,d,e,f,g…]，算子ClippedSwiglu对其进行以下计算：
 
   1. 将 x 基于输入参数 dim 进行合轴，合轴后维度为[pre,cut,after]。其中 cut 轴为合轴之后需要切分为两个张量的轴，切分方式分为前后切分或者奇偶切分；pre，after 可以等于1。例如当 dim 为3，合轴后 x 的维度为[a * b * c, d, e * f * g * …]。此外，由于after轴的元素为连续存放，且计算操作为逐元素的，因此将cut轴与after轴合并，得到x的维度为[pre,cut]。
@@ -21,7 +21,7 @@
      $$
      sum = \text{Sum}(group\_index)
      $$
-     
+
      $$
      x = x[ : sum, : ]
      $$
@@ -59,15 +59,15 @@
      $$
      A = A.clamp(min=None, max=limit)
      $$
-     
+
      $$
      B = B.clamp(min=-limit, max=limit)
      $$
-     
+
      $$
      y\_glu = A * sigmoid(alpha * A)
      $$
-     
+
      $$
      y = y\_glu * (B + bias)
      $$
@@ -149,7 +149,7 @@
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
-    
+
   </tbody></table>
 
 ## 约束说明

@@ -1,6 +1,6 @@
 # aclnnFastGelu
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/fast_gelu)
+
 
 ## 产品支持情况
 
@@ -109,7 +109,7 @@ aclnnStatus aclnnFastGelu(
     </tr>
   </tbody>
   </table>
-  
+
 
 - **返回值：**
 

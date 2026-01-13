@@ -5,7 +5,7 @@
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 
 ## 功能说明
 
@@ -18,14 +18,14 @@
   (1-\beta_1^{step},1-\beta_2^{step}),&biasCorrection=True
   \end{cases}
   $$
-  
+
   $$
   grad=\begin{cases}
   grad+weightDecay*var,&mode=0\\
   grad,&mode=1
   \end{cases}
   $$
-  
+
   $$
   m_{out}=\beta_1*m+(1-\beta_1)*grad
   $$
@@ -114,7 +114,7 @@
 
 输入grad、var、m、v、s的数据类型和shape需要保持一致。
 
-- 确定性计算： 
+- 确定性计算：
   - aclnnApplyFusedEmaAdam默认确定性实现。
 
 ## 调用示例
@@ -254,7 +254,7 @@ int main() {
 
   // out, inplace
   std::vector<int64_t> outShape = {2, 2, 2};
-  
+
   // attr
   float lr = 0.001f;
   float emaDecay = 0.5f;
@@ -267,7 +267,7 @@ int main() {
 
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
-  
+
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   // 调用aclnnApplyFusedEmaAdam第一段接口
   ret = aclnnApplyFusedEmaAdamGetWorkspaceSize(grad, var, m, v, s, step, lr, emaDecay, beta1, beta2, eps,

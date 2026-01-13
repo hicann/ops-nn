@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -14,7 +14,7 @@
 - 计算公式：
   - **GroupNorm:**
     记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-    
+
     $$
     \left\{
     \begin{array} {rcl}
@@ -26,11 +26,11 @@
     $$
 
   - **Swish:**
-    
+
     $$
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
-    
+
     当activateSwish为True时，会计算Swish， 此时Swish计算公式的x为GroupNorm公式得到的out。
 
 ## 参数说明

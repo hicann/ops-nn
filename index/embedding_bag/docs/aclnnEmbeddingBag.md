@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -18,9 +18,9 @@
   indices的shape为(bagIndices)
   offsets的shape为(bagOffsets)
   ```
-  
+
   - 当mode为sum模式：
-  
+
     ```
     output的shape 为 includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape 为 (bagIndices,)
@@ -494,7 +494,7 @@ int main() {
   //创建maxIndices aclTensor
   ret = CreateAclTensor(maxIndicesHostData, maxIndicesShape, &maxIndicesDeviceAddr, aclDataType::ACL_INT64, &maxIndices);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
   //非tensor参数
   bool scaleGradByFreq = false;
   int64_t mode = 0;
@@ -569,7 +569,7 @@ int main() {
   aclDestroyTensor(offset2bag);
   aclDestroyTensor(bagSize);
   aclDestroyTensor(maxIndices);
-  
+
   // 7. 释放device资源, 需要根据具体API的接口定义修改
   aclrtFree(weightDeviceAddr);
   aclrtFree(indicesDeviceAddr);

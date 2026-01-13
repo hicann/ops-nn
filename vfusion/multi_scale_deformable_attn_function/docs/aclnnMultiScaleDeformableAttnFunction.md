@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -24,13 +24,13 @@
     $$
     x_0 = \lfloor x \rfloor,\quad x_1 = x_0 + 1,\qquad
     y_0 = \lfloor y \rfloor,\quad y_1 = y_0 + 1
-    $$  
+    $$
 
     计算采样点相对于左上角网格点的偏移，用于插值权重：
 
     $$
     \alpha_x = x - x_0, \qquad \alpha_y = y - y_0
-    $$  
+    $$
 
     计算双线性插值权重，四个邻点的和为1
 
@@ -51,7 +51,7 @@
     + w_{10} \, V_{b,\ell,y_0,x_1,h,:}
     + w_{01} \, V_{b,\ell,y_1,x_0,h,:}
     + w_{11} \, V_{b,\ell,y_1,x_1,h,:}
-    $$  
+    $$
 
     所有层、所有采样点的双线性采样结果，加权求和得到最终输出：
 
@@ -61,27 +61,27 @@
     A_{b,q,h,\ell,p} \cdot
     \operatorname{bilinear}\!\left(V;\,b,h,\ell,
     x_{b,q,h,\ell,p}, y_{b,q,h,\ell,p}\right)
-    $$  
+    $$
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMultiScaleDeformableAttnFunction”接口执行计算。
 ```Cpp
 aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(
-    const aclTensor* value, 
-    const aclTensor* spatialShape, 
-    const aclTensor* levelStartIndex, 
-    const aclTensor* location, 
-    const aclTensor* attnWeight, 
-    aclTensor*       output, 
-    uint64_t*        workspaceSize, 
+    const aclTensor* value,
+    const aclTensor* spatialShape,
+    const aclTensor* levelStartIndex,
+    const aclTensor* location,
+    const aclTensor* attnWeight,
+    aclTensor*       output,
+    uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
 ```Cpp
 aclnnStatus aclnnMultiScaleDeformableAttnFunction(
-    void*          workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor* executor, 
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
     aclrtStream    stream)
 ```
 
@@ -191,10 +191,10 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
       <td>-</td>
     </tr>
   </tbody></table>
-  
+
   - Atlas推理系列产品：不支持BFLOAT16
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
@@ -281,10 +281,10 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
       <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
-  </table>  
+  </table>
 
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -292,7 +292,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 - 确定性计算：
   - aclnnMultiScaleDeformableAttnFunction默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 通道数channels%8 = 0，且channels <= 256
   - 查询的数量32 <= num_queries < 500000
   - 特征图的数量num_levels <= 16
@@ -420,7 +420,7 @@ int main() {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnMultiScaleDeformableAttnFunction第一段接口
-    ret = aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(value, spatialShape, levelStartIndex, location, attnWeight, output, 
+    ret = aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(value, spatialShape, levelStartIndex, location, attnWeight, output,
                                                                 &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存

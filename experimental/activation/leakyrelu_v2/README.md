@@ -3,7 +3,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------- |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> | √        |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √        |
 ## 功能说明
 
 - 算子功能：LeakyRelu激活函数。
@@ -18,7 +18,7 @@ $$ y = \begin{cases} x, & x \ge 0 \\ negative\_slope \times x, & x < 0 \end{case
 | negative_slope | 属性           | 控制x < 0时的斜率。                                          | FLOAT    | -        |
 | y      | 输出           | LeakyRelu计算的结果。                                        | 见下方   | ND       |
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT、FLOAT16。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 ## 约束说明
 

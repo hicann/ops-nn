@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -25,7 +25,7 @@
     y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 
   $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDequantBiasGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnDequantBias”接口执行计算。
@@ -114,7 +114,7 @@ aclnnStatus aclnnDequantBias(
       <td>ND</td>
       <td>1</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>outputDtype</td>
       <td>输入</td>
@@ -157,8 +157,8 @@ aclnnStatus aclnnDequantBias(
     </tr>
   </tbody>
   </table>
-  
-  
+
+
 - **返回值：**
 aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 第一段接口会完成入参校验，出现以下场景时报错：
@@ -233,8 +233,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     </tr>
   </tbody>
   </table>
-  
-  
+
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -328,7 +328,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {40, 256}; 
+  std::vector<int64_t> inputShape = {40, 256};
   std::vector<int64_t> weightShape = {256};
   std::vector<int64_t> activationShape = {40};
   std::vector<int64_t> biasShape = {256};
@@ -356,13 +356,13 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHostData, biasShape, &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
-  
+
+
   std::vector<int64_t> yShape = {40,256};
   std::vector<int16_t> yHostData(40*256, 9);
   aclTensor* y = nullptr;
   void* yDeviceAddr = nullptr;
- 
+
 
   ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT16, &y);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

@@ -5,47 +5,47 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 算子功能：ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。
 - 计算公式：
-  
+
   假设有两个点集：  xyz1=[B,N,2], xyz2=[B,M,2]
-  
+
   - ChamferDistance（倒角距离）正向算子计算公式为：
-    
+
     $dist1_i=Min((x_{1_i}−x_2)^2+(y_{1_i}−y_2)^2)，x_2, y_2∈xyz2$
     $dist2_i=Min((x_{2_i}-x_1)^2+(y_{2_i}-y_1)^2)，x_1,y_1∈xyz1$
-  
+
   - 反向算子即为对该公式求导，计算公式为：
     - $dist1_i 对x_{1_i} $的导数$=2*grad\_dist1*(x_{1_i}-x_2)$
 
       其中：$x_{1_i}∈xyz1$，$x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以考虑多点并行计算。
-      
+
     - $dist1_i 对y_{1_i} $的导数$=2*grad\_dist1*(y_{1_i}-y_2)$
-      
+
       其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以也可以考虑多点并行计算。
-      
+
     - $dist1_i 对x_2 $的导数$=-2*grad\_dist1*(x_{1_i}-x_2)$
-      
+
       其中$x_{1_i}∈xyz1，x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度需要根据最小距离值对应的索引值去更新，所以这块无法并行只能单点计算。
-    
+
     - $dist1_i 对y_2 $的导数$=-2*grad\_dist1*(y_{1_i}-y_2)$
-      
+
       其中$y_{1_i}∈xyz1，y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度需要根据最小值对应的索引值去更新，所以这块也无法并行只能单点计算。
-  
+
   对应$dist2_i$对$x_{2_i} 、x_1、y_{2_i} 、y_1$的导数和上述过程类似，这里不再赘述。
-  
+
   最终计算公式如下，i∈[0,n)：
 
   $grad_xyz1[2*i] = 2*grad\_dist_1*(x_{1_i}-x_2) - 2*grad\_dist_1*(x_{1_i}-x_2)$
-  
+
   $grad_xyz1[2*i+1] = 2*grad\_dist1*(y_{1_i}-y_2) - 2*grad\_dist1*(y_{1_i}-y_2)$
-  
+
   $grad_xyz2[2*i] = 2*grad\_dist2*(x_{1_i}-x_2) - 2*grad\_dist2*(x_{1_i}-x_2)$
-  
+
   $grad_xyz2[2*i+1] = 2*grad\_dist2*(y_{1_i}-y_2) - 2*grad\_dist2*(y_{1_i}-y_2)$
 
 ## 函数原型
@@ -58,7 +58,7 @@
 ## aclnnChamferDistanceBackwardGetWorkspaceSize
 
 - **参数说明**：
-  
+
   - xyz1（aclTensor\*, 计算输入）：算子正向输入的点集1的坐标，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、grad_dist1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
   - xyz2（aclTensor\*, 计算输入）：算子正向输入的点集2的坐标，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16，且数据类型与xyz2、grad_dist1、grad_dist2、grad_xyz1、grad_xyz2一致，shape为（B,N,2），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
   - idx1（aclTensor\*, 计算输入）：算子正向输出的距离xyz1最小距离的xyz2中的点的索引tensor，Device侧的aclTensor，数据类型支持INT32，且数据类型与idx2一致，shape为（B,N），[数据格式](../../../docs/zh/context/数据格式.md)支持ND
@@ -70,7 +70,7 @@
   - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   ```
@@ -84,18 +84,18 @@
 ## aclnnChamferDistanceBackward
 
 - **参数说明**：
-  
+
   - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
   - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnChamferDistanceBackwardGetWorkspaceSize获取。
   - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
   - stream（aclrtStream, 入参）：指定执行任务的Stream。
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
   - aclnnChamferDistanceBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
@@ -135,7 +135,7 @@ int Init(int32_t deviceId, aclrtStream* stream) {
     ret = aclrtSetDevice(deviceId);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret); 
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
     return 0;
 }
 
@@ -171,7 +171,7 @@ int main() {
     auto ret = Init(deviceId, &stream);
     // check根据自己的需要处理
     CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-    
+
     // 2.构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xyz1Shape = {2, 2, 2};
     std::vector<int64_t> xyz2Shape = {2, 2, 2};
@@ -246,11 +246,11 @@ int main() {
     // 调用aclnnChamferDistanceBackward第二段接口
     ret = aclnnChamferDistanceBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnChamferDistanceBackward failed. ERROR: %d\n", ret); return ret);
-    
+
     // 4.(固定写法)同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-    
+
     // 5.获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(gradXyz1Shape);
     std::vector<float> resultData(size, 0);

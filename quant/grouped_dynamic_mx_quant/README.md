@@ -6,7 +6,7 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
 
 ## 功能说明
 
@@ -15,7 +15,7 @@
 - 计算公式：
   - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度mxscale_pre, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}, 计算公式为下面公式(1)(2)。
   $$
-  shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1} 
+  shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
   $$
   $$
   mxscale\_pre = 2^{shared\_exp}  \tag{2}
@@ -24,11 +24,11 @@
   $$
   P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
   $$
-  
+
   ​	量化后的P<sub>i</sub>按对应的x<sub>i</sub>的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
-  
+
   - emax: 对应数据类型的最大正则数的指数位。
-  
+
     |   DataType    | emax |
     | :-----------: | :--: |
     | FLOAT8_E4M3FN |  8   |

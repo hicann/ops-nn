@@ -1,6 +1,6 @@
 # aclnnNonzeroV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/non_zero)
+
 
 ## 产品支持情况
 
@@ -29,9 +29,9 @@
   - out（aclTensor*, 计算输出）：Device侧的aclTensor，数据类型为INT64。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - workspaceSize（uint64_t*, 出参）：返回用户需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor**, 出参）：返回op执行器，包含了算子计算流程。
-  
+
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   ```
   第一段接口完成入参校验，出现以下场景时报错：
@@ -50,7 +50,7 @@
   - stream（aclrtStream, 入参）：指定执行任务的Stream。
 
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

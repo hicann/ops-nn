@@ -5,7 +5,7 @@
 | 产品 | 是否支持 |
 | :---------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                        |    √    |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
 
 ## 功能说明
 
@@ -15,7 +15,7 @@
   $$
   quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} g_i + b_i, \quad \text { where }   \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
-  
+
   $$
   y=round((quant\_in*scale)+offset)
   $$

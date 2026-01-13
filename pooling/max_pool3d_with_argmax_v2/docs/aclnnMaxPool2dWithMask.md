@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -42,14 +42,14 @@
 
 - **参数说明：**
   - self（aclTensor*，计算输入）: 输入Tensor，公式中的input，Device侧aclTensor。shape支持3D或者4D，不支持其他shape。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)在3维时支持ND，在4维时支持NCHW。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16和BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16和BFLOAT16。
   - kernelSize（aclIntArray*，计算输入）: 表示最大池化的窗口大小，公式中的k，Host侧的aclIntArray，数据类型支持INT64，数组长度必须为1或2，且数组元素必须都大于0。
   - stride（aclIntArray*，计算输入）: 窗口移动的步长，公式中的stride，Host侧的aclIntArray，数据类型支持INT64。stride的长度为0时，stride的数值等于kernelSize的值。
   - padding（aclIntArray*，计算输入）: 每一条边补充的层数，公式中的padding_size，Host侧的aclIntArray，补充的位置填写“负无穷”，数据类型支持INT64，数组长度必须为1或2，且数组元素必须都大于等于0或者小于等于kernelSize/2。
   - dilation（aclIntArray*，计算输入）: 控制窗口中元素的步幅，公式中的dilation_size，Host侧的aclIntArray，数据类型支持INT64，值仅支持1。
   - ceilMode（bool，计算输入）: 控制计算输出out的shape推导时的取值模式，Host侧的Bool型。仅支持取值true或false。为true时表示推导公式中Hout和Wout的shape时用向上取整的方法，为false时即表示向下取整。
   - out（aclTensor*，计算输出）: 输出Tensor，公式中的out，Device侧的aclTensor。池化后的结果。shape需要按照功能说明中out的shape推导公式进行计算。[数据格式](../../../docs/zh/context/数据格式.md)在3维时支持ND，在4维时支持NCHW，与self保持一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16和BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16和BFLOAT16。
   - indices（aclTensor*，计算输出）: 输出Tensor，Device侧的aclTensor。最大值的索引位置组成的Tensor（采用mask语义）。数据类型仅支持INT8。shape需要按照功能说明中indices的shape推导公式进行计算，不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)在3维时支持ND，在4维时支持NCHW，与self保持一致，为自定义的mask值。
   - workspaceSize（uint64_t*，出参）: 返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor**，出参）: 返回op执行器，包含了算子计算流程。

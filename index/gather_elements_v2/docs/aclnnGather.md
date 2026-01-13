@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -204,7 +204,7 @@ aclnnStatus aclnnGather(
 ## aclnnGather
 
   - **参数说明**
-   
+
       <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
       <col style="width: 200px">
       <col style="width: 162px">
@@ -376,10 +376,10 @@ int main() {
   aclDestroyTensor(self);
   aclDestroyTensor(index);
   aclDestroyTensor(out);
-    
+
   // 7. 释放device资源
   aclrtFree(selfDeviceAddr);
-  aclrtFree(indexDeviceAddr); 
+  aclrtFree(indexDeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
@@ -387,7 +387,7 @@ int main() {
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  
+
   return 0;
 }
 ```

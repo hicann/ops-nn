@@ -5,64 +5,64 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 接口功能：实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。
 
 - 计算公式：
-  
+
   假定输入（input）的shape是[N, inC, inH, inW]，输出的（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
-  
+
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
   $$
-  
+
   $$
   outW = (inW + padding[2] + padding[3] - ((K_W - 1) * dilation[3] + 1)) // stride[3] + 1
   $$
-  
+
   标准卷积计算采样点下标：
-  
+
   $$
   x = -padding[2] + ow*stride[3] + kw*dilation[3], kw的取值为(0, K\_W-1)
   $$
-  
+
   $$
   y = -padding[0] + oh*stride[2] + kh*dilation[2], kh的取值为(0, K\_H-1)
   $$
-  
+
   根据传入的offset，进行变形卷积，计算偏移后的下标：
-  
+
   $$
   (x,y) = (x + offsetX, y + offsetY)
   $$
 
   使用双线性插值计算偏移后点的值：
-  
+
   $$
   (x_{0}, y_{0}) = (int(x), int(y)) \\
   (x_{1}, y_{1}) = (x_{0} + 1, y_{0} + 1)
   $$
-  
+
   $$
   weight_{00} = (x_{1} - x) * (y_{1} - y) \\
-  weight_{01} = (x_{1} - x) * (y - y_{0}) \\ 
-  weight_{10} = (x - x_{0}) * (y_{1} - y) \\ 
-  weight_{11} = (x - x_{0}) * (y - y_{0}) \\ 
+  weight_{01} = (x_{1} - x) * (y - y_{0}) \\
+  weight_{10} = (x - x_{0}) * (y_{1} - y) \\
+  weight_{11} = (x - x_{0}) * (y - y_{0}) \\
   $$
-  
+
   $$
   deformOut(x, y) = weight_{00} * input(x0, y0) + weight_{01} * input(x0,y1) + weight_{10} * input(x1, y0) + weight_{11} * input(x1,y1)
   $$
-  
+
   进行卷积计算得到最终输出：
-  
+
   $$
   \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{deformOut}(N_i, k)
   $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDeformableConv2dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeformableConv2d”接口执行计算。
@@ -248,7 +248,7 @@ aclnnStatus aclnnDeformableConv2d(
       <td>ND、NCHW</td>
       <td>4</td>
       <td>√</td>
-    </tr>    
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnDeformableConv2d(
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -473,7 +473,7 @@ int main() {
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 创建weight aclTensor
     ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT, &weight);
     CHECK_RET(ret == ACL_SUCCESS, return ret);

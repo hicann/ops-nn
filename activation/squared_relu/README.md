@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -26,7 +26,7 @@
   $$
 
   其中，x是输入Tensor，y是输出Tensor，i是元素在Tensor中的位置索引。
-  
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 773px"><colgroup>
@@ -65,7 +65,7 @@
 
 - 输入值为NaN，输出也为NaN，输入是Inf，输出也是Inf。
 - 输入是-Inf，输出是0。
-- 输入shape只支持维度1至8维，不在范围内执行报错。 
+- 输入shape只支持维度1至8维，不在范围内执行报错。
 
 ## 调用说明
 

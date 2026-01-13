@@ -5,13 +5,13 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量进行正切函数运算。
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -27,9 +27,9 @@
 
 ```Cpp
 aclnnStatus aclnnForeachTanGetWorkspaceSize(
-  const aclTensorList      *x, 
-  const aclTensorList      *out, 
-  uint64_t                 *workspaceSize, 
+  const aclTensorList      *x,
+  const aclTensorList      *out,
+  uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
 ```Cpp
@@ -150,9 +150,9 @@ aclnnStatus aclnnForeachTan(
     <tr>
       <td>x或out中的Tensor维度超过8维。</td></tr>
     </tr>
-    
+
   </tbody></table>
-  
+
 ## aclnnForeachTan
 
 - **参数说明**：
@@ -283,7 +283,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* out1 = nullptr;

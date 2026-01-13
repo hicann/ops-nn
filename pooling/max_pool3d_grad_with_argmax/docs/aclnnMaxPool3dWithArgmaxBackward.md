@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -22,18 +22,18 @@
 
 - **参数说明：**
   * gradOutput(aclTensor*, 计算输入): 梯度Tensor，Device侧aclTensor。和正向的输出shape一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND, 当输入是5维时，内部按照NCDHW处理，当输入是4维时，在0维度处补1，内部按照NCDHW处理。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * self(aclTensor*, 计算输入): 正向的输入Tensor，Device侧aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND, 当输入是5维时，内部按照NCDHW处理，当输入是4维时，在0维度处补1，内部按照NCDHW处理，与gradOutput一致。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * indices(aclTensor \*, 计算输入): 输入Tensor，是Device侧aclTensor。正向输入中最大元素的索引位置。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW，与self保持一致。shape与gradOutput一致。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持INT32
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持INT32
   * kernelSize(aclIntArray*, 计算输入): 表示最大池化的窗口大小。Host侧的aclIntArray，表示池化窗口的大小，INT64类型数组，长度为1 ($kD = kH = kW$) 或3 ($kD, kH, kW$)。
   * stride(aclIntArray*, 计算输入): Host侧的aclIntArray，表示池化操作的步长，INT64类型的数组，长度为0（$sD = kD, sH = kH, sW = kW$）或者1（$sD = sH = sW$）或3（$sD, sH, sW$）。
   * padding(aclIntArray*, 计算输入): Host侧的aclIntArray，表示在输入的D、H、W方向上padding补0的层数，INT64类型数组，长度为1（$padD = padH = padW$）或3（$padD, padH, padW$）。
   * dilation(aclIntArray*, 计算输入): Host侧的aclIntArray，表示控制窗口中元素的步幅，INT64类型数组，长度为1（$dD = dH = dW$）或3（$dD, dH, dW$），值仅支持1。
   * ceilMode(bool, 计算输入): 表示正向平均池化过程中推导的输出的shape是否向上取整。数据类型支持BOOL。
   * gradInput(aclTensor \*, 计算输出): 反向输出Tensor，是Device侧aclTensor。shape与self保持一致。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW，与self保持一致。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * workspaceSize(uint64_t \*, 出参): 返回需要在Device侧申请的workspace大小。
   * executor(aclOpExecutor \*\*, 出参): 返回op执行器，包含了算子计算流程。
 

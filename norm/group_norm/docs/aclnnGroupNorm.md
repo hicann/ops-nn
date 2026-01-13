@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -14,7 +14,7 @@
   记 $x=self$，$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n - 1} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的样本方差，则
 
   $$
-  out = \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta 
+  out = \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta
 
   $$
 
@@ -32,26 +32,26 @@
 
 ```cpp
 aclnnStatus aclnnGroupNormGetWorkspaceSize(
-  const aclTensor *self, 
-  const aclTensor *gamma, 
-  const aclTensor *beta, 
-  int64_t          N, 
-  int64_t          C, 
-  int64_t          HxW, 
-  int64_t          group, 
-  double           eps, 
-  aclTensor       *out, 
-  aclTensor       *meanOut, 
-  aclTensor       *rstdOut, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *self,
+  const aclTensor *gamma,
+  const aclTensor *beta,
+  int64_t          N,
+  int64_t          C,
+  int64_t          HxW,
+  int64_t          group,
+  double           eps,
+  aclTensor       *out,
+  aclTensor       *meanOut,
+  aclTensor       *rstdOut,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnGroupNorm(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -267,7 +267,7 @@ aclnnStatus aclnnGroupNorm(
     </tr>
     <tr>
       <td>self在N维度上的空间大小不等于N。</td>
-    </tr> 
+    </tr>
     <tr>
       <td>self在C维度上的空间大小不等于C。</td>
     </tr>

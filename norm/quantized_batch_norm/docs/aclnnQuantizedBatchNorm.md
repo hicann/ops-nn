@@ -5,29 +5,29 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 接口功能：
-  
+
   将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。
 - 计算公式：
-  
+
   1.反量化计算：
-  
+
   $$
   x' = (x - inputZeroPoint) * inputScale
   $$
-  
+
   2.归一化计算：
-  
+
   $$
   y =\frac{x' - mean}{\sqrt{var + epsilon}} * weight + bias
   $$
-  
+
   3.量化计算：
-  
+
   $$
   output = round(\frac{y}{outputScale} + outputZeroPoint)
   $$
@@ -224,7 +224,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -292,7 +292,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
   </table>
 
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

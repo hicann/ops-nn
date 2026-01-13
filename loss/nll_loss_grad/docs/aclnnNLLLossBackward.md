@@ -1,6 +1,6 @@
 # aclnnNLLLossBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/nll_loss_grad)
+
 
 ## 产品支持情况
 
@@ -15,7 +15,7 @@
 - 接口功能：负对数似然损失函数的反向传播。
 - 计算公式：
   - reduction=mean：
-    
+
     $$
     x\_grad_{target(t)} =\begin{cases}
     (-gradOutput * w_{(target(t))}) / totalweight &, target(t)=1 \\
@@ -24,23 +24,23 @@
     $$
 
   - reduction=sum：
-    
+
     $$
     x\_grad_{target(t)} =\begin{cases}
     -gradOutput * w_{(target(t))} &, target(t)=1 \\
     0 &, target(t)=0
     \end{cases}
     $$
-    
+
   - reduction=none：
-    
+
     $$
     x\_grad_{target(t)} =\begin{cases}
     -gradOutput_t * w_{(target(t))} &, target(t)=1 \\
     0 &, target(t)=0
     \end{cases}
     $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnNLLLossBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNLLLossBackward”接口执行计算。
@@ -283,7 +283,7 @@ aclnnStatus aclnnNLLLossBackward(
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
     - aclnnNLLLossBackward默认确定性实现。
 
 ## 调用示例

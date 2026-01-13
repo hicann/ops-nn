@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -43,7 +43,7 @@
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyBackwardGetWorkspaceSize(
- const aclTensor *gradOutput, 
+ const aclTensor *gradOutput,
  const aclTensor *self,
  const aclTensor *target,
  const aclTensor *weightOptional,
@@ -63,7 +63,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
 ## aclnnBinaryCrossEntropyBackwardGetWorkspaceSize
 
 - **参数说明：**
- 
+
     | <div style="width:150px">参数名</div>  | <div style="width:120px">输入/输出</div>  | <div style="width:294px">描述</div> |<div style="width:191px">使用说明</div>| <div style="width:150px">数据类型</div>  | <div style="width:102px">数据格式</div> | <div style="width:102px">维度(shape)</div> | <div style="width:145px">非连续Tensor</div> |
     | ------------------| ------------------ | --------------|-------------------- | ----------------- | --------------------- | ---------------|---------------------------|
     | gradOutput | 输入 | 网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。 |- |与`self`一致|ND|-|√|
@@ -165,8 +165,8 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
 
 ## 约束说明
 
-- 确定性计算： 
-  - aclnnBinaryCrossEntropyBackward默认确定性实现。  
+- 确定性计算：
+  - aclnnBinaryCrossEntropyBackward默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

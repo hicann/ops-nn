@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -25,7 +25,7 @@
   - selfRef(aclTensor*, 计算输入)：Device侧的aclTensor，数据类型支持情况如下：
     - 当accumulate为true时，FLOAT16、FLOAT、BOOL、INT8、UINT8、INT16、INT32、INT64、DOUBLE、COMPLEX64、COMPLEX128。
     - 当accumulate为false时，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持如下：
-      * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BOOL、FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、COMPLEX64、COMPLEX128
+      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BOOL、FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、COMPLEX64、COMPLEX128
   - index(aclTensor*, 计算输入)：Device侧的aclTensor，数据类型支持INT32、INT64，元素个数要求和source保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。index中的索引数据不支持越界。
   - source(aclTensor*, 计算输入): Device侧的aclTensor，数据类型和selfRef一致，元素个数和index一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - accumulate(bool, 计算输入)：Host侧的布尔类型。

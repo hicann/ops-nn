@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -22,8 +22,8 @@
   其中：
 
   $$
-  z_i = 
-  \begin{cases} 
+  z_i =
+  \begin{cases}
   \text{eps}, & \text{if } x_i < \text{eps} \\
   x_i, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
   1 - \text{eps}, & \text{if } x_i > 1 - \text{eps}
@@ -294,7 +294,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {1, 4}; 
+  std::vector<int64_t> inputShape = {1, 4};
 
   std::vector<float> inputHostData = {0.1, 0.2, 0.3, 0.4};
 

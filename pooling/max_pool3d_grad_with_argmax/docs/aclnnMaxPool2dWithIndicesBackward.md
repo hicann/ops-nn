@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -43,11 +43,11 @@
 
 - **参数说明：**
   * gradOutput(const aclTensor \*, 计算输入): 反向传播过程中上一步输出的梯度，Device侧aclTensor。和正向的输出shape一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。数据格式与self保持一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
   * self(const aclTensor \*, 计算输入): 正向的输入数据，Device侧aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
   * indices(aclTensor \*, 计算输入): 正向输出的索引，是Device侧aclTensor，shape和输入gradOutput一致。正向输出中最大元素的索引位置，数据格式与self保持一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持INT32。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持INT32。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
   * kernelSize(const aclIntArray \*, 计算输入): 池化操作中使用的滑动窗口大小，Host侧的aclIntArray，长度仅支持1、2。
     - 当kernelSize中元素个数为1时，窗口大小为（kernelSize[0], kernelSize[0]）。
     - 当kernelSize中元素个数为2时，窗口大小为（kernelSize[0], kernelSize[1]）。
@@ -59,10 +59,10 @@
     - 当padding中元素个数为1时，对H与W轴的头部与尾部分别填充长度为padding[0]的`-Inf`。
     - 当padding中元素个数为2时，对H轴的头部与尾部填充长度为padding[0]的`-Inf`,对W轴的头部与尾部填充长度为padding[1]的`-Inf`。
   * dilation(const aclIntArray \*, 计算输入): 池化操作的扩张因子，扩张操作增加了池化窗口中元素间的距离，Host侧的aclIntArray。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持dilation为（1，1）。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持dilation为（1，1）。
   * ceilMode(const bool \*, 计算输入): 控制是否开启池化操作的输出大小为向上取整模式，Host侧的bool。为True时表示计算输出形状时，采用向上取整的方法；为False即向下取整。
   * gradInput(aclTensor \*, 计算输出): 反向传播输出的梯度，是Device侧aclTensor。shape与self保持一致。数据格式与self保持一致。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持FLOAT。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW和CHW。
   * workspaceSize(uint64_t \*, 出参): 返回需要在Device侧申请的workspace大小。
   * executor(aclOpExecutor \*\*, 出参): 返回op执行器，包含了算子计算流程。
 

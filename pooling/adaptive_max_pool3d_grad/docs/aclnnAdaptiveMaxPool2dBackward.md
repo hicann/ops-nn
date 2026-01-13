@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -33,21 +33,21 @@
 ## aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize
 
 - **参数说明：**
-  
+
   - gradOutput（aclTensor \*， 计算输入）：梯度Tensor，Device侧aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，和正向的输出shape一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND， 当输入是4维时，内部按照NCHW处理，当输入是3维时，在0维度处补1，内部按照NCHW处理。
-    
+
   - self（aclTensor \*， 计算输入）：正向的输入Tensor，Device侧aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND， 当输入是4维时，内部按照NCHW处理，当输入是3维时，在0维度处补1，内部按照NCHW处理，与gradOutput一致。
-    
+
   - indices（aclTensor \*， 计算输入）：输入Tensor，是Device侧aclTensor。数据类型支持INT32，INT64。正向输入中最大元素的索引位置。[数据格式](../../../docs/zh/context/数据格式.md)与gradOutput保持一致。shape与gradOutput一致。
-    
+
   - gradInput（aclTensor \*，计算输出）：反向输出Tensor，是Device侧aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，shape与self保持一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)与self保持一致。
-    
+
   - workspaceSize(uint64_t \*， 出参)：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor \*\*， 出参）：返回op执行器，包含了算子计算流程。
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   ```
   第一段接口完成入参校验，出现以下场景时报错：
   161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的gradOutput、self或indices是空指针。
@@ -61,13 +61,13 @@
 ## aclnnAdaptiveMaxPool2dBackward
 
 - **参数说明：**
-  
+
   - workspace（void \*， 入参）：在Device侧申请的workspace内存地址。
   - workspaceSize（uint64_t， 入参）：在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize获取。
   - executor（aclOpExecutor \*， 入参）：op执行器，包含了算子计算流程。
   - stream（aclrtStream， 入参）：指定执行任务的Stream。
 - **返回值：**
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

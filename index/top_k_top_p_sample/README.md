@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -116,7 +116,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   $$
   sortedLogits[b] = sort(logitsValue[b], descendant) \\
   probsSum[b]=sortedLogits[b].cumsum (dim=-1) \\
-  topPMask[b] = (probsSum[b] - sortedLogits[b])>topP[b] 
+  topPMask[b] = (probsSum[b] - sortedLogits[b])>topP[b]
   $$
 
   * 将需要过滤的位置设置为-Inf，得到sortedValue[b][v]：
@@ -150,7 +150,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
   * 从`probsOpt`中取出每个batch的最大元素，从`logitsIdx`中gather相应元素的输入索引，作为输出`logitsSelectIdx`：
-    
+
     $$
     logitsSelectIdx[b] = logitsIdx[b][argmax(probsOpt[b][:])]
     $$
@@ -247,7 +247,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * 输入shape限制：
     * logits、q、logitsTopKPselect的尺寸和维度必须完全一致，目前仅支持两维。
     * logits、topK、topP、logitsSelectIdx除最后一维以外的所有维度必须顺序和大小完全一致。目前logits只能是2维，topK、topP、logitsSelectIdx必须是1维非空Tensor。logits、topK、topP不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
-  * 其他限制：  
+  * 其他限制：
     * 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
     * 如果1024<topK[batch]<vocSize[batch]，则视为选择当前batch的全部有效元素并跳过topK采样。
     * 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。

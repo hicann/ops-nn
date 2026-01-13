@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -36,7 +36,7 @@
   <tbody>
     <tr>
       <td>x</td>
-      <td>输入</td>      
+      <td>输入</td>
       <td><ul><li>需要归一化的数据输入，对应公式中的`x`。</li><li>shape支持1-8维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -64,7 +64,7 @@
     </tr>
     <tr>
       <td>rstd</td>
-      <td>输出</td>      
+      <td>输出</td>
       <td><ul><li>x的标准差倒数，对应公式中`Rms(x)`的倒数。</li><li>shape支持1-8维度，shape与入参`x`的shape前几维保持一致，前几维指`x`的维度减去`gamma`的维度，表示不需要norm的维度。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>

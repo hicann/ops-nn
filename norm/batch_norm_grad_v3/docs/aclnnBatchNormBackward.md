@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -14,17 +14,17 @@
 - 计算公式：
 
   - 当training为true时：
-  
+
     $$
     gradInput = \frac{weight}{ n{\sqrt{saveVar + eps}} }(n * gradOut - \sum^m_{i=0}{gradOut} - \frac{x-saveMean}{ {\sqrt{saveVar + eps}} }\sum^m_{i=0}({gradOut} *\frac{x-saveMean}{ {\sqrt{saveVar + eps}} } ))
     $$
 
     $$
-    gradWeight = \sum^m_{i=0}[{gradOut} * (x - saveMean)] * \frac{1}{ {\sqrt{saveVar + eps}} } 
+    gradWeight = \sum^m_{i=0}[{gradOut} * (x - saveMean)] * \frac{1}{ {\sqrt{saveVar + eps}} }
     $$
 
     $$
-    gradBias = \sum^m_{i=0}{gradOut} 
+    gradBias = \sum^m_{i=0}{gradOut}
     $$
 
   - 当training为false时：
@@ -34,14 +34,14 @@
     $$
 
     $$
-    gradWeight = \sum^m_{i=0}[{gradOut} * (x - runningMean)] * \frac{1}{ {\sqrt{runningVar + eps}} } 
+    gradWeight = \sum^m_{i=0}[{gradOut} * (x - runningMean)] * \frac{1}{ {\sqrt{runningVar + eps}} }
     $$
 
     $$
-    gradBias = \sum^m_{i=0}{gradOut} 
+    gradBias = \sum^m_{i=0}{gradOut}
     $$
 
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchNormBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchNormBackward”接口执行计算。
@@ -228,7 +228,7 @@ aclnnStatus aclnnBatchNormBackward(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>     
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -252,14 +252,14 @@ aclnnStatus aclnnBatchNormBackward(
   </tbody>
   </table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`、`gradWeight`、`gradBias`的数据类型与`gradOut`的保持一致。
     - 参数`gradOut`、`input`、`gradInput`的数据格式不支持NHWC、NDHWC。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

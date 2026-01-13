@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -14,21 +14,21 @@
   * 输入dims的描述：N - 批次，C - 通道，D - 深度，W - 宽度，H - 高度。
   * 当D * H * W超过int32时，建议在模型尺寸上分割D轴。
 * 计算公式：
-  
+
   * output tensor中每个元素的计算公式：
-    
+
     $$
     out(N_i, C_j, d, h, w) = \max\limits_{{k\in[0,k_{D}-1],m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times d + k, stride[1]\times h + m, stride[2]\times w + n)
     $$
 
   * out tensor的shape推导公式（默认ceilMode=false，即向下取整）：
-    
+
     $$
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lfloor{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1, \lfloor{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rfloor + 1]
     $$
 
   * out tensor的shape推导公式（默认ceilMode=true，即向上取整）：
-    
+
     $$
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lceil{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rceil + 1,\lceil{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rceil + 1, \lceil{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rceil + 1]
     $$
@@ -43,7 +43,7 @@
 ## aclnnMaxPool3dWithArgmaxGetWorkspaceSize
 
 * **参数说明**：
-  
+
   * self(aclTensor*, 计算输入): 输入Tensor，Device侧aclTensor。数据类型仅支持FLOAT32、FLOAT16、BFLOAT16。shape支持4D、5D。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   * kernelSize(aclIntArray*, 计算输入): 表示最大池化的窗口大小，数组长度必须为1或3，且数组元素必须都大于0。
   * stride(aclIntArray*, 计算输入): 窗口移动的步长，数组长度必须为0，1或3，且数组元素必须都大于0。当数组的长度为0时，内部会取kernelSize的值作为strides。
@@ -55,7 +55,7 @@
   * workspaceSize(uint64_t \*, 出参): 返回需要在Device侧申请的workspace大小。
   * executor(aclOpExecutor \*\*, 出参): 返回op执行器，包含了算子计算流程。
 * **返回值**：
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ```
@@ -82,13 +82,13 @@
 ## aclnnMaxPool3dWithArgmax
 
 - **参数说明：**
-  
+
   * workspace(void \*, 入参): 在Device侧申请的workspace内存地址。
   * workspaceSize(uint64_t, 入参): 在Device侧申请的workspace大小，由第一段接口aclnnMaxPool3dWithArgmaxGetWorkspaceSize获取。
   * executor(aclOpExecutor \*, 入参): op执行器，包含了算子计算流程。
   * stream(aclrtStream, 入参): 指定执行任务的Stream。
 - **返回值：**
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

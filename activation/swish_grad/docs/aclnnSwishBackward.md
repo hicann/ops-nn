@@ -6,13 +6,13 @@
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR/Ascend 950DT</term> |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
-- 接口功能：aclnnSwishBackward是[aclnnSwish](../../swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。 
+- 接口功能：aclnnSwishBackward是[aclnnSwish](../../swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。
 - 计算公式：
-  
+
   - Swish函数公式
 
   $$
@@ -25,7 +25,7 @@
 
   s^\prime(x)= \beta s(x)+\sigma(\beta x)(1-\beta s(x))= \sigma(\beta x)*(1+\beta x(1-\sigma(\beta x)))
 
-  $$    
+  $$
 
   $$
   gradInput = gradOutput * s^\prime(x)
@@ -147,7 +147,7 @@ aclnnStatus aclnnSwishBackward(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -182,7 +182,7 @@ aclnnStatus aclnnSwishBackward(
       <td>gradOutput、self和gradInput的shape不同。</td>
     </tr>
   </tbody></table>
- 
+
 
 ## aclnnSwishBackward
 
@@ -342,7 +342,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwishBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) { 
+  if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }

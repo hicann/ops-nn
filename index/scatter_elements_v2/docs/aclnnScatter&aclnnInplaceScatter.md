@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 - 算子功能: 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。
@@ -46,20 +46,20 @@
 - **参数说明：**
 
   - self(aclTensor*, 计算输入)：公式中的`self`，Device侧的aclTensor。self的维度数量需要与index、src相同，shape支持0-8维。self的数据类型需要与src一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
   - dim(int64_t, 计算输入)：用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
 
   - index(aclTensor*, 计算输入)：公式中的`index`，Device侧的aclTensor。索引张量，数据类型支持INT32、INT64。index的维度数量需要与self、src相同，shape支持0-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
 
   - src(aclTensor*, 计算输入)：公式中的`src`，Device侧的aclTensor。src的维度数量需要与self、index相同，shape支持0-8维。src的数据类型需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
   - reduce(int64_t, 计算输入)：Host侧的整型，选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1)，(mul, 2)，(none, 0)。具体操作含义如下：
     0：表示替换操作，将src中的对应位置的值按照index替换到out中的对应位置。
     1：表示累加操作，将src中的对应位置的值按照index累加到out中的对应位置。
     2：表示累乘操作，将src中的对应位置的值按照index累乘到out的对应位置。
   - out(aclTensor*, 计算输出)：数据类型与self的数据类型一致。shape需要与self一致。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
-  
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
+
   - workspaceSize(uint64_t*，出参)：返回需要在Device侧申请的workspace大小。
 
   - executor(aclOpExecutor**，出参)：返回op执行器，包含了算子计算流程。
@@ -103,11 +103,11 @@
 - **参数说明：**
 
   - selfRef(aclTensor*, 计算输入|计算输出)：scatter的目标张量，公式中的`self`，Device侧的aclTensor。shape支持0-8维，且shape需要与index和src的维度数量相同。数据类型与src的数据类型一致。支持空tensor， 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。 
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
   - dim(int64_t, 计算输入)：指定沿哪个维度进行scatter操作，数据类型为INT64，host侧整型。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
-  - index(aclTensor*, 计算输入)：索引张量，用于指定src张量中散布到self张量中的位置，Device侧的aclTensor。数据类型支持INT32、INT64。index的维度数量需要与selfRef、src相同，shape支持0-8维。对于每一个维度d，需保证index.size(d) <= src.size(d)，如果d != dim, 需要保证index.size(d) <= selfRef.size(d)。支持空tensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。  
+  - index(aclTensor*, 计算输入)：索引张量，用于指定src张量中散布到self张量中的位置，Device侧的aclTensor。数据类型支持INT32、INT64。index的维度数量需要与selfRef、src相同，shape支持0-8维。对于每一个维度d，需保证index.size(d) <= src.size(d)，如果d != dim, 需要保证index.size(d) <= selfRef.size(d)。支持空tensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - src(aclTensor*, 计算输入)：公式中的`src`，Device侧的aclTensor。源张量，其中的值将根据index张量指定的位置散布到self中,src的维度数量需要与selfRef、index相同，shape支持0-8维。src的数据类型需要与selfRef一致。支持空tensor， 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。   
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。
   - reduce(int64_t, 计算输入)：选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。具体操作含义如下：
     0：表示替换操作，将src中的对应位置的值按照index替换到selfRef中的对应位置
     1：表示累加操作，将src中的对应位置的值按照index累加到selfRef中的对应位置

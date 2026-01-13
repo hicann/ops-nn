@@ -4,7 +4,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -19,7 +19,7 @@
 ## aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize
 
 - **参数说明：**
-  
+
   - gradOutput（aclTensor*，计算输入）：当前节点的梯度，Device侧的aclTensor。数据类型支持BFLOAT16、FLOAT16、FLOAT32，且数据类型与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持4维或5维，shape的每一维均为正数，且总维数与self一致。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND，且需要与self数据格式一致。
   - self(aclTensor\*, 计算输入)：输入张量，叶子节点。Device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持4维或5维，且shape的每一维均为正数。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND。
   - out(aclTensor\*, 计算输出)：输出张量，对应了输入叶子节点的梯度。Device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32；shape与self保持一致；[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND，且与self数据类型一致。
@@ -44,7 +44,7 @@
 ## aclnnAdaptiveAvgPool3dBackward
 
 - **参数说明：**
-  
+
   - workspace（void*，入参）：在Device侧申请的workspace内存地址。
   - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize获取。
   - executor（aclOpExecutor*，入参）：op执行器，包含了算子计算流程。

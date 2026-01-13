@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
   - 算子功能：将tensor中的每个元素根据dim这个维度，重复Tensor repeats中对应位置的相应次数。
@@ -31,7 +31,7 @@
 - **参数说明：**
 
   - self(aclTensor*, 计算输入)：Device侧的aclTensor，功能说明中待被数据复制的输入tensor。支持空tensor, 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND，shape支持1-8维。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
 
   - repeats(aclTensor*, 计算输入)：重复的次数。Device侧的aclTensor，数据类型支持INT32、INT64。repeats只能为0D / 1D tensor。如果为1D tensor，那么repeats的size必须为1或self的dim维度的size。支持空tensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
 
@@ -40,7 +40,7 @@
   - outputSize(int64_t, 计算输入)：dim维度再进行重复后的最终大小。Host侧的int64_t类型。如果repeats中有多个值，则outputSize值必须为repeats的求和。如果repeats只有一个元素时，则outputSize值必须为repeats * self的dim维度size。
 
   - out(aclTensor*, 计算输出)：Device侧的aclTensor，功能说明中数据复制完成的输出tensor。数据类型需要与self一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。如果repeats中有多个值，out的shape在dim维度下的size等于repeats中所有元素的和，如果repeats只有一个元素时，out的shape在dim维度下的size等于repeats * self的dim维度下的size。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、BFLOAT16、FLOAT类型。
 
   - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
 

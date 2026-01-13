@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -28,19 +28,19 @@ $$
 - **参数说明：**
 
   - self（aclTensor*，计算输入）：公式中的`self`，Device侧的aclTensor。shape支持0-8维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
   - ord（aclScalar*，计算输入）：表示范数的类型，公式中的`ord`，Device侧的aclScalar。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数值支持0.0、1.0、2.0、3.0，数据类型支持FLOAT。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数值支持0.0、1.0、2.0、3.0，数据类型支持FLOAT。
   - dims（aclIntArray*，计算输入）：指定计算范数的维度，Device侧的aclIntArray。支持[-N, N-1]，且dims中的元素不能重复，N为self的维度。默认值为None，为None时self会被展平后计算。数据类型支持INT64。
 
   - keepDims（bool，计算输入）：决定输出张量是否保留dims参数指定的轴，Host侧的bool常量。
 
   - dtype（aclDataType, 计算输入）：指定self计算时的数据类型，Host侧的aclDataType常量。需要与out的dtype一致。在计算前将self转换成dtype指定类型进行计算，dtype需要与self数据类型满足转换关系：当self数据类型为FLOAT时，dtype只能为FLOAT；self数据类型为FLOAT16时，dtype可以为FLOAT或FLOAT16；self数据类型为BFLOAT16时，dtype可以为FLOAT或BFLOAT16。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
   - out（aclTensor*，计算输出）：公式中的`out`，Device侧的aclTensor。shape支持0-8维。若keepDims为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepDims为false，reduce轴的维度不保留，其余维度shape需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
   - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
 
@@ -232,5 +232,5 @@ int main() {
   aclFinalize();
 
   return 0;
-} 
+}
 ```

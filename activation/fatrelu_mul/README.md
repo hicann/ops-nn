@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -16,18 +16,18 @@
 - 计算公式：
 
   给定输入张量input，最后一维的长度为2d，进行以下计算：
-  
+
   1. 将input分割为两部分：
 
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
-     
+
   2. 对x1应用Threshold激活函数，定义如下：
 
      $$
-     \text{Threshold}(x, \text{threshold}) = 
-        \begin{cases} 
+     \text{Threshold}(x, \text{threshold}) =
+        \begin{cases}
         0 & \text{if } x < \text{threshold} \\
         x & \text{if } x \geq \text{threshold}
         \end{cases}
@@ -38,7 +38,7 @@
      $$
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
-     
+
   3. 最终输出是x1和x2的逐元素乘积：
 
      $$

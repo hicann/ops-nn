@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -117,7 +117,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   $$
   sortedLogits[b] = sort(logitsValue[b], descendant) \\
   probsSum[b]=sortedLogits[b].cumsum (dim=-1) \\
-  topPMask[b] = (probsSum[b] - sortedLogits[b])>topP[b] 
+  topPMask[b] = (probsSum[b] - sortedLogits[b])>topP[b]
   $$
 
   * 将需要过滤的位置设置为-Inf，得到sortedValue[b][v]：
@@ -151,7 +151,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
   * 从`probsOpt`中取出每个batch的最大元素，从`logitsIdx`中gather相应元素的输入索引，作为输出`logitsSelectIdx`：
-    
+
     $$
     logitsSelectIdx[b] = logitsIdx[b][argmax(probsOpt[b][:])]
     $$
@@ -164,25 +164,25 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
 ```Cpp
 aclnnStatus aclnnTopKTopPSampleGetWorkspaceSize(
-  const aclTensor *logits, 
-  const aclTensor *topK, 
-  const aclTensor *topP, 
-  const aclTensor *q, 
-  double           eps, 
-  bool             isNeedLogits, 
-  int64_t          topKGuess, 
-  const aclTensor *logitsSelectIdx, 
-  const aclTensor *logitsTopKPSelect, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *logits,
+  const aclTensor *topK,
+  const aclTensor *topP,
+  const aclTensor *q,
+  double           eps,
+  bool             isNeedLogits,
+  int64_t          topKGuess,
+  const aclTensor *logitsSelectIdx,
+  const aclTensor *logitsTopKPSelect,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 
 ```
 
 ```Cpp
 aclnnStatus aclnnTopKTopPSample(
-  void           *workspace, 
-  uint64_t        workspaceSize, 
-  aclOpExecutor  *executor, 
+  void           *workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor  *executor,
   aclrtStream     stream)
 
 ```
@@ -327,7 +327,7 @@ aclnnStatus aclnnTopKTopPSample(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -363,7 +363,7 @@ aclnnStatus aclnnTopKTopPSample(
       <td>logits与topP的数据类型不一致。</td>
     </tr>
   </tbody></table>
-  
+
 ## aclnnTopKTopPSample
 
 - **参数说明：**

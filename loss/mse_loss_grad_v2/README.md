@@ -5,16 +5,16 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 算子功能：
-  
+
   均方误差函数[aclnnMseLoss](../mse_loss_v2/README.md)的反向传播。
 
 - 计算公式：
-  
+
   当`reduction`为`mean`时：
 
   $$
@@ -48,7 +48,7 @@
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>公式中的输入grad 
+      <td>公式中的输入grad
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -84,7 +84,7 @@
 
 ## 约束说明
 
-无  
+无
 
 ## 调用说明
 

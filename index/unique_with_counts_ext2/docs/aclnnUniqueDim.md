@@ -5,53 +5,53 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 算子功能：在某一dim轴上，对输入张量`self`做去重操作。
 - 示例：假设`self`为
-  
+
   $$
   \begin{bmatrix}
   \begin{bmatrix}
-   2 & 1 & 2 
+   2 & 1 & 2
   \end{bmatrix}\\
    \begin{bmatrix}
-   1 & 2 & 1 
+   1 & 2 & 1
   \end{bmatrix}\\
    \begin{bmatrix}
-   2 & 1 & 2 
+   2 & 1 & 2
   \end{bmatrix}\\
   \end{bmatrix}
   $$
-  
+
   `dim`为0，则`valueOut`为：
-  
+
   $$
   \begin{bmatrix}
   \begin{bmatrix}
-   2 & 1 & 2 
+   2 & 1 & 2
   \end{bmatrix}\\
    \begin{bmatrix}
-   1 & 2 & 1 
-  \end{bmatrix}\\ 
+   1 & 2 & 1
+  \end{bmatrix}\\
   \end{bmatrix}
   $$
-  
+
   `inverseOut`为：
-  
+
   $$
   \begin{bmatrix}
-   0 & 1 & 0 
+   0 & 1 & 0
   \end{bmatrix}
   $$
-  
+
   `countsOut`为：
-  
+
   $$
   \begin{bmatrix}
-   1 & 2  
+   1 & 2
   \end{bmatrix}
   $$
 
@@ -65,20 +65,20 @@
 ## aclnnUniqueDimGetWorkspaceSize
 
 - **参数说明**：
-  
+
   - self（aclTensor\*, 计算输入）：示例中的`self`，Device侧的aclTensor。shape支持0-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
   - sorted（bool, 计算输入）：表示返回的输出结果`valueOut`是否排序。
   - returnInverse（bool, 计算输入）：表示是否返回`self`在`dim`轴上各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。
   - dim（int64_t, 计算输入）：示例中的`dim`，Host侧的整型，指定做去重操作的维度，数据类型支持INT64，取值范围为\[-self.dim(), self.dim()\)。
   - valueOut（aclTensor\*, 计算输出）：示例中的`valueOut`，表示去重结果，Device侧的aclTensor。数据类型与`self`一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
   - inverseOut（aclTensor\*, 计算输出）：示例中的`inverseOut`，表示`self`在`dim`轴上各元素在valueOut中对应元素的位置下标，Device侧的aclTensor，数据类型支持INT64。
   - countsOut（aclTensor\*,计算输出）：示例中的`countsOut`，表示`valueOut`中的各元素在`self`中出现的次数，Device侧的aclTensor，数据类型支持INT64。
   - workspaceSize（uint64_t\*, 出参）：返回需要在Device侧申请的workspace大小。
   - executor（aclOpExecutor\**, 出参）：返回op执行器，包含了算子计算流程。
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   ```
@@ -94,13 +94,13 @@
 ## aclnnUniqueDim
 
 - **参数说明**：
-  
+
   - workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
   - workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnUniqueDimGetWorkspaceSize获取。
   - executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。
   - stream（aclrtStream, 入参）：指定执行任务的Stream。
 - **返回值**：
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -182,7 +182,7 @@ int main() {
   auto ret = Init(deviceId, &stream);
   // check根据自己的需要处理
   CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> valueShape = {3,2};

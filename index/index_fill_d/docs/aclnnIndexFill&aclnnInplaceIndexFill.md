@@ -1,6 +1,6 @@
 # aclnnIndexFill&aclnnInplaceIndexFill
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/index_fill_d)
+
 
 ## 产品支持情况
 
@@ -8,7 +8,7 @@
 | :----------------------------------------------------------- | :------: |
 | Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -16,25 +16,25 @@
 - 示例：输入self为：
 
       [[1, 2, 3],
-      
+
       [4, 5, 6],
-      
+
       [7, 8, 9]]
 
   若dim = 0，index = [0, 2]， value = 0时，算子的计算结果为：
 
       [[0, 0, 0],
-      
+
       [4, 5, 6],
-      
+
       [0, 0, 0]]
 
   若dim = 1，index = [0, 2]， value = 0时，算子的计算结果为：
 
       [[0, 2, 0],
-      
+
       [0, 5, 0],
-      
+
       [0, 8, 0]]
 
 ## 函数原型
@@ -509,7 +509,7 @@ int main() {
   std::vector<int64_t> outShape = selfShape;
   void* selfDeviceAddr = nullptr;
   void* indexDeviceAddr = nullptr;
-  void* outDeviceAddr = nullptr; 
+  void* outDeviceAddr = nullptr;
   aclTensor* self = nullptr;
   aclTensor* index = nullptr;
   aclScalar* value = nullptr;

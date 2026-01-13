@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -202,7 +202,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
     </tbody>
     </table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：参数`totalSum`、`totalSquareSum`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：参数`totalSum`、`totalSquareSum`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
 
 - **返回值：**
 
@@ -362,13 +362,13 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> totalSumShape = {1, 2}; 
-  std::vector<int64_t> totalSquareSumShape = {1, 2}; 
-  std::vector<int64_t> sampleCountShape = {1}; 
-  std::vector<int64_t> meanShape = {2}; 
-  std::vector<int64_t> varShape = {2}; 
-  std::vector<int64_t> batchMeanShape = {2}; 
-  std::vector<int64_t> batchInvstdShape = {2}; 
+  std::vector<int64_t> totalSumShape = {1, 2};
+  std::vector<int64_t> totalSquareSumShape = {1, 2};
+  std::vector<int64_t> sampleCountShape = {1};
+  std::vector<int64_t> meanShape = {2};
+  std::vector<int64_t> varShape = {2};
+  std::vector<int64_t> batchMeanShape = {2};
+  std::vector<int64_t> batchInvstdShape = {2};
   void* totalSumDeviceAddr = nullptr;
   void* totalSquareSumDeviceAddr = nullptr;
   void* sampleCountDeviceAddr = nullptr;
@@ -383,12 +383,12 @@ int main() {
   aclTensor* var = nullptr;
   aclTensor* batchMean = nullptr;
   aclTensor* batchInvstd = nullptr;
-  std::vector<float> totalSumData = {300, 400}; 
-  std::vector<float> totalSquareSumData = {300, 400}; 
+  std::vector<float> totalSumData = {300, 400};
+  std::vector<float> totalSquareSumData = {300, 400};
   std::vector<int32_t> sampleCountData = {400};
-  std::vector<float> meanData = {400, 400}; 
-  std::vector<float> varData = {400, 400}; 
-  std::vector<float> batchMeanData = {0, 0}; 
+  std::vector<float> meanData = {400, 400};
+  std::vector<float> varData = {400, 400};
+  std::vector<float> batchMeanData = {0, 0};
   std::vector<float> batchInvstdData = {0, 0};
   float momentum = 1e-1;
   float eps = 1e-5;

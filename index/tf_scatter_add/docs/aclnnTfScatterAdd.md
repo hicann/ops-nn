@@ -5,14 +5,14 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 算子功能：实现兼容tf.compat.v1.scatter_add和tf.compat.v1.scatter_nd_add的功能，将tensor updates中的值按指定的索引tensor indices加到tensor varRef的切片上。若有多于一个updates值被填入到varRef的同一个切片，那么这些值将会在这一切片上进行累加。规则如下：
 
 $$
-varRef[indices[i,...,j],...] = varRef[indices[i,...,j],...] + updates 
+varRef[indices[i,...,j],...] = varRef[indices[i,...,j],...] + updates
 $$
 
 或者

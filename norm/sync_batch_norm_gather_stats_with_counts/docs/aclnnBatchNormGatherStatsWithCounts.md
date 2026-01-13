@@ -5,12 +5,12 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 接口功能：
-  
+
   收集所有device的均值和方差，更新全局的均值和标准差的倒数。BatchNorm的性能和BatchSize相关，BatchSize越大，BatchNorm的统计量也会越准。然而像检测这样的任务，占用显存较高，一张显卡往往只使用较少的图片，比如两张来训练，这就导致BatchNorm的表现变差。一个解决方式就是SyncBatchNorm，所有卡共享同一个BatchNorm，得到全局的统计量。
 
   aclnnBatchNormGatherStatsWithCounts计算时，依赖[aclnnBatchNormStats](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/API/aolapi/context/aclnnBatchNormStats.md)计算单卡数据的均值和标准差的倒数。
@@ -21,17 +21,17 @@
   $$
   y = \frac{(x-E[x])}{\sqrt{Var(x)+ eps}} * γ + β
   $$
-  
+
   其中，runningMean和runningVar更新公式如下：
-  
+
   $$
       runningMean=runningMean*(1-momentum) + E[x]*momentum
   $$
-  
+
   $$
       runningVar=runningVar*(1-momentum) + E[x]*momentum
   $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchNormGatherStatsWithCounts”接口执行计算。
@@ -185,7 +185,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>      
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -212,7 +212,7 @@ aclnnStatus aclnnBatchNormGatherStatsWithCounts(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

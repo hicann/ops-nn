@@ -5,31 +5,31 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 接口功能：
-  
+
   主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。计算结果如下：
   - 计算损失函数l对缩放权重γ的梯度($\frac{\partial l}{\partial γ}$)。
  	- 计算损失函数l对偏移量β的梯度($\frac{\partial l}{\partial β}$)。
  	- 以损失函数l相对于输出(y<sub>i</sub>)的偏差d<sub>yi</sub>推导计算$\frac{\partial l}{\partial x_i}$所需的中间量sumDy和sumDyXmu。其中($\frac{\partial l}{\partial x_i}$)为损失函数l相对于对应层各输入(x<sub>i</sub>)的梯度。
-  
+
 - 计算公式：
-  
+
   $$
   gradWeight = \frac{\partial l}{\partial γ} = \sum^m_{i=0} \frac{\partial l}{\partial y_i} \cdot \hat{(x_i)} = \frac{1}{{\sqrt{σ^2_B + eps}}} \cdot \sum^m_{i=0} \frac{\partial l}  {\partial y_i} \cdot (x_i-μ_B)
   $$
-  
+
   $$
   gradBias = \frac{\partial l}{\partial β} = \sum^m_{i=0} \frac{\partial l}{\partial y_i}
   $$
-  
+
   $$
   sumDy = sum(l, y_i) = \displaystyle \sum^m_{i=0} \frac{\partial l}{\partial y_i}
   $$
-  
+
   $$
   sumDyXmu = sum(l, y_i, x_i, μ_B) = \displaystyle \sum^m_{i=0} \frac{\partial l}{\partial y_i} \cdot (x_i-μ_B)
   $$
@@ -209,7 +209,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-    </tr>     
+    </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -236,7 +236,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

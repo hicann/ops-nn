@@ -5,18 +5,18 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 - 接口功能：将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。该算子是一个元素级别的BatchNorm操作函数，用于在某些特定场景下对输入数据进行归一化处理。与[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)相比，aclnnBatchNormElemt可能会针对特定的硬件或优化需求进行调整。
 
 - 计算公式：
-  
+
   $$
   y = \frac{(x-E[x])}{\sqrt{Var(x)+ ε}} * weight + bias
   $$
 
   标准差与方差的关系如下:
-  
+
   $$
   \frac{1}{S} = \frac{1}{\sqrt{Var(x) + eps}}
   $$
@@ -169,7 +169,7 @@ aclnnStatus aclnnBatchNormElemt(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

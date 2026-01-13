@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -21,26 +21,26 @@ $$
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaskedSoftmaxWithRelPosBias”接口执行计算。
 ```Cpp
 aclnnStatus aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *attenMaskOptional, 
-  const aclTensor *relativePosBias, 
-  double           scaleValue, 
-  int64_t          innerPrecisionMode, 
-  const aclTensor *out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *attenMaskOptional,
+  const aclTensor *relativePosBias,
+  double           scaleValue,
+  int64_t          innerPrecisionMode,
+  const aclTensor *out,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
 ```Cpp
 aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 ## aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1494px"><colgroup>
   <col style="width: 146px">
   <col style="width: 110px">
@@ -210,8 +210,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 - 确定性计算：
   - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
 
-- 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize 表示S2对齐32Byte后的结果。 
-  
+- 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize 表示S2对齐32Byte后的结果。
+
   - 对于attenMaskOptional存在的情况：
     ```
     对于FLOAT类型，公式如下：
@@ -231,14 +231,14 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     dtypeSize = 4；
     xSize = s2AlignedSize * dtypeSize;
     softMaskMinTmpSize = 288；
-    minComputeSize = xSize * 6 + softMaskMinTmpSize；  
+    minComputeSize = xSize * 6 + softMaskMinTmpSize；
     对于FLOAT16类型，公式如下：
     dtypeSize = 2；
     xSize = s2AlignedSize * dtypeSize;
     softMaskMinTmpSize = 288；
     minComputeSize = xSize* 12 + softMaskMinTmpSize;
     ```
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：如果为BFLOAT16类型，其与FLOAT16类型的公式保持一致。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：如果为BFLOAT16类型，其与FLOAT16类型的公式保持一致。
 
 ## 调用示例
 

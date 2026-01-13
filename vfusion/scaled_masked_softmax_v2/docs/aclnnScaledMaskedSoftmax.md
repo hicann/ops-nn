@@ -5,13 +5,13 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 接口功能：将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。
 - 计算公式：
-  
+
   $$
   y = Softmax((scale * x) * mask, dim = -1)
   $$
@@ -26,19 +26,19 @@
 
 ```Cpp
 aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(
-    const aclTensor* x, 
-    const aclTensor* mask, 
-    double scale, 
-    bool fixTriuMask, 
-    aclTensor*       y, 
-    uint64_t*        workspaceSize, 
+    const aclTensor* x,
+    const aclTensor* mask,
+    double scale,
+    bool fixTriuMask,
+    aclTensor*       y,
+    uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
 ```Cpp
 aclnnStatus aclnnScaledMaskedSoftmax(
-    void*          workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor* executor, 
+    void*          workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor* executor,
     aclrtStream    stream)
 ```
 
@@ -220,7 +220,7 @@ aclnnStatus aclnnScaledMaskedSoftmax(
   </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

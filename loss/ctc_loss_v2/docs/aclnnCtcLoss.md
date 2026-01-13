@@ -6,13 +6,13 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 接口功能：计算连接时序分类损失值。
 
-- 计算公式： 
+- 计算公式：
   定义$y_{k}^{t}$表示在时刻$t$时真实字符为$k$的概率。（一般地，$y_{k}^{t}$是经过softmax之后的输出矩阵中的一个元素）。将字符集$L^{'}$可以构成的所有序列的集合称为$L^{'T}$，将$L^{'T}$中的任意一个序列称为路径，并标记为$π$。$π$的分布为公式(1)：
 
   $$
@@ -32,7 +32,7 @@
   $$
 
   当zeroInfinity为True时
-  
+
   $$
   h(x)=\begin{cases}0,&h(x) == Inf \text{ or } h(x) == -Inf \\h(x),&\text { else }\end{cases}
   $$
@@ -195,7 +195,7 @@ aclnnStatus aclnnCtcLoss(
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
@@ -280,8 +280,8 @@ aclnnStatus aclnnCtcLoss(
   - `target_lengths`中的元素要求小于等于`input_lengths`中对应的元素。
 
   若不满足前三条值域约束，CPU/GPU可能存在越界行为，导致negLogLikelihoodOut和logAlphaOut的计算结果可能与CPU/GPU存在差异。若不满足第四条值域约束，logAlphaOut在对应batch上的计算结果与CPU/GPU存在差异。
-  
-- 确定性计算： 
+
+- 确定性计算：
   - aclnnCtcLoss默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例

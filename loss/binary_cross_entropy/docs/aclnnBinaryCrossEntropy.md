@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -33,12 +33,12 @@
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyGetWorkspaceSize(
-  const aclTensor* self, 
-  const aclTensor* target, 
-  const aclTensor* weight, 
-  int64_t          reduction, 
-  aclTensor*       out, 
-  uint64_t*        workspaceSize, 
+  const aclTensor* self,
+  const aclTensor* target,
+  const aclTensor* weight,
+  int64_t          reduction,
+  aclTensor*       out,
+  uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
 
@@ -61,7 +61,7 @@ aclnnStatus aclnnBinaryCrossEntropy(void *workspace,
     | out | 输出 | 表示计算输出，公式中的$\ell(self,target)$。 | 如果reduction = None，shape与`self`一致，其他情况shape为[1]|  与`self`一致|ND|-|-|
     | workspaceSize | 输出 | 返回需要在Device侧申请的workspace大小。 | -|  -|-|-|-|
     | executor | 输出 | 返回op执行器，包含了算子计算流程。 | -|  -|-|-|-|
-  
+
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -140,8 +140,8 @@ aclnnStatus aclnnBinaryCrossEntropy(void *workspace,
 
 ## 约束说明
 
-- 确定性计算： 
-  - aclnnBinaryCrossEntropy默认确定性实现。  
+- 确定性计算：
+  - aclnnBinaryCrossEntropy默认确定性实现。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

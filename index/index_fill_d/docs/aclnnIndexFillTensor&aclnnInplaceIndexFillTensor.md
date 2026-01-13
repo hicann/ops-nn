@@ -6,7 +6,7 @@
 | :----------------------------------------------------------- | :------: |
 | Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -15,23 +15,23 @@
 输入self为:
 
   &emsp;&emsp;[[1, 2, 3],
-  
+
   &emsp;&emsp;&nbsp;[4, 5, 6],
-  
+
   &emsp;&emsp;&nbsp;[7, 8, 9]]
-  
+
   若dim = 0，index = [0, 2]，value = 0时，算子的计算结果为：
 
     &emsp;&emsp;[[0, 0, 0],
-    
+
     &emsp;&emsp;&nbsp;[4, 5, 6],
 
     &emsp;&emsp;&nbsp;[0, 0, 0]]
-    
+
   若dim = 1，index = [0, 2]，value = 0时，算子的计算结果为：
 
     &emsp;&emsp;[[0, 2, 0],
-    
+
     &emsp;&emsp;&nbsp;[0, 5, 0],
 
     &emsp;&emsp;&nbsp;[0, 8, 0]]
@@ -41,7 +41,7 @@
 - aclnnIndexFillTensor和aclnnInplaceIndexFillTensor实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
 
   - aclnnIndexFillTensor：需新建一个输出张量对象存储计算结果。
-  - aclnnInplaceIndexFillTensor：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。 
+  - aclnnInplaceIndexFillTensor：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnIndexFillTensorGetWorkspaceSize”或者“aclnnInplaceIndexFillTensorGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnIndexFillTensor”或者“aclnnInplaceIndexFillTensor”接口执行计算。
 
@@ -261,7 +261,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
       </tr>
       </tbody>
     </table>
-  
+
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -353,7 +353,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
         <td>-</td>
       </tr>
     </tbody></table>
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -517,7 +517,7 @@ int main() {
   std::vector<int64_t> selfShape = {3, 3};
   std::vector<int64_t> outShape = selfShape;
   void* selfDeviceAddr = nullptr;
-  void* outDeviceAddr = nullptr; 
+  void* outDeviceAddr = nullptr;
   aclTensor* self = nullptr;
   aclScalar* value = nullptr;
   aclIntArray* index = nullptr;

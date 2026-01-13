@@ -5,27 +5,27 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
 - 算子功能：将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。
 - 计算公式：
-  
+
   1.反量化计算：
-  
+
   $$
   x' = (x - inputZeroPoint) * inputScale
   $$
-  
+
   2.归一化计算：
-  
+
   $$
   y =\frac{x' - mean}{\sqrt{var + ϵ}} * γ + β
   $$
-  
+
   3.量化计算：
-  
+
   $$
   out = round(\frac{y}{outputScale} + outputZeroPoint)
   $$

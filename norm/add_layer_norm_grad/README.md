@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -61,17 +61,17 @@
       $$
       rstd=\frac {1}{\sqrt{\operatorname{Var}(x)}}
       $$
-    
+
     - $\frac{{\rm d}\hat{x_j}}{{\rm d}x_i}$：
-    
+
       $$
       \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x_i)}}-\frac{1}{\operatorname{Var}(x_i)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}
       $$
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
- 
+
     - $\frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}$：
-    
+
       $$
       \frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}=\frac{1}{D}
       $$
@@ -79,7 +79,7 @@
       其中，D为x中参加均值计算的数量。
 
     - $\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}$：
-      
+
       $$
       \frac{\rm d \operatorname{Var}(x_i)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}  (x_i)}}(x_i-\operatorname{E}(x))
       $$

@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -22,9 +22,9 @@
 
 - **参数说明：**
   * gradOutput(aclTensor*, 计算输入): 反向传播过程中上一步输出的梯度，Device侧aclTensor。和正向的输出shape一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * self(aclTensor*, 计算输入): 正向的输入数据，Device侧aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW，与gradOutput一致。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * indices(aclTensor \*, 计算输入): 正向输出的索引，是Device侧aclTensor。最大值在求mask的kernel位置的bit值组成的Tensor。数据类型仅支持INT8。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW，与self保持一致。
   * kernelSize(aclIntArray*, 计算输入): 池化操作中使用的滑动窗口大小，Host侧的aclIntArray，长度仅支持1、2。
     - 当kernelSize中元素个数为1时，窗口大小为（kernelSize[0], kernelSize[0]）。
@@ -37,7 +37,7 @@
   * dilation(aclIntArray*, 计算输入): 控制窗口中元素的步幅，Host侧的aclIntArray，长度仅支持1、2，值仅支持1。
   * ceilMode(const bool, 计算输入): 控制是否开启池化操作的输出大小为向上取整模式，Host侧的bool。为True时表示计算输出形状时用向上取整的方法；为False时即向下取整。
   * gradInput(aclTensor \*, 计算输出): 反向传播输出的梯度，是Device侧aclTensor。shape与self保持一致。[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW，与self保持一致。
-    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
+    * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16、BFLOAT16。
   * workspaceSize(uint64_t \*, 出参): 返回需要在Device侧申请的workspace大小。
   * executor(aclOpExecutor \*\*, 出参): 返回op执行器，包含了算子计算流程。
 

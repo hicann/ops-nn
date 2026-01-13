@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -21,10 +21,10 @@
 ## aclnnGroupNormSwishGradGetWorkspaceSize
 
 - **参数说明：**
-  
+
   * dy (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，反向计算的梯度，维度需大于一维，元素个数需要等于N\*C\*HxW，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
-  * mean (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第二个输出，表示input分组后每个组的均值，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。 
+  * mean (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第二个输出，表示input分组后每个组的均值，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
   * rstd (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第三个输出，表示input分组后每个组的标准差倒数，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
 
@@ -55,7 +55,7 @@
   * executor (aclOpExecutor\**, 出参)：返回op执行器，包含算子计算流程。
 
 - **返回值：**
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ```
@@ -78,13 +78,13 @@
 ## aclnnGroupNormSwishGrad
 
 - **参数说明：**
-  
+
   * workspace(void*, 入参)：在Device侧申请的workspace内存地址。
   * workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGradGetWorkspaceSize获取。
   * executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
   * stream(aclrtStream, 入参)：指定执行任务的Stream。
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

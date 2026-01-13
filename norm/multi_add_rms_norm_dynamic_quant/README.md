@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -15,7 +15,7 @@
   $$
   x_{1}=x_{1a}+x_{1bOptional}+x_{1cOptional}+x_{1dOptional}+x_{1eOptional}  (x_{1}为长度为1到5的listOfTensor)
   $$
-  
+
   $$
   x=x_{1}+x_{2}
   $$
@@ -67,7 +67,7 @@
   $$
 
   其中row\_max代表每行求最大值。
-  
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

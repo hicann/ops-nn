@@ -5,13 +5,13 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
 - 算子功能：计算连接时序分类损失值。
 
-- 计算表达式： 
+- 计算表达式：
   定义$y_{k}^{t}$表示在时刻$t$时真实字符为$k$的概率。（一般地，$y_{k}^{t}$是经过softmax之后的输出矩阵中的一个元素）。将字符集$L^{'}$可以构成的所有序列的集合称为$L^{'T}$，将$L^{'T}$中的任意一个序列称为路径，并标记为$π$。$π$的分布为公式(1)：
 
   $$
@@ -31,7 +31,7 @@
   $$
 
   当zeroInfinity为True时
-  
+
   $$
   h(x)=\begin{cases}0,&h(x) == Inf \text{ or } h(x) == -Inf \\h(x),&\text { else }\end{cases}
   $$
@@ -48,7 +48,7 @@
 - **参数说明：**
 
   - logProbs(aclTensor*, 计算输入): 表示输出的对数概率，公式中的`y`，Device侧的aclTensor。shape为($T, N, C$)或($T, C$)，$T$为输入长度，$N$为批处理大小，$C$为类别数，必须大于0，包括空白标识。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、BFLOAT16。
   - targets(aclTensor*, 计算输入): 表示包含目标序列的标签，公式中的`π`，Device侧的aclTensor。数据类型支持INT64、INT32、BOOL、FLOAT、FLOAT16。当shape为($N, S$)，$S$为不小于$targetLengths$中的最大值的值；或者shape为(SUM($targetLengths$))，假设$targets$是未填充的而且在1维内级联的。当logProbs为2维时，N=1。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - inputLengths(aclIntArray*, 计算输入)：表示输入序列的实际长度，公式中的`T`为inputLengths中的元素，Host侧的aclIntArray。数组长度为$N$，数组中的每个值必须小于等于$T$。当logProbs为2维时，N=1。
   - targetLengths(aclIntArray*, 计算输入)：表示目标序列的实际长度，公式中的`l`的长度为targetLengths中的元素，Host侧的aclIntArray。数组长度为$N$，当targets的shape为($N, S$)时，数组中的每个值必须小于等于$S$。当logProbs为2维时，N=1。
@@ -56,7 +56,7 @@
   - zeroInfinity(bool, 计算输入)：表示是否将无限损耗和相关梯度归零，公式中的`zeroInfinity`，Host侧的bool类型。
   - negLogLikelihoodOut(aclTensor*, 计算输出): 表示输出的损失值，公式中的`h`，Device侧的aclTensor。数据类型必须和logProbs一致。当logProbs为3维时，negLogLikelihoodOut的shape为($N$)的Tensor，否则negLogLikelihoodOut为0维Tensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
   - logAlphaOut(aclTensor*, 计算输出): 表示输入到目标的可能跟踪的概率，公式中的`p(l|x)`，Device侧的aclTensor。数据类型必须和logProbs一致，当logProbs为2维时，N=1。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：shape为($N, T, (2*max(targetLengths)+8)/8*8$)
   - workspaceSize(uint64_t*, 出参): 返回需要在Device侧申请的workspace大小。
   - executor(aclOpExecutor**, 出参): 返回op执行器，包含了算子计算流程。
 
@@ -94,12 +94,12 @@
 
   若不满足前三条值域约束，CPU/GPU可能存在越界行为，导致negLogLikelihoodOut和logAlphaOut的计算结果可能与CPU/GPU存在差异。若不满足第四条值域约束，logAlphaOut在对应batch上的计算结果与CPU/GPU存在差异。
 
-- 确定性计算： 
+- 确定性计算：
   - aclnnCtcLoss默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```Cpp
   #include <iostream>

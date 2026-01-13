@@ -5,12 +5,12 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 - 算子功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
-- 计算公式：  
+- 计算公式：
 
   对给定的输入张量 x ，其维度为[a,b,c,d,e,f,g…]，aclnnClippedSwiglu对其进行以下计算：
 
@@ -59,15 +59,15 @@
      $$
      A = A.clamp(min=None, max=limit)
      $$
-     
+
      $$
      B = B.clamp(min=-limit, max=limit)
      $$
-     
+
      $$
      y\_glu = A * sigmoid(alpha * A)
      $$
-     
+
      $$
      y = y\_glu * (B + bias)
      $$
@@ -78,22 +78,22 @@
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnClippedSwigluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnClippedSwiglu”接口执行计算。
 ```Cpp
 aclnnStatus aclnnClippedSwigluGetWorkspaceSize(
-    const aclTensor *x, 
-    const aclTensor *groupIndexOptional, 
-    int64_t          dim, 
-    double           alpha, 
-    double           limit, 
-    double           bias, 
-    bool             interleaved, 
-    const aclTensor *out, 
-    uint64_t        *workspaceSize, 
+    const aclTensor *x,
+    const aclTensor *groupIndexOptional,
+    int64_t          dim,
+    double           alpha,
+    double           limit,
+    double           bias,
+    bool             interleaved,
+    const aclTensor *out,
+    uint64_t        *workspaceSize,
     aclOpExecutor   **executor)
 ```
 ```Cpp
 aclnnStatus aclnnClippedSwiglu(
-    void          *workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 ## aclnnClippedSwigluGetWorkspaceSize

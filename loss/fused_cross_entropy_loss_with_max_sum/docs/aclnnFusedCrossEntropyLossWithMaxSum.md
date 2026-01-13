@@ -5,21 +5,21 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
-## 功能说明 
+## 功能说明
 
 - 算子功能：本算子是词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。
 - 计算公式：
 
-          $$ 
+          $$
           lossOut = log(sum_exp_logits) - predicted_logits
           $$
 
           $$
           softMaxOutOptional = exp(vocab_parallel_logits -logits_max.unsqueeze(dim = -1)) \ sum_exp_logits.unsqueeze(dim = -1)
           $$
-          
+
 
 ## 函数原型
 
@@ -35,13 +35,13 @@
   - logitsMax(aclTensor*，计算输入)：matmul计算后各行的最大值，公式中的logitsMax。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，数据类型支持FLOAT。
 
   - sumExpLogits(aclTensor*，计算输入)：matmul计算结果与其各行的最大值作差后exp的结果。公式中的sumExpLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，shape与logitsMax一致，数据类型支持FLOAT。
-  
+
   - predictedLogits(aclTensor*，计算输入)：表示matmul计算结果与其各行的最大值作差后maskedTargetOut筛选后的结果。公式中的predictedLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持1维，shape与logitsMax一致，数据类型支持FLOAT。
 
   - labelSmoothing(float，计算输入)：标签平滑系数，用于缓解过拟合，当前只支持0。
 
   - inputOptional(aclTensor*，计算输入)：matmul输入左矩阵。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当前只支持输入空指针。
-  
+
   - weightOptional(aclTensor*，计算输入)：matmul输入右矩阵。权重矩阵。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当前只支持输入空指针。
 
   - vocabParallelLogitsOptional(aclTensor*，计算输入)：matmul计算结果。公式中的vocabParallelLogits。Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，数据维度支持2维，shape第1维需要与logitsMax第1维一致。数据类型支持FLOAT16，BFLOAT16。
@@ -85,7 +85,7 @@
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
   - aclnnFusedCrossEntropyLossWithMaxSum默认确定性实现。
 
 ## 调用示例
@@ -226,7 +226,7 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // 调用aclnnFusedCrossEntropyLossWithMaxSum第一段接口
-  ret = aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(logitsMax, sumExpLogits, predictedLogits, labelSmoothing, input, weight, 
+  ret = aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(logitsMax, sumExpLogits, predictedLogits, labelSmoothing, input, weight,
                                                           vocabParallelLogitsOptional, lossOut, softMaxOutOptional, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存

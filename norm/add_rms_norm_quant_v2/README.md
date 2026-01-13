@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能描述
 
@@ -179,18 +179,18 @@
 
 - **边界值场景说明**
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
 
 - **维度的边界说明**
 
   参数`x1`、`x2`、`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`y1`、`y2`、`x`、`resOut`的shape中每一维大小都不大于INT32的最大值2147483647。
-  
+
 - **数据格式说明**
 
     所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
 
 - **各产品型号支持数据类型说明**
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
      | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2数据类型 | zero_points1数据类型 | zero_points2数据类型 | bias数据类型 | y1数据类型 | y2数据类型 | x数据类型 | resOut数据类型 |
      | - | - | - | - | - | - | - | - | - | - | - | - |

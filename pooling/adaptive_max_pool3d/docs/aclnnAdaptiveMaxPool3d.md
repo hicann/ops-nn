@@ -4,7 +4,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明
 
@@ -12,35 +12,35 @@
 
 - 计算公式：
   outputOut tensor中对于DHW轴上每个位置为$(l,m,n)$的元素来说，其计算公式为：
-  
+
   $$
   D^{l}_{left} = floor((l*D)/D_o)
   $$
-  
+
   $$
   D^{l}_{right} = ceil(((l+1)*D)/D_o)
   $$
-  
+
   $$
   H^{m}_{left} = floor((m*H)/H_o)
   $$
-  
+
   $$
   H^{m}_{right} = ceil(((m+1)*H)/H_o)
   $$
-  
+
   $$
   W^{n}_{left} = floor((n*W)/W_o)
   $$
-  
+
   $$
   W^{n}_{right} = ceil(((n+1)*W)/W_o)
   $$
-  
+
   $$
   outputOut(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{max} input(N,C,i,j,k)
   $$
-  
+
   $$
   indicesOut(N,C,l,m,n)=\underset {i \in [D^{l}_{left}, D^{l}_{right}],j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{argmax} input(N,C,i,j,k)
   $$
@@ -201,7 +201,7 @@ aclnnStatus aclnnAdaptiveMaxPool3d(
 ## aclnnAdaptiveMaxPool3d
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
     <col style="width: 173px">
     <col style="width: 133px">
@@ -332,9 +332,9 @@ int main() {
   aclTensor* self = nullptr;
   aclTensor* out = nullptr;
   aclTensor* indices = nullptr;
-  std::vector<float> selfHostData = {0, 1, 2, 3, 4.1, 5, 6, 7, 
+  std::vector<float> selfHostData = {0, 1, 2, 3, 4.1, 5, 6, 7,
                                      8, 9, 10, 11, 12, 13, 14, 15};
-  std::vector<float> outHostData = {0, 0, 0, 0.0}; 
+  std::vector<float> outHostData = {0, 0, 0, 0.0};
   std::vector<int64_t> indicesHostData = {0, 0, 0, 0};
 
   //创建self aclTensor
@@ -383,7 +383,7 @@ int main() {
   ret = aclrtMemcpy(indicesData.data(), indicesData.size() * sizeof(indicesData[0]), indDeviceAddr,
                     size * sizeof(indicesData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  
+
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("out[%ld] is: %f\n", i, outData[i]);
   }

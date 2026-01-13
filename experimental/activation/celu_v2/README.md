@@ -3,7 +3,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------- |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> | √        |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √        |
 ## 功能说明
 
 - 算子功能：激活函数Celu（Continuously Differentiable Exponential Linear Units）。
@@ -19,7 +19,7 @@
 | alpha   | 属性           | CELU公式中的$\alpha$值，默认值为1.0。 | FLOAT    | -        |
 | z    | 输出           | 输出张量，shape和dtype与输入x一致。 | 同self   | ND       |
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持FLOAT、FLOAT16。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 ## 约束说明
 

@@ -1,6 +1,6 @@
 # aclnnNonzero
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/non_zero)
+
 
 ## 产品支持情况
 

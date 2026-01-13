@@ -1,6 +1,6 @@
 # aclnnNLLLoss2dBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/nll_loss_grad)
+
 
 ## 产品支持情况
 
@@ -272,7 +272,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
     - aclnnNLLLoss2dBackward默认确定性实现。
 
 ## 调用示例
