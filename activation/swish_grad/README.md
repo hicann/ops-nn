@@ -5,6 +5,8 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 | <term>Ascend 950PR/Ascend 950DT</term> |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
 ## 功能说明
 
@@ -37,70 +39,58 @@
 
 ## 参数说明
 
- <table style="undefined;table-layout: fixed; width: 1380px"><colgroup>
-  <col style="width: 171px">
-  <col style="width: 115px">
-  <col style="width: 200px">
-  <col style="width: 230px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
-  <col style="width: 145px">
+  <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>
       <th>参数名</th>
-      <th>输入/输出</th>
+      <th>输入/输出/属性</th>
       <th>描述</th>
-      <th>使用说明</th>
       <th>数据类型</th>
       <th>数据格式</th>
-      <th>维度(shape)</th>
-      <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradOutput</td>
+      <td>grad</td>
       <td>输入</td>
       <td>表示Swish激活函数正向输出的梯度，公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
     </tr>
     <tr>
-      <td>self</td>
+      <td>x</td>
       <td>输入</td>
       <td>表示用于计算激活函数的张量，公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
-    </tr>
-      <tr>
-      <td>betaOptional</td>
-      <td>输入</td>
-      <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
-      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
     </tr>
     <tr>
-      <td>gradInput</td>
-      <td>输出</td>
-      <td><ul><li>backward计算的输出，为Swish正向输入的梯度值，即对输入进行求导后的结果。</li><li>公式中的gradInput。</li></ul></td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的shape一致。</li><li>gradOutput、self与gradInput的数据类型一致。</li></ul></td>
+      <td>y</td>
+      <td>输入</td>
+      <td>表示Swish激活函数的正向输出结果，公式中的σ(x)。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
     </tr>
-  </tbody>
-  </table>
+    <tr>
+      <td>grad_x</td>
+      <td>输出</td>
+      <td>表示Swish正向输入的梯度值，即对输入进行求导后的结果。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>scale</td>
+      <td>可选属性</td>
+      <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
+      <td>FLOAT32</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 无
