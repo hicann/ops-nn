@@ -313,7 +313,7 @@ bool QuantBatchMatmulV4PergroupTiling::CheckInputsShape(
     OP_TILING_CHECK(
         x2ScaleInner != n || x2ScaleOuter != nkgroup,
         VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Input x1Scale's shape should be [%zu, %zu], but actual shape is [%zu, %zu]", nkgroup,
+            inputParams_.opName, "Input x1Scale's shape should be [%ld, %ld], but actual shape is [%ld, %ld]", nkgroup,
             n, x2ScaleOuter, x2ScaleInner),
         return false);
 

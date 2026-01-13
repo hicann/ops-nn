@@ -37,6 +37,7 @@ void PlatformUtil::GetLocalMemSize(fe::PlatFormInfos &platform_info, const strin
 }
 
 void PlatformUtil::ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char *op_name, fe::PlatFormInfos &platform_info) {
+  (void) op_name;
   platform_info.GetLocalMemSize(fe::LocalMemType::UB, compileInfo.ubSize);
   platform_info.GetLocalMemSize(fe::LocalMemType::L1, compileInfo.l1Size);
   platform_info.GetLocalMemSize(fe::LocalMemType::L2, compileInfo.l2Size);
