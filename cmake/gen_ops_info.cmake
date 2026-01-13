@@ -325,7 +325,7 @@ endfunction()
 function(get_op_type_from_op_name OP_NAME OP_TYPE)
   execute_process(
     COMMAND
-      find ${CMAKE_CURRENT_SOURCE_DIR} -name ${OP_NAME}_def.cpp -exec grep OP_ADD {} \;
+      find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep OP_ADD {} \;
     OUTPUT_VARIABLE op_type
     )
   if(NOT op_type)
@@ -445,6 +445,9 @@ function(gen_ops_info_and_python)
       set(HAS_OP_COMPILE_OF_COMPUTE_UNIT FALSE)
       foreach(OP_DIR ${COMPILED_OP_DIRS})
         get_filename_component(op_name ${OP_DIR} NAME)
+        if(NOT EXISTS ${OP_DIR}/op_host/${op_name}_def.cpp OR NOT EXISTS ${OP_DIR}/op_kernel)
+          continue()
+        endif()
         set(op_type)
         set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
         if(EXISTS ${binary_json})
