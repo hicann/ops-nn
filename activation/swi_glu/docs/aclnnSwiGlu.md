@@ -90,7 +90,7 @@ aclnnStatus aclnnSwiGlu(
       <td>输出</td>
       <td>表示计算结果，公式中的out<sub>i</sub>。</td>
       <td>数据类型与计算输入x的类型一致。</td>
-      <td>INT8</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>-</td>
       <td>×</td>
