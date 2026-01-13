@@ -89,7 +89,7 @@ public:
 
     template <typename T>
     __aicore__ inline void CommonCopyIn(
-        TQue<QuePosition::VECIN, BUFFER_NUM>& inQueueData, GlobalTensor<T>& xGm, uint32_t calcOffset,
+        TQue<QuePosition::VECIN, BUFFER_NUM>& inQueueData, GlobalTensor<T>& xGm, int64_t calcOffset,
         uint32_t coreLength)
     {
         // alloc tensor from queue memory
@@ -107,7 +107,7 @@ public:
     template <typename T>
     __aicore__ inline void CommonCopyOut(
         TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueOut, TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueueMask,
-        GlobalTensor<T>& yGm, GlobalTensor<uint8_t>& maskGm, uint32_t calcOffset, uint32_t coreLength)
+        GlobalTensor<T>& yGm, GlobalTensor<uint8_t>& maskGm, int64_t calcOffset, uint32_t coreLength)
     {
         // deque output tensor from VECOUT queue
         LocalTensor<T> yLocal = outQueueOut.DeQue<T>();
