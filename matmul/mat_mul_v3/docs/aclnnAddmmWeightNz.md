@@ -78,7 +78,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>表示矩阵乘的第一个矩阵，公式中的self。</td>
       <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </li><li> 在mat1不转置的情况下各个维度表示：（m，k）。</br> </li><li>在mat1转置的情况下各个维度表示：（k，m）。</br> </ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnAddmmWeightNz(
       </li><li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
      </li><li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1</li> 
       </td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
       <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2</td>
       <td>-</td>
