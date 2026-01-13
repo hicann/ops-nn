@@ -180,8 +180,8 @@ public:
         gmBeta1PowerOut_.SetValue(0, beta1Power_);
         gmBeta2PowerOut_.SetValue(0, beta2Power_);
 
-        dcci(reinterpret_cast<__gm__ T*>(beta1PowerOut), cache_line_t::SINGLE_CACHE_LINE, dcci_dst_t::CACHELINE_OUT);
-        dcci(reinterpret_cast<__gm__ T*>(beta2PowerOut), cache_line_t::SINGLE_CACHE_LINE, dcci_dst_t::CACHELINE_OUT);
+        DataCacheCleanAndInvalid<T, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(beta1PowerOut);
+        DataCacheCleanAndInvalid<T, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(beta2PowerOut);
     }
 
     __aicore__ inline void Process()

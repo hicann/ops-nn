@@ -170,10 +170,8 @@ public:
         gmBeta1PowerOut_.SetValue(0, beta1Power_);
         gmBeta2PowerOut_.SetValue(0, beta2Power_);
 
-        dcci(
-            reinterpret_cast<__gm__ float*>(beta1PowerOut), cache_line_t::SINGLE_CACHE_LINE, dcci_dst_t::CACHELINE_OUT);
-        dcci(
-            reinterpret_cast<__gm__ float*>(beta2PowerOut), cache_line_t::SINGLE_CACHE_LINE, dcci_dst_t::CACHELINE_OUT);
+        DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(beta1PowerOut);
+        DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(beta2PowerOut);
     }
 
     __aicore__ inline void Process()
@@ -186,7 +184,6 @@ public:
             gmBeta2_.GetPhyAddr(0), gmEpsilon_.GetPhyAddr(0), gmGrad_.GetPhyAddr(0), gmMaxGradNorm_.GetPhyAddr(0),
             gmMOut_.GetPhyAddr(0), gmVOut_.GetPhyAddr(0), gmBeta1PowerOut_.GetPhyAddr(0),
             gmBeta2PowerOut_.GetPhyAddr(0), gmMaxGradNormOut_.GetPhyAddr(0));
-        PipeBarrier<PIPE_ALL>();
         SyncAll();
     }
 
