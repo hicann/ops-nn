@@ -44,7 +44,7 @@ TEST_F(l2_max_pool3d_with_argmax_backward_test, ascend910B2_normal_float)
     vector<int64_t> padding_dims = {0};
     vector<int64_t> dilation_dims = {1};
     vector<int64_t> out_dims = {2, 3, 1, 1, 1};
-    vector<int64_t> indices_dims = {2, 3, 4, 4, 64};
+    vector<int64_t> indices_dims = {2, 3, 1, 1, 1};
 
     auto kernel_desc = IntArrayDesc(kernel_dims);
     auto stride_desc = IntArrayDesc(stride_dims);

@@ -191,11 +191,10 @@ aclnnStatus aclnnAvgPool2d(
   <term>cubeMathType</term>：支持的枚举值如下：
     * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
     * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
-      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
+      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，不支持该选项。当输入为其他数据类型时不做处理。
     * 2：USE_FP16，支持将输入降精度至FLOAT16计算。
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为BFLOAT16时不支持该选项。
-    * 3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。
-      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。
+    * 3：USE_HF32，不支持该选项。
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

@@ -464,7 +464,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckPaddingValidAvgPool2D(kernelSize, padding), ACLNN_ERR_PARAM_INVALID);
 
     // cubeMathType需要在支持的范围内
-    CHECK_RET(CheckCubeMathTypeValid(cubeMathType), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckCubeMathTypeValid(cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 对于输出shape是否合理进行check
     CHECK_RET(CheckOutputShape(self, gradInput), ACLNN_ERR_PARAM_INVALID);

@@ -53,7 +53,7 @@
                                    7. stride中存在小于等于0的数值。
                                    8. padding的长度不等于1或3.
                                    9. padding中存在小于0或者大于kernelSize/2的数值。
-                                   10. dilation的数值不等于1。
+                                   10. dilation的长度不等于1或者3。
                                    11. 平台不支持
                                    12. depth * height * width > max int32，超出了indices的表示范围。
   ```

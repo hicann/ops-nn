@@ -237,6 +237,14 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
     return true;
 }
 
+static bool CheckInputShape(
+    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput)
+{
+    OP_CHECK_SHAPE_NOT_EQUAL(indices, gradOutput, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL(self, gradInput, return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, aclTensor* gradInput)
@@ -248,6 +256,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFormat(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckParamsValid(kernelSize, stride, padding, dilation), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckSelfShapeSupport(self), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckInputShape(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

@@ -492,6 +492,15 @@ static bool CheckValue(
     return true;
 }
 
+static bool CheckAvgPool2dCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType)
+{
+    if (cubeMathType == USE_HF32) {
+        OP_LOGW("The function remains the same as 0(KEEP_DTYPE) when the cubeMathType is 3(USE_HF32)." \
+            "This configuration is not recommended and will be deprecated in a future release.");
+    }
+    return CheckCubeMathType(cubeTensorDtype, cubeMathType);
+}
+
 static aclnnStatus CheckParams(
     const aclTensor *self, const aclIntArray *kernelSize, const aclIntArray *stride, const aclIntArray *padding,
     const bool ceilMode, aclTensor *out, int8_t cubeMathType)
@@ -512,7 +521,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckShape(self, kernelSize, stride, padding, ceilMode, out), ACLNN_ERR_PARAM_INVALID);
 
     // 检查cubeMathType
-    CHECK_RET(CheckCubeMathType(self->GetDataType(), cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAvgPool2dCubeMathType(self->GetDataType(), cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
