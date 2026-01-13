@@ -8,5 +8,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.activation.gelu.graph_plugin.CMakeLists.txt ")
+message(STATUS "=== Debug: start ops.activation.gelu.op_graph.CMakeLists.txt ")
 add_graph_plugin_sources()
