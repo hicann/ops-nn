@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public:
         blockIdx_ /= GetTaskRation();
 
         InitTilingData(tilingData);
-        if (blockIdx_ >= usedCoreNum_) {
+        if (blockIdx_ >= usedCoreNum_ || GetSubBlockIdx() == 1) {
             return;
         }
         pipe_ = tPipe;
@@ -98,12 +98,12 @@ public:
      */
     __aicore__ inline void Process()
     {
+        if (blockIdx_ >= usedCoreNum_ || GetSubBlockIdx() == 1) {
+            return;
+        }
         uint32_t batchDim = DequantBmm::CeilDiv(batch_, singleCoreBatch_);
         uint32_t mDim = DequantBmm::CeilDiv(m_, singleCoreM_);
         uint32_t nDim = DequantBmm::CeilDiv(n_, singleCoreN_);
-        if (blockIdx_ >= usedCoreNum_) {
-            return;
-        }
 
         uint32_t divideBatchcoreNum = usedCoreNum_ / batchDim;
 

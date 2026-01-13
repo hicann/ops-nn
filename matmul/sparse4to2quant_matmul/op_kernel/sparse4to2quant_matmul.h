@@ -328,11 +328,11 @@ private:
     {
         if ASCEND_IS_AIC {
             // AIC跳过前两次Wait，也就是一次ping一次pong，这里补上
-            if (loop_ > 2) { // 大于2表示需要补上开头跳过的ping
+            if (loop_ > 0) { // 大于0表示需要补上开头跳过的ping
                 WaitEvent(C2V_PING_FLAG);
             }
 
-            if (loop_ > 3) { // 大于3表示需要补上开头跳过的pong
+            if (loop_ > 1) { // 大于1表示需要补上开头跳过的pong
                 WaitEvent(C2V_PONG_FLAG);
             }
             mm_.End();
