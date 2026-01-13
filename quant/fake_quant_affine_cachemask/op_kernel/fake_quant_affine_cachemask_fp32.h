@@ -133,12 +133,7 @@ private:
         Cast(curTemp, curInt32Temp, RoundMode::CAST_ROUND, calCount);
         Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
         Select(
-            curTemp, maskTemp, curTemp, static_cast<yType>(this->quantMin), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            this->mask, repeatTimes, repeatParams);
-        Compare(maskTemp, yLocal, infTensor, CMPMODE::NE, calCount);
-        Select(
-            curTemp, maskTemp, curTemp, static_cast<yType>(this->quantMin), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            this->mask, repeatTimes, repeatParams);
+            curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, this->mask, repeatTimes, repeatParams);
         Adds(curTemp, curTemp, static_cast<yType>(-1 * zeroPointValue), calCount);
         Muls(yLocal, curTemp, static_cast<yType>(scaleValue), calCount);
         PipeBarrier<PIPE_ALL>();

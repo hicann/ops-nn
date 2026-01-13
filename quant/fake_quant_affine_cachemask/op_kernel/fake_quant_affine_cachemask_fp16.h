@@ -130,12 +130,7 @@ private:
         Cast(curTemp, curInt32Temp, RoundMode::CAST_ROUND, calCount);
         Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
         Select(
-            curTemp, maskTemp, curTemp, static_cast<float>(this->quantMin), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            this->mask, repeatTimes, repeatParams);
-        Compare(maskTemp, xLocal, infTensor, CMPMODE::NE, calCount);
-        Select(
-            curTemp, maskTemp, curTemp, static_cast<float>(this->quantMin), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            this->mask, repeatTimes, repeatParams);
+            curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, this->mask, repeatTimes, repeatParams);
         Adds(curTemp, curTemp, static_cast<float>(-1 * zeroPointValue), calCount);
         Muls(curTemp, curTemp, static_cast<float>(scaleValue), calCount);
         Cast(yLocal, curTemp, RoundMode::CAST_RINT, calCount);
