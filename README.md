@@ -2,6 +2,7 @@
 
 ## 🔥Latest News
 
+- [2025/12] 开源算子支持Ascend 950PR/Ascend 950DT，可以通过CANN Simulator仿真工具开发调试；支持了conv算子<<<>>>调用示例，方便用户自定义使用。
 - [2025/09] ops-nn项目首次上线。
 
 ## 🚀概述
