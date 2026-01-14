@@ -7,4 +7,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE convolution_backward ACLNNTYPE aclnn_exclude DEPENDENCIES matmul.common mat_mul_v3 batch_mat_mul_v3 convolution_forward)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE convolution_backward ACLNNTYPE aclnn_exclude DEPENDENCIES matmul.common mat_mul_v3 batch_mat_mul_v3 convolution_forward conv3d_backprop_input_v2 conv3d_backprop_filter_v2)

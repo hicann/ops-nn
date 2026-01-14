@@ -1415,11 +1415,11 @@ static aclnnStatus CalculateConv1DTransposeBackward(ConvolutionBackwardInputTens
   return ACLNN_SUCCESS;
 }
 
-static bool IsConv3DBpSupportMatmulMode(const aclTensor *inputTensor, ConvolutionBackwardParams &params)
+static bool IsConvBpSupportMatmulMode(const aclTensor *inputTensor, const ConvolutionBackwardParams &params)
 {
-  // must be NCDHW format
+  // must be NCDHW format or NCHW
   op::Format format = inputTensor->GetStorageFormat();
-  if (format != op::Format::FORMAT_NCDHW) {
+  if (format != op::Format::FORMAT_NCDHW && format != op::Format::FORMAT_NCHW) {
     return false;
   }
   // padding
@@ -1450,6 +1450,42 @@ static bool IsConv3DBpSupportMatmulMode(const aclTensor *inputTensor, Convolutio
   return true;
 }
 
+static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
+    const ConvolutionBackwardParams &params)
+{
+  // matmul暂时不支持8bit
+  auto is8bit = [](const aclTensor *tensor) -> bool {
+    auto dtype = tensor->GetDataType();
+    return dtype == DataType::DT_HIFLOAT8 || dtype == DataType::DT_FLOAT8_E4M3FN;
+  };
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+      (is8bit(inputTensor.input) || is8bit(inputTensor.weight) || is8bit(inputTensor.gradOutput))) {
+    return false;
+  }
+
+  const auto &inputShape = inputTensor.input->GetViewShape();
+  const auto &weightShape = inputTensor.weight->GetViewShape();
+  const auto &gradOutputShape = inputTensor.gradOutput->GetViewShape();
+  if (!IsConvBpSupportMatmulMode(inputTensor.input, params)) {
+    return false;
+  }
+
+  bool isFmEqKernel = true;
+  const vector<int64_t> dimIdxVec { kHDimNCHWIdx, kWDimNCHWIdx};
+  const int64_t resolutionDimSize = static_cast<int64_t>(dimIdxVec.size());
+  for (int64_t idx = 0; idx < resolutionDimSize; ++idx) {
+    int64_t dimIdx = dimIdxVec[idx];
+    bool isDimFmEqKernel = (weightShape[dimIdx] == inputShape[dimIdx]) && (gradOutputShape[dimIdx] == 1);
+    if (!isDimFmEqKernel) {
+      isFmEqKernel = false;
+    }
+  }
+  if (isFmEqKernel) {
+    return true;
+  }
+  return false;
+}
+
 static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputTensor,
   ConvolutionBackwardParams &params)
 {
@@ -1466,7 +1502,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   const auto &inputShape = inputTensor.input->GetViewShape();
   const auto &weightShape = inputTensor.weight->GetViewShape();
   const auto &gradOutputShape = inputTensor.gradOutput->GetViewShape();
-  if (!IsConv3DBpSupportMatmulMode(inputTensor.input, params)) {
+  if (!IsConvBpSupportMatmulMode(inputTensor.input, params)) {
     return Conv3DBp2MmMode::CONV3D_BP_NO_MM;
   }
 
@@ -1474,7 +1510,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   bool isStrideEqKernel = true;
   const vector<int64_t> dimIdxVec {dDimNCDHWIdx, hDimNCDHWIdx, wDimNCDHWIdx};
   const vector<int64_t> strideIdxVec {0, 1, 2}; // 0 : depth 1 : height 2 : width
-  const int64_t resolutionDimSize = (int64_t)(dimIdxVec.size());
+  const int64_t resolutionDimSize = static_cast<int64_t>(dimIdxVec.size());
   for (int64_t idx = 0; idx < resolutionDimSize; ++idx) {
     int64_t dimIdx = dimIdxVec[idx];
     int64_t strideIdx = strideIdxVec[idx];
@@ -2299,7 +2335,9 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
   if (socVersion == SocVersion::ASCEND910_95) {
     return true;
   }
-
+  if (IsConv2DBp2MmMode(inputTensor, params)) {
+    return true;
+  }
   if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
     // 满足白名单时2D->3D
     l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
