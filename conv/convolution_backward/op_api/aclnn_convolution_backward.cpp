@@ -377,21 +377,33 @@ static aclnnStatus OutputPostProcess(const aclTensor *&outputTensor, const aclTe
     (l0ResultTensor->GetStorageShape().GetDim(storageShapeDimSize - 1) == 16) && (groups > 1);
   // 特殊场景，先cast 再transdata规避
   if (needSpecialCast) {
-    l0ResultTensor = l0op::CastOnlyForConvBackward(l0ResultTensor, op::DataType::DT_FLOAT16, executor);
-    OP_CHECK(l0ResultTensor != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess fail, l0ResultTensor with cast return nullptr."),
-            return ACLNN_ERR_INNER_NULLPTR);
-    const aclTensor *transTensor = nullptr;
-    transTensor = l0op::TransData(l0ResultTensor, GetPrimaryFormat(outputTensor->GetOriginalFormat()), groups, executor);
-    OP_CHECK(transTensor != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess failed, %s with TransData return nullptr.",
-                    tensorName.c_str()),
-            return ACLNN_ERR_INNER_NULLPTR);
-    outputTensor = l0op::Cast(transTensor, outputTensor->GetDataType(), executor);
-    OP_CHECK(outputTensor != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess failed, %s with Cast return nullptr.",
-                     tensorName.c_str()),
-             return ACLNN_ERR_INNER_NULLPTR);
+    if (outputTensor->GetDataType() == op::DataType::DT_FLOAT) {
+      l0ResultTensor = l0op::CastOnlyForConvBackward(l0ResultTensor, op::DataType::DT_FLOAT16, executor);
+      OP_CHECK(l0ResultTensor != nullptr,
+              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess fail, l0ResultTensor with cast return nullptr."),
+              return ACLNN_ERR_INNER_NULLPTR);
+      const aclTensor *transTensor = nullptr;
+      transTensor = l0op::TransData(l0ResultTensor, GetPrimaryFormat(outputTensor->GetOriginalFormat()), groups, executor);
+      OP_CHECK(transTensor != nullptr,
+              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess failed, %s with TransData return nullptr.",
+                      tensorName.c_str()),
+              return ACLNN_ERR_INNER_NULLPTR);
+      outputTensor = l0op::Cast(transTensor, outputTensor->GetDataType(), executor);
+      OP_CHECK(outputTensor != nullptr,
+               OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess failed, %s with Cast return nullptr.",
+                       tensorName.c_str()),
+               return ACLNN_ERR_INNER_NULLPTR);
+    }else {
+      l0ResultTensor = l0op::CastOnlyForConvBackward(l0ResultTensor, outputTensor->GetDataType(), executor);
+      OP_CHECK(l0ResultTensor != nullptr,
+              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess fail, l0ResultTensor with cast return nullptr."),
+              return ACLNN_ERR_INNER_NULLPTR);
+      outputTensor = l0op::TransData(l0ResultTensor, GetPrimaryFormat(outputTensor->GetOriginalFormat()), groups, executor);
+      OP_CHECK(outputTensor != nullptr,
+               OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output postprocess failed, %s with transdata return nullptr.",
+                       tensorName.c_str()),
+               return ACLNN_ERR_INNER_NULLPTR);
+    }
   } else {
     const aclTensor *transTensor = nullptr;
     transTensor = l0op::TransData(l0ResultTensor, GetPrimaryFormat(outputTensor->GetOriginalFormat()), groups, executor);
