@@ -9,8 +9,3 @@
 # ----------------------------------------------------------------------------
 
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE conv3d_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES convolution_forward conv2d_v2)
-if(ENABLE_BINARY OR ENABLE_CUSTOM)
-    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/conv3d_v2_apt)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../op_kernel/
-        DESTINATION ${CMAKE_BINARY_DIR}/tbe/ascendc/conv3d_v2_apt)
-endif()

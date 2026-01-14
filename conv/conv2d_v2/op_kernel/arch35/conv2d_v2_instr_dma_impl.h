@@ -32,9 +32,9 @@ public:
     __aicore__ inline void SetParams(Intf *self)
     {
         self_ = self;
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             srcCiStride = self_->ctx.convTiling->orgHixWi * Intf::k0;
-        } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
+        } else if constexpr (Intf::formatFmap == ConvFormat::NHWC) {
             srcCiStride = Intf::k0;
         }
         srcKhStride = self_->ctx.convTiling->khUb * self_->ctx.convTiling->dilationH;
@@ -52,7 +52,7 @@ public:
         srckwAL1IterOffset = self_->ctx.kwAL1Iter * self_->ctx.convTiling->dilationW * self_->ctx.convTiling->kwL1 +
                              self_->ctx.vecKwIter * srcKwStride;
         if (unlikely(self_->ctx.isFirstIterate)) {
-            if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+            if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = self_->ctx.convTiling->orgHixWi;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTiling->dilationW;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] = self_->ctx.convTiling->dilationH *
@@ -81,7 +81,7 @@ public:
 
         uint32_t baseOffset = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                               self_->ctx.vecCi1Iter * srcCiStride;
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             baseOffset += self_->ctx.cinAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM;
             if (self_->ctx.vecId == 1) {
                 baseOffset += self_->ctx.currentVec0Ci * self_->ctx.convTiling->orgHixWi;
@@ -111,7 +111,7 @@ public:
                     self_->ctx.convTiling->kwUb - kwUbOnPadLeft - kwUbOnPadRight;
                 copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] =
                     self_->ctx.convTiling->khUb - khUbOnPadTop - khUbOnPadBottom;
-                if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+                if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
                     srcOffset = baseOffset + hIdxWithPadStart * self_->ctx.orgWi + wIdxWithPadStart;
                 } else {
                     srcOffset = baseOffset + hIdxWithPadStart * self_->ctx.orgWi * self_->ctx.convTiling->orgCi +

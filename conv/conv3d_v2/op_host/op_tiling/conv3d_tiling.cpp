@@ -61,7 +61,6 @@ static ge::graphStatus TilingPrepareForConv3DV2(gert::TilingParseContext *contex
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::BT, compileInfoPtr->btSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
     ascendcPlatform.GetCoreMemBw(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Rate);
-
     OP_LOGD(context->GetNodeName(),
             "compileInfoPtr->socVersion %s"
             " l1Size:%lu, l2Size:%lu, coreNum:%u, "

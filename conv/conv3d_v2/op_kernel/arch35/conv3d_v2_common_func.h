@@ -20,8 +20,10 @@
 #include "../../common/arch35/conv_framework_util.h"
 #include "../../common/arch35/conv_instr.h"
 #include "conv3d_v2_config.h"
+#include "conv3d_v2_dequant_impl.h"
 #include "conv3d_v2_util.h"
 #include "conv3d_v2_instr.h"
+#include "../conv3d_v2_tiling_data.h"
 
 namespace Conv3dFunc {
 using namespace ConvFunc;
@@ -74,7 +76,7 @@ template <class Intf, uint32_t ImplType>
 struct Init {
     static __aicore__ inline void call(Intf *self, const void *__restrict tiling)
     {
-        self->ctx.convTiling = (TConv3DTiling *)tiling;
+        self->ctx.convTiling = (Ops::NN::Conv3dV2::TConv3DTiling *)tiling;
         self->ctx.ddr2l1LoopBatch = self->ctx.convTiling->singleCoreBatch;
         if ASCEND_IS_AIC_CONV {
             InitTilingData(self, tiling);
@@ -106,6 +108,8 @@ struct Init {
         if ASCEND_IS_AIV_CONV {
             if constexpr (Intf::groupOptFlag) {
                 OptGroupVecInit<Intf>(self);
+            } else if constexpr (Intf::isDeQuantFlag) {
+                DeQuantVecInit<Intf>(self);
             }
         }
     }
@@ -229,6 +233,10 @@ struct SetSingleOutputShape {
                 if constexpr (Intf::groupOptFlag) {
                     OptGroupInitNValue<Intf>(self);
                     OptGroupInitIterValue<Intf>(self);
+                } else if constexpr (Intf::isDeQuantFlag) {
+                    InitCoDirectionValue<Intf>(self);
+                    InitHoDirectionValue<Intf>(self);
+                    InitDoDirectionValue<Intf>(self);
                 }
             }
         }
@@ -253,6 +261,10 @@ struct SetSingleOutputShape {
                 if constexpr (Intf::groupOptFlag) {
                     OptGroupInitNValue<Intf>(self);
                     OptGroupInitIterValue<Intf>(self);
+                } else if constexpr (Intf::isDeQuantFlag) {
+                    InitCoDirectionValue<Intf>(self);
+                    InitDoDirectionValue<Intf>(self);
+                    InitMDirectionValue<Intf>(self);
                 }
             }
         }

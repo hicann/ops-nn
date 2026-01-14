@@ -252,8 +252,9 @@ ge::graphStatus Conv3dBaseTilingV2::ParseGroupLegal()
     auto groupsPtr = context_->GetAttrs()->GetInt(attrGroupIndex);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, groupsPtr);
     oriShapeAttrInfo_.oriGroups = *groupsPtr;
-    if (apiInputPlatformInfo_.socVersion == platform_ascendc::SocVersion::ASCEND910_55 &&
-        oriShapeAttrInfo_.oriGroups != 1) {
+    bool notSupportGroupConv = (apiInputPlatformInfo_.socVersion == platform_ascendc::SocVersion::ASCEND910_55) ||
+                               flagInfo_.isConv3dDequant;
+    if (notSupportGroupConv && oriShapeAttrInfo_.oriGroups != 1) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: unsupport groups (%ld)! = 1.",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriGroups);
         return ge::GRAPH_FAILED;

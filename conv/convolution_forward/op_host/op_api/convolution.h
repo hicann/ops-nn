@@ -70,6 +70,10 @@ const aclTensor *Conv3dv2NCDHWFp16(const aclTensor *input, const aclTensor *weig
 const aclTensor *Conv3dv2NCDHWHif8(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                    const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,
                                    int groups, aclOpExecutor *executor);
+const aclTensor *Conv3dv2L0Func(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+                                const aclTensor *scale, op::DataType outputDtype, op::Format outputFormat,
+                                const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,
+                                int groups, bool useHf32, aclOpExecutor *executor);
 
 const aclTensor *QuantConv3d6HdInt8To6HdBf16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                              const aclTensor *scale, const aclTensor *offset, const aclIntArray *stride,

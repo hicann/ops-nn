@@ -111,7 +111,7 @@ public:
         }
 
         uint16_t ciLoopTimes = self_->ctx.convTiling->bUbKStep / self_->ctx.convTiling->kernelHxkernelW / Intf::k0;
-        uint16_t coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * CO0_LOOP_TIMES;
+        uint16_t coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * co0LoopTimes;
         uint16_t khkwLoopTimes = self_->ctx.convTiling->kernelHxkernelW;
         uint32_t srcCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0;
         uint32_t srcCoStride = coPerReg * self_->ctx.convTiling->bUbKStep;
@@ -121,14 +121,18 @@ public:
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<typename Intf::WeightT> gatherReg;
+            MicroAPI::RegTensor<RegT> gatherReg;
             MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::WeightT, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::MaskReg vstsMaskReg;
+            if constexpr (Intf::isQuantScene) {
+                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
+            } else {
+                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
+            }
 
-            __local_mem__ typename Intf::WeightT *srcAddr =
-                (__local_mem__ typename Intf::WeightT *)self_->ctx.ndTensor.GetPhyAddr();
-            __local_mem__ typename Intf::WeightT *dstAddr =
-                (__local_mem__ typename Intf::WeightT *)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)self_->ctx.ndTensor.GetPhyAddr();
+            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
             __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
 
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
@@ -140,11 +144,16 @@ public:
                         uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                              coOptIndex * dstCoStride;
 
-                        MicroAPI::DataCopyGather<typename Intf::WeightT, typename Intf::WeightT, IndexT>(
-                            gatherReg, srcAddr + srcOffset, indexReg, maskReg);
+                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
+                            gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
 
-                        MicroAPI::DataCopy<typename Intf::WeightT>(
-                            dstAddr + dstOffset, (MicroAPI::RegTensor<typename Intf::WeightT> &)gatherReg, maskReg);
+                        if constexpr (Intf::isQuantScene) {
+                            // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
+                            MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
+                                (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
+                        }
+                        MicroAPI::DataCopy<DstT>(
+                            dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
                     }
                 }
             }
@@ -187,12 +196,16 @@ private:
 private:
     Intf *self_ = nullptr;
 
+    using SrcT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
+    using DstT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
+    using RegT = typename Conditional<Intf::isQuantScene, int16_t, typename Intf::WeightT>::type;
     using IndexT = typename Conditional<
         AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t, uint16_t>::type;
 
     LocalTensor<IndexT> indexTensor;
 
-    const static uint16_t coPerReg = BLOCK_L0_N / CO0_LOOP_TIMES;
+    const static uint16_t co0LoopTimes = (Intf::isQuantScene) ? B8_CO0_LOOP_TIMES : CO0_LOOP_TIMES;
+    const static uint16_t coPerReg = BLOCK_L0_N / co0LoopTimes;
 };
 
 template <class Intf>

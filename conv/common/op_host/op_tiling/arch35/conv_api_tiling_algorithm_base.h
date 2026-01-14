@@ -59,7 +59,7 @@ protected:
     uint64_t fMapDTypeSize = 0;
     uint64_t weightDTypeSize = 0;
     uint64_t biasDTypeSize = 0;
-    uint64_t quantScaleDtypeSize = 0;
+    uint64_t scaleDtypeSize = 0;
 };
 } // namespace conv_tiling
 

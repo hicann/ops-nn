@@ -183,46 +183,6 @@ ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
     return ge::GRAPH_SUCCESS;
 }
 
-// optiling recaculate pad for kernel directed call process
-void Conv2dBaseTiling::GetOriPadFromPadMode(const string& padMode)
-{
-    if (padMode == "SPECIFIC") {
-        return;
-    }
-
-    if (padMode == "VALID") {
-        oriShapeAttrInfo_.oriPadTop = 0;
-        oriShapeAttrInfo_.oriPadBottom = 0;
-        oriShapeAttrInfo_.oriPadLeft = 0;
-        oriShapeAttrInfo_.oriPadRight = 0;
-        return;
-    } else {
-        int64_t padH = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapH, oriShapeAttrInfo_.oriStrideH) - 1) *
-                    oriShapeAttrInfo_.oriStrideH + oriShapeAttrInfo_.oriDilationH * (oriShapeAttrInfo_.oriWeightH - 1) -
-                    oriShapeAttrInfo_.oriFmapH + 1;
-        int64_t padW = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapW, oriShapeAttrInfo_.oriStrideW) - 1) *
-                    oriShapeAttrInfo_.oriStrideW + oriShapeAttrInfo_.oriDilationW * (oriShapeAttrInfo_.oriWeightW - 1) -
-                    oriShapeAttrInfo_.oriFmapW + 1;
-        if (padMode == "SAME" || padMode == "SAME_UPPER") {
-            if (padMode == "SAME") {
-                padH = padH < 0 ? 0 : padH;
-                padW = padW < 0 ? 0 : padW;
-            }
-            oriShapeAttrInfo_.oriPadBottom = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadTop = padH - oriShapeAttrInfo_.oriPadBottom;
-            oriShapeAttrInfo_.oriPadRight = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadLeft = padW - oriShapeAttrInfo_.oriPadRight;
-        } else {
-            // padMode is "SAME_LOWER"
-            oriShapeAttrInfo_.oriPadTop = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadBottom = padH - oriShapeAttrInfo_.oriPadTop;
-            oriShapeAttrInfo_.oriPadLeft = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;
-        }
-    }
-    return;
-}
-
 bool Conv2dBaseTiling::UpdateOriPadFromPadMode()
 {
     if (flagInfo_.quantFlag) {
@@ -301,6 +261,46 @@ ge::graphStatus Conv2dBaseTiling::CheckOffsetXLegal()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv2dBaseTiling::CheckExtendReluLegal()
+{
+    if (!flagInfo_.extendConvFlag) {
+        return ge::GRAPH_SUCCESS;
+    }
+    auto enableRelu0Ptr = context_->GetAttrs()->GetBool(EXTENDCONV_ATTR_ENABLE_RELU_0_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, enableRelu0Ptr);
+    auto enableRelu1Ptr = context_->GetAttrs()->GetBool(EXTENDCONV_ATTR_ENABLE_RELU_1_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, enableRelu1Ptr);
+
+    // check scale1 and enablerelu1 when dualoutput is false
+    if (attrInfo_.dualOutput == 0) {
+        auto scale1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_SCALE_1_INDEX);
+        if (*enableRelu1Ptr || scale1Desc != nullptr) {
+            OP_LOGE(context_->GetNodeName(),
+                    "%s AscendC: When dualoutput is false, the second related input and attr is not allowed.",
+                    context_->GetNodeType());
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    // check and get relumode/slipmode
+    if (this->CheckExtendConv2dReluWeightAndClipValue(0, fixpipeInfo_.reluMode0)
+        != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (attrInfo_.dualOutput != 0) {
+        if (this->CheckExtendConv2dReluWeightAndClipValue(1, fixpipeInfo_.reluMode1)
+            != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    OP_LOGD(context_->GetNodeName(),
+            "%s AscendC: reluMode0 is %u, reluMode1 is %u.",
+            context_->GetNodeType(), fixpipeInfo_.reluMode0, fixpipeInfo_.reluMode1);
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
 {
     if (flagInfo_.quantFlag) {
@@ -315,7 +315,7 @@ ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
         descInfo_.outDtype == ge::DataType::DT_FLOAT;
  
     if (flagInfo_.hasBias) {
-        IsFp32InputFp32OutputFlag &= descInfo_.biasDtype == ge::DataType::DT_FLOAT;
+        IsFp32InputFp32OutputFlag = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
     }
     bool enbaleHf32 = *enableHf32Ptr;
     OP_TILING_CHECK(enbaleHf32 && !IsFp32InputFp32OutputFlag,
@@ -339,54 +339,30 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendConv2dReluWeightAndClipValue(const 
     // get enable relu and input ptr
     auto enableReluPtr = context_->GetAttrs()->GetBool(enabelReluInputIdx);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, enableReluPtr);
-    auto reluWeightPtr = context_->GetOptionalInputShape(reluWeightInputIdx);
-    auto clipValuePtr = context_->GetOptionalInputShape(clipValueInputIdx);
-    if (*enableReluPtr) {
-        reluMode = static_cast<uint8_t>(ReluMode::NORMALRELU);
-    }
-    OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: reluMode is %u, enableRelu[%d] enableReluWeight[%d] enableClipValue[%d].",
-            context_->GetNodeType(), reluMode, *enableReluPtr, reluWeightPtr == nullptr, clipValuePtr == nullptr);
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckExtendReluLegal()
-{
-    if (!flagInfo_.extendConvFlag) {
+    if (!*enableReluPtr) {
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: reluMode is NORELU", context_->GetNodeType());
         return ge::GRAPH_SUCCESS;
     }
-    auto enableRelu0Ptr = context_->GetAttrs()->GetBool(EXTENDCONV_ATTR_ENABLE_RELU_0_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, enableRelu0Ptr);
-    auto enableRelu1Ptr = context_->GetAttrs()->GetBool(EXTENDCONV_ATTR_ENABLE_RELU_1_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, enableRelu1Ptr);
 
-    // check scale1 and enablerelu1 when dualoutput is false
-    if (!attrInfo_.dualOutput) {
-        auto scale1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_SCALE_1_INDEX);
-        if (*enableRelu1Ptr || scale1Desc != nullptr) {
-            OP_LOGE(context_->GetNodeName(),
-                    "%s AscendC: When dualoutput is false, the second related input and attr is not allowed.",
-                    context_->GetNodeType());
-            return ge::GRAPH_FAILED;
-        }
+    // default is nullptr
+    auto clipValuePtr = context_->GetOptionalInputShape(clipValueInputIdx);
+    auto reluWeightShapePtr = context_->GetOptionalInputShape(reluWeightInputIdx);
+    if (reluWeightShapePtr == nullptr) {
+        reluMode = static_cast<uint8_t>(ReluMode::NORMALRELU);
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: reluMode is NORMALRELU", context_->GetNodeType());
+        return ge::GRAPH_SUCCESS;
     }
 
-    // check and get relumode/slipmode
-    if (this->CheckExtendConv2dReluWeightAndClipValue(0, fixpipeInfo_.reluMode0)
-        != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (attrInfo_.dualOutput) {
-        if (this->CheckExtendConv2dReluWeightAndClipValue(1, fixpipeInfo_.reluMode1)
-            != ge::GRAPH_SUCCESS) {
-            return ge::GRAPH_FAILED;
-        }
+    size_t reluWeightShapeLen = reluWeightShapePtr->GetStorageShape().GetDim(0);
+    if (reluWeightShapeLen == 1) {
+        reluMode = static_cast<uint8_t>(ReluMode::SCALARRELU);
+    } else if (reluWeightShapeLen > 1) {
+        reluMode = static_cast<uint8_t>(ReluMode::VECTORRELU);
     }
 
     OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: reluMode0 is %u, reluMode1 is %u.",
-            context_->GetNodeType(), fixpipeInfo_.reluMode0, fixpipeInfo_.reluMode1);
-
+            "%s AscendC: reluMode is %u, enableRelu[1] reluWeightShapeLen[%zu] enableClipValue[%d].",
+            context_->GetNodeType(), reluMode, reluWeightShapeLen, clipValuePtr != nullptr);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -400,6 +376,46 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputLegal()
     attrInfo_.dualOutput = static_cast<uint8_t>(*dualOutputPtr);
     fixpipeInfo_.dualOutput = attrInfo_.dualOutput;
     return ge::GRAPH_SUCCESS;
+}
+
+// optiling recaculate pad for kernel directed call process
+void Conv2dBaseTiling::GetOriPadFromPadMode(const string& padMode)
+{
+    if (padMode == "SPECIFIC") {
+        return;
+    }
+
+    if (padMode == "VALID") {
+        oriShapeAttrInfo_.oriPadTop = 0;
+        oriShapeAttrInfo_.oriPadBottom = 0;
+        oriShapeAttrInfo_.oriPadLeft = 0;
+        oriShapeAttrInfo_.oriPadRight = 0;
+        return;
+    } else {
+        int64_t padH = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapH, oriShapeAttrInfo_.oriStrideH) - 1) *
+                    oriShapeAttrInfo_.oriStrideH + oriShapeAttrInfo_.oriDilationH * (oriShapeAttrInfo_.oriWeightH - 1) -
+                    oriShapeAttrInfo_.oriFmapH + 1;
+        int64_t padW = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapW, oriShapeAttrInfo_.oriStrideW) - 1) *
+                    oriShapeAttrInfo_.oriStrideW + oriShapeAttrInfo_.oriDilationW * (oriShapeAttrInfo_.oriWeightW - 1) -
+                    oriShapeAttrInfo_.oriFmapW + 1;
+        if (padMode == "SAME" || padMode == "SAME_UPPER") {
+            if (padMode == "SAME") {
+                padH = padH < 0 ? 0 : padH;
+                padW = padW < 0 ? 0 : padW;
+            }
+            oriShapeAttrInfo_.oriPadBottom = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadTop = padH - oriShapeAttrInfo_.oriPadBottom;
+            oriShapeAttrInfo_.oriPadRight = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadLeft = padW - oriShapeAttrInfo_.oriPadRight;
+        } else {
+            // padMode is "SAME_LOWER"
+            oriShapeAttrInfo_.oriPadTop = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadBottom = padH - oriShapeAttrInfo_.oriPadTop;
+            oriShapeAttrInfo_.oriPadLeft = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;
+        }
+    }
+    return;
 }
 
 ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()

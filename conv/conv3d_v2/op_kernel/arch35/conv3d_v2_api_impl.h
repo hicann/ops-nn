@@ -20,6 +20,11 @@
 #include "conv3d_v2_common_func.h"
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_util.h"
+#include "conv3d_v2_instr_impl.h"
+#include "../../common/arch35/conv_instr_m_mode_impl.h"
+#include "../../common/arch35/conv_instr_hw_mode_impl.h"
+#include "../../common/arch35/conv_instr_impl.h"
+#include "../../common/arch35/conv_instr_opt_group_impl.h"
 
 namespace conv3d {
 using namespace AscendC;
@@ -49,6 +54,8 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, SetWeightStartPosition);
     CONV_REG_IMPL(Config, ConvFunc, SetIterIndex);
     CONV_REG_IMPL(Config, ConvFunc, Iterate);
+    CONV_REG_IMPL(Config, ConvFunc, ConvPreProcess);
+    CONV_REG_IMPL(Config, ConvFunc, ConvPostProcess);
     CONV_REG_IMPL(Config, ConvFunc, IterateAll);
     CONV_REG_IMPL(Config, ConvFunc, GetTensorC);
     CONV_REG_IMPL(Config, ConvFunc, End);
@@ -56,7 +63,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const struct TConv3DTiling *__restrict convTiling;
+        const struct Ops::NN::Conv3dV2::TConv3DTiling *__restrict convTiling;
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
         using LoadAL1Tools = typename Conditional<
@@ -112,6 +119,31 @@ public:
         uint64_t bL1Cin = 0;
         uint64_t bL1CinTail = 0;
         uint64_t bL1CinLoadNum = 0;
+
+        Conv3dFunc::DeQuantL0C2UBTools<Intf> dequantL0C2UBTools;
+        Conv3dFunc::DeQuantLoadParamsTools<Intf> dequantLoadParamsTools;
+        Conv3dFunc::DeQuantCalcTools<Intf> dequantCalcTools;
+        Conv3dFunc::DeQuantUB2GMTools<Intf> dequantUB2GmTools;
+
+        TBuf<TPosition::VECIN> scaleUbBuf;
+        TBuf<TPosition::VECIN> biasB16UbBuf;
+        TBuf<TPosition::VECIN> biasB32UbBuf;
+        TBuf<TPosition::VECIN> mmadResUbBuf;
+
+        LocalTensor<typename Intf::ScaleT> scaleTensor;
+        LocalTensor<typename Intf::BiasT> biasB16Tensor;
+        LocalTensor<float> biasB32Tensor;
+        LocalTensor<typename Intf::L0cT> mmadResUbTensor;
+        LocalTensor<typename Intf::OutputT> outputResUbTensor;
+
+        uint32_t mUbIter = 0;
+        uint32_t maxMUbIter = 0;
+        uint32_t l0C2UbLoopM = 0;
+        uint32_t l0C2UbLoopWo = 0;
+        uint32_t currentMUb = 0;
+        uint32_t currentNUb = 0;
+        uint32_t fixpTimes = 0;
+        uint32_t fixpTimesTotal = 0;
     };
 
     struct ImplDataType {

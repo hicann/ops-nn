@@ -31,9 +31,10 @@ struct Conv2dIntfExt : public Intf<Config, Impl> {
 };
 
 #define REGISTER_CONV_API(name, Config, Impl, Intf)                                                                   \
-    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG=Conv2dParam>     \
-    using name =                                                                                                      \
-        Conv2dIntfExt<Config<ConvDataType<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>>, Impl, Intf>
+    template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE,               \
+              class CONV_CFG=Conv2dParam>                                                                             \
+    using name = Conv2dIntfExt<                                                                                       \
+        Config<ConvDataType<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>>, Impl, Intf>
 
 REGISTER_CONV_API(Conv2d, Conv2dCfg, Conv2dApiImpl, Conv2dIntf);
 

@@ -78,7 +78,18 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
     SetApiInputPlatformInfo(curShortSoc);
     return ge::GRAPH_SUCCESS;
 }
- 
+
+ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
+{
+    if (GetPlatformInfoInner() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    this->conv2dApiTiling_ = conv_tiling::Conv2dTiling(apiInputPlatformInfo);
+    this->conv2dApiTiling_.SetExtendConvFlag(flagInfo_.extendConvFlag);
+    this->conv2dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
+    return ge::GRAPH_SUCCESS;
+}
+
 void Conv2dBaseTiling::SetApiInputPlatformInfo(const platform_ascendc::SocVersion& curShortSoc)
 {
     apiInputPlatformInfo.socVersion = curShortSoc;
@@ -97,17 +108,7 @@ void Conv2dBaseTiling::SetApiInputPlatformInfo(const platform_ascendc::SocVersio
             socNameTab.at(curShortSoc).c_str());
 }
 
-ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
-{
-    if (GetPlatformInfoInner() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    this->conv2dApiTiling_ = conv_tiling::Conv2dTiling(apiInputPlatformInfo);
-    this->conv2dApiTiling_.SetExtendConvFlag(flagInfo_.extendConvFlag);
-    return ge::GRAPH_SUCCESS;
-}
-
-bool Conv2dBaseTiling::CheckDim(int64_t dimValue, uint64_t maxDimValue)
+bool Conv2dBaseTiling::CheckDim(int64_t dimValue, uint64_t maxDimValue) const
 {
     if (dimValue <= 0) {
         return false;
@@ -128,31 +129,6 @@ bool Conv2dBaseTiling::EnableOptGroup()
     return ConvAlignB(optGroupInfo_.cinOpt, k0) * shapeInfo_.kh * shapeInfo_.kw *
                ConvAlignB(optGroupInfo_.coutOpt, n0) * WEIGHT_UB_NUMS * dtypeSizeTab.at(descInfo_.weightDtype) <=
            (apiInputPlatformInfo.ubSize - OPT_GROUP_RESERVED_SIZE);
-}
-
-void Conv2dBaseTiling::GetGroupsInfo()
-{
-    attrInfo_.groups = static_cast<uint32_t>(oriShapeAttrInfo_.oriGroups);
-
-    if (attrInfo_.groups == 1) {
-        flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
-        return;
-    }
-
-    oriGroupInfo_.ciPerGroup = shapeInfo_.ci / attrInfo_.groups;
-    oriGroupInfo_.coPerGroup = shapeInfo_.co / attrInfo_.groups;
-    oriGroupInfo_.groups = attrInfo_.groups;
-    oriGroupInfo_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
-    conv2dApiTiling_.CalcOptGroupParams(oriGroupInfo_, optGroupInfo_);
-    convBase_.InitGroupInfo(oriGroupInfo_, optGroupInfo_);
-
-    if (EnableOptGroup()) {
-        flagInfo_.convGroupType = ConvGroupType::OPT_GROUP_CONV;
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Opt Group.", paramInfo_.nodeType.c_str());
-    } else {
-        flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Ori Group.", paramInfo_.nodeType.c_str());
-    }
 }
 
 void Conv2dBaseTiling::GetShapeInfo()
@@ -191,14 +167,29 @@ void Conv2dBaseTiling::GetAttrsInfo()
     GetGroupsInfo();
 }
 
-ge::Format Conv2dBaseTiling::GetWeightFormat() const
+void Conv2dBaseTiling::GetGroupsInfo()
 {
-    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
-    auto weightStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(weightDesc->GetStorageFormat()));
-    if (weightStorageFormat == ge::Format::FORMAT_FRACTAL_Z || weightStorageFormat == ge::Format::FORMAT_FRACTAL_Z_C04) {
-        return weightDesc->GetOriginFormat();
+    attrInfo_.groups = static_cast<uint32_t>(oriShapeAttrInfo_.oriGroups);
+
+    if (attrInfo_.groups == 1) {
+        flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
+        return;
     }
-    return weightStorageFormat;
+
+    oriGroupInfo_.ciPerGroup = shapeInfo_.ci / attrInfo_.groups;
+    oriGroupInfo_.coPerGroup = shapeInfo_.co / attrInfo_.groups;
+    oriGroupInfo_.groups = attrInfo_.groups;
+    oriGroupInfo_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
+    conv2dApiTiling_.CalcOptGroupParams(oriGroupInfo_, optGroupInfo_);
+    convBase_.InitGroupInfo(oriGroupInfo_, optGroupInfo_);
+
+    if (EnableOptGroup()) {
+        flagInfo_.convGroupType = ConvGroupType::OPT_GROUP_CONV;
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Opt Group.", paramInfo_.nodeType.c_str());
+    } else {
+        flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Ori Group.", paramInfo_.nodeType.c_str());
+    }
 }
 
 gert::Shape Conv2dBaseTiling::GetWeightShape(const gert::StorageShape* weightShapePtr) const
@@ -209,6 +200,16 @@ gert::Shape Conv2dBaseTiling::GetWeightShape(const gert::StorageShape* weightSha
         return weightShapePtr->GetOriginShape();
     }
     return weightShapePtr->GetStorageShape();
+}
+
+ge::Format Conv2dBaseTiling::GetWeightFormat() const
+{
+    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
+    auto weightStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(weightDesc->GetStorageFormat()));
+    if (weightStorageFormat == ge::Format::FORMAT_FRACTAL_Z || weightStorageFormat == ge::Format::FORMAT_FRACTAL_Z_C04) {
+        return weightDesc->GetOriginFormat();
+    }
+    return weightStorageFormat;
 }
 
 void Conv2dBaseTiling::GetDescInfo()
@@ -231,7 +232,11 @@ void Conv2dBaseTiling::GetDescInfo()
         descInfo_.biasFormat =
             static_cast<ge::Format>(GetPrimaryFormat(context_->GetOptionalInputDesc(biasIndex)->GetStorageFormat()));
     }
-    paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
+    if (IsMdcSoc(apiInputPlatformInfo.socVersion)) {
+        paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
+    } else {
+        paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
+    }
     if (flagInfo_.extendConvFlag) {
         descInfo_.out1Format = static_cast<ge::Format>(
             GetPrimaryFormat(context_->GetOutputDesc(EXTENDCONV_OUTPUT_1_INDEX)->GetStorageFormat()));
@@ -239,19 +244,12 @@ void Conv2dBaseTiling::GetDescInfo()
     }
 }
 
-uint64_t Conv2dBaseTiling::GetC04UbLoadMaxNsize()
-{
-    c04Info_.orgkH = shapeInfo_.kh;
-    c04Info_.orgkW = shapeInfo_.kw;
-    c04Info_.n0 = convOpsConstParams_.n0;
-    c04Info_.k0 = convOpsConstParams_.k0;
-    c04Info_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
-
-    return conv2dApiTiling_.CalcC04UbLoadMaxNsize(c04Info_);
-}
-
 bool Conv2dBaseTiling::IsEnableC04()
 {
+    if (IsMdcSoc(apiInputPlatformInfo.socVersion)) {
+        return descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
+    }
+
     if (apiInputPlatformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55) {
         return false;
     }
@@ -294,15 +292,41 @@ bool Conv2dBaseTiling::IsEnableC04()
     return true;
 }
 
-void Conv2dBaseTiling::SetQuantFlag()
+uint64_t Conv2dBaseTiling::GetC04UbLoadMaxNsize()
 {
-    flagInfo_.quantFlag = isQuantConv2D(context_->GetNodeType());
+    c04Info_.orgkH = shapeInfo_.kh;
+    c04Info_.orgkW = shapeInfo_.kw;
+    c04Info_.n0 = convOpsConstParams_.n0;
+    c04Info_.k0 = convOpsConstParams_.k0;
+    c04Info_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
+
+    return conv2dApiTiling_.CalcC04UbLoadMaxNsize(c04Info_);
 }
 
 void Conv2dBaseTiling::SetHasBias()
 {
     auto tmpBiasIdx = flagInfo_.quantFlag ? QUANT_INPUT_BIAS_INDEX : INPUT_BIAS_INDEX;
     flagInfo_.hasBias = context_->GetOptionalInputShape(tmpBiasIdx) != nullptr;
+}
+
+void Conv2dBaseTiling::SetQuantFlag()
+{
+    flagInfo_.quantFlag = isQuantConv2D(context_->GetNodeType());
+}
+
+ge::graphStatus Conv2dBaseTiling::GetNodeType()
+{
+    auto nodeType = context_->GetNodeType();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, nodeType);
+    auto iter = std::find(CONV2D_SUPPORTED_NODETYPE.begin(), CONV2D_SUPPORTED_NODETYPE.end(), nodeType);
+    if (iter == CONV2D_SUPPORTED_NODETYPE.end()) {
+         OP_LOGE(context_->GetNodeName(), "Unsupported node type %s.", nodeType);
+         return ge::GRAPH_FAILED;
+    }
+    paramInfo_.nodeType = nodeType;
+    flagInfo_.quantFlag = isQuantConv2D(nodeType);
+    flagInfo_.extendConvFlag = isExtendConv2D(nodeType);
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus Conv2dBaseTiling::GetConv2DAxisPosInfo()
@@ -322,53 +346,6 @@ ge::graphStatus Conv2dBaseTiling::GetConv2DAxisPosInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::GetNodeType()
-{
-    auto nodeType = context_->GetNodeType();
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, nodeType);
-    auto iter = std::find(CONV2D_SUPPORTED_NODETYPE.begin(), CONV2D_SUPPORTED_NODETYPE.end(), nodeType);
-    if (iter == CONV2D_SUPPORTED_NODETYPE.end()) {
-         OP_LOGE(context_->GetNodeName(), "Unsupported node type %s.", nodeType);
-         return ge::GRAPH_FAILED;
-    }
-    paramInfo_.nodeType = nodeType;
-    flagInfo_.quantFlag = isQuantConv2D(nodeType);
-    flagInfo_.extendConvFlag = isExtendConv2D(nodeType);
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckNullPtr()
-{
-    OP_TILING_CHECK(context_->GetAttrs() == nullptr,
-                    OP_LOGE(context_->GetNodeName(), "%s AscendC: attrs got from ge is nullptr",
-                    paramInfo_.nodeType.c_str()),
-                    return ge::GRAPH_FAILED);
-    auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
-    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
-    auto outputDesc = context_->GetOutputDesc(OUTPUT_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapDesc);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
-    if (flagInfo_.quantFlag) {
-        auto scaleDesc = context_->GetOptionalInputDesc(INPUT_SCALE_INDEX);
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
-    }
-    if (flagInfo_.extendConvFlag) {
-        auto output1Desc = context_->GetOutputDesc(EXTENDCONV_OUTPUT_1_INDEX);
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, output1Desc);
-        auto offsetWDesc = context_->GetOptionalInputDesc(INPUT_OFFSET_W_INDEX);
-        auto reluWeight0Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_RELU_WIGHT_0_INDEX);
-        auto reluWeight1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_RELU_WIGHT_1_INDEX);
-        auto clipValue0Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_0_INDEX);
-        auto clipValue1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_1_INDEX);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, offsetWDesc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, reluWeight0Desc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, reluWeight1Desc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue0Desc);
-        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue1Desc);
-    }
-    return ge::GRAPH_SUCCESS;
-}
 
 ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
 {
@@ -418,6 +395,35 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv2dBaseTiling::CheckNullPtr()
+{
+    OP_TILING_CHECK(context_->GetAttrs() == nullptr,
+                    OP_LOGE(context_->GetNodeName(), "%s AscendC: attrs got from ge is nullptr",
+                    paramInfo_.nodeType.c_str()),
+                    return ge::GRAPH_FAILED);
+    auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
+    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
+    auto outputDesc = context_->GetOutputDesc(OUTPUT_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    if (flagInfo_.quantFlag) {
+        auto scaleDesc = context_->GetOptionalInputDesc(INPUT_SCALE_INDEX);
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
+    }
+    if (flagInfo_.extendConvFlag) {
+        auto output1Desc = context_->GetOutputDesc(EXTENDCONV_OUTPUT_1_INDEX);
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, output1Desc);
+        auto offsetWDesc = context_->GetOptionalInputDesc(INPUT_OFFSET_W_INDEX);
+        auto clipValue0Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_0_INDEX);
+        auto clipValue1Desc = context_->GetOptionalInputDesc(EXTENDCONV_INPUT_CLIP_VALUE_1_INDEX);
+        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, offsetWDesc);
+        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue0Desc);
+        OPS_CHECK_NOT_NULL_WITH_CONTEXT(context_, clipValue1Desc);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
 {
     if (CheckLoad3DLimits() != ge::GRAPH_SUCCESS || CheckL1SizeLimitsKernelFullLoad() != ge::GRAPH_SUCCESS) {
@@ -447,6 +453,28 @@ void Conv2dBaseTiling::SetBlockDimRes()
     blockDimRes.woDim = tilingData_.conv2dRunInfo.get_woDim();
     blockDimRes.mDim = blockDimRes.hoDim;
     blockDimRes.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
+}
+
+// reset conv2d API's tilingdata
+ge::graphStatus Conv2dBaseTiling::DoLibApiTiling()
+{
+    if (flagInfo_.useTilingRepo || flagInfo_.useTilingCache) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    if (GetConv2dApiTiling() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (SetTilingKey() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    PrintLibApiTilingData();
+    if (AddTilingToCache()) {
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add fast tiling to cache",
+                paramInfo_.nodeType.c_str());
+    }
+ 
+    return ge::GRAPH_SUCCESS;
 }
 
 // calculate total tilingdata
@@ -484,41 +512,10 @@ ge::graphStatus Conv2dBaseTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-// reset conv2d API's tilingdata
-ge::graphStatus Conv2dBaseTiling::DoLibApiTiling()
-{
-    if (flagInfo_.useTilingRepo || flagInfo_.useTilingCache) {
-        return ge::GRAPH_SUCCESS;
-    }
-
-    if (GetConv2dApiTiling() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (SetTilingKey() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    PrintLibApiTilingData();
-    if (AddTilingToCache()) {
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add fast tiling to cache",
-                paramInfo_.nodeType.c_str());
-    }
- 
-    return ge::GRAPH_SUCCESS;
-}
-
 uint64_t Conv2dBaseTiling::GetTilingKey() const
 {
     // default 0
     return tilingKey_;
-}
-
-ge::graphStatus Conv2dBaseTiling::GetWorkspaceSize()
-{
-    size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = MIN_WORKSPACE_SIZE;
-
-    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus Conv2dBaseTiling::PostTiling()
@@ -532,6 +529,15 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
         context_->SetBlockDim(blockDimRes.batchDim * blockDimRes.nDim * blockDimRes.hoDim * blockDimRes.woDim *
                               blockDimRes.groupDim);
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::GetWorkspaceSize()
+{
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+    workspaces[0] = MIN_WORKSPACE_SIZE;
+
     return ge::GRAPH_SUCCESS;
 }
 }

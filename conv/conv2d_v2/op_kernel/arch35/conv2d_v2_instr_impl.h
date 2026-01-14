@@ -201,7 +201,7 @@ public:
             return;
         }
 
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             LoadAl1Data(kAL1Iter, batchIter);
         } else {
             LoadAl1DataHWC(kAL1Iter, batchIter);
@@ -256,7 +256,7 @@ public:
             return;
         }
 
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             uint64_t aL1GmOffset = batchIter * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM +
                                    hiIdx * self_->ctx.orgWi;

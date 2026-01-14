@@ -430,7 +430,12 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self)
         self->ctx.madIns.SetMN(self->ctx.currentML0Align, self->ctx.currentNL0Align);
     }
 
-    self->ctx.copyOutIns.SetMN(currentML0, currentNL0);
+    if constexpr (Intf::isDeQuantFlag) {
+        self->ctx.dequantL0C2UBTools.SetMN(currentML0, currentNL0);
+    } else {
+        self->ctx.copyOutIns.SetMN(currentML0, currentNL0);
+    }
+
     if constexpr (Intf::isExtendConv2d) {
         self->ctx.copyOutIns1.SetMN(currentML0, currentNL0);
     }

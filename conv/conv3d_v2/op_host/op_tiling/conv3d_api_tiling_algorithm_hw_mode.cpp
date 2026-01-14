@@ -25,8 +25,11 @@ namespace Conv3dApiTiling {
 void Conv3dTilingAlgorithmHwMode::InitPingPong()
 {
     this->doubleBufferValue.pbAL1 = DOUBLE_BUFFER_NUM;
-    this->doubleBufferValue.pbAL1 = (CalcL1SizeForL0Tiling(CONST_HO_1, tilingIns_->cubeInfo.m0, tilingIns_->cubeInfo.n0)
-                                     <= tilingIns_->platformInfo.l1Size) ? DOUBLE_BUFFER_NUM : ENABLE_DOUBLE_BUFFER;
+    this->doubleBufferValue.pbAL1 =
+        (CalcL1SizeForL0Tiling(CONST_HO_1, tilingIns_->cubeInfo.m0, tilingIns_->cubeInfo.n0) <=
+         tilingIns_->platformInfo.l1Size) ?
+            DOUBLE_BUFFER_NUM :
+            ENABLE_DOUBLE_BUFFER;
     this->doubleBufferValue.pbBL1 = DOUBLE_BUFFER_NUM;
     this->doubleBufferValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->doubleBufferValue.pbBL0 = DOUBLE_BUFFER_NUM;
@@ -36,24 +39,25 @@ void Conv3dTilingAlgorithmHwMode::InitPingPong()
 void Conv3dTilingAlgorithmHwMode::GetL0TilingRange()
 {
     // Get nL0 range
-    uint64_t nL0Max = min(tilingIns_->platformInfo.l0BSize / (tilingIns_->cubeInfo.k0 * this->doubleBufferValue.pbBL0 *
-                                                                weightDTypeSize),
-                          tilingIns_->platformInfo.l0CSize / (tilingIns_->cubeInfo.m0 * this->doubleBufferValue.pbCL0 *
-                                                                g_dtypeSizeTab.at(tilingIns_->cubeInfo.madType)));
-    CalcCommFactorWithPowerOfTwo(tilingIns_->shapeCalc.singleCo1, nL0Max / tilingIns_->cubeInfo.n0,
-                                 l0TilingRange.nL0Range);
+    uint64_t nL0Max = min(
+        tilingIns_->platformInfo.l0BSize / (tilingIns_->cubeInfo.k0 * this->doubleBufferValue.pbBL0 * weightDTypeSize),
+        tilingIns_->platformInfo.l0CSize / (tilingIns_->cubeInfo.m0 * this->doubleBufferValue.pbCL0 *
+                                            g_dtypeSizeTab.at(tilingIns_->cubeInfo.madType)));
+    CalcCommFactorWithPowerOfTwo(
+        tilingIns_->shapeCalc.singleCo1, nL0Max / tilingIns_->cubeInfo.n0, l0TilingRange.nL0Range);
     VectorElementMultip(l0TilingRange.nL0Range, tilingIns_->cubeInfo.n0);
 
     // Get hoL0 range
     l0TilingRange.hoL0Range = {CONST_HO_1};
     // Get woL0 range
-    uint64_t woL0Max = min(tilingIns_->platformInfo.l0ASize / (tilingIns_->cubeInfo.k0 * this->doubleBufferValue.pbAL0 *
-                          fMapDTypeSize),
-                          tilingIns_->platformInfo.l0CSize / (tilingIns_->cubeInfo.n0 * this->doubleBufferValue.pbCL0 *
-                          g_dtypeSizeTab.at(tilingIns_->cubeInfo.madType)));
+    uint64_t woL0Max = min(
+        tilingIns_->platformInfo.l0ASize / (tilingIns_->cubeInfo.k0 * this->doubleBufferValue.pbAL0 * fMapDTypeSize),
+        tilingIns_->platformInfo.l0CSize / (tilingIns_->cubeInfo.n0 * this->doubleBufferValue.pbCL0 *
+                                            g_dtypeSizeTab.at(tilingIns_->cubeInfo.madType)));
     woL0Max = min(woL0Max, static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo));
-    CalcCommFactorWithPowerOfTwo(tilingIns_->shapeInfo.singleWo / tilingIns_->cubeInfo.m0,
-                                 woL0Max / tilingIns_->cubeInfo.m0, l0TilingRange.woL0Range);
+    CalcCommFactorWithPowerOfTwo(
+        tilingIns_->shapeInfo.singleWo / tilingIns_->cubeInfo.m0, woL0Max / tilingIns_->cubeInfo.m0,
+        l0TilingRange.woL0Range);
     if (l0TilingRange.woL0Range.empty()) {
         l0TilingRange.woL0Range.push_back(1);
     }
@@ -69,8 +73,8 @@ void Conv3dTilingAlgorithmHwMode::InitializeL0TilingParamsAndIndices()
     l0TilingParams.woL0 = l0TilingRange.woL0Range[l0TilingIdx.woL0Idx];
     l0TilingParams.hoL0 = l0TilingRange.hoL0Range[INITIAL_INDEX];
     l0TilingParams.nL0 = l0TilingRange.nL0Range[l0TilingIdx.nL0Idx];
-    l0TilingParams.orgCoAlignN0 = AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.orgCo),
-                                         static_cast<uint64_t>(tilingIns_->cubeInfo.n0));
+    l0TilingParams.orgCoAlignN0 =
+        AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.orgCo), static_cast<uint64_t>(tilingIns_->cubeInfo.n0));
 }
 
 bool Conv3dTilingAlgorithmHwMode::ShouldUpdateWoL0Index() const
@@ -80,15 +84,14 @@ bool Conv3dTilingAlgorithmHwMode::ShouldUpdateWoL0Index() const
            (l0TilingIdx.nL0Idx == (nL0RangeLen - static_cast<uint64_t>(1)));
 }
 
-void Conv3dTilingAlgorithmHwMode::UpdateL0TilingParamsAndCheck(bool& l0BufferNotOverflowFlag,
-                                                               uint64_t& usedL1Size,
-                                                               uint64_t& usedBTSize)
+void Conv3dTilingAlgorithmHwMode::UpdateL0TilingParamsAndCheck(
+    bool& l0BufferNotOverflowFlag, uint64_t& usedL1Size, uint64_t& usedBTSize)
 {
     l0TilingParams.woL0 = l0TilingRange.woL0Range[l0TilingIdx.woL0Idx];
     l0TilingParams.nL0 = l0TilingRange.nL0Range[l0TilingIdx.nL0Idx];
 
-    l0BufferNotOverflowFlag = CheckL0Buffer(l0TilingParams.woL0 * l0TilingParams.hoL0,
-                                           l0TilingParams.kL0, l0TilingParams.nL0);
+    l0BufferNotOverflowFlag =
+        CheckL0Buffer(l0TilingParams.woL0 * l0TilingParams.hoL0, l0TilingParams.kL0, l0TilingParams.nL0);
     usedL1Size = CalcL1SizeForL0Tiling(l0TilingParams.hoL0, l0TilingParams.woL0, l0TilingParams.nL0);
     usedBTSize = CalcBTSize(l0TilingParams.nL0);
 }
@@ -96,11 +99,11 @@ void Conv3dTilingAlgorithmHwMode::UpdateL0TilingParamsAndCheck(bool& l0BufferNot
 void Conv3dTilingAlgorithmHwMode::AdjustIndicesL0Tiling(bool updateWoL0Index)
 {
     if (updateWoL0Index) {
-        l0TilingIdx.woL0Idx = (l0TilingIdx.woL0Idx == INITIAL_INDEX) ?
-                              INITIAL_INDEX : l0TilingIdx.woL0Idx - static_cast<uint64_t>(1);
+        l0TilingIdx.woL0Idx =
+            (l0TilingIdx.woL0Idx == INITIAL_INDEX) ? INITIAL_INDEX : l0TilingIdx.woL0Idx - static_cast<uint64_t>(1);
     } else {
-        l0TilingIdx.nL0Idx = (l0TilingIdx.nL0Idx == INITIAL_INDEX) ?
-                             INITIAL_INDEX : l0TilingIdx.nL0Idx - static_cast<uint64_t>(1);
+        l0TilingIdx.nL0Idx =
+            (l0TilingIdx.nL0Idx == INITIAL_INDEX) ? INITIAL_INDEX : l0TilingIdx.nL0Idx - static_cast<uint64_t>(1);
     }
 }
 
@@ -119,8 +122,8 @@ void Conv3dTilingAlgorithmHwMode::L0TilingDecision()
 {
     InitializeL0TilingParamsAndIndices();
 
-    bool l0BufferNotOverflowFlag = CheckL0Buffer(l0TilingParams.woL0 * l0TilingParams.hoL0,
-                                                 l0TilingParams.kL0, l0TilingParams.nL0);
+    bool l0BufferNotOverflowFlag =
+        CheckL0Buffer(l0TilingParams.woL0 * l0TilingParams.hoL0, l0TilingParams.kL0, l0TilingParams.nL0);
     uint64_t usedL1Size = CalcL1SizeForL0Tiling(l0TilingParams.hoL0, l0TilingParams.woL0, l0TilingParams.nL0);
     uint64_t usedBTSize = CalcBTSize(l0TilingParams.nL0);
 
@@ -148,8 +151,8 @@ void Conv3dTilingAlgorithmHwMode::L0TilingDecision()
     SetFinalL0TilingParams();
 }
 
-
-uint64_t Conv3dTilingAlgorithmHwMode::CalcL1SizeForL0Tiling(uint64_t currhoL0, uint64_t currwoL0, uint64_t currnL0) const
+uint64_t Conv3dTilingAlgorithmHwMode::CalcL1SizeForL0Tiling(
+    uint64_t currhoL0, uint64_t currwoL0, uint64_t currnL0) const
 {
     // Calculate AL1 size
     uint64_t hiAL1Min = InferHiL1(currhoL0, tilingIns_->shapeInfo.orgHi);
@@ -168,15 +171,15 @@ int64_t Conv3dTilingAlgorithmHwMode::InitCalcL1ParamsForFmap()
     uint64_t hiL1FullLoad = InferHiL1(tilingIns_->shapeInfo.singleHo, tilingIns_->shapeInfo.orgHi);
     uint64_t wiL1FullLoad = InferWiL1(tilingIns_->shapeInfo.singleWo, tilingIns_->shapeInfo.orgWi);
     this->l1TilingCalc.fmapFullLoadL1Size = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
-        tilingIns_->shapeCalc.singleCi1 * hiL1FullLoad * wiL1FullLoad * static_cast<uint64_t>(tilingIns_->cubeInfo.k0) *
-        this->fMapDTypeSize;
+                                            tilingIns_->shapeCalc.singleCi1 * hiL1FullLoad * wiL1FullLoad *
+                                            static_cast<uint64_t>(tilingIns_->cubeInfo.k0) * this->fMapDTypeSize;
     // cal min/kfullload fmap size in L1(mL0)
     uint64_t hiL1MinLoad = InferHiL1(this->l0TilingParams.hoL0, tilingIns_->shapeInfo.orgHi);
     uint64_t wiL1MinLoad = InferWiL1(this->l0TilingParams.woL0, tilingIns_->shapeInfo.orgWi);
-    this->l1TilingCalc.fmapMinLoadL1Size = tilingIns_->cubeInfo.k0 * hiL1MinLoad * wiL1MinLoad *
-        this->fMapDTypeSize * this->doubleBufferValue.pbAL1;
+    this->l1TilingCalc.fmapMinLoadL1Size =
+        tilingIns_->cubeInfo.k0 * hiL1MinLoad * wiL1MinLoad * this->fMapDTypeSize * this->doubleBufferValue.pbAL1;
     this->l1TilingCalc.fmapKL1FullLoadSize = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
-        tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.fmapMinLoadL1Size;
+                                             tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.fmapMinLoadL1Size;
 
     return VALID_VALUE;
 }
@@ -197,18 +200,15 @@ void Conv3dTilingAlgorithmHwMode::GetL1TilingRangeForM()
 void Conv3dTilingAlgorithmHwMode::InitL1TiLingMap()
 {
     this->l1TilingInitMap[L1TilingMode::NONE_FULL_LOAD].SetIdx(0, 0, 0, 0, 0);
-    this->l1TilingInitMap[L1TilingMode::FULL_LOAD_AL1].SetIdx(this->l1TilingRange.kAL1Range.size() - 1, 0,
-                                                              this->l1TilingRange.hoAL1ValueRange.size() - 1,
-                                                              this->l1TilingRange.woAL1ValueRange.size() - 1,
-                                                              0);
-    this->l1TilingInitMap[L1TilingMode::FULL_LOAD_BL1].SetIdx(0, this->l1TilingRange.kBL1Range.size() - 1,
-                                                              0, 0,
-                                                              this->l1TilingRange.nBL1ValueRange.size() - 1);
-    this->l1TilingInitMap[L1TilingMode::ALL_FULL_LOAD].SetIdx(this->l1TilingRange.kAL1Range.size() - 1,
-                                                              this->l1TilingRange.kBL1Range.size() - 1,
-                                                              this->l1TilingRange.hoAL1ValueRange.size() - 1,
-                                                              this->l1TilingRange.woAL1ValueRange.size() - 1,
-                                                              this->l1TilingRange.nBL1ValueRange.size() - 1);
+    this->l1TilingInitMap[L1TilingMode::FULL_LOAD_AL1].SetIdx(
+        this->l1TilingRange.kAL1Range.size() - 1, 0, this->l1TilingRange.hoAL1ValueRange.size() - 1,
+        this->l1TilingRange.woAL1ValueRange.size() - 1, 0);
+    this->l1TilingInitMap[L1TilingMode::FULL_LOAD_BL1].SetIdx(
+        0, this->l1TilingRange.kBL1Range.size() - 1, 0, 0, this->l1TilingRange.nBL1ValueRange.size() - 1);
+    this->l1TilingInitMap[L1TilingMode::ALL_FULL_LOAD].SetIdx(
+        this->l1TilingRange.kAL1Range.size() - 1, this->l1TilingRange.kBL1Range.size() - 1,
+        this->l1TilingRange.hoAL1ValueRange.size() - 1, this->l1TilingRange.woAL1ValueRange.size() - 1,
+        this->l1TilingRange.nBL1ValueRange.size() - 1);
 }
 
 void Conv3dTilingAlgorithmHwMode::InitABL1TilingMode()
@@ -216,7 +216,8 @@ void Conv3dTilingAlgorithmHwMode::InitABL1TilingMode()
     // init L1 fmap weight full load case and init mode
     if (tilingIns_->shapeInfo.singleWo % static_cast<int64_t>(tilingIns_->cubeInfo.m0) != static_cast<int64_t>(0)) {
         if (this->l1TilingCalc.weightFullLoadL1Size + this->l1TilingCalc.fmapMinLoadL1Size +
-            this->l1TilingCalc.biasMinLoadL1Size <= tilingIns_->platformInfo.l1Size) {
+                this->l1TilingCalc.biasMinLoadL1Size <=
+            tilingIns_->platformInfo.l1Size) {
             this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
             this->doubleBufferValue.pbBL1 = static_cast<uint8_t>(1);
         } else {
@@ -230,12 +231,13 @@ void Conv3dTilingAlgorithmHwMode::InitABL1TilingMode()
 int64_t Conv3dTilingAlgorithmHwMode::ProcessAllL1FullLoad()
 {
     // when fmap and weight can both full load, it can set res and return directly
-    this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
-        this->l1TilingCalc.ci0HkWk;
-    this->l1TilingParams.kBL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
-        this->l1TilingCalc.ci0HkWk;
+    this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
+                                tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.ci0HkWk;
+    this->l1TilingParams.kBL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
+                                tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.ci0HkWk;
     this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) /
-        static_cast<uint64_t>(tilingIns_->cubeInfo.m0) * static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
+                                      static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
+                                      static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
     this->l1TilingParams.nBL1Value = tilingIns_->cubeInfo.n0 * tilingIns_->shapeCalc.singleCo1;
     this->l1TilingFlag.iterateMNOrder = IterateMNOrder::ITER_M_FST;
     return VALID_VALUE;
@@ -244,10 +246,11 @@ int64_t Conv3dTilingAlgorithmHwMode::ProcessAllL1FullLoad()
 int64_t Conv3dTilingAlgorithmHwMode::ProcessFmapL1FullLoad()
 {
     // when only fmap full load in L1, nfirset and iter kbl1 then nbl1
-    this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
-                                this->l1TilingCalc.ci0HkWk;
+    this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
+                                tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.ci0HkWk;
     this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) /
-                                static_cast<uint64_t>(tilingIns_->cubeInfo.m0) * static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
+                                      static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
+                                      static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
     this->l1TilingFlag.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     // speical case, when min weight can not load in L1, bypass
     if (CoreL1TilingMinWeightBypass()) {
@@ -267,10 +270,10 @@ void Conv3dTilingAlgorithmHwMode::MAL1IdxIter()
     while (this->l1TilingIdx.woAL1Idx < this->l1TilingRange.woAL1ValueRange.size() && CheckL1Buffer()) {
         this->l1TilingIdx.woAL1Idx++;
     }
-    this->l1TilingIdx.woAL1Idx = this->l1TilingIdx.woAL1Idx == INITIAL_INDEX ? INITIAL_INDEX :
-        this->l1TilingIdx.woAL1Idx - static_cast<uint64_t>(1);
+    this->l1TilingIdx.woAL1Idx = this->l1TilingIdx.woAL1Idx == INITIAL_INDEX ?
+                                     INITIAL_INDEX :
+                                     this->l1TilingIdx.woAL1Idx - static_cast<uint64_t>(1);
 }
-
 
 uint64_t Conv3dTilingAlgorithmHwMode::CalcCurrFmapL1Size() const
 {
@@ -280,8 +283,8 @@ uint64_t Conv3dTilingAlgorithmHwMode::CalcCurrFmapL1Size() const
     uint64_t woL1Load = this->l1TilingRange.woAL1ValueRange.at(this->l1TilingIdx.woAL1Idx);
     uint64_t wiL1Load = InferWiL1(woL1Load, tilingIns_->shapeInfo.orgWi);
     uint64_t currentFmL1Size =
-        (this->l1TilingRange.kAL1Range.at(this->l1TilingIdx.kAL1Idx) / this->l1TilingCalc.ci0HkWk) *
-        hiL1Load * wiL1Load * this->fMapDTypeSize * this->doubleBufferValue.pbAL1 * tilingIns_->cubeInfo.k0;
+        (this->l1TilingRange.kAL1Range.at(this->l1TilingIdx.kAL1Idx) / this->l1TilingCalc.ci0HkWk) * hiL1Load *
+        wiL1Load * this->fMapDTypeSize * this->doubleBufferValue.pbAL1 * tilingIns_->cubeInfo.k0;
     return currentFmL1Size;
 }
 
@@ -299,11 +302,13 @@ int64_t Conv3dTilingAlgorithmHwMode::KABL1FullLoadIter()
     uint64_t fmapMte2Size = INITIAL_SIZE;
     uint64_t weightMte2Size = INITIAL_SIZE;
     uint64_t bothFullloadIterNMte2Size = INITIAL_SIZE;
-    uint64_t loopTime = CeilDiv(tilingIns_->shapeInfo.singleWo, this->l1TilingRange.woAL1ValueRange.at(tmpWoAL1Idx)) *
+    uint64_t loopTime =
+        CeilDiv(tilingIns_->shapeInfo.singleWo, this->l1TilingRange.woAL1ValueRange.at(tmpWoAL1Idx)) *
         CeilDiv(tilingIns_->shapeInfo.singleHo, this->l1TilingRange.hoAL1ValueRange.at(this->l1TilingIdx.hoAL1Idx));
-    if (Conv3dCommon::MulWithOverflowCheck(fmapMte2Size, fmapSingleCoreL1Load,
-                             static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
-        Conv3dCommon::MulWithOverflowCheck(weightMte2Size, weightSingleCoreL1Load, loopTime * static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
+    if (Conv3dCommon::MulWithOverflowCheck(
+            fmapMte2Size, fmapSingleCoreL1Load, static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
+        Conv3dCommon::MulWithOverflowCheck(
+            weightMte2Size, weightSingleCoreL1Load, loopTime * static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
         AddWithOverflowCheck(bothFullloadIterNMte2Size, fmapMte2Size, weightMte2Size)) {
         TILING_ERROR_LOG("total mte2 size in l1 is overflow uint64, KABL1FullLoadIter failed!");
         return INVALID_VALUE;
@@ -313,7 +318,8 @@ int64_t Conv3dTilingAlgorithmHwMode::KABL1FullLoadIter()
     // weight_mte2_size: weightSingleCoreL1Load
     uint64_t bothFullloadIterMMte2Size = INITIAL_SIZE;
     loopTime = CeilDiv(tilingIns_->shapeInfo.singleCo, this->l1TilingRange.nBL1ValueRange.at(tmpNBL1Idx));
-    if (Conv3dCommon::MulWithOverflowCheck(fmapMte2Size, fmapSingleCoreL1Load, loopTime * static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
+    if (Conv3dCommon::MulWithOverflowCheck(
+            fmapMte2Size, fmapSingleCoreL1Load, loopTime * static_cast<uint64_t>(tilingIns_->shapeInfo.singleDo)) ||
         AddWithOverflowCheck(bothFullloadIterMMte2Size, fmapMte2Size, weightSingleCoreL1Load)) {
         TILING_ERROR_LOG("total mte2 size in l1 is overflow uint64, KABL1FullLoadIter failed!");
         return INVALID_VALUE;
@@ -338,8 +344,9 @@ uint64_t Conv3dTilingAlgorithmHwMode::KABL1FullLoadIterN()
     while (this->l1TilingIdx.woAL1Idx < this->l1TilingRange.woAL1ValueRange.size() && CheckL1Buffer()) {
         this->l1TilingIdx.woAL1Idx++;
     }
-    this->l1TilingIdx.woAL1Idx = this->l1TilingIdx.woAL1Idx == INITIAL_INDEX ? INITIAL_INDEX :
-        this->l1TilingIdx.woAL1Idx - static_cast<uint64_t>(1);
+    this->l1TilingIdx.woAL1Idx = this->l1TilingIdx.woAL1Idx == INITIAL_INDEX ?
+                                     INITIAL_INDEX :
+                                     this->l1TilingIdx.woAL1Idx - static_cast<uint64_t>(1);
     tmpWoAL1Idx = this->l1TilingIdx.woAL1Idx;
     this->l1TilingIdx.woAL1Idx = startIdxBk;
     return tmpWoAL1Idx;
@@ -356,12 +363,14 @@ void Conv3dTilingAlgorithmHwMode::SetMAL1NBL1ValueAndMode()
         this->l1TilingParams.nBL1Value = tilingIns_->shapeCalc.singleCo1 * tilingIns_->cubeInfo.n0;
         tilingIns_->l1TilingInfo.bl1FullLoad = true;
     } else if (this->l1TilingFlag.abL1Mode == L1TilingMode::FULL_LOAD_AL1) {
-        this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) / static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
+        this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) /
+                                          static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
                                           static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
         tilingIns_->l1TilingInfo.al1FullLoad = true;
     } else if (this->l1TilingFlag.abL1Mode == L1TilingMode::ALL_FULL_LOAD) {
         this->l1TilingParams.nBL1Value = tilingIns_->shapeCalc.singleCo1 * tilingIns_->cubeInfo.n0;
-        this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) / static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
+        this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) /
+                                          static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
                                           static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
         tilingIns_->l1TilingInfo.al1FullLoad = true;
         tilingIns_->l1TilingInfo.bl1FullLoad = true;

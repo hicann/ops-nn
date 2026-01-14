@@ -78,15 +78,19 @@ __aicore__ inline bool IterateL0MFirstMMode(Intf *self)
         self->ctx.mL0Iter = 0;
     } else {
         self->ctx.loadBL0Flag = false;
-        if constexpr (Intf::kl0FullLoadFlag) {
-            self->ctx.kL0FullLoadAl0PingPongFlag =
-                CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadAl0PingPongFlag;
+        if ASCEND_IS_AIC_CONV {
+            if constexpr (Intf::kl0FullLoadFlag) {
+                self->ctx.kL0FullLoadAl0PingPongFlag =
+                    CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadAl0PingPongFlag;
+            }
         }
         return true;
     }
 
-    if constexpr (Intf::kl0FullLoadFlag) {
-        self->ctx.kL0FullLoadAl0PingPongFlag = 0;
+    if ASCEND_IS_AIC_CONV {
+        if constexpr (Intf::kl0FullLoadFlag) {
+            self->ctx.kL0FullLoadAl0PingPongFlag = 0;
+        }
     }
 
     if constexpr (Intf::hasNL0IterFlag) {
@@ -109,8 +113,10 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
         return true;
     }
 
-    if (self->ctx.kAL1fullload) {
-        self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+    if ASCEND_IS_AIC_CONV {
+        if (self->ctx.kAL1fullload) {
+            self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+        }
     }
 
     self->ctx.mAL1Iter++;
@@ -141,8 +147,10 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
         return true;
     }
 
-    if (self->ctx.kBL1fullload) {
-        self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+    if ASCEND_IS_AIC_CONV {
+        if (self->ctx.kBL1fullload) {
+            self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+        }
     }
 
     if constexpr (Intf::hasNL1IterFlag) {
@@ -166,16 +174,20 @@ __aicore__ inline bool IterateL0NFirstMMode(Intf *self)
             self->ctx.nL0Iter = 0;
         } else {
             self->ctx.loadAL0Flag = false;
-            if constexpr (Intf::kl0FullLoadFlag) {
-                self->ctx.kL0FullLoadBl0PingPongFlag =
-                    CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadBl0PingPongFlag;
+            if ASCEND_IS_AIC_CONV {
+                if constexpr (Intf::kl0FullLoadFlag) {
+                    self->ctx.kL0FullLoadBl0PingPongFlag =
+                        CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadBl0PingPongFlag;
+                }
             }
             return true;
         }
     }
 
-    if constexpr (Intf::kl0FullLoadFlag) {
-        self->ctx.kL0FullLoadBl0PingPongFlag = 0;
+    if ASCEND_IS_AIC_CONV {
+        if constexpr (Intf::kl0FullLoadFlag) {
+            self->ctx.kL0FullLoadBl0PingPongFlag = 0;
+        }
     }
 
     self->ctx.mL0Iter++;
@@ -196,8 +208,10 @@ __aicore__ inline bool IterateNFirstMMode(Intf *self)
         return true;
     }
 
-    if (self->ctx.kBL1fullload) {
-        self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+    if ASCEND_IS_AIC_CONV {
+        if (self->ctx.kBL1fullload) {
+            self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
+        }
     }
 
     if constexpr (Intf::hasNL1IterFlag) {
@@ -213,8 +227,10 @@ __aicore__ inline bool IterateNFirstMMode(Intf *self)
         }
     }
 
-    if (self->ctx.kAL1fullload) {
-        self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+    if ASCEND_IS_AIC_CONV {
+        if (self->ctx.kAL1fullload) {
+            self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+        }
     }
 
     self->ctx.mAL1Iter++;

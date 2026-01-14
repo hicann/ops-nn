@@ -108,7 +108,7 @@ public:
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1, self_->ctx.convTiling->orgWi, padList);
         }
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             uint64_t aL1GmOffset = batchIter * self_->ctx.convTiling->innerBatch * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM;
 
@@ -198,7 +198,7 @@ public:
 
     __aicore__ inline void LoadBL1(uint64_t kBL1Iter, uint64_t nBL1Iter)
     {
-        if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
+        if constexpr (Intf::formatWeight == ConvFormat::NCHW) {
             if constexpr (Intf::isDmaFlag) {
                 LoadBL1DataKernelSplit(kBL1Iter, nBL1Iter);
             } else {

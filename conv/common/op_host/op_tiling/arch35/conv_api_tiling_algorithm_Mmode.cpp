@@ -27,6 +27,7 @@ int64_t ConvTilingAlgorithmMmode::Process()
     if (GetL1Tiling() == -1) {
         return -1;
     }
+    GetUbTiling();
     // set pb res
     SetPBufferRes();
     return 0;
@@ -51,7 +52,7 @@ bool ConvTilingAlgorithmMmode::CheckMinL1Tiling()
     uint64_t minBiasSize = tilingIns_->hasBias ? AlignB(tilingIns_->cubeInfo.n0 * this->biasDTypeSize, C0_SIZE) : 0;
     uint64_t curUsedL1Size = minAL1Size + minBiasSize + minBL1Size;
  
-    if (tilingIns_->hasQuantScale) {
+    if (tilingIns_->hasScale) {
         // cal channelwise fix params according to channelWiseCoefficient
         float minFixpipeParamsL1Size = tilingIns_->shapeInfo.channelWiseCoeff *
             static_cast<float>(tilingIns_->cubeInfo.n0 * FP16_DTYPE_SIZE);
@@ -238,7 +239,8 @@ void ConvTilingAlgorithmMmode::GetL1TilingRange()
     CalcCommFactor(multiMAL1Max, multiMAL1Max, this->l1TilingRange.mAL1ValueRange);
     VectorElementMultip(this->l1TilingRange.mAL1ValueRange, l0TilingParams.mL0);
     // load3d m start position <= LOAD3D_M_START_POS_LIMIT
-    if (tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::MC62CM12A) {
         auto mL1EffectiveCount = count_if(this->l1TilingRange.mAL1ValueRange.begin(),
             this->l1TilingRange.mAL1ValueRange.end(), [](uint64_t x) { return x <= LOAD3D_M_START_POS_LIMIT; });
         this->l1TilingRange.mAL1ValueRange.resize(mL1EffectiveCount);
@@ -265,56 +267,80 @@ void ConvTilingAlgorithmMmode::InitABL1TilingMode()
 {
     auto fullLoadML1 = tilingIns_->cubeInfo.m0 * tilingIns_->shapeInfo.singleM1;
     bool mL1ExceedInstrLimit = fullLoadML1 > LOAD3D_M_START_POS_LIMIT;
-    // init L1 fmap weight full load case and init mode
-    if (this->l1TilingCalc.fmapFullLoadL1Size + this->l1TilingCalc.weightFullLoadL1Size +
-        this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
-        tilingIns_->platformInfo.l1Size && !mL1ExceedInstrLimit) {
+
+    // Check if all full load is possible
+    if (IsAllFullLoadPossible(mL1ExceedInstrLimit)) {
         this->l1TilingFlag.abL1Mode = L1TilingMode::ALL_FULL_LOAD;
         this->dbValue.pbAL1 = 1;
-        if(tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
+        if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
             this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
             this->dbValue.pbAL1 = CONST_VALUE_2;
         }
         return;
     }
-    if (this->l1TilingCalc.fmapFullLoadL1Size <= this->l1TilingCalc.weightFullLoadL1Size *
-        tilingIns_->platformInfo.abL1mte2BandWidthCof) {
-        if (this->l1TilingCalc.weightFullLoadL1Size + this->l1TilingCalc.fmapMinLoadL1Size +
-            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
-            tilingIns_->platformInfo.l1Size) {
-            this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
-            return;
-        } else if (this->l1TilingCalc.weightMinLoadL1Size + this->l1TilingCalc.fmapFullLoadL1Size +
-            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
-            tilingIns_->platformInfo.l1Size && !mL1ExceedInstrLimit) {
-            this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
-            this->dbValue.pbAL1 = 1;
-            if(tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
-                this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
-                this->dbValue.pbAL1 = CONST_VALUE_2;
-            }
-            return;
+
+    // weightFullLoadL1Size is bigger than fmapFullLoadL1Size
+    if (IsWeightFullLoadDominant() && IsWeightFullLoadPossible()) {
+        this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
+        return;
+    } else if (IsWeightFullLoadDominant() && IsFmapFullLoadPossible(mL1ExceedInstrLimit)) {
+        this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
+        this->dbValue.pbAL1 = 1;
+        if(tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
+            this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
+            this->dbValue.pbAL1 = CONST_VALUE_2;
         }
-    } else {
-        if (this->l1TilingCalc.weightMinLoadL1Size + this->l1TilingCalc.fmapFullLoadL1Size + this->l1TilingCalc.biasMinLoadL1Size +
-            this->l1TilingCalc.fixpMinLoadL1Size <= tilingIns_->platformInfo.l1Size && !mL1ExceedInstrLimit) {
-            this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
-            this->dbValue.pbAL1 = 1;
-            if(tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
-                this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
-                this->dbValue.pbAL1 = CONST_VALUE_2;
-            }
-            return;
-        } else if (this->l1TilingCalc.weightFullLoadL1Size + this->l1TilingCalc.fmapMinLoadL1Size +
-            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
-            tilingIns_->platformInfo.l1Size) {
-            this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
-            return;
-        }
+        return;
     }
-    // other case None can full load in L1 case
+
+    // weightFullLoadL1Size is smaller than fmapFullLoadL1Size
+    if (IsFmapFullLoadPossible(mL1ExceedInstrLimit)) {
+        this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
+        this->dbValue.pbAL1 = 1;
+        if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
+            if (IsWeightFullLoadPossible()) {
+                this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
+                this->dbValue.pbAL1 = CONST_VALUE_2;
+                return;
+            }
+            this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
+            this->dbValue.pbAL1 = CONST_VALUE_2;
+        }
+        return;
+    } else if (IsWeightFullLoadPossible()) {
+        this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
+        return;
+    }
+    // If none of the above conditions are met, set to NONE_FULL_LOAD
     this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
     return;
+}
+
+bool ConvTilingAlgorithmMmode::IsAllFullLoadPossible(bool mL1ExceedInstrLimit)
+{
+    return (this->l1TilingCalc.fmapFullLoadL1Size + this->l1TilingCalc.weightFullLoadL1Size +
+            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
+            tilingIns_->platformInfo.l1Size) && !mL1ExceedInstrLimit;
+}
+
+bool ConvTilingAlgorithmMmode::IsWeightFullLoadDominant()
+{
+    return (this->l1TilingCalc.fmapFullLoadL1Size <= this->l1TilingCalc.weightFullLoadL1Size *
+           tilingIns_->platformInfo.abL1mte2BandWidthCof);
+}
+
+bool ConvTilingAlgorithmMmode::IsWeightFullLoadPossible()
+{
+    return (this->l1TilingCalc.weightFullLoadL1Size + this->l1TilingCalc.fmapMinLoadL1Size +
+            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
+            tilingIns_->platformInfo.l1Size);
+}
+
+bool ConvTilingAlgorithmMmode::IsFmapFullLoadPossible(bool mL1ExceedInstrLimit)
+{
+    return (this->l1TilingCalc.weightMinLoadL1Size + this->l1TilingCalc.fmapFullLoadL1Size +
+            this->l1TilingCalc.biasMinLoadL1Size + this->l1TilingCalc.fixpMinLoadL1Size <=
+            tilingIns_->platformInfo.l1Size) && !mL1ExceedInstrLimit;
 }
 
 void ConvTilingAlgorithmMmode::FmapL1FullLoadIter()
@@ -585,7 +611,7 @@ void ConvTilingAlgorithmMmode::L1NoFullLoadIter()
 void ConvTilingAlgorithmMmode::BiasL1TilingDecision()
 {
     // decide bias and fixpParams in L1
-    if (!tilingIns_->hasBias && !tilingIns_->hasQuantScale) {
+    if (!tilingIns_->hasBias && !tilingIns_->hasScale) {
         return;
     }
 
@@ -595,7 +621,8 @@ void ConvTilingAlgorithmMmode::BiasL1TilingDecision()
 
     // decide if bias can fullload in L1, than decide if fixpipe Params can full load in L1
     bool isSupportSoc = tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
-                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55;
+                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55 ||
+                        tilingIns_->platformInfo.socVersion == platform_ascendc::SocVersion::MC62CM12A;
     if (!this->l1TilingFlag.isBiasFullLoad) {
         this->l1TilingFlag.isBiasFullLoad = true;
         bool exceedDataCopyLimits = isSupportSoc && tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 *
@@ -607,7 +634,7 @@ void ConvTilingAlgorithmMmode::BiasL1TilingDecision()
     if (!this->l1TilingFlag.isFixpFullLoad) {
         this->l1TilingFlag.isFixpFullLoad = true;
         bool exceedDataCopyLimits = isSupportSoc && tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 *
-            this->quantScaleDtypeSize > DATACOPYPARAMS_BURSTLEN_MAX;
+            this->scaleDtypeSize > DATACOPYPARAMS_BURSTLEN_MAX;
         if (!CheckL1Buffer() || exceedDataCopyLimits) {
             this->l1TilingFlag.isFixpFullLoad = false;
         }
@@ -714,7 +741,7 @@ uint64_t ConvTilingAlgorithmMmode::CalcL1SizeForL0Tiling(uint64_t currmL0, uint6
         uint64_t biasSize = currnL0 * biasDTypeSize;
         usedL1Size += biasSize;
     }
-    if (tilingIns_->hasQuantScale) {
+    if (tilingIns_->hasScale) {
         uint64_t scaleSize = static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff *
                                                    static_cast<float>(currnL0 * FP16_DTYPE_SIZE));
         usedL1Size += scaleSize;
@@ -900,5 +927,41 @@ void ConvTilingAlgorithmMmode::CheckL0CDoubleBuffer()
     }
 }
 
+void ConvTilingAlgorithmMmode::ScaleBiasUbTilingDecision()
+{
+    if (l0TilingParams.mL0 == 0 || l0TilingParams.nL0 == 0) {
+        return;
+    }
+    if (!tilingIns_->isScaleBiasInUb) {
+        return;
+    }
 
+    uint64_t mUb = 0;
+    std::vector<uint64_t> mUbRange;
+    CalcCommFactor(l0TilingParams.mL0, l0TilingParams.mL0, mUbRange);
+
+    // output + scale + bias(fp16/bf16) + bias(fp32) <= UB_SIZE
+    // output + scale + bias(fp32) <= UB_SIZE
+    uint64_t totalScaleBiasTypeSize = tilingIns_->descInfo.biasType.dtype == ConvDtype::FLOAT32 ?
+        TOTAL_SCALE_BIAS_32_TYPE_SIZE : TOTAL_SCALE_BIAS_16_TYPE_SIZE;
+    for (int32_t i = mUbRange.size() - 1; i >= 0; i--) {
+        if (l0TilingParams.nL0 * (mUbRange[i] * MAX_OUT_TYPE_SIZE + totalScaleBiasTypeSize) <=
+            tilingIns_->platformInfo.ubSize) {
+            mUb = mUbRange[i];
+            break;
+        }
+    }
+
+    // if mUb fullload mL0, split mL0 to use more vector
+    if (mUb == l0TilingParams.mL0) {
+        mUb = CeilDiv(l0TilingParams.mL0, VEC_NUM_PER_CUBE_910D);
+    }
+    tilingIns_->ubTilingInfo.mUb = mUb;
+    tilingIns_->ubTilingInfo.nUb = l0TilingParams.nL0; // nUb fullload nL0 by default;
+}
+
+void ConvTilingAlgorithmMmode::GetUbTiling()
+{
+    ScaleBiasUbTilingDecision();
+}
 } // namespace conv_tiling_algo_m

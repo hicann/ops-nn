@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_conv3d_v2_ascendc_tiling_repo.cpp
+ * \file test_conv3d_v2_ascendc_repo_tiling.cpp
  * \brief
  */
 
@@ -19,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
 #include "log/log.h"
 #include "array_ops.h"
 #include "tests/ut/common/ut_op_util.h"
@@ -27,12 +28,16 @@
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "tests/ut/common/kernel_run_context_facker.h"
 #include "test_cube_util.h"
-#include "conv/conv3d_v2/op_host/op_tiling/conv3d_base_tiling.h"
-#include "conv/common/op_host/op_tiling/arch35/conv_base_utils.h"
+#include "platform/platform_info.h"
+#include "register/op_impl_registry.h"
+#include "../../../op_host/op_tiling/arch35/conv3d_v2_tuning_tiling.h"
+#include "../../../op_host/op_tiling/arch35/conv3d_v2_base_tiling.h"
+#include "../../../../common/op_host/op_tiling/arch35/conv_base.h"
 
 using namespace ut_util;
+using namespace std;
+using namespace ge;
 
-namespace RuntimeKb {
 extern std::string GetTestSuiteName();
 extern std::string GetTestCaseName();
 
@@ -56,14 +61,10 @@ struct Conv3DTilingTestParamRepo {
 
 class Conv3DTilingRepo: public testing::TestWithParam<Conv3DTilingTestParamRepo> {
 protected:
-    void SetUp() { }
+    void SetUp() {}
 
-    void TearDown() {
-        unsetenv("TUNE_BANK_PATH");
-    }
-    static void TearDownTestCase() {
-        Configuration::Instance().Finalize();
-    }
+    void TearDown() {}
+    static void TearDownTestCase() {}
     void PrepareTest(Conv3DTilingTestParamRepo &param) {
         std::cout << "knowledge" << std::endl;
         PrepareKnowledge(param);
@@ -74,6 +75,7 @@ protected:
         std::cout << param.tiling_data << std::endl;
         auto j = nlohmann::json::parse(param.tiling_data);
         conv3d_knowledge.groups = j["groups"];
+        conv3d_knowledge.singleCoreCi = j["singleCoreCi"]; // wyh 
         conv3d_knowledge.singleCoreDo = j["singleCoreDo"];
         conv3d_knowledge.singleCoreCo = j["singleCoreCo"];
         conv3d_knowledge.singleCoreHo = j["singleCoreHo"];
@@ -123,6 +125,10 @@ protected:
         conv3d_knowledge.groupDim= j["groupDim"];
         conv3d_knowledge.isC04Flag= j["isC04Flag"];
         conv3d_knowledge.mMode= j["mMode"];
+        //wyh
+        conv3d_knowledge.bl1FullLoad = j["bl1FullLoad"];
+        conv3d_knowledge.al1FullLoad = j["al1FullLoad"];
+        conv3d_knowledge.bl1BypassFlag = j["bl1BypassFlag"];
     }
     void PrepareInfoDict(Conv3DTilingTestParamRepo &param) {
         std::cout << param.info_dict << std::endl;
@@ -168,21 +174,10 @@ protected:
     tuningtiling::Conv3DV2InputArgs conv3d_info_dict;
 };
 
-TEST_P(Conv3DTilingRepo, general_cases) {
+TEST_P(Conv3DTilingRepo, general_cases_001) {
     Conv3DTilingTestParamRepo param = GetParam();
     std::cout << "run case " << param.case_name << std::endl;
     PrepareTest(param);
-    Configuration::Instance().Finalize();
-    bank_path = "/tmp/" + GetTestSuiteName() + "/" + GetTestCaseName();
-    setenv("TUNE_BANK_PATH", bank_path.c_str(), 1);
-    auto ret = SystemUtils::CreateMultiDirectory(bank_path);
-    EXPECT_EQ(ret, SUCCESS);
-    PlatformInfo plat;
-    plat.soc_version = "Ascend910_9589";
-    plat.core_num = 32;
-    const std::set<std::string> kOpWhiteLists{"Conv3DV2"};
-    ret = RuntimeBankManager::Instance().InitAoeOpBank(plat, kOpWhiteLists);
-    EXPECT_EQ(ret, SUCCESS);
     tuningtiling::TuningTilingDefPtr tiling = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(optype);
     nlohmann::json a;
     conv3d_knowledge.ToJson(a);
@@ -220,10 +215,11 @@ TEST_P(Conv3DTilingRepo, general_cases) {
     std::string op_type = "Conv3DV2";
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    uint64_t aicoreNum = 32;
+    uint32_t aicoreNum = 32;
     string compile_info_string = R"({
           "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", 
-                            "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, 
+                            "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
+                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, 
                             "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288, 
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, 
                             "CORE_NUM": 32}
@@ -239,6 +235,7 @@ TEST_P(Conv3DTilingRepo, general_cases) {
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
     compile_info.tilingType = op_type;
     compile_info.aicoreNum = aicoreNum;
+    compile_info.socVersion = "Ascend910_9589";
     compile_info.shortSocVersion = "Ascend910_95";
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -257,14 +254,14 @@ TEST_P(Conv3DTilingRepo, general_cases) {
                                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                             .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                                             .NodeAttrs({
-                                                {"strides", ge::AnyValue::CreateFrom<std::vector<int64_t>>(strides_ref)},
-                                                {"pads", ge::AnyValue::CreateFrom<std::vector<int64_t>>(pads_ref)},
-                                                {"dilations", ge::AnyValue::CreateFrom<std::vector<int64_t>>(dilations_ref)},
-                                                {"groups", ge::AnyValue::CreateFrom<int64_t>(1)},
-                                                {"data_format", ge::AnyValue::CreateFrom<std::string>("NCHW")},
-                                                {"offset_x", ge::AnyValue::CreateFrom<int64_t>(0)},
-                                                {"pad_mode", ge::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                                {"enable_hf32", ge::AnyValue::CreateFrom<bool>(false)}
+                                                {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides_ref)},
+                                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads_ref)},
+                                                {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations_ref)},
+                                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}
                                                 })
                                             .TilingData(tilingDataPtr.get())
                                             .Workspace(ws_size)
@@ -278,28 +275,27 @@ TEST_P(Conv3DTilingRepo, general_cases) {
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    ret = RuntimeBankManager::Instance().Update(tiling_context, optype, tiling);
-    EXPECT_EQ(ret, SUCCESS);
-    ret = RuntimeBankManager::Instance().Save();
-    EXPECT_EQ(ret, SUCCESS);
-
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     auto block_dim = tiling_context->GetBlockDim();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    // ASSERT_EQ(tiling_data_result, param.tiling_data);
-    const std::string rm_bank_dir = "rm -rf " + bank_path;
-    system(rm_bank_dir.c_str());
+
 }
 
 static Conv3DTilingTestParamRepo general_cases_params_repo[] = {
-  {
-"Conv3DV2_repo_test_0","Conv3DV2",R"({"aDtype":27,"bDtype":27,"cDtype":27,"biasDtype":27,"aShapeN":1,"aShapeD":16,"aShapeH":16,"aShapeW":16,"bShapeN":1,"bShapeC":1,"bShapeD":1,"bShapeH":1,"bShapeW":1,"cShapeD":16,"cShapeH":16,"cShapeW":16,"aFormat":30,"bFormat":30,"cFormat":30,"groups":1,"strideD":1,"strideH":1,"strideW":1,"dilationD":1,"dilationH":1,"dilationW":1,"padHead":0,"padTail":0,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"biasFlag":true,"reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0, "reserverdParam6": 0})",
-R"({"groups":1,"orgCi":1,"orgDi":16,"orgHi":16,"orgWi":16,"orgDo":16,"orgCo":1,"orgHo":16,"orgWo":16,"kernelD":1,"kernelH":1,"kernelW":1,"singleCoreDo":1,"singleCoreCo":1,"singleCoreHo":128,"singleCoreWo":0,"singleCoreCi":1,"kAL1":16,"kBL1":16,"nBL1":16,"hoL1":128,"woL1":0,"hoL0":128,"woL0":0,"kL0":16,"nL0":16,"pBufferFlag":7,"strideD":1,"strideH":1,"strideW":1,"dilationD":1,"dilationH":1,"dilationW":1,"padHead":0,"padTail":0,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"iterateMNOrder":0,"biasFullLoadFlag":1,"fixpParamsFullLoadFlag":0,"hf32Enable":0,"hf32TransMode":0,"batchDim":1,"doDim":16,"hoDim":2,"nDim":1,"groupDim":1, "mMode": 1, "isC04Flag": 0})"
+  {"Conv3DV2_repo_test_0","Conv3DV2",
+R"({"aDtype": 27, "bDtype": 27, "cDtype": 27, "biasDtype": 27, "aShapeN": 1, "aShapeD": 243, "aShapeH": 542, "aShapeW": 62, "bShapeN": 256, "bShapeC": 256, 
+"bShapeD": 3, "bShapeH": 3, "bShapeW": 3, "cShapeD": 241, "cShapeH": 540, "cShapeW": 60, "aFormat": 30, "bFormat": 30, "cFormat": 30, "groups": 1, 
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0, 
+"padLeft": 0, "padRight": 0, "biasFlag": true, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0, 
+"reserverdParam6": 0})", 
+R"({"groups": 1, "singleCoreDo": 241, "singleCoreCo": 128, "singleCoreHo": 2025, "singleCoreWo": 0, "singleCoreCi": 256, 
+"orgDo": 241, "orgCo": 256, "orgHo": 540, "orgWo": 60, "orgCi": 256, "orgDi": 243, "orgHi": 542, "orgWi": 62, "kernelD": 3, "kernelH": 3, "kernelW": 3, 
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0, 
+"padLeft": 0, "padRight": 0, "hoL0": 512, "woL0": 0, "kL0": 32, "nL0": 128, "kAL1": 288, "kBL1": 288, "nBL1": 128, "hoL1": 512, "woL1": 0, 
+"pBufferFlag": 27, "bl1FullLoad": 0, "al1FullLoad": 0, "bl1BypassFlag": 0, "iterateMNOrder": 0, "biasFullLoadFlag": 1, "fixpParamsFullLoadFlag": 1, "hf32Enable": 0,
+ "hf32TransMode": 0, "batchDim": 1, "nDim": 2, "hoDim": 16, "doDim": 1, "groupDim": 1, "isC04Flag": 0, "mMode": 1})"
   }
 };
 
 INSTANTIATE_TEST_CASE_P(Conv3DV2, Conv3DTilingRepo, testing::ValuesIn(general_cases_params_repo));
-
-}

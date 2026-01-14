@@ -13,14 +13,14 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV3D_TILING_H
-#define ASCENDC_TIKCFW_TILING_CONV3D_TILING_H
+#ifndef ASCENDC_TILING_CONV3D_TILING_H
+#define ASCENDC_TILING_CONV3D_TILING_H
 
 #include "conv3d_api_tiling_base.h"
 
 namespace Conv3dApiTiling {
 
-class Conv3dTiling : public Conv3dTilingBase {
+class __attribute__((visibility("default"))) Conv3dTiling : public Conv3dTilingBase {
 public:
     Conv3dTiling() = default;
     explicit Conv3dTiling(const PlatformInfo& platform) : Conv3dTilingBase(platform) {};
@@ -32,4 +32,4 @@ protected:
 
 } // namespace Conv3dApiTiling
 
-#endif // ASCENDC_TIKCFW_TILING_CONV3D_TILING_H
+#endif // ASCENDC_TILING_CONV3D_TILING_H

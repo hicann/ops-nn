@@ -92,7 +92,7 @@ uint32_t ConvTilingBase::GetBandWidthCof(platform_ascendc::SocVersion curSoc) co
 
 bool ConvTilingBase::CheckQuantUniqueAttr()
 {
-    if (hasQuantScale) {
+    if (quantConvFlag) {
         ConvDtype fMapDtype = descInfo.fMapType.dtype;
         ConvDtype outputDtype = descInfo.outputType.dtype;
         if (attrInfo.offsetx != 0 &&
@@ -182,21 +182,20 @@ vector<vector<ConvDtype>> ConvTilingBase::GetSupportedDataTypes() const
     vector<vector<ConvDtype>> res;
     if (hasBias) {
         // [fmap, weight, bias, output]
-        if (extendConvFlag || hasQuantScale) {
+        if (extendConvFlag || quantConvFlag) {
             res = EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_WITH_BIAS;
         } else {
             res = CONV_SUPPORTED_TYPES_WITH_BIAS;
         }
     } else {
         // [fmap, weight, output]
-        if (extendConvFlag || hasQuantScale) {
+        if (extendConvFlag || quantConvFlag) {
             res = EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_WITHOUT_BIAS;
         } else {
             res = CONV_SUPPORTED_TYPES_WITHOUT_BIAS;
         }
     }
-    TILING_LOG_DEBUG("ConvTilingBase::GetSupportedDataTypes hasBias:%d extendConvFlag:%d hasQuantScale:%d",
-        hasBias, extendConvFlag, hasQuantScale);
+
     return res;
 }
 

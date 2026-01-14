@@ -232,7 +232,7 @@ void Conv2dBaseTiling::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2Tu
 
 void Conv2dBaseTiling::SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling)
 {
-    if (convRepoTiling->isC04Flag) {
+    if (convRepoTiling->isC04Flag != 0) {
         c04Info_.curNBL1 = convRepoTiling->nBL1;
         c04Info_.orgkH = convRepoTiling->kernelH;
         c04Info_.orgkW = convRepoTiling->kernelW;
@@ -242,7 +242,7 @@ void Conv2dBaseTiling::SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling
         c04Info_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
         tilingData_.conv2dApiTiling.set_bUbNStep(static_cast<uint32_t>(conv2dApiTiling_.CalcC04UbLoadNsize(c04Info_)));
         tilingData_.conv2dApiTiling.set_bUbKStep(0);
-    } else if (convRepoTiling->isWeightUbTransFlag) {
+    } else if (convRepoTiling->isWeightUbTransFlag != 0) {
         conv_tiling::ConvWeightUbTransParams params = {convRepoTiling->nBL1, convRepoTiling->kBL1,
             static_cast<uint64_t>(convRepoTiling->kernelH), static_cast<uint64_t>(convRepoTiling->kernelW),
             convOpsConstParams_.k0, convOpsConstParams_.n0, dtypeMap.at(descInfo_.weightDtype)};

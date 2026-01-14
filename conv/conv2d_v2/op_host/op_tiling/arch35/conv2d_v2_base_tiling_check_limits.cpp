@@ -92,7 +92,8 @@ ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelFullLoad()
     uint64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
     uint64_t nBL1min = convOpsConstParams_.n0;
     uint64_t biasUsedL1Size = flagInfo_.hasBias ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
-    uint64_t scaleUsedL1Size = ConvAlignB(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE);
+    uint64_t scaleUsedL1Size = ConvAlignB(
+        static_cast<uint64_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE);
     uint64_t kBL1min = convOpsConstParams_.k0 * shapeInfo_.kh * shapeInfo_.kw;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
  
@@ -121,7 +122,8 @@ ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelSplit()
     uint64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
     uint64_t nBL1min = convOpsConstParams_.n0;
     uint64_t biasUsedL1Size = flagInfo_.hasBias ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
-    uint64_t scaleUsedL1Size = ConvAlignB(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE);
+    uint64_t scaleUsedL1Size = ConvAlignB(
+        static_cast<uint64_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE);
     uint64_t kBL1min = convOpsConstParams_.k0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
  

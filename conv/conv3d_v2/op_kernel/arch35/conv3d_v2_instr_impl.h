@@ -79,7 +79,7 @@ public:
             this->Al1PadHeadSet2d(hiLoadL1, self_->ctx.orgWi);
         }
 
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCDHW) {
             LoadAL1Data();
         } else {
             LoadAL1DataHWC();
@@ -229,6 +229,7 @@ public:
 private:
     __aicore__ inline void LoadAl1Data()
     {
+        this->aL1Pos = 0;
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
 
@@ -239,7 +240,7 @@ private:
             this->Al1PadHeadSet2d(hiLoadL1, wiLoadL1);
         }
 
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCDHW) {
             aL1GmOffset = self_->ctx.convTiling->orgHixWi * self_->ctx.convTiling->dilationD;
             LoadAl1Data(realHiTopGmIdx, realWiTopGmIdx, al1Offset, aL1GmOffset);
         } else {
@@ -255,7 +256,6 @@ private:
     __aicore__ inline void LoadAl1Data(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx,
                                        int64_t al1Offset, int64_t aL1GmOffset)
     {
-        this->aL1Pos = 0;
         uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->cinIdx * self_->ctx.orgDi * self_->ctx.convTiling->orgHixWi +
                             this->diIdx * self_->ctx.convTiling->orgHixWi +
@@ -273,7 +273,6 @@ private:
     __aicore__ inline void LoadAl1DataHWC(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx,
                                           int64_t al1Offset, int64_t aL1GmOffset)
     {
-        this->aL1Pos = 0;
         uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->diIdx * self_->ctx.convTiling->orgHixWi * self_->ctx.orgCi +
                             realHiTopGmIdx * self_->ctx.orgWi * self_->ctx.orgCi +
@@ -298,7 +297,7 @@ private:
         } else {
             intriParams.dnNum = hiLoadL1;
             intriParams.nValue = wiLoadL1;
-            if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+            if constexpr (Intf::formatFmap == ConvFormat::NCDHW) {
                 intriParams.srcDnMatrixStride = self_->ctx.orgWi;
             } else {
                 intriParams.srcDnMatrixStride = self_->ctx.orgWi * self_->ctx.orgCi;
@@ -306,7 +305,7 @@ private:
             intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
         }
 
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatFmap == ConvFormat::NCDHW) {
             intriParams.srcDValue = self_->ctx.convTiling->orgHixWi * self_->ctx.convTiling->orgDi;
         } else {
             intriParams.srcDValue = self_->ctx.orgCi;

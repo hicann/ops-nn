@@ -21,6 +21,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "aclnn_kernels/transpose.h"
 
 using namespace op;
 
@@ -60,6 +61,7 @@ const int64_t C0_DIM_NDC1HWC0_INDEX = 5;
 const int64_t C0_BF16 = 16;
 const size_t CONV3D_TRANSPOSE_V2_WHITE_LIST_CASE_SIZE = 29;
 const size_t CONV3D_V2_WHITE_LIST_CASE_SIZE = 22;
+const int64_t C_DIM_NCDHW_INDEX = 1;
 const int64_t D_DIM_NCDHW_INDEX = 2;
 const int64_t H_DIM_NCDHW_INDEX = 3;
 const int64_t W_DIM_NCDHW_INDEX = 4;
@@ -674,6 +676,10 @@ static aclIntArray* ConstructConv3DNewPad(const aclIntArray *padding, aclOpExecu
 
 static aclnnStatus ResetStorageShape(const aclTensor *input, aclTensor *&output)
 {
+  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  if (socVersion == SocVersion::ASCEND910_95) {
+    return ACLNN_SUCCESS;
+  }
   if (input->GetDataType() == output->GetDataType()) {
     return ACLNN_SUCCESS;
   }
@@ -908,6 +914,18 @@ const aclTensor *Conv3dv2NCDHWFp16(const aclTensor *input, const aclTensor *weig
     return output;
 }
 
+const aclTensor *Conv3dv2L0Func(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
+                                const aclTensor *scale, op::DataType outputDtype, op::Format outputFormat,
+                                const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,
+                                int groups, bool useHf32, aclOpExecutor *executor)
+{
+    L0_DFX(Conv3dv2L0Func, input, weight, bias, scale, outputDtype, outputFormat, stride, padding, dilation, groups);
+    auto output =
+        executor->AllocTensor(outputDtype, outputFormat, outputFormat);
+    Conv3dv2WithFlag(input, weight, bias, scale, nullptr, stride, padding, dilation, groups, useHf32, output, executor);
+    return output;
+}
+
 // 根据shape生成对应shape的Input tensor
 static aclTensor* InitializeTensor(op::FVector<int64_t, op::MAX_DIM_NUM> shape, aclOpExecutor* executor,
                                    const aclTensor *input) {
@@ -981,18 +999,57 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor *input, const aclTens
     // 将inputSize刷新成预期的out的shape
     auto outputShapeVector = op::ToShapeVector(output->GetViewShape());
     inputSize = InitializeTensor(outputShapeVector, executor, input);
+    uint32_t execMode = useHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
     if (bias) {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv2DTranspose, OP_INPUT(inputSize, input, weight, bias), OP_OUTPUT(output),
                                     OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, outputPad4, 0, padding_p,
-                                            auto_pad, output_shape1, hf32));
+                                    auto_pad, output_shape1, hf32),
+                                    OP_MODE(execMode));
     } else {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv2DTranspose, OP_INPUT(inputSize, input, weight), OP_OUTPUT(output),
                                     OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, outputPad4, 0, padding_p,
-                                            auto_pad, output_shape1, hf32));
+                                    auto_pad, output_shape1, hf32),
+                                    OP_MODE(execMode));
     }
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                           "ConvTranspose2d ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return ACLNN_SUCCESS;
+}
+
+static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
+    OP_LOGD("enter CheckPreTransposeEnable.");
+    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    // 当前仅支持ASCEND910_95
+    if (socVersion != SocVersion::ASCEND910_95) {
+        return false;
+    }
+    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        return false;
+    }
+
+    auto dataType = weight->GetDataType();
+    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16) {
+        return false;
+    }
+
+    auto weightShape = weight->GetOriginalShape();
+    for (size_t i = 0; i < weightShape.GetDimNum(); i++) {
+        if (weightShape[i] <= 0) {
+            return false;
+        }
+    }
+    uint64_t weightC = weightShape[C_DIM_NCDHW_INDEX];
+    uint64_t weightD = weightShape[D_DIM_NCDHW_INDEX];
+    uint64_t weightH = weightShape[H_DIM_NCDHW_INDEX];
+    uint64_t weightW = weightShape[W_DIM_NCDHW_INDEX];
+
+    if (weightD * weightH * weightW <= 1) {
+        return false;
+    }
+    if ((weightC != 16 && weightC < 32) || weightC <= weightH * weightW) {
+        return false;
+    }
+    return true;
 }
 
 static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
@@ -1043,28 +1100,43 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
 
+    if (CheckPreTransposeEnable(weight, groups)) {
+        OP_LOGD("Conv3d transpose v2 support preTranspose.");
+        // transpose weight NCDHW -> NDHWC
+        FVector<int64_t> newShapeDims = {0, 2, 3, 4, 1};
+        auto permAfter = executor->AllocIntArray(newShapeDims.data(), newShapeDims.size());
+        CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        weight = l0op::Transpose(weight, permAfter, executor);
+
+        // change weight format
+        const_cast<aclTensor*>(weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(weight)->SetStorageFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
+    }
+
     // 将inputSize刷新成预期的out的shape
     auto outputShapeVector = op::ToShapeVector(output->GetViewShape());
     inputSize = InitializeTensor(outputShapeVector, executor, input);
     vector<int64_t> caseInfo;
     Conv3DTransPoseV2Prarams params = {input, weight, output, stride, padding, dilation, outputPadding, static_cast<int>(groups)};
     ConstructCaseInfo(params, caseInfo);
+    uint32_t execMode = useHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+
     if (groups > 1 || params.input->GetDataType() == DataType::DT_FLOAT ||
         IsConv3DTransposeV2WhiteListCase(caseInfo, CONV3D_TRANSPOSE_V2_WHITE_LIST) ||
         IsConv3DTransposeUseV2(params)) {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTransposeV2, OP_INPUT(inputSize, input, weight, nullptr, nullptr),
                                           OP_OUTPUT(output), OP_ATTR(stride5, pad5, dilation5, groups,
-                                          dataFormat, outputPad5, 0, paddingP, hf32));
-        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                             "ConvTranspose3d ADD_TO_LAUNCHER_LIST_AICORE failed.");
+                                          dataFormat, outputPad5, 0, paddingP, hf32),
+                                          OP_MODE(execMode));
     } else {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTranspose, OP_INPUT(inputSize, input, weight), OP_OUTPUT(output),
                                           OP_ATTR(stride5, pad5, dilation5, groups,
-                                          dataFormat, outputPad5, 0, paddingP));
-        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                             "ConvTranspose3d ADD_TO_LAUNCHER_LIST_AICORE failed.");
+                                          dataFormat, outputPad5, 0, paddingP, hf32),
+                                          OP_MODE(execMode));
     }
-
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                         "ConvTranspose3d ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return ACLNN_SUCCESS;
 }
 

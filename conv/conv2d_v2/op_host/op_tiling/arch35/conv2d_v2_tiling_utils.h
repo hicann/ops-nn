@@ -17,6 +17,7 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_TILING_UTILS_H
 
 #include "conv/common/op_host/op_tiling/arch35/conv_base.h"
+#include "base/err_msg.h"
 
 namespace optiling {
 namespace conv_ops_tiling {
@@ -26,6 +27,7 @@ using conv_tiling::DTYPE_TO_STR;
   if ((ptr) != nullptr) {                                                                        \
     const char* name = ((context)->GetNodeName() == nullptr) ? "nil" : (context)->GetNodeName(); \
     OP_LOGE_WITHOUT_REPORT(name, "%s not support now, must be nullptr!", #ptr);                  \
+    REPORT_INNER_ERR_MSG("EZ9999", "op[%s], %s not support now, must be nullptr!", name, #ptr);  \
     return ge::GRAPH_FAILED;                                                                     \
   }
 
@@ -37,6 +39,23 @@ constexpr uint32_t FORMAT_NCHW_W_INDEX = 3;
 constexpr uint32_t FORMAT_NCHW_DIM = 4;
 constexpr uint32_t FORMAT_ND_DIM = 1;
 constexpr uint32_t CONV2D_DIM_SIZE_LIMIT = 4;
+
+constexpr uint32_t ATTR_STRIDE_INDEX = 0;
+constexpr uint32_t ATTR_PAD_INDEX = 1;
+constexpr uint32_t ATTR_DILATION_INDEX = 2;
+constexpr uint32_t ATTR_GROUP_INDEX = 3;
+constexpr uint32_t ATTR_DATAFORMAT_INDEX = 4;
+constexpr uint32_t ATTR_PAD_MODE_INDEX = 6;
+constexpr uint32_t ATTR_ENABLE_HF32_INDEX = 7;
+ 
+constexpr uint32_t ATTR_QUANT_DTYPE_INDEX = 0;
+constexpr uint32_t ATTR_QUANT_STRIDE_INDEX = 1;
+constexpr uint32_t ATTR_QUANT_PAD_INDEX = 2;
+constexpr uint32_t ATTR_QUANT_DILATION_INDEX = 3;
+constexpr uint32_t ATTR_QUANT_GROUP_INDEX = 4;
+constexpr uint32_t ATTR_QUANT_DATAFORMAT_INDEX = 5;
+constexpr uint32_t ATTR_QUANT_OFFSETX_INDEX = 6;
+constexpr uint32_t ATTR_QUANT_ROUNDMODE_INDEX = 7;
 
 constexpr uint32_t EXTENDCONV_ATTR_STRIDES_INDEX = 0;
 constexpr uint32_t EXTENDCONV_ATTR_PADS_INDEX = 1;
@@ -88,6 +107,12 @@ struct Conv2dOriginFormatAixsPosInfo {
     uint32_t hIndex = 0;
     uint32_t wIndex = 0;
 };
+
+// the function used by new MDC chip supporting fix-point operation
+inline bool IsMdcSoc(const platform_ascendc::SocVersion shortSoc)
+{
+    return shortSoc == platform_ascendc::SocVersion::MC62CM12A;
+}
 
 // the function used by judgeing operation type
 inline bool isQuantConv2D(const string& nodeType)

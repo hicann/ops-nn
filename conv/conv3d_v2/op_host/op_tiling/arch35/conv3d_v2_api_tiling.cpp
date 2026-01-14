@@ -21,22 +21,41 @@
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
 #include "conv3d_v2_tiling.h"
 #include "conv3d_v2_api_tiling.h"
+#include "conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
+#include "../conv3d_api_tiling_utils.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_base.h"
 
 using namespace conv_tiling_algo_m;
 using namespace conv_tiling_algo_hw;
 using namespace std;
+
+using optiling::conv_ops_tiling::ConvCeilDiv;
+using optiling::conv_ops_tiling::ConvAlignB;
 
 namespace conv_tiling {
 namespace {
 constexpr int64_t RET_FAIL = -1;
 }
 
-int64_t Conv3dTiling::GetTiling(optiling::TConv3DTiling &tiling)
+void Conv3dTiling::InitFlag()
+{
+    this->isScaleBiasInUb = descInfo.fMapType.format == ConvFormat::NCDHW &&
+                            descInfo.outputType.format == ConvFormat::NDHWC &&
+                            descInfo.scaleType.dtype == ConvDtype::FLOAT32;
+    // conv3d int8: scale and bias will be stored in UB but not in L1
+    if (this->isScaleBiasInUb) {
+        this->hasBias = false;
+        this->hasScale = false;
+    }
+}
+
+int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
 {
     if (!CheckInputParam()) {
         TILING_LOG_ERROR("conv3d api tiling check params failed.");
         return RET_FAIL;
     }
+    InitFlag();
     InferCubeInfo();
     Infer5hdShape();
 
@@ -113,34 +132,34 @@ bool Conv3dTiling::CheckInputFormat()
     return true;
 }
 
-uint32_t Conv3dTiling::CalcAL1SpaceSize(optiling::TConv3DTiling& tiling)
+uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     uint64_t aL1SpaceSize = 0;
     uint64_t fmapSize = DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
 
-    uint64_t dilatedKernelH = (tiling.get_kernelH() - 1) * tiling.get_dilationH() + 1;
+    uint64_t dilatedKernelH = (tiling.kernelH - 1) * tiling.dilationH + 1;
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-        uint64_t mL1Max = tiling.get_hoL1() < tiling.get_singleCoreHo() ? tiling.get_hoL1() : tiling.get_singleCoreHo();
-        uint64_t hoL1Max = std::min(mL1Max / tiling.get_orgWo() + CONST_VALUE_2, tiling.get_orgHo());
-        uint64_t hiAL1Max = (hoL1Max - 1) * tiling.get_strideH() + dilatedKernelH;
-        hiAL1Max = hiAL1Max > tiling.get_orgHi() ? tiling.get_orgHi() : hiAL1Max;
+        uint64_t mL1Max = tiling.hoL1 < tiling.singleCoreHo ? tiling.hoL1 : tiling.singleCoreHo;
+        uint64_t hoL1Max = std::min(mL1Max / tiling.orgWo + CONST_VALUE_2, tiling.orgHo);
+        uint64_t hiAL1Max = (hoL1Max - 1) * tiling.strideH + dilatedKernelH;
+        hiAL1Max = hiAL1Max > tiling.orgHi ? tiling.orgHi : hiAL1Max;
 
-        aL1SpaceSize = tiling.get_cinAInCore() * hiAL1Max * tiling.get_orgWi();
+        aL1SpaceSize = tiling.cinAInCore * hiAL1Max * tiling.orgWi;
     } else {
-        uint64_t hiAL1Max = (tiling.get_hoL1() - 1) * tiling.get_strideH() + dilatedKernelH;
-        hiAL1Max = hiAL1Max > tiling.get_orgHi() ? tiling.get_orgHi() : hiAL1Max;
+        uint64_t hiAL1Max = (tiling.hoL1 - 1) * tiling.strideH + dilatedKernelH;
+        hiAL1Max = hiAL1Max > tiling.orgHi ? tiling.orgHi : hiAL1Max;
 
         uint64_t wiAL1Max = 0;
-        if (isC04Flag && tiling.get_singleCoreWo() == tiling.get_woL1()) {
-            wiAL1Max = tiling.get_orgWi();
+        if (isC04Flag && tiling.singleCoreWo == tiling.woL1) {
+            wiAL1Max = tiling.orgWi;
 
             aL1SpaceSize = AlignB(hiAL1Max * wiAL1Max, C0_SIZE / (fmapSize * C04_CIN_SIZE)) * C04_CIN_SIZE;
         } else {
-            uint64_t dilatedKernelW = (tiling.get_kernelW() - 1) * tiling.get_dilationW() + 1;
-            wiAL1Max = (tiling.get_woL1() - 1) * tiling.get_strideW() + dilatedKernelW;
-            wiAL1Max = wiAL1Max > tiling.get_orgWi() ? tiling.get_orgWi() : wiAL1Max;
+            uint64_t dilatedKernelW = (tiling.kernelW - 1) * tiling.dilationW + 1;
+            wiAL1Max = (tiling.woL1 - 1) * tiling.strideW + dilatedKernelW;
+            wiAL1Max = wiAL1Max > tiling.orgWi ? tiling.orgWi : wiAL1Max;
 
-            aL1SpaceSize = tiling.get_cinAInCore() * hiAL1Max * wiAL1Max;
+            aL1SpaceSize = tiling.cinAInCore * hiAL1Max * wiAL1Max;
         }
     }
     aL1SpaceSize = AlignB(aL1SpaceSize * fmapSize, C0_SIZE);
@@ -148,127 +167,134 @@ uint32_t Conv3dTiling::CalcAL1SpaceSize(optiling::TConv3DTiling& tiling)
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv3dTiling::SetScalarParams(optiling::TConv3DTiling& tiling)
+void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     // calculate the follow params in tiling process, for scalar optimization in kernel
-    uint32_t kernelHxkernelW = tiling.get_kernelH() * tiling.get_kernelW();
-    uint32_t cinAInCore = tiling.get_kAL1() / kernelHxkernelW;
-    uint32_t kAL1Tail = (AlignB(tiling.get_singleCoreCi(), cubeInfo.k0) * tiling.get_kernelD() * kernelHxkernelW) %
-                        tiling.get_kAL1();
-    kAL1Tail = kAL1Tail == 0 ? tiling.get_kAL1() : kAL1Tail;
-    uint32_t kBL1Tail = (tiling.get_singleCoreCi() * kernelHxkernelW) % tiling.get_kBL1();
-    kBL1Tail = kBL1Tail == 0 ? tiling.get_kBL1() : kBL1Tail;
+    uint32_t kernelHxkernelW = tiling.kernelH * tiling.kernelW;
+    uint32_t cinAInCore = tiling.kAL1 / kernelHxkernelW;
+    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelHxkernelW) %
+                        tiling.kAL1;
+    kAL1Tail = kAL1Tail == 0 ? tiling.kAL1 : kAL1Tail;
+    uint32_t kBL1Tail = (tiling.singleCoreCi * kernelHxkernelW) % tiling.kBL1;
+    kBL1Tail = kBL1Tail == 0 ? tiling.kBL1 : kBL1Tail;
     uint32_t cinATailInCore = kAL1Tail / kernelHxkernelW;
     uint32_t cinBTailInCore = kBL1Tail / kernelHxkernelW;
-    uint64_t orgHixWi = tiling.get_orgHi() * tiling.get_orgWi();
-    uint32_t cinOffsetBlockInGM = tiling.get_kAL1() / kernelHxkernelW * orgHixWi;
+    uint64_t orgHixWi = tiling.orgHi * tiling.orgWi;
+    uint32_t cinOffsetBlockInGM = tiling.kAL1 / kernelHxkernelW * orgHixWi;
     uint32_t mStep = 0;
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-        mStep = AlignB(tiling.get_hoL0(), cubeInfo.m0);
+        mStep = AlignB(tiling.hoL0, cubeInfo.m0);
     } else {
-        mStep = AlignB(tiling.get_hoL0() * tiling.get_woL0(), cubeInfo.m0);
+        mStep = AlignB(tiling.hoL0 * tiling.woL0, cubeInfo.m0);
     }
     uint32_t fmapKStride = mStep / cubeInfo.m0;
-    uint32_t nStep = CeilDiv(tiling.get_nL0(), cubeInfo.n0);
-    uint32_t kStep = tiling.get_kL0() / cubeInfo.k0;
-    uint32_t weightKStride = CeilDiv(tiling.get_nBL1(), cubeInfo.n0);
-    uint32_t coutOffsetBlock = (tiling.get_orgCi() / tiling.get_groups()) * kernelHxkernelW;
-    uint32_t cinBInCore = tiling.get_kBL1() / kernelHxkernelW;
-    uint32_t nL1DivBlockSize = tiling.get_nBL1() / cubeInfo.n0;
+    uint32_t nStep = CeilDiv(tiling.nL0, cubeInfo.n0);
+    uint32_t kStep = tiling.kL0 / cubeInfo.k0;
+    uint32_t weightKStride = CeilDiv(tiling.nBL1, cubeInfo.n0);
+    uint32_t coutOffsetBlock = (tiling.orgCi / tiling.groups) * kernelHxkernelW;
+    uint32_t cinBInCore = tiling.kBL1 / kernelHxkernelW;
+    uint32_t nL1DivBlockSize = tiling.nBL1 / cubeInfo.n0;
 
-    tiling.set_kernelHxkernelW(kernelHxkernelW);
-    tiling.set_kernelHxkernelWxkernelD(tiling.get_kernelD() * kernelHxkernelW);
+    tiling.kernelHxkernelW  = kernelHxkernelW;
+    tiling.kernelHxkernelWxkernelD = tiling.kernelD * tiling.kernelHxkernelW;
     // l0TilingInfo.nL0 != 0 is checked before
-    tiling.set_multiNBL1(static_cast<uint32_t>(CeilDiv(tiling.get_nBL1(), tiling.get_nL0())));
-    tiling.set_cinAInCore(cinAInCore);
-    tiling.set_cinATailInCore(cinATailInCore);
-    tiling.set_orgHixWi(orgHixWi);
-    tiling.set_cinOffsetBlockInGM(cinOffsetBlockInGM);
-    tiling.set_mStep(mStep);
-    tiling.set_fmapKStride(fmapKStride);
-    tiling.set_nStep(nStep);
-    tiling.set_kStep(kStep);
-    tiling.set_weightKStride(weightKStride);
-    tiling.set_coutOffsetBlock(coutOffsetBlock);
-    tiling.set_cinBInCore(cinBInCore);
-    tiling.set_cinBTailInCore(cinBTailInCore);
-    tiling.set_nL1DivBlockSize(nL1DivBlockSize);
-    tiling.set_aL1SpaceSize(CalcAL1SpaceSize(tiling));
+    tiling.multiNBL1 = static_cast<uint32_t>(CeilDiv(tiling.nBL1, tiling.nL0));
+    tiling.cinAInCore = cinAInCore;
+    tiling.cinATailInCore = cinATailInCore;
+    tiling.orgHixWi = orgHixWi;
+    tiling.cinOffsetBlockInGM = cinOffsetBlockInGM;
+    tiling.mStep = mStep;
+    tiling.fmapKStride = fmapKStride;
+    tiling.nStep = nStep;
+    tiling.kStep = kStep;
+    tiling.weightKStride = weightKStride;
+    tiling.coutOffsetBlock = coutOffsetBlock;
+    tiling.cinBInCore = cinBInCore;
+    tiling.cinBTailInCore = cinBTailInCore;
+    tiling.nL1DivBlockSize = nL1DivBlockSize;
+    tiling.aL1SpaceSize = CalcAL1SpaceSize(tiling);
 }
 
-void Conv3dTiling::SetAttrsTilingData(optiling::TConv3DTiling& tiling)
+void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
-    tiling.set_strideH(static_cast<uint32_t>(this->attrInfo.strideH));
-    tiling.set_strideW(static_cast<uint32_t>(this->attrInfo.strideW));
-    tiling.set_strideD(static_cast<uint32_t>(this->attrInfo.strideD));
-    tiling.set_dilationH(static_cast<uint32_t>(this->attrInfo.dilationH));
-    tiling.set_dilationW(static_cast<uint32_t>(this->attrInfo.dilationW));
-    tiling.set_dilationD(static_cast<uint32_t>(this->attrInfo.dilationD));
-    tiling.set_padHead(static_cast<uint32_t>(this->attrInfo.padHead));
-    tiling.set_padTail(static_cast<uint32_t>(this->attrInfo.padTail));
-    tiling.set_padTop(static_cast<uint32_t>(this->attrInfo.padTop));
-    tiling.set_padBottom(static_cast<uint32_t>(this->attrInfo.padBottom));
-    tiling.set_padLeft(static_cast<uint32_t>(this->attrInfo.padLeft));
-    tiling.set_padRight(static_cast<uint32_t>(this->attrInfo.padRight));
+    tiling.strideH = static_cast<uint32_t>(this->attrInfo.strideH);
+    tiling.strideW = static_cast<uint32_t>(this->attrInfo.strideW);
+    tiling.strideD = static_cast<uint32_t>(this->attrInfo.strideD);
+    tiling.dilationH = static_cast<uint32_t>(this->attrInfo.dilationH);
+    tiling.dilationW = static_cast<uint32_t>(this->attrInfo.dilationW);
+    tiling.dilationD = static_cast<uint32_t>(this->attrInfo.dilationD);
+    tiling.padHead = static_cast<uint32_t>(this->attrInfo.padHead);
+    tiling.padTail = static_cast<uint32_t>(this->attrInfo.padTail);
+    tiling.padTop = static_cast<uint32_t>(this->attrInfo.padTop);
+    tiling.padBottom = static_cast<uint32_t>(this->attrInfo.padBottom);
+    tiling.padLeft = static_cast<uint32_t>(this->attrInfo.padLeft);
+    tiling.padRight = static_cast<uint32_t>(this->attrInfo.padRight);
 
-    tiling.set_groups(static_cast<uint32_t>(this->attrInfo.groups));
+    tiling.groups = static_cast<uint32_t>(this->attrInfo.groups);
 
     if (this->optGroupFlag) {
-        tiling.set_singleCoreGroups(static_cast<uint32_t>(shapeInfo.singleGroups));
-        tiling.set_singleCoreGroupOpt(static_cast<uint32_t>(shapeInfo.singleGroupOpt));
-        tiling.set_enlarge(static_cast<uint32_t>(shapeInfo.enlarge));
+        tiling.singleCoreGroups = static_cast<uint32_t>(shapeInfo.singleGroups);
+        tiling.singleCoreGroupOpt = static_cast<uint32_t>(shapeInfo.singleGroupOpt);
+        tiling.enlarge = static_cast<uint32_t>(shapeInfo.enlarge);
     }
 
-    tiling.set_offsetx(this->attrInfo.offsetx);
-    tiling.set_roundMode(this->attrInfo.roundMode);
+    tiling.offsetx = this->attrInfo.offsetx;
+    tiling.roundMode = this->attrInfo.roundMode;
+    if (this->isScaleBiasInUb) {
+        tiling.hasBias = 1;
+        tiling.hasScale = 1;  
+    } else {
+        tiling.hasBias = static_cast<uint8_t>(this->hasBias);
+        tiling.hasScale = static_cast<uint8_t>(this->hasScale);
+    }
 }
 
-void Conv3dTiling::SetTilingData(optiling::TConv3DTiling& tiling)
+void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-        tiling.set_singleCoreHo(static_cast<uint64_t>(shapeInfo.singleM));
-        tiling.set_hoL1(static_cast<uint32_t>(l1TilingInfo.mAL1));
-        tiling.set_hoL0(static_cast<uint32_t>(l0TilingInfo.mL0));
+        tiling.singleCoreHo = static_cast<uint64_t>(shapeInfo.singleM);
+        tiling.hoL1 = static_cast<uint32_t>(l1TilingInfo.mAL1);
+        tiling.hoL0 = static_cast<uint32_t>(l0TilingInfo.mL0);
     } else {
-        tiling.set_singleCoreHo(static_cast<uint64_t>(shapeInfo.singleHo));
-        tiling.set_singleCoreWo(static_cast<uint64_t>(shapeInfo.singleWo));
-        tiling.set_hoL1(static_cast<uint32_t>(l1TilingInfo.hoAL1));
-        tiling.set_woL1(static_cast<uint32_t>(l1TilingInfo.woAL1));
-        tiling.set_hoL0(static_cast<uint32_t>(l0TilingInfo.hoL0));
-        tiling.set_woL0(static_cast<uint32_t>(l0TilingInfo.woL0));
+        tiling.singleCoreHo = static_cast<uint64_t>(shapeInfo.singleHo);
+        tiling.singleCoreWo = static_cast<uint64_t>(shapeInfo.singleWo);
+        tiling.hoL1 = static_cast<uint32_t>(l1TilingInfo.hoAL1);
+        tiling.woL1 = static_cast<uint32_t>(l1TilingInfo.woAL1);
+        tiling.hoL0 = static_cast<uint32_t>(l0TilingInfo.hoL0);
+        tiling.woL0 = static_cast<uint32_t>(l0TilingInfo.woL0);
     }
-    tiling.set_orgDo(static_cast<uint64_t>(this->shapeInfo.orgDo));
-    tiling.set_orgHo(static_cast<uint64_t>(this->shapeInfo.orgHo));
-    tiling.set_orgWo(static_cast<uint64_t>(this->shapeInfo.orgWo));
-    tiling.set_orgDi(static_cast<uint64_t>(this->shapeInfo.orgDi));
-    tiling.set_orgHi(static_cast<uint64_t>(this->shapeInfo.orgHi));
-    tiling.set_orgWi(static_cast<uint64_t>(this->shapeInfo.orgWi));
-    tiling.set_singleCoreBatch(static_cast<uint64_t>(this->shapeInfo.singleBatch));
-    tiling.set_singleCoreDo(static_cast<uint64_t>(this->shapeInfo.singleDo));
-    tiling.set_singleCoreCi(static_cast<uint32_t>(shapeInfo.singleCi));
-    tiling.set_singleCoreCo(static_cast<uint32_t>(this->shapeInfo.singleCo));
-    tiling.set_orgCo(static_cast<uint32_t>(this->shapeInfo.orgCo));
-    tiling.set_orgCi(static_cast<uint32_t>(this->shapeInfo.orgCi));
-    tiling.set_kernelD(static_cast<uint32_t>(this->shapeInfo.orgkD));
-    tiling.set_kernelH(static_cast<uint32_t>(this->shapeInfo.orgkH));
-    tiling.set_kernelW(static_cast<uint32_t>(this->shapeInfo.orgkW));
+    tiling.mUB = static_cast<uint32_t>(ubTilingInfo.mUb);
+    tiling.nUB = static_cast<uint32_t>(ubTilingInfo.nUb);
+    tiling.orgDo = static_cast<uint64_t>(this->shapeInfo.orgDo);
+    tiling.orgHo = static_cast<uint64_t>(this->shapeInfo.orgHo);
+    tiling.orgWo = static_cast<uint64_t>(this->shapeInfo.orgWo);
+    tiling.orgDi = static_cast<uint64_t>(this->shapeInfo.orgDi);
+    tiling.orgHi = static_cast<uint64_t>(this->shapeInfo.orgHi);
+    tiling.orgWi = static_cast<uint64_t>(this->shapeInfo.orgWi);
+    tiling.singleCoreBatch = static_cast<uint64_t>(this->shapeInfo.singleBatch);
+    tiling.singleCoreDo = static_cast<uint64_t>(this->shapeInfo.singleDo);
+    tiling.singleCoreCi = static_cast<uint32_t>(shapeInfo.singleCi);
+    tiling.singleCoreCo = static_cast<uint32_t>(this->shapeInfo.singleCo);
+    tiling.orgCo = static_cast<uint32_t>(this->shapeInfo.orgCo);
+    tiling.orgCi = static_cast<uint32_t>(this->shapeInfo.orgCi);
+    tiling.kernelD = static_cast<uint32_t>(this->shapeInfo.orgkD);
+    tiling.kernelH = static_cast<uint32_t>(this->shapeInfo.orgkH);
+    tiling.kernelW = static_cast<uint32_t>(this->shapeInfo.orgkW);
 
     SetAttrsTilingData(tiling);
 
-    tiling.set_kAL1(static_cast<uint32_t>(this->l1TilingInfo.kAL1));
-    tiling.set_kBL1(static_cast<uint32_t>(this->l1TilingInfo.kBL1));
-    tiling.set_nBL1(static_cast<uint32_t>(this->l1TilingInfo.nBL1));
-    tiling.set_kL0(static_cast<uint32_t>(this->l0TilingInfo.kL0));
-    tiling.set_nL0(static_cast<uint32_t>(this->l0TilingInfo.nL0));
-    tiling.set_pBufferFlag(static_cast<uint32_t>(this->dbValue.pBufferFlag));
+    tiling.kAL1 = static_cast<uint32_t>(this->l1TilingInfo.kAL1);
+    tiling.kBL1 = static_cast<uint32_t>(this->l1TilingInfo.kBL1);
+    tiling.nBL1 = static_cast<uint32_t>(this->l1TilingInfo.nBL1);
+    tiling.kL0 = static_cast<uint32_t>(this->l0TilingInfo.kL0);
+    tiling.nL0 = static_cast<uint32_t>(this->l0TilingInfo.nL0);
+    tiling.pBufferFlag = static_cast<uint32_t>(this->dbValue.pBufferFlag);
 
-    tiling.set_hasBias(static_cast<uint8_t>(this->hasBias));
-    tiling.set_hasScale(static_cast<uint8_t>(this->hasQuantScale));
-    tiling.set_iterateMNOrder(static_cast<uint8_t>(this->l1TilingInfo.iterateMNOrder));
-    tiling.set_biasFullLoadFlag(static_cast<uint8_t>(this->l1TilingInfo.biasFullLoadFlag));
-    tiling.set_fixpParamsFullLoadFlag(static_cast<uint8_t>(this->l1TilingInfo.fixpParamsFullLoadFlag));
-    tiling.set_hf32Enable(static_cast<uint8_t>(this->hf32Enable));
-    tiling.set_hf32TransMode(static_cast<uint8_t>(this->hf32TransMode));
+    tiling.iterateMNOrder = static_cast<uint8_t>(this->l1TilingInfo.iterateMNOrder);
+    tiling.biasFullLoadFlag = static_cast<uint8_t>(this->l1TilingInfo.biasFullLoadFlag);
+    tiling.fixpParamsFullLoadFlag = static_cast<uint8_t>(this->l1TilingInfo.fixpParamsFullLoadFlag);
+    tiling.hf32Enable = static_cast<uint8_t>(this->hf32Enable);
+    tiling.hf32TransMode = static_cast<uint8_t>(this->hf32TransMode);
     SetScalarParams(tiling);
 }
 
@@ -719,7 +745,8 @@ void Conv3dTiling::SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int6
     shapeInfo.singleGroupOpt = singleGroupOpt;
 }
 
-void Conv3dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, ConvOptGroupInfo& optGroupInfo) const
+void Conv3dTiling::CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGroupInfo& oriGroupInfo,
+                                      optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const
 {
     if (oriGroupInfo.groups <= 0) {
         TILING_LOG_ERROR("Illegal params : groups=%lu which must > 0.", oriGroupInfo.groups);
@@ -752,15 +779,20 @@ void Conv3dTiling::SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag = false)
     this->hf32TransMode = hf32TransModeFlag;
 }
 
-void Conv3dTiling::SetQuantScale(bool hasScale)
+void Conv3dTiling::SetQuantConvFlag(bool quantConvEnable)
 {
-    this->hasQuantScale = hasScale;
-    if (hasScale) {
-        this->descInfo.quantScaleType.dtype = ConvDtype::INT64;
-    }
+    this->quantConvFlag = quantConvEnable;
 }
 
-void Conv3dTiling::SetFixpipeParams(const FixpipeInfo& fixpipeInfo)
+void Conv3dTiling::SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype)
+{
+    this->hasScale = true;
+    this->descInfo.scaleType.pos = pos;
+    this->descInfo.scaleType.dtype = dtype;
+    this->descInfo.scaleType.format = format;
+}
+
+void Conv3dTiling::SetFixpipeParams(const optiling::conv_ops_tiling::FixpipeInfo& fixpipeInfo)
 {
     shapeInfo.quantMode0 = fixpipeInfo.quantMode0;
     shapeInfo.reluMode0 = fixpipeInfo.reluMode0;
@@ -780,6 +812,84 @@ void Conv3dTiling::SetOffsetx(int8_t offsetx)
 void Conv3dTiling::SetRoundMode(int8_t roundMode)
 {
     attrInfo.roundMode = roundMode;
+}
+
+void Conv3dTiling::SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
+                            optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
+                            optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
+                            optiling::conv_ops_tiling::BlockDimRes blockDimRes)
+{
+    SetOrgWeightShape(static_cast<int64_t>(convShapeInfo.co), static_cast<int64_t>(convShapeInfo.kd),
+                                       static_cast<int64_t>(convShapeInfo.kh), static_cast<int64_t>(convShapeInfo.kw));
+    SetOrgFmapShape(static_cast<int64_t>(convShapeInfo.ci), static_cast<int64_t>(convShapeInfo.di),
+                                     static_cast<int64_t>(convShapeInfo.hi), static_cast<int64_t>(convShapeInfo.wi));
+
+    uint64_t singleCoreCi = convShapeInfo.ci;                          
+    SetSingleWeightShape(static_cast<int64_t>(singleCoreCi), static_cast<int64_t>(convShapeInfo.kd),
+                                          static_cast<int64_t>(convShapeInfo.kh), static_cast<int64_t>(convShapeInfo.kw));
+
+    uint64_t curCo = convShapeInfo.co;
+    int64_t singleCoreCo = ConvCeilDiv(ConvAlignB(curCo, convOpsConstParams.n0), blockDimRes.nDim);
+    int64_t singleCoreDo = ConvCeilDiv(convShapeInfo.dout, blockDimRes.doDim);
+    int64_t singleCoreBatch = ConvCeilDiv(convShapeInfo.batch, blockDimRes.batchDim);
+    int64_t singleCoreHo = 0;
+    int64_t singleCoreMo = 0;
+    if (flagInfo.mSplitModeFlag) {
+        singleCoreMo = ConvCeilDiv(ConvAlignB(convShapeInfo.ho * convShapeInfo.wo, convOpsConstParams.m0), blockDimRes.mDim);
+        SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
+    } else {
+        singleCoreHo = ConvCeilDiv(convShapeInfo.ho, blockDimRes.hoDim);
+        SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo,
+            static_cast<int64_t>(convShapeInfo.wo), singleCoreBatch);
+    }
+}
+
+int64_t Conv3dTiling::GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo, 
+                                    optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo, 
+                                    optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
+                                    optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
+                                    optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
+                                    optiling::conv_ops_tiling::BlockDimRes blockDimRes,
+                                    Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData)
+{
+    SetShape(flagInfo, convShapeInfo, convOpsConstParams, blockDimRes);
+    bool hf32TransModeEnable = false;
+    bool isHF32 = (convAttrInfo.hf32Mode == 1);
+    if (isHF32) {
+        SetHF32(isHF32, hf32TransModeEnable);
+    }
+
+    int8_t outputOrderFlag = flagInfo.mSplitModeFlag ? 1: 0;
+    SetOutputOrder(outputOrderFlag);
+    SetPadding(static_cast<int64_t>(convAttrInfo.padHead), static_cast<int64_t>(convAttrInfo.padTail),
+                                static_cast<int64_t>(convAttrInfo.padTop), static_cast<int64_t>(convAttrInfo.padBottom),
+                                static_cast<int64_t>(convAttrInfo.padLeft), static_cast<int64_t>(convAttrInfo.padRight));
+    SetDilation(static_cast<int64_t>(convAttrInfo.dilationH), static_cast<int64_t>(convAttrInfo.dilationW),
+                                 static_cast<int64_t>(convAttrInfo.dilationD));
+    SetStride(static_cast<int64_t>(convAttrInfo.strideH), static_cast<int64_t>(convAttrInfo.strideW),
+                               static_cast<int64_t>(convAttrInfo.strideD));
+    SetGroups(static_cast<int32_t>(convAttrInfo.groups));
+
+    SetWeightType(TPosition::GM, optiling::conv_ops_tiling::formatMap[convDescInfo.weightFormat],
+                                   optiling::conv_ops_tiling::dtypeMap[convDescInfo.weightDtype]);
+    SetFmapType(TPosition::GM, optiling::conv_ops_tiling::formatMap[convDescInfo.fMapFormat],
+                                 optiling::conv_ops_tiling::dtypeMap[convDescInfo.fMapDtype]);
+    SetOutputType(TPosition::CO1, optiling::conv_ops_tiling::formatMap[convDescInfo.outFormat],
+                                   optiling::conv_ops_tiling::dtypeMap[convDescInfo.outDtype]);
+    SetQuantConvFlag(flagInfo.quantFlag);
+    SetOffsetx(static_cast<int8_t>(convAttrInfo.offsetx));
+    SetRoundMode(static_cast<int8_t>(convAttrInfo.roundMode));
+
+    if (flagInfo.hasBias) {
+        SetBiasType(TPosition::GM, optiling::conv_ops_tiling::formatMap[convDescInfo.biasFormat],
+                                     optiling::conv_ops_tiling::dtypeMap[convDescInfo.biasDtype]);
+    }
+
+    if (GetTiling(tilingData.conv3dApiTiling) == -1) {
+        return -1;
+    }
+
+    return 0;
 }
 
 } // namespace conv_tiling

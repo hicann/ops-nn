@@ -134,7 +134,12 @@ private:
     void CheckL0CDoubleBuffer();
     bool IsKAL1orKBL1FullLoad();
     bool IsKAL1andKBL1FullLoad();
-
+    void ScaleBiasUbTilingDecision();
+    void GetUbTiling();
+    bool IsAllFullLoadPossible(bool mL1ExceedInstrLimit);
+    bool IsWeightFullLoadDominant();
+    bool IsWeightFullLoadPossible();
+    bool IsFmapFullLoadPossible(bool mL1ExceedInstrLimit);
     L0TilingRange l0TilingRange;
     L0TilingParams l0TilingParams;
     L0TilingIdx l0TilingIdx;

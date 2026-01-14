@@ -16,6 +16,61 @@
  
 namespace optiling {
 namespace conv_ops_tiling {
+void Conv2dBaseTiling::PrintOpTilingData()
+{
+    /*
+      maily used to check the Validity of ops tilingdata
+      do not modify the param name if not necessarily
+    */
+    std::stringstream ss;
+    ss << "hin: " << tilingData_.conv2dRunInfo.get_hin() << ", win: " << tilingData_.conv2dRunInfo.get_win()
+       << ", hout: " << tilingData_.conv2dRunInfo.get_hout() << ", wout: " << tilingData_.conv2dRunInfo.get_wout()
+       << ", batch: " << tilingData_.conv2dRunInfo.get_batch() << ", cin: " << tilingData_.conv2dRunInfo.get_cin()
+       << ", cout: " << tilingData_.conv2dRunInfo.get_cout() << ", kh: " << tilingData_.conv2dRunInfo.get_kh()
+       << ", kw: " << tilingData_.conv2dRunInfo.get_kw() << ", batchDim: " << tilingData_.conv2dRunInfo.get_batchDim()
+       << ", hoDim: " << tilingData_.conv2dRunInfo.get_hoDim() << ", woDim: " << tilingData_.conv2dRunInfo.get_woDim()
+       << ", nDim: " << tilingData_.conv2dRunInfo.get_nDim()
+       << ", strideH: " << tilingData_.conv2dRunInfo.get_strideH()
+       << ", strideW: " << tilingData_.conv2dRunInfo.get_strideW()
+       << ", dilationH: " << tilingData_.conv2dRunInfo.get_dilationH()
+       << ", dilationW: " << tilingData_.conv2dRunInfo.get_dilationW()
+       << ", padTop: " << tilingData_.conv2dRunInfo.get_padTop()
+       << ", padLeft: " << tilingData_.conv2dRunInfo.get_padLeft()
+       << ", groups: " << tilingData_.conv2dRunInfo.get_groups()
+       << ", cinOpt: " << tilingData_.conv2dRunInfo.get_cinOpt()
+       << ", coutOpt: " << tilingData_.conv2dRunInfo.get_coutOpt()
+       << ", groupOpt: " << tilingData_.conv2dRunInfo.get_groupOpt()
+       << ", enlarge: " << tilingData_.conv2dRunInfo.get_enlarge()
+       << ", groupDim: " << tilingData_.conv2dRunInfo.get_groupDim()
+       << ", hasBias: " << static_cast<uint32_t>(tilingData_.conv2dRunInfo.get_hasBias());
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: ops tilingdata: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
+}
+
+void Conv2dBaseTiling::PrintTilingInfo()
+{
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: tiling running mode: %s.",
+            paramInfo_.nodeType.c_str(), FeatureFlagEnumToString(featureFlagInfo_));
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: weight desc: format: %s, dtype: %s.",
+            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.weightFormat).c_str(),
+            dtypeToStrTab.at(descInfo_.weightDtype).c_str());
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: featuremap desc: format: %s, dtype: %s.",
+            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
+            dtypeToStrTab.at(descInfo_.fMapDtype).c_str());
+    if (flagInfo_.hasBias) {
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: bias desc: format %s, dtype: %s.",
+                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.biasFormat).c_str(),
+                dtypeToStrTab.at(descInfo_.biasDtype).c_str());
+    }
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: output desc: format: %s, dtype: %s.",
+            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
+            dtypeToStrTab.at(descInfo_.outDtype).c_str());
+    if (flagInfo_.extendConvFlag && (attrInfo_.dualOutput != 0)) {
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: output1 desc: format: %s, dtype: %s.",
+                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.out1Format).c_str(),
+                dtypeToStrTab.at(descInfo_.out1Dtype).c_str());
+    }
+}
+
 void Conv2dBaseTiling::PrintLibApiTilingDataPartOne(std::stringstream &ss)
 {
     ss << "singleCoreHo: " << tilingData_.conv2dApiTiling.get_singleCoreHo()
@@ -68,60 +123,6 @@ void Conv2dBaseTiling::PrintLibApiTilingDataPartOne(std::stringstream &ss)
     << ", innerBatch: " << static_cast<uint32_t>(tilingData_.conv2dApiTiling.get_innerBatch());
 }
 
-void Conv2dBaseTiling::PrintOpTilingData()
-{
-    /*
-      maily used to check the Validity of ops tilingdata
-      do not modify the param name if not necessarily
-    */
-    std::stringstream ss;
-    ss << "hin: " << tilingData_.conv2dRunInfo.get_hin() << ", win: " << tilingData_.conv2dRunInfo.get_win()
-       << ", hout: " << tilingData_.conv2dRunInfo.get_hout() << ", wout: " << tilingData_.conv2dRunInfo.get_wout()
-       << ", batch: " << tilingData_.conv2dRunInfo.get_batch() << ", cin: " << tilingData_.conv2dRunInfo.get_cin()
-       << ", cout: " << tilingData_.conv2dRunInfo.get_cout() << ", kh: " << tilingData_.conv2dRunInfo.get_kh()
-       << ", kw: " << tilingData_.conv2dRunInfo.get_kw() << ", batchDim: " << tilingData_.conv2dRunInfo.get_batchDim()
-       << ", hoDim: " << tilingData_.conv2dRunInfo.get_hoDim() << ", woDim: " << tilingData_.conv2dRunInfo.get_woDim()
-       << ", nDim: " << tilingData_.conv2dRunInfo.get_nDim()
-       << ", strideH: " << tilingData_.conv2dRunInfo.get_strideH()
-       << ", strideW: " << tilingData_.conv2dRunInfo.get_strideW()
-       << ", dilationH: " << tilingData_.conv2dRunInfo.get_dilationH()
-       << ", dilationW: " << tilingData_.conv2dRunInfo.get_dilationW()
-       << ", padTop: " << tilingData_.conv2dRunInfo.get_padTop()
-       << ", padLeft: " << tilingData_.conv2dRunInfo.get_padLeft()
-       << ", groups: " << tilingData_.conv2dRunInfo.get_groups()
-       << ", cinOpt: " << tilingData_.conv2dRunInfo.get_cinOpt()
-       << ", coutOpt: " << tilingData_.conv2dRunInfo.get_coutOpt()
-       << ", groupOpt: " << tilingData_.conv2dRunInfo.get_groupOpt()
-       << ", enlarge: " << tilingData_.conv2dRunInfo.get_enlarge()
-       << ", groupDim: " << tilingData_.conv2dRunInfo.get_groupDim()
-       << ", hasBias: " << static_cast<uint32_t>(tilingData_.conv2dRunInfo.get_hasBias());
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: ops tilingdata: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
-}
-
-void Conv2dBaseTiling::PrintTilingInfo()
-{
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: tiling running mode: %s.",
-            paramInfo_.nodeType.c_str(), FeatureFlagEnumToString(featureFlagInfo_));
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: weight desc: format: %s, dtype: %s.",
-            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.weightFormat).c_str(),
-            dtypeToStrTab.at(descInfo_.weightDtype).c_str());
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: featuremap desc: format: %s, dtype: %s.",
-            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
-            dtypeToStrTab.at(descInfo_.fMapDtype).c_str());
-    if (flagInfo_.hasBias) {
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: bias desc: format %s, dtype: %s.",
-                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.biasFormat).c_str(),
-                dtypeToStrTab.at(descInfo_.biasDtype).c_str());
-    }
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: output desc: format: %s, dtype: %s.",
-            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
-            dtypeToStrTab.at(descInfo_.outDtype).c_str());
-    if (flagInfo_.extendConvFlag && attrInfo_.dualOutput) {
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: output1 desc: format: %s, dtype: %s.",
-                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.out1Format).c_str(),
-                dtypeToStrTab.at(descInfo_.out1Dtype).c_str());
-    }
-}
 
 void Conv2dBaseTiling::PrintLibApiTilingData()
 {

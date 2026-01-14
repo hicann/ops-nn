@@ -74,15 +74,12 @@ public:
         if ASCEND_IS_AIV {
             return;
         }
-        uint64_t currentKL0 = 0;
         if constexpr (Intf::c04Flag) {
             currentKL0 = IsKL0Tail() ? c04KStepTail : self_->ctx.convTiling->kL0;
+        } else if constexpr (Intf::k0 == Intf::k0FmapTail) {
+            currentKL0 = IsKL0Tail() ? self_->ctx.kL0Tail : self_->ctx.convTiling->kL0;
         } else {
-            if constexpr (Intf::k0 == Intf::k0FmapTail) {
-                currentKL0 = IsKL0Tail() ? self_->ctx.kL0Tail : self_->ctx.convTiling->kL0;
-            } else {
-                currentKL0 = IsKL0Tail() ? self_->ctx.kAL0Tail : self_->ctx.convTiling->kL0;
-            }
+            currentKL0 = IsKL0Tail() ? self_->ctx.kAL0Tail : self_->ctx.convTiling->kL0;
         }
 
         uint64_t posK = self_->ctx.kAL0Iter * self_->ctx.convTiling->kL0;
@@ -101,7 +98,7 @@ public:
                   ((static_cast<uint64_t>(channelSize_) & MASK_16) << CIN_OFFSET);
             param_.SetConfig1(xt_);
         }
-        xm_ = ((currentKL0 & MASK_16) << 0) | ((posK & MASK_16) << POSK_OFFSET) | xmtmp_;
+        xm_ = currentKL0 | (posK << POSK_OFFSET) | xmtmp_;
         param_.SetConfig0(xm_);
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::MULTI_BATCH)) {
@@ -138,6 +135,7 @@ private:
     uint16_t channelSize_ = 0;
     uint64_t c04KStepTail = 0;
     uint64_t realHixWi = 0;
+    uint64_t currentKL0 = 0;
     Load3DBitModeParam param_;
 };
 
@@ -372,10 +370,22 @@ private:
         }
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode0;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode0 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode0);
+                if (self_->ctx.convTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar0;
+                }
+#endif
                 intriParams.deqScalar = self_->ctx.deqScalar0;
             } else {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode1;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode1 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode1);
+                if (self_->ctx.convTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar1;
+                }
+#endif
                 intriParams.deqScalar = self_->ctx.deqScalar1;
             }
         }

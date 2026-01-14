@@ -1,12 +1,43 @@
 # aclnnQuantConvolution
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/conv/convolution_forward)
+
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
+<table>
+<tr>
+<th style="text-align:left">产品</th>
+<th style="text-align:center; width:100px">是否支持</th>
+</tr>
+<tr>
+<td><term>昇腾950 AI处理器</term></td>
+<td style="text-align:center">√</td>
+</tr>
+<tr>
+<td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
+<td style="text-align:center">√</td>
+</tr>
+<tr>
+<td><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></td>
+<td style="text-align:center">√</td>
+</tr>
+<tr>
+<td><term>Atlas 200I/500 A2 推理产品</term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 推理系列产品 </term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 训练系列产品</term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 200/300/500 推理产品</term></td>
+<td style="text-align:center">×</td>
+</tr>
+</table>
 
 ## 功能说明
 
@@ -317,14 +348,16 @@ aclnnStatus aclnnQuantConvolution(
 - 确定性计算
   - aclnnQuantConvolution默认确定性实现。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-    <col style="width:150px">
-    <col style="width:700px">
+  <table style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+    <col style="width:70px">
+    <col style="width:300px">
+    <col style="width:300px">
     </colgroup>
    <thead>
     <tr>
      <th><term>约束类型</term></th>
-     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>昇腾 950 AI 处理器</term></th>
    </tr>
    </thead>
    <tbody>
@@ -333,47 +366,105 @@ aclnnStatus aclnnQuantConvolution(
      <td>
         <ul>input、weight 数据类型不支持 FLOAT8_E4M3FN、HIFLOAT8，数据格式不支持 NCHW。</ul>
      </td>
+     <td>
+        <ul>-</ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">bias</th>
      <td>
+        <ul>
           bias 数据类型不支持 INT32，会转成 FLOAT 参与计算。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          <li>当 input 的数据类型是FLOAT8_E4M3FN、HIFLOAT8 时，仅支持 FLOAT。</li>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">scale</th>
      <td>
+        <ul>
           scale 数据类型不支持INT64、UINT64。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          -
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">padding</th>
      <td>
+        <ul>
           padding 的数组长度需要等于 3。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          <li>3d 场景下，padding 的数组长度可以为 3 和 6。</li>
+          <li>2d 场景下，padding 的数组长度可以为 2 和 4。</li>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">groups</th>
      <td>
+        <ul>
           groups 数值必须为 1。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          groups 数值应该在 [1,65535] 范围内。
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">offsetx</th>
      <td>
+        <ul>
           offsetx 暂不支持，传入 0 值即可。
+        <ul>
+     </td>
+     <td>
+        <ul>
+          <li>当 input 数据类型为 HIFLOAT8、FLOAT8_E4M3FN 时，offsetx 仅支持传入 0。</li>
+          <li>当 input 数据类型为 INT8 时，数值应该在 [-128,127] 范围内。</li>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">roundMode</th>
      <td>
+        <ul>
           roundMode 暂不支持，传入空指针 nullptr。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          <li>当 output 数据类型为 FLOAT8_E4M3FN 时，roundMode 仅支持传入 rint。</li>
+          <li>当 output 数据类型为 HIFLOAT8 时，roundMode仅支持传入 round</li>
+          <li>当 output 为其他数据类型时，建议传入空指针 nullptr</li>
+        </ul>
      </td>
    </tr>
    <tr>
      <th scope="row">output</th>
      <td>
+        <ul>
           output 数据类型支持 BFLOAT16、FLOAT16，数据格式仅支持 NCDHW。
+        </ul>
+     </td>
+     <td>
+        <ul>
+          <li>当 input 数据类型为 INT8 时，output仅支持 FLOAT16、BFLOAT16。</li>
+          <li>当 input 数据类型为 FLOAT8_E4M3FN 时，output支持 FLOAT8_E4M3FN、FLOAT16、BFLOAT16、FLOAT</li>
+          <li>当 input 数据类型为 HIFLOAT8 时，output支持 HIFLOAT8、FLOAT16、BFLOAT16、FLOAT。</li>
+        </ul>
      </td>
    </tr>
    <tr>
@@ -385,6 +476,10 @@ aclnnStatus aclnnQuantConvolution(
           <li>input, weight, bias, scale 中每一组 tensor 的每一维大小都应小于 1000000。</li>
         </ul>
      </td>
+     <td>
+        <ul>
+          算子仅支持在推理场景下调用。
+        </ul>
      </td>
    </tr>
    </tbody>
@@ -618,7 +713,7 @@ int aclnnQuantConvolutionTest(int32_t deviceId, aclrtStream& stream, std::vector
 }
 ```
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 ```
 int main() {
   // 1. （固定写法）device/stream 初始化，参考 acl API 手册
@@ -635,4 +730,19 @@ int main() {
 }
 ```
 
+- <term>昇腾950 AI处理器</term>：
+```
+int main() {
+  // 1. （固定写法）device/stream 初始化，参考 acl API 手册
+  // 根据自己的实际device填写deviceId
+  int32_t deviceId = 0;
+  aclrtStream stream;
+  std::vector<aclDataType> dtypesInfo = {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_INT32,
+    aclDataType::ACL_INT64, aclDataType::ACL_FLOAT16}; // 分别是input/weight/bias/scale/output的datatype
+  auto ret = aclnnQuantConvolutionTest(deviceId, stream, dtypesInfo);
+  CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionTest failed. ERROR: %d\n", ret); return ret);
 
+  Finalize(deviceId, stream);
+  return 0;
+}
+```

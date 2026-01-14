@@ -27,8 +27,8 @@ ConvTilingAlgorithmBase::ConvTilingAlgorithmBase(ConvTilingBase *tilingIns)
     if (tilingIns_->hasBias) {
         this->biasDTypeSize = DTYPE_SIZE_TAB.at(tilingIns_->descInfo.biasType.dtype);
     }
-    if (tilingIns_->hasQuantScale) {
-        this->quantScaleDtypeSize = DTYPE_SIZE_TAB.at(tilingIns_->descInfo.quantScaleType.dtype);
+    if (tilingIns_->hasScale) {
+        this->scaleDtypeSize = DTYPE_SIZE_TAB.at(tilingIns_->descInfo.scaleType.dtype);
     }
 }
 

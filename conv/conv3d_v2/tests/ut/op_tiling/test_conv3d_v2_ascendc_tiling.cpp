@@ -439,9 +439,15 @@ void CheckValidTilingData(TilingParam &tilingData,
                           uint64_t l0bSize,
                           uint64_t l0cSize,
                           bool hasBias,
-                          uint64_t tilingKey)
+                          uint64_t tilingKey,
+                          bool isConv3dDequant)
 {
     int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
+    if (isConv3dDequant) {
+      ASSERT_GT(tilingData.mUB, 0);
+      ASSERT_GT(tilingData.nUB, 0);
+      EXPECT_EQ(tilingData.nUB % n0, 0);
+    }
     // check size
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL0 = pBuffer & 0x01;
@@ -537,7 +543,10 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, ge::DataType dtype,
                     uint32_t isHasBias = 1, uint32_t groups = 1, int64_t fixBatcho = 0, int64_t fixDo = 0, int64_t fixHo = 0,
                     int64_t fixWo = 0, bool isErrorCaseFlag = false, string padMode = "SPECIFIC", bool enableHf32 = false,
-                    string shortSocVersion = "Ascend910_95", ge::Format format = ge::Format::FORMAT_NCDHW) {
+                    string shortSocVersion = "Ascend910_95", ge::Format format = ge::Format::FORMAT_NCDHW,
+                    ge::Format outformat = ge::Format::FORMAT_NCDHW,
+                    bool isConv3dDequant=false, bool hasScale = false, ge::DataType biasDtypeIn = ge::DT_FLOAT16,
+                    ge::DataType outputDtypeIn = ge::DT_FLOAT16, ge::DataType scaleDtypeIn = ge::DT_FLOAT16) {
 	uint32_t  mmadDtypesize = 4;//mmadDtype is FLOAT32 in develop4
 
   bool hasBias = (isHasBias == 1);
@@ -586,6 +595,7 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
   gert::StorageShape featuremap = {{batch, cin, di, hi, wi}, {batch, cin, di, hi, wi}};
   gert::StorageShape weight = {{cout, cin / groups, kD, kH, kW}, {cout, cin / groups, kD, kH, kW}};
   gert::StorageShape bias = {{cout}, {cout}};
+  gert::StorageShape scale = {{cout}, {cout}};
   gert::StorageShape offset_w;
   gert::StorageShape output = {{batcho, cout, Do, ho, wo}, {batcho, cout, Do, ho, wo}};
   if (format == ge::FORMAT_NDHWC) {
@@ -596,7 +606,10 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     weight = {{kD, kH, kW, cin / groups, cout}, {kD, kH, kW, cin / groups, cout}};
     output = {{batcho, Do, ho, wo, cout}, {batch, Do, ho, wo, cout}};
   }
-
+  if (outformat == ge::FORMAT_NDHWC) {
+    outputFormat = ge::FORMAT_NDHWC;
+    output = {{batcho, Do, ho, wo, cout}, {batch, Do, ho, wo, cout}};
+  }
   // 对于可选输入，不传时用nullptr占位
   std::vector<void*> input_shape_ref;
 	if(hasBias) {
@@ -604,6 +617,13 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
 	} else {
 		input_shape_ref = {&featuremap, &weight, nullptr};
 	}
+
+	if(hasScale) {
+		input_shape_ref.push_back(&scale);
+	} else {
+    input_shape_ref.push_back(nullptr);
+  }
+
     std::vector<void*> output_shapes_ref = {&output};
     std::vector<int64_t> strides_ref = {1, 1, strideD, strideH, strideW};
     std::vector<int64_t> pads_ref = {padh, padt, padu, padd, padl, padr};
@@ -658,9 +678,16 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     ge::DataType weightDtype = dtype;
     ge::DataType biasDtype = dtype == DT_HIFLOAT8 ? ge::DT_FLOAT : dtype;
     ge::DataType outputDtype = dtype;
+    ge::DataType scaleDtype = dtype;
+    if (isConv3dDequant) {
+      biasDtype = biasDtypeIn;
+      outputDtype = outputDtypeIn;
+      scaleDtype = scaleDtypeIn;
+      outputFormat = outformat;
+    }
     auto holder = gert::TilingContextFaker().SetOpType(op_type)
-                                            .NodeIoNum(3, 1)
-                                            .IrInstanceNum({1, 1, 1})
+                                            .NodeIoNum(4, 1)
+                                            .IrInstanceNum({1, 1, 1, 1})
                                             .InputShapes(input_shape_ref)
                                             .OutputShapes(output_shapes_ref)
                                             .CompileInfo(&compile_info)
@@ -668,6 +695,7 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                                             .NodeInputTd(0, fmapDype, fmapFormat, fmapFormat)
                                             .NodeInputTd(1, weightDtype, weightFormat, weightFormat)
                                             .NodeInputTd(2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                            .NodeInputTd(3, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                                             .NodeOutputTd(0, outputDtype, outputFormat, outputFormat)
                                             .NodeAttrs({
                                                 {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides_ref)},
@@ -701,7 +729,8 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
       EXPECT_GE(tilingParam.hoDim, 1);
 	    EXPECT_GE(tilingParam.nDim, 1);
 	    if((tilingParam.batchDim >= 1) && (tilingParam.doDim >= 1) && (tilingParam.hoDim >= 1) && (tilingParam.nDim >= 1)) {
-		    CheckValidTilingData(tilingParam, m0, n0, k0, weightDtypeSize, featuremapDtypeSize, biasDtypeSize, mmadDtypesize, L1_SIZE, L0a_SIZE, L0b_SIZE, L0c_SIZE, hasBias, tilingKey);
+		    CheckValidTilingData(tilingParam, m0, n0, k0, weightDtypeSize, featuremapDtypeSize, biasDtypeSize,
+          mmadDtypesize, L1_SIZE, L0a_SIZE, L0b_SIZE, L0c_SIZE, hasBias, tilingKey, isConv3dDequant);
 	    }
     } else {
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
@@ -2770,4 +2799,74 @@ TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_valid) {
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_ndhwc_valid) {
   Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NDHWC);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp16_Mmode) {
+  Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp32_Mmode) {
+  Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasbf16_Mmode) {
+  Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasfp32_Mmode) {
+  Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp16) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp32) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasbf16) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasfp32) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    false, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_scaledtype) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_dtype_group) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_format_group) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_groups) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 2, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_bias_null) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 0, 1, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+}
+
+TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_sclae_null) {
+  Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
+    true, "SPECIFIC", false, "Ascend910_95", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, false, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }

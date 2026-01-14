@@ -25,10 +25,14 @@
 #include <algorithm>
 #include <set>
 #include <tiling/platform/platform_ascendc.h>
+#include "conv_template_utils.h"
 
 using namespace std;
 
+using optiling::conv_ops_tiling::ConvDtype;
 namespace conv_tiling {
+using optiling::conv_ops_tiling::ConvDtype;
+using optiling::conv_ops_tiling::ConvFormat;
 #ifdef ENABLE_CONV_TILING_DEBUG
 #define LOG(level, format, ...)                                         \
     do {                                                                \
@@ -42,42 +46,6 @@ namespace conv_tiling {
 #define TILING_LOG_INFO(format, ...) LOG("[INFO] ", format, ##__VA_ARGS__)
 #define TILING_LOG_WARNING(format, ...) LOG("[WARN] ", format, ##__VA_ARGS__)
 #define TILING_LOG_ERROR(format, ...) LOG("[ERROR]", format, ##__VA_ARGS__)
-
-enum class ConvDtype {
-    FLOAT16 = 0,
-    FLOAT32,
-    BFLOAT16,
-    INT4,
-    INT8,
-    INT16,
-    INT32,
-    INT64,
-    UINT64,
-    UINT8,
-    UINT16,
-    UINT32,
-    HIFLOAT8,
-    FLOAT8_E4M3FN,
-    DOUBLE,
-    UNDEFINED
-};
-
-enum class ConvFormat {
-    ND = 0,
-    NCHW,
-    NHWC,
-    HWCN,
-    DHWNC,
-    DHWCN,
-    NDHWC,
-    NCDHW,
-    NC1HWC0,
-    NDC1HWC0,
-    FRACTAL_Z_C04,
-    FRACTAL_Z_3D,
-    FRACTAL_Z,
-    UNDEFINED
-};
 
 enum class TPosition {
     GM = 0,
@@ -135,26 +103,6 @@ enum class OutputOrder {
     INVALID
 };
 
-enum class ConvGroupType {
-    NORMAL_CONV = 0,
-    ORI_GROUP_CONV,
-    OPT_GROUP_CONV
-};
-
-struct ConvOriGroupInfo {
-    uint64_t ciPerGroup = 0;
-    uint64_t coPerGroup = 0;
-    uint64_t groups = 0;
-    ConvDtype weightDtype = ConvDtype::UNDEFINED;
-};
-
-struct ConvOptGroupInfo {
-    uint64_t enlarge = 0;
-    uint64_t groupOpt = 0;
-    uint64_t cinOpt = 0;
-    uint64_t coutOpt = 0;
-};
-
 struct ConvC04Info {
     uint64_t curNBL1 = 0;
     uint64_t orgkH = 0;
@@ -188,19 +136,6 @@ struct ConvDmaParams {
 
     uint32_t khUb = 0;
     uint32_t kwUb = 0;
-};
-
-struct FixpipeInfo {
-    uint8_t quantMode0 = 0;
-    uint8_t reluMode0 = 0;
-    uint8_t clipMode0 = 0;
-    uint8_t quantMode1 = 0;
-    uint8_t reluMode1 = 0;
-    uint8_t clipMode1 = 0;
-    uint8_t dualOutput = 0;
-    float channelWiseCoeff = 0;
-// channelWiseCoeff represents the sum of the multiples of the byte width of the data type of the channelwise
-// parameter in fixpipe compared to the byte width of FP16 (two bytes).
 };
 
 enum class TilingAlgorithmType {
@@ -326,6 +261,10 @@ constexpr uint32_t FP16_DTYPE_SIZE = 2;
 // load3dv2 hin/win max value
 constexpr uint64_t LOAD3DV2_HIN_WIN_LIMIT_VALUE = 32767;
 
+// conv3d int8 in UB
+constexpr uint64_t MAX_OUT_TYPE_SIZE = 4;
+constexpr uint64_t TOTAL_SCALE_BIAS_16_TYPE_SIZE = 10;
+constexpr uint64_t TOTAL_SCALE_BIAS_32_TYPE_SIZE = 8;
 struct AscendApiCubeTypeMap {
 public:
     struct {

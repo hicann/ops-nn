@@ -60,24 +60,24 @@ void SetDtype(ConvTilingBase &testTiling,
               ConvDtype fmapDtype,
               ConvDtype weightDtype,
               ConvDtype biasDtype = ConvDtype::FLOAT16,
-              ConvDtype quantScaleType = ConvDtype::INT64)
+              ConvDtype scaleType = ConvDtype::INT64)
 {
     testTiling.descInfo.fMapType.dtype = fmapDtype;
     testTiling.descInfo.weightType.dtype = weightDtype;
     testTiling.descInfo.biasType.dtype = biasDtype;
-    testTiling.descInfo.quantScaleType.dtype = quantScaleType;
+    testTiling.descInfo.scaleType.dtype = scaleType;
 }
 
 void SetFormat(ConvTilingBase &testTiling,
               ConvFormat fmapFormat,
               ConvFormat weightFormat,
               ConvFormat biasFormat = ConvFormat::ND,
-              ConvFormat quantScaleFormat = ConvFormat::ND)
+              ConvFormat scaleFormat = ConvFormat::ND)
 {
     testTiling.descInfo.fMapType.format = fmapFormat;
     testTiling.descInfo.weightType.format = weightFormat;
     testTiling.descInfo.biasType.format = biasFormat;
-    testTiling.descInfo.quantScaleType.format = quantScaleFormat;
+    testTiling.descInfo.scaleType.format = scaleFormat;
 }
 
 TEST_F(TestConv2dTiling, test_algo_HW_InitPingPong)
@@ -2262,7 +2262,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcAvalibleL1Size)
     testTiling.shapeInfo.singleCo = 8;
     ConvTilingAlgorithmBBmode algo(&testTiling, conv2DBasicBlockInfo);
     testTiling.hasBias = false;
-    testTiling.hasQuantScale = false;
+    testTiling.hasScale = false;
     conv2DBasicBlockInfo.biasFullLoad = false;
     conv2DBasicBlockInfo.fixpFullLoad = false;
     conv2DBasicBlockInfo.nTile = 16;
@@ -2272,23 +2272,23 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcAvalibleL1Size)
     EXPECT_EQ(algo.availableL1Size, 512*1024);
 
     testTiling.hasBias = true;
-    testTiling.hasQuantScale = false;
+    testTiling.hasScale = false;
     algo.CalcAvalibleL1Size();
     EXPECT_EQ(algo.fmapL1FullLoadSize, 1024);
     EXPECT_EQ(algo.weightL1FullLoadSize, 1152);
     EXPECT_EQ(algo.availableL1Size, 512*1024-64);
 
     testTiling.hasBias = false;
-    testTiling.hasQuantScale = true;
+    testTiling.hasScale = true;
     testTiling.shapeInfo.channelWiseCoeff = 4;
-    algo.quantScaleDtypeSize = 8;
+    algo.scaleDtypeSize = 8;
     algo.CalcAvalibleL1Size();
     EXPECT_EQ(algo.fmapL1FullLoadSize, 1024);
     EXPECT_EQ(algo.weightL1FullLoadSize, 1152);
     EXPECT_EQ(algo.availableL1Size, 512*1024-128);
 
     testTiling.hasBias = true;
-    testTiling.hasQuantScale = true;
+    testTiling.hasScale = true;
     testTiling.shapeInfo.channelWiseCoeff = 4;
     algo.CalcAvalibleL1Size();
     EXPECT_EQ(algo.fmapL1FullLoadSize, 1024);

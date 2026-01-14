@@ -16,18 +16,21 @@
 #ifndef CONV_COMMON_H
 #define CONV_COMMON_H
 
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "conv_config.h"
 
 #if defined(FORMAT_X)
 #if FORMAT_X == FORMAT_NCHW || FORMAT_X == FORMAT_NHWC
 #include "../../conv2d_v2/arch35/conv2d_v2_api.h"
 using namespace conv2d;
 #elif FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC
-#include "../../conv3d_v2_apt/arch35/conv3d_v2_api.h"
+#include "../../conv3d_v2/arch35/conv3d_v2_api.h"
 using namespace conv3d;
 #endif
 #endif
+
+using namespace conv;
  
 constexpr uint8_t SINGLE_BLOCK_SIZE = 32;
 constexpr uint8_t M0 = 16;
@@ -89,6 +92,9 @@ public:
     __aicore__ __forceinline__ void CalcStartAddrHWodeHWC(const uint32_t din, const uint32_t dout,
                                                           const uint64_t doIdxStart = 0, const int64_t diIdxStart = 0);
 
+    __aicore__ __forceinline__ void CalcStartAddrDeQuant(const uint32_t din, const uint32_t dout, const uint32_t kd,
+                                                         const uint64_t doIdxStart, const int64_t diIdxStart);
+
     __aicore__ __forceinline__ void InitBufferCommon(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                                      const ExtendParams* extendParams);
 
@@ -101,7 +107,7 @@ public:
     __aicore__ __forceinline__ int64_t Max(const int64_t numA, const int64_t numB);
 
 public:
-    uint32_t blockIdx = get_block_idx();
+    uint32_t blockIdx = 0;
 
 protected:
     CONV *convOps;
@@ -121,6 +127,13 @@ template <class CONV, class RUN_INFO>
 __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
     Init(CONV *convPtr, const RUN_INFO* tilingPtr, bool hasScaleFlag)
 {
+    if ASCEND_IS_AIV {
+        blockIdx = GetBlockIdx();
+        uint32_t subblocknum = GetSubBlockNum();
+        blockIdx = blockIdx / subblocknum;
+    } else {
+        blockIdx = GetBlockIdx();
+    }
     convOps = convPtr;
     convRunInfo = tilingPtr;
     hasScale = hasScaleFlag;
@@ -310,6 +323,34 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
 
 template <class CONV, class RUN_INFO>
 __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
+    CalcStartAddrDeQuant(const uint32_t din, const uint32_t dout, const uint32_t kd,
+                         const uint64_t doIdxStart, const int64_t diIdxStart)
+{
+    CalcStartAddrCommon(din, dout);
+
+    if constexpr (CONV::isMMode) {
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + diIdxStart * hwIn;
+
+        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
+                          convOps->mIdxStart * convRunInfo->cout + convOps->nIdxStart +
+                          doIdxStart * hwOut * convRunInfo->cout;
+    } else {
+        int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convRunInfo->strideH) -
+        static_cast<int64_t>(convRunInfo->padTop);
+        convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
+            convRunInfo->win + diIdxStart * hwIn;
+        convOps->singleCoreHiStartPos = hiStartPosTmp;
+
+        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->hoIdxStart *
+                          convRunInfo->wout * convRunInfo->cout + convOps->nIdxStart +
+                          doIdxStart * hwOut * convRunInfo->cout;
+    }
+    weightStartAddr = convOps->nIdxStart * convRunInfo->cin * kd * convRunInfo->kh * convRunInfo->kw;
+}
+
+template <class CONV, class RUN_INFO>
+__aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
      InitFixpipeBuffer(const ExtendParams* extendParams)
 {
     if constexpr (CONV::isQuant || CONV::IS_EXTEND_CONV2D) {
@@ -323,6 +364,12 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
                     convOps->fixpipeParams.scale0.SetGlobalBuffer(
                         reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale0));
                 }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                if (convOps->conv2dApiTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    convOps->fixpipeParams.reluWeight0.SetGlobalBuffer(
+                        reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(extendParams->reluWeight0));
+                }
+#endif
                 if constexpr (CONV::IS_EXTEND_CONV2D) {
                     if (convOps->dualOutput) {
                         if (convOps->conv2dApiTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
@@ -333,6 +380,12 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
                             convOps->fixpipeParams.scale1.SetGlobalBuffer(
                                 reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale1));
                         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                        if (convOps->conv2dApiTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                            convOps->fixpipeParams.reluWeight1.SetGlobalBuffer(
+                                reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(extendParams->reluWeight1));
+                        }
+#endif
                     }
                 }
             } else {

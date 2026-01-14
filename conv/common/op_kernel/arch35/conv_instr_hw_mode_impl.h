@@ -304,10 +304,22 @@ public:
         }
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode0;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode0 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode0);
+                if (self_->ctx.convTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar0;
+                }
+#endif
                 intriParams.deqScalar = self_->ctx.deqScalar0;
             } else {
-                intriParams.reluEn = self_->ctx.convTiling->reluMode1;
+                intriParams.reluEn = self_->ctx.convTiling->reluMode1 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTiling->reluMode1);
+                if (self_->ctx.convTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                    intriParams.reluScalar = self_->ctx.preReluScalar1;
+                }
+#endif
                 intriParams.deqScalar = self_->ctx.deqScalar1;
             }
         }

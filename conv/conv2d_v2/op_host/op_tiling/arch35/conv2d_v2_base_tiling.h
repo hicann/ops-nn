@@ -32,7 +32,6 @@
 namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
-using conv_tiling::ConvGroupType;
 using conv_tiling::TPosition;
 using conv_tiling::BoundType;
 class Conv2dTilingCache : public ConvTilingCache<Conv2dCacheTilingData>
@@ -69,11 +68,11 @@ protected:
     bool GetConv2DTilingFromRepo();
     bool GetQuantConv2DTilingFromRepo();
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
-    void TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> aoeTiling);
-    void TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> aoeTiling);
-    void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> aoeTiling);
+    void TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
+    void TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
+    void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &size);
-    uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> aoeTiling);
+    uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
 
     void BasicBlock();
     void BasicBlockL0Init();
@@ -86,7 +85,7 @@ protected:
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> BasicBlockBatchMDimCandidates();
     unordered_set<pair<uint32_t, uint32_t>, pair_hash> GenerateCandidates(
         const uint32_t cores, const uint64_t cut1, const uint32_t cut2, const uint32_t calCut1,
-        const uint32_t calCut2);
+        const uint32_t calCut2) const;
     void SetConv2dBasicBlockInfo(const vector<pair<uint32_t, uint32_t>> &ordered_candidates,
         const vector<tuple<IterateMNOrder, bool, bool, bool, bool, bool, bool, float>> &strategies,
         const vector<tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>> &tileInfo, const int32_t &index);
@@ -109,11 +108,11 @@ protected:
 
 private:
     conv_tiling::Conv2dTiling conv2dApiTiling_;
-    conv_tiling::ConvOriGroupInfo oriGroupInfo_;
-    conv_tiling::ConvOptGroupInfo optGroupInfo_;
+    optiling::conv_ops_tiling::ConvOriGroupInfo oriGroupInfo_;
+    optiling::conv_ops_tiling::ConvOptGroupInfo optGroupInfo_;
     conv_tiling::ConvC04Info c04Info_;
     conv_tiling::Conv2DBasicBlockInfo conv2dBasicBlockInfo_;
-    conv_tiling::FixpipeInfo fixpipeInfo_;
+    optiling::conv_ops_tiling::FixpipeInfo fixpipeInfo_;
 
     ConvTilingParseInfo* opInfo_ = nullptr;
     Conv2DTilingParseInfo quantOpInfo_;
@@ -143,7 +142,7 @@ private:
     platform_ascendc::SocVersion socVersion;
 
 private:
-    bool CheckDim(int64_t dimValue, uint64_t maxDimValue);
+    bool CheckDim(int64_t dimValue, uint64_t maxDimValue) const;
     ge::graphStatus CheckStrideLegal();
     ge::graphStatus CheckDilationLegal();
     ge::graphStatus CheckPadLegal();
@@ -153,7 +152,7 @@ private:
     ge::graphStatus CheckOffsetXLegal();
     ge::graphStatus CheckFmapShape();
     ge::graphStatus CheckWeightShape();
-    ge::graphStatus CheckBiasShape();
+    ge::graphStatus CheckBiasShape() const;
     ge::graphStatus CheckOutputShape();
     ge::graphStatus CheckInputDesc();
     ge::graphStatus CheckParamsDtype();
@@ -219,7 +218,7 @@ private:
     bool GetPosByFormat(const ge::Format format, const std::string &pos, const std::string &inputStr,
         size_t &posIdx) const;
     bool IsEnableC04();
-    void SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> aoeTiling);
+    void SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     uint64_t GetC04UbLoadMaxNsize();
     ge::graphStatus PrepareTiling();
     ge::graphStatus ParseFmapShape();

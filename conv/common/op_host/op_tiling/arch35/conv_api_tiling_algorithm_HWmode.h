@@ -188,6 +188,8 @@ private:
     void CheckL0DoubleBuffer();
     void Printl1TilingCalc();
     void GetDmaL1Tiling();
+    void ScaleBiasUbTilingDecision();
+    void GetUbTiling();
     L1TilingCalc l1TilingCalc;
     L1TilingInit l1TilingInit;
     unordered_map<L1TilingMode, L1TilingInit> l1TilingInitMap;

@@ -19,7 +19,12 @@
 #include "conv2d_v2_api_tilingdata.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
+
 namespace conv_tiling {
+using optiling::conv_ops_tiling::FixpipeInfo;
+using optiling::conv_ops_tiling::ConvOriGroupInfo;
+using optiling::conv_ops_tiling::ConvOptGroupInfo;
+
 struct Conv2DBasicBlockTilingParams {
     uint32_t mTile = 0; // Tile is the size of the block in singleCore
     uint32_t nTile = 0;
@@ -86,8 +91,9 @@ public:
     void SetDilation(int32_t dilationH, int32_t dilationW);
     void SetStride(int32_t strideH, int32_t strideW);
     void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
-    void SetQuantScale(bool hasScale);
+    void SetQuantScale(bool hasScaleFlag);
     void SetExtendConvFlag(bool extendConvEnable);
+    void SetQuantConvFlag(bool quantConvEnable); 
     void SetFixpipeParams(FixpipeInfo& fixpipeInfo);
     void SetOffsetx(int8_t offsetx);
     void SetC04Flag(bool isC04Enable);
@@ -109,8 +115,8 @@ private:
     void SetScalarParams(optiling::TConv2DTiling& tiling);
     void SetUbTiling(optiling::TConv2DTiling& tiling);
     void SetExtendConv2DParams(optiling::TConv2DTiling& tiling);
-    uint64_t CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_t ci1Ub, uint64_t co1Ub);
-    uint64_t CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb);
+    uint64_t CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_t ci1Ub, uint64_t co1Ub) const;
+    uint64_t CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb) const;
     uint32_t CalcAL1SpaceSize(optiling::TConv2DTiling& tiling);
     void SetDefaultDdim();
     void PrintTilingData() const;

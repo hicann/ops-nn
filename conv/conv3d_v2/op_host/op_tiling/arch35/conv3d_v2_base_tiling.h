@@ -25,15 +25,16 @@
 #include "conv3d_v2_tiling_utils.h"
 #include "conv3d_v2_tuning_tiling.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_cache_tiling.h"
+#include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
 
 using namespace platform_ascendc;
 
 namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
-using conv_tiling::ConvGroupType;
 using conv_tiling::TPosition;
-class Conv3dTilingCache : public ConvTilingCache<Conv3dCacheTilingData>
+class Conv3dTilingCache : public ConvTilingCache<Ops::NN::Conv3dV2::Conv3DV2TilingData>
 {
 public:
     static Conv3dTilingCache& GetInstance() {
@@ -71,23 +72,17 @@ protected:
     void GetCacheTilingInputArgs();
     bool GetTilingFromCache();
     void TranslateCachedTilingData();
-    void TranslateCachedRunInfo();
-    void TranslateCachedApiTilingPartOne();
-    void TranslateCachedApiTilingPartTwo();
-    void TranslateCachedApiTilingPartThree();
     bool AddTilingToCache();
-    void GetCachedTilingDataPartOne();
-    void GetCachedTilingDataPartTwo();
-    void GetCachedTilingDataPartThree();
+    void GetCachedTilingData();
 
 private:
     conv_tiling::Conv3dTiling conv3dApiTiling_;
-    Conv3DTilingData tilingData_;
-    Conv3dCacheTilingData cachedTilingData_;
-    conv_tiling::ConvOriGroupInfo oriGroupInfo_;
-    conv_tiling::ConvOptGroupInfo optGroupInfo_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingData cachedTilingData_;
+    optiling::conv_ops_tiling::ConvOriGroupInfo oriGroupInfo_;
+    optiling::conv_ops_tiling::ConvOptGroupInfo optGroupInfo_;
     conv_tiling::PlatformInfo apiInputPlatformInfo_;
-    conv_tiling::FixpipeInfo fixpipeInfo_;
+    optiling::conv_ops_tiling::FixpipeInfo fixpipeInfo_;
     ConvTilingParseInfo* opInfo_ = nullptr;
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
@@ -160,16 +155,7 @@ private:
     ge::graphStatus ParseQuantRoundModeLegal();
     ge::graphStatus SetTilingKey();
     void SetQuantFlag();
-    void SetHasBias();
-    // get tiilingKey params value
-    uint64_t GetL0PingPongVal();
-    uint64_t GetWeightTilingVal();
-    uint64_t GetOutputOrderVal();
-    uint64_t GetFmpTilingValMMode(const bool kAL1FullloadFlag);
-    uint64_t GetFmpTilingValHWMode(const bool kAL1FullloadFlag);
-    uint64_t GetFmpTilingVal();
-    uint64_t GetL1PingPongVal();
-    void ReSetTilingKeyPara();
+    void SetScaleBiasFlag();
     ge::graphStatus GetConv3DAxisPosInfo();
     bool CheckInstrLimitsMmode();
     bool CheckInstrLimitsHWmode();

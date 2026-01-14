@@ -44,12 +44,21 @@ const static uint32_t BLOCK_L0_M = 16;
 const static uint32_t BT_BLOCK_SIZE = 32;
 const static uint32_t L0_SYBC_DB_CLOSE = 0x0;
 const static uint32_t L0_SYNC_DB_OPEN = 0x1;
+const static uint32_t UB_MAX_REPEAT_TIMES = 255;
+const static uint32_t UB_CALC_ONE_REPEAT = 64;
+const static uint32_t COUNT_ONE_BLK_B32 = 8;
 const static uint8_t C04_CIN_SIZE  = 4;
 const static uint8_t ROUND_MODE_RINT = 1;
 const static uint8_t ROUND_MODE_ROUND = 2;
 const static uint8_t ROUND_MODE_HYBRID = 3;
 const static uint8_t DOUBLE_BUF = 2;
 const static uint8_t BIT_OFFSET_8 = 8;
+
+// Vec DeQuant
+const static uint32_t DTYPE_SIZE_B32 = 4;
+const static uint8_t CV_SYNC_ID_MTE3_FIXP = 0;
+const static uint8_t CV_SYNC_ID_FIXP_V = 1;
+
 // Opt Group
 const static uint16_t REG_SIZE = 256;
 const static uint16_t CO0_LOOP_TIMES = 2;
@@ -104,14 +113,29 @@ static constexpr IsResetLoad3dConfig CONV_LOAD3DV2_DEFAULT_CONFIG = {false, fals
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {
     CO2Layout::COLUMN_MAJOR,
     false,
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    true
+#endif
 };
 constexpr FixpipeConfig CFG_ROW_MAJOR_FIXED_POINT = {
     CO2Layout::ROW_MAJOR,
     false,
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    true
+#endif
+};
+constexpr FixpipeConfig CFG_ROW_MAJOR_UB = {
+    CO2Layout::ROW_MAJOR,
+    true
 };
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#define ASCEND_IS_AIC_CONV constexpr(true)
+#define ASCEND_IS_AIV_CONV constexpr(true)
+#else
 #define ASCEND_IS_AIC_CONV ASCEND_IS_AIC
 #define ASCEND_IS_AIV_CONV ASCEND_IS_AIV
+#endif
 
 // unit flag mode
 constexpr uint8_t UNIT_FLAG_DISABLE = 0;

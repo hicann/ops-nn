@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV3D_TILINGDATA_H
-#define ASCENDC_TIKCFW_TILING_CONV3D_TILINGDATA_H
+#ifndef ASCENDC_TILING_CONV3D_TILINGDATA_H
+#define ASCENDC_TILING_CONV3D_TILINGDATA_H
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
@@ -25,4 +25,4 @@
 namespace optiling {
 }  // namespace optiling
 
-#endif // ASCENDC_TIKCFW_TILING_CONV3D_TILINGDATA_H
+#endif // ASCENDC_TILING_CONV3D_TILINGDATA_H

@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV3D_TILING_BASE_H
-#define ASCENDC_TIKCFW_TILING_CONV3D_TILING_BASE_H
+#ifndef ASCENDC_TILING_CONV3D_TILING_BASE_H
+#define ASCENDC_TILING_CONV3D_TILING_BASE_H
 
 #include "conv3d_api_tiling_utils.h"
 #include "../../op_kernel/conv3d_v2_tiling_data.h"
@@ -235,4 +235,4 @@ private:
 
 } // namespace Conv3dApiTiling
 
-#endif // ASCENDC_TIKCFW_TILING_CONV3D_TILING_BASE_H
+#endif // ASCENDC_TILING_CONV3D_TILING_BASE_H

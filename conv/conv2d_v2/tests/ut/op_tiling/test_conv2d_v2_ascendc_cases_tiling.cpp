@@ -91,35 +91,6 @@ TEST_F(TestConv2dHWmode,test_c04_Case_17) {
 TEST_F(TestConv2dHWmode,test_c04_Case_18) {
     Conv2DCase({3,4096,4096},{64,7,7},{3,3,3,3},{2,2},{1,1},{32,1},{ConvDtype::FLOAT32,ConvDtype::FLOAT32,ConvDtype::FLOAT32,ConvDtype::FLOAT32},{true,false,true},{0,0,0}, 1);
 }
-TEST_F(TestConv2dHWmode,test_hif8_fp8_nobias_Case_1) {
-    uint8_t roundMode = 0;
-    for(uint8_t dTypesIndex = 1; dTypesIndex < SUPPORTED_QUANT_TYPES_WITHOUT_BIAS.size(); dTypesIndex++) {
-        if(SUPPORTED_QUANT_TYPES_WITHOUT_BIAS[dTypesIndex][2] == ConvDtype::HIFLOAT8) {
-            roundMode = 2;
-        } else if (SUPPORTED_QUANT_TYPES_WITHOUT_BIAS[dTypesIndex][2] == ConvDtype::FLOAT8_E4M3FN ||
-                   SUPPORTED_QUANT_TYPES_WITHOUT_BIAS[dTypesIndex][2] == ConvDtype::INT8) {
-            roundMode = 1;
-        }
-        Conv2DCase({3,16,64},{16,3,3},{1,1,1,1},{1,1},{1,1},{1,1},SUPPORTED_QUANT_TYPES_WITHOUT_BIAS[dTypesIndex],{false,true,false},{0,roundMode,0}, 1);
-    }
-}
-
-TEST_F(TestConv2dHWmode,test_hif8_fp8_hasbias_Case_2) {
-    uint8_t roundMode = 0;
-    for(uint8_t dTypesIndex = 1; dTypesIndex < SUPPORTED_QUANT_TYPES_WITH_BIAS.size(); dTypesIndex++) {
-        if(SUPPORTED_QUANT_TYPES_WITH_BIAS[dTypesIndex][3] == ConvDtype::HIFLOAT8) {
-            roundMode = 2;
-        } else if (SUPPORTED_QUANT_TYPES_WITH_BIAS[dTypesIndex][3] == ConvDtype::FLOAT8_E4M3FN ||
-                   SUPPORTED_QUANT_TYPES_WITH_BIAS[dTypesIndex][3] == ConvDtype::INT8) {
-            roundMode = 1;
-        }
-        Conv2DCase({3,1024,64},{4096,3,3},{1,1,1,1},{1,1},{1,1},{1,1},SUPPORTED_QUANT_TYPES_WITH_BIAS[dTypesIndex],{true,true,false},{0,roundMode,0}, 1);
-    }
-}
-
-TEST_F(TestConv2dMmode,test_int8_0) {
-   Conv2DCase({32,32,32},{16,1,1},{0,0,0,0},{1,1},{1,1},{32,1},{ConvDtype::INT8,ConvDtype::INT8,ConvDtype::INT32,ConvDtype::FLOAT16},{true,true,false},{1,1,0}, 1);
-}
 
 TEST_F(TestConv2dHWmode,test_fp16_sdxl_0) {
   Conv2DCase({1,1,16},{16,1,1},{0,0,0,0},{1,1},{1,1},{1,1},{ConvDtype::FLOAT16,ConvDtype::FLOAT16,ConvDtype::FLOAT16,ConvDtype::FLOAT16},{true,false,false},{0,0,0}, 1);

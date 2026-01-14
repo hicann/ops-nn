@@ -36,7 +36,7 @@ public:
 
     __aicore__ inline void Al1PadHeadSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1) {
         uint32_t padHeadSize = cin1LoadL1PadHead * hiLoadL1 * wiLoadL1;
-        if constexpr (Intf::isQuantScene) {
+        if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t paddingValue = (static_cast<uint16_t>(self_->ctx.convTiling->offsetx)) << BIT_OFFSET_8 |
                                     (static_cast<uint16_t>(self_->ctx.convTiling->offsetx));
             uint16_t b16PadHeadblockNum = padHeadSize / Intf::k0;
@@ -57,7 +57,7 @@ public:
 
     __aicore__ inline void Al1PadTailSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1) {
         uint32_t padTailSize = cin1LoadL1PadTail * hiLoadL1 * wiLoadL1;
-        if constexpr (Intf::isQuantScene) {
+        if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t paddingValue = (static_cast<uint16_t>(self_->ctx.convTiling->offsetx)) << BIT_OFFSET_8 |
                                     (static_cast<uint16_t>(self_->ctx.convTiling->offsetx));
             uint16_t b16PadTailblockNum = padTailSize / Intf::k0;
@@ -76,7 +76,7 @@ public:
 
     __aicore__ inline void SetPadData()
     {
-        if constexpr (Intf::isQuantScene) {
+        if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t padValue = (static_cast<uint16_t>(self_->ctx.convTiling->offsetx)) << BIT_OFFSET_8 |
                                 (static_cast<uint16_t>(self_->ctx.convTiling->offsetx));
             InitConstValueParams<uint16_t> params(1, static_cast<uint16_t>(
@@ -210,7 +210,7 @@ public:
 
         uint64_t bL1GmPos = 0;
         uint64_t bL1GmOffset = 0;
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
             bL1GmPos = dkIdx * self_->ctx.convTiling->kernelHxkernelW + cinIdx *
                        self_->ctx.convTiling->kernelHxkernelWxkernelD + coutIdx * self_->ctx.singleCoreCi *
                        self_->ctx.convTiling->kernelHxkernelWxkernelD;
@@ -237,7 +237,7 @@ private:
     {
         intriParams.dValue = currentBL1Cin1;
         intriParams.dstNzC0Stride = self_->ctx.convTiling->nBL1 * self_->ctx.convTiling->kernelHxkernelW;
-        if constexpr (Intf::formatOutput == ConvFormat::NCDHW) {
+        if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
             intriParams.srcDValue = self_->ctx.convTiling->kernelHxkernelWxkernelD;
             intriParams.dnNum = currentNBL1;
             intriParams.nValue = self_->ctx.convTiling->kernelHxkernelW;

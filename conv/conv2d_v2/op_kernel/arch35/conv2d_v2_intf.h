@@ -122,6 +122,7 @@ struct Conv2dIntf {
     constexpr static bool groupOptNZFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
                                            formatWeight == ConvFormat::FRACTAL_Z;
     constexpr static bool isConv3D = false;
+    constexpr static bool isDeQuantFlag = false;
 
     constexpr static uint8_t sizeOfFmap = sizeof(FmapT);
     constexpr static uint8_t sizeOfWeight = sizeof(WeightT);
@@ -271,6 +272,22 @@ public:
         using local = typename Ext::SetIterIndex;
         if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, groupOptIter)) {
             local::call(this, groupOptIter);
+        }
+    }
+
+    __aicore__ inline void ConvPreProcess()
+    {
+        using local = typename Ext::ConvPreProcess;
+        if constexpr (CONV_CHECK_FUN(local, ConvFunc, this)) {
+            local::call(this);
+        }
+    }
+    
+    __aicore__ inline void ConvPostProcess()
+    {
+        using local = typename Ext::ConvPostProcess;
+        if constexpr (CONV_CHECK_FUN(local, ConvFunc, this)) {
+            local::call(this);
         }
     }
 

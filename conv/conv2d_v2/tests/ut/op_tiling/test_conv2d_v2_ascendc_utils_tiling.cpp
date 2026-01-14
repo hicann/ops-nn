@@ -95,7 +95,7 @@ uint64_t CalcUsdL1Size(optiling::TConv2DTiling &tilingData,
     uint32_t weightDtyeSize = DTYPE_SIZE_TAB.at(tiling.descInfo.weightType.dtype);
     uint32_t featuremapDtyeSize = DTYPE_SIZE_TAB.at(tiling.descInfo.fMapType.dtype);
     uint32_t biasDtyeSize = tiling.hasBias ? DTYPE_SIZE_TAB.at(tiling.descInfo.biasType.dtype) : 0;
-    uint32_t scaleDtyeSize = tiling.hasQuantScale ? DTYPE_SIZE_TAB.at(tiling.descInfo.quantScaleType.dtype) : 0;
+    uint32_t scaleDtyeSize = tiling.hasScale ? DTYPE_SIZE_TAB.at(tiling.descInfo.scaleType.dtype) : 0;
     uint64_t curl1Size = 0;
     uint64_t al1Size = 0;
     uint64_t bl1Size = 0;
@@ -134,7 +134,7 @@ uint64_t CalcUsdL1Size(optiling::TConv2DTiling &tilingData,
             }
         }
 
-        if (tiling.hasQuantScale) {
+        if (tiling.hasScale) {
             if (tilingData.get_fixpParamsFullLoadFlag()) {
                 scaleL1Size = ConvCeilDiv(tilingData.get_singleCoreCo(), n0) * n0 * scaleDtyeSize;
             } else {

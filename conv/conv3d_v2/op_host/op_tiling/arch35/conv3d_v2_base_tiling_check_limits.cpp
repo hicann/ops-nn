@@ -109,35 +109,5 @@ ge::graphStatus Conv3dBaseTilingV2::CheckInstructionLimits()
     return ge::GRAPH_SUCCESS;
 }
 
-bool Conv3dBaseTilingV2::CheckInstrLimitsMmode()
-{
-    if (descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
-        uint64_t loadAL1SrcNdMatixStride = shapeInfo_.ci * shapeInfo_.hi * shapeInfo_.wi * attrInfo_.dilationD;
-        if (loadAL1SrcNdMatixStride > MAX_40_BIT_NUM) {
-            stringstream ss;
-            ss << paramInfo_.nodeType.c_str() << " AscendC: Fmap can't enable m split mode due to DN2NZ's limits: ci("
-               << shapeInfo_.ci << ") * hi(" << shapeInfo_.hi << ") * wi(" << shapeInfo_.wi << ") * di("
-               << attrInfo_.dilationD << ") > " << MAX_40_BIT_NUM << ".";
-            OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
-            return false;
-        }
-    }
-    return true;
-}
- 
-bool Conv3dBaseTilingV2::CheckInstrLimitsHWmode()
-{
-    if (descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
-        uint64_t fixpipeDstNdStride = shapeInfo_.wo * shapeInfo_.co;
-        if (fixpipeDstNdStride > MAX_32_BIT_NUM) {
-            OP_LOGE(context_->GetNodeName(),
-                    "%s AscendC: Output shape not satisfy Fixpipe's limits: wout(%lu) * cout(%lu) > %lu.",
-                    paramInfo_.nodeType.c_str(), shapeInfo_.wo, shapeInfo_.co, MAX_32_BIT_NUM);
-            return false;
-        }
-    }
-    return true;
-}
-
 }
 }

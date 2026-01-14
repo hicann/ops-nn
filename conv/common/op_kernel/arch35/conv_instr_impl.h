@@ -203,15 +203,20 @@ private:
             mmadParams.k = IsKL0Tail() ? self_->ctx.kAL0Tail : self_->ctx.convTiling->kL0;
         }
 
-        if (!self_->ctx.enableBias) {
+        if constexpr (!Intf::isDeQuantFlag) {
+            if (!self_->ctx.enableBias) {
+                mmadParams.cmatrixInitVal = self_->ctx.kIter == 0;
+                mmadParams.cmatrixSource = false;
+            } else {
+                mmadParams.cmatrixInitVal = false;
+                mmadParams.cmatrixSource = self_->ctx.kIter == 0;
+            }
+        } else {
             mmadParams.cmatrixInitVal = self_->ctx.kIter == 0;
             mmadParams.cmatrixSource = false;
-        } else {
-            mmadParams.cmatrixInitVal = false;
-            mmadParams.cmatrixSource = self_->ctx.kIter == 0;
         }
 
-        if constexpr (!Intf::isInnerBatchFlag) {
+        if constexpr (!Intf::isInnerBatchFlag && !Intf::isDeQuantFlag) {
             mmadParams.unitFlag = IsKL0Tail() ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
         }
     }

@@ -35,7 +35,7 @@
 #include "level0/padv3.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/cast.h"
-
+#include "aclnn_kernels/transpose.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "aclnn_quant_convolution.h"
 
@@ -52,6 +52,9 @@ using QUANT_CONV_V2_FUNCTION = const aclTensor* (*) (const aclTensor* input, con
     const aclTensor* scale, const aclTensor* bias, DataType outputDtype, const aclIntArray* stride,
     const aclIntArray* padding, const aclIntArray* dilation, int groups, int32_t offsetx, const char* roundMode,
     aclOpExecutor* executor);
+using CONV3D_V2_FUNCTION = const aclTensor* (*) (const aclTensor* input, const aclTensor* weight,
+    const aclTensor* bias, const aclTensor* scale, DataType outputDtype, Format outputFormat, const aclIntArray* stride,
+    const aclIntArray* padding, const aclIntArray* dilation, int groups, bool useHf32, aclOpExecutor* executor);
 
 #define CHECK_PARAMS_EQ(param, value)                                                                             \
     do {                                                                                                          \
@@ -102,6 +105,7 @@ const size_t QUANT_CONV_2D_STRIDE_DIM = 2;
 const size_t QUANT_CONV_3D_STRIDE_DIM = 3;
 const size_t QUANT_CONV_2D_DILATION_DIM = 2;
 const size_t QUANT_CONV_3D_DILATION_DIM = 3;
+const size_t CONV_3D_INPUT_DIM = 5;
 const size_t INPUT_C_INDEX = 1;
 const size_t CONST_VALUE_2 = 2;
 const int32_t OFFSET_X_MAX_VALUE = 127;
@@ -119,6 +123,10 @@ const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DEFAULT = {
 const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_910_95 = {
     // input, weight, output, bias
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_INT32},
+    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_BF16, DataType::DT_FLOAT},
+    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_BF16, DataType::DT_BF16},
+    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_FLOAT},
+    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_FLOAT16},
     {DataType::DT_HIFLOAT8, DataType::DT_HIFLOAT8, DataType::DT_FLOAT, DataType::DT_FLOAT},
     {DataType::DT_HIFLOAT8, DataType::DT_HIFLOAT8, DataType::DT_FLOAT16, DataType::DT_FLOAT},
     {DataType::DT_HIFLOAT8, DataType::DT_HIFLOAT8, DataType::DT_BF16, DataType::DT_FLOAT},
@@ -177,7 +185,6 @@ static FVector<int64_t> ConstructV2Padding(const FVector<int64_t> &oldPad, const
     } else {
         return oldPad;
     }
-
     return newPad;
 }
 
@@ -358,7 +365,7 @@ static const aclTensor* L0FuncWarper(std::map<std::string, L0FUNCTION> l0Functio
                                      const aclIntArray* stride, const aclIntArray* padding,
                                      const aclIntArray* dilation, const int64_t groups,
                                      int32_t offsetx, const char* roundMode, op::DataType outputDtype,
-                                     aclOpExecutor *executor)
+                                     op::Format outputFormat, aclOpExecutor *executor)
 {
     const aclTensor* result = nullptr;
     if (l0Functions.find(functionType) == l0Functions.end()) {
@@ -368,8 +375,13 @@ static const aclTensor* L0FuncWarper(std::map<std::string, L0FUNCTION> l0Functio
 
     L0FUNCTION fn = l0Functions.at(functionType);
     if (IsSocSupportND()) {
-        result = (reinterpret_cast<QUANT_CONV_V2_FUNCTION>(fn))(input, weight, scale, bias, outputDtype, stride, padding, dilation,
-                                              groups, offsetx, roundMode, executor);
+        if (functionType == "Conv3dV2L0") {
+            result = (reinterpret_cast<CONV3D_V2_FUNCTION>(fn))(input, weight, bias, scale, outputDtype, outputFormat,
+                stride, padding, dilation, groups, false, executor);
+        } else {
+            result = (reinterpret_cast<QUANT_CONV_V2_FUNCTION>(fn))(input, weight, scale, bias, outputDtype, stride,
+                padding, dilation, groups, offsetx, roundMode, executor);
+        }
     } else {
         result = (reinterpret_cast<QUANT_CONV_FUNCTION>(fn))(input, weight, bias, scale, offset, stride, padding, dilation,
                                            groups, executor);
@@ -380,9 +392,9 @@ static const aclTensor* L0FuncWarper(std::map<std::string, L0FUNCTION> l0Functio
 
 #define FUNCTION_CALL_BY_OPTYPE(l0Functions, functionType, input, weight, bias, scale, offset, stride,\
                                 padding, dilation, groups, offsetx, roundMode, \
-                                outputDtype, executor)                                              \
+                                outputDtype, outputFormat, executor)                                              \
     L0FuncWarper(l0Functions, functionType, input, weight, bias, scale, offset, stride, padding,    \
-                 dilation, groups, offsetx, roundMode, outputDtype, executor)
+                 dilation, groups, offsetx, roundMode, outputDtype, outputFormat, executor)
 
 class QuantConvolutionChecker {
 public:
@@ -579,10 +591,11 @@ public:
     {
         DataType scaleDtype = engine.meta.scale.dataType;
         if (IsSocSupportND()) {
-            if (scaleDtype != DataType::DT_INT64 && scaleDtype != DataType::DT_UINT64) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected scaleDtype equals one of [%s, %s], get %s",
+            if (scaleDtype != DataType::DT_INT64 && scaleDtype != DataType::DT_UINT64 &&
+                scaleDtype != DataType::DT_FLOAT) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected scaleDtype equals one of [%s, %s, %s], get %s",
                     op::ToString(DataType::DT_INT64).GetString(), op::ToString(DataType::DT_UINT64).GetString(),
-                    op::ToString(scaleDtype).GetString());
+                    op::ToString(DataType::DT_FLOAT).GetString(), op::ToString(scaleDtype).GetString());
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
@@ -1059,6 +1072,7 @@ protected:
     const aclTensor* quantConvOut = nullptr;
     std::map<std::string, L0FUNCTION> l0Functions;
     DataType outputDtype = DataType::DT_UNDEFINED;
+    Format outputFormat = Format::FORMAT_ND;
 };
 
 class QuantConv3dImpl : public QuantConvolutionImpl {
@@ -1076,7 +1090,9 @@ public:
     aclnnStatus PreProcessV2()
     {
         REG_L0_FUNCTION_BY_OPTYPE(l0Functions, QuantConv3dNCDHW, "QuantConvV2L0");
+        REG_L0_FUNCTION_BY_OPTYPE(l0Functions, Conv3dv2L0Func, "Conv3dV2L0");
         outputDtype = output->GetDataType();
+        outputFormat = output->GetViewFormat();
         if (padding->Size() == QUANT_CONV_3D_PAD_DIM) {
             padding = ViewQuantConv3dPad3dAs6d(padding, executor);
             if (padding == nullptr) {
@@ -1122,15 +1138,26 @@ public:
     aclnnStatus Impl() override
     {
         if (IsSocSupportND()) {
-            quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConvV2L0", input, weight, bias, scale, offset,
-                                                   stride, padding, dilation, groups, offsetx, roundMode, outputDtype, executor);
+            bool isConv3DQuant = input->GetViewShape().GetDimNum() == CONV_3D_INPUT_DIM &&
+                                 input->GetDataType() == DataType::DT_INT8 &&
+                                 scale->GetDataType() == DataType::DT_FLOAT;
+            if (isConv3DQuant) {
+                outputFormat = op::Format::FORMAT_NDHWC;
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "Conv3dV2L0", input, weight, bias, scale, offset,
+                    stride, padding, dilation, groups, offsetx, roundMode, outputDtype, outputFormat, executor);
+            } else {
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConvV2L0", input, weight, bias, scale, offset,
+                    stride, padding, dilation, groups, offsetx, roundMode, outputDtype, outputFormat, executor);
+            }
         } else {
             if (outputDtype == DataType::DT_FLOAT16) {
-                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdFp16", input, weight, bias, scale, offset,
-                                                       stride, padding, dilation, groups, offsetx, roundMode, outputDtype, executor);
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdFp16", input, weight, bias,
+                    scale, offset, stride, padding, dilation, groups, offsetx, roundMode, outputDtype,
+                    outputFormat, executor);
             } else if (outputDtype == DataType::DT_BF16) {
-                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdBf16", input, weight, bias, scale, offset,
-                                                       stride, padding, dilation, groups, offsetx, roundMode, outputDtype, executor);
+                quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "QuantConv3d6HdInt8To6HdBf16", input, weight, bias,
+                    scale, offset, stride, padding, dilation, groups, offsetx, roundMode, outputDtype,
+                    outputFormat, executor);
             }
         }
 
@@ -1147,8 +1174,18 @@ public:
         if (!IsSocSupportND()) {
             resConvOut = l0op::TransData(quantConvOut, output->GetStorageFormat(), groups, executor);
             CHECK_RET(resConvOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        } else {
+            bool isConv3DQuant = input->GetViewShape().GetDimNum() == CONV_3D_INPUT_DIM &&
+                                 input->GetDataType() == DataType::DT_INT8 &&
+                                 scale->GetDataType() == DataType::DT_FLOAT;
+            if (isConv3DQuant) {
+                FVector<int64_t> inputDims = {0, 4, 1, 2, 3}; // NDHWC -> NCDHW
+                auto permPre = executor->AllocIntArray(inputDims.data(), inputDims.size());
+                CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                resConvOut = l0op::Transpose(quantConvOut, permPre, executor);
+                resConvOut = l0op::ReFormat(resConvOut, op::Format::FORMAT_NCDHW);
+            }
         }
-
         auto quantConv3dViewCopyRet = l0op::ViewCopy(resConvOut, output, executor);
         CHECK_NULLPTR(quantConv3dViewCopyRet, ACLNN_ERR_RUNTIME_ERROR);
         return ACLNN_SUCCESS;
@@ -1189,7 +1226,7 @@ public:
     aclnnStatus Impl() override
     {
         quantConvOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "ExtendConv2DL0", input, weight, bias, scale, offset,
-            stride, padding, dilation, groups, offsetx, roundMode, outputDtype, executor);
+            stride, padding, dilation, groups, offsetx, roundMode, outputDtype, outputFormat, executor);
         if (quantConvOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv2d impl raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;

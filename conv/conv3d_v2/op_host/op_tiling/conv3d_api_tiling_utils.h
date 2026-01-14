@@ -13,8 +13,8 @@
  * \brief
  */
 
-#ifndef ASCENDC_TIKCFW_TILING_CONV3D_TILING_UTIL_H
-#define ASCENDC_TIKCFW_TILING_CONV3D_TILING_UTIL_H
+#ifndef ASCENDC_TILING_CONV3D_TILING_UTIL_H
+#define ASCENDC_TILING_CONV3D_TILING_UTIL_H
 
 #include <iostream>
 #include <cstdint>
@@ -352,4 +352,4 @@ bool AddWithOverflowCheck(T &res, T a, T b)
 
 } // namespace Conv3dApiTiling
 
-#endif // ASCENDC_TIKCFW_TILING_CONV3D_TILING_UTIL_H
+#endif // ASCENDC_TILING_CONV3D_TILING_UTIL_H

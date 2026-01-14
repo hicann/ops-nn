@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_v2.h
@@ -16,10 +16,10 @@
 #ifndef CONV3D_V2_H
 #define CONV3D_V2_H
 
-#include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../../common/arch35/conv_common.h"
 #include "conv3d_v2_api.h"
+#include "../conv3d_v2_tiling_data.h"
 
 using namespace AscendC;
 using namespace conv3d;
@@ -40,20 +40,20 @@ struct Conv3DV2Param : public Conv3dParam {
     using Output1Dtype = half;
 };
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 class Conv3dV2Base {
 public:
     __aicore__ inline Conv3dV2Base() {}
 
     __aicore__ inline void RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                                             const Conv3DTilingData& conv3dTilingData,
+                                             const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData,
                                              const ExtendParams* extendParams = nullptr);
 protected:
     __aicore__ inline bool Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                               const ExtendParams* extendParams,
-                                              const Conv3DTilingData& conv3dTilingData);
+                                              const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData);
 
-    __aicore__ inline void InitTilingData(const Conv3DTilingData& conv3dTilingData);
+    __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData);
 
     __aicore__ inline bool InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerHoDim, uint32_t blockPerMDim);
 
@@ -68,15 +68,15 @@ public:
     using WEIGHT_T = typename WEIGHT_TYPE::T;
     using OUTPUT_T = typename OUTPUT_TYPE::T;
     using BIAS_T = typename BIAS_TYPE::T;
-    using SCALE_T = uint64_t;
+    using SCALE_T = typename SCALE_TYPE::T;
 
     // Conv3D API
-    Conv3d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG> conv;
-    ConvCommon<Conv3dV2Base, Conv3DRunInfo> convCommon;
+    Conv3d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG> conv;
+    ConvCommon<Conv3dV2Base, Ops::NN::Conv3dV2::Conv3DRunInfo> convCommon;
 
     // Tiling data
-    const TConv3DTiling* conv3dApiTiling;
-    const Conv3DRunInfo* conv3dRunInfo;
+    const Ops::NN::Conv3dV2::TConv3DTiling* conv3dApiTiling;
+    const Ops::NN::Conv3dV2::Conv3DRunInfo* conv3dRunInfo;
 
     // Input and output tensor declare
     GlobalTensor<FMAP_T> fmapGm;
@@ -111,27 +111,28 @@ public:
 
     constexpr static ConvFormat A_FORMAT = FMAP_TYPE::format;
     constexpr static ConvFormat B_FORMAT = WEIGHT_TYPE::format;
+    constexpr static ConvFormat C_FORMAT = OUTPUT_TYPE::format;
     constexpr static bool isMMode = CONV_CFG::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE);
-    constexpr static bool isQuant = (IsSameType<FMAP_T, int8_t>::value && IsSameType<OUTPUT_T, half>::value) ||
+    constexpr static bool isQuant = (IsSameType<FMAP_T, int8_t>::value) ||
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static bool IS_EXTEND_CONV2D = false;
 };
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
-    RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Conv3DTilingData& conv3dTilingData,
-                      const ExtendParams* extendParams)
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
+    RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                      const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData, const ExtendParams* extendParams)
 {
     if (Conv3dV2KernelInit(x, filter, bias, y, extendParams, conv3dTilingData)) {
         Conv3dV2KernelImpl();
     }
 }
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams,
-                       const Conv3DTilingData& conv3dTilingData)
+                       const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData)
 {
     hasScale = (extendParams != nullptr);
     InitTilingData(conv3dTilingData);
@@ -140,7 +141,7 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
 
     conv.Init(conv3dApiTiling);
 
-    if constexpr (A_FORMAT == ConvFormat::NCDHW) {
+    if constexpr (C_FORMAT == ConvFormat::NCDHW) {
         if constexpr (isMMode) {
             if (!InitSingleCoreData(conv3dRunInfo->mDim, 1, 0)) {
                 return false;
@@ -167,16 +168,16 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     return true;
 }
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
-    InitTilingData(const Conv3DTilingData& conv3dTilingData)
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
+    InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData)
 {
     conv3dRunInfo = &(conv3dTilingData.conv3dRunInfo);
     conv3dApiTiling = &(conv3dTilingData.conv3dApiTiling);
 }
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerMDim, uint32_t blockPerHoDim)
 {
     const uint32_t dataPerBatchDim = conv3dRunInfo->hoDim * conv3dRunInfo->nDim * conv3dRunInfo->doDim;
@@ -219,13 +220,16 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     return true;
 }
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
     int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD - conv3dRunInfo->padHead;
     diIdxStart = convCommon.Max(diIdxStart, 0);
-    if constexpr (A_FORMAT == ConvFormat::NCDHW) {
+    if constexpr (A_FORMAT == ConvFormat::NCDHW && C_FORMAT == ConvFormat::NDHWC) {
+        convCommon.CalcStartAddrDeQuant(conv3dRunInfo->din, conv3dRunInfo->dout, conv3dRunInfo->kd,
+                                        doIdxStart, diIdxStart);
+    } else if constexpr (A_FORMAT == ConvFormat::NCDHW) {
         if constexpr (isMMode) {
             convCommon.CalcStartAddrMMode(conv3dRunInfo->din, conv3dRunInfo->dout, conv3dRunInfo->kd,
                 doIdxStart, diIdxStart);
@@ -243,8 +247,8 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     convCommon.InitBufferCommon(x, filter, bias, y, extendParams);
 }
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
-__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>::
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
+__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     Conv3dV2KernelImpl()
 {
     int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD;
@@ -259,7 +263,7 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
                 conv3dRunInfo->wout, singleCoreBatch);
         }
         conv.SetFmapStartPosition(diIdxStart, this->singleCoreHiStartPos, 0, 0);
-}
+    }
 
     conv.SetWeight(filterGm);
     if (conv3dRunInfo->hasBias) {

@@ -20,16 +20,28 @@
 #include "conv3d_v2_api_tilingdata.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
-
+#include "../../../../conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
+#include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
 namespace conv_tiling {
-class Conv3dTiling : public ConvTilingBase {
+class __attribute__((visibility("default"))) Conv3dTiling : public ConvTilingBase {
 public:
     Conv3dTiling() {};
     explicit Conv3dTiling(const PlatformInfo& platform) : ConvTilingBase(platform) {};
     ~Conv3dTiling() override {};
-    int64_t GetTiling(optiling::TConv3DTiling &tiling);
+    int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling);
     int64_t Compute() override;
-
+    int64_t GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo, 
+                          optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo, 
+                          optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
+                          optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
+                          optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
+                          optiling::conv_ops_tiling::BlockDimRes blockDimRes,
+                          Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData);
+    void SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
+                  optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
+                  optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
+                  optiling::conv_ops_tiling::BlockDimRes blockDimRes);
     void SetOrgWeightShape(int64_t orgCo, int64_t orgKd, int64_t orgKh, int64_t orgKw);
     void SetOrgFmapShape(int64_t orgCi, int64_t orgDi, int64_t orgHi, int64_t orgWi);
     void SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw);
@@ -46,19 +58,22 @@ public:
     void SetStride(int64_t strideD, int64_t strideH, int64_t strideW);
     void SetGroups(int32_t groups);
     void SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt);
-    void CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, ConvOptGroupInfo& optGroupInfo) const;
-    void SetOutputOrder(int8_t outOrder);
-    void SetScalarParams(optiling::TConv3DTiling& tiling);
-    void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
-    void SetQuantScale(bool hasScale);
-    void SetFixpipeParams(const FixpipeInfo& fixpipeInfo);
+    void CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGroupInfo& oriGroupInfo,
+                            optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const;
+    void SetOutputOrder(int8_t outputOrder);
+    void SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetHF32(bool hf32Enable, bool hf32TransMode);
+    void SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype);
+    void SetQuantConvFlag(bool quantConvEnable);
+    void SetFixpipeParams(const optiling::conv_ops_tiling::FixpipeInfo& fixpipeInfo);
     void SetOffsetx(int8_t offsetx);
     void SetRoundMode(int8_t roundMode);
+    void InitFlag();
 private:
     shared_ptr<ConvTilingAlgorithmBase> algoPtr;
-    void SetTilingData(optiling::TConv3DTiling& tiling);
-    void SetAttrsTilingData(optiling::TConv3DTiling& tiling);
-    uint32_t CalcAL1SpaceSize(optiling::TConv3DTiling& tiling);
+    void SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    uint32_t CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void PrintTilingData() const;
     void Infer5hdShape();
     bool CheckInputParam();

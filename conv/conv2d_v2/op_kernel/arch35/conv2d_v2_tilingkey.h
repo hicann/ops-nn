@@ -187,9 +187,8 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
 
 // Weight Ub Trans Mode TilingKey SEL
 #if (!defined(ASCENDC_TPL_PRE) && !defined(ASCENDC_TPL_KERNEL)) ||                                                   \
-    (defined(ORIG_DTYPE_X) && ((ORIG_DTYPE_X == DT_FLOAT16) || (ORIG_DTYPE_X == DT_BF16) || (ORIG_DTYPE_X == DT_FLOAT)) &&                         \
-     defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCHW &&       \
-     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW)
+     (defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCHW &&       \
+     ((defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW) || (defined(FORMAT_Y0) && FORMAT_Y0 == FORMAT_NCHW)))
 
 #define CONV2D_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()                                                                      \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \

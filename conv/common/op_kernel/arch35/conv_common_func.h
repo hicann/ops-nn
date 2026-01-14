@@ -16,6 +16,7 @@
 #ifndef CONV_COMMON_FUNC_H
 #define CONV_COMMON_FUNC_H
 
+#include <cstring>
 #include "conv_config.h"
 #include "conv_framework_util.h"
 #include "conv_iterate_impl.h"
@@ -30,6 +31,8 @@ CONV_DECLARE_REG_IMPL(SetWeight);
 CONV_DECLARE_REG_IMPL(SetBias);
 CONV_DECLARE_REG_IMPL(SetScale);
 CONV_DECLARE_REG_IMPL(SetFixpipeParams);
+CONV_DECLARE_REG_IMPL(ConvPreProcess);
+CONV_DECLARE_REG_IMPL(ConvPostProcess);
 CONV_DECLARE_REG_IMPL(IterateAll);
 CONV_DECLARE_REG_IMPL(GetTensorC);
 CONV_DECLARE_REG_IMPL(End);
@@ -61,9 +64,17 @@ struct SetBias {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::BiasT> &bias)
     {
         if ASCEND_IS_AIC_CONV {
-            self->ctx.biasgm.SetGlobalBuffer(bias.GetPhyAddr(0), bias.GetSize());
-            self->ctx.isFirstIterate = true;
-            self->ctx.enableBias = true;
+            if constexpr (!Intf::isDeQuantFlag) {
+                self->ctx.biasgm.SetGlobalBuffer(bias.GetPhyAddr(0), bias.GetSize());
+                self->ctx.isFirstIterate = true;
+                self->ctx.enableBias = true;
+            }
+        }
+
+        if ASCEND_IS_AIV_CONV {
+            if constexpr (Intf::isDeQuantFlag) {
+                self->ctx.biasgm.SetGlobalBuffer(bias.GetPhyAddr(0), bias.GetSize());
+            }
         }
     }
 };
@@ -73,9 +84,17 @@ struct SetScale {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::ScaleT> &scale)
     {
         if ASCEND_IS_AIC_CONV {
-            self->ctx.scalegm.SetGlobalBuffer(scale.GetPhyAddr(0), scale.GetSize());
-            self->ctx.isFirstIterate = true;
-            self->ctx.enableVectorQuant = true;
+            if constexpr (!Intf::isDeQuantFlag) {
+                self->ctx.scalegm.SetGlobalBuffer(scale.GetPhyAddr(0), scale.GetSize());
+                self->ctx.isFirstIterate = true;
+                self->ctx.enableVectorQuant = true;
+            }
+        }
+
+        if ASCEND_IS_AIV_CONV {
+            if constexpr (Intf::isDeQuantFlag) {
+                self->ctx.scalegm.SetGlobalBuffer(scale.GetPhyAddr(0), scale.GetSize());
+            }
         }
     }
 };
@@ -91,6 +110,12 @@ struct SetFixpipeParams {
                     self->ctx.deqScalar0 = fixpipeParams.scale0.GetValue(0);
                 }
             }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+            if (self->ctx.convTiling->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                float m2 = fixpipeParams.reluWeight0.GetValue(0);
+                self->ctx.preReluScalar0 = reinterpret_cast<uint64_t&>(m2);
+            }
+#endif
             if constexpr (Intf::isExtendConv2d) {
                 if (self->ctx.convTiling->dualOutput &&
                     self->ctx.convTiling->quantMode1 != static_cast<uint8_t>(QuantModeType::NO_QUANT)) {
@@ -98,6 +123,12 @@ struct SetFixpipeParams {
                     if (self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
                         self->ctx.deqScalar1 = fixpipeParams.scale1.GetValue(0);
                     }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+                    if (self->ctx.convTiling->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+                        float m2 = fixpipeParams.reluWeight1.GetValue(0);
+                        self->ctx.preReluScalar1 = reinterpret_cast<uint64_t&>(m2);
+                    }
+#endif
                 }
                 if (self->ctx.convTiling->quantMode0 != static_cast<uint8_t>(QuantModeType::NO_QUANT) ||
                     self->ctx.convTiling->quantMode1 != static_cast<uint8_t>(QuantModeType::NO_QUANT)) {
@@ -154,6 +185,69 @@ struct GetTensorC {
 };
 
 template <class Intf, uint32_t ImplType>
+struct ConvPreProcess {
+    static __aicore__ inline void call(Intf *self)
+    {
+        if ASCEND_IS_AIC_CONV {
+            if constexpr (!Intf::isDeQuantFlag) {
+                if (self->ctx.convTiling->biasFullLoadFlag && self->ctx.enableBias) {
+                    self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
+                    self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm,
+                        self->ctx.singleCoreCo, 0);
+                    self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
+                    self->ctx.biasL1 = self->ctx.queueBiasL1.template DeQue<typename Intf::BiasT>();
+                }
+                if (self->ctx.convTiling->fixpParamsFullLoadFlag && self->ctx.enableVectorQuant) {
+                    if constexpr (Intf::groupType != static_cast<int8_t>(ConvGroupType::NORMAL_CONV)) {
+                        event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
+                        SetFlag<HardEvent::FIX_MTE2>(eventId);
+                        WaitFlag<HardEvent::FIX_MTE2>(eventId);
+                    }
+                    self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
+                    if constexpr (Intf::isExtendConv2d) {
+                        if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                            self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
+                                self->ctx.singleCoreCo, 0);
+                        }
+                        if (self->ctx.convTiling->dualOutput &&
+                            self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                            self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1[self->ctx.scale1L1offset],
+                                self->ctx.scale1gm, self->ctx.singleCoreCo, 0);
+                        }
+                    } else {
+                        self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
+                            self->ctx.singleCoreCo, 0);
+                    }
+                    self->ctx.queueScaleL1.EnQue(self->ctx.scaleL1);
+                    self->ctx.scaleL1 = self->ctx.queueScaleL1.template DeQue<typename Intf::ScaleT>();
+                }
+            }
+        }
+
+        self->ctx.cl0PingPongFlag = 0;
+    }
+};
+
+template <class Intf, uint32_t ImplType>
+struct ConvPostProcess {
+    static __aicore__ inline void call(Intf *self)
+    {
+        if ASCEND_IS_AIC_CONV {
+            if constexpr (!Intf::isDeQuantFlag) {
+                if (self->ctx.convTiling->biasFullLoadFlag && self->ctx.enableBias) {
+                    self->ctx.queueBiasL1.FreeTensor(self->ctx.biasL1);
+                }
+                if (self->ctx.convTiling->fixpParamsFullLoadFlag && self->ctx.enableVectorQuant) {
+                    self->ctx.queueScaleL1.FreeTensor(self->ctx.scaleL1);
+                }
+            }
+
+            self->ctx.isFirstIterate = true;
+        }
+    }
+};
+
+template <class Intf, uint32_t ImplType>
 struct IterateAll {
     template <bool sync = true>
     static __aicore__ inline bool call(
@@ -168,79 +262,44 @@ struct IterateAll {
         Intf *self, const GlobalTensor<typename Intf::OutputT> &output0,
         const GlobalTensor<typename Intf::Output1T> &output1, bool enPartialSum = false)
     {
-        IterateAll<Intf, ImplType>::IterateBiasScale(self);
+        ConvPreProcess<Intf, ImplType>::call(self);
 
-        self->ctx.cl0PingPongFlag = 0;
+        if ASCEND_IS_AIV_CONV {
+            if constexpr (Intf::isDeQuantFlag) {
+                self->ctx.dequantUB2GmTools.SetOutputGm(output0);
+            }
+        }
 
         while (Iterate<Intf, ImplType>::call(self, enPartialSum)) {
-            if constexpr (Intf::isExtendConv2d) {
-                IterateAll<Intf, ImplType>::GetExtendTensorC(self, output0, output1);
-            } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
-                if constexpr (Intf::isFixedPoint) {
-                    GetTensorC<Intf, ImplType>::template
-                        call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0);
+            if ASCEND_IS_AIC_CONV {
+                if constexpr (Intf::isDeQuantFlag) {
+                    self->ctx.dequantL0C2UBTools.CopyOut();
+                    self->ctx.queueCL0.FreeTensor(self->ctx.cl0);
+                } else if constexpr (Intf::isExtendConv2d) {
+                    IterateAll<Intf, ImplType>::GetExtendTensorC(self, output0, output1);
+                } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
+                    if constexpr (Intf::isFixedPoint) {
+                        GetTensorC<Intf, ImplType>::template
+                            call<GlobalTensor, CFG_ROW_MAJOR_FIXED_POINT, sync>(self, output0);
+                    } else {
+                        GetTensorC<Intf, ImplType>::template
+                            call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0);
+                    }
                 } else {
-                    GetTensorC<Intf, ImplType>::template
-                        call<GlobalTensor, CFG_ROW_MAJOR, sync>(self, output0);
-                }
-            } else {
-                if constexpr (Intf::isFixedPoint) {
-                    GetTensorC<Intf, ImplType>::template
-                        call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0);
-                } else {
-                    GetTensorC<Intf, ImplType>::template
-                        call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0);
+                    if constexpr (Intf::isFixedPoint) {
+                        GetTensorC<Intf, ImplType>::template
+                            call<GlobalTensor, CFG_COLUMN_MAJOR_FIXED_POINT, sync>(self, output0);
+                    } else {
+                        GetTensorC<Intf, ImplType>::template
+                            call<GlobalTensor, CFG_COLUMN_MAJOR, sync>(self, output0);
+                    }
                 }
             }
         }
 
-        if ASCEND_IS_AIC_CONV {
-            if (self->ctx.convTiling->biasFullLoadFlag && self->ctx.enableBias) {
-                self->ctx.queueBiasL1.FreeTensor(self->ctx.biasL1);
-            }
-            if (self->ctx.convTiling->fixpParamsFullLoadFlag && self->ctx.enableVectorQuant) {
-                self->ctx.queueScaleL1.FreeTensor(self->ctx.scaleL1);
-            }
-
-            self->ctx.isFirstIterate = true;
-        }
+        ConvPostProcess<Intf, ImplType>::call(self);
 
         return false;
-    }
-
-    static __aicore__ inline void IterateBiasScale(Intf *self) {
-        if ASCEND_IS_AIC_CONV {
-            if (self->ctx.convTiling->biasFullLoadFlag && self->ctx.enableBias) {
-                self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
-                self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm,
-                    self->ctx.singleCoreCo, 0);
-                self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
-                self->ctx.biasL1 = self->ctx.queueBiasL1.template DeQue<typename Intf::BiasT>();
-            }
-            if (self->ctx.convTiling->fixpParamsFullLoadFlag && self->ctx.enableVectorQuant) {
-                if constexpr (Intf::groupType != static_cast<int8_t>(ConvGroupType::NORMAL_CONV)) {
-                    event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
-                    SetFlag<HardEvent::FIX_MTE2>(eventId);
-                    WaitFlag<HardEvent::FIX_MTE2>(eventId);
-                }
-                self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
-                if constexpr (Intf::isExtendConv2d) {
-                    if (self->ctx.convTiling->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
-                            self->ctx.singleCoreCo, 0);
-                    }
-                    if (self->ctx.convTiling->dualOutput && self->ctx.convTiling->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                        self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1[self->ctx.scale1L1offset],
-                            self->ctx.scale1gm, self->ctx.singleCoreCo, 0);
-                    }
-                } else {
-                    self->ctx.loadScaleL1Ins.LoadChannelWiseL1FullLoad(self->ctx.scaleL1, self->ctx.scalegm,
-                        self->ctx.singleCoreCo, 0);
-                }
-                self->ctx.queueScaleL1.EnQue(self->ctx.scaleL1);
-                self->ctx.scaleL1 = self->ctx.queueScaleL1.template DeQue<typename Intf::ScaleT>();
-            }
-        }
     }
 
     template <bool sync = true>
@@ -293,11 +352,13 @@ struct End {
         if ASCEND_IS_AIC_CONV {
             self->ctx.queueAL1.FreeAllEvent();
             self->ctx.queueBL1.FreeAllEvent();
-            self->ctx.queueBiasL1.FreeAllEvent();
-            self->ctx.queueScaleL1.FreeAllEvent();
-            self->ctx.queueBiasBT.FreeAllEvent();
+            if constexpr (!Intf::isDeQuantFlag) {
+                self->ctx.queueBiasL1.FreeAllEvent();
+                self->ctx.queueScaleL1.FreeAllEvent();
+                self->ctx.queueBiasBT.FreeAllEvent();
+            }
 
-            if constexpr (Intf::isInnerBatchFlag) {
+            if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
                 self->ctx.queueCL0.FreeAllEvent();
             }
         }
@@ -316,8 +377,11 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf *self)
     int8_t al1db = (self->ctx.convTiling->pBufferFlag & 0x08) >> 3;
     int8_t bl1db = (self->ctx.convTiling->pBufferFlag & 0x10) >> 4;
 
-    if constexpr (Intf::isInnerBatchFlag) {
-        uint64_t cl0Spacesize = self->ctx.convTiling->innerBatch * self->ctx.convTiling->mStep * self->ctx.convTiling->nL0;
+    if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
+        uint64_t cl0Spacesize = self->ctx.convTiling->mStep * self->ctx.convTiling->nL0;
+        if constexpr (Intf::isInnerBatchFlag) {
+            cl0Spacesize *= self->ctx.convTiling->innerBatch;
+        }
         if (!cl0db) {
             self->ctx.pipe.InitBuffer(self->ctx.queueCL0, 1, cl0Spacesize * Intf::sizeOfL0c);
         } else {
@@ -345,6 +409,12 @@ __aicore__ inline void InitBufferWithDoubleBuf(Intf *self)
             self->ctx.pipe.InitBuffer(self->ctx.queueBL1, DOUBLE_BUF, self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
         }
     }
+
+    if constexpr (Intf::isDeQuantFlag) {
+        self->ctx.pipe.InitBuffer(self->ctx.mmadResUbBuf,
+            self->ctx.convTiling->mUB * self->ctx.convTiling->nUB * Intf::sizeOfL0c);
+        self->ctx.mmadResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::L0cT>();
+    }
 }
 
 template <class Intf>
@@ -354,15 +424,18 @@ __aicore__ inline void InitBuffer(Intf *self)
 
     InitBufferWithDoubleBuf<Intf>(self);
     
-    if (self->ctx.convTiling->hasBias) {
-        uint64_t biasl1Spacesize = self->ctx.convTiling->biasFullLoadFlag ? AlignB(
-            self->ctx.singleCoreCo * Intf::sizeOfBias, BLOCK_L0_N * Intf::sizeOfBias) :
-            self->ctx.convTiling->nL0 * Intf::sizeOfBias;
-        uint64_t biasBTSpacesize = self->ctx.convTiling->nL0;
-        self->ctx.pipe.InitBuffer(self->ctx.queueBiasL1, 1, AlignB(biasl1Spacesize, C0_SIZE));
-        self->ctx.pipe.InitBuffer(
-            self->ctx.queueBiasBT, 1, AlignB(biasBTSpacesize * Intf::sizeOfL0c, BT_SIZE));
+    if constexpr (!Intf::isDeQuantFlag) {
+        if (self->ctx.convTiling->hasBias) {
+            uint64_t biasl1Spacesize = self->ctx.convTiling->biasFullLoadFlag ? AlignB(
+                self->ctx.singleCoreCo * Intf::sizeOfBias, BLOCK_L0_N * Intf::sizeOfBias) :
+                self->ctx.convTiling->nL0 * Intf::sizeOfBias;
+            uint64_t biasBTSpacesize = self->ctx.convTiling->nL0;
+            self->ctx.pipe.InitBuffer(self->ctx.queueBiasL1, 1, AlignB(biasl1Spacesize, C0_SIZE));
+            self->ctx.pipe.InitBuffer(
+                self->ctx.queueBiasBT, 1, AlignB(biasBTSpacesize * Intf::sizeOfL0c, BT_SIZE));
+        }
     }
+
     if constexpr (Intf::isExtendConv2d) {
         uint64_t scaleL1SpaceSize = 0;
         uint64_t scale0L1Size = self->ctx.convTiling->fixpParamsFullLoadFlag ? AlignB(
@@ -404,17 +477,21 @@ __aicore__ inline void InitHf32Mode(Intf *self)
 template <class Intf>
 __aicore__ inline void InitSubApiParams(Intf *self)
 {
-    self->ctx.loadBiasL1Ins.SetParams(self);
-    self->ctx.loadScaleL1Ins.SetParams(self);
     self->ctx.loadBL1Ins.SetParams(self);
     self->ctx.loadAl1Ins.SetParams(self);
     self->ctx.loadAL0Ins.SetParams(self);
     self->ctx.loadBL0Ins.SetParams(self);
     self->ctx.madIns.SetParams(self);
-    self->ctx.loadBiasBTIns.SetParams(self);
-    self->ctx.copyOutIns.SetParams(self);
-    if constexpr (Intf::isExtendConv2d) {
-        self->ctx.copyOutIns1.SetParams(self);
+    if constexpr (!Intf::isDeQuantFlag) {
+        self->ctx.loadBiasL1Ins.SetParams(self);
+        self->ctx.loadScaleL1Ins.SetParams(self);
+        self->ctx.loadBiasBTIns.SetParams(self);
+        self->ctx.copyOutIns.SetParams(self);
+        if constexpr (Intf::isExtendConv2d) {
+            self->ctx.copyOutIns1.SetParams(self);
+        }
+    } else {
+        self->ctx.dequantL0C2UBTools.SetParams(self);
     }
 }
 

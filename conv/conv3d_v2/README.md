@@ -8,7 +8,7 @@
 <th style="text-align:center; width:100px">是否支持</th>
 </tr>
 <tr>
-<td><term>Ascend 950PR/Ascend 950DT</term></td>
+<td><term>昇腾 950 AI 处理器</term></td>
 <td style="text-align:center">√</td>
 </tr>
 <tr>
@@ -16,8 +16,24 @@
 <td style="text-align:center">√</td>
 </tr>
 <tr>
-<td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
+<td><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></td>
 <td style="text-align:center">√</td>
+</tr>
+<tr>
+<td><term>Atlas 200I/500 A2 推理产品</term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 推理系列产品 </term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 训练系列产品</term></td>
+<td style="text-align:center">×</td>
+</tr>
+<tr>
+<td><term>Atlas 200/300/500 推理产品</term></td>
+<td style="text-align:center">×</td>
 </tr>
 </table>
 
@@ -166,7 +182,7 @@
 </tr>
 </table>
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A2 训练系列产品 / Atlas 800I A2 推理产品 / A200I A2 Box 异构组件、Atlas A3 训练系列产品 / Atlas A3 推理系列产品：
   - 不支持 `HIFLOAT8` 数据类型。
   - `scale` 和 `offset` 参数仅支持 `FLOAT` 类型。
   - 输入为 `INT8` 数据类型时，`bias` 为必选输入，`groups` 仅支持 1。
@@ -174,15 +190,14 @@
   - 不支持 `pad_mode` 属性。
   - 当不满足 `Pointwise` 分支情况时，`x` 支持 `NDC1HWC0`，`filter` 支持 `FRACTAL_Z_3D`。
 
-- Ascend 950PR/Ascend 950DT：
+- 昇腾 950 AI 处理器：
   - 不支持 `INT8` 数据类型。
 
 ## 约束说明
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+- Atlas A2 训练系列产品 / Atlas 800I A2 推理产品 / A200I A2 Box 异构组件、Atlas A3 训练系列产品 / Atlas A3 推理系列产品：
   - `filter` 的 `H`、`W` 维度范围：[1,511]。
   - 不支持空 `tensor`。
-  - 当 `groups` 为 1, `dilation` 全为 1，`padding` 全为 0，`filter` 没有为 1 的维度， `x` 的 `D` * `H` * `W` 小于 65536，`bias` 为 `FLOAT` 时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
 
   <table>
   <tr>
@@ -238,7 +253,7 @@
   </tr>
   </table>
 
-- Ascend 950PR/Ascend 950DT：
+- 昇腾 950 AI 处理器：
   - 当 `x` 数据类型为 `HIFLOAT8` 时，`filter` 的数据类型必须与 `x` 一致。`N` 维度大小应该大于等于 0。`D`、`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `D`、`H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在输入 `bias`、输出 `y` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
   - 当 `x` 和 `filter` 数据类型是 `HIFLOAT8` 时，`bias` 数据类型会转成 `FLOAT` 参与计算。

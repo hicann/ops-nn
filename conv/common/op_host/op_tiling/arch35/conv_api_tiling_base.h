@@ -24,7 +24,11 @@ const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_WITH_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::HIFLOAT8}
+    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::HIFLOAT8},
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}
 };
 
 // [fmap, weight, output]
@@ -94,6 +98,11 @@ struct L0TilingRes {
     uint64_t kL0 = 0;
     uint64_t nL0 = 0;
     uint64_t mL0 = 0;
+};
+
+struct UbTilingRes {
+    uint64_t mUb = 0;
+    uint64_t nUb = 0;
 };
 
 struct DoubleBufferRes {
@@ -174,7 +183,7 @@ struct DescInfo {
     ConvType fMapType = {ConvFormat::UNDEFINED, ConvDtype::UNDEFINED, TPosition::GM};
     ConvType biasType = {ConvFormat::UNDEFINED, ConvDtype::UNDEFINED, TPosition::GM};
     ConvType outputType = {ConvFormat::UNDEFINED, ConvDtype::UNDEFINED, TPosition::CO1};
-    ConvType quantScaleType = {ConvFormat::UNDEFINED, ConvDtype::UNDEFINED, TPosition::GM};
+    ConvType scaleType = {ConvFormat::UNDEFINED, ConvDtype::UNDEFINED, TPosition::GM};
 };
 
 struct CubeInfo {
@@ -185,7 +194,7 @@ struct CubeInfo {
     ConvDtype biasType = ConvDtype::UNDEFINED;
 };
 
-class ConvTilingBase {
+class __attribute__((visibility("default"))) ConvTilingBase {
 public:
     ConvTilingBase() {};
     explicit ConvTilingBase(const PlatformInfo& platform);
@@ -198,11 +207,13 @@ public:
     PlatformInfo platformInfo;
     L1TilingRes l1TilingInfo;
     L0TilingRes l0TilingInfo;
+    UbTilingRes ubTilingInfo;
     DoubleBufferRes dbValue;
 
     // common usd
     bool hasBias = false;
-    bool hasQuantScale = false;
+    bool hasScale = false;
+    bool isScaleBiasInUb = false;
     int8_t outputOrder = static_cast<int8_t>(OutputOrder::M);
     int8_t tilingAlgorithmType = static_cast<int8_t>(TilingAlgorithmType::FORMULAS);
 
@@ -217,6 +228,7 @@ public:
 
     // used for extendconv2d
     bool extendConvFlag = false;
+    bool quantConvFlag = false;
 
 protected:
     virtual int64_t Compute() = 0;

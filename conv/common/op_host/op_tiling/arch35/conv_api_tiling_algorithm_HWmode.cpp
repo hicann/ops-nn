@@ -50,6 +50,7 @@ int64_t ConvTilingAlgorithmHWmode::Process()
     }
     GetKL0Tiling();
     SetL0TilingRes();
+    GetUbTiling();
     CheckL0DoubleBuffer();
     SetPBufferRes();
     return 0;
@@ -1401,5 +1402,45 @@ int64_t ConvTilingAlgorithmHWmode::GetL1Tiling()
     UpdateBiasFixpParamsL1Fullload();
     SetL1TilingRes();
     return 0;
+}
+
+void ConvTilingAlgorithmHWmode::ScaleBiasUbTilingDecision()
+{
+    if (l0Params.woL0 == 0 || l0Params.hoL0 == 0 || l0Params.nL0 == 0) {
+        return;
+    }
+    if (!tilingIns_->isScaleBiasInUb) {
+        return;
+    }
+
+    uint64_t woUb = 0;
+    std::vector<uint64_t> woUbRange;
+    CalcCommFactor(l0Params.woL0, l0Params.woL0, woUbRange);
+
+    // output + scale + bias(fp16/bf16) + bias(fp32) <= UB_SIZE
+    // output + scale + bias(fp32) <= UB_SIZE
+    uint64_t totalScaleBiasTypeSize = tilingIns_->descInfo.biasType.dtype == ConvDtype::FLOAT32 ?
+        TOTAL_SCALE_BIAS_32_TYPE_SIZE : TOTAL_SCALE_BIAS_16_TYPE_SIZE;
+    for (int32_t i = woUbRange.size() - 1; i >= 0; i--) {
+        uint64_t curUbSize = l0Params.nL0 * (woUbRange[i] * MAX_OUT_TYPE_SIZE + totalScaleBiasTypeSize);
+        if (curUbSize <= tilingIns_->platformInfo.ubSize) {
+            woUb = woUbRange[i];
+            break;
+        }
+    }
+    if (woUb == l0Params.woL0) {
+        if (l0Params.hoL0 == 1) {
+            // like m mode, split w
+            woUb = CeilDiv(l0Params.woL0, VEC_NUM_PER_CUBE_910D);
+        }
+    }
+    tilingIns_->ubTilingInfo.mUb = woUb;
+    tilingIns_->ubTilingInfo.nUb = l0Params.nL0; // nUb cann fullload nL0 in any situation
+}
+
+
+void ConvTilingAlgorithmHWmode::GetUbTiling()
+{
+    ScaleBiasUbTilingDecision();
 }
 } // namespace conv_tiling_algo_hw

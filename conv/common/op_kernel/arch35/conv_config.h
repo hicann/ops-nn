@@ -16,7 +16,7 @@
 #ifndef CONV_CONFIG_H
 #define CONV_CONFIG_H
 
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_utils.h"
 #include "conv_util.h"
@@ -173,7 +173,11 @@ struct GetDstType<float> {
 
 template <>
 struct GetDstType<half> {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    using Type = int32_t;
+#else
     using Type = float;
+#endif
 };
 
 template <>
@@ -203,7 +207,7 @@ struct ConvType {
     using T = TYPE;
 };
 
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG>
+template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 struct ConvDataType {
     using ConvParam = CONV_CFG;
     using FmapT = typename FMAP_TYPE::T;
@@ -211,7 +215,7 @@ struct ConvDataType {
     using OutputT  = typename OUTPUT_TYPE::T;
     using Output1T = typename CONV_CFG::Output1Dtype;
     using BiasT = typename BIAS_TYPE::T;
-    using ScaleT = uint64_t;
+    using ScaleT = typename SCALE_TYPE::T;
     using ReluWeightT = float;
     using ClipValue0T = typename OUTPUT_TYPE::T;
     using ClipValue1T = typename CONV_CFG::Output1Dtype;
@@ -281,6 +285,8 @@ public:
         uint64_t scale1L1offset = 0; // 双输出时scale1在L1上的偏移
         uint64_t deqScalar0 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
         uint64_t deqScalar1 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
+        uint64_t preReluScalar0 = 0;
+        uint64_t preReluScalar1 = 0;
 
         uint64_t fmapOneBatchSize = 0;
         uint64_t outputOneBatchSize = 0;

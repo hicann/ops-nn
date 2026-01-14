@@ -211,13 +211,13 @@ DECLARE_SCHEMA(Conv2DV2TunnerTiling,
   FIELD(Conv2DV2TunnerTiling, innerBatch),
   FIELD(Conv2DV2TunnerTiling, isWeightUbTransFlag));
 
-void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2d_args);
-void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2d_args,
-                 size_t bias_input_index);
-void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2d_args,
-                  size_t filter_input_index);
-std::string DisplayInfoDict(std::shared_ptr<void> &input_args, size_t size, std::string op_type);
-bool TilingForConv2DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &input_args, size_t &size);
+void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs);
+void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs,
+                 size_t biasInputIndex);
+void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2InputArgs> &conv2dArgs,
+                  size_t filterInputIndex);
+std::string DisplayInfoDict(std::shared_ptr<void> &inputArgs, size_t size, std::string opType);
+bool TilingForConv2DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs, size_t &size);
 }  // namespace tuningtiling
 
 #endif

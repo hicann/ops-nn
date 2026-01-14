@@ -65,6 +65,7 @@ struct Conv3dIntf {
     constexpr static bool iterateMFirstFlag = ConvParam::iterOrder == 0;
     constexpr static bool iterateNFirstFlag = ConvParam::iterOrder == 1;
 
+    constexpr static auto formatFmap = Config::formatFmap;
     constexpr static auto formatWeight = Config::formatWeight;
     constexpr static auto formatOutput = Config::formatOutput;
     constexpr static auto posOutput = Config::posOutput;
@@ -72,10 +73,12 @@ struct Conv3dIntf {
     constexpr static bool isFixedPoint = false;
     constexpr static uint64_t k0 = C0_SIZE / sizeof(WeightT);
     constexpr static uint64_t k0FmapTail = C0_SIZE / sizeof(FmapT);
-    constexpr static bool isQuantScene = (AscendC::IsSameType<L0cT, int32_t>::value &&
-                                          AscendC::IsSameType<OutputT, half>::value) ||
-                                         AscendC::IsSameType<FmapT, hifloat8_t>::value ||
-                                         AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value;
+    constexpr static bool isDeQuantFlag = AscendC::IsSameType<FmapT, int8_t>::value &&
+        (AscendC::IsSameType<BiasT, half>::value || AscendC::IsSameType<BiasT, bfloat16_t>::value ||
+         AscendC::IsSameType<BiasT, float>::value);
+    constexpr static bool isQuantScene = !isDeQuantFlag &&
+        (AscendC::IsSameType<L0cT, int32_t>::value && AscendC::IsSameType<OutputT, half>::value) ||
+        AscendC::IsSameType<FmapT, hifloat8_t>::value || AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value;
     constexpr static bool c04Flag = false;
     constexpr static bool c04NDFlag = false;
     constexpr static bool weightUbTrans = false;
@@ -93,6 +96,7 @@ struct Conv3dIntf {
     constexpr static uint8_t sizeOfBias = sizeof(BiasT);
     constexpr static uint8_t sizeOfScale = sizeof(ScaleT);
     constexpr static uint8_t sizeOfL0c = sizeof(L0cT);
+    constexpr static uint8_t sizeOfOutput = sizeof(OutputT);
 
 public:
     ContextType ctx;
@@ -229,6 +233,22 @@ public:
         using local = typename Ext::SetIterIndex;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, groupOptIter)) {
             local::call(this, groupOptIter);
+        }
+    }
+
+    __aicore__ inline void ConvPreProcess()
+    {
+        using local = typename Ext::ConvPreProcess;
+        if constexpr (CONV_CHECK_FUN(local, ConvFunc, this)) {
+            local::call(this);
+        }
+    }
+    
+    __aicore__ inline void ConvPostProcess()
+    {
+        using local = typename Ext::ConvPostProcess;
+        if constexpr (CONV_CHECK_FUN(local, ConvFunc, this)) {
+            local::call(this);
         }
     }
 

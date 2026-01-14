@@ -22,6 +22,9 @@
 #include "conv_iterate_hw_mode_impl.h"
 #include "conv_iterate_m_mode_impl.h"
 #include "conv_util.h"
+#if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
+#include "../../conv3d_v2/arch35/conv3d_v2_dequant_impl.h"
+#endif
 
 namespace ConvFunc {
 using namespace AscendC;
@@ -50,6 +53,10 @@ struct Iterate {
                 return Conv2dFunc::WeightUbTransVecImpl<Intf>(self);
             } else if constexpr (Intf::isDmaFlag) {
                 return Conv2dFunc::DmaVecImpl<Intf>(self);
+            } else if constexpr (Intf::isDeQuantFlag) {
+#if defined(FORMAT_X) && (FORMAT_X == FORMAT_NCDHW || FORMAT_X == FORMAT_NDHWC)
+                return Conv3dFunc::DeQuantVecImpl<Intf>(self);
+#endif
             }
         }
         return false;
@@ -319,13 +326,14 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf *self)
 {
     SetMNBeforeIterateK<Intf>(self);
-    IterateBiasScale(self);
+    if constexpr (!Intf::isDeQuantFlag) {
+        IterateBiasScale(self);
+    }
 
-    if constexpr (Intf::isInnerBatchFlag) {
+    if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
         self->ctx.cl0 = self->ctx.queueCL0.template AllocTensor<typename Intf::L0cT>();
     } else {
-        int8_t cl0db = (self->ctx.convTiling->pBufferFlag & 0x04) >> 2;
-        if (cl0db) {
+        if ((self->ctx.convTiling->pBufferFlag & 0x04) >> 2) {
             self->ctx.cl0 =
                 self->ctx.wholeCl0Tensor[(self->ctx.cl0PingPongFlag & 0x1) * L0C_HALF_SIZE / Intf::sizeOfL0c];
         } else {
@@ -348,7 +356,7 @@ __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf *self)
 
     FreeL1Tensor<Intf>(self);
 
-    if constexpr (Intf::isInnerBatchFlag) {
+    if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
         self->ctx.queueCL0.EnQue(self->ctx.cl0);
         self->ctx.cl0 = self->ctx.queueCL0.template DeQue<typename Intf::L0cT>();
     } else {

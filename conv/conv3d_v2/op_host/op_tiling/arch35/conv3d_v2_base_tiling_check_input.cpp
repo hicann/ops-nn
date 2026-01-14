@@ -39,6 +39,33 @@ ge::graphStatus Conv3dBaseTilingV2::ParseFmapShape()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
+{
+    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
+    auto weightShape = weightShapePtr->GetStorageShape();
+    if (weightShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input weight shape dim num: %zu != %u.",
+                paramInfo_.nodeType.c_str(), weightShape.GetDimNum(), CONV3D_DIM_SIZE_LIMIT);
+        return ge::GRAPH_FAILED;
+    }
+    oriShapeAttrInfo_.oriWeightN = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriWeightC = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriWeightD = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
+    oriShapeAttrInfo_.oriWeightH = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriWeightW = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
+    shapeInfo_.kd = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightD);
+    shapeInfo_.kh = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightH);
+    shapeInfo_.kw = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightW);
+    shapeInfo_.co = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightN);
+
+    auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_K_IDX);
+    if (k0 == 0) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: Get k0 = 0.", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv3dBaseTilingV2::CheckFmapShape()
 {
     if (oriShapeAttrInfo_.oriFmapN < 1 || oriShapeAttrInfo_.oriFmapN > MAX_N_BF16_SHAPE) {
@@ -109,33 +136,6 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
-{
-    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
-    auto weightShape = weightShapePtr->GetStorageShape();
-    if (weightShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input weight shape dim num: %zu != %u.",
-                paramInfo_.nodeType.c_str(), weightShape.GetDimNum(), CONV3D_DIM_SIZE_LIMIT);
-        return ge::GRAPH_FAILED;
-    }
-    oriShapeAttrInfo_.oriWeightN = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriWeightC = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriWeightD = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
-    oriShapeAttrInfo_.oriWeightH = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriWeightW = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
-    shapeInfo_.kd = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightD);
-    shapeInfo_.kh = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightH);
-    shapeInfo_.kw = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightW);
-    shapeInfo_.co = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightN);
-
-    auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_K_IDX);
-    if (k0 == 0) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: Get k0 = 0.", paramInfo_.nodeType.c_str());
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 bool Conv3dBaseTilingV2::GetPosByFormat(const ge::Format format, const std::string &pos,
                                       const std::string &inputStr, size_t &posIdx) const
 {
@@ -151,13 +151,14 @@ bool Conv3dBaseTilingV2::GetPosByFormat(const ge::Format format, const std::stri
 
 ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
 {
-    if (!flagInfo_.hasBias) {
-        return ge::GRAPH_SUCCESS;
+    if (flagInfo_.isConv3dDequant && !flagInfo_.hasBias) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: not support conv3d int8 bias null.", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
     }
 
     auto biasShapePtr = flagInfo_.quantFlag ?
         context_->GetOptionalInputShape(QUANT_INPUT_BIAS_INDEX) : context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
-    if (biasShapePtr == nullptr) {
+    if (!flagInfo_.hasBias || biasShapePtr == nullptr) {
         return ge::GRAPH_SUCCESS;
     }
     auto biasDimNum = biasShapePtr->GetStorageShape().GetDimNum();
@@ -232,6 +233,32 @@ ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
+{
+    if (socVersion == SocVersion::ASCEND910_95 || socVersion == SocVersion::ASCEND910_55) {
+        bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
+                                          descInfo_.weightFormat == ge::FORMAT_NCDHW &&
+                                          descInfo_.outFormat == ge::FORMAT_NDHWC;
+        std::stringstream ss;
+        ss <<"The support params format list [fmap, weight, output] for scene ";
+        ss <<"(conv3d dequant) is [NCDHW, NCDHW, NDHWC]";
+        if (flagInfo_.isConv3dDequant && !isConv3dDequantFormatLegal) {
+            OP_LOGE(context_->GetNodeName(),
+                "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",
+                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
+                formatToStrTab.at(descInfo_.weightFormat).c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
+                ss.str().c_str());
+            return ge::GRAPH_FAILED;
+        }
+
+        auto res = CheckInputDescForND();
+        if (res != ge::GRAPH_SUCCESS) {
+            return res;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv3dBaseTilingV2::ParseOutputShape()
 {
     auto outputShapePtr = context_->GetOutputShape(OUTPUT_INDEX);
@@ -252,71 +279,54 @@ ge::graphStatus Conv3dBaseTilingV2::ParseOutputShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
-{
-    if (socVersion == SocVersion::ASCEND910_95 || socVersion == SocVersion::ASCEND910_55) {
-        auto res = CheckInputDescForND();
-        if (res != ge::GRAPH_SUCCESS) {
-            return res;
-        }
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus Conv3dBaseTilingV2::CheckQuantScaleDesc()
 {
-    if (!flagInfo_.quantFlag) {
+    if (!(flagInfo_.isConv3dDequant || flagInfo_.quantFlag)) {
         return ge::GRAPH_SUCCESS;
     }
-    auto scaleDesc = context_->GetOptionalInputDesc(INPUT_SCALE_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
-    if (static_cast<ge::Format>(GetPrimaryFormat(scaleDesc->GetStorageFormat())) != ge::Format::FORMAT_ND) {
+
+    if (flagInfo_.isConv3dDequant && !flagInfo_.hasScale) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: conv3d scale can not be null when input is int8.",
+                paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    if (static_cast<ge::Format>(descInfo_.scaleFormat) != ge::Format::FORMAT_ND) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: unSupported scale format: %s, only support [ND].",
-                paramInfo_.nodeType.c_str(), formatToStrTab.at(scaleDesc->GetStorageFormat()).c_str());
+                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.scaleFormat).c_str());
         return ge::GRAPH_FAILED;
     }
-    auto scaleDtype = scaleDesc->GetDataType();
-    if (scaleDtype != ge::DataType::DT_INT64 && scaleDtype != ge::DataType::DT_UINT64) {
-        OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: unSupported scale datatype: %s, only support [INT64] or [UINT64].",
-                paramInfo_.nodeType.c_str(), dtypeToStrTab.at(scaleDtype).c_str());
-        return ge::GRAPH_FAILED;
-    }
-    auto scaleShapePtr = context_->GetOptionalInputShape(INPUT_SCALE_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleShapePtr);
+    auto tmpScaleIdx = flagInfo_.quantFlag ? QUANT_CONV_SCALE_IDX : CONV_SCALE_IDX;
+    auto scaleShapePtr = context_->GetOptionalInputShape(tmpScaleIdx);
     OP_TILING_CHECK(scaleShapePtr->GetStorageShape().GetDimNum() != FORMAT_ND_DIM,
                     OP_LOGE(context_->GetNodeName(), "%s AscendC: input scale shape dim num: %zu != %u.",
                             paramInfo_.nodeType.c_str(), scaleShapePtr->GetStorageShape().GetDimNum(), FORMAT_ND_DIM),
                     return ge::GRAPH_FAILED);
-    size_t scaleShapeLen = scaleShapePtr->GetStorageShape().GetDim(0);
-    OP_TILING_CHECK(scaleShapeLen != static_cast<size_t>(oriShapeAttrInfo_.oriWeightN),
+    size_t scaleShape = scaleShapePtr->GetStorageShape().GetDim(0);
+    OP_TILING_CHECK(scaleShape != static_cast<size_t>(oriShapeAttrInfo_.oriWeightN),
                     OP_LOGE(context_->GetNodeName(),
-                            "%s AscendC: input illegal scale shape: %lu, which must equal to Cout: %ld.",
-                            paramInfo_.nodeType.c_str(), scaleShapeLen, oriShapeAttrInfo_.oriWeightN),
+                            "%s AscendC: input illegal scale shape: %zu, which must equal to Cout: %ld.",
+                            paramInfo_.nodeType.c_str(), scaleShape, oriShapeAttrInfo_.oriWeightN),
                     return ge::GRAPH_FAILED);
-    fixpipeInfo_.channelWiseCoeff += INT64_DTYPE_SIZE_COMPARE_FP16;
-    return ge::GRAPH_SUCCESS;
-}
 
-ge::graphStatus Conv3dBaseTilingV2::CheckInputDescForND()
-{
-    bool formatMatchTag = false;
-    std::vector<std::vector<ge::Format>> supportFormats;
-    std::stringstream ss;
-    convBase_.GetSupportedFormats(flagInfo_.quantFlag, false, apiInputPlatformInfo_.socVersion, ss, supportFormats);
-    for (uint8_t kindId = 0; kindId < supportFormats.size(); kindId++) {
-        if (ConvArrMatch(paramInfo_.paramsFormat, supportFormats[kindId], paramInfo_.paramsFormat.size())) {
-            formatMatchTag = true;
-            break;
+    if (flagInfo_.quantFlag) {
+        if (descInfo_.scaleDtype != ge::DataType::DT_INT64 && descInfo_.scaleDtype != ge::DataType::DT_UINT64) {
+            OP_LOGE(context_->GetNodeName(),
+                    "%s AscendC: unSupported scale datatype: %s, only support int64 and uint64.",
+                    paramInfo_.nodeType.c_str(), dtypeToStrTab.at(descInfo_.scaleDtype).c_str());
+            return ge::GRAPH_FAILED;
         }
-    }
-    if (!formatMatchTag) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",
-            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
-            formatToStrTab.at(descInfo_.weightFormat).c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
-            ss.str().c_str());
-        return ge::GRAPH_FAILED;
+        fixpipeInfo_.channelWiseCoeff += INT64_DTYPE_SIZE_COMPARE_FP16;
+    } else {
+        // conv3d
+        if (descInfo_.scaleDtype != ge::DataType::DT_FLOAT) {
+            OP_LOGE(context_->GetNodeName(),
+                    "%s AscendC: unSupported scale datatype: %s, only support float32.",
+                    paramInfo_.nodeType.c_str(), dtypeToStrTab.at(descInfo_.scaleDtype).c_str());
+            return ge::GRAPH_FAILED;
+        }
+        // scale will in UB, skip fbsize calc
+        fixpipeInfo_.channelWiseCoeff = 0;
     }
 
     return ge::GRAPH_SUCCESS;
@@ -361,6 +371,30 @@ ge::graphStatus Conv3dBaseTilingV2::CheckParamsDtype()
             DTYPE_TO_STR.at(dtypeMap.at(descInfo_.outDtype)).c_str());
     }
     return ge::GRAPH_FAILED;
+}
+
+ge::graphStatus Conv3dBaseTilingV2::CheckInputDescForND()
+{
+    bool formatMatchTag = false;
+    std::vector<std::vector<ge::Format>> supportFormats;
+    std::stringstream ss;
+    convBase_.GetSupportedFormats(flagInfo_.quantFlag, false, apiInputPlatformInfo_.socVersion, ss, supportFormats);
+    for (uint8_t kindId = 0; kindId < supportFormats.size(); kindId++) {
+        if (ConvArrMatch(paramInfo_.paramsFormat, supportFormats[kindId], paramInfo_.paramsFormat.size())) {
+            formatMatchTag = true;
+            break;
+        }
+    }
+    if (!formatMatchTag) {
+        OP_LOGE(context_->GetNodeName(),
+            "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",
+            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
+            formatToStrTab.at(descInfo_.weightFormat).c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
+            ss.str().c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    return ge::GRAPH_SUCCESS;
 }
 }
 }

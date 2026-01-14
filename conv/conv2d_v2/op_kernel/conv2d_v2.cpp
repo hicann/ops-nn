@@ -52,6 +52,7 @@ constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
 #endif
 constexpr ConvFormat biasFormat = ConvFormat::ND;
+constexpr ConvFormat scaleFormat = ConvFormat::ND;
 
 #if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
 #define SET_KERNEL_TASK_TYPE(key) KERNEL_TASK_TYPE(key, KERNEL_TYPE_AIC_ONLY)
@@ -83,14 +84,15 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #else
     using biasType = ConvType<TPosition::GM, biasFormat, half>;  // only for compile
 #endif
+    using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
     if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
-        Conv2dBase<fmapType, weightType, outputType, biasType,
+        Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
             Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
                           EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch>> baseConv2d;
         baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
     } else {
-        GroupConv2d<fmapType, weightType, outputType, biasType,
+        GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
             Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
                           EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch>> groupConv2d;
         groupConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);

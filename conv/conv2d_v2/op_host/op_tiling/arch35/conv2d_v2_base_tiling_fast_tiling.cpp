@@ -37,7 +37,6 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
     if (CheckInstructionLimits() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-
     if (Conv2DInfoInitAndCheck() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -47,6 +46,7 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
 ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
 {
     Conv2dOpTilingSetShape();
+    convBase_.UpdateFlagInfo(flagInfo_);
     OP_LOGD(context_->GetNodeName(), "%s AscendC: get tiling from fast_tiling.", paramInfo_.nodeType.c_str());
     if (flagInfo_.mSplitModeFlag) { // M split mode
         if (flagInfo_.mBasicBlockFlag) {
@@ -86,8 +86,9 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
 ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
 {
     convBase_.ConvBaseInitAttrInfo(attrInfo_);
+    convBase_.ConvBaseInitOpInfo(opInfo_);
+    convBase_.updatePlatformInfoFromOpInfo();
     convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
-    convBase_.ConvBaseInitOpInfo(opInfo_); 
     convBase_.InitblockDimConstParas();
     convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
     // check if enable c04 mode
@@ -98,6 +99,23 @@ ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
     if (GetTilingSplitMode() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::GetC04TilingSplitMode()
+{
+    flagInfo_.mSplitModeFlag = false;
+    bool forceHWSplitModeFlag = featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG &&
+                                shapeInfo_.wo > ENABLE_MMODE_CONV1D_WO_LIMIT_128;
+    if (!forceHWSplitModeFlag && convBase_.CheckC04L1SizeLimitsInMsplitMode() == ge::GRAPH_SUCCESS) {
+        flagInfo_.mSplitModeFlag = true;
+        return ge::GRAPH_SUCCESS;
+    }
+    if (convBase_.CheckC04L1SizeLimitsInHWSplitMode() != ge::GRAPH_SUCCESS) {
+        flagInfo_.enableC04Flag = false;
+        return convBase_.CheckL1SizeLimitsInHWsplitMode();
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -136,21 +154,6 @@ ge::graphStatus Conv2dBaseTiling::GetTilingSplitMode()
     return ge::GRAPH_FAILED;
 }
 
-ge::graphStatus Conv2dBaseTiling::GetC04TilingSplitMode()
-{
-    flagInfo_.mSplitModeFlag = false;
-    if (convBase_.CheckC04L1SizeLimitsInMsplitMode() == ge::GRAPH_SUCCESS) {
-        flagInfo_.mSplitModeFlag = true;
-        return ge::GRAPH_SUCCESS;
-    }
-    if (convBase_.CheckC04L1SizeLimitsInHWSplitMode() != ge::GRAPH_SUCCESS) {
-        flagInfo_.enableC04Flag = false;
-        return convBase_.CheckL1SizeLimitsInHWsplitMode();
-    }
-
-    return ge::GRAPH_SUCCESS;
-}
-
 void Conv2dBaseTiling::SelectMModeAlgorithm()
 {
     flagInfo_.mBasicBlockFlag = false;
@@ -175,7 +178,7 @@ void Conv2dBaseTiling::SelectMModeAlgorithm()
     if (flagInfo_.hasBias) {
         biasSize = dtypeSizeTab.at(descInfo_.biasDtype) * shapeInfo_.co;
     }
-    scaleSize = fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE * shapeInfo_.co;
+    scaleSize = static_cast<int64_t>(fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE * shapeInfo_.co);
     int64_t availableL1Size = L1_SIZE - biasSize - scaleSize;
     int64_t mTile = 0;
     int64_t nTile = 0;

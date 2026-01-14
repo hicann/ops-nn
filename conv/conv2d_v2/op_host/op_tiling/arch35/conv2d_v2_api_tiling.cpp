@@ -82,6 +82,15 @@ bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optilin
     return true;
 }
 
+void Conv2dTiling::Infer5hdShape()
+{
+    shapeInfo.singleCi1 = isC04Flag ? CONST_VALUE_1 : CeilDiv(shapeInfo.singleCi, cubeInfo.k0);
+    shapeInfo.singleCo1 = CeilDiv(shapeInfo.singleCo, cubeInfo.n0);
+    if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
+        shapeInfo.singleM1 = CeilDiv(shapeInfo.singleM, cubeInfo.m0);
+    }
+}
+
 void Conv2dTiling::SetDefaultDdim()
 {
     shapeInfo.orgkD = 1;
@@ -92,15 +101,6 @@ void Conv2dTiling::SetDefaultDdim()
     attrInfo.padTail = 0;
     attrInfo.dilationD = 1;
     attrInfo.strideD = 1;
-}
-
-void Conv2dTiling::Infer5hdShape()
-{
-    shapeInfo.singleCi1 = isC04Flag ? CONST_VALUE_1 : CeilDiv(shapeInfo.singleCi, cubeInfo.k0);
-    shapeInfo.singleCo1 = CeilDiv(shapeInfo.singleCo, cubeInfo.n0);
-    if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-        shapeInfo.singleM1 = CeilDiv(shapeInfo.singleM, cubeInfo.m0);
-    }
 }
 
 int64_t Conv2dTiling::Compute()
@@ -170,7 +170,7 @@ bool Conv2dTiling::CheckParamsBBModePhase1()
     return true;
 }
 
-uint64_t Conv2dTiling::CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_t ci1Ub, uint64_t co1Ub)
+uint64_t Conv2dTiling::CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_t ci1Ub, uint64_t co1Ub) const
 {
     uint64_t kernelHxkernelW = params.orgkH * params.orgkW;
     uint64_t weightDtypeSize = DTYPE_SIZE_TAB.at(params.weightDtype);
@@ -220,7 +220,7 @@ void Conv2dTiling::GetWeightUBTiling(ConvWeightUbTransParams& params)
     params.bUbKStep = static_cast<uint32_t>(ci1UbRange[ci1UbIndex] * kernelHxkernelW * params.k0);
 }
 
-uint64_t Conv2dTiling::CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb)
+uint64_t Conv2dTiling::CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb) const
 {
     uint64_t fmapDtypeSize = DTYPE_SIZE_TAB.at(params.fmapDtype);
  
@@ -262,48 +262,6 @@ void Conv2dTiling::GetDmaUbTiling(ConvDmaParams& params)
         ++khUbIdx;
     }
     params.khUb = static_cast<uint32_t>(khUbRange[khUbIdx]);
-}
-
-void Conv2dTiling::SetUbTiling(optiling::TConv2DTiling& tiling)
-{
-    if (isDmaFlag) {
-        ConvDmaParams params = {l1TilingInfo.hoAL1, l1TilingInfo.woAL1, l1TilingInfo.khL1,
-            l1TilingInfo.kwL1, cubeInfo.k0, descInfo.fMapType.dtype};
-        GetDmaUbTiling(params);
-        tiling.set_khUb(params.khUb);
-        tiling.set_kwUb(params.kwUb);
-        return;
-    }
-
-    if (isC04Flag) {
-        ConvC04Info c04Info = {l1TilingInfo.nBL1, static_cast<uint64_t>(shapeInfo.orgkH),
-            static_cast<uint64_t>(shapeInfo.orgkW), cubeInfo.k0, cubeInfo.n0, dbValue.pbBL1, descInfo.weightType.dtype};
-        tiling.set_bUbNStep(CalcC04UbLoadNsize(c04Info));
-        tiling.set_bUbKStep(0);
-        return;
-    }
-
-    uint64_t kernelHxkernelW = shapeInfo.orgkH * shapeInfo.orgkW;
-    uint64_t weightKSize = AlignB(shapeInfo.orgCi, cubeInfo.k0) * kernelHxkernelW;
-    bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * VEC_NUM_PER_CUBE_910D *
-        DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <= (platformInfo.ubSize - VGATHER_REGISTER_SIZE);
-    bool weightUbFlag = !this->extendConvFlag && attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
-        (descInfo.weightType.dtype == ConvDtype::FLOAT16 || descInfo.weightType.dtype == ConvDtype::BFLOAT16 ||
-        this->hf32Enable) &&
-        !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) && l1TilingInfo.kBL1 != weightKSize &&
-        dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
-    if (weightUbFlag) {
-        ConvWeightUbTransParams params = {l1TilingInfo.nBL1, l1TilingInfo.kBL1,
-            static_cast<uint64_t>(shapeInfo.orgkH), static_cast<uint64_t>(shapeInfo.orgkW),
-            cubeInfo.k0, cubeInfo.n0, descInfo.weightType.dtype};
-        GetWeightUBTiling(params);
-        tiling.set_bUbNStep(params.bUbNStep);
-        tiling.set_bUbKStep(params.bUbKStep);
-        return;
-    }
-
-    tiling.set_bUbNStep(0);
-    tiling.set_bUbKStep(0);
 }
 
 void Conv2dTiling::SetScalarParams(optiling::TConv2DTiling& tiling)
@@ -355,6 +313,47 @@ void Conv2dTiling::SetScalarParams(optiling::TConv2DTiling& tiling)
     tiling.set_aL1SpaceSize(CalcAL1SpaceSize(tiling));
 }
 
+void Conv2dTiling::SetUbTiling(optiling::TConv2DTiling& tiling)
+{
+    if (isDmaFlag) {
+        ConvDmaParams params = {l1TilingInfo.hoAL1, l1TilingInfo.woAL1, l1TilingInfo.khL1,
+            l1TilingInfo.kwL1, cubeInfo.k0, descInfo.fMapType.dtype};
+        GetDmaUbTiling(params);
+        tiling.set_khUb(params.khUb);
+        tiling.set_kwUb(params.kwUb);
+        return;
+    }
+
+    if (isC04Flag) {
+        ConvC04Info c04Info = {l1TilingInfo.nBL1, static_cast<uint64_t>(shapeInfo.orgkH),
+            static_cast<uint64_t>(shapeInfo.orgkW), cubeInfo.k0, cubeInfo.n0, dbValue.pbBL1, descInfo.weightType.dtype};
+        tiling.set_bUbNStep(CalcC04UbLoadNsize(c04Info));
+        tiling.set_bUbKStep(0);
+        return;
+    }
+
+    uint64_t kernelHxkernelW = shapeInfo.orgkH * shapeInfo.orgkW;
+    uint64_t weightKSize = AlignB(shapeInfo.orgCi, cubeInfo.k0) * kernelHxkernelW;
+    bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * VEC_NUM_PER_CUBE_910D *
+        DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <= (platformInfo.ubSize - VGATHER_REGISTER_SIZE);
+    bool weightUbFlag = attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
+ 	    !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
+        !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) && l1TilingInfo.kBL1 != weightKSize &&
+        dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
+    if (weightUbFlag) {
+        ConvWeightUbTransParams params = {l1TilingInfo.nBL1, l1TilingInfo.kBL1,
+            static_cast<uint64_t>(shapeInfo.orgkH), static_cast<uint64_t>(shapeInfo.orgkW),
+            cubeInfo.k0, cubeInfo.n0, descInfo.weightType.dtype};
+        GetWeightUBTiling(params);
+        tiling.set_bUbNStep(params.bUbNStep);
+        tiling.set_bUbKStep(params.bUbKStep);
+        return;
+    }
+
+    tiling.set_bUbNStep(0);
+    tiling.set_bUbKStep(0);
+}
+
 void Conv2dTiling::SetExtendConv2DParams(optiling::TConv2DTiling& tiling)
 {
     // set extendConv2d fixpipe mode to tilingdata
@@ -365,29 +364,6 @@ void Conv2dTiling::SetExtendConv2DParams(optiling::TConv2DTiling& tiling)
     tiling.set_reluMode1(shapeInfo.reluMode1);
     tiling.set_clipMode1(shapeInfo.clipMode1);
     tiling.set_dualOutput(shapeInfo.dualOutput);
-}
-
-void Conv2dTiling::SetAttrsTilingData(optiling::TConv2DTiling& tiling)
-{
-    tiling.set_strideH(static_cast<uint32_t>(attrInfo.strideH));
-    tiling.set_strideW(static_cast<uint32_t>(attrInfo.strideW));
-    tiling.set_dilationH(static_cast<uint32_t>(attrInfo.dilationH));
-    tiling.set_dilationW(static_cast<uint32_t>(attrInfo.dilationW));
-    tiling.set_padTop(static_cast<uint32_t>(attrInfo.padTop));
-    tiling.set_padBottom(static_cast<uint32_t>(attrInfo.padBottom));
-    tiling.set_padLeft(static_cast<uint32_t>(attrInfo.padLeft));
-    tiling.set_padRight(static_cast<uint32_t>(attrInfo.padRight));
-
-    tiling.set_groups(static_cast<uint32_t>(attrInfo.groups));
-
-    if (this->optGroupFlag) {
-        tiling.set_singleCoreGroups(static_cast<uint32_t>(shapeInfo.singleGroups));
-        tiling.set_singleCoreGroupOpt(static_cast<uint32_t>(shapeInfo.singleGroupOpt));
-        tiling.set_enlarge(static_cast<uint32_t>(shapeInfo.enlarge));
-    }
-
-    tiling.set_offsetx(attrInfo.offsetx);
-    tiling.set_roundMode(attrInfo.roundMode);
 }
 
 void Conv2dTiling::SetTilingData(optiling::TConv2DTiling& tiling)
@@ -434,7 +410,7 @@ void Conv2dTiling::SetTilingData(optiling::TConv2DTiling& tiling)
     tiling.set_hf32Enable(this->hf32Enable);
     tiling.set_hf32TransMode(this->hf32TransMode);
     tiling.set_hasBias(static_cast<uint8_t>(hasBias));
-    tiling.set_hasScale(static_cast<uint8_t>(hasQuantScale));
+    tiling.set_hasScale(static_cast<uint8_t>(hasScale));
     tiling.set_iterateMNOrder(static_cast<uint8_t>(l1TilingInfo.iterateMNOrder));
     tiling.set_biasFullLoadFlag(static_cast<uint8_t>(l1TilingInfo.biasFullLoadFlag));
     tiling.set_fixpParamsFullLoadFlag(static_cast<uint8_t>(l1TilingInfo.fixpParamsFullLoadFlag));
@@ -443,6 +419,29 @@ void Conv2dTiling::SetTilingData(optiling::TConv2DTiling& tiling)
     SetUbTiling(tiling);
     SetScalarParams(tiling);
     SetExtendConv2DParams(tiling);
+}
+
+void Conv2dTiling::SetAttrsTilingData(optiling::TConv2DTiling& tiling)
+{
+    tiling.set_strideH(static_cast<uint32_t>(attrInfo.strideH));
+    tiling.set_strideW(static_cast<uint32_t>(attrInfo.strideW));
+    tiling.set_dilationH(static_cast<uint32_t>(attrInfo.dilationH));
+    tiling.set_dilationW(static_cast<uint32_t>(attrInfo.dilationW));
+    tiling.set_padTop(static_cast<uint32_t>(attrInfo.padTop));
+    tiling.set_padBottom(static_cast<uint32_t>(attrInfo.padBottom));
+    tiling.set_padLeft(static_cast<uint32_t>(attrInfo.padLeft));
+    tiling.set_padRight(static_cast<uint32_t>(attrInfo.padRight));
+
+    tiling.set_groups(static_cast<uint32_t>(attrInfo.groups));
+
+    if (this->optGroupFlag) {
+        tiling.set_singleCoreGroups(static_cast<uint32_t>(shapeInfo.singleGroups));
+        tiling.set_singleCoreGroupOpt(static_cast<uint32_t>(shapeInfo.singleGroupOpt));
+        tiling.set_enlarge(static_cast<uint32_t>(shapeInfo.enlarge));
+    }
+
+    tiling.set_offsetx(attrInfo.offsetx);
+    tiling.set_roundMode(attrInfo.roundMode);
 }
 
 uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::TConv2DTiling& tiling)
@@ -630,17 +629,22 @@ void Conv2dTiling::SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag = false)
     this->hf32TransMode = hf32TransModeFlag;
 }
 
-void Conv2dTiling::SetQuantScale(bool hasScale)
+void Conv2dTiling::SetQuantScale(bool hasScaleFlag)
 {
-    this->hasQuantScale = hasScale;
-    if (hasScale) {
-        this->descInfo.quantScaleType.dtype = ConvDtype::INT64;
+    this->hasScale = hasScaleFlag;
+    if (hasScaleFlag) {
+        this->descInfo.scaleType.dtype = ConvDtype::INT64;
     }
 }
 
 void Conv2dTiling::SetExtendConvFlag(bool extendConvEnable)
 {
     this->extendConvFlag = extendConvEnable;
+}
+
+void Conv2dTiling::SetQuantConvFlag(bool quantConvEnable)
+{
+    this->quantConvFlag = quantConvEnable;
 }
 
 void Conv2dTiling::SetFixpipeParams(FixpipeInfo& fixpipeInfo)
@@ -710,15 +714,6 @@ void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
 }
 
-uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const
-{
-    uint64_t fullLoadK = AlignB(c04Info.orgkH * c04Info.orgkW * C04_CIN_SIZE, c04Info.k0);
-    uint32_t weightDtypeSize = DTYPE_SIZE_TAB.at(c04Info.weightDtype);
-    uint64_t nMaxStep = ((platformInfo.ubSize - VGATHER_REGISTER_SIZE) / fullLoadK /
-        C04_VEC_USE_BUFF_NUM / weightDtypeSize / c04Info.n0) * c04Info.n0;
-    return nMaxStep;
-}
-
 uint32_t Conv2dTiling::GetVecNumBySoc() const
 {
     if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
@@ -726,6 +721,15 @@ uint32_t Conv2dTiling::GetVecNumBySoc() const
     } else {
         return 0;
     }
+}
+
+uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const
+{
+    uint64_t fullLoadK = AlignB(c04Info.orgkH * c04Info.orgkW * C04_CIN_SIZE, c04Info.k0);
+    uint32_t weightDtypeSize = DTYPE_SIZE_TAB.at(c04Info.weightDtype);
+    uint64_t nMaxStep = ((platformInfo.ubSize - VGATHER_REGISTER_SIZE) / fullLoadK /
+        C04_VEC_USE_BUFF_NUM / weightDtypeSize / c04Info.n0) * c04Info.n0;
+    return nMaxStep;
 }
 
 uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
@@ -776,17 +780,6 @@ bool Conv2dTiling::CheckAttrBeforeCoreBind()
     return true;
 }
 
-bool Conv2dTiling::CheckAttrBBModePhase1()
-{
-    if (!CheckAttrBeforeCoreBind()) {
-        return false;
-    }
-    if (!CheckGroupsBBModePhase1()) {
-        return false;
-    }
-    return true;
-}
-
 bool Conv2dTiling::CheckAttr()
 {
     if (!CheckAttrBeforeCoreBind()) {
@@ -796,6 +789,17 @@ bool Conv2dTiling::CheckAttr()
         return false;
     }
     if (!CheckGroups()) {
+        return false;
+    }
+    return true;
+}
+
+bool Conv2dTiling::CheckAttrBBModePhase1()
+{
+    if (!CheckAttrBeforeCoreBind()) {
+        return false;
+    }
+    if (!CheckGroupsBBModePhase1()) {
         return false;
     }
     return true;
@@ -1005,12 +1009,11 @@ bool Conv2dTiling::CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo)
     if (hasBias) {
         biasSize = DTYPE_SIZE_TAB.at(descInfo.biasType.dtype) * conv2DBasicBlockInfo.nTile;
     }
-    if (hasQuantScale) {
-        scaleSize = shapeInfo.channelWiseCoeff *
-                    DTYPE_SIZE_TAB.at(descInfo.quantScaleType.dtype) * conv2DBasicBlockInfo.nTile;
+    if (hasScale) {
+        scaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff *
+                    DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype) * conv2DBasicBlockInfo.nTile);
     }
-    TILING_LOG_DEBUG("scaleSize:%ld, hasQuantScale:%d, channelWiseCoeff:%f", scaleSize, hasQuantScale,
-                    shapeInfo.channelWiseCoeff);
+
     int64_t availableL1Size = platformInfo.l1Size - biasSize - scaleSize;
     int64_t fMapDtypeSize = static_cast<int64_t>(DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype));
     int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize /
@@ -1023,20 +1026,6 @@ bool Conv2dTiling::CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo)
         return false;
     }
     if (conv2DBasicBlockInfo.mTile < cubeInfo.m0 || conv2DBasicBlockInfo.nTile < cubeInfo.n0) {
-        return false;
-    }
-    return true;
-}
-
-bool Conv2dTiling::CheckDataCopyLimits()
-{
-    uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
-    uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
-    if (descInfo.fMapType.format == ConvFormat::NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-        TILING_LOG_ERROR(
-            "Fmap shape not satisfy DataCopy's limits: hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
-            shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
-            loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
         return false;
     }
     return true;
@@ -1067,6 +1056,20 @@ bool Conv2dTiling::CheckFixpipeLimits()
     return true;
 }
 
+bool Conv2dTiling::CheckDataCopyLimits()
+{
+    uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
+    uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
+    if (descInfo.fMapType.format == ConvFormat::NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
+        TILING_LOG_ERROR(
+            "Fmap shape not satisfy DataCopy's limits: hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
+            shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
+            loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
+        return false;
+    }
+    return true;
+}
+
 bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad()
 {
     InferCubeInfo();
@@ -1074,7 +1077,8 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad()
     uint64_t weightDtypeSize = DTYPE_SIZE_TAB.at(descInfo.weightType.dtype);
     uint64_t nBL1min = cubeInfo.n0;
     uint64_t biasUsedL1Size = hasBias ? AlignB(nBL1min * DTYPE_SIZE_TAB.at(descInfo.biasType.dtype), C0_SIZE) : 0;
-    uint64_t scaleUsedL1Size = AlignB(nBL1min * shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE);
+    uint64_t scaleUsedL1Size = AlignB(static_cast<uint64_t>(nBL1min * shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE),
+                                                            C0_SIZE);
     uint64_t kBL1min = cubeInfo.k0 * shapeInfo.orgkH * shapeInfo.orgkW;
     uint64_t weightUsedL1Size = AlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t fmapUsedL1Size = 0;
@@ -1123,12 +1127,11 @@ bool Conv2dTiling::CheckL1SizeLimit()
     // ensure 32-byte alignment
     uint64_t minBiasSize = hasBias ? AlignB(cubeInfo.n0 * DTYPE_SIZE_TAB.at(descInfo.biasType.dtype), C0_SIZE) : 0;
     uint64_t minScaleSize = 0;
-    if (hasQuantScale) {
-        minScaleSize = shapeInfo.channelWiseCoeff *
-                       cubeInfo.n0 * DTYPE_SIZE_TAB.at(descInfo.quantScaleType.dtype);
+    if (hasScale) {
+        minScaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff *
+                       cubeInfo.n0 * DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype));
     }
-    TILING_LOG_DEBUG("minScaleSize:%lu, hasQuantScale:%d, channelWiseCoeff:%f", minScaleSize, hasQuantScale,
-                    shapeInfo.channelWiseCoeff);
+
     uint64_t minBL1Size = shapeInfo.orgkH * shapeInfo.orgkW * cubeInfo.n0 * cubeInfo.k0 * weightDtypeSize;
     uint64_t minAL1Size = 0;
     uint64_t minHoAL1 = min(MIN_M_L1_SIZE / shapeInfo.orgWo + CONST_VALUE_2, shapeInfo.orgHo);

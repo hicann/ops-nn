@@ -18,7 +18,8 @@ namespace optiling {
 namespace conv_ops_tiling {
 bool Conv2dBaseTiling::CheckSupportCacheTiling()
 {
-    if (apiInputPlatformInfo.socVersion != platform_ascendc::SocVersion::ASCEND910_95) {
+    if (apiInputPlatformInfo.socVersion != platform_ascendc::SocVersion::ASCEND910_95 &&
+        apiInputPlatformInfo.socVersion != platform_ascendc::SocVersion::MC62CM12A) {
         return false;
     }
 
@@ -65,6 +66,30 @@ bool Conv2dBaseTiling::AddTilingToCache()
     return tilingCache.AddCachedTiling(cacheInputArgs_, cachedTilingData_);
 }
 
+void Conv2dBaseTiling::GetCachedTilingDataAux()
+{
+    cachedTilingData_.fmapKStride = tilingData_.conv2dApiTiling.get_fmapKStride();
+    cachedTilingData_.weightKStride = tilingData_.conv2dApiTiling.get_weightKStride();
+    cachedTilingData_.cinOffsetBlockInGM = tilingData_.conv2dApiTiling.get_cinOffsetBlockInGM();
+    cachedTilingData_.coutOffsetBlock = tilingData_.conv2dApiTiling.get_coutOffsetBlock();
+    cachedTilingData_.nL1DivBlockSize = tilingData_.conv2dApiTiling.get_nL1DivBlockSize();
+    cachedTilingData_.iterateMNOrder = tilingData_.conv2dApiTiling.get_iterateMNOrder();
+    cachedTilingData_.biasFullLoadFlag = tilingData_.conv2dApiTiling.get_biasFullLoadFlag();
+    cachedTilingData_.fixpParamsFullLoadFlag = tilingData_.conv2dApiTiling.get_fixpParamsFullLoadFlag();
+    cachedTilingData_.hf32Enable = tilingData_.conv2dApiTiling.get_hf32Enable();
+    cachedTilingData_.hf32TransMode = tilingData_.conv2dApiTiling.get_hf32TransMode();
+    cachedTilingData_.batchDim = tilingData_.conv2dRunInfo.get_batchDim();
+    cachedTilingData_.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
+    cachedTilingData_.nDim = tilingData_.conv2dRunInfo.get_nDim();
+    cachedTilingData_.hoDim = tilingData_.conv2dRunInfo.get_hoDim();
+    cachedTilingData_.woDim = tilingData_.conv2dRunInfo.get_woDim();
+    cachedTilingData_.cinOpt = tilingData_.conv2dRunInfo.get_cinOpt();
+    cachedTilingData_.coutOpt = tilingData_.conv2dRunInfo.get_coutOpt();
+    cachedTilingData_.groupOpt = tilingData_.conv2dRunInfo.get_groupOpt();
+    cachedTilingData_.enableC04Flag = flagInfo_.enableC04Flag;
+    cachedTilingData_.mSplitModeFlag = flagInfo_.mSplitModeFlag;
+}
+
 void Conv2dBaseTiling::GetCachedTilingData()
 {
     cachedTilingData_.singleCoreBatch = tilingData_.conv2dApiTiling.get_singleCoreBatch();
@@ -106,29 +131,24 @@ void Conv2dBaseTiling::GetCachedTilingData()
     cachedTilingData_.innerBatch = tilingData_.conv2dApiTiling.get_innerBatch();
     GetCachedTilingDataAux();
 }
- 
-void Conv2dBaseTiling::GetCachedTilingDataAux()
+
+void Conv2dBaseTiling::GetCacheTilingInputArgsExtend()
 {
-    cachedTilingData_.fmapKStride = tilingData_.conv2dApiTiling.get_fmapKStride();
-    cachedTilingData_.weightKStride = tilingData_.conv2dApiTiling.get_weightKStride();
-    cachedTilingData_.cinOffsetBlockInGM = tilingData_.conv2dApiTiling.get_cinOffsetBlockInGM();
-    cachedTilingData_.coutOffsetBlock = tilingData_.conv2dApiTiling.get_coutOffsetBlock();
-    cachedTilingData_.nL1DivBlockSize = tilingData_.conv2dApiTiling.get_nL1DivBlockSize();
-    cachedTilingData_.iterateMNOrder = tilingData_.conv2dApiTiling.get_iterateMNOrder();
-    cachedTilingData_.biasFullLoadFlag = tilingData_.conv2dApiTiling.get_biasFullLoadFlag();
-    cachedTilingData_.fixpParamsFullLoadFlag = tilingData_.conv2dApiTiling.get_fixpParamsFullLoadFlag();
-    cachedTilingData_.hf32Enable = tilingData_.conv2dApiTiling.get_hf32Enable();
-    cachedTilingData_.hf32TransMode = tilingData_.conv2dApiTiling.get_hf32TransMode();
-    cachedTilingData_.batchDim = tilingData_.conv2dRunInfo.get_batchDim();
-    cachedTilingData_.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
-    cachedTilingData_.nDim = tilingData_.conv2dRunInfo.get_nDim();
-    cachedTilingData_.hoDim = tilingData_.conv2dRunInfo.get_hoDim();
-    cachedTilingData_.woDim = tilingData_.conv2dRunInfo.get_woDim();
-    cachedTilingData_.cinOpt = tilingData_.conv2dRunInfo.get_cinOpt();
-    cachedTilingData_.coutOpt = tilingData_.conv2dRunInfo.get_coutOpt();
-    cachedTilingData_.groupOpt = tilingData_.conv2dRunInfo.get_groupOpt();
-    cachedTilingData_.enableC04Flag = flagInfo_.enableC04Flag;
-    cachedTilingData_.mSplitModeFlag = flagInfo_.mSplitModeFlag;
+    cacheInputArgs_.dual_output = attrInfo_.dualOutput;
+    cacheInputArgs_.quantMode0 = fixpipeInfo_.quantMode0;
+    cacheInputArgs_.reluMode0 = fixpipeInfo_.reluMode0;
+    cacheInputArgs_.clipMode0 = fixpipeInfo_.clipMode0;
+    cacheInputArgs_.scaleFlag0 = 0;
+    cacheInputArgs_.quantMode1 = fixpipeInfo_.quantMode1;
+    cacheInputArgs_.reluMode1 = fixpipeInfo_.reluMode1;
+    cacheInputArgs_.clipMode1 = fixpipeInfo_.clipMode1;
+    cacheInputArgs_.scaleFlag1 = 0;
+    cacheInputArgs_.output1Format = descInfo_.out1Format;
+    cacheInputArgs_.output1Dtype = descInfo_.out1Dtype;
+    cacheInputArgs_.output1ShapeN = oriShapeAttrInfo_.oriOutput1N;
+    cacheInputArgs_.output1ShapeC = oriShapeAttrInfo_.oriOutput1C;
+    cacheInputArgs_.output1ShapeH = oriShapeAttrInfo_.oriOutput1H;
+    cacheInputArgs_.output1ShapeW = oriShapeAttrInfo_.oriOutput1W;
 }
 
 void Conv2dBaseTiling::GetCacheTilingInputArgs()
@@ -170,25 +190,6 @@ void Conv2dBaseTiling::GetCacheTilingInputArgs()
     GetCacheTilingInputArgsExtend();
 }
 
-void Conv2dBaseTiling::GetCacheTilingInputArgsExtend()
-{
-    cacheInputArgs_.dual_output = attrInfo_.dualOutput;
-    cacheInputArgs_.quantMode0 = fixpipeInfo_.quantMode0;
-    cacheInputArgs_.reluMode0 = fixpipeInfo_.reluMode0;
-    cacheInputArgs_.clipMode0 = fixpipeInfo_.clipMode0;
-    cacheInputArgs_.scaleFlag0 = 0;
-    cacheInputArgs_.quantMode1 = fixpipeInfo_.quantMode1;
-    cacheInputArgs_.reluMode1 = fixpipeInfo_.reluMode1;
-    cacheInputArgs_.clipMode1 = fixpipeInfo_.clipMode1;
-    cacheInputArgs_.scaleFlag1 = 0;
-    cacheInputArgs_.output1Format = descInfo_.out1Format;
-    cacheInputArgs_.output1Dtype = descInfo_.out1Dtype;
-    cacheInputArgs_.output1ShapeN = oriShapeAttrInfo_.oriOutput1N;
-    cacheInputArgs_.output1ShapeC = oriShapeAttrInfo_.oriOutput1C;
-    cacheInputArgs_.output1ShapeH = oriShapeAttrInfo_.oriOutput1H;
-    cacheInputArgs_.output1ShapeW = oriShapeAttrInfo_.oriOutput1W;
-}
-
 void Conv2dBaseTiling::TranslateCachedRunInfo()
 {
 	tilingData_.conv2dRunInfo.set_batch(cacheInputArgs_.inputShapeN);
@@ -217,6 +218,35 @@ void Conv2dBaseTiling::TranslateCachedRunInfo()
     tilingData_.conv2dRunInfo.set_groupOpt(cachedTilingData_.groupOpt);
     tilingData_.conv2dRunInfo.set_enlarge(cachedTilingData_.enlarge);
     tilingData_.conv2dRunInfo.set_groupDim(cachedTilingData_.groupDim);
+}
+
+void Conv2dBaseTiling::TranslateCachedApiTilingPartTwo()
+{
+    tilingData_.conv2dApiTiling.set_strideH(cacheInputArgs_.strideH);
+    tilingData_.conv2dApiTiling.set_strideW(cacheInputArgs_.strideW);
+    tilingData_.conv2dApiTiling.set_dilationH(cacheInputArgs_.dilationH);
+    tilingData_.conv2dApiTiling.set_dilationW(cacheInputArgs_.dilationW);
+    tilingData_.conv2dApiTiling.set_padTop(cacheInputArgs_.padTop);
+    tilingData_.conv2dApiTiling.set_padBottom(cacheInputArgs_.padBottom);
+    tilingData_.conv2dApiTiling.set_padLeft(cacheInputArgs_.padLeft);
+    tilingData_.conv2dApiTiling.set_padRight(cacheInputArgs_.padRight);
+    tilingData_.conv2dApiTiling.set_iterateMNOrder(cachedTilingData_.iterateMNOrder);
+    tilingData_.conv2dApiTiling.set_biasFullLoadFlag(cachedTilingData_.biasFullLoadFlag);
+    tilingData_.conv2dApiTiling.set_fixpParamsFullLoadFlag(cachedTilingData_.fixpParamsFullLoadFlag);
+    tilingData_.conv2dApiTiling.set_hf32Enable(cachedTilingData_.hf32Enable);
+    tilingData_.conv2dApiTiling.set_hf32TransMode(cachedTilingData_.hf32TransMode);
+    tilingData_.conv2dApiTiling.set_hasBias(cacheInputArgs_.biasFlag);
+    tilingData_.conv2dApiTiling.set_hasScale(static_cast<uint8_t>(flagInfo_.quantFlag || flagInfo_.extendConvFlag));
+    tilingData_.conv2dApiTiling.set_offsetx(attrInfo_.offsetx);
+    tilingData_.conv2dApiTiling.set_roundMode(attrInfo_.roundMode);
+    tilingData_.conv2dApiTiling.set_dualOutput(fixpipeInfo_.dualOutput);
+    tilingData_.conv2dApiTiling.set_quantMode0(fixpipeInfo_.quantMode0);
+    tilingData_.conv2dApiTiling.set_reluMode0(fixpipeInfo_.reluMode0);
+    tilingData_.conv2dApiTiling.set_clipMode0(fixpipeInfo_.clipMode0);
+    tilingData_.conv2dApiTiling.set_quantMode1(fixpipeInfo_.quantMode1);
+    tilingData_.conv2dApiTiling.set_reluMode1(fixpipeInfo_.reluMode1);
+    tilingData_.conv2dApiTiling.set_clipMode1(fixpipeInfo_.clipMode1);
+    tilingData_.conv2dApiTiling.set_innerBatch(cachedTilingData_.innerBatch);
 }
 
 void Conv2dBaseTiling::TranslateCachedApiTilingPartOne()
@@ -271,35 +301,6 @@ void Conv2dBaseTiling::TranslateCachedApiTilingPartOne()
     tilingData_.conv2dApiTiling.set_nL1DivBlockSize(cachedTilingData_.nL1DivBlockSize);
     tilingData_.conv2dApiTiling.set_kernelH(cacheInputArgs_.weightShapeH);
     tilingData_.conv2dApiTiling.set_kernelW(cacheInputArgs_.weightShapeW);
-}
-
-void Conv2dBaseTiling::TranslateCachedApiTilingPartTwo()
-{
-    tilingData_.conv2dApiTiling.set_strideH(cacheInputArgs_.strideH);
-    tilingData_.conv2dApiTiling.set_strideW(cacheInputArgs_.strideW);
-    tilingData_.conv2dApiTiling.set_dilationH(cacheInputArgs_.dilationH);
-    tilingData_.conv2dApiTiling.set_dilationW(cacheInputArgs_.dilationW);
-    tilingData_.conv2dApiTiling.set_padTop(cacheInputArgs_.padTop);
-    tilingData_.conv2dApiTiling.set_padBottom(cacheInputArgs_.padBottom);
-    tilingData_.conv2dApiTiling.set_padLeft(cacheInputArgs_.padLeft);
-    tilingData_.conv2dApiTiling.set_padRight(cacheInputArgs_.padRight);
-    tilingData_.conv2dApiTiling.set_iterateMNOrder(cachedTilingData_.iterateMNOrder);
-    tilingData_.conv2dApiTiling.set_biasFullLoadFlag(cachedTilingData_.biasFullLoadFlag);
-    tilingData_.conv2dApiTiling.set_fixpParamsFullLoadFlag(cachedTilingData_.fixpParamsFullLoadFlag);
-    tilingData_.conv2dApiTiling.set_hf32Enable(cachedTilingData_.hf32Enable);
-    tilingData_.conv2dApiTiling.set_hf32TransMode(cachedTilingData_.hf32TransMode);
-    tilingData_.conv2dApiTiling.set_hasBias(cacheInputArgs_.biasFlag);
-    tilingData_.conv2dApiTiling.set_hasScale(static_cast<uint8_t>(flagInfo_.quantFlag || flagInfo_.extendConvFlag));
-    tilingData_.conv2dApiTiling.set_offsetx(attrInfo_.offsetx);
-    tilingData_.conv2dApiTiling.set_roundMode(attrInfo_.roundMode);
-    tilingData_.conv2dApiTiling.set_dualOutput(fixpipeInfo_.dualOutput);
-    tilingData_.conv2dApiTiling.set_quantMode0(fixpipeInfo_.quantMode0);
-    tilingData_.conv2dApiTiling.set_reluMode0(fixpipeInfo_.reluMode0);
-    tilingData_.conv2dApiTiling.set_clipMode0(fixpipeInfo_.clipMode0);
-    tilingData_.conv2dApiTiling.set_quantMode1(fixpipeInfo_.quantMode1);
-    tilingData_.conv2dApiTiling.set_reluMode1(fixpipeInfo_.reluMode1);
-    tilingData_.conv2dApiTiling.set_clipMode1(fixpipeInfo_.clipMode1);
-    tilingData_.conv2dApiTiling.set_innerBatch(cachedTilingData_.innerBatch);
 }
 
 void Conv2dBaseTiling::TranslateCachedTilingData()

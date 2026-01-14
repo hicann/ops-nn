@@ -50,6 +50,8 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, SetWeightStartPosition);
     CONV_REG_IMPL(Config, ConvFunc, SetIterIndex);
     CONV_REG_IMPL(Config, ConvFunc, Iterate);
+    CONV_REG_IMPL(Config, ConvFunc, ConvPreProcess);
+    CONV_REG_IMPL(Config, ConvFunc, ConvPostProcess);
     CONV_REG_IMPL(Config, ConvFunc, IterateAll);
     CONV_REG_IMPL(Config, ConvFunc, GetTensorC);
     CONV_REG_IMPL(Config, ConvFunc, End);
