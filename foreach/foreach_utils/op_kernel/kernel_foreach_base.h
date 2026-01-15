@@ -63,7 +63,7 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void KernelForeachBase<T>::Init(const ForeachCommonTilingData* tilingData)
+__aicore__ inline void KernelForeachBase<T>::Init(const ForeachCommonTilingData* __restrict__ tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -83,7 +83,7 @@ __aicore__ inline void KernelForeachBase<T>::Init(const ForeachCommonTilingData*
 }
 
 template <typename T>
-__aicore__ inline void KernelForeachBase<T>::ParseTilingData(const ForeachCommonTilingData* tilingData)
+__aicore__ inline void KernelForeachBase<T>::ParseTilingData(const ForeachCommonTilingData* __restrict__ tilingData)
 {
     inputsTensorUbSize = tilingData->inputsTensorUbSize;
     tensorDataCountList = tilingData->tensorDataCountList;
