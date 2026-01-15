@@ -457,22 +457,22 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/softmax_cross_entropy_with_logits/README.md">softmax_cross_entropy_with_logits</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/softmax_grad/README.md">softmax_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>完成softmax的反向传播。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -483,6 +483,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量计算Softmax值。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/softplus/README.md">softplus</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>激活函数，用于将任意实数映射到正数区间。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1907,12 +1917,12 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_v2/README.md">smooth_l1_loss_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>计算SmoothL1损失函数。</td>
   </tr>
   <tr>
     <td>loss</td>
