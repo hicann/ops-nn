@@ -31,8 +31,8 @@ class KernelForeachBase
 protected:
     __aicore__ inline KernelForeachBase(){};
 
-    __aicore__ inline void Init(const ForeachCommonTilingData* tilingData);
-    __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(const ForeachCommonTilingData* __restrict__ tilingData);
+    __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* __restrict__ tilingData);
     __aicore__ inline __gm__ T* GetTensorAddr(uint16_t index, GM_ADDR tensorPtr);
 
     template <typename T1, typename T2>
