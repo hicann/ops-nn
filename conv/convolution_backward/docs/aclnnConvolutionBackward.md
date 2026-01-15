@@ -81,6 +81,7 @@ aclnnStatus aclnnConvolutionBackward(
     aclOpExecutor       *executor,  
     const aclrtStream    stream)
 ```
+
 ## aclnnConvolutionBackwardGetWorkspaceSize
 
 - **参数说明：**
@@ -337,9 +338,9 @@ aclnnStatus aclnnConvolutionBackward(
 
 - **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
 
-    第一段接口完成入参校验，出现以下场景时报错：
+  第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
     <col style="width:250px">
@@ -394,6 +395,7 @@ aclnnStatus aclnnConvolutionBackward(
 
    </table>
 
+
 ## aclnnConvolutionBackward
 
 - **参数说明：**
@@ -430,6 +432,7 @@ aclnnStatus aclnnConvolutionBackward(
     </tbody>
   </table>
 
+
 - **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -439,21 +442,24 @@ aclnnStatus aclnnConvolutionBackward(
 - 确定性计算
   - aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-    <col style="width:150px">
-    <col style="width:700px">
-    </colgroup>
+  <table style="undefined;table-layout: fixed; width: 1396px"><colgroup>
+  <col style="width: 168px">
+  <col style="width: 404px">
+  <col style="width: 429px">
+  <col style="width: 395px">
+  </colgroup>
    <thead>
     <tr>
      <th><term>约束类型</term></th>
-     <th><term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
    </tr>
    </thead>
    <tbody>
 
    <tr>
      <th scope="row">空Tensor约束</th>
-     <td>
+     <td colspan="2">
         <ul><li>input的维度必须是2维以上。stride、padding、dilation、outputPadding的维度必须等于input维度-2，其中padding在2D的时候可以是4维。</li>
         <li>transposed=false时，D、H、W维度约束满足公式一（见表格下方说明）。</li>
         <li>transposed=true时：</li>
@@ -461,79 +467,126 @@ aclnnStatus aclnnConvolutionBackward(
           <li>weight的N轴必须和input的C轴相等。</li></ul>
         </ul>
      </td>
+     <td>-</td>
    </tr>
    <tr>
      <th scope="row">gradOutput约束</th>
+     <td>-</td>
      <td>
-        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。
+        <ul>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。</ul>
+     </td>
+     <td>
+        <ul>不支持空Tensor。</ul>
      </td>
    </tr>
    <tr>
      <th scope="row">input约束</th>
+     <td>
+        <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
+        <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li></ul>
+     </td>
      <td>
         <ul>1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1。
           <ul><li>transposed=true：支持N维度为0的空Tensor。当N维度为0且满足空Tensor约束时，还支持DHW维度为0。</li>
           <li>transposed=false：支持N、C维度为0的空Tensor（C维度为0时要求weight的C维度也为0）。当N或C维度为0且满足空Tensor约束时，还支持DHW维度为0。</li></ul>
          </ul>
      </td>
+     <td>-</td>
    </tr>
    <tr>
      <th scope="row">weight约束</th>
+     <td>
+        <ul><li>transposed=true：H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
+        <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），所有维度的大小应该大于等于1。当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li></ul>
+     </td>
      <td>
         <ul>2d和3d transposed=false场景，H、W的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。1d transposed=false场景，L的大小应该在[1,255]的范围内，其他维度的大小应该大于等于1。
            <ul><li>transposed=true: 当input为空Tensor且满足空Tensor约束时，此时支持C、D、H、W轴为0。</li>
            <li>transposed=false：支持C维度等于0（C为0时要求input C维度也为0），当input为空Tensor且满足空Tensor约束时，此时支持D、H、W轴为0。</li></ul>
         </ul>
      </td>
+     <td>
+        <ul>不支持空Tensor。</ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">stride约束</th>
      <td>
-        3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。
+        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，strideD应该在[1,1000000]的范围内，strideH、strideW应该在[1,63]的范围内。</ul>
      </td>
+     <td>
+        <ul>3d transposed=false场景，strideD应该大于等于1，strideH、strideW应该在[1,63]的范围内。1d和2d transposed=false场景，各个值都应该大于等于1。</ul>
+     </td>
+     <td>-</td>
    </tr>
    <tr>
      <th scope="row">padding约束</th>
      <td>
-        3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。
+        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于0。1d、2d和3d transposed=true场景，paddingD应该在[0,1000000]的范围内，paddingH、paddingW应该在[0,255]的范围内。</ul>
      </td>
+     <td>
+        <ul>3d transposed=false场景，paddingD应该大于等于0，paddingH、paddingW应该在[0,255]的范围内。1d和2d transposed=false场景，各个值都应该在[0,255]的范围内。</ul>
+     </td>
+     <td>-</td>
    </tr>
    <tr>
      <th scope="row">dilation约束</th>
      <td>
-        1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。
+        <ul>1d、2d和3d transposed=false场景，各个值都应该大于等于1。1d、2d和3d transposed=true场景，dilationD应该在[1,1000000]的范围内，dilationH、dilationW应该在[1,255]的范围内。</ul>
      </td>
+     <td>
+        <ul>1d、2d和3d transposed=false场景，各个值都应该在[1,255]的范围内。</ul>
+     </td>
+     <td>-</td>
    </tr>
    <tr>
      <th scope="row">dtype约束</th>
      <td>
-        不支持HIFLOAT8、FLOAT8_E4M3FN。
+        <ul>只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
+        </ul>
+     </td>
+     <td>
+        <ul>不支持HIFLOAT8、FLOAT8_E4M3FN。</ul>
+     </td>
+     <td>
+        <ul>不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。</ul>
      </td>
    </tr>
    <tr>
      <th scope="row">cubeMathType说明</th>
-     <td>
+     <td colspan="2">
         <ul><li>枚举值为0：暂无说明。</li>
         <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为2：当输入是BFLOAT16时不支持该选项。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         </ul>
      </td>
+     <td>
+        <ul><li>枚举值为0：当输入是FLOAT，Cube计算单元暂不支持，取0时会报错。</li>
+        <li>枚举值为1：当输入是FLOAT，转换为FLOAT16计算。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为2：暂无说明。</li>
+        <li>枚举值为3：当输入是FLOAT，Cube计算单元暂不支持。</li>
+        </ul>
+     </td>
    </tr>
    <tr>
      <th scope="row">其他约束</th>
      <td>-</td>
+     <td>-</td>
+     <td>
+        <ul>当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。</ul>
+     </td>
    </tr>
    </tbody>
   </table>
     
   - 公式一：
-
     $$
         (input_{dim} + pad_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
     $$
 
 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
+
 
 ## 调用示例
 

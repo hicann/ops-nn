@@ -46,6 +46,7 @@
 | offset_x  | 可选属性 | <ul><li>默认值为 0，保留字段。</li></ul> | INT | - |
 | y | 输出 | <ul><li>相当于公式中的($N,C_{out},D_{out},H_{out},W_{out}$)。</li><li>数据格式与'x'一致。</li></ul> | FLOAT16、BFLOAT16、FLOAT32、HIFLOAT8、FLOAT8_E4M3FN | NDHWC、NCDHW |
 
+- <term>Ascend 950PR/Ascend 950DT处理器</term>：当'X'和'y'数据格式为NDHWC，dtype为非8bit时，暂不支持groups>1。
 - 不同groups取值与dtype的组合说明
 
     | groups |        dtype           |   x format  | filter format |    y format    |
