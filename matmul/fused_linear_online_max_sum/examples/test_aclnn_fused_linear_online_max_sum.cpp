@@ -92,7 +92,7 @@ int main() {
   std::vector<int64_t> vocabParallelLogitsOutOptionalShape = {mSize, nSize};
   void* inputDeviceAddr = nullptr;
   void* weightDeviceAddr = nullptr;
-  void* tatgetDeviceAddr = nullptr;
+  void* targetDeviceAddr = nullptr;
   void* logitsMaxLocalOutDeviceAddr = nullptr;
   void* sumExpLogitsLocalOutDeviceAddr = nullptr;
   void* predictedLogitsLocalOutDeviceAddr = nullptr;
@@ -126,7 +126,7 @@ int main() {
   ret = CreateAclTensor(weightHostData, weightShape, &weightDeviceAddr, aclDataType::ACL_FLOAT16, &weight);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建target aclTensor
-  ret = CreateAclTensor(targetHostData, targetShape, &tatgetDeviceAddr, aclDataType::ACL_INT32, &target);
+  ret = CreateAclTensor(targetHostData, targetShape, &targetDeviceAddr, aclDataType::ACL_INT32, &target);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建logitsMaxLocalOut aclTensor
   ret = CreateAclTensor(logitsMaxLocalOutHostData, logitsMaxLocalOutShape, &logitsMaxLocalOutDeviceAddr, aclDataType::ACL_FLOAT, &logitsMaxLocalOut);
@@ -234,7 +234,7 @@ int main() {
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(inputDeviceAddr);
   aclrtFree(weightDeviceAddr);
-  aclrtFree(tatgetDeviceAddr);
+  aclrtFree(targetDeviceAddr);
   aclrtFree(logitsMaxLocalOutDeviceAddr);
   aclrtFree(sumExpLogitsLocalOutDeviceAddr);
   aclrtFree(predictedLogitsLocalOutDeviceAddr);

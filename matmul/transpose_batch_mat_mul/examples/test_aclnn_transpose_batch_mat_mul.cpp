@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_transpose_batch_mat_mul.h"
@@ -110,12 +111,18 @@ int main()
 
     // 创建x1 aclTensor
     ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT16, &x1);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建x2 aclTensor
     ret = CreateAclTensor(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_FLOAT16, &x2);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2TensorPtr(x2, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> x2DeviceAddrPtr(x2DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     aclIntArray* permX1 = aclCreateIntArray(permX1Series.data(), permX1Series.size());
@@ -123,6 +130,7 @@ int main()
     aclIntArray* permY = aclCreateIntArray(permYSeries.data(), permYSeries.size());
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
+    std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     // aclnnTransposeBatchMatMul接口调用示例
     // 3. 调用CANN算子库API，需要修改为具体的API名称
@@ -137,6 +145,7 @@ int main()
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        executorAddrPtr.reset(workspaceAddr);
     }
     // 调用aclnnTransposeBatchMatMul第二段接口
     ret = aclnnTransposeBatchMatMul(workspaceAddr, workspaceSize, executor, stream);
@@ -153,21 +162,16 @@ int main()
         resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
+    int64_t max_print_size = 8;
+    for (int64_t i = 0; i < max_print_size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(x1);
-    aclDestroyTensor(x2);
-    aclDestroyTensor(out);
+    aclDestroyTensor(scale);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(x1DeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
+    aclrtFree(scaleDeviceAddr);
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

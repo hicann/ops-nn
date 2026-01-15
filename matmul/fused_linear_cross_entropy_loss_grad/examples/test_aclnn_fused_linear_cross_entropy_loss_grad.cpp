@@ -211,6 +211,8 @@ int main()
     aclDestroyTensor(weight);
     aclDestroyTensor(targetMask);
     aclDestroyTensor(maskedTarget);
+    aclDestroyTensor(logitsMaxOptional);
+    aclDestroyTensor(sumExpLogitsOptional);
     aclDestroyTensor(softmaxOptional);
     aclDestroyTensor(inputGradOut);
     aclDestroyTensor(weightGradOut);

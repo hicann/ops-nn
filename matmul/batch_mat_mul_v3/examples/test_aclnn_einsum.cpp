@@ -142,8 +142,9 @@ int main() {
 
   // 6. 释放aclTensor和aclScalar, 需要根据具体API的接口定义修改
   aclDestroyTensorList(tensorList);
+  aclDestroyTensor(input1);
+  aclDestroyTensor(input2);
   aclDestroyTensor(out);
-
 
   // 7. 释放Device资源, 需要根据具体API的接口定义修改
   aclrtFree(input1DeviceAddr);
