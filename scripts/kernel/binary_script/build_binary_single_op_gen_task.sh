@@ -111,7 +111,7 @@ call_write_scripts() {
   local op_compile_option="{\"$op_type\": {"
   local inner_properties=()
   # auto_sync 默认true
-  if [ "$auto_sync" != "true" ]; then
+  if [ "$auto_sync" == "false" ]; then
     inner_properties+=("\"auto_sync\": $auto_sync")
   fi
   if [ -n "$compile_options" ]; then
@@ -320,7 +320,7 @@ main() {
 
   json_line=$(echo "$ascendc_op_conf" | tr -d '\n\r')
 
-  auto_sync="false"
+  auto_sync=""
   if [ -n "$json_line" ]; then
     val_part=$(echo "$json_line" | sed -E 's/.*"auto_sync"[[:space:]]*:[[:space:]]*(\{[^}]*\}|true|false).*/\1/')
     if [ "$val_part" = "true" ] || [ "$val_part" = "false" ]; then
@@ -332,7 +332,7 @@ main() {
           auto_sync="$match"
         fi
       fi
-      auto_sync=${auto_sync:-"false"}
+      auto_sync=${auto_sync:-""}
     fi
   fi
 
