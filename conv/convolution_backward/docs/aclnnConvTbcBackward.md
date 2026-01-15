@@ -364,16 +364,16 @@ aclnnStatus aclnnConvTbcBackward(
 - 确定性计算
   - aclnnConvTbcBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-  <table style="undefined;table-layout: fixed; width: 1396px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1001px"><colgroup>
   <col style="width: 168px">
   <col style="width: 404px">
   <col style="width: 429px">
-  <col style="width: 395px">
     </colgroup>
    <thead>
     <tr>
      <th>约束类型</th>
-     <th><term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
    </tr>
    </thead>
    <tbody>
@@ -397,9 +397,6 @@ aclnnStatus aclnnConvTbcBackward(
      <td>
         <ul>input 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。</ul>
      </td>
-     <td>
-        <ul>input 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。</ul>
-     </td>
    </tr>
    <tr>
      <th scope="row">weight约束</th>
@@ -414,11 +411,6 @@ aclnnStatus aclnnConvTbcBackward(
           weight 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。
         </ul>
      </td>
-     <td>
-        <ul>
-          weight 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。
-        </ul>
-     </td>
    </tr>
    <tr>
      <th scope="row">dtype约束</th>
@@ -427,9 +419,6 @@ aclnnStatus aclnnConvTbcBackward(
      </td>   
      <td>
         <ul>不支持HIFLOAT8、FLOAT8_E4M3FN。</ul>
-     </td>
-     <td>
-        <ul>不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。</ul>
      </td>
    </tr>
    <tr>
@@ -446,13 +435,6 @@ aclnnStatus aclnnConvTbcBackward(
         <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32 计算。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为2：当输入是 BFLOAT16 不支持该选项。</li>
         <li>枚举值为3：当输入是FLOAT，Cube计算单元暂不支持，取3时会报错。</li>
-        </ul>
-     </td>
-     <td>
-        <ul><li>枚举值为0：当输入是FLOAT，Cube计算单元暂不支持，取0时会报错。</li>
-        <li>枚举值为1：当输入是FLOAT，转换为FLOAT16计算。当输入为其他数据类型时不做处理。</li>
-        <li>枚举值为2：当输入是 BFLOAT16 不支持该选项。</li>
-        <li>枚举值为3：暂时不支持。</li>
         </ul>
      </td>
    </tr>
