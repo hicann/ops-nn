@@ -396,6 +396,7 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/op_api/
 - **UT验证**
 
   算子开发过程中，可通过UT验证（如Tiling）方式进行快速验证，如需查看详细实现，请参考[Tiling UT](../../../examples/add_example/tests/ut/op_host/test_add_example_tiling.cpp)。
+  执行UT验证的命令，请参考[算子调用](../invocation/quick_op_invocation.md)
 
 - **aclnn调用验证**
 
