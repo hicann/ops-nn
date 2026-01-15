@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_batch_matmul.h"
@@ -99,16 +100,23 @@ int main()
     int8_t cubeMathType = 1;
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfTensorPtr(self, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建mat2 aclTensor
     ret = CreateAclTensor(mat2HostData, mat2Shape, &mat2DeviceAddr, aclDataType::ACL_FLOAT, &mat2);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mat2TensorPtr(mat2, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> mat2DeviceAddrPtr(mat2DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
+    std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     // aclnnBatchMatMul接口调用示例
     // 3. 调用CANN算子库API，需要修改为具体的API名称
@@ -120,6 +128,7 @@ int main()
     if (workspaceSize > 0UL) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        executorAddrPtr.reset(workspaceAddr);
     }
     // 调用aclnnBatchMatMul第二段接口
     ret = aclnnBatchMatMul(workspaceAddr, workspaceSize, executor, stream);
@@ -140,17 +149,7 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(self);
-    aclDestroyTensor(mat2);
-    aclDestroyTensor(out);
-
-    // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(selfDeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > 0UL) {
-        aclrtFree(workspaceAddr);
-    }
+    // 6. 释放device资源，需要根据具体API的接口定义修改
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

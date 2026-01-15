@@ -10,21 +10,20 @@
 
 /*!
  * \file lock.h
- * \brief temporary rwlock implementation from willzhang4a58.github.io
+ * \brief
  */
 
 #ifndef CANN_OPS_BUILT_IN_LOCK_H_
 #define CANN_OPS_BUILT_IN_LOCK_H_
 
-#include <mutex>
-#include <condition_variable>
+#include <shared_mutex>
 
 namespace Ops {
 namespace NN {
 namespace optiling {
 class RWLock {
 public:
-    RWLock() : _status(0), _waiting_readers(0), _waiting_writers(0) {}
+    RWLock() = default;
     ~RWLock() = default;
     RWLock(const RWLock &) = delete;
     RWLock(RWLock &&) = delete;
@@ -38,14 +37,7 @@ public:
     void unlock();
 
 private:
-    // negative: writer
-    // positive: reader
-    int32_t _status = 0;
-    int32_t _waiting_readers = 0;
-    int32_t _waiting_writers = 0;
-    std::mutex _mtx;
-    std::condition_variable _read_cv;
-    std::condition_variable _write_cv;
+    std::shared_mutex _mtx;
 };
 } // namespace optiling
 } // namespace NN

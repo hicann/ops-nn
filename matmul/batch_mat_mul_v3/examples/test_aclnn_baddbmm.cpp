@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_baddbmm.h"
@@ -107,12 +108,18 @@ int main()
     float betaValue = 1.0f;
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfTensorPtr(self, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建batch1 aclTensor
     ret = CreateAclTensor(batch1HostData, batch1Shape, &batch1DeviceAddr, aclDataType::ACL_FLOAT, &batch1);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> batch1TensorPtr(batch1, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> batch1DeviceAddrPtr(batch1DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建batch2 aclTensor
     ret = CreateAclTensor(batch2HostData, batch2Shape, &batch2DeviceAddr, aclDataType::ACL_FLOAT, &batch2);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> batch2TensorPtr(batch2, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> batch2DeviceAddrPtr(batch2DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建alpha aclScalar
     alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
@@ -122,10 +129,13 @@ int main()
     CHECK_RET(beta != nullptr, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
+    std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     // aclnnBaddbmm接口调用示例
     // 3. 调用CANN算子库API
@@ -137,6 +147,7 @@ int main()
     if (workspaceSize > 0UL) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        executorAddrPtr.reset(workspaceAddr);
     }
     // 调用aclnnBaddbmm第二段接口
     ret = aclnnBaddbmm(workspaceAddr, workspaceSize, executor, stream);
@@ -160,19 +171,22 @@ int main()
     // aclnnInplaceBaddbmm接口调用示例
     // 3. 调用CANN算子库API
     LOG_PRINT("\ntest aclnnInplaceBaddbmm\n");
+    uint64_t workspaceSizeForInplace = 0;
     // 调用aclnnInplaceBaddbmm第一段接口
     ret =
-        aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSize, &executor);
+        aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSizeForInplace, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* inplaceWorkspaceAddr = nullptr;
-    if (workspaceSize > 0UL) {
-        ret = aclrtMalloc(&inplaceWorkspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    void* workspaceAddrForInplace = nullptr;
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrForInplacePtr(nullptr, aclrtFree);
+    if (workspaceSizeForInplace > 0UL) {
+        ret = aclrtMalloc(&workspaceAddrForInplace, workspaceSizeForInplace, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        workspaceAddrForInplacePtr.reset(workspaceAddrForInplace);
     }
     // 调用aclnnInplaceBaddbmm第二段接口
-    ret = aclnnInplaceBaddbmm(inplaceWorkspaceAddr, workspaceSize, executor, stream);
+    ret = aclnnInplaceBaddbmm(workspaceAddrForInplace, workspaceSizeForInplace, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmm failed. ERROR: %d\n", ret); return ret);
 
     // 4. （固定写法）同步等待任务执行结束
@@ -188,23 +202,11 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(self);
-    aclDestroyTensor(batch1);
-    aclDestroyTensor(batch2);
+    // 6. 释放aclScalar，需要根据具体API的接口定义修改
     aclDestroyScalar(alpha);
     aclDestroyScalar(beta);
-    aclDestroyTensor(out);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(selfDeviceAddr);
-    aclrtFree(batch1DeviceAddr);
-    aclrtFree(batch2DeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > 0UL) {
-        aclrtFree(workspaceAddr);
-    }
-    aclrtFree(inplaceWorkspaceAddr);
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

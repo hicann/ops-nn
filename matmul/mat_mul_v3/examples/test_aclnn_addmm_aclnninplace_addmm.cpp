@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_addmm.h"
@@ -99,12 +100,18 @@ int main() {
   float betaValue = 1.0f;
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfTensorPtr(self, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建mat1 aclTensor
   ret = CreateAclTensor(mat1HostData, mat1Shape, &mat1DeviceAddr, aclDataType::ACL_FLOAT, &mat1);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mat1TensorPtr(mat1, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> mat1DeviceAddrPtr(mat1DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建mat2 aclTensor
   ret = CreateAclTensor(mat2HostData, mat2Shape, &mat2DeviceAddr, aclDataType::ACL_FLOAT, &mat2);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mat2TensorPtr(mat2, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> mat2DeviceAddrPtr(mat2DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue,aclDataType::ACL_FLOAT);
@@ -114,11 +121,14 @@ int main() {
   CHECK_RET(beta != nullptr, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor = nullptr;
+  std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
   // 调用aclnnAddmm第一段接口
   ret = aclnnAddmmGetWorkspaceSize(self, mat1, mat2, beta, alpha, out, cubeMathType, &workspaceSize, &executor);
@@ -128,6 +138,7 @@ int main() {
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    executorAddrPtr.reset(workspaceAddr);
   }
   // 调用aclnnAddmm第二段接口
   ret = aclnnAddmm(workspaceAddr, workspaceSize, executor, stream);
@@ -156,9 +167,11 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddrForInplace = nullptr;
+  std::unique_ptr<void, aclError (*)(void*)> workspaceAddrForInplacePtr(nullptr, aclrtFree);
   if (workspaceSizeForInplace > 0) {
     ret = aclrtMalloc(&workspaceAddrForInplace, workspaceSizeForInplace, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    workspaceAddrForInplacePtr.reset(workspaceAddrForInplace);
   }
   // 调用aclnnInplaceAddmm第二段接口
   ret = aclnnInplaceAddmm(workspaceAddrForInplace, workspaceSizeForInplace, executor, stream);
@@ -176,25 +189,11 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-  aclDestroyTensor(self);
-  aclDestroyTensor(mat1);
-  aclDestroyTensor(mat2);
+  // 6. 释放aclScalar，需要根据具体API的接口定义修改
   aclDestroyScalar(beta);
   aclDestroyScalar(alpha);
-  aclDestroyTensor(out);
 
   // 7.释放device资源，需要根据具体API的接口定义修改
-  aclrtFree(selfDeviceAddr);
-  aclrtFree(mat1DeviceAddr);
-  aclrtFree(mat2DeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
-  if (workspaceSizeForInplace > 0) {
-    aclrtFree(workspaceAddrForInplace);
-  }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();

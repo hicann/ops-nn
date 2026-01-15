@@ -9,6 +9,7 @@
  */
  
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <cmath>
 #include "acl/acl.h"
@@ -163,39 +164,63 @@ int main() {
 
   // 创建x1 aclTensor
   ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT, &x1);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建x1Fp16 aclTensor
   ret = CreateAclTensor(x1HostData, x1Shape, &x1Fp16DeviceAddr, aclDataType::ACL_FLOAT16, &x1Fp16);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1Fp16TensorPtr(x1Fp16, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> x1Fp16DeviceAddrPtr(x1Fp16DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建x2 aclTensor
   ret = CreateAclTensor(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_INT8, &x2);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2TensorPtr(x2, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> x2DeviceAddrPtr(x2DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建addOffset aclTensor
   ret = CreateAclTensor(addOffsetHostData, addOffsetShape, &addOffsetDeviceAddr, aclDataType::ACL_FLOAT, &addOffset);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> addOffsetTensorPtr(addOffset, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> addOffsetDeviceAddrPtr(addOffsetDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建addOffsetFp16 aclTensor
   ret = CreateAclTensor(addOffsetHostData, addOffsetShape, &addOffsetFp16DeviceAddr, aclDataType::ACL_FLOAT16, &addOffsetFp16);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> addOffsetFp16TensorPtr(addOffsetFp16, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> addOffsetFp16DeviceAddrPtr(addOffsetFp16DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建mulScale aclTensor
   ret = CreateAclTensor(mulScaleHostData, mulScaleShape, &mulScaleDeviceAddr, aclDataType::ACL_FLOAT, &mulScale);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mulScaleTensorPtr(mulScale, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> mulScaleDeviceAddrPtr(mulScaleDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建mulScaleFp16 aclTensor
   ret = CreateAclTensor(mulScaleHostData, mulScaleShape, &mulScaleFp16DeviceAddr, aclDataType::ACL_FLOAT16, &mulScaleFp16);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mulScaleFp16TensorPtr(mulScaleFp16, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> mulScaleFp16DeviceAddrPtr(mulScaleFp16DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建diagonalMatrix aclTensor
   ret = CreateAclTensor(diagonalMatrixHostData, diagonalMatrixShape, &diagonalMatrixDeviceAddr, aclDataType::ACL_INT8, &diagonalMatrix);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> diagonalMatrixTensorPtr(diagonalMatrix, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> diagonalMatrixDeviceAddrPtr(diagonalMatrixDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建deqOffset aclTensor
   ret = CreateAclTensor(deqOffsetHostData, deqOffsetShape, &deqOffsetDeviceAddr, aclDataType::ACL_INT32, &deqOffset);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> deqOffsetTensorPtr(deqOffset, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> deqOffsetDeviceAddrPtr(deqOffsetDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建deqScale aclTensor
   ret = CreateAclTensor(deqScaleHostData, deqScaleShape, &deqScaleDeviceAddr, aclDataType::ACL_UINT64, &deqScale);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> deqScaleTensorPtr(deqScale, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> deqScaleDeviceAddrPtr(deqScaleDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建outFp16 aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outFp16DeviceAddr, aclDataType::ACL_FLOAT16, &outFp16);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outFp16TensorPtr(outFp16, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> outFp16deviceAddrPtr(outFp16DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -249,7 +274,6 @@ int main() {
   ret = aclnnWeightQuantBatchMatmulGetWorkspaceSize(x1Fp16, x2, diagonalMatrix, deqOffset, deqScale, addOffsetFp16, mulScaleFp16, nullptr, transposeX1, transposeX2, antiquantScale, antiquantOffset, outFp16, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
-
   // 根据第一段接口计算出的workspaceSize申请device内存
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -281,34 +305,12 @@ int main() {
   std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
+  int64_t max_print_size = 8;
+  for (int64_t i = 0; i < max_print_size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-  aclDestroyTensor(x1);
-  aclDestroyTensor(x1Fp16);
-  aclDestroyTensor(x2);
-  aclDestroyTensor(addOffset);
-  aclDestroyTensor(addOffsetFp16);
-  aclDestroyTensor(mulScaleFp16);
-  aclDestroyTensor(mulScale);
-  aclDestroyTensor(out);
-  aclDestroyTensor(outFp16);
 
-
-  // 7. 释放device资源，需要根据具体API的接口定义修改
-  aclrtFree(x1DeviceAddr);
-  aclrtFree(x2DeviceAddr);
-  aclrtFree(addOffsetDeviceAddr);
-  aclrtFree(deqScaleDeviceAddr);
-  aclrtFree(mulScaleDeviceAddr);
-  aclrtFree(diagonalMatrixDeviceAddr);
-  aclrtFree(deqOffsetDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  aclrtFree(x1Fp16DeviceAddr);
-  aclrtFree(addOffsetFp16DeviceAddr);
-  aclrtFree(mulScaleFp16DeviceAddr);
-  aclrtFree(outFp16DeviceAddr);
+  // 6. 释放device资源，需要根据具体API的接口定义修改
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
   }

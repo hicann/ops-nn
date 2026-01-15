@@ -19,37 +19,17 @@ namespace NN {
 namespace optiling {
 void RWLock::rdlock()
 {
-    std::unique_lock<std::mutex> lck(_mtx);
-    _waiting_readers += 1;
-    _read_cv.wait(lck, [&]() { return _waiting_writers == 0 && _status >= 0; });
-    _waiting_readers -= 1;
-    _status += 1;
+    _mtx.lock_shared();
 }
 
 void RWLock::wrlock()
 {
-    std::unique_lock<std::mutex> lck(_mtx);
-    _waiting_writers += 1;
-    _write_cv.wait(lck, [&]() { return _status == 0; });
-    _waiting_writers -= 1;
-    _status = -1;
+    _mtx.lock();
 }
 
 void RWLock::unlock()
 {
-    std::unique_lock<std::mutex> lck(_mtx);
-    if (_status == -1) {
-        _status = 0;
-    } else {
-        _status -= 1;
-    }
-    if (_waiting_writers > 0) {
-        if (_status == 0) {
-            _write_cv.notify_one();
-        }
-    } else {
-        _read_cv.notify_all();
-    }
+    _mtx.unlock();
 }
 }
 }
