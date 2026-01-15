@@ -93,6 +93,7 @@ ge::graphStatus LeakyReluTiling::RunTiling()
     float negativeSlope = scaleValueAttr != nullptr ? *scaleValueAttr : 0.0;
 
     if (this->outputDtype == ge::DT_FLOAT16) {
+        dType = static_cast<uint64_t>(TPL_FP16);
         // fp16需要cast成fp32处理
         OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluCastDag<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
                         OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"),
