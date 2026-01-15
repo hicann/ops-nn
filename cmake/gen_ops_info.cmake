@@ -344,7 +344,7 @@ endfunction()
 # check op_type is or not support in compute_unit
 # ######################################################################################################################
 function(check_op_supported OP_NAME COMPUTE_UNIT OP_SUPPORTED_COMPUTE_UNIT)
-  set(cmd "find ${CMAKE_CURRENT_SOURCE_DIR} -name ${OP_NAME}_def.cpp -exec grep '\.AddConfig(\\s*\"${COMPUTE_UNIT}\"' {} \;")
+  set(cmd "find ${OP_DIR} -name ${OP_NAME}_def.cpp -exec grep '\.AddConfig(\\s*\"${COMPUTE_UNIT}\"' {} \;")
   execute_process(
     COMMAND bash -c "${cmd}"
     OUTPUT_VARIABLE op_supported_compute_unit
