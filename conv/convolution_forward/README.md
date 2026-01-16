@@ -4,13 +4,9 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>昇腾910_95 AI处理器</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
-| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -48,7 +44,7 @@
 | output | 输出 | <ul><li>公式中的 out，表示卷积输出。</li><li>数据类型需要与 input 与 weight 推导之后的数据类型保持一致。</li><li>通道数等于 weight 第一维，其他维度≥0。</li></ul> | FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN | NCL、NCHW、NCDHW |
 | cubeMathType | 输入 | <ul><li>用于判断 Cube 单元应该使用哪种计算逻辑进行运算。</li><li>0 (KEEP_DTYPE): 保持输入数据类型进行计算。</li><li> 1 (ALLOW_FP32_DOWN_PRECISION): 允许 FLOAT32 降低精度计算，提升性能。</li><li> 2 (USE_FP16): 使用 FLOAT16 精度进行计算。</li><li> 3 (USE_HF32): 使用 HF32（混合精度）进行计算。</li></ul> | INT8 | - |
 
-* <term>Atlas A2 训练系列产品 / Atlas 800I A2 推理产品 / A200I A2 Box 异构组件、Atlas A3 训练系列产品 / Atlas A3 推理系列产品</term>：
+* <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - input、weight 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。
     - bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
     - conv1d、conv2d、conv3d 正向场景下 bias 会转成 FLOAT 参与计算。
@@ -59,14 +55,7 @@
     - cubeMathType 为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。
     - cubeMathType 为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。
     - cubeMathType 为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。
-* <term>Atlas 推理系列产品、Atlas 训练系列产品</term>：
-    - input、weight 数据类型支持 FLOAT、FLOAT16。
-    - bias 数据类型不支持 BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
-    - cubeMathType 为 0(KEEP_DTYPE) 时，当输入是 FLOAT 暂不支持。
-    - cubeMathType 为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 FLOAT16 计算。
-    - cubeMathType 为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。
-    - cubeMathType 为 3(USE_HF32) 时暂不支持。
-* <term>昇腾 910_95 AI 处理器</term>：
+* <term>Ascend 950PR/Ascend 950DT</term>：
     - input、weight 数据类型支持 FLOAT、FLOAT16、BFLOAT16、HIFLOAT8。
     - transposed=true 时：input 数据类型额外支持 FLOAT8_E4M3FN，支持 N 维度大于等于0，其他各个维度的大小应该大于等于1。
     - transposed=false 时：当 input 数据类型为 HIFLOAT8 时，weight 的数据类型必须与 input 一致。支持 N 维度大于等于0，支持 D、H、W 维度大于等于0（等于0的场景仅在 output 推导的 D、H、W 维度也等于0时支持），支持 C 维度大于等于0（等于0的场景仅在 output 推导的 N、C、D、H、W 其中某一维度等于0时支持）。
@@ -76,15 +65,10 @@
     - cubeMathType 为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。
     - cubeMathType 为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。
     - cubeMathType 为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。
-* <term>Atlas 200I/500 A2 推理产品</term>：
-
 ## 约束说明
 
-* <term>Atlas 推理系列产品</term>：当前仅支持1D和2D卷积，暂不支持3D卷积。input, weight, bias中每一组tensor的每一维大小都应不大于1000000。
-* <term>Atlas 训练系列产品</term>：支持1D和2D卷积，3D卷积仅支持transposed为false且输入数据类型为FLOAT16场景。input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
-* <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
-* <term>昇腾 910_95 AI处理器</term>：transposed 为 true 的场景，支持 1D、2D 和 3D 卷积，支持空 Tensor。
-* <term>Atlas 200I/500 A2 推理产品</term>：当前仅支持 2D 卷积，暂不支持 1D、3D 卷积。input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
+* <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：input, weight, bias 中每一组 tensor 的每一维大小都应不大于 1000000。
+* <term>Ascend 950PR/Ascend 950DT</term>：transposed 为 true 的场景，支持 1D、2D 和 3D 卷积，支持空 Tensor。
 * 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击[Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明

@@ -1,43 +1,12 @@
 # aclnnConvDepthwise2d
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/conv/convolution_forward)
-
 ## 产品支持情况
 
-<table>
-<tr>
-<th style="text-align:left">产品</th>
-<th style="text-align:center; width:100px">是否支持</th>
-</tr>
-<tr>
-<td><term>昇腾 910_95 AI 处理器</term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas 200I/500 A2 推理产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 推理系列产品 </term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas 训练系列产品</term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas 200/300/500 推理产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-</table>
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    √     |
 
 ## 功能说明
 
@@ -207,7 +176,6 @@ aclnnStatus aclnnConvDepthwise2d(
   </tr>
   </table>
 
-
 - **返回值：**
 
   `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
@@ -298,10 +266,8 @@ aclnnStatus aclnnConvDepthwise2d(
    <thead>
     <tr>
      <th><term>约束类型</term></th>
-     <th><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
-     <th><term>Atlas 推理系列产品</term></th>
-     <th><term>Atlas 训练系列产品</term></th>
-     <th><term>昇腾 910_95 AI 处理器</term></th>
+     <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <th><term>Ascend 950PR/Ascend 950DT</term></th>
    </tr>
    </thead>
    <tbody>
@@ -313,12 +279,6 @@ aclnnStatus aclnnConvDepthwise2d(
           <li>self 通道数应小于等于 65535。</li>
         </ul>
      </td>
-     <td colspan="2">
-        <ul>
-          <li>self、weight 数据类型不支持 BFLOAT16、HIFLOAT8。</li>
-          <li>self 通道数应小于等于 65535。</li>
-        </ul>
-     </td>
      <td> - </td>
    </tr>
    <tr>
@@ -326,16 +286,6 @@ aclnnStatus aclnnConvDepthwise2d(
      <td>
         <ul>
           bias 数据类型不支持 HIFLOAT8、FLOAT8_E4M3FN。数据类型与 self、weight 一致。
-        </ul>
-     </td>
-     <td>
-        <ul>
-          bias 数据类型不支持 BFLOAT16、HIFLOAT8。
-        </ul>
-     </td>
-     <td>
-        <ul>
-          bias 数据类型不支持 HIFLOAT8。
         </ul>
      </td>
      <td>
@@ -351,14 +301,6 @@ aclnnStatus aclnnConvDepthwise2d(
           <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 HFLOAT32 计算。</li>
           <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
           <li>为 3(USE_HF32) 时，当输入是 FLOAT 转换为 HFLOAT32 计算。</li>
-        <ul>
-     </td>
-     <td colspan="2">
-        <ul>
-          <li>为 0(KEEP_DTYPE) 时，当输入是 FLOAT 暂不支持。</li>
-          <li>为 1(ALLOW_FP32_DOWN_PRECISION) 时，当输入是 FLOAT 允许转换为 FLOAT16 计算。</li>
-          <li>为 2(USE_FP16) 时，当输入是 BFLOAT16 不支持该选项。</li>
-          <li>为 3(USE_HF32) 时暂不支持。</li>
         <ul>
      </td>
      <td>
