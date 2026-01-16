@@ -31,8 +31,8 @@
 可通过`build.sh`快速创建算子目录，进入项目根目录，执行如下命令：
 
 ```bash
-# 创建指定算子目录，如bash build.sh --genop_aicpu=examples/add_example
-# ${op_class}表示算子类型，如matmul类。
+# 创建指定算子目录，如bash build.sh --genop=activation/op_example
+# ${op_class}表示算子类型，如activation类。
 # ${op_name}表示算子名的小写下划线形式，如`AddExample`算子对应为add_example，新增算子不允许与已有算子重名。
 bash build.sh --genop_aicpu=${op_class}/${op_name}
 ```
