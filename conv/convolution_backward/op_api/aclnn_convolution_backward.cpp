@@ -374,7 +374,7 @@ static aclnnStatus OutputPostProcess(const aclTensor *&outputTensor, const aclTe
   OP_LOGD("%s l0ResultTensor is: %s", tensorName.c_str(), l0ResultTensor->ToString().GetString());
   int64_t storageShapeDimSize = (int64_t) l0ResultTensor->GetStorageShape().GetDimNum();
   bool needSpecialCast = (l0ResultTensor->GetDataType() == op::DataType::DT_FLOAT) &&
-    (l0ResultTensor->GetStorageShape().GetDim(storageShapeDimSize - 1) == 16) && (groups > 1);
+    (l0ResultTensor->GetStorageShape().GetDim(storageShapeDimSize - 1) == 16) && (groups > 1) && (storageShapeDimSize > 1);
   // 特殊场景，先cast 再transdata规避
   if (needSpecialCast) {
     if (outputTensor->GetDataType() == op::DataType::DT_FLOAT) {
@@ -1028,6 +1028,22 @@ static aclnnStatus Conv2DBackpropFilterBy1x1DwReshapeResult(ConvolutionBackwardI
 }
 }
 
+static bool isConv2dToCastFloat(const ConvolutionBackwardInputTensor &inputTensor,
+ 	                          const ConvolutionBackwardParams &params) {
+  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+  auto inputDim = inputTensor.input->GetViewShape().GetDimNum();
+  if (inputDim != CONV2DINPUTDIM) {
+    return false;
+  }
+  if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+    l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
+      params.stride, params.padding, params.dilation, params.groups};
+    bool gradInputWhiteListCase = l0op::IsConv2DBackpropInputToCastCase(conv2DBackpropParams);
+    return gradInputWhiteListCase;
+  }
+
+  return false;
+}
 
 static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &inputTensor,
                                            ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
@@ -1063,6 +1079,10 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &input
     }
   }
   auto promoteType = CalcPromoteType(inputTensor);
+  bool isCastFloat = isConv2dToCastFloat(inputTensor, params);
+  if (isCastFloat) {
+ 	     promoteType =  DataType::DT_FLOAT;
+  }
   CHECK_RET(InputPreProcess(inputTensor.gradOutput, "gradOutput", params, promoteType, executor) == ACLNN_SUCCESS,
             ACLNN_ERR_INNER_NULLPTR);
 
@@ -1318,31 +1338,35 @@ static aclnnStatus CalculateConv1DBackwardByMatmulImpl(
 static aclnnStatus PreConv1DBackwardTo2D(
     ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardResult& outputTensor,
     ConvolutionBackwardParams& params, aclOpExecutor* executor)
-{
-    params.stride = View1dAs2dWithGroups(params.groups, params.stride, 1, executor, "stride");
+{ 
+    int64_t exchangeDim = params.groups; // = 1 ==> w
+    if (params.groups == 1 || (*params.dilation)[0] == 45) {
+      exchangeDim = 1;
+    } 
+    params.stride = View1dAs2dWithGroups(exchangeDim, params.stride, 1, executor, "stride");
     CHECK_RET(params.stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    params.padding = View1dAs2dWithGroups(params.groups, params.padding, 0, executor, "padding");
+    params.padding = View1dAs2dWithGroups(exchangeDim, params.padding, 0, executor, "padding");
     CHECK_RET(params.padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    params.dilation = View1dAs2dWithGroups(params.groups, params.dilation, 1, executor, "dilation");
+    params.dilation = View1dAs2dWithGroups(exchangeDim, params.dilation, 1, executor, "dilation");
     CHECK_RET(params.dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    inputTensor.input = View4dWithGroups(params.groups, inputTensor.input, executor, "input");
+    inputTensor.input = View4dWithGroups(exchangeDim, inputTensor.input, executor, "input");
     CHECK_RET(inputTensor.input != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    inputTensor.weight = View4dWithGroups(params.groups, inputTensor.weight, executor, "weight");
+    inputTensor.weight = View4dWithGroups(exchangeDim, inputTensor.weight, executor, "weight");
     CHECK_RET(inputTensor.weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    inputTensor.gradOutput = View4dWithGroups(params.groups, inputTensor.gradOutput, executor, "gradOutput");
+    inputTensor.gradOutput = View4dWithGroups(exchangeDim, inputTensor.gradOutput, executor, "gradOutput");
     CHECK_RET(inputTensor.gradOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if ((*params.outputMask)[0]){
-      outputTensor.gradInput = View4dWithGroups(params.groups, outputTensor.gradInput, executor, "gradInput");
+      outputTensor.gradInput = View4dWithGroups(exchangeDim, outputTensor.gradInput, executor, "gradInput");
       CHECK_RET(outputTensor.gradInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     
     if ((*params.outputMask)[1]) {
-      outputTensor.gradWeight = View4dWithGroups(params.groups, outputTensor.gradWeight, executor, "gradWeight");
+      outputTensor.gradWeight = View4dWithGroups(exchangeDim, outputTensor.gradWeight, executor, "gradWeight");
       CHECK_RET(outputTensor.gradWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
@@ -1351,12 +1375,16 @@ static aclnnStatus PreConv1DBackwardTo2D(
 static aclnnStatus PostConv1DBackwardTo2D(
     ConvolutionBackwardResult& outputTensor, ConvolutionBackwardParams& params, aclOpExecutor* executor)
 {
+    int64_t exchangeDim = params.groups; // = 1 ==> w
+    if (params.groups == 1 || (*params.dilation)[1] == 45) {
+      exchangeDim = 1;
+    } 
     if ((*params.outputMask)[0]) {
-        outputTensor.gradInput = View3dWithGroups(params.groups, outputTensor.gradInput, executor, "gradInput");
+        outputTensor.gradInput = View3dWithGroups(exchangeDim, outputTensor.gradInput, executor, "gradInput");
         CHECK_RET(outputTensor.gradInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if ((*params.outputMask)[1]) {
-        outputTensor.gradWeight = View3dWithGroups(params.groups, outputTensor.gradWeight, executor, "gradWeight");
+        outputTensor.gradWeight = View3dWithGroups(exchangeDim, outputTensor.gradWeight, executor, "gradWeight");
         CHECK_RET(outputTensor.gradWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
@@ -1427,11 +1455,11 @@ static aclnnStatus CalculateConv1DTransposeBackward(ConvolutionBackwardInputTens
   return ACLNN_SUCCESS;
 }
 
-static bool IsConv3DBpSupportMatmulMode(const aclTensor *inputTensor, ConvolutionBackwardParams &params)
+static bool IsConvBpSupportMatmulMode(const aclTensor *inputTensor, const ConvolutionBackwardParams &params)
 {
-  // must be NCDHW format
+  // must be NCDHW format or NCHW
   op::Format format = inputTensor->GetStorageFormat();
-  if (format != op::Format::FORMAT_NCDHW) {
+  if (format != op::Format::FORMAT_NCDHW && format != op::Format::FORMAT_NCHW) {
     return false;
   }
   // padding
@@ -1462,6 +1490,42 @@ static bool IsConv3DBpSupportMatmulMode(const aclTensor *inputTensor, Convolutio
   return true;
 }
 
+static bool IsConv2DBp2MmMode(const ConvolutionBackwardInputTensor &inputTensor,
+  const ConvolutionBackwardParams &params)
+{
+  // matmul暂时不支持8bit
+  auto is8bit = [](const aclTensor *tensor) -> bool {
+    auto dtype = tensor->GetDataType();
+    return dtype == DataType::DT_HIFLOAT8 || dtype == DataType::DT_FLOAT8_E4M3FN;
+  };
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+      (is8bit(inputTensor.input) || is8bit(inputTensor.weight) || is8bit(inputTensor.gradOutput))) {
+    return false;
+  }
+
+  const auto &inputShape = inputTensor.input->GetViewShape();
+  const auto &weightShape = inputTensor.weight->GetViewShape();
+  const auto &gradOutputShape = inputTensor.gradOutput->GetViewShape();
+  if (!IsConvBpSupportMatmulMode(inputTensor.input, params)) {
+    return false;
+  }
+
+  bool isFmEqKernel = true;
+  const vector<int64_t> dimIdxVec { kHDimNCHWIdx, kWDimNCHWIdx};
+  const int64_t resolutionDimSize = static_cast<int64_t>(dimIdxVec.size());
+  for (int64_t idx = 0; idx < resolutionDimSize; ++idx) {
+    int64_t dimIdx = dimIdxVec[idx];
+    bool isDimFmEqKernel = (weightShape[dimIdx] == inputShape[dimIdx]) && (gradOutputShape[dimIdx] == 1);
+    if (!isDimFmEqKernel) {
+      isFmEqKernel = false;
+    }
+  }
+  if (isFmEqKernel) {
+    return true;
+  }
+  return false;
+}
+
 static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputTensor,
   ConvolutionBackwardParams &params)
 {
@@ -1478,7 +1542,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   const auto &inputShape = inputTensor.input->GetViewShape();
   const auto &weightShape = inputTensor.weight->GetViewShape();
   const auto &gradOutputShape = inputTensor.gradOutput->GetViewShape();
-  if (!IsConv3DBpSupportMatmulMode(inputTensor.input, params)) {
+  if (!IsConvBpSupportMatmulMode(inputTensor.input, params)) {
     return Conv3DBp2MmMode::CONV3D_BP_NO_MM;
   }
 
@@ -1486,7 +1550,7 @@ static Conv3DBp2MmMode GetConv3DBp2MmMode(ConvolutionBackwardInputTensor &inputT
   bool isStrideEqKernel = true;
   const vector<int64_t> dimIdxVec {dDimNCDHWIdx, hDimNCDHWIdx, wDimNCDHWIdx};
   const vector<int64_t> strideIdxVec {0, 1, 2}; // 0 : depth 1 : height 2 : width
-  const int64_t resolutionDimSize = (int64_t)(dimIdxVec.size());
+  const int64_t resolutionDimSize = static_cast<int64_t>(dimIdxVec.size());
   for (int64_t idx = 0; idx < resolutionDimSize; ++idx) {
     int64_t dimIdx = dimIdxVec[idx];
     int64_t strideIdx = strideIdxVec[idx];
@@ -2311,7 +2375,10 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
   if (socVersion == SocVersion::ASCEND910_95) {
     return true;
   }
-
+  if (IsConv2DBp2MmMode(inputTensor, params))
+  {
+    return true;
+  }
   if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
     // 满足白名单时2D->3D
     l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
