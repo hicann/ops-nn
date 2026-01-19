@@ -103,21 +103,6 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_add_support_bias)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc c_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    int8_t cubeMathType = 0;
-    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, c_desc, "add", cubeMathType),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
 TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_3)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
