@@ -99,4 +99,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_swish_grad](examples/test_aclnn_swish_grad.cpp) | 通过[aclnnSwishBackward](docs/aclnnSwishBackward.md)接口方式调用CtclossV2算子。 |
+| aclnn接口 | [test_aclnn_swish_grad](examples/test_aclnn_swish_grad.cpp) | 通过[aclnnSwishBackward](docs/aclnnSwishBackward.md)接口方式调用SwishGrad算子。 |
