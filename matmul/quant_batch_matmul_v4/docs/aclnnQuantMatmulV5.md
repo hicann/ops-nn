@@ -277,7 +277,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>yOffset（aclTensor*）</td>
         <td>输入</td>
         <td>公式中的输入yOffset。</td>
-        <td>shape支持1维（n）。值要求为8\*x2\*x2Scale。</td>
+        <td>shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8*x2*x2Scale，并在第1维累加。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
