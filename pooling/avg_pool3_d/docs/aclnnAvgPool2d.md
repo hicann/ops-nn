@@ -7,10 +7,13 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
-- 接口功能：：对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作，其中$k$为kernelSize，表示池化窗口的大小，$s$为stride，表示池化操作的步长。
+- 接口功能：对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作，其中$k$为kernelSize，表示池化窗口的大小，$s$为stride，表示池化操作的步长。
 - 计算公式：
   输入input（$N,C,H,W$）、输出out（$N,C,H_{out},W_{out}$）和池化步长（$strides$）、池化窗口大小($kH,kW$)的关系是
 
@@ -187,10 +190,13 @@ aclnnStatus aclnnAvgPool2d(
       <td>-</td>
     </tr>
   </tbody></table>
+  <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持BFLOAT16。
 
   <term>cubeMathType</term>：支持的枚举值如下：
     * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
+      * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时不支持该选项。
     * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
+      * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为FLOAT16计算。当输入为其他数据类型时不做处理。
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，不支持该选项。当输入为其他数据类型时不做处理。
     * 2：USE_FP16，支持将输入降精度至FLOAT16计算。
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为BFLOAT16时不支持该选项。
@@ -286,6 +292,8 @@ aclnnStatus aclnnAvgPool2d(
 ## 约束说明
 - 确定性计算：
   - aclnnAvgPool2d默认确定性实现。
+
+- <term>Atlas 训练系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1(ALLOW_FP32_DOWN_PRECISION)来允许接口内部cast到FLOAT16进行计算。
 
 ## 调用示例
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
