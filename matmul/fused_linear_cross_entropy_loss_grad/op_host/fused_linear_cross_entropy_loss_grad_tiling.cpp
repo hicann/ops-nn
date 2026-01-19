@@ -562,11 +562,16 @@ static ge::graphStatus MemFriendlyTilingFunc(gert::TilingContext* context)
     userWorkspaceByteSize += mm0ResultSizePerEpoch * BUFFER_NUM * IN_BYTE_SIZE;
     userWorkspaceByteSize += mm1ResultSizePerEpoch * BUFFER_NUM * IN_BYTE_SIZE;
     userWorkspaceByteSize += mm2ResultSizePerEpoch * BUFFER_NUM * IN_BYTE_SIZE;
-    userWorkspaceByteSize += (uint64_t)BT * H * BUFFER_NUM * IN_BYTE_SIZE;
-    userWorkspaceByteSize += (uint64_t)V * H * BUFFER_NUM * IN_BYTE_SIZE;
+    userWorkspaceByteSize += (uint64_t)BT * H * IN_BYTE_SIZE;
+    userWorkspaceByteSize += (uint64_t)V * H * IN_BYTE_SIZE;
     size_t sysWorkspaceByteSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
     size_t *currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = userWorkspaceByteSize + sysWorkspaceByteSize;
+    OP_LOGD(
+        context->GetNodeName(),
+        "[FusedLinearCrossEntropyLossGrad] userWorkspaceByteSize=%lld totalWorkspace=%lld.",
+        userWorkspaceByteSize, currentWorkspace[0]
+    );
 
     return ge::GRAPH_SUCCESS;
 }
