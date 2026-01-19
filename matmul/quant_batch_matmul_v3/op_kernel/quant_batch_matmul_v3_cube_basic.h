@@ -17,9 +17,10 @@
 
 #include "quant_batch_matmul_v3_block.h"
 #include "quant_batch_matmul_v3_update.h"
+#include "quant_batch_matmul_v3_basic_epilogue.h"
 
 namespace AscendC {
-template <TemplateBasicType>
+template <TemplateBasicTypeForClass>
 class QuantBatchMatmulV3BaseKernel {  // 纯cube kernel，无pertoken，输出int8/fp16/int32
 public:
     __aicore__ inline QuantBatchMatmulV3BaseKernel() {}

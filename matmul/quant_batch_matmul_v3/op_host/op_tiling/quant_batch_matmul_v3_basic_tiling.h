@@ -82,7 +82,7 @@ protected:
     bool IsPertokenBasicSwitchCondition() const;
     bool CheckInBasicBenefitsRange(uint64_t m, uint64_t n, uint64_t k) const;
     bool CheckMNSmallShape(uint64_t m, uint64_t n) const;
-    bool CheckUseBasicTiling();
+    virtual bool CheckUseBasicTiling();
     bool DoBasicTiling();
     bool CalcL0Tiling();
     bool CalcL1Tiling();

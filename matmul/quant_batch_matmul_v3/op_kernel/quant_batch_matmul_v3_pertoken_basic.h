@@ -17,9 +17,24 @@
 
 #include "quant_batch_matmul_v3_block.h"
 #include "quant_batch_matmul_v3_update.h"
+#include "quant_batch_matmul_v3_basic_epilogue.h"
 
 namespace AscendC {
-template <TemplateBasicType>
+
+template<FusedOpType OpType>
+struct EpilogueTypeTraits;
+
+template<>
+struct EpilogueTypeTraits<FusedOpType::GELU_TANH> {
+    using Type = EpilogueDequantGeluTanh;
+};
+
+template<>
+struct EpilogueTypeTraits<FusedOpType::GELU_ERF> {
+    using Type = EpilogueDequantGeluErf;
+};
+
+template <TemplateBasicTypeForClass>
 class BmmDequantPertokenBasic {
 public:
     __aicore__ inline BmmDequantPertokenBasic() {}
@@ -65,13 +80,13 @@ public:
         if (blockIdx_ >= usedCoreNum_) {
             return;
         }
+        // 带batch场景只需要在最开始初始化offsetWorkspaceC_和控制同步的loop
+        bool pongSwitch = false;
+        offsetWorkspaceC_ = BUFFER_NUM * blockIdx_ * baseM_ * baseN_;
+        loop_ = 0;
+        uint64_t pingOffsetC = offsetWorkspaceC_;
         for (uint64_t batchIndex = 0; batchIndex < batch_; batchIndex++) {
             bool reverse = true;
-            bool pongSwitch = false;
-            // 每个batch重新初始化offsetWorkspaceC_和控制同步的loop
-            offsetWorkspaceC_ = BUFFER_NUM * blockIdx_ * baseM_ * baseN_;
-            loop_ = 0;
-            uint64_t pingOffsetC = offsetWorkspaceC_;
             // 首块计算，兼容无L2cache切分场景，减少scalar计算
             block_.InitFirstTileBlockIndex();
             OneTileCompute(0, 0, pingOffsetC, batchIndex, pongSwitch);
@@ -180,14 +195,51 @@ private:
 
             UpdateBatchOffset(batchIndex, offset_);
             offsetWorkspaceC_ = pingOffsetC + pongSwitch * baseM_ * baseN_;
-            BasicMMDequantCompute(block_.params_.singleCoreM, block_.params_.singleCoreN,
+            BasicMMCVFusionCompute(block_.params_.singleCoreM, block_.params_.singleCoreN,
                                   C2V_PING_FLAG | pongSwitch, V2C_PING_FLAG | pongSwitch);
             pongSwitch = !pongSwitch;
             block_.UpdateBlockIndex();
         }
     }
 
-    __aicore__ inline void BasicMMDequantCompute(uint32_t CurAicM, uint32_t CurAicN, uint16_t v2cSyncFlag,
+    __aicore__ inline EpilogueParams<yType, scaleType> InitEpilogueParams(uint32_t CurAicM, uint32_t CurAicN)
+    {
+        return EpilogueParams<yType, scaleType>(
+            mmOutGm_,
+            yGm_,
+            biasGmBf16_,
+            biasGmFp16_,
+            biasGmFp32_,
+            scaleGm_,
+            pertokenScaleGm_, // GlobalTensor
+
+            outFp32Tmp_,
+            vecQueTmp_,
+            biasFp32Tmp_,
+            broadcastFp32Tmp_, // TBuf
+
+            vecQueSrc_,
+            vecQueOut_,
+            vecQueBias_,
+            vecQueScale_,
+            vecQuePertokenScale_, // TQue
+
+            CurAicM,
+            CurAicN,
+            subBlockIdx_,
+            ubCalcM_,
+            ubCalcN_,
+            offsetWorkspaceC_,
+            biasDtype_,
+            biasDtypeSize_,
+            isPerTensor_,
+            scaleScalar_,
+            offset_,
+            n_ // 常量
+        );
+    }
+
+    __aicore__ inline void BasicMMCVFusionCompute(uint32_t CurAicM, uint32_t CurAicN, uint16_t v2cSyncFlag,
                                                  uint16_t c2vSyncFlag)
     {
         if ASCEND_IS_AIC {
@@ -200,7 +252,8 @@ private:
 
         if ASCEND_IS_AIV {
             WaitEvent(c2vSyncFlag);
-            BasicDequantCompute(mmOutGm_, CurAicM, CurAicN);
+            auto epilogueParams = InitEpilogueParams(CurAicM, CurAicN);
+            epilogue_.Process(epilogueParams);
             NotifyEvent<PIPE_MTE2>(v2cSyncFlag);
         }
     }
@@ -216,168 +269,6 @@ private:
         }
         mm_.Iterate();
         mm_.GetTensorC(mmOutGm_[offsetWorkspaceC_], 0, true);
-    }
-
-    __aicore__ inline void PertokenCalculate(uint32_t basicBlockComputeInfo[], uint32_t mUbLoopIdx,
-                                             DataCopyPadParams &padParams, LocalTensor<float> &dstLocalFp32,
-                                             LocalTensor<float> &tmpdstLocal)
-
-    {
-        uint32_t curAivN = basicBlockComputeInfo[0];
-        uint32_t curAivM = basicBlockComputeInfo[1];
-        uint32_t ubResAlignedN = basicBlockComputeInfo[2];
-        uint32_t subBlockoffset = basicBlockComputeInfo[3]; // 数组下标3
-
-        DataCopyParams scale2UbParams{1, 0, 0, 0};
-        scale2UbParams.blockLen = curAivM * sizeof(float);
-        uint64_t offsetPertoken = offset_.offsetPertoken + mUbLoopIdx * ubCalcM_ + subBlockoffset;
-        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U);  // 8: 32B aligned for float
-
-        const uint32_t broadCastDst[M_N_TWO_DIMS] = {curAivM, computedAivN};
-        const uint32_t broadCastSrc[M_N_TWO_DIMS] = {curAivM, 1};
-
-        LocalTensor<float> broadcastFp32 = broadcastFp32Tmp_.Get<float>();
-        LocalTensor<float> pertokenScaleLocal = vecQuePertokenScale_.AllocTensor<float>();
-
-        DataCopyPad(pertokenScaleLocal, pertokenScaleGm_[offsetPertoken], scale2UbParams, padParams);
-        vecQuePertokenScale_.EnQue<float>(pertokenScaleLocal);
-        pertokenScaleLocal = vecQuePertokenScale_.DeQue<float>();
-
-        BroadCast<float, M_N_TWO_DIMS, 1>(broadcastFp32, pertokenScaleLocal, broadCastDst, broadCastSrc);
-
-        AscendC::PipeBarrier<PIPE_V>();
-
-        if (computedAivN == ubResAlignedN) {
-            Mul(tmpdstLocal, broadcastFp32, dstLocalFp32, computedAivN * curAivM);
-        } else {
-            for (auto i = 0; i < curAivM; i++) {
-                Mul(tmpdstLocal[ubResAlignedN * i], broadcastFp32[computedAivN * i], dstLocalFp32[computedAivN * i],
-                    computedAivN);
-            }
-        }
-        vecQuePertokenScale_.FreeTensor(pertokenScaleLocal);
-    }
-
-    __aicore__ inline void BasicDequantCompute(GlobalTensor<int32_t> &curMmOutGm, uint32_t curAicM, uint32_t curAicN)
-    {
-        LocalTensor<float> dstLocalFp32 = outFp32Tmp_.Get<float>();
-        LocalTensor<float> biasFp32;
-        LocalTensor<bfloat16_t> oriBiasBf16;
-        LocalTensor<half> oriBiasFp16;
-        LocalTensor<float> oriBiasFp32;
-        // aic:aiv 1:2 spilt m
-        uint32_t subBlockoffset = 0;
-
-        int64_t vecNum = GetTaskRation(); // 获取cube/vector配比 1:2  在vector会返回2
-        vecNum = (vecNum == 0) ? 1 : vecNum;
-        subBlockoffset = subBlockIdx_ * curAicM / vecNum;
-        curAicM = curAicM / vecNum + subBlockIdx_ * (curAicM % vecNum);
-        uint32_t curAivM = ubCalcM_;
-        // calcN in ub is equal to aicN
-        uint32_t curAivN = curAicN;
-        uint32_t mUbLoops = DequantBmm::CeilDiv(curAicM, ubCalcM_);
-        DataCopyParams gm2UbParams{1, 0, 0, 0};
-        DataCopyExtParams ub2GmParams{1, 0, 0, 0, 0};
-        DataCopyPadParams padParams;
-        DequantParams dequantParams;
-        DequantBmm::CalcDequantParams(mUbLoops == 1 ? curAicM : ubCalcM_, curAicN, dequantParams);
-        for (uint32_t mUbLoopIdx = 0; mUbLoopIdx < mUbLoops; ++mUbLoopIdx) {
-            if (mUbLoopIdx == mUbLoops - 1) {
-                curAivM = curAicM - ubCalcM_ * (mUbLoops - 1);
-                DequantBmm::CalcDequantParams(curAivM, curAicN, dequantParams, mUbLoops != 1 && curAivM != ubCalcM_);
-            }
-            LocalTensor<int32_t> srcLocal = vecQueSrc_.AllocTensor<int32_t>();
-            LocalTensor<yType> dstLocal = vecQueOut_.AllocTensor<yType>();
-            LocalTensor<uint8_t> tmpLocal = vecQueTmp_.Get<uint8_t>();
-            // datacopypad 32B aligned
-            DequantBmm::SetGm2UbParams(gm2UbParams, curAivM, curAivN);
-            DequantBmm::CopyMmOutToLocal(srcLocal, curMmOutGm, gm2UbParams, padParams,
-                                        offsetWorkspaceC_ + mUbLoopIdx * ubCalcM_ * curAicN + subBlockoffset * curAicN);
-
-            if (biasDtype_ != DT_INT32) {
-                BiasTensorInit(dstLocalFp32, biasFp32, oriBiasBf16, oriBiasFp16, oriBiasFp32);
-                BiasGm2Ub(oriBiasBf16, oriBiasFp16, oriBiasFp32, padParams, curAicN);
-            }
-            if (isPerTensor_) {
-                AscendDequant(dstLocalFp32, srcLocal, scaleScalar_, tmpLocal, dequantParams);
-            } else {
-                LocalTensor<scaleType> scaleLocal = vecQueScale_.AllocTensor<scaleType>();
-                DequantBmm::Bf16ScaleGm2Ub<scaleType>(scaleLocal, scaleGm_, padParams, curAicN, offset_.offsetScale);
-                AscendDequant(dstLocalFp32, srcLocal, scaleLocal, tmpLocal, dequantParams);
-                vecQueScale_.FreeTensor(scaleLocal);
-            }
-            uint32_t ubResAlignedN = DequantBmm::Align(curAivN);  // 16: sizeof(yType) is 2, 32B / 2
-            LocalTensor<float> tmpdstLocal = vecQueTmp_.Get<float>();
-            uint32_t basicBlockComputeInfo[4] = {curAivN, curAivM, ubResAlignedN, subBlockoffset};
-            PertokenCalculate(basicBlockComputeInfo, mUbLoopIdx, padParams, dstLocalFp32, tmpdstLocal);
-
-            if (biasDtype_ != DT_INT32) {
-                CalBiasAdd(tmpdstLocal, biasFp32, oriBiasBf16, oriBiasFp16, oriBiasFp32, curAivN, curAivM);
-            }
-            AscendC::PipeBarrier<PIPE_V>();
-            Cast(dstLocal, tmpdstLocal, RoundMode::CAST_RINT, curAivM * ubResAlignedN);
-            SetFlag<HardEvent::V_MTE3>(EVENT_ID2);
-            vecQueSrc_.FreeTensor(srcLocal);
-            // dst from ub -> gm
-            DequantBmm::SetUb2GmParams<yType>(ub2GmParams, curAivM, curAivN, n_);
-            WaitFlag<HardEvent::V_MTE3>(EVENT_ID2);
-            DequantBmm::CopyUbToGm<yType>(offset_.offsetC + mUbLoopIdx * ubCalcM_ * n_ + subBlockoffset * n_,
-                                          ub2GmParams, dstLocal, yGm_, vecQueOut_);
-        }
-    }
-
-    __aicore__ inline void BiasTensorInit(LocalTensor<float>& /* dstLocalFp32 */, LocalTensor<float>& biasFp32,
-                                          LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
-                                          LocalTensor<float>& oriBiasFp32) {
-        biasFp32 = biasFp32Tmp_.Get<float>();
-        if (biasDtype_ == DT_BF16) {
-            oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>();  // free in CalBiasAdd
-        } else if (biasDtype_ == DT_FLOAT16) {
-            oriBiasFp16 = vecQueBias_.AllocTensor<half>();  // free in CalBiasAdd
-        } else if (biasDtype_ == DT_FLOAT) {
-            oriBiasFp32 = vecQueBias_.AllocTensor<float>();  // free in CalBiasAdd
-        }
-    }
-
-    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                     LocalTensor<float> &oriBiasFp32, DataCopyPadParams padParams, uint32_t curAivN)
-    {
-        DataCopyParams bias2UbParams{1, 0, 0, 0};
-        bias2UbParams.blockLen = curAivN * biasDtypeSize_;
-
-        if (biasDtype_ == DT_BF16) {
-            DataCopyPad(oriBiasBf16, biasGmBf16_[offset_.offsetBias], bias2UbParams, padParams);
-        } else if (biasDtype_ == DT_FLOAT16) {
-            DataCopyPad(oriBiasFp16, biasGmFp16_[offset_.offsetBias], bias2UbParams, padParams);
-        } else if (biasDtype_ == DT_FLOAT) {
-            DataCopyPad(oriBiasFp32, biasGmFp32_[offset_.offsetBias], bias2UbParams, padParams);
-        }
-    }
-
-    __aicore__ inline void CalBiasAdd(LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
-                                      LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
-                                      LocalTensor<float>& oriBiasFp32, uint32_t curAivN, uint32_t curAivM)
-    {
-        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U);  // 8: 32B aligened for int32_t
-        uint32_t ubResAlignedN = DequantBmm::Align(curAivN);     // 16: sizeof(ytype) is 2 , 32B / 2
-        AscendC::PipeBarrier<PIPE_V>();
-        if (biasDtype_ == DT_BF16) {
-            Cast(biasFp32, oriBiasBf16, RoundMode::CAST_NONE, ubResAlignedN);
-            AscendC::PipeBarrier<PIPE_V>();
-            vecQueBias_.FreeTensor(oriBiasBf16);
-        } else if (biasDtype_ == DT_FLOAT16) {
-            Cast(biasFp32, oriBiasFp16, RoundMode::CAST_NONE, ubResAlignedN);
-            AscendC::PipeBarrier<PIPE_V>();
-            vecQueBias_.FreeTensor(oriBiasFp16);
-        } else if (biasDtype_ == DT_FLOAT) {
-            biasFp32 = oriBiasFp32;
-            AscendC::PipeBarrier<PIPE_V>();
-            vecQueBias_.FreeTensor(oriBiasFp32);
-        }
-        for (int32_t mIdx = 0; mIdx < curAivM; ++mIdx) {
-            Add(dstLocalFp32[mIdx * ubResAlignedN], dstLocalFp32[mIdx * ubResAlignedN], biasFp32, ubResAlignedN);
-        }
-        AscendC::PipeBarrier<PIPE_V>();
     }
 
     __aicore__ inline void End()
@@ -450,6 +341,7 @@ private:
     QuantBatchMatmulV3BaseBlock block_;
     UPDATE_TYPE update_; // 量化mm或mc2的更新计算大小和地址的接口
     QBmmBlockOffset offset_;
+    EpilogueType epilogue_;
 
     using AMatmulType = matmul::MatmulType<TPosition::GM, CubeFormat::ND, x1Type, aTrans>;
     using BMatmulType = matmul::MatmulType<TPosition::GM, DequantBmm::GetFormat(x2Format), x2Type, bTrans>;

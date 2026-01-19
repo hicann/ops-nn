@@ -22,9 +22,11 @@
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"
 
+#define TemplateBasicTypeForClass typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, \
+    int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE, class EpilogueType = EpilogueDequant
 #define TemplateBasicType typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, \
-    int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE
-#define TemplateBasicValue x1Type, x2Type, scaleType, yType, x1Format, x2Format, aTrans, bTrans, UPDATE_TYPE
+    int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE, class EpilogueType
+#define TemplateBasicValue x1Type, x2Type, scaleType, yType, x1Format, x2Format, aTrans, bTrans, UPDATE_TYPE, EpilogueType
 
 constexpr uint32_t BMM_BLOCK_NUM = 16;
 constexpr uint32_t K0_INT4 = 64;
@@ -115,8 +117,109 @@ struct QBmmBaseBlockArgs {
 enum class FusedOpType : uint32_t {
     NONE = 0U,
     RELU = 1U,
-    SWIGLU = 2U
+    SWIGLU = 2U,
+    GELU_TANH = 3UL,
+    GELU_ERF = 4UL
 };
+
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+template<typename yType, typename scaleType>
+struct EpilogueParams {
+    AscendC::GlobalTensor<int32_t> &curMmOutGm;
+    AscendC::GlobalTensor<yType> &yGm;
+    AscendC::GlobalTensor<bfloat16_t> &biasGmBf16;
+    AscendC::GlobalTensor<half> &biasGmFp16;
+    AscendC::GlobalTensor<float> &biasGmFp32;
+    AscendC::GlobalTensor<scaleType> &scaleGm;
+    AscendC::GlobalTensor<float> &pertokenScaleGm;
+
+    AscendC::TBuf<AscendC::TPosition::VECCALC> &outFp32Tmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> &vecQueTmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> &biasFp32Tmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> &broadcastFp32Tmp;
+
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueSrc;
+    AscendC::TQue<AscendC::QuePosition::VECOUT, 1> &vecQueOut;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueBias;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueScale;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQuePertokenScale;
+
+    uint32_t curAicM;
+    uint32_t curAicN;
+    uint32_t subBlockIdx;
+    uint32_t ubCalcM;
+    uint32_t ubCalcN;
+    uint64_t offsetWorkspaceC;
+    uint32_t biasDtype;
+    uint32_t biasDtypeSize;
+    bool isPerTensor;
+    scaleType scaleScalar;
+    QBmmBlockOffset offset;
+    uint32_t n;
+
+    __aicore__ EpilogueParams(
+        AscendC::GlobalTensor<int32_t> &curMmOutGm,
+        AscendC::GlobalTensor<yType> &yGm,
+        AscendC::GlobalTensor<bfloat16_t> &biasGmBf16,
+        AscendC::GlobalTensor<half> &biasGmFp16,
+        AscendC::GlobalTensor<float> &biasGmFp32,
+        AscendC::GlobalTensor<scaleType> &scaleGm,
+        AscendC::GlobalTensor<float> &pertokenScaleGm,
+
+        AscendC::TBuf<AscendC::TPosition::VECCALC> &outFp32Tmp,
+        AscendC::TBuf<AscendC::TPosition::VECCALC> &vecQueTmp,
+        AscendC::TBuf<AscendC::TPosition::VECCALC> &biasFp32Tmp,
+        AscendC::TBuf<AscendC::TPosition::VECCALC> &broadcastFp32Tmp,
+
+        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueSrc,
+        AscendC::TQue<AscendC::QuePosition::VECOUT, 1> &vecQueOut,
+        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueBias,
+        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueScale,
+        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQuePertokenScale,
+
+        uint32_t curAicM,
+        uint32_t curAicN,
+        uint32_t subBlockIdx,
+        uint32_t ubCalcM,
+        uint32_t ubCalcN,
+        uint64_t offsetWorkspaceC,
+        uint32_t biasDtype,
+        uint32_t biasDtypeSize,
+        bool isPerTensor,
+        scaleType scaleScalar,
+        QBmmBlockOffset offset,
+        uint32_t n
+    ):curMmOutGm(curMmOutGm),
+      yGm(yGm), 
+      biasGmBf16(biasGmBf16), 
+      biasGmFp16(biasGmFp16),
+      biasGmFp32(biasGmFp32),
+      scaleGm(scaleGm),
+      pertokenScaleGm(pertokenScaleGm),
+      outFp32Tmp(outFp32Tmp),
+      vecQueTmp(vecQueTmp),
+      biasFp32Tmp(biasFp32Tmp),
+      broadcastFp32Tmp(broadcastFp32Tmp),
+      vecQueSrc(vecQueSrc),
+      vecQueOut(vecQueOut),
+      vecQueBias(vecQueBias),
+      vecQueScale(vecQueScale),
+      vecQuePertokenScale(vecQuePertokenScale),
+      curAicM(curAicM),
+      curAicN(curAicN),
+      subBlockIdx(subBlockIdx),
+      ubCalcM(ubCalcM),
+      ubCalcN(ubCalcN),
+      offsetWorkspaceC(offsetWorkspaceC),
+      biasDtype(biasDtype),
+      biasDtypeSize(biasDtypeSize),
+      isPerTensor(isPerTensor),
+      scaleScalar(scaleScalar),
+      offset(offset),
+      n(n)
+      {}
+};
+#endif
 
 enum class BasicQuantMode : uint32_t {
     DEFAULT = 0x0U,

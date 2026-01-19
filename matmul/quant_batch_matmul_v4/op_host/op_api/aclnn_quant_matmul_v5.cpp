@@ -26,35 +26,11 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "aclnn_quant_matmul_v5.h"
+#include "quant_matmul_common_check.h"
 
 using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
-using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
-using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
-                              const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &,
-                              const int64_t &>;
-using TupleAttr = std::tuple<bool, bool>;
-using TupleTensor = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>;
-
 namespace {
-static constexpr int INDEX_X1_IN_INPUT_TUPLE = 0;
-static constexpr int INDEX_X2_IN_INPUT_TUPLE = 1;
-static constexpr int INDEX_X1_SCALE_IN_QUANT_TUPLE = 0;
-static constexpr int INDEX_X2_SCALE_IN_QUANT_TUPLE = 1;
-static constexpr int INDEX_Y_SCALE_IN_QUANT_TUPLE = 2;
-static constexpr int INDEX_X1_OFFSET_IN_QUANT_TUPLE = 3;
-static constexpr int INDEX_X2_OFFSET_IN_QUANT_TUPLE = 4;
-static constexpr int INDEX_Y_OFFSET_IN_QUANT_TUPLE = 5;
-static constexpr int INDEX_BIAS_IN_QUANT_TUPLE = 6;
-static constexpr int INDEX_GROUP_SIZE_IN_QUANT_TUPLE = 7;
-static constexpr int INDEX_INTERFACE_TYPE_IN_QUANT_TUPLE = 8;
-static constexpr int INDEX_OUT_IN_TUPLE = 2;
-
-static const int64_t INT4_NUMS_IN_INT32 = 8;
-static const size_t MIN_DIM_NUM_ND = 2;
-static const size_t MAX_DIM_NUM_ND = 6;
-static const size_t MIN_DIM_NUM_NZ = 4;
-static const size_t MAX_DIM_NUM_NZ = 8;
 static const size_t MAX_SCALE_DIM = 2;
 static const size_t MX_SCALE_MAX_DIM = 3;
 static const size_t PENULTIMATE_DIM = 2;
@@ -606,42 +582,6 @@ static aclnnStatus CheckParams(const QuantMatmulChecker& qmmV3Checker, bool isA8
     return ACLNN_SUCCESS;
 }
 
-static bool CheckSpecialCase(const aclTensor *tensor, int64_t firstLastDim, int64_t secondLastDim) {
-    if (tensor->GetViewShape().GetDim(firstLastDim) == tensor->GetViewShape().GetDim(secondLastDim)) {
-        OP_LOGD("QuantMatmul special case, no need to set transpose attr value.");
-        return true;
-    }
-    return false;
-}
-
-static bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose) {
-    int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
-    int64_t dim2 = tensor->GetViewShape().GetDimNum() - PENULTIMATE_DIM;
-    // check if tensor is contiguous layout
-    if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
-        OP_LOGD("QuantMatmul GetTransposeAttrValue, find tensor is not contiguous.");
-        const_cast<aclTensor *>(tensor)->SetViewShape(SwapLastTwoDimValue(tensor->GetViewShape()));
-        if (!CheckSpecialCase(tensor, dim1, dim2)) {
-            return !transpose;
-        }
-    }
-    return transpose;
-}
-
-static const aclTensor* SetTensorToNDFormat(const aclTensor *input) {
-    OP_LOGD("QuantMatmul set tensor to ND format.");
-    const aclTensor* output = nullptr;
-    if (input == nullptr) {
-        return output;
-    }
-    if (input->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
-        output = l0op::ReFormat(input, op::Format::FORMAT_ND);
-    } else {
-        output = input;
-    }
-    return output;
-}
-
 static aclIntArray* GetPerm(int64_t dim, aclOpExecutor* executor) {
     CHECK_RET(static_cast<size_t>(dim) >= MIN_DIM_NUM_ND, nullptr);
     std::vector<int64_t> valuePerm(dim);
@@ -716,116 +656,6 @@ static inline bool MxScaleContiguousProcess(const aclTensor *&mxScaleTensor, acl
     return true;
 }
 
-// 二维及以上的tensor都需要调
-static inline bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose,
-                                           aclOpExecutor *executor) {
-    if (contiguousTensor == nullptr || contiguousTensor->GetViewShape().GetDimNum() == 1) {
-        OP_LOGD("QuantMatmul no need to do contiguous process.");
-        return true;
-    }
-    auto transposeFlag = IsTransposeLastTwoDims(contiguousTensor);
-    // swap tensor if its viewshape not satisfy request shape without adding a transpose node
-    if (transposeFlag) {
-        contiguousTensor = executor->CreateView(contiguousTensor, SwapLastTwoDimValue(contiguousTensor->GetViewShape()),
-                                                contiguousTensor->GetViewOffset());
-        transpose = !transpose;
-    } else {
-        contiguousTensor = l0op::Contiguous(contiguousTensor, executor);
-    }
-    CHECK_RET(contiguousTensor != nullptr, false);
-    return true;
-}
-
-static aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* executor)
-{
-    // 将int32的输入dtype修改为int4, 同时ViewShape和ViewStrides也从int32修改为int4所对应的。
-    auto viewShape = input->GetViewShape();
-    viewShape[viewShape.GetDimNum() - 1] = viewShape[viewShape.GetDimNum() - 1] * INT4_NUMS_IN_INT32;
-    auto inputTemp = executor->CreateView(input, viewShape, input->GetViewOffset());
-    inputTemp->SetDataType(DataType::DT_INT4);
-    OP_LOGD("The conversion from int32 to int4 is completed.");
-    return inputTemp;
-}
-
-static aclnnStatus SetSpecilNZTensorToNormalNZFormat(const aclTensor *&input, aclOpExecutor *executor) {
-    OP_LOGD("QuantMatmulV4 set special NZ format to normal NZ format.");
-    auto nzTensorTmp =  executor->CreateView(input, input->GetViewShape(), input->GetViewOffset());
-    CHECK_RET(nzTensorTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    nzTensorTmp->SetViewFormat(op::Format::FORMAT_ND);
-    nzTensorTmp->SetOriginalFormat(op::Format::FORMAT_ND);
-    nzTensorTmp->SetStorageFormat(op::Format::FORMAT_FRACTAL_NZ);
-    nzTensorTmp->SetStorageShape(input->GetStorageShape());
-    nzTensorTmp->SetOriginalShape(input->GetOriginalShape());
-    input = nzTensorTmp;
-    return ACLNN_SUCCESS;
-}
-
-static aclnnStatus WeightNZCaseProcess(const aclTensor *&x2, bool &transposeX2, aclOpExecutor *executor) {
-    // if weight is already in nz format, no need to set contiguous
-    if (ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ ||
-        ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32) {
-        x2->SetOriginalShape(x2->GetViewShape());
-        if (ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32) {
-            CHECK_RET(SetSpecilNZTensorToNormalNZFormat(x2, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-        }
-    } else {
-        CHECK_RET(TensorContiguousProcess(x2, transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
-    }
-    return ACLNN_SUCCESS;
-}
-
-static void InputPreProcessA4W4(const aclTensor *&x1, const aclTensor *&x2, aclOpExecutor *executor)
-{
-    if (x2->GetDataType() == DataType::DT_INT32) {
-        x2 = ConvertTensorToInt4(x2, executor);
-    }
-    if (x1->GetDataType() == DataType::DT_INT32) {
-        x1 = ConvertTensorToInt4(x1, executor);
-    }
-}
-
-static aclnnStatus A4W4CaseProcess(const aclTensor *&x1, const aclTensor *&x2, aclOpExecutor *executor) {
-    InputPreProcessA4W4(x1, x2, executor);
-    return ACLNN_SUCCESS;
-}
-
-static aclnnStatus SpecialOutputProcess(const aclTensor *x1, const aclTensor *x2, const aclTensor *out,
-                                        const aclTensor *&matmulRet, aclOpExecutor* executor) {
-    // we have to reshape for case which x1 and x2 are 2 dims and out is 3 dims, otherwise, viewcopy will fail
-    OP_LOGD("QuantMatmul enter SpecialOutputProcess func.");
-    auto outShape = out->GetViewShape();
-    auto outDimNum = outShape.GetDimNum();
-    int64_t outMDim = outShape.GetDim(outDimNum - 2);
-    auto x1DimNum = x1->GetViewShape().GetDimNum();
-    auto x2DimNum = x2->GetViewShape().GetDimNum();
-    // speical case : x1 and x2 are 2 dim, output is 3 dim, have to reshape matmul result, otherwise viewcopy will fail.
-    if (x1DimNum == 2 && x2DimNum == 2 && outDimNum == 3 && outMDim == 1) {
-        matmulRet = l0op::Reshape(matmulRet, outShape, executor);
-    }
-    CHECK_RET(matmulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    return ACLNN_SUCCESS;
-}
-
-static const aclTensor* GetNDFormat(const aclTensor *input) {
-    const aclTensor* reformatedInput = input;
-    if (input != nullptr) {
-        reformatedInput = SetTensorToNDFormat(input);
-    }
-    return reformatedInput;
-}
-
-static aclnnStatus PostMatmulCalcProcess(const aclTensor *matmulRet, const aclTensor *x1, const aclTensor *x2,
-                                         const aclTensor *out, aclOpExecutor *executor) {
-    CHECK_RET(matmulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(SpecialOutputProcess(x1, x2, out, matmulRet, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-
-    // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
-    auto viewCopyResult = l0op::ViewCopy(matmulRet, out, executor);
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    return ACLNN_SUCCESS;
-}
-
 static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &quantTensors,
                                         TupleAttr &boolsTrans, const aclTensor *out,
                                         bool& isA8W4, aclOpExecutor *executor) {
@@ -873,17 +703,6 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &qu
     }
     A4W4CaseProcess(x1, x2, executor);
     return ACLNN_SUCCESS;
-}
-
-static void GetDtypeAndTranspose(TupleTensor mandatoryTensors, int64_t &dtype, bool &transposeX1,
-                                 bool &transposeX2) {
-    auto x1 = std::get<0>(mandatoryTensors);
-    auto x2 = std::get<1>(mandatoryTensors);
-    auto out = std::get<INDEX_OUT_IN_TUPLE>(mandatoryTensors);
-    dtype = static_cast<int64_t> (out->GetDataType());
-    transposeX1 = GetTransposeAttrValue(x1, transposeX1);
-    transposeX2 = GetTransposeAttrValue(x2, transposeX2);
-    OP_LOGD("QuantMatmul attr transposeX1 is %d, transposeX2 is %d.", transposeX1, transposeX2);
 }
 
 static aclTensor* ProcessScaleTensor(const aclTensor *scale) {

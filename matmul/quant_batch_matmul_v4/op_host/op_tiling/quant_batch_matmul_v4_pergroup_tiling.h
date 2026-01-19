@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /*!
- * \file quant_batch_matmul_v3_pergroup_tiling.h
+ * \file quant_batch_matmul_v4_pergroup_tiling.h
  * \brief
  */
 
