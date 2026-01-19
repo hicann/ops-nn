@@ -305,7 +305,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_test_FLOAT64) {
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // test_dtype: index_dtype = int64, self_dtype = COMPLEX64
@@ -329,7 +329,7 @@ TEST_F(l2GatherV2Test, l2_gather_v2_test_COMPLEX64) {
   // SAMPLE: only test GetWorkspaceSize
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 // test_dtype: index_dtype = int64, self_dtype = BFLOAT16
 TEST_F(l2GatherV2Test, l2_gather_v2_test_BFLOAT16) {

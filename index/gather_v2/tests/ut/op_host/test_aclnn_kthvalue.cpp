@@ -84,7 +84,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_fp32) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，float32，dim为-1
@@ -97,7 +97,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_fp32_dim_neg1) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，float32, dim为0
@@ -110,7 +110,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_fp32_dim_neg0) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，float32,k为负数
@@ -149,7 +149,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_fp16) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，int8
@@ -162,7 +162,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_int8) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，uint8
@@ -175,7 +175,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_uint8) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，int16
@@ -188,7 +188,7 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_int16) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 用例不支持，complex64

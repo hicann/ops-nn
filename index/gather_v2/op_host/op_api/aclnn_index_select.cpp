@@ -185,6 +185,12 @@ aclnnStatus aclnnIndexSelectGetWorkspaceSize(const aclTensor *self, int64_t dim,
   auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
   CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+  // 判断self是零维的情况：将它转成一维
+  if (selfContiguous->GetViewShape().GetDimNum()==0) {
+    const int64_t zero = 0;
+    selfContiguous = l0op::UnsqueezeNd(selfContiguous, zero, uniqueExecutor.get());
+  }
+
   // index如果非连续，需要转连续
   auto indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
   CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

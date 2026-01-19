@@ -69,7 +69,11 @@ static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BOOL};
 
 static const int64_t MAX_INDICES_NUM = 20000;
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000;
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000; // 维度小于5时的最大索引数限制
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM5 = 54247424; // 维度5时的最大索引数限制
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM6 = 48611328; // 维度6时的最大索引数限制
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM7 = 44384256; // 维度7时的最大索引数限制
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM8 = 40861696; // 维度8时的最大索引数限制
 static const int64_t MAX_RESERVE_NUM = 100;
 static const int64_t MULTI_DTYPE_SUPPORT_NUM = 200;
 static const int64_t MULTI_DTYPE_SUPPORT_TAIL = 128;
@@ -180,6 +184,39 @@ static bool IsAiCPUSupportCheckIndices910_95(const aclTensor *selfRef, const FVe
   return false;
 }
 
+static bool IndexPutV2IndicesNumsLimit(const FVector<const aclTensor*, 8> &indices) {
+  if (indices.size() == 0) {
+    return true;
+  }
+  // 以下情况会在indexPutV2的tiling里被拦截，需要路由到aicpu
+  int64_t indicesNums = static_cast<int64_t>(indices[0]->GetViewShape().GetShapeSize());
+  auto dims = indices.size();
+  OP_LOGD("indices size is %ld, indices nums is %ld", dims, indicesNums);
+  // aclnn中原本的拦截量
+  if (indicesNums > MAX_SUPPORTTYPE_INDICES_NUM) {
+    OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
+    return false;
+  }
+  // 高维需要进一步细化拦截量
+  if (dims == 5 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM5) { // 5 is dims
+    OP_LOGD("IndexPutV2 not support indices num greater than 54247424 when indices size is 5.");
+    return false;
+  }
+  if (dims == 6 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM6) { // 6 is dims
+    OP_LOGD("IndexPutV2 not support indices num greater than 48611328 when indices size is 6.");
+    return false;
+  }
+  if (dims == 7 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM7) { // 7 is dims
+    OP_LOGD("IndexPutV2 not support indices num greater than 44384256 when indices size is 7.");
+    return false;
+  }
+  if (dims == 8 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM8) { // 8 is dims
+    OP_LOGD("IndexPutV2 not support indices num greater than 40861696 when indices size is 8.");
+    return false;
+  }
+  return true;
+}
+
 static bool IsAiCPUSupportCheckIndices(const FVector<const aclTensor*, 8>& indices,
                                        const aclTensor* value)
 {
@@ -256,8 +293,7 @@ static bool IsAiCPUSupport(const aclTensor *selfRef, const FVector<const aclTens
   }
 
   // tiling失败走aicpu逻辑
-  if (indices[0]->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM) {
-    OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
+  if (!IndexPutV2IndicesNumsLimit(indices)) {
     return true;
   }
   int64_t tailSize = 1;

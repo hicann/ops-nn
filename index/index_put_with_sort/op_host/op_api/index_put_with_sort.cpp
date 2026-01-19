@@ -32,6 +32,9 @@ static const int64_t SLICESIZE_LIMIT = 1024;
 static const int64_t SLICESIZE_BASE = 128;
 static const int64_t INDICES_MIN_LIMIT = 100;
 static const int64_t SLICESIZE_FP16_LIMIT = 30000;
+static const int64_t MEMORY_LIMIT = 250 * 1024 * 1024; // 250M
+static const int64_t SIZE_OF_FLOAT = 4;
+static const int64_t SIZE_OF_HALF = 2;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDEX_PUT_WITH_SORT = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -173,7 +176,7 @@ static bool CheckDataSize(aclTensor *selfRef, const aclTensorList *indices) {
   return true;
 }
 
-static bool IndexPutWithSortBetter(aclTensor *selfRef, const aclTensorList *indices) {
+static bool IndexPutWithSortBetter(aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values) {
   int64_t indicesNums = static_cast<int64_t>((*indices)[0]->GetViewShape().GetShapeSize());
   int64_t sliceSize = 1;
   auto indicesSize = indices->Size();
@@ -202,6 +205,11 @@ static bool IndexPutWithSortBetter(aclTensor *selfRef, const aclTensorList *indi
     // 索引多 或 尾轴大 或 尾轴较大且索引较多
     if (indicesNums >= INDICES_LIMIT || sliceSize >= INDICES_LIMIT ||
         (indicesNums >= INDICES_MIN_LIMIT && sliceSize >= SLICESIZE_FP16_LIMIT)) {
+      return true;
+    }
+    // self和values升精度前后总内存超过250M
+    int64_t dataNums = static_cast<int64_t>(selfRef->GetViewShape().GetShapeSize() + values->GetViewShape().GetShapeSize());
+    if (dataNums * (SIZE_OF_FLOAT + SIZE_OF_HALF) > MEMORY_LIMIT) {
       return true;
     }
   }
@@ -239,7 +247,7 @@ bool IsIndexPutWithSortSupport(aclTensor *selfRef, const aclTensorList *indices,
     return false;
   }
   // 8. indexputv2优势限制
-  if(deterministicValue == 0 && (!IndexPutWithSortBetter(selfRef, indices))) {
+  if(deterministicValue == 0 && (!IndexPutWithSortBetter(selfRef, indices, values))) {
     return false;
   }
   // 9. 非确定性计算的替换模式不走indexputwithsort

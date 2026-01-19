@@ -101,9 +101,14 @@ static const std::string& GetReduceStr(int64_t reduce)
     } else if (reduce == REDUCE_MUL) {
         return REDUCTION_MUL;
     } else if (reduce == REDUCE_MAX) {
+        OP_LOGW("Maximum mode is experimental!");
         return REDUCTION_MAX;
     } else if (reduce == REDUCE_MIN) {
+        OP_LOGW("Minimum mode is experimental!");
         return REDUCTION_MIN;
+    }
+    if (reduce != 0) {
+        OP_LOGW("reduce not in {1,2,3,4}, will use reduce=0 (none).");
     }
     return REDUCTION_NONE;
 }

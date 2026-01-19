@@ -39,7 +39,7 @@ dim为2, index_select(2, index)：   K=index[k]; &nbsp;  out$[l][m][k]$ = self$[
   - self(aclTensor*, 计算输入)：Device侧的aclTensor，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。维度不大于8。
      * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128
   - dim(int64_t, 计算输入)：指定的维度，int64类型，范围[-self.dim(), self.dim() - 1]。
-  - index(aclTensor*, 计算输入)：索引，Device侧的aclTensor，数据类型支持INT64、INT32。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW，且只能是0D或1D（零维的情况：当成是size为1的一维）。index中的索引数据的取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。<。
+  - index(aclTensor*, 计算输入)：索引，Device侧的aclTensor，数据类型支持INT64、INT32。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW，且只能是0D或1D（零维的情况：当成是size为1的一维）。index中的索引数据的取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。
   - out(aclTensor*, 计算输出)：输出Tensor，Device侧的aclTensor，数据类型同self。维数与self一致。**除dim维长度等于index长度外，其他维长度与self相应维一致**。[数据格式](../../../docs/zh/context/数据格式.md)支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。
      * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：FLOAT、FLOAT16、BFLOAT16、INT64、INT32、INT16、INT8、UINT8、UINT16、UINT32、UINT64、BOOL、DOUBLE、COMPLEX64、COMPLEX128
   - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。

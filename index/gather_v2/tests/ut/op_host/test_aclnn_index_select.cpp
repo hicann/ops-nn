@@ -624,7 +624,7 @@ TEST_F(l2IndexSelectTest, l2_index_select_self_0_dim) {
 
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+  EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
 
   ut.TestPrecision();
 }
