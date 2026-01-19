@@ -538,6 +538,10 @@ static ge::graphStatus KernelTiling(gert::TilingContext* context, TilingParams& 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
 
+    if (params.socVersion == platform_ascendc::SocVersion::ASCEND310P) {
+        // Set to batch mode, all cores start simultaneously
+        context->SetScheduleMode(1);
+    }
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = params.atomicAddNum == 0UL ? static_cast<size_t>(WORK_SPACE_SIZE) :
