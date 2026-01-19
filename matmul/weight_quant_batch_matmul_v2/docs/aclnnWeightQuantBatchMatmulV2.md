@@ -258,6 +258,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
   - biasOptional（aclTensor *, 计算输入）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。
     - <term>Ascend 950PR/Ascend 950DT</term>：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT、BFLOAT16。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT或BFLOAT16；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。当`x`的数据类型为BFLOAT16时，同时`weight`类型为FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8时，本参数要求为BFLOAT16
+  
+  - antiquantGroupSize（int, 计算输入）：表示在伪量化pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法不为pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)时传入0；当伪量化算法为pergroup[量化模式](../../../docs/zh/context/量化介绍.md)时传入值的范围为[32, k-1]且值要求是32的倍数；在mx[量化模式](../../../docs/zh/context/量化介绍.md)，仅支持32。
 
   - y（aclTensor *, 计算输出）：
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：维度支持2维，shape支持(m, n)。数据类型支持FLOAT16、BFLOAT16、INT8。当`quantScaleOptional`存在时，数据类型为INT8；当`quantScaleOptional`不存在时，数据类型支持FLOAT16、BFLOAT16，且与输入`x`的数据类型一致。
