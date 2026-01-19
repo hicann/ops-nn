@@ -4,12 +4,14 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+
 
 ## 功能说明
 
-- 算子功能：完成矩阵乘计算，然后和向量相加。
+- 接口功能：完成矩阵乘计算，然后和向量相加。
 - 计算公式：
 
   $$
@@ -42,17 +44,7 @@ aclnnStatus aclnnAddmv(
 
 ## aclnnAddmvGetWorkspaceSize
 
-- **参数说明：**
-
-  * cubeMathType（INT8，计算输入）：用于指定Cube单元的计算逻辑，Host侧的整型。数据类型支持INT8。注意：如果输入的数据类型存在互推导关系，该参数默认对互推导后的数据类型进行处理。支持的枚举值如下：
-    * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
-    * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
-      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
-    * 2：USE_FP16，支持将输入降精度至FLOAT16计算。
-    * 3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。
-      * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。
-  * workspaceSize(uint64_t\*, 出参)：返回需要在Device侧申请的workspace大小。
-  * executor(aclOpExecutor\*\*, 出参)：返回op执行器，包含了算子计算流程。
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
   <col style="width: 149px">
@@ -79,10 +71,10 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>Device侧的aclTensor，需要和后续乘法结果相加的1维向量。</td>
-      <td><ul><li>数据类型需要与 mat@vec 构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a></li>
-      <li>shape在alpha不为0时需要与 mat1@vec 满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a></li>
-      <li>alpha为0时需要与 mat1@vec 相同</li></ul></td>
+      <td>需要和后续乘法结果相加的1维向量。</td>
+      <td><ul><li>数据类型需要与 mat@vec 构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <li>shape在alpha不为0时需要与 mat@vec 满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系。</a></li>
+      <li>alpha为0时需要与 mat@vec 相同。</li></ul></td>
       <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
@@ -91,9 +83,9 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>mat</td>
       <td>输入</td>
-      <td>Device侧的aclTensor，和vec进行乘法运算的2维矩阵。</td>
-      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a></li>
-      <li>shape需要与 vec 满足乘法关系</ul></td>
+      <td>和vec进行乘法运算的2维矩阵。</td>
+      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <li>shape需要与 vec 满足乘法关系。</ul></td>
       <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
@@ -102,9 +94,9 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>vec</td>
       <td>输入</td>
-      <td>Device侧的aclTensor，和mat进行乘法运算的1维向量。</td>
-      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a></li>
-      <li>shape需要与 mat 满足乘法关系</ul></td>
+      <td>和mat进行乘法运算的1维向量。</td>
+      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <li>shape需要与 mat 满足乘法关系。</ul></td>
       <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
@@ -113,7 +105,7 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>alpha</td>
       <td>输入</td>
-      <td>公式中的α，Host侧的aclScalar，mat和vec乘积的系数</td>
+      <td>公式中的α，mat和vec乘积的系数。</td>
       <td>-</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8</td>
       <td>-</td>
@@ -123,7 +115,7 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>beta</td>
       <td>输入</td>
-      <td>公式中的β，Host侧的aclScalar，self的系数</td>
+      <td>公式中的β，self的系数。</td>
       <td>-</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8</td>
       <td>ND</td>
@@ -133,9 +125,9 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>Device侧的aclTensor，指定的1维输出向量</td>
-      <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/互推导关系.md">推导后的数据类型</a></li>
-      <li>shape与mat和vec的乘积相同</ul></td>
+      <td>指定的1维输出向量。</td>
+      <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/互推导关系.md">推导后的数据类型。</a></li>
+      <li>shape与mat和vec的乘积相同。</ul></td>
       <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
@@ -178,21 +170,22 @@ aclnnStatus aclnnAddmv(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
+
   第一段接口完成入参校验，出现如下场景时报错：
 
-  <table style="undefined;table-layout: fixed; width: 887px"><colgroup>
-  <col style="width: 300px">
-  <col style="width: 200px">
-  <col style="width: 700px">
+  <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
+  <col style="width: 281px">
+  <col style="width: 119px">
+  <col style="width: 749px">
   </colgroup>
   <thead>
     <tr>
@@ -225,11 +218,12 @@ aclnnStatus aclnnAddmv(
 
 ## aclnnAddmv
 
-- **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
-  <col style="width: 230px">
-  <col style="width: 150px">
-  <col style="width: 750px">
+- **参数说明**
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 168px">
+  <col style="width: 128px">
+  <col style="width: 854px">
   </colgroup>
   <thead>
     <tr>
@@ -261,16 +255,20 @@ aclnnStatus aclnnAddmv(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmv默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmv默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
