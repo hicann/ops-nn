@@ -19,7 +19,7 @@
 
 using namespace std;
 
-class l2_scatter_add_test : public testing::Test {
+class l2_scatter_add_test_elements : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "Scatter Add Test Setup" << endl; }
     static void TearDownTestCase() { cout << "Scatter Add Test TearDown" << endl; }
@@ -33,7 +33,7 @@ public:
 };
 
 // 空tensor
-TEST_F(l2_scatter_add_test, case_2)
+TEST_F(l2_scatter_add_test_elements, case_2)
 {
     auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
         .Precision(0.0001, 0.0001);
@@ -50,7 +50,7 @@ TEST_F(l2_scatter_add_test, case_2)
 }
 
 // checkNotNull self index src
-TEST_F(l2_scatter_add_test, case_3)
+TEST_F(l2_scatter_add_test_elements, case_3)
 {
     auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
         .Precision(0.0001, 0.0001);
@@ -77,7 +77,7 @@ TEST_F(l2_scatter_add_test, case_3)
 }
 
 // checkNotNull out
-TEST_F(l2_scatter_add_test, case_4)
+TEST_F(l2_scatter_add_test_elements, case_4)
 {
     auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
         .Precision(0.0001, 0.0001);
@@ -92,7 +92,7 @@ TEST_F(l2_scatter_add_test, case_4)
 }
 
 // CheckDtype different dtype of input
-TEST_F(l2_scatter_add_test, case_7)
+TEST_F(l2_scatter_add_test_elements, case_7)
 {
     auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
@@ -111,7 +111,7 @@ TEST_F(l2_scatter_add_test, case_7)
 
 
 // CheckShape 1 index > self
-TEST_F(l2_scatter_add_test, case_9)
+TEST_F(l2_scatter_add_test_elements, case_9)
 {
     auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
@@ -129,7 +129,7 @@ TEST_F(l2_scatter_add_test, case_9)
 }
 
 // CheckShape 1 index > src
-TEST_F(l2_scatter_add_test, case_10)
+TEST_F(l2_scatter_add_test_elements, case_10)
 {
     auto self_desc = TensorDesc({3, 4}, ACL_DOUBLE, ACL_FORMAT_ND)
         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})

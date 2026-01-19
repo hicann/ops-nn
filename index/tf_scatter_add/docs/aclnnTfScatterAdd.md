@@ -36,7 +36,7 @@ $$
   * indices(aclTensor*，计算输入)：公式中的输入`indices`，要更新的索引位置，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维数支持1~8维，indices中的索引数据不支持越界，若出现索引越界，则不对varRef进行更新。数据类型支持INT32、INT64。
   * updates(aclTensor*，计算输入)：公式中的输入`updates`，要添加到`varRef`中的更新值，Device侧的aclTensor。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，维数支持1~8维，数据类型需要与varRef一致。数据类型支持FLOAT32，FLOAT16，BFLOAT16，INT32，INT8，UINT8。
   * workspaceSize(uint64_t *，计算输入)：返回需要在Device侧申请的workspace大小。
-  * executor(uint64_t *，出参)：返回op执行器，包含了算子计算流程。
+  * executor(aclOpExecutor\**，出参)：返回op执行器，包含了算子计算流程。
 
 - **返回值**
 

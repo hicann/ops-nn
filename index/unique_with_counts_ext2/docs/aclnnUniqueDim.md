@@ -66,7 +66,7 @@
 
 - **参数说明**：
 
-  - self（aclTensor\*, 计算输入）：示例中的`self`，Device侧的aclTensor。shape支持0-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - self（aclTensor\*, 计算输入）：示例中的`self`，Device侧的aclTensor。shape支持1-8维。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、UINT32、INT32、UINT64、INT64、DOUBLE、BOOL、BFLOAT16。
   - sorted（bool, 计算输入）：表示返回的输出结果`valueOut`是否排序。
   - returnInverse（bool, 计算输入）：表示是否返回`self`在`dim`轴上各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。
@@ -107,7 +107,8 @@
 
 - 确定性计算：
   - aclnnUniqueDim默认确定性实现。
-
+- 性能：
+ 	- A2、A3及训练系列产品上，当self在dim上的维度值超过2亿时，性能很差甚至是运行超时。
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
