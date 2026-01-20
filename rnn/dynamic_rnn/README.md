@@ -4,42 +4,45 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
+|Ascend 950PR/Ascend 950DT|×|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
-|Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|√|
+|Atlas 训练系列产品|×|
 
 ## 功能说明
 
 - 算子功能：基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。
-- 算子公式：
-以LSTM格式为例给定输入 $x_t$、前一时刻隐藏状态 $h_{t-1}$ 和细胞状态 $c_{t-1}$，DynamicRNN的计算过程如下：
+- 算子公式：以LSTM格式为例给定输入 $x_t$、前一时刻隐藏状态 $h_{t-1}$ 和细胞状态 $c_{t-1}$，DynamicRNN的计算过程如下：
 
-1. **遗忘门** (Forget Gate):
-   $$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$$
+    1. **遗忘门** (Forget Gate):
+       $$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$$
 
-2. **输入门** (Input Gate):
-   $$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$$
-   $$\tilde{c}_t = \tanh(W_c \cdot [h_{t-1}, x_t] + b_c)$$
+    2. **输入门** (Input Gate):
+       $$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$$
+       $$\tilde{c}_t = \tanh(W_c \cdot [h_{t-1}, x_t] + b_c)$$
 
-3. **细胞状态更新**:
-   $$c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t$$
+    3. **细胞状态更新**:
+       $$c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t$$
 
-4. **输出门** (Output Gate):
-   $$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$$
-   $$h_t = o_t \odot \tanh(c_t)$$
+    4. **输出门** (Output Gate):
+       $$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$$
+       $$h_t = o_t \odot \tanh(c_t)$$
 
-其中：
-- $\sigma$ 是 sigmoid 函数
-- $\odot$ 表示逐元素乘法 (Hadamard product)
-- $W_*$ 是可学习的权重矩阵
-- $b_*$ 是可学习的偏置项
+    其中：
+    - $\sigma$ 是 sigmoid 函数
+    - $\odot$ 表示逐元素乘法 (Hadamard product)
+    - $W_*$ 是可学习的权重矩阵
+    - $b_*$ 是可学习的偏置项
 
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
-  <col style="width: 20px">
-  <col style="width: 30px">
   <col style="width: 150px">
-  <col style="width: 50px">
+  <col style="width: 150px">
+  <col style="width: 470px">
+  <col style="width: 170px">
   <col style="width: 50px">
   </colgroup>
   <thead>
@@ -241,6 +244,8 @@
       <td>-</td>
     </tr>
   </tbody></table>
+
+- Atlas 推理系列产品：不支持BFLOAT16。
 
 ## 约束说明
 
