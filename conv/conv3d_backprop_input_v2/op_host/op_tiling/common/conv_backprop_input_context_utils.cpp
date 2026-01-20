@@ -518,7 +518,9 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
   if (IsSocVersionFuse(context)) {
     bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
       (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
-    dtypeSupportFlag = isFp16Flag || isInt8Flag;
+    bool isFp16Int8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_INT8 &&
+      (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
+    dtypeSupportFlag = isFp16Flag || isInt8Flag || isFp16Int8Flag;
     dtypeCheckLog = "fp16 and int8";
   }
   OP_CHECK_IF(
@@ -586,7 +588,9 @@ static bool UpdateShapeParams(const gert::TilingContext *context, const Conv3dBp
   otherParams.a_shape.w = out_backprop_shape_ncdhw.w;
   // only support fp16 now
   otherParams.a_shape.c0 = kDtypeBlockReduceMap.at(otherParams.a_dtype);
-  otherParams.a_shape.c1 = Ops::Base::CeilDiv(otherParams.a_shape.c, otherParams.a_shape.c0);
+  otherParams.b_shape.c0 = kDtypeBlockReduceMap.at(otherParams.b_dtype);
+  otherParams.a_shape.c1 = Ops::Base::CeilDiv(otherParams.a_shape.c, otherParams.b_shape.c0);
+  otherParams.b_shape.c1 = Ops::Base::CeilDiv(otherParams.b_shape.c, otherParams.b_shape.c0);
   // c_shape means y shape
   otherParams.c_shape.c = y_shape_ncdhw.c;
   otherParams.c_shape.d = y_shape_ncdhw.d;
@@ -603,8 +607,6 @@ static bool UpdateShapeParams(const gert::TilingContext *context, const Conv3dBp
   otherParams.filter_d_dilation = (otherParams.b_shape.d - 1) * runInfoV2.dilation_d + 1;
   otherParams.filter_h_dilation = (otherParams.b_shape.h - 1) * runInfoV2.dilation_h + 1;
   otherParams.filter_w_dilation = (otherParams.b_shape.w - 1) * runInfoV2.dilation_w + 1;
-  otherParams.b_shape.c0 = kDtypeBlockReduceMap.at(otherParams.b_dtype);
-  otherParams.b_shape.c1 = Ops::Base::CeilDiv(otherParams.b_shape.c, otherParams.b_shape.c0);
 
   return true;
 }
@@ -635,7 +637,7 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
     otherParams.filter_co0 = BYTE_BLOCK / runInfoV2.b_dtype_bytes;
     otherParams.co1g = Ops::Base::CeilDiv(
       otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups,
-      otherParams.c_shape.c0);
+      otherParams.b_shape.c0);
     otherParams.filter_ci0 = kBlockSize;
   }
   otherParams.co1g_reduce = otherParams.co1g;
@@ -649,13 +651,11 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   const auto &y_ori_shape = y_shape->GetOriginShape();
   const auto op_name = context->GetNodeName();
   OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "out_backprop ori shape dim nums is invalid."),
-              return false);
+              OP_LOGE(op_name, "out_backprop origin shape dim nums = %zu should be 5", out_backprop_ori_shape.GetDimNum()), return false);
   OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "filter ori shape dim nums is invalid."),
-              return false);
+              OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5", filter_ori_shape.GetDimNum()), return false);
   OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "y ori shape dim nums is invalid."), return false);
+              OP_LOGE(op_name, "y origin shape dim nums = %zu should be 5", y_ori_shape.GetDimNum()), return false);
 
   Shape out_backprop_shape_ncdhw;
   Shape filter_shape_ncdhw;
@@ -695,24 +695,24 @@ static bool GetShapeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo 
   auto filter_ori_format = filter_desc->GetOriginFormat();
   auto y_ori_format = y_desc->GetOriginFormat();
   OP_CHECK_IF(out_backprop_ori_format != y_ori_format,
-              OP_LOGE(op_name, "y(dedx) ori format[%s] should be same with out_backprop ori format[%s].",
+              OP_LOGE(op_name, "y origin format[%s] should be same with out_backprop origin format[%s].",
                       ge::TypeUtils::FormatToSerialString(y_ori_format).c_str(),
                       ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
               return false);
   OP_CHECK_IF(out_backprop_ori_format != ge::FORMAT_NDHWC && out_backprop_ori_format != ge::FORMAT_NCDHW,
-              OP_LOGE(op_name, "out_backprop ori format[%s] should be NDHWC or NCDHW.",
+              OP_LOGE(op_name, "out_backprop origin format[%s] should be NDHWC or NCDHW.",
                       ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
               return false);
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
-                OP_LOGE(op_name, "filter ori format[%s] should be NDHWC/NCDHW/DHWCN.",
+                OP_LOGE(op_name, "filter origin format[%s] should be NDHWC/NCDHW/DHWCN.",
                         ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str()),
                 return false);
     OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index),
                 OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
   } else {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
-                OP_LOGE(op_name, "filter ori format should be NDHWC or NCDHW or DHWCN."), return false);
+                OP_LOGE(op_name, "filter origin format should be NDHWC or NCDHW or DHWCN."), return false);
     auto out_backprop_format = static_cast<ge::Format>(ge::GetPrimaryFormat(out_backprop_desc->GetStorageFormat()));
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
     auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
@@ -774,12 +774,14 @@ static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Co
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     bool invalidFilterFormat = runInfoV2.filterFormat != ge::FORMAT_NCDHW &&
       runInfoV2.filterFormat != ge::FORMAT_NDHWC && runInfoV2.filterFormat != ge::FORMAT_DHWCN;
-    bool invalidFormat = runInfoV2.outBackpropFormat != ge::FORMAT_NCDHW || invalidFilterFormat ||
-        runInfoV2.yFormat != ge::FORMAT_NCDHW;
+    bool invalidOutBackpropFormat = runInfoV2.outBackpropFormat != ge::FORMAT_NCDHW &&
+        runInfoV2.outBackpropFormat != ge::FORMAT_NDHWC;
+    bool invalidYFormat = runInfoV2.yFormat != ge::FORMAT_NCDHW && runInfoV2.yFormat != ge::FORMAT_NDHWC;
+    bool invalidFormat = invalidOutBackpropFormat || invalidFilterFormat || invalidYFormat;
     OP_CHECK_IF(
         runInfoV2.groups != 1 && invalidFormat,
         CUBE_INNER_ERR_REPORT(context->GetNodeName(),
-        "When groups(%d) > 1, out_backprop_format[%s] is limited to NCDHW, y_format[%s] is limited to NCDHW, "
+        "When groups(%d) > 1, out_backprop_format[%s] is limited to NCDHW/NDHWC, y_format[%s] is limited to NCDHW/NDHWC, "
             "filter_format[%s] are limited to NCDHW/NDHWC/DHWCN.",
         runInfoV2.groups,
         ge::TypeUtils::FormatToSerialString(runInfoV2.outBackpropFormat).c_str(),
@@ -857,7 +859,7 @@ static bool HandleConv3DTranspose(gert::TilingContext *context, const Conv3dBpIn
   return true;
 }
 
-bool CheckCalPads(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams) {
+static bool CheckCalPads(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, optiling::OpTypeV2 op_type, const OtherParams& otherParams) {
   int64_t do_expect = (otherParams.c_shape.d + runInfoV2.pad_h +
                       runInfoV2.pad_t - otherParams.filter_d_dilation) /
                       runInfoV2.stride_d + 1;
@@ -867,17 +869,13 @@ bool CheckCalPads(const gert::TilingContext *context, const Conv3dBpInputV2RunIn
   int64_t wo_expect = (otherParams.c_shape.w + runInfoV2.pad_l +
                       runInfoV2.pad_r - otherParams.filter_w_dilation) /
                       runInfoV2.stride_w + 1;
-  OP_CHECK_IF(do_expect != otherParams.a_shape.d || ho_expect != otherParams.a_shape.h || wo_expect != otherParams.a_shape.w,
-              OP_LOGE(context->GetNodeName(), "out_backprop's shape[%ld,%ld,%ld,%ld,%ld] is not equal with inferred shape[%ld,%ld,%ld,%ld,%ld]",
-                      otherParams.a_shape.batch,
-                      otherParams.a_shape.c,
-                      otherParams.a_shape.d,
-                      otherParams.a_shape.h,
-                      otherParams.a_shape.w,
-                      otherParams.a_shape.batch,
-                      otherParams.a_shape.c,
-                      do_expect, ho_expect, wo_expect),
-              return false);
+  std::string check_input_name = (op_type == optiling::OpTypeV2::kConv3DTransposeV2) ? "x" : "out_backprop";
+  OP_CHECK_IF(do_expect != otherParams.a_shape.d, OP_LOGE(context->GetNodeName(), "%s's D = %ld is not equal with inferred D = %ld",
+              check_input_name.c_str(), otherParams.a_shape.d, do_expect), return false);
+  OP_CHECK_IF(ho_expect != otherParams.a_shape.h, OP_LOGE(context->GetNodeName(), "%s's H = %ld is not equal with inferred H = %ld",
+              check_input_name.c_str(), otherParams.a_shape.h, ho_expect), return false);
+  OP_CHECK_IF(wo_expect != otherParams.a_shape.w, OP_LOGE(context->GetNodeName(), "%s's W = %ld is not equal with inferred W = %ld",
+              check_input_name.c_str(), otherParams.a_shape.w, wo_expect), return false);
   return true;
 }
 
@@ -931,7 +929,7 @@ static bool CalPads(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInf
     OP_CHECK_IF(!HandleConv3DTranspose(context, runInfoV2, otherParams), OP_LOGE(context, "Failed to process Conv3DTranspose."), return false);
   }
 
-  return CheckCalPads(context, runInfoV2, otherParams);
+  return CheckCalPads(context, runInfoV2, op_type, otherParams);
 }
 
 static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
@@ -1864,7 +1862,7 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
             OP_LOGE(context, "failed to get impl mode"), return false);
     }
 
-    if (!CheckCalPads(context, runInfoV2, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
+    if (!CheckCalPads(context, runInfoV2, opType, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
         !CheckAttrs(runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(runInfoV2, context->GetNodeName(), otherParams)) {
         OP_LOGE(context, "params is invalid");
         return false;
