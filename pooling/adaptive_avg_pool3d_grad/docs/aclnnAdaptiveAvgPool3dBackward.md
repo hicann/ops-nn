@@ -1,54 +1,201 @@
 # aclnnAdaptiveAvgPool3dBackward
 ## 产品支持情况
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool3d_grad)
+
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                   |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
-算子功能：[aclnnAdaptiveAvgPool3d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) 的反向计算。
+[aclnnAdaptiveAvgPool3d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) 的反向计算。
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveAvgPool3dBackward”接口执行计算。
-
-- `aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnAdaptiveAvgPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)`
-
+```Cpp
+aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
+  const aclTensor   *gradOutput,
+  const aclTensor   *self,
+  aclTensor         *out,
+  uint64_t          *workspaceSize,
+  aclOpExecutor     **executor)
+```
+```Cpp
+aclnnStatus aclnnAdaptiveAvgPool3dBackward(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 ## aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize
 
 - **参数说明：**
-
-  - gradOutput（aclTensor*，计算输入）：当前节点的梯度，Device侧的aclTensor。数据类型支持BFLOAT16、FLOAT16、FLOAT32，且数据类型与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持4维或5维，shape的每一维均为正数，且总维数与self一致。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND，且需要与self数据格式一致。
-  - self(aclTensor\*, 计算输入)：输入张量，叶子节点。Device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，shape支持4维或5维，且shape的每一维均为正数。[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND。
-  - out(aclTensor\*, 计算输出)：输出张量，对应了输入叶子节点的梯度。Device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32；shape与self保持一致；[数据格式](../../../docs/zh/context/数据格式.md)支持NCDHW、ND，且与self数据类型一致。
-  - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1453px"><colgroup>
+  <col style="width: 154px">
+  <col style="width: 121px">
+  <col style="width: 208px">
+  <col style="width: 226px">
+  <col style="width: 275px">
+  <col style="width: 186px">
+  <col style="width: 138px">
+  <col style="width: 146px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>gradOutput</td>
+      <td>输入</td>
+      <td>当前节点的梯度。</td>
+      <td>数据类型与self一致，NC维度和sekf保持一致。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>NCDHW、ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>叶子节点。</td>
+      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>NCDHW、ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>对应了输入叶子节点的梯度。</td>
+      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>NCDHW、ND</td>
+      <td>4-5</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的gradOutput、self或out是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID)：1. gradOutput和self的数据类型和数据格式不在支持的范围之内。
-                                        2. gradOutput、self和out数据类型不一致。
-                                        3. gradOutput、self和out的维数不等于4或5。
-                                        4. gradOutput、self和out的shape不匹配。
-                                        5. gradOutput或self的shape的某一维不大于0。
-                                        6. gradOutput和self的数据格式不一致。
-                                        7. NC维度不一致。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+    <col style="width: 267px">
+    <col style="width: 124px">
+    <col style="width: 775px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回码</th>
+        <th>错误码</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的gradOutput、self或out是空指针。</td>
+      </tr>
+      <tr>
+        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="7">161002</td>
+        <td>gradOutput和self的数据类型和数据格式不在支持的范围之内。</td>
+      </tr>
+      <tr>
+        <td>gradOutput、self和out数据类型不一致。</td>
+      </tr>
+      <tr>
+        <td>gradOutput、self和out的维数不等于4或5。</td>
+      </tr>
+      <tr>
+        <td>gradOutput、self和out的shape不匹配。</td>
+      </tr>
+      <tr>
+        <td>gradOutput或self的shape的某一维不大于0。</td>
+      </tr>
+      <tr>
+        <td>gradOutput和self的数据格式不一致。</td>
+      </tr>
+      <tr>
+        <td>NC维度不一致。</td>
+      </tr>
+    </tbody>
+    </table>
 
 ## aclnnAdaptiveAvgPool3dBackward
 
 - **参数说明：**
-
-  - workspace（void*，入参）：在Device侧申请的workspace内存地址。
-  - workspaceSize（uint64_t，入参）：在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize获取。
-  - executor（aclOpExecutor*，入参）：op执行器，包含了算子计算流程。
-  - stream（aclrtStream，入参）：指定执行任务的Stream。
+  
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool2dBackwardGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

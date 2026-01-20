@@ -11,7 +11,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_adaptive_avg_pool3d_backward.h"
+#include "../../../op_api/aclnn_adaptive_avg_pool3d_backward.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -62,7 +62,7 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
         aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_backward_outputsize_allone_NCDHW_01)
@@ -116,7 +116,7 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
         aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_backward_outputsize_common_CDHW_04)
@@ -170,7 +170,7 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
         aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_input_one_one_shape_notmatch_notsupport_07)
