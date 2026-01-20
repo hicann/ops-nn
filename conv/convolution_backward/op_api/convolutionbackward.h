@@ -157,6 +157,8 @@ bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params);
 
 bool IsInputTransdataWhiteListCase(const ConvBackpropParams &params);
 
+bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams &params);
+
 bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams &params);
 
 bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params);
