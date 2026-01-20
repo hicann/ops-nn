@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 /*!
  * \file quant_batch_matmul_v3_bf16.h
  * \brief
@@ -37,7 +38,7 @@ public:
         blockIdx_ /= GetTaskRation();
 
         InitTilingData(tilingData);
-        if (blockIdx_ >= usedCoreNum_) {
+        if (blockIdx_ >= usedCoreNum_ || GetSubBlockIdx() == 1) {
             return;
         }
         pipe_ = tPipe;
@@ -93,12 +94,13 @@ public:
      */
     __aicore__ inline void Process()
     {
+        if (blockIdx_ >= usedCoreNum_ || GetSubBlockIdx() == 1) {
+            return;
+        }
+
         uint32_t batchDim = DequantBmm::CeilDiv(batch_, singleCoreBatch_);
         uint32_t mDim = DequantBmm::CeilDiv(m_, singleCoreM_);
         uint32_t nDim = DequantBmm::CeilDiv(n_, singleCoreN_);
-        if (blockIdx_ >= usedCoreNum_) {
-            return;
-        }
 
         uint32_t divideBatchcoreNum = usedCoreNum_ / batchDim;
 

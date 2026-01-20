@@ -443,7 +443,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Sparse4to2QuantMatmul is not supported in current platform"),
         return ACLNN_ERR_PARAM_INVALID);
 
-    OP_CHECK_NULL(sparseWeight, return ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK_NULL(sparseWeight, return ACLNN_ERR_PARAM_NULLPTR);
 
     OP_CHECK_WRONG_DIMENSION(sparseWeight, MIN_DIM_NUM_ND, return ACLNN_ERR_PARAM_INVALID);
 
