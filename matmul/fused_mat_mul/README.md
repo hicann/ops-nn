@@ -130,7 +130,7 @@
     <tbody>
       <tr>
         <td>aclnn接口</td>
-        <td>待上线</td>
+        <td><a href="examples/arch35/test_aclnn_fused_mat_mul.cpp">test_aclnn_fused_mat_mul</a></td>
         <td>通过<a href="docs/aclnnFusedMatmul.md">aclnnFusedMatmul</a>接口方式调用FusedMatmul算子</td>
       </tr>
   </tbody></table> 

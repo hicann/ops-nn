@@ -2006,6 +2006,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/gemm_v3/README.md">gemm_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>计算α乘以A与B的乘积，再与β和input C的乘积求和。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/mat_mul_v3/README.md">mat_mul_v3</a></td>
     <td>✓</td>
     <td>✓</td>
