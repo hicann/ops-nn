@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -986,9 +986,31 @@ build_binary() {
   echo "--------------- prepare build end ---------------"
 
   echo "--------------- binary build start ---------------"
+  local UNITS=(${COMPUTE_UNIT_SHORT//;/ })
+  if [[ ${#UNITS[@]} -eq 0 ]]; then
+    UNITS+=("ascend910b")
+  fi
+  for unit in "${UNITS[@]}"; do
+    remove_opc_cmd="rm -rf ${BUILD_PATH}/binary/${unit}/bin/opc_cmd"
+    ${remove_opc_cmd}
+    if grep -wq "prepare_binary_compile_${unit}" <<< "${all_targets}"; then
+      cmake --build . --target prepare_binary_compile_${unit} -- ${VERBOSE} -j 1
+      if [ $? -ne 0 ]; then
+        print_error "opc gen failed!" && exit 1
+      fi
+    fi
+    OPC_CMD_FILE="${BUILD_PATH}/binary/${unit}/bin/opc_cmd/opc_cmd.sh"
+    if [[ -f "$OPC_CMD_FILE" ]]; then
+      opc_list_num=$(wc -l < "$OPC_CMD_FILE" 2>/dev/null || echo 0);
+    else 
+      opc_list_num=0;
+    fi
+    CMAKE_ARGS="${CMAKE_ARGS} -DOPC_NUM_${unit}=${opc_list_num}"
+  done
+  cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS}
+
   if grep -wq "binary" <<< "${all_targets}"; then
-    export ASCENDC_PER_COMPILE_JOB_THREAD=$THREAD_NUM
-    cmake --build . --target binary -- ${VERBOSE} -j1
+    cmake --build . --target binary -- ${VERBOSE} -j $THREAD_NUM
     if [ $? -ne 0 ]; then
       print_error "Kernel compile failed!" && exit 1
     fi

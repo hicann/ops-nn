@@ -1,6 +1,6 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -90,92 +90,6 @@ function get_simplified_key_config_file() {
   return 0
 }
 
-call_write_scripts() {
-  local op_type="$1"
-  local soc_version_lower="$2"
-  local auto_sync="$3"
-  local compute_units="$4"
-  local compile_options="$5"
-
-  local rep_cfg='{
-    "batch": "",
-    "iterate": ""
-  }'
-
-  local cfg_dir='{
-    "impl_dir": "'"${topdir}/build/tbe/ascendc"'",
-    "out_dir": "'"${topdir}/build/tbe/dynamic"'",
-    "auto_gen_dir": "'"${topdir}/build/autogen"'"
-  }'
-
-  local op_compile_option="{\"$op_type\": {"
-  local inner_properties=()
-  # auto_sync 默认true
-  if [ "$auto_sync" == "false" ]; then
-    inner_properties+=("\"auto_sync\": $auto_sync")
-  fi
-  if [ -n "$compile_options" ]; then
-    inner_properties+=("\"compile_options\": $compile_options")
-  fi
-
-  if [ ${#inner_properties[@]} -gt 0 ]; then
-    local inner_props_str=$(IFS=,; echo "${inner_properties[*]}")
-    op_compile_option+="$inner_props_str"
-  fi
-  op_compile_option+="}}"
-  if [ ${#inner_properties[@]} -eq 0 ]; then
-    op_compile_option="{\"$op_type\": {}}"
-  fi
-  
-  local op_cfg_path="${topdir}/build/tbe/config"
-  local op_cfg_name="aic-${soc_version_lower}-ops-info.ini"
-  local op_cfg_file="${op_cfg_path}/${op_cfg_name}"
-
-  if [ ! -f "$op_cfg_file" ]; then
-    echo "Warning: Op config file $op_cfg_file not found"
-    return 1
-  fi
-
-  local UTIL_DIR="${workdir}/../../util/"
-
-  TMP_DIR=$(mktemp -d)
-  trap 'rm -rf "$TMP_DIR"' EXIT
-  echo "$rep_cfg" > "$TMP_DIR/rep_cfg.json"
-  echo "$cfg_dir" > "$TMP_DIR/cfg_dir.json"
-  echo "$op_compile_option" > "$TMP_DIR/op_compile_option.txt"
-
-  if [ -n "$op_compile_option" ]; then
-    has_op_opt="1"
-  else
-    has_op_opt=""
-  fi
-
-python3 -c "
-import sys,json,os
-sys.path.insert(0, '''$UTIL_DIR''')
-from ascendc_impl_build import write_scripts
-
-tmp_dir = '$TMP_DIR'
-op_opt = '$has_op_opt'
-
-def read_file(path):
-    with open(path, 'r') as f:
-        return f.read()
-
-cfgs_dict = json.loads(read_file(os.path.join(tmp_dir, 'rep_cfg.json')))
-dirs_dict = json.loads(read_file(os.path.join(tmp_dir, 'cfg_dir.json')))
-op_compile_list = json.loads(read_file(os.path.join(tmp_dir, 'op_compile_option.txt'))) if op_opt else None
-
-write_scripts(
-  '''$op_cfg_file''',
-  cfgs_dict,
-  dirs_dict,
-  '''$op_type''',
-  op_compile_list
-)
-"
-}
-
 main() {
   echo "[INFO]excute file: $0"
   if [ $# -lt 4 ]; then
@@ -206,10 +120,6 @@ main() {
     mkdir -p "${binary_temp_conf_dir}"
   fi
   local opc_info_csv="${binary_temp_conf_dir}/_${soc_version_lower}_tmp.csv"
-  local gen_file="${workdir}/${SCRIPT_NAME_OF_GEN_OPCINFO}"
-  local cmd="bash ${gen_file} ${soc_version} ${opc_info_csv}"
-  ${cmd}
-  echo "[INFO] end to gen opcinfo use ${SCRIPT_NAME_OF_GEN_OPCINFO}"
 
   # step0: gen task
   opc_task_cmd_file="${task_path}/${OPC_TASK_NAME}"
@@ -318,40 +228,6 @@ main() {
     simplified_key_param=""
   fi
 
-  json_line=$(echo "$ascendc_op_conf" | tr -d '\n\r')
-
-  auto_sync=""
-  if [ -n "$json_line" ]; then
-    val_part=$(echo "$json_line" | sed -E 's/.*"auto_sync"[[:space:]]*:[[:space:]]*(\{[^}]*\}|true|false).*/\1/')
-    if [ "$val_part" = "true" ] || [ "$val_part" = "false" ]; then
-      auto_sync="$val_part"
-    elif [ "${val_part#*\{}" != "$val_part" ] && [ "${val_part%\}}" != "$val_part" ]; then
-      if [ -n "$soc_version_lower" ]; then
-        match=$(echo "$val_part" | sed -n "s/.*\"$soc_version_lower\"[[:space:]]*:[[:space:]]*\([a-zA-Z]*\)[,}]*.*/\1/p")
-        if [ "$match" = "true" ] || [ "$match" = "false" ]; then
-          auto_sync="$match"
-        fi
-      fi
-      auto_sync=${auto_sync:-""}
-    fi
-  fi
-
-  compute_units=$(echo "$json_line" | awk '
-  match($0, /"compute_units"[[:space:]]*:[[:space:]]*\[([^]]*)\]/, arr) {
-    str = arr[1]
-    gsub(/"/, "", str)
-    gsub(/^[[:space:]]+|[[:space:]]+$/, "", str)
-    gsub(/,[[:space:]]*/, " ", str)
-    print str
-  }')
-
-  compile_options=$(echo "$json_line" | awk '
-  match($0, /"compile_options"[[:space:]]*:[[:space:]]*(\{[^}]*\})/, arr) {
-    print arr[1]
-  }')
-
-  call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compute_units" "$compile_options"
-
   # step 5: get impl_mode from all_ops_impl_mode.ini
   # ascendc_config.json 配置超过两种以上的implmode使用ascendc_config的配置，否则使用binary_implmode_default
   # 如果都没有配置，默认high_performance
@@ -379,12 +255,7 @@ main() {
   opc_soc_version=$(trans_soc ${soc_version})
 
   # 所有算子的kernel  onebyone 进行编译
-  get_thread_num_with_json_config ${binary_config_file}
-  local thread_num=$?
-  local ascendc_per_compile_job_thread=${ASCENDC_PER_COMPILE_JOB_THREAD}
-  local ascendc_per_compile_job=$((ascendc_per_compile_job_thread / thread_num))
-  echo "[INFO] op:${op_type} thread_num = ${thread_num}"
-  echo "ascendc_per_compile_job=${ascendc_per_compile_job}"
+  local thread_num=$(cat ${binary_config_file} | grep bin_filename | wc -l)
   for impl_mode in ${impl_list_array[@]}; do
     impl_mode_name=$impl_mode
     if [ ${#var_array[@]} -ge 2 ]; then
