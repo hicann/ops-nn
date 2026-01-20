@@ -97,7 +97,7 @@ aclnnStatus aclnnLogSoftmaxBackward(
       <td>out</td>
       <td>输出</td>
       <td>函数的输出是输入的梯度值，即对输入进行求导后的结果。</td>
-      <td><ul><li>shape需要与gradOutput，output一致。</li><li>BFLOAT16不需要额外申请空间，其他数据类型通过自动cast能力支持，但会额外申请空间。</li></ul></td>
+      <td><ul><li>shape需要与gradOutput，output一致。</li><li>FLOAT16、FLOAT32、BFLOAT16不需要额外申请空间，其他数据类型通过自动cast能力支持，但会额外申请空间。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
