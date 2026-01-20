@@ -353,8 +353,8 @@ private:
                 }
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
             if constexpr (LAST_LOOP_NUMS == 1) {
+                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     ReduceSum(mean, x1, pregLast);
@@ -362,11 +362,16 @@ private:
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + a, mean, pregOne);
                 }
             } else if constexpr (LAST_LOOP_NUMS == 2) {
+                uint32_t lastTailNum = lastBinaryAddNum - VL_B32;
+                MaskReg pregLast = UpdateMask<float>(lastTailNum);
+                RegTensor<float> shlReg;
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     DataCopy(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
-                    Add(x1, x1, x2, pregFull);
-                    ReduceSum(mean, x1, pregLast);
+                    ShiftLefts((RegTensor<uint32_t> &)shlReg, (RegTensor<uint32_t> &)x2, static_cast<int16_t>(0), 
+                    pregLast);
+                    Add(x1, x1, shlReg, pregFull);
+ 	                ReduceSum(mean, x1, pregFull);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + a, mean, pregOne);
                 }
@@ -451,8 +456,8 @@ private:
                 }
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            MaskReg pregLast = UpdateMask<float>(lastBinaryAddNumTmp);
             if constexpr (LAST_LOOP_NUMS == 1) {
+                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNumTmp);
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     ReduceSum(var, x1, pregLast);
@@ -460,11 +465,16 @@ private:
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + a, var, pregOne);
                 }
             } else if constexpr (LAST_LOOP_NUMS == 2) {
+                uint32_t lastTailNum = lastBinaryAddNum - VL_B32;
+                MaskReg pregLast = UpdateMask<float>(lastTailNum);
+                RegTensor<float> shlReg;
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     DataCopy(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
-                    Add(x1, x1, x2, pregFull);
-                    ReduceSum(var, x1, pregLast);
+                    ShiftLefts((RegTensor<uint32_t> &)shlReg, (RegTensor<uint32_t> &)x2, static_cast<int16_t>(0), 
+                    pregLast);
+                    Add(x1, x1, shlReg, pregFull);
+                    ReduceSum(var, x1, pregFull);
                     Muls(var, var, nCorrectionFactor, pregOne);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + a, var, pregOne);
                 }
