@@ -105,15 +105,28 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
         return ge::GRAPH_FAILED);
 
     if (shape_bias != nullptr && shape_bias->GetDimNum() != 0) {
-        OP_CHECK_IF(
-            (shape_bias->GetDimNum() != kMatmulV2BiasShapeSize),
-            CUBE_INNER_ERR_REPORT(op_name, "input dim num[%zu] of bias is not 1!", shape_bias->GetDimNum()),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            shape_b->GetDim(idx_n) != shape_bias->GetDim(0),
-            CUBE_INNER_ERR_REPORT(
-                op_name, "The n(%ld) tensors must be the same bias(%ld,)", shape_b->GetDim(idx_n), shape_c->GetDim(0)),
-            return ge::GRAPH_FAILED);
+        if (shape_bias->GetDimNum() == 1) {
+            OP_CHECK_IF(
+                shape_b->GetDim(idx_n) != shape_bias->GetDim(0),
+                CUBE_INNER_ERR_REPORT(
+                    op_name, "The n(%ld) tensors must be the same bias(%ld,)", shape_b->GetDim(idx_n),
+                    shape_bias->GetDim(0)),
+                return ge::GRAPH_FAILED);
+        } else if (shape_bias->GetDimNum() == 2) {
+            OP_CHECK_IF(
+                shape_bias->GetDim(0) != 1,
+                CUBE_INNER_ERR_REPORT(op_name, "The m(%ld) of bias must be 1", shape_bias->GetDim(0)),
+                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(
+                shape_bias->GetDim(1) != shape_b->GetDim(idx_n),
+                CUBE_INNER_ERR_REPORT(
+                    op_name, "The n(%ld) tensors must be the same bias(%ld,)", shape_b->GetDim(idx_n),
+                    shape_bias->GetDim(1)),
+                return ge::GRAPH_FAILED);
+        } else {
+            OP_LOGD(op_name, "input dim num[%zu] of bias is illegal", shape_bias->GetDimNum());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     if (shape_c != nullptr && shape_c->GetDimNum() != 0) {

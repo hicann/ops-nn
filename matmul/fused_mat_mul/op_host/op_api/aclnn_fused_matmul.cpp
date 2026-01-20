@@ -162,15 +162,15 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
+    
+    // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
+    CHECK_RET(CheckShape(x, x2, x3, y), ACLNN_ERR_PARAM_INVALID);
 
-    // 2. 检查输入的数据类型是否在支持的数据类型之内
-    CHECK_RET(CheckFormat(x, x2, bias, x3, y), ACLNN_ERR_PARAM_INVALID);
-
-    // 3. 检查Format是否支持
+    // 3. 检查输入的数据类型是否在支持的数据类型之内
     CHECK_RET(CheckDtypeValid(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
 
-    // 4. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
-    CHECK_RET(CheckShape(x, x2, x3, y), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查Format是否支持
+    CHECK_RET(CheckFormat(x, x2, bias, x3, y), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查cubeMathType
     CHECK_RET(CheckMathType(x, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
