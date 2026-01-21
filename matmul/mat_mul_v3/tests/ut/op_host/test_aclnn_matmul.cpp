@@ -730,7 +730,7 @@ TEST_F(l2_matmul_test, cubeMathType_4_fp32_fp32)
 TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_invalid)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
-    auto tensor_1_desc = TensorDesc({5,3,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
+    auto tensor_1_desc = TensorDesc({5,2,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
     int8_t cube_math_type = 0;
@@ -745,7 +745,7 @@ TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_valid)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
     op::SetCubeCoreNum(32U);
-    auto tensor_1_desc = TensorDesc({5,2,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
+    auto tensor_1_desc = TensorDesc({5,3,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
     int8_t cube_math_type = 0;

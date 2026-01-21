@@ -39,7 +39,7 @@ aclnnStatus aclnnMatmulWeightNz(
 ```
 
 ## aclnnMatmulWeightNzGetWorkspaceSize
-- **参数说明：**
+- **参数说明**
   <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
     <col style="width: 151px">
     <col style="width: 121px">
@@ -144,9 +144,11 @@ aclnnStatus aclnnMatmulWeightNz(
     - 不支持 cubeMathType为3：USE_HF32 的选项
     - 不支持 cubeMathType为4：FORCE_GRP_ACC_FOR_FP32 的选项
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
   <col style="width: 250px">
   <col style="width: 130px">
@@ -180,7 +182,7 @@ aclnnStatus aclnnMatmulWeightNz(
 
 ## aclnnMatmulWeightNz
 
-- **参数说明：**
+- **参数说明**
 
 
   <div style="overflow-x: auto;">
@@ -221,7 +223,7 @@ aclnnStatus aclnnMatmulWeightNz(
   </div>
 
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 

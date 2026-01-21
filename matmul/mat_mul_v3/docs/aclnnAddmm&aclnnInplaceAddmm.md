@@ -69,16 +69,16 @@ aclnnStatus aclnnInplaceAddmm(
 
 ## aclnnAddmmGetWorkspaceSize
 
-- **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
-  <col style="width: 151px">
-  <col style="width: 121px">
-  <col style="width: 301px">
-  <col style="width: 331px">
-  <col style="width: 237px">
-  <col style="width: 111px">
-  <col style="width: 111px">
-  <col style="width: 145px">
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1563px"><colgroup>
+  <col style="width: 153px">
+  <col style="width: 123px">
+  <col style="width: 232px">
+  <col style="width: 437px">
+  <col style="width: 203px">
+  <col style="width: 120px">
+  <col style="width: 149px">
+  <col style="width: 146px">
   </colgroup>
   <thead>
     <tr>
@@ -95,9 +95,9 @@ aclnnStatus aclnnInplaceAddmm(
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>表示矩阵乘的第一个矩阵，公式中的self。</td>
-      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li></ul></td>
+      <td>表示bias矩阵，公式中的self。</td>
+      <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -106,9 +106,9 @@ aclnnStatus aclnnInplaceAddmm(
     <tr>
       <td>mat1</td>
       <td>输入</td>
-      <td>表示矩阵乘的第二个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
-      </td>
+      <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
+      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <li>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </li><li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -118,7 +118,9 @@ aclnnStatus aclnnInplaceAddmm(
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与self的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
+      <li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -197,14 +199,15 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  
   第一段接口完成入参校验，出现如下场景时报错：
-  <table style="undefined;table-layout: fixed; width: 809px"><colgroup>
-    <col style="width: 257px">
-    <col style="width: 121px">
-    <col style="width: 431px">
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+    <col style="width: 283px">
+    <col style="width: 120px">
+    <col style="width: 747px">
     </colgroup>
     <thead>
       <tr>
@@ -234,12 +237,11 @@ aclnnStatus aclnnInplaceAddmm(
 
 ## aclnnAddmm
 
-- **参数说明：**
-  <div style="overflow-x: auto;">
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-  <col style="width: 250px">
-  <col style="width: 130px">
-  <col style="width: 650px">
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 168px">
+  <col style="width: 128px">
+  <col style="width: 854px">
   </colgroup>
   <thead>
     <tr>
@@ -270,25 +272,24 @@ aclnnStatus aclnnInplaceAddmm(
     </tr>
   </tbody>
   </table>
-  </div>
 
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceAddmmGetWorkspaceSize
 
-- **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 1508px"><colgroup>
-  <col style="width: 151px">
-  <col style="width: 121px">
-  <col style="width: 301px">
-  <col style="width: 331px">
-  <col style="width: 237px">
-  <col style="width: 111px">
-  <col style="width: 111px">
-  <col style="width: 145px">
+- **参数说明**
+  <table style="undefined;table-layout: fixed; width: 1563px"><colgroup>
+  <col style="width: 153px">
+  <col style="width: 123px">
+  <col style="width: 232px">
+  <col style="width: 437px">
+  <col style="width: 203px">
+  <col style="width: 120px">
+  <col style="width: 149px">
+  <col style="width: 146px">
   </colgroup>
   <thead>
     <tr>
@@ -316,9 +317,8 @@ aclnnStatus aclnnInplaceAddmm(
     <tr>
       <td>mat1</td>
       <td>输入</td>
-      <td>表示矩阵乘的第二个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
-      </td>
+      <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -397,15 +397,15 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
   
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口完成入参校验，出现如下场景时报错：
-  <table style="undefined;table-layout: fixed; width: 809px"><colgroup>
-      <col style="width: 257px">
-      <col style="width: 121px">
-      <col style="width: 431px">
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+      <col style="width: 283px">
+      <col style="width: 120px">
+      <col style="width: 747px">
       </colgroup>
       <thead>
         <tr>
@@ -436,14 +436,13 @@ aclnnStatus aclnnInplaceAddmm(
 
 ## aclnnInplaceAddmm
 
-- **参数说明：**
+- **参数说明**
 
 
-  <div style="overflow-x: auto;">
-  <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
-  <col style="width: 250px">
-  <col style="width: 130px">
-  <col style="width: 650px">
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 168px">
+  <col style="width: 128px">
+  <col style="width: 854px">
   </colgroup>
   <thead>
     <tr>
@@ -470,19 +469,18 @@ aclnnStatus aclnnInplaceAddmm(
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的stream。</td>
+      <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
   </table>
-  </div>
 
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-- 确定性计算
+- 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   
