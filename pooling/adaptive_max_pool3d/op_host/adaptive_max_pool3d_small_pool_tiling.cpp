@@ -34,7 +34,7 @@ bool AdaptiveMaxPool3dSmallPoolTiling::IsCapable()
     calInfo_.kernelHMax = CalKernelMax(input_.Hi, input_.Ho);
     calInfo_.kernelWMax = CalKernelMax(input_.Wi, input_.Wo);
     auto kernelWMaxAlign = (calInfo_.kernelWMax + 7) / 8 * 8;
-    bool limitSizeMax = (calInfo_.kernelDMax * calInfo_.kernelHMax * kernelWMaxAlign <= KERNEL_SIZE_LIMIT);
+    bool limitSizeMax = (calInfo_.kernelDMax * calInfo_.kernelHMax * kernelWMaxAlign < KERNEL_SIZE_LIMIT);
     bool limitWMax = (calInfo_.kernelWMax <= KERNEL_W_LIMIT);
     bool isCapable = limitSizeMax && limitWMax;
     OP_LOGD(

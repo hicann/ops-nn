@@ -1,11 +1,18 @@
 # aclnnAdaptiveMaxPool2d
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_max_pool3d)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾910_95 AI处理器</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -18,8 +25,8 @@
 aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(
   const aclTensor   *self,
   const aclIntArray *outputSize,
-  const aclTensor   *outputOut,
-  const aclTensor   *indicesOut,
+  aclTensor         *outputOut,
+  aclTensor         *indicesOut,
   uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
@@ -172,7 +179,7 @@ aclnnStatus aclnnAdaptiveMaxPool2d(
         <td>outputOut的shape与实际输出shape不匹配。</td>
       </tr>
       <tr>
-        <td>self的format不是NCHW/NHWC/NCL这两种format。</td>
+        <td>self的format不是NCHW/NHWC/NCL这三种format。</td>
       </tr>
       <tr>
         <td>ACLNN_ERR_INNER_NULLPTR</td>
