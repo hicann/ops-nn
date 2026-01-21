@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "opdev/op_log.h"
-#include "../../../op_host/op_api/aclnn_max_pool3d_with_argmax.h"
+#include "../../../op_api/aclnn_max_pool3d_with_argmax.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"

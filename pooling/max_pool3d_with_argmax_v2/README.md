@@ -4,8 +4,13 @@
 
 | 产品 | 是否支持 |
 | ---- | :----:|
+|昇腾910_95 AI处理器|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|√|
+|Atlas 200I/500 A2推理产品|×|
+|Atlas 推理系列产品|×|
+|Atlas 训练系列产品|×|
+|Atlas 200/300/500 推理产品|×|
 
 ## 功能说明
 
@@ -17,13 +22,11 @@
     $$
     out(N_i, C_j, d, h, w) = \max\limits_{{k\in[0,k_{D}-1],m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times d + k, stride[1]\times h + m, stride[2]\times w + n)
     $$
-
   * out tensor的shape推导公式 (默认ceilMode=false，即向下取整)：
     
     $$
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lfloor{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1, \lfloor{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rfloor + 1]
     $$
-
   * out tensor的shape推导公式 (默认ceilMode=true，即向上取整)：
     
     $$
@@ -53,7 +56,7 @@
       <td>输入</td>
       <td>待进行MaxPool3DWithArgmaxV2计算的入参。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>NCDHW</td>
+      <td>NCDHW、NDHWC</td>
     </tr>
     <tr>
       <td>ksize</td>
@@ -93,7 +96,7 @@
     <tr>
       <td>data_format</td>
       <td>可选属性</td>
-      <td>输入数据格式，支持"NCDHW"。</td>
+      <td>输入数据格式，支持"NCDHW"和"NDHWC"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
@@ -102,16 +105,18 @@
       <td>输出</td>
       <td>表示池化后的结果。数据类型、数据格式需要与`x`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
-      <td>NCDHW</td>
+      <td>NCDHW、NDHWC</td>
     </tr>
     <tr>
       <td>argmax</td>
       <td>输出</td>
       <td>最大值的索引位置组成的Tensor。shape需要与`y`一致。</td>
-      <td>INT32</td>
-      <td>NCDHW</td>
+      <td>INT32、INT64</td>
+      <td>NCDHW、NDHWC</td>
     </tr>
   </tbody></table>
+
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：`argmax` 数据类型不支持INT64。输入数据排布不支持NDHWC。
 
 ## 约束说明
 
