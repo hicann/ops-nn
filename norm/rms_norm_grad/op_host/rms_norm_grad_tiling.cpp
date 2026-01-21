@@ -36,6 +36,7 @@ static const uint32_t USED_UB = 195584; // (192 - 1) * 1024
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
+constexpr uint8_t SCHEDULE_MODE = 1;
 
 static uint32_t CalcSmallDBufferSize(uint32_t colValAlign)
 {
@@ -214,7 +215,7 @@ static bool CheckRstdShape(
         for (uint32_t i = 0; i < rstdDimNum; i++) {
             OP_CHECK_IF(
                 rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-                OP_LOGE(context, "Input rstd shape invaild, shape is not equal dy first few dim."), return false);
+                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
         }
         for (uint32_t i = rstdDimNum; i < xDimNum - gammaDimNum; i++) {
             OP_CHECK_IF(
@@ -225,7 +226,7 @@ static bool CheckRstdShape(
         for (uint32_t i = 0; i < xDimNum - gammaDimNum; i++) {
             OP_CHECK_IF(
                 rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-                OP_LOGE(context, "Input rstd shape invaild, shape is not equal dy first few dim."), return false);
+                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
         }
     }
     return true;
@@ -326,6 +327,7 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
 {
     OP_CHECK_IF(
         !CheckInputShape4RmsNormGrad(context), OP_LOGE(context, "Input shape invalid."), return ge::GRAPH_FAILED);
+    context->SetScheduleMode(SCHEDULE_MODE);
     RmsNormGradTilingData tiling;
     uint32_t col_val = 1;
     uint32_t row_val = 1;

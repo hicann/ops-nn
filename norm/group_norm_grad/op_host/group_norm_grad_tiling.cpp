@@ -54,6 +54,7 @@ constexpr uint32_t FLOAT16_DTYPE_BYTES = 2;
 constexpr uint32_t EIGHT_BLOCK = 8;
 constexpr uint32_t SPLIT_COUNT = 2;
 constexpr uint32_t STEP_SIZE = 64;
+constexpr uint8_t SCHEDULE_MODE = 1;
 } // namespace
 
 namespace optiling {
@@ -593,6 +594,7 @@ ge::graphStatus TilingGroupNormGrad(gert::TilingContext* context)
         GroupNormGradRegBaseTiling tilingObj(context);
         return tilingObj.DoTiling();
     }
+    context->SetScheduleMode(SCHEDULE_MODE);
     GroupNormGradTiling tilingObject(context);
     tilingObject.Init();
     return tilingObject.SetKernelTiling();
