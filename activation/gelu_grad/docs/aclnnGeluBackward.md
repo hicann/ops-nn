@@ -109,7 +109,7 @@ aclnnStatus aclnnGeluBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>backward计算的输出，为GELU正向入参的梯度值，即对输入进行求导后的结果。</td>
-      <td><ul><li>dtype与self和gradOutput进行数据类型推导后的结果一致。</li><li>shape与gradOutput和self进行broadcast后的shape一致。</li></ul></td>
+      <td><ul><li>dtype与self和gradOutput进行数据类型推导后的可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）一致。</li><li>shape与gradOutput和self进行broadcast后的shape一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
