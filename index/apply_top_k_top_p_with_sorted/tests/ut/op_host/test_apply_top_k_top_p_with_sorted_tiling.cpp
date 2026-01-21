@@ -279,6 +279,18 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      40,
      0,
      ""},
+    {"test_case_float32_topP_succ",
+    ge::DT_FLOAT,
+    ge::DT_INT32,
+    {4, 152064},
+    {4, 152064},
+    {4},
+    {},
+    {4, 152064},
+    ge::GRAPH_SUCCESS,
+    40,
+    2,
+    "4 152064 0 4 40 1024 1024 1024 1024 512 512 196608 18 0 "},
 };
 
 INSTANTIATE_TEST_CASE_P(ApplyTopKTopPWithSorted, ApplyTopKTopPWithSortedTilingTest, testing::ValuesIn(cases));

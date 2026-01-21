@@ -45,6 +45,7 @@ namespace {
     constexpr uint32_t K_VALUE_MAX = 1024;
     constexpr uint32_t ONLY_TOP_P_KEY = 2;
     constexpr uint32_t ONLY_TOP_K_KEY = 1;
+    constexpr uint32_t BATCH_MODE = 1;
 } // namespace
 
 namespace optiling {
@@ -175,6 +176,9 @@ void ApplyTopKTopPWithSortedTiling::SetTilingKey() {
     tilingKey_ += onlyTopK_;
     tilingKey_ += onlyTopP_;
     tilingcontext->SetTilingKey(tilingKey_);
+    if (tilingKey_ == ONLY_TOP_P_KEY){
+        tilingcontext->SetScheduleMode(BATCH_MODE);
+    }
 }
 
 void ApplyTopKTopPWithSortedTiling::GetUsedCore()
