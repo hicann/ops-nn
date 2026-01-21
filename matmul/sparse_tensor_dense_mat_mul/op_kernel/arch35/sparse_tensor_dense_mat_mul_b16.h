@@ -17,6 +17,7 @@
 
 #include "sparse_tensor_dense_mat_mul_base.h"
 #include "../inc/platform.h"
+#include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
 namespace SparseTensorDenseMatMul {

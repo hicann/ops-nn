@@ -16,6 +16,9 @@
 #define ADD_RMS_NORM_REGBASE_H
 #include "add_rms_norm_regbase_common.h"
 #include "../../rms_norm/rms_norm_base.h"
+#include "../inc/platform.h"
+#include "kernel_operator.h"
+
 namespace AddRmsNorm {
 using namespace AscendC;
 constexpr uint64_t ALIGN_32_FACTOR = 32;

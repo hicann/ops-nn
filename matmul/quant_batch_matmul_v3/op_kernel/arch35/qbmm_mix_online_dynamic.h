@@ -16,6 +16,7 @@
 #define QBMM_MIX_ONLINE_DYNAMIC_H
 
 #include "../../inc/platform.h"
+#include "kernel_operator.h"
 #include "mm_extension_interface/qbmm_custom_mm_policy.h"
 #include "qbmm_asw_block.h"
 #include "../quant_batch_matmul_v3_base.h"

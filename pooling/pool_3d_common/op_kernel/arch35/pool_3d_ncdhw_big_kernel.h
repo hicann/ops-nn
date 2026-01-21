@@ -17,6 +17,7 @@
 
 #include "pool_3d_common.h"
 #include "../inc/platform.h"
+#include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
 namespace Pool3D

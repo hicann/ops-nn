@@ -17,6 +17,7 @@
 
 #include "../foreach_utils/arch35/foreach_regbase_ternary.h"
 #include "../inc/platform.h"
+#include "kernel_operator.h"
 #include "../inc/load_store_utils.h"
 
 namespace ForeachAddcmulScalar {

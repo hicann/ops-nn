@@ -19,6 +19,7 @@
 #include "../../foreach_utils/arch35/foreach_regbase_common.h"
 #include "../../inc/load_store_utils.h"
 #include "../../inc/platform.h"
+#include "kernel_operator.h"
 
 namespace ForeachNorm {
 

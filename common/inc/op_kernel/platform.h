@@ -15,7 +15,7 @@
 #ifndef OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
 #define OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
 
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_utils.h"
 

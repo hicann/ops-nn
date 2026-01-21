@@ -20,6 +20,7 @@
 #include "arch35/ge_glu_grad_v2_erf_fp16.h"
 #include "arch35/ge_glu_grad_v2_erf_fp32.h"
 #include "../inc/platform.h"
+#include "kernel_operator.h"
 
 using namespace AscendC;
 

@@ -16,6 +16,7 @@
 #define POOL_3D_NDHWC_BIG_KERNEL_H_
 
 #include "pool_3d_common.h"
+#include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
