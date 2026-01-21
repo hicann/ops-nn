@@ -54,6 +54,7 @@ constexpr uint64_t REPEAT_BYTES = 256;
 constexpr uint64_t MAX_REPEAT_TIMES = 255;
 constexpr uint64_t RESVERD_BUFF_BYTES = 8192;
 constexpr uint64_t SYS_WORKSPACE_BYTES = static_cast<uint64_t>(16 * 1024 * 1024);
+constexpr uint32_t BATCH_MODE = 1;
 
 const static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =
 {
@@ -277,7 +278,8 @@ ge::graphStatus FusedLinearOnlineMaxSumTiling::RunKernelTiling() {
                              tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     tilingContext_->SetBlockDim(aiCubeNum_);
-    
+    tilingContext_->SetScheduleMode(BATCH_MODE);
+
     OP_LOGD(opName_, "TilingForFusedLinearOnlineMaxSum RunKernelTiling end.");
     return ge::GRAPH_SUCCESS;
 }

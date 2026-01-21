@@ -12,7 +12,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_fused_linear_online_max_sum.h"
+#include "../../../op_api/aclnn_fused_linear_online_max_sum.h"
 #include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/op_api_ut.h"

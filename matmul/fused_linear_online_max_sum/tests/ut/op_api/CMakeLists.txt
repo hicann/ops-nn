@@ -7,4 +7,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE fused_linear_online_max_sum ACLNNTYPE aclnn_exclude DEPENDENCIES mat_mul_v3)
+file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
+if(UT_TEST_ALL OR OP_API_UT)
+    add_modules_ut_sources(HOSTNAME ${OP_API_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()

@@ -4,14 +4,18 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
 
-  功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss，中间根据通信拆分为[aclnnFusedLinearOnlineMaxSum](./aclnnFusedLinearOnlineMaxSum.md)、[aclnnFusedCrossEntropyLossWithMaxSum](../../fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md)，需要依次调用实现完整功能。
+  功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss，中间根据通信拆分为[aclnnFusedLinearOnlineMaxSum](./aclnnFusedLinearOnlineMaxSum.md)、[aclnnFusedCrossEntropyLossWithMaxSum](../../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md)，需要依次调用实现完整功能。
 
 - 计算公式：
 
@@ -81,6 +85,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedLinearOnlineMaxSumGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedLinearOnlineMaxSum”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnFusedLinearOnlineMaxSumGetWorkspaceSize(
   const aclTensor* input,
@@ -108,13 +113,13 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
 
 ## aclnnFusedLinearOnlineMaxSumGetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 1300px"><colgroup>
-  <col style="width: 101px">
-  <col style="width: 115px">
   <col style="width: 220px">
-  <col style="width: 200px">
+  <col style="width: 120px">
+  <col style="width: 240px">
+  <col style="width: 330px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -265,12 +270,13 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
+  <col style="width: 267px">
   <col style="width: 103px">
   <col style="width: 604px">
   </colgroup>
@@ -326,7 +332,7 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
 
 ## aclnnFusedLinearOnlineMaxSum
 
-- **参数说明：**
+- **参数说明**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -363,13 +369,14 @@ aclnnStatus aclnnFusedLinearOnlineMaxSum(
   </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性说明：
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedLinearOnlineMaxSum默认确定性实现。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：aclnnFusedLinearOnlineMaxSum默认确定性实现。
 
 ## 调用示例
 
