@@ -1,9 +1,12 @@
 # aclnnSoftmaxBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/softmax_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
@@ -12,7 +15,6 @@
 - 接口功能：完成[softmax](../../softmax_v2/docs/aclnnSoftmax.md)的反向传播。
 - 计算公式：对于Softmax函数的求导，可以使用以下公式：
   out（输入梯度值）和gradOutput（上一层输出梯度）、output（Softmax正向输出）的关系可表示如下：
-
   $$
   out = gradOutput \cdot output - sum(gradOutput \cdot output)\cdot output
   $$
@@ -84,7 +86,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>0-8</td>
       <td>√</td>
     </tr>
-      <tr>
+    <tr>
       <td>dim</td>
       <td>输入</td>
       <td>Softmax函数的维度。</td>
@@ -126,6 +128,9 @@ aclnnStatus aclnnSoftmaxBackward(
     </tr>
     </tbody>
   </table>
+  
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。 
+ 
 
 - **返回值：**
 
@@ -164,6 +169,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>gradOutput、output、out的shape不一致。</td>
     </tr>
   </tbody></table>
+
 
 ## aclnnSoftmaxBackward
 

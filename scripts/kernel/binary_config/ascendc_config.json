@@ -322,7 +322,7 @@
     {"name":"DeepNormGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync" : false},
     {"name":"SoftmaxV2", "compute_units": ["ascend910_95"], "auto_sync": false, "impl_mode": ""},
     {"name":"LogSoftmaxV2", "compute_units": ["ascend910_95"], "auto_sync": false, "impl_mode": ""},
-    {"name":"SoftmaxGrad", "compute_units": ["ascend910_95"], "auto_sync": false, "impl_mode": ""},
+    {"name":"SoftmaxGrad", "compute_units": ["ascend910_95"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend910_95": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"LogSoftmaxGrad", "compute_units": ["ascend910_95"], "auto_sync": false, "impl_mode": ""},
     {"name":"MoeGatingTopK", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : false},
     {"name":"MoeGatingTopKSoftmax", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},

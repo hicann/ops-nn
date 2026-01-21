@@ -1,0 +1,137 @@
+{
+    "op_type": "SoftmaxGrad",
+    "op_list": [
+      {
+        "bin_filename": "SoftmaxGrad_float16",
+        "inputs": [
+          {
+            "name": "softmax",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "grad_softmax",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad_x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "SoftmaxGrad_float32",
+        "inputs": [
+          {
+            "name": "softmax",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "grad_softmax",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad_x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "SoftmaxGrad_bfloat16",
+        "inputs": [
+          {
+            "name": "softmax",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "grad_softmax",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "grad_x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }
