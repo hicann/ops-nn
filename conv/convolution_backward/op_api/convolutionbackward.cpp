@@ -1299,8 +1299,11 @@ static aclnnStatus Conv2DBackpropInputWithFlag(const aclTensor *input, const acl
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv2DBackpropInput InferShape failed.");
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
+  // useHf32Flag的值为0x40 : 表示HF32
+  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
   ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop),
-    OP_OUTPUT(output), OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag));
+    OP_OUTPUT(output), OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag),
+    OP_MODE(execMode));
   OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                       "Conv2DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
   return ACLNN_SUCCESS;
@@ -1406,9 +1409,12 @@ static aclnnStatus Conv2DBackpropFilterWithFlag(const aclTensor *input, const ac
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv2DBackpropFilter InferShape failed.");
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
+  // useHf32Flag的值为0x40 : 表示HF32
+  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
   ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag));
+      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag),
+      OP_MODE(execMode));
   OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                       "Conv2DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
   return ACLNN_SUCCESS;
@@ -1538,7 +1544,7 @@ static bool CheckV2BasicBlockSupport(const ConvBackpropParams &params) {
   return isKernelSupport && isDataTypeSuport;
 }
 
-bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams &params) {
+static bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams &params) {
   const aclTensor &kernel = *(params.weight);
   const aclTensor &outBackprop = *(params.outBackprop);
   const aclTensor &input = *(params.input);
@@ -1662,15 +1668,19 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
 
   ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
   bool useV2Flag = IsConv3DBackpropFilterV2(params);
+  // useHf32Flag的值为0x40 : 表示HF32
+  uint32_t execMode = useHf32 == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
   if (useV2Flag) {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DBackpropFilterV2, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-                                OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32));
+    OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32),
+    OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropFilterV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
   } else {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-        OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32));
+      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32),
+      OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
   }
@@ -1797,17 +1807,20 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
     output = nullptr;
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
-
+    // useHf32Flag的值为0x40 : 表示HF32
+    uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
   if (useV2Flag) {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropInputV2, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag));
+      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag),
+      OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropInputV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
   } else {
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
       Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag));
+      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag),
+      OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
                                        "Conv3DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
   }

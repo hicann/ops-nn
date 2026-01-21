@@ -7,6 +7,9 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 
 ## 功能说明
@@ -70,11 +73,15 @@
 
 * <term>Ascend 950PR/Ascend 950DT</term>：
     - 只有在transposed=true且output_mask[0]=true时，数据类型才支持HIFLOAT8、FLOAT8_E4M3FN。
+* <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
+    - 不支持BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN。
+    - gradOutput、weight参数下，不支持空tensor。
 * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 不支持HIFLOAT8、FLOAT8_E4M3FN。
 
 ## 约束说明  
 
+* <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：当前仅支持1D和2D卷积的反向传播，暂不支持3D卷积的反向传播。
 * 更详细的约束说明可查看[aclnnConvolutionBackward](docs/aclnnConvolutionBackward.md)接口资料。
 
 ## 调用说明
