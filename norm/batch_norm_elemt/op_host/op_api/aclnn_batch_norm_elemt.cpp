@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include "../../../norm_common/op_host/norm_tensor_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "level0/mul.h"
 #include "level0/div.h"
 #include "level0/sub.h"

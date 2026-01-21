@@ -9,7 +9,7 @@
  */
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "../../../norm_common/op_host/norm_tensor_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"

@@ -19,7 +19,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
-#include "../../../norm_common/op_host/norm_tensor_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "quantized_batch_norm.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

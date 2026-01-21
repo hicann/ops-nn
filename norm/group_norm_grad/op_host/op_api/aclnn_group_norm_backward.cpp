@@ -24,7 +24,7 @@
 #include "level0/expand.h"
 #include "level0/fill.h"
 #include "level0/reduce_sum_op.h"
-#include "../../../norm_common/op_host/norm_tensor_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"

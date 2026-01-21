@@ -8,4 +8,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.group_norm_grad.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm_grad ACLNNTYPE aclnn_exclude DEPENDENCIES batch_norm_grad_v3)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm_grad ACLNNTYPE aclnn_exclude DEPENDENCIES batch_norm_grad_v3 norm_common)

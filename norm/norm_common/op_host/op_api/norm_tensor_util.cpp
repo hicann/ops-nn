@@ -17,7 +17,7 @@
 #include "level0/squeeze.h"
 #include "level0/fill.h"
 #include "aclnn/aclnn_base.h"
-#include "../norm_tensor_util.h"
+#include "norm_tensor_util.h"
 
 namespace op {
 const aclIntArray* getAllDims(const aclTensor* self, aclOpExecutor* executor)

@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.batch_norm_elemt.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_norm_elemt ACLNNTYPE aclnn DEPENDENCIES batch_norm_v3 norm_common)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_norm_elemt ACLNNTYPE aclnn_exclude DEPENDENCIES batch_norm_v3 norm_common)

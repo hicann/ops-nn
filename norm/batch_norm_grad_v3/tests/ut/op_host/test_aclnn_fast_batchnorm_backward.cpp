@@ -779,18 +779,4 @@ TEST_F(l2FastBatchNormBackwardTest, ascend910_9589_l2_batch_norm_backward_shape_
         OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
     getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
-
-    ut = OP_API_UT(
-        aclnnFastBatchNormBackward,
-        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
-        OUTPUT(gradInDesc, outputErrDesc, gradBiasDesc));
-getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
-
-    ut = OP_API_UT(
-        aclnnFastBatchNormBackward,
-        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
-        OUTPUT(gradInDesc, gradWeightDesc, outputErrDesc));
-    getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }

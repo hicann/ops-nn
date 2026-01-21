@@ -19,8 +19,8 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_batch_norm_reduce.h"
-#include "../../../norm_common/op_host/norm_tensor_util.h"
-#include "norm/batch_norm_v3/op_host/op_api/batch_norm.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
+#include "../../../batch_norm_v3/op_host/op_api/batch_norm.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
 

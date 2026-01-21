@@ -9,4 +9,4 @@
 #/
 message(STATUS "=== Debug: start ops.norm.sync_batch_norm_gather_stats_with_counts.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE sync_batch_norm_gather_stats_with_counts ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE sync_batch_norm_gather_stats_with_counts ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common)

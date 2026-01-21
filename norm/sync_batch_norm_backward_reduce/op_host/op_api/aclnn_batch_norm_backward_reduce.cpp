@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "../../../norm_common/op_host/norm_tensor_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "batch_norm_backward_reduce.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
