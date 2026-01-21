@@ -100,12 +100,13 @@ private:
 
 int64_t BatchNormGradV3SplitLoadCrossCoreTiling::CalcBubBlock(int64_t tmpChannelNum)
 {
+    tmpChannelNum = GetAlignValue(tmpChannelNum);
     int64_t ubTensorRelateChannelBlock = 0;
     int64_t ubTensorNotRelateChannelBlock = 0;
     int64_t relateBlockNum = 4;
     int64_t noRelateBlockNum = 3;
     ubTensorRelateChannelBlock = sizeof(float) * relateBlockNum;
-    ubTensorNotRelateChannelBlock = tmpChannelNum * noRelateBlockNum;
+    ubTensorNotRelateChannelBlock = tmpChannelNum * noRelateBlockNum * sizeof(float);
     return (aicoreParams_.ubSize - ubTensorNotRelateChannelBlock) / ubTensorRelateChannelBlock;
 }
 

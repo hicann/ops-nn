@@ -2003,7 +2003,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
     gert::StorageShape dweight_shape = {{2}, {2}};
     gert::StorageShape dbias_shape = {{2}, {2}};
     float eps = 1e-5;
-    bool is_training = false;
+    bool is_training = true;
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2074,7 +2074,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -2091,12 +2091,12 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 10001);
+    ASSERT_EQ(tiling_key, 30001);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "12 0 2 0 5 0 80 0 1 0 1 0 183 0 2 0 925353388 0 ");
+        "12 0 2 0 5 0 80 0 1 0 1 0 137 0 2 0 925353388 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -2114,7 +2114,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
     gert::StorageShape dweight_shape = {{40}, {40}};
     gert::StorageShape dbias_shape = {{40}, {40}};
     float eps = 1e-5;
-    bool is_training = false;
+    bool is_training = true;
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2186,7 +2186,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -2203,7 +2203,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 20002);
+    ASSERT_EQ(tiling_key, 40002);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
@@ -2226,7 +2226,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
     gert::StorageShape dweight_shape = {{2}, {2}};
     gert::StorageShape dbias_shape = {{2}, {2}};
     float eps = 1e-5;
-    bool is_training = false;
+    bool is_training = true;
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2298,7 +2298,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
-                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -2315,7 +2315,7 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 20012);
+    ASSERT_EQ(tiling_key, 40012);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
