@@ -294,7 +294,8 @@ void MaxPool3DGradWithArgmaxNormalTiling::SetOtherTilingParams()
     maxPoolGradParams.totalCnt =
         maxPoolGradParams.ncCnt * maxPoolGradParams.doCnt * maxPoolGradParams.hoCnt * maxPoolGradParams.woCnt;
     maxPoolGradParams.usedCoreNum = std::min(maxPoolGradParams.totalCnt, maxPoolGradParams.totalCoreNum);
-    if (maxPoolGradParams.xDtypeSize != DTYPE_LEN_B32 && maxPoolGradParams.isOverLap) {
+    maxPoolGradParams.isNeedWorkspace = maxPoolGradParams.xDtypeSize != DTYPE_LEN_B32 && maxPoolGradParams.isOverLap;
+    if (maxPoolGradParams.isNeedWorkspace) {
         maxPoolGradParams.workspaceSize = maxPoolGradParams.ncDim * maxPoolGradParams.diDim * maxPoolGradParams.hiDim *
                                           maxPoolGradParams.wiDim * sizeof(float);
     } else {
@@ -329,6 +330,9 @@ ge::graphStatus MaxPool3DGradWithArgmaxNormalTiling::DoOpTiling()
     SetBaseTilingData();
     SetNormalTilingData();
     PrintTilingData();
+    if (maxPoolGradParams.isInitOutput || maxPoolGradParams.isNeedWorkspace) {
+        context_->SetScheduleMode(1);
+    }
     PrintNormalTilingData();
     return ge::GRAPH_SUCCESS;
 }

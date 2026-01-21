@@ -28,15 +28,7 @@ using namespace AdaptiveMaxPool3DGrad;
 extern "C" __global__ __aicore__ void adaptive_max_pool3d_grad(
     GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    if (workspace == nullptr) {
-        return;
-    }
-
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
-    if (g_coreType == AIC) {
+    if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;
     }
     TPipe pipe;

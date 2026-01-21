@@ -273,6 +273,7 @@ void MaxPool3DGradWithArgmaxCutKTiling::SetOtherTilingParams()
     } else {
         maxPoolGradParams.workspaceSize = 0UL;
     }
+    maxPoolGradParams.isNeedWorkspace = maxPoolGradParams.xDtypeSize != DTYPE_LEN_B32 && maxPoolGradParams.isOverLap;
 }
 
 ge::graphStatus MaxPool3DGradWithArgmaxCutKTiling::DoOpTiling()
@@ -283,6 +284,9 @@ ge::graphStatus MaxPool3DGradWithArgmaxCutKTiling::DoOpTiling()
     SetOtherTilingParams();
     SetBaseTilingData();
     PrintTilingData();
+    if (maxPoolGradParams.isInitOutput || maxPoolGradParams.isNeedWorkspace) {
+        context_->SetScheduleMode(1);
+    }
     return ge::GRAPH_SUCCESS;
 }
 

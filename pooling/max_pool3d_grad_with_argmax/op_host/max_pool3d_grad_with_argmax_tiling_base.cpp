@@ -260,15 +260,15 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBase::CheckInputValid()
     int64_t doExpected, hoExpected, woExpected;
     if (maxPoolGradParams.ceilMode) {
         doExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.diDim + NUM_TWO * pDTop - dilationD * (kd - 1) - 1), sd) + 1;
+            Ops::Base::CeilDiv((maxPoolGradParams.diDim + NUM_TWO * pDTop + sd - dilationD * (kd - 1) - 1), sd);
         hoExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.hiDim + NUM_TWO * pHTop - dilationH * (kh - 1) - 1), sh) + 1;
+            Ops::Base::CeilDiv((maxPoolGradParams.hiDim + NUM_TWO * pHTop + sh - dilationH * (kh - 1) - 1), sh);
         woExpected =
-            Ops::Base::CeilDiv((maxPoolGradParams.wiDim + NUM_TWO * pWTop - dilationW * (kw - 1) - 1), sw) + 1;
+            Ops::Base::CeilDiv((maxPoolGradParams.wiDim + NUM_TWO * pWTop + sw - dilationW * (kw - 1) - 1), sw);
     } else {
-        doExpected = (maxPoolGradParams.diDim + NUM_TWO * pDTop - dilationD * (kd - 1) - 1) / sd + 1;
-        hoExpected = (maxPoolGradParams.hiDim + NUM_TWO * pHTop - dilationH * (kh - 1) - 1) / sh + 1;
-        woExpected = (maxPoolGradParams.wiDim + NUM_TWO * pWTop - dilationW * (kw - 1) - 1) / sw + 1;
+        doExpected = (maxPoolGradParams.diDim + NUM_TWO * pDTop + sd - dilationD * (kd - 1) - 1) / sd;
+        hoExpected = (maxPoolGradParams.hiDim + NUM_TWO * pHTop + sh - dilationH * (kh - 1) - 1) / sh;
+        woExpected = (maxPoolGradParams.wiDim + NUM_TWO * pWTop + sw - dilationW * (kw - 1) - 1) / sw;
     }
     doExpected = ((doExpected - 1) * sd >= maxPoolGradParams.diDim + pDTop) ? doExpected - 1 : doExpected;
     hoExpected = ((hoExpected - 1) * sh >= maxPoolGradParams.hiDim + pHTop) ? hoExpected - 1 : hoExpected;
@@ -430,6 +430,19 @@ void MaxPool3DGradWithArgmaxTilingBase::SetBaseTilingData()
 
 void MaxPool3DGradWithArgmaxTilingBase::PrintTilingData()
 {
+    maxPoolGradParams.isInitOutput = 
+        (maxPoolGradParams.doDim * maxPoolGradParams.kd < maxPoolGradParams.diDim + maxPoolGradParams.pDTop + 
+            maxPoolGradParams.pDBottom) ||
+        (maxPoolGradParams.hoDim * maxPoolGradParams.kh < maxPoolGradParams.hiDim + maxPoolGradParams.pHTop +
+            maxPoolGradParams.pHBottom) ||
+        (maxPoolGradParams.woDim * maxPoolGradParams.kw < maxPoolGradParams.wiDim + maxPoolGradParams.pWTop +
+            maxPoolGradParams.pWBottom) ||
+        (maxPoolGradParams.doDim - 1) * maxPoolGradParams.sd + maxPoolGradParams.kd < maxPoolGradParams.diDim +
+        maxPoolGradParams.pDTop ||
+        (maxPoolGradParams.hoDim - 1) * maxPoolGradParams.sh + maxPoolGradParams.kh < maxPoolGradParams.hiDim +
+        maxPoolGradParams.pHTop ||
+        (maxPoolGradParams.woDim - 1) * maxPoolGradParams.sw + maxPoolGradParams.kw < maxPoolGradParams.wiDim +
+        maxPoolGradParams.pWTop || maxPoolGradParams.isOverLap;
     OP_LOGI(
         context_->GetNodeName(),
         "TilingData nc: %lu, di: %lu, hi: %lu, wi: %lu do: %lu, ho: %lu, wo: %lu, "

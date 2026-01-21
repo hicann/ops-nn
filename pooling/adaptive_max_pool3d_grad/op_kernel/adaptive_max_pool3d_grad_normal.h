@@ -59,9 +59,9 @@ public:
         params_.baseHo = tiling->baseHo;
         params_.baseWo = tiling->baseWo;
         params_.ncCnt = tiling->ncCnt;
-        params_.dCnt = tiling->doCnt;
-        params_.hCnt = tiling->hoCnt;
-        params_.wCnt = tiling->woCnt;
+        params_.doCnt = tiling->doCnt;
+        params_.hoCnt = tiling->hoCnt;
+        params_.woCnt = tiling->woCnt;
         params_.totalCnt = tiling->totalCnt;
         params_.baseNcTail = tiling->ncTail;
         params_.doTail = tiling->doTail;
@@ -78,10 +78,14 @@ public:
 
     __aicore__ inline void InitInputsOutputs(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace)
     {
-        gradGm.SetGlobalBuffer((__gm__ TGrad*)grad);
-        argmaxGm.SetGlobalBuffer((__gm__ TArgmax*)argmax);
-        yGm.SetGlobalBuffer((__gm__ TY*)y);
-        workspaceGm.SetGlobalBuffer((__gm__ float*)usrWorkspace);
+        gradGm.SetGlobalBuffer((__gm__ TGrad*)grad, params_.ncDim * params_.doDim * params_.hoDim * params_.woDim);
+        argmaxGm.SetGlobalBuffer((__gm__ TArgmax*)argmax, params_.ncDim * params_.doDim * params_.hoDim * params_.woDim);
+        yGm.SetGlobalBuffer((__gm__ TY*)y, params_.ncDim * params_.diHiWiLen);
+        if constexpr (!is_same<TY, float>::value && IsOverlap) {
+            workspaceGm.SetGlobalBuffer((__gm__ float*)usrWorkspace, params_.ncDim * params_.diHiWiLen);
+        } else {
+            workspaceGm.SetGlobalBuffer((__gm__ float*)usrWorkspace);
+        }
         if (GetBlockIdx() == 0) {
             if constexpr (is_same<TY, float>::value) {
                 InitGlobalMemory(yGm, params_.ncDim * params_.diHiWiLen, 0.0f);
@@ -143,14 +147,14 @@ public:
 
         for (uint64_t totalIndex = 0; totalIndex < params_.totalCnt; totalIndex++) {
             if (GetBlockIdx() == totalIndex % GetBlockNum()) {
-                core_.ncCntIndex = totalIndex / (params_.dCnt * params_.hCnt * params_.wCnt);
-                core_.doCntIndex = totalIndex / (params_.hCnt * params_.wCnt) % params_.dCnt;
-                core_.hoCntIndex = totalIndex / params_.wCnt % params_.hCnt;
-                core_.woCntIndex = totalIndex % params_.wCnt;
+                core_.ncCntIndex = totalIndex / (params_.doCnt * params_.hoCnt * params_.woCnt);
+                core_.doCntIndex = totalIndex / (params_.hoCnt * params_.woCnt) % params_.doCnt;
+                core_.hoCntIndex = totalIndex / params_.woCnt % params_.hoCnt;
+                core_.woCntIndex = totalIndex % params_.woCnt;
                 core_.ncShape = core_.ncCntIndex == params_.ncCnt - 1 ? params_.baseNcTail : params_.singleCoreNc;
-                core_.doShape = core_.doCntIndex == params_.dCnt - 1 ? params_.doTail : params_.singleCoreDo;
-                core_.hoShape = core_.hoCntIndex == params_.hCnt - 1 ? params_.hoTail : params_.singleCoreHo;
-                core_.woShape = core_.woCntIndex == params_.wCnt - 1 ? params_.woTail : params_.singleCoreWo;
+                core_.doShape = core_.doCntIndex == params_.doCnt - 1 ? params_.doTail : params_.singleCoreDo;
+                core_.hoShape = core_.hoCntIndex == params_.hoCnt - 1 ? params_.hoTail : params_.singleCoreHo;
+                core_.woShape = core_.woCntIndex == params_.woCnt - 1 ? params_.woTail : params_.singleCoreWo;
                 SubProcess();
             }
         }

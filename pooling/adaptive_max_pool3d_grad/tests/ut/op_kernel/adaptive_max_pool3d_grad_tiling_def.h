@@ -67,8 +67,8 @@ inline void InitTilingData(uint8_t* tiling, AdaptiveMaxPool3DGradTilingData* con
     AdaptiveMaxPool3DGradTilingData tiling_data; \
     InitTilingData(tiling_arg, &tiling_data)
 
-#define DTYPE_X half
-#define DTYPE_GRAD half
+#define DTYPE_X float
+#define DTYPE_GRAD float
 #define DTYPE_ARGMAX int32_t
-#define DTYPE_Y half
+#define DTYPE_Y float
 #endif // _ADA_MAX_POOL3d_GRAD_TILING_DEF_H_

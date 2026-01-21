@@ -224,7 +224,6 @@ ge::graphStatus AdaptiveMaxPool3DGradTilingBase::PostTiling()
     context_->SetBlockDim(maxPoolGradParams.usedCoreNum);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
-
     size_t usrWorkspaceSize = maxPoolGradParams.workspaceSize;
     size_t sysWorkSpaceSize = 16 * 1024 * 1024;
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);

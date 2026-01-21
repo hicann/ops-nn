@@ -597,3 +597,104 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_case_0
     TestMaxPool3dGradWithArgmaxKernel<float>(
         xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
 }
+
+template <typename T>
+void TestMaxPool3dGradWithArgmaxKernelScatterOverlap(
+    vector<uint64_t>& xShape, vector<uint64_t>& gradShape, vector<uint64_t>& ksize, vector<uint64_t>& strides,
+    vector<uint64_t>& pads, vector<uint64_t>& dilation, uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
+{
+    uint64_t ncDim = xShape[0] * xShape[1];
+    uint64_t diDim = xShape[2];
+    uint64_t hiDim = xShape[3];
+    uint64_t wiDim = xShape[4];
+    uint64_t doDim = gradShape[2];
+    uint64_t hoDim = gradShape[3];
+    uint64_t woDim = gradShape[4];
+
+    size_t xByteSize = ncDim * diDim * hiDim * wiDim * sizeof(T);
+    size_t gradByteSize = ncDim * doDim * hoDim * woDim * sizeof(T);
+    size_t argmaxByteSize = ncDim * doDim * hoDim * woDim * sizeof(int32_t);
+    size_t dxByteSize = ncDim * diDim * hiDim * wiDim * sizeof(T);
+    size_t tilingDataSize = sizeof(MaxPool3DGradWithArgmaxTilingData);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
+    uint8_t* argmax = (uint8_t*)AscendC::GmAlloc(argmaxByteSize);
+    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dxByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+    MaxPool3DGradWithArgmaxTilingData* tilingDatafromBin = reinterpret_cast<MaxPool3DGradWithArgmaxTilingData*>(tiling);
+
+    tilingDatafromBin->ncDim = ncDim;
+    tilingDatafromBin->diDim = diDim;
+    tilingDatafromBin->hiDim = hiDim;
+    tilingDatafromBin->wiDim = wiDim;
+    tilingDatafromBin->doDim = doDim;
+    tilingDatafromBin->hoDim = hoDim;
+    tilingDatafromBin->woDim = woDim;
+    tilingDatafromBin->kd = ksize[0];
+    tilingDatafromBin->kh = ksize[1];
+    tilingDatafromBin->kw = ksize[2];
+    tilingDatafromBin->sd = strides[0];
+    tilingDatafromBin->sh = strides[1];
+    tilingDatafromBin->sw = strides[2];
+    tilingDatafromBin->padDTop = pads[0];
+    tilingDatafromBin->padHTop = pads[1];
+    tilingDatafromBin->padWTop = pads[2];
+    tilingDatafromBin->padDBottom = 0;
+    tilingDatafromBin->padHBottom = 0;
+    tilingDatafromBin->padWBottom = 0;
+    tilingDatafromBin->baseNc = ncDim / blockDim;
+    tilingDatafromBin->baseDo = 2;
+    tilingDatafromBin->baseHo = 2;
+    tilingDatafromBin->baseWo = 2;
+    tilingDatafromBin->ncTail = ncDim / blockDim;
+    tilingDatafromBin->doTail = 2;
+    tilingDatafromBin->hoTail = 2;
+    tilingDatafromBin->woTail = 2;
+    tilingDatafromBin->ncCnt = blockDim;
+    tilingDatafromBin->doCnt = 1;
+    tilingDatafromBin->hoCnt = 1;
+    tilingDatafromBin->woCnt = 1;
+    tilingDatafromBin->totalCnt = blockDim;
+    tilingDatafromBin->usedCoreNum = blockDim;
+    tilingDatafromBin->totalUBSize = 196352;
+    tilingDatafromBin->singleCoreNc = 0;
+    tilingDatafromBin->singleCoreDo = 0;
+    tilingDatafromBin->singleCoreHo = 0;
+    tilingDatafromBin->singleCoreWo = 0;
+    tilingDatafromBin->ncRound = 1;
+    tilingDatafromBin->ncRoundTail = 1;
+    tilingDatafromBin->preCoreNum = 0;
+    tilingDatafromBin->totalRound = 1;
+
+    // normal fp16
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(grad);
+    AscendC::GmFree(argmax);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_overlap_case_0)
+{
+    vector<uint64_t> xShape = {1, 1, 96, 96, 96};
+    vector<uint64_t> gradShape = {1, 1, 2, 2, 2};
+    vector<uint64_t> ksize = {64, 64, 64};
+    vector<uint64_t> strides = {32, 32, 32};
+    vector<uint64_t> pads = {0, 0, 0};
+    vector<uint64_t> dilation = {1, 1, 1};
+    uint64_t workspaceSize = 0;
+    uint64_t blockDim = 1;
+    uint64_t tilingKey = 102;
+    TestMaxPool3dGradWithArgmaxKernelScatterOverlap<float>(
+        xShape, gradShape, ksize, strides, pads, dilation, workspaceSize, blockDim, tilingKey);
+}

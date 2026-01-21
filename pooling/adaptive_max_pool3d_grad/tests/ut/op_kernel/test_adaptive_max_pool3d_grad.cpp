@@ -41,7 +41,7 @@ struct AdaptiveMaxPool3DGradTestParam {
 
     int64_t blockDim = 0;
 
-    size_t dataTypeSize;
+    size_t dataTypeSize = 4;
 
     uint32_t tilingKey;
     AdaptiveMaxPool3DGradTilingData tiling;
@@ -84,14 +84,13 @@ TEST_P(AdaptiveMaxPool3DGradTest, test_case_adaptive_max_pool3d_grad)
     int64_t gradByteSize = outputShapeSize * param.dataTypeSize;
     int64_t argmaxByteSize = outputShapeSize * sizeof(int32_t);
     int64_t dxByteSize = inputShapeSize * param.dataTypeSize;
-
     int64_t workspaceSize = 0;
     int64_t tilingDataSize = sizeof(AdaptiveMaxPool3DGradTilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
     uint8_t* argmax = (uint8_t*)AscendC::GmAlloc(argmaxByteSize);
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dxByteSize);
+    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
@@ -137,7 +136,7 @@ TEST_P(AdaptiveMaxPool3DGradTest, test_case_adaptive_max_pool3d_grad)
 
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(adaptive_max_pool3d_grad, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(adaptive_max_pool3d_grad, blockDim, x, grad, argmax, dx, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(grad);
@@ -156,11 +155,39 @@ static AdaptiveMaxPool3DGradTestParam cases[] = {
      1,
      1,
      1,
-     sizeof(float),
      40,
+     sizeof(float),
      2,
      {3200, 1,  64, 64, 1, 1,  1, 1, 64, 64, 80, 1,      1, 1, 3200, 1, 1,
-      1,    80, 1,  1,  1, 40, 1, 1, 1,  40, 40, 196352, 1, 0, 1,    0}}
+      1,    80, 1,  1,  1, 40, 1, 1, 1,  40, 40, 196352, 1, 0, 1,    0}},
+    {"test_case_adaptive_max_pool3d_grad_scatter_overlap",
+     1,
+     1,
+     70,
+     70,
+     70,
+     3,
+     3,
+     3,
+     1,
+     sizeof(float),
+     102,
+     {1, 70, 70, 70, 3, 3, 3, 24, 24, 24, 1, 3, 3, 3, 1, 1, 1,  1, 1, 3, 3,
+      3, 1, 1, 1, 1, 1, 1, 196352, 1, 1, 1, 0}},
+    {"test_case_adaptive_max_pool3d_grad_normal_overlap",
+     1,
+     1,
+     7,
+     7,
+     7,
+     3,
+     3,
+     3,
+     40,
+     sizeof(float),
+     100,
+     {1, 7, 7, 7, 3, 3, 3, 3, 3, 3, 1, 1, 1, 3, 64, 3, 3, 3, 1, 3, 3,
+      3, 1, 1, 1, 1, 1, 1, 196352, 0, 0, 0, 0}}
 };
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3DGrad, AdaptiveMaxPool3DGradTest, testing::ValuesIn(cases));

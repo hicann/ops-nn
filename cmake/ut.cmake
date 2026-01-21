@@ -335,6 +335,8 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
+            COMMAND cp -r ${PROJECT_SOURCE_DIR}/pooling/pool_3d_common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
         )
         ## kernel src copy
         kernel_src_copy(

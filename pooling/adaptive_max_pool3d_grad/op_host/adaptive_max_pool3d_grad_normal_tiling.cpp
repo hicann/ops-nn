@@ -196,6 +196,7 @@ ge::graphStatus AdaptiveMaxPool3DGradNormalTiling::DoOpTiling()
     bool res = SetNormalTilingParams();
     OP_CHECK_IF(!res, OP_LOGE(context_->GetNodeName(), "Normal cal tiling params failed."), return ge::GRAPH_FAILED);
     maxPoolGradParams.tilingType = TILING_TYPE_NORMAL;
+    context_->SetScheduleMode(1);
     SetOtherTilingParams();
     SetBaseTilingData();
     SetNormalTilingData();
