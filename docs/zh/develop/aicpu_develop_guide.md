@@ -59,10 +59,10 @@ ${op_name}                              # 替换为实际算子名的小写下�
 └── CMakeLists.txt                      # 算子Cmakelist入口
 ```
 
-若`${op_class}`为全新算子分类，需额外在`cmake/variables.cmake`的`OP_CATEGORY_LIST`中添加`${op_class}`，否则无法正常编译。
+若```${op_class}```为全新算子分类，需额外在`cmake/variables.cmake`的`OP_CATEGORY_LIST`中添加```${op_class}```，否则无法正常编译。
 
 ## 算子定义
-算子定义需要完成两个交付件：`README.md` `${op_name}.json`
+算子定义需要完成两个交付件：`README.md` ```${op_name}.json```
 
 **交付件1：README.md**
 
@@ -89,13 +89,13 @@ graph LR
 ```
 ### 代码实现
 
-Kernel一共需要两个交付件：`${op_name}_aicpu.cpp` `${op_name}_aicpu.h`
+Kernel一共需要两个交付件：```${op_name}_aicpu.cpp``` ```${op_name}_aicpu.h```
 
 **交付件1：${op_name}_aicpu.h**
 
 算子类声明
 
-Kernel实现的第一步，需在头文件`op_kernel_aicpu/${op_name}_aicpu.h`进行算子类的声明，算子类需继承CpuKernel基类。
+Kernel实现的第一步，需在头文件```op_kernel_aicpu/${op_name}_aicpu.h```进行算子类的声明，算子类需继承CpuKernel基类。
 如需查看详细实现，请参考[add_example_aicpu.h](../../../examples/add_example_aicpu/op_kernel_aicpu/add_example_aicpu.h)。
 
 
@@ -211,11 +211,11 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
     # 安装run包
     ./build_out/cann-ops-nn-${vendor_name}-linux.${arch}.run
     ```
-    自定义算子包安装在`${ASCEND_HOME_PATH}/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录，可提前在环境变量中配置。
+    自定义算子包安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录，可提前在环境变量中配置。
     
 4. **（可选）卸载自定义算子包。**
 
-    自定义算子包安装后在`${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts`目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：
+    自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：
     
     ```bash
     bash ${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts/uninstall.sh

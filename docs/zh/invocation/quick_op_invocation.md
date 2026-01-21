@@ -48,7 +48,7 @@
 
 3. **（可选）卸载自定义算子包**
 
-    自定义算子包安装后在`${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts`目录会生成`uninstall.sh`脚本，通过执行该脚本可卸载自定义算子包，具体命令如下：
+    自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`脚本，通过执行该脚本可卸载自定义算子包，具体命令如下：
     ```bash
     bash ${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts/uninstall.sh
     ```

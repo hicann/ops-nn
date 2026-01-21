@@ -145,7 +145,7 @@ Self-extractable archive "cann-ops-nn-custom-linux.${arch}.run" successfully cre
 ```bash
 ./build_out/cann-ops-nn-*linux*.run
 ```
-`AddExample`安装在`${ASCEND_HOME_PATH}/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录。
+`AddExample`安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录。
 
 ### 4. 配置环境变量
 

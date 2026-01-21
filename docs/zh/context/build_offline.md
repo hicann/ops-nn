@@ -4,15 +4,15 @@
 
 本章提供了离线编译安装指导，在此之前请确保已按[环境部署](./quick_install.md)完成基础环境搭建。
 ## 获取依赖
-离线编译时，需手动安装如下依赖，否则无法正常编译和执行算子，其中`${cann_3rd_lib_path}`表示第三方软件存放的目录。
+离线编译时，需手动安装如下依赖，否则无法正常编译和执行算子，其中```${cann_3rd_lib_path}```表示第三方软件存放的目录。
 
 - 依赖json
 
-下载[json](https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip)，并解压到`${cann_3rd_lib_path}/json/include`，若无该目录请自行创建。
+下载[json](https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip)，并解压到```${cann_3rd_lib_path}/json/include```，若无该目录请自行创建。
 
 - 依赖makeself
 
-下载[makeself](https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz)，并解压到`${cann_3rd_lib_path}/makeself`，若无该目录请自行创建。
+下载[makeself](https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz)，并解压到```${cann_3rd_lib_path}/makeself```，若无该目录请自行创建。
 
 ## 离线编译（自定义算子包）
 自定义算子包编译时，需增加--cann_3rd_lib_path配置选项并指定路径，命令如下：
