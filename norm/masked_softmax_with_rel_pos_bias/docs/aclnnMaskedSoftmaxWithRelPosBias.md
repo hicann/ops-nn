@@ -2,10 +2,14 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -13,9 +17,9 @@
 
 - 计算公式：
 
-$$
-out = \operatorname{softmax}(scaleValue * x + attenMaskOptional + relativePosBias)
-$$
+  $$
+  out = \operatorname{softmax}(scaleValue * x + attenMaskOptional + relativePosBias)
+  $$
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaskedSoftmaxWithRelPosBias”接口执行计算。
@@ -136,6 +140,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   </tbody>
   </table>
 
+  - <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
+
 - **返回值：**
   <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。</p>
   <p>第一段接口完成入参校验，出现以下场景报错：</p>
@@ -209,6 +215,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 ## 约束说明
 - 确定性计算：
   - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
+
+- <term>Atlas 推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。
 
 - 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize 表示S2对齐32Byte后的结果。
 
