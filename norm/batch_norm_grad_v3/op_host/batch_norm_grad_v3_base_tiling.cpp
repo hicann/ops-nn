@@ -259,4 +259,14 @@ ge::graphStatus BatchNormGradV3Base::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
+int64_t BatchNormGradV3Base::GetAlignValue(int64_t value)
+{
+    if (dyDtype_ == ge::DT_FLOAT) {
+        value = (value + FLOAT_BLOCK_SIZE - 1) / FLOAT_BLOCK_SIZE * FLOAT_BLOCK_SIZE;
+    } else {
+        value = (value + HALF_BLOCK_SIZE - 1) / HALF_BLOCK_SIZE * HALF_BLOCK_SIZE;
+    }
+    return value;
+}
+
 } // namespace optiling

@@ -9,4 +9,4 @@
 
 message(STATUS "=== Debug: start ops.norm.bn_training_reduce.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE bn_training_reduce ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE bn_training_reduce ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common batch_norm_v3)

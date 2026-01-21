@@ -125,6 +125,7 @@ protected:
     ge::graphStatus GetDyInfo();
     ge::graphStatus GetWeightRunningVarDxInfo();
     ge::graphStatus CheckInputValid();
+    int64_t GetAlignValue(int64_t value);
 
 protected:
     const char* opName_ = "BatchNormGradV3Base";
