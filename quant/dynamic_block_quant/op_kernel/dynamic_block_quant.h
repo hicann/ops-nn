@@ -21,7 +21,6 @@ namespace DynamicBlockQuant {
 using namespace AscendC;
 
 constexpr float NUM_INT_8_MAX = 127.0f;
-constexpr float BLOCK_MAX_VALUE_MIN = 1e-4f;
 constexpr int64_t SINGLE_DATA_BLOCK_SIZE = 32;
 constexpr int64_t ONE_K_BYTES = 1024;
 
@@ -108,9 +107,11 @@ private:
     LocalTensor<float> quantScale;
     LocalTensor<float> quantScaleBrcb;
     LocalTensor<float> maskTmp;
-    LocalTensor<float> quantMask;
-    LocalTensor<float> quantMask2;
-    LocalTensor<float> quantMask3;            // 填充127.0的tensor
+    LocalTensor<float> quantMask; // 填充1.0 tensor
+    LocalTensor<float> quantMask2; // 填充1.0/127 tensor
+    LocalTensor<float> quantMask3; // 填充127.0的tensor
+    LocalTensor<float> minScaleTensor; // 填充minScale的值
+    LocalTensor<float> invMinScaleTensor; // 填充minScale的值
     LocalTensor<float> blockMaxValueMinLimit; // 填充inputMin的限制,防止max值过小
     LocalTensor<T> clearUbZero;               // 全0tensor，用于clear ub
 
@@ -141,7 +142,8 @@ private:
     int64_t tailColBlockStart = 0;
     int64_t tailColBlockEnd = 0;
 
-    float blockMaxValueMin = BLOCK_MAX_VALUE_MIN;
+    float minScale = 0.0f;
+    bool hasMinScale = false;
 
     int64_t ubSize = 0;
 
@@ -166,6 +168,7 @@ __aicore__ inline void DynamicBlockQuantND<T>::Init(
 template <typename T>
 __aicore__ inline void DynamicBlockQuantND<T>::InitScalars()
 {
+    hasMinScale = minScale > 0.0f;
     colBlockTotalNum = CeilDiv(colNum, blockSizeCol);
     colPadNum = colBlockTotalNum * blockSizeCol;
     colPadExtNum = colPadNum - colNum;
@@ -213,6 +216,15 @@ __aicore__ inline void DynamicBlockQuantND<T>::InitLocalTensors()
     Duplicate(quantMask, (float)(1.0), NUM_EIGHT);
     Duplicate(quantMask2, (float)(1.0) / NUM_INT_8_MAX, NUM_EIGHT);
     Duplicate(quantMask3, NUM_INT_8_MAX, NUM_EIGHT);
+
+    if (hasMinScale) {
+        minScaleTensor = tmp[offset].ReinterpretCast<float>();
+        offset += NUM_EIGHT * sizeof(float);
+        invMinScaleTensor = tmp[offset].ReinterpretCast<float>();
+        offset += NUM_EIGHT * sizeof(float);
+        Duplicate(minScaleTensor, minScale, NUM_EIGHT);
+        Duplicate(invMinScaleTensor, (float)(1.0) / minScale, NUM_EIGHT);
+    }
 
     if (colClearExtNum > 0) {
         clearUbZero = tmp[offset].ReinterpretCast<T>();
@@ -316,6 +328,7 @@ template <typename T>
 __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(
     int64_t calcNum, int64_t startBlockIdx, int64_t scaleCount)
 {
+    LocalTensor<float> scaleLocalTmp = scaleLocal[NUM_ONE_TWO_EIGHT];
     Cast(xLocalTmp, xLocal, RoundMode::CAST_NONE, calcNum);
     SetFlag<HardEvent::V_MTE2>(eventIdVToMTE2);
     WaitFlag<HardEvent::V_MTE2>(eventIdVToMTE2);
@@ -323,28 +336,28 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(
     Abs(xLocalAbs, xLocalTmp, static_cast<int32_t>(calcNum));
     PipeBarrier<PIPE_V>();
     // 计算每个block的最大值
-    WholeReduceMax(scaleLocal, xLocalAbs, NUM_SIX_FOUR, scaleCount, 1, 1, NUM_ONE_SIX, ReduceOrder::ORDER_ONLY_VALUE);
-    WholeReduceMax(
-        scaleLocal[NUM_ONE_TWO_EIGHT], xLocalAbs[NUM_SIX_FOUR], NUM_SIX_FOUR, scaleCount, 1, 1, NUM_ONE_SIX,
-        ReduceOrder::ORDER_ONLY_VALUE);
+    Max(xLocalAbs, xLocalAbs, xLocalAbs[NUM_EIGHT], NUM_SIX_FOUR, scaleCount, {1, NUM_TWO, NUM_TWO, NUM_EIGHT, NUM_ONE_SIX, NUM_ONE_SIX});
     PipeBarrier<PIPE_V>();
-    Max(scaleLocal, scaleLocal, scaleLocal[NUM_ONE_TWO_EIGHT], scaleCount);
+    WholeReduceMax(scaleLocal, xLocalAbs, NUM_SIX_FOUR, scaleCount, 1, 1, NUM_EIGHT, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
+    BinaryRepeatParams MultiOneBlockParams = {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0};
+    uint8_t repeatTimes = CeilDiv(scaleCount, NUM_SIX_FOUR);
     // bf16场景因xLocakAbs已为float，可先div再扩展
-    Div(scaleLocal[NUM_ONE_TWO_EIGHT], quantMask, scaleLocal, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR),
-        {1, 0, 1, NUM_EIGHT, 0, NUM_EIGHT});
+    Div(scaleLocalTmp, quantMask, scaleLocal, NUM_SIX_FOUR, repeatTimes, {1, 0, 1, NUM_EIGHT, 0, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
-    Mul(scaleLocal[NUM_ONE_TWO_EIGHT], scaleLocal[NUM_ONE_TWO_EIGHT], quantMask3, NUM_SIX_FOUR,
-        CeilDiv(scaleCount, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
-    PipeBarrier<PIPE_V>();
+    Mul(scaleLocalTmp, scaleLocalTmp, quantMask3, NUM_SIX_FOUR, repeatTimes, MultiOneBlockParams);
 
     // 计算scale的输出
-    Mul(scaleLocal, scaleLocal, quantMask2, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR),
-        {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+    Mul(scaleLocal, scaleLocal, quantMask2, NUM_SIX_FOUR, repeatTimes, MultiOneBlockParams);
+    if (hasMinScale) {
+        PipeBarrier<PIPE_V>();
+        Max(scaleLocalTmp, scaleLocalTmp, minScaleTensor, NUM_SIX_FOUR, repeatTimes, MultiOneBlockParams);
+        Min(scaleLocal, scaleLocal, invMinScaleTensor, NUM_SIX_FOUR, repeatTimes, MultiOneBlockParams);
+    }
     CopyOutScale(startBlockIdx, scaleCount);
-
+    PipeBarrier<PIPE_V>();
     // 扩展quantScale用于量化x
-    Brcb(quantScaleBrcb, scaleLocal[NUM_ONE_TWO_EIGHT], CeilDiv(scaleCount, NUM_EIGHT), {1, NUM_EIGHT});
+    Brcb(quantScaleBrcb, scaleLocalTmp, CeilDiv(scaleCount, NUM_EIGHT), {1, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
     Copy(
         quantScale, quantScaleBrcb, NUM_SIX_FOUR, CeilDiv(scaleCount * NUM_EIGHT, NUM_SIX_FOUR),
@@ -369,7 +382,7 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
     WholeReduceMax(
         scaleLocalT, xLocalAbs, NUM_ONE_TWO_EIGHT, scaleCount, 1, 1, NUM_EIGHT, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
-    // fp16场景因xLocakAbs不为float，先扩展再div
+    // fp16场景因xLocakAbs不为float，先brcb再div
     Brcb(quantScaleLocalT, scaleLocalT, CeilDiv(calcNum / NUM_ONE_TWO_EIGHT, NUM_EIGHT), {1, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
     Cast(quantScale, quantScaleLocalT, RoundMode::CAST_NONE, calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX);
@@ -378,12 +391,20 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
 
     Mul(scaleLocal, scaleLocal, quantMask2, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR),
         {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+    if (hasMinScale) {
+        PipeBarrier<PIPE_V>();
+        Min(scaleLocal, scaleLocal, invMinScaleTensor, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+    }
     CopyOutScale(startBlockIdx, scaleCount);
     Div(quantScale, quantMask, quantScale, NUM_SIX_FOUR,
         CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 0, 1, NUM_EIGHT, 0, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
     Mul(quantScale, quantScale, quantMask3, NUM_SIX_FOUR,
         CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+    if (hasMinScale) {
+        PipeBarrier<PIPE_V>();
+        Max(quantScale, quantScale, minScaleTensor, NUM_SIX_FOUR, CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+    }
     PipeBarrier<PIPE_V>();
 }
 
@@ -529,6 +550,7 @@ __aicore__ inline void DynamicBlockQuantND<T>::ParseTilingData(DynamicBlockQuant
     blockSizeRow = tilingData->blockSizeRow;
     blockSizeCol = tilingData->blockSizeCol;
     perCoreRowNum = tilingData->perCoreRowNum;
+    minScale = tilingData->minScale;
 
     tailRow = tilingData->tailRowList[coreIdx];
     tailColBlockStart = tilingData->tailColBlockStartList[coreIdx];
