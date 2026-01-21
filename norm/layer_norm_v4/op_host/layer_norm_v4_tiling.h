@@ -165,6 +165,53 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_511, LayerNormV4TilingDataRegBaseTwoPassP
 REGISTER_TILING_DATA_CLASS(LayerNormV4_520, LayerNormV4TilingDataRegBaseTwoPassPerf)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_522, LayerNormV4TilingDataRegBaseTwoPassPerf)
 
+BEGIN_TILING_DATA_DEF(LayerNormV4CommonTilingData)
+TILING_DATA_FIELD_DEF(int64_t, blockDim);
+TILING_DATA_FIELD_DEF(uint32_t, colSize);
+TILING_DATA_FIELD_DEF(uint32_t, rowSize);
+TILING_DATA_FIELD_DEF(float, eps);
+TILING_DATA_FIELD_DEF(uint32_t, space);
+TILING_DATA_FIELD_DEF(float, coefficient);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrBeta);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV4_700, LayerNormV4CommonTilingData);
+REGISTER_TILING_DATA_CLASS(LayerNormV4_701, LayerNormV4CommonTilingData);
+REGISTER_TILING_DATA_CLASS(LayerNormV4_702, LayerNormV4CommonTilingData);
+
+BEGIN_TILING_DATA_DEF(LayerNormV4MergeNTilingData)
+TILING_DATA_FIELD_DEF(uint32_t, blockDim);
+TILING_DATA_FIELD_DEF(uint32_t, colSize);
+TILING_DATA_FIELD_DEF(uint32_t, rowSize);
+TILING_DATA_FIELD_DEF(float, eps);
+TILING_DATA_FIELD_DEF(float, coefficient);
+TILING_DATA_FIELD_DEF(uint32_t, rowAlign);
+TILING_DATA_FIELD_DEF(uint32_t, nRow);
+TILING_DATA_FIELD_DEF(uint32_t, ableNRow);
+TILING_DATA_FIELD_DEF(uint32_t, loopCount);
+TILING_DATA_FIELD_DEF(uint32_t, formerNum);
+TILING_DATA_FIELD_DEF(uint32_t, formerRemainNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailNRow);
+TILING_DATA_FIELD_DEF(uint32_t, tailLoop);
+TILING_DATA_FIELD_DEF(uint32_t, tailNum);
+TILING_DATA_FIELD_DEF(uint32_t, tailRemainNum);
+TILING_DATA_FIELD_DEF(uint32_t, tileLength);
+TILING_DATA_FIELD_DEF(uint32_t, blockLength);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrBeta);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV4_600, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_1600, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_2600, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_601, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_1601, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_2601, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_602, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_1602, LayerNormV4MergeNTilingData)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_2602, LayerNormV4MergeNTilingData)
+
 struct ParamsLayerNomrV4 {
     uint64_t coreNum;
     uint64_t ubSizePlatForm;
@@ -213,6 +260,10 @@ enum class LayerNormV4TilingKey : int64_t
     LAYER_NORM_REGBASE_TWO_PASS_PERF_FLOAT16_FLOAT16 = 511,
     LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_FLOAT32 = 520,
     LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_BFLOAT16 = 522,
+
+    LAYER_NORM_MERGE_N_FLOAT32_FLOAT32 = 600,
+
+    LAYER_NORM_COMMON_BFLOAT16_BFLOAT16 = 700,
 };
 
 enum class LNTemplateKey : int
@@ -262,6 +313,36 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
+};
+
+class LayerNormV4MergeNTiling : public LayerNormV4TilingBase {
+public:
+    explicit LayerNormV4MergeNTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
+    {}
+    ~LayerNormV4MergeNTiling() override = default;
+    LayerNormV4MergeNTilingData td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+    void PrepareTiling(uint64_t ubSize, uint32_t& nRow, uint32_t tailNRow, uint32_t tailNum);
+};
+
+class LayerNormV4CommonTiling : public LayerNormV4TilingBase {
+public:
+    explicit LayerNormV4CommonTiling(gert::TilingContext* tilingContext) : LayerNormV4TilingBase(tilingContext)
+    {}
+    ~LayerNormV4CommonTiling() override = default;
+    LayerNormV4CommonTilingData td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+    void TilingDataPrint();
 };
 
 class LayerNormV4TransposeTiling : public LayerNormV4TilingBase {

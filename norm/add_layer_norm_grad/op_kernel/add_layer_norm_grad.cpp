@@ -69,7 +69,7 @@ extern "C" __global__ __aicore__ void add_layer_norm_grad(
         KernelAddLayerNormGradLarge<half, 51> op;
         INIT_CUT_D_PROCESS;
     } else {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         if (TILING_KEY_IS(30)) {
             KernelAddLayerNormGrad<bfloat16_t, 30> op;
             INIT_CUT_N_PROCESS;

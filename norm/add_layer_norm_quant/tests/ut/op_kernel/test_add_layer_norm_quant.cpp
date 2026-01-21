@@ -89,33 +89,18 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_normal)
     tilingDatafromBin->isXOut = 1;
     tilingDatafromBin->scaleOffsetMode = 200;
     tilingDatafromBin->isPerTensor = 0;
-    // dual normal bf16/fp16
-    // ICPU_SET_TILING_KEY(1100);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1101);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1102);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3100);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3101);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3102);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // Sole normal bf16/fp16
     tilingDatafromBin->scaleOffsetMode = 100;
+
+    tilingDatafromBin->numLastDimAlign = 5120;
+    tilingDatafromBin->numLastDimAlign32 = 5120;
+    tilingDatafromBin->mulLoopFp32 = 80;
+    tilingDatafromBin->mulTailFp32 = 0;
+    tilingDatafromBin->dstRepStrideFp32 = 128;
+    tilingDatafromBin->firstDimPerTimeTail = 1;
+    tilingDatafromBin->rowTailPerBlock = 1;
+    tilingDatafromBin->rowTailLastBlock = 1;
+    tilingDatafromBin->gmOffset = 5120;
+
     ICPU_SET_TILING_KEY(1102);
     ICPU_RUN_KF(
         add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, nullptr, nullptr, nullptr, y1, y2, x,
@@ -195,31 +180,17 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_single_row)
     tilingDatafromBin->isXOut = 1;
     tilingDatafromBin->scaleOffsetMode = 200;
     tilingDatafromBin->isPerTensor = 0;
-    // dual normal bf16/fp16
-    // ICPU_SET_TILING_KEY(1120);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1121);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1122);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3120);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3121);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3122);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+
+    tilingDatafromBin->numLastDimAlign = D;
+    tilingDatafromBin->numLastDimAlign32 = D;
+    tilingDatafromBin->mulLoopFp32 = 176;
+    tilingDatafromBin->mulTailFp32 = 0;
+    tilingDatafromBin->dstRepStrideFp32 = 128;
+    tilingDatafromBin->firstDimPerTimeTail = 1;
+    tilingDatafromBin->rowTailPerBlock = 1;
+    tilingDatafromBin->rowTailLastBlock = 1;
+    tilingDatafromBin->gmOffset = D;
+    
     // Sole normal bf16/fp16
     tilingDatafromBin->scaleOffsetMode = 100;
     ICPU_SET_TILING_KEY(1122);
@@ -303,32 +274,16 @@ TEST_F(add_layer_norm_quant_test, test_case_static_normal)
     tilingDatafromBin->isXOut = 1;
     tilingDatafromBin->scaleOffsetMode = 211;
     tilingDatafromBin->isPerTensor = 0;
-    // dual normal bf16/fp16
-    // ICPU_SET_TILING_KEY(1000);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1001);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(1002);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3000);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3001);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
-    // ICPU_SET_TILING_KEY(3002);
-    // ICPU_RUN_KF(
-    //     add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, offsets1, offsets2, y1, y2, x,
-    //     outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
+    tilingDatafromBin->numLastDimAlign = D;
+    tilingDatafromBin->numLastDimAlign32 = D;
+    tilingDatafromBin->mulLoopFp32 = 176;
+    tilingDatafromBin->mulTailFp32 = 0;
+    tilingDatafromBin->dstRepStrideFp32 = 128;
+    tilingDatafromBin->firstDimPerTimeTail = 1;
+    tilingDatafromBin->rowTailPerBlock = 1;
+    tilingDatafromBin->rowTailLastBlock = 1;
+    tilingDatafromBin->gmOffset = D;
     // Dual and No offset
     tilingDatafromBin->scaleOffsetMode = 200;
     ICPU_SET_TILING_KEY(1002);
@@ -556,6 +511,17 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_fp32)
     tilingDatafromBin->isXOut = 1;
     tilingDatafromBin->scaleOffsetMode = 200;
     tilingDatafromBin->isPerTensor = 0;
+    
+    tilingDatafromBin->numLastDimAlign = D;
+    tilingDatafromBin->numLastDimAlign32 = D;
+    tilingDatafromBin->mulLoopFp32 = 80;
+    tilingDatafromBin->mulTailFp32 = 0;
+    tilingDatafromBin->dstRepStrideFp32 = 128;
+    tilingDatafromBin->firstDimPerTimeTail = 1;
+    tilingDatafromBin->rowTailPerBlock = 1;
+    tilingDatafromBin->rowTailLastBlock = 1;
+    tilingDatafromBin->gmOffset = D;
+    
     // dual normal fp32
     ICPU_SET_TILING_KEY(2100);
     ICPU_RUN_KF(

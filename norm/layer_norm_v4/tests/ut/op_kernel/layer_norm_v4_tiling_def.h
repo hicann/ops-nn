@@ -21,6 +21,7 @@
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
+#define DTYPE_X float
 
 #pragma pack(1)
 
@@ -66,6 +67,48 @@ struct LayerNormV4TilingDataTranspose {
 
 #pragma pack()
 
+#pragma pack(1)
+
+struct LayerNormV4MergeNTilingData {
+    uint32_t blockDim = 0;
+    uint32_t colSize = 0;
+    uint32_t rowSize = 0;
+    float eps = 0;
+    float coefficient = 0;
+    uint32_t rowAlign = 0;
+    uint32_t nRow = 0;
+    uint32_t ableNRow = 0;
+    uint32_t loopCount = 0;
+    uint32_t formerNum = 0;
+    uint32_t formerRemainNum = 0;
+    uint32_t tailNRow = 0;
+    uint32_t tailLoop = 0;
+    uint32_t tailNum = 0;
+    uint32_t tailRemainNum = 0;
+    uint32_t tileLength = 0;
+    uint32_t blockLength = 0;
+
+    uint32_t nullptrGamma = 0;
+    uint32_t nullptrBeta = 0;
+};
+
+#pragma pack()
+
+#pragma pack(1)
+
+struct LayerNormV4CommonTilingData {
+    int64_t blockDim = 0;
+    uint32_t colSize = 0;
+    uint32_t rowSize = 0;
+    float eps = 0;
+    uint32_t space = 0;
+    float coefficient = 0;
+    uint32_t nullptrGamma = 0;
+    uint32_t nullptrBeta = 0;
+};
+
+#pragma pack()
+
 #ifdef __NPU_TILING__
 inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4TilingDataSingleRead* const_data)
 {
@@ -93,6 +136,36 @@ inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4Tili
 inline void InitTilingData(uint8_t* tiling, LayerNormV4TilingDataTranspose* const_data)
 {
     memcpy(const_data, tiling, sizeof(LayerNormV4TilingDataTranspose));
+}
+#endif
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4MergeNTilingData* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormV4MergeNTilingData) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, LayerNormV4MergeNTilingData* const_data)
+{
+    memcpy(const_data, tiling, sizeof(LayerNormV4MergeNTilingData));
+}
+#endif
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4CommonTilingData* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormV4CommonTilingData) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, LayerNormV4CommonTilingData* const_data)
+{
+    memcpy(const_data, tiling, sizeof(LayerNormV4CommonTilingData));
 }
 #endif
 

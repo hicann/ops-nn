@@ -58,6 +58,7 @@ constexpr int32_t OUTPUT_DBETA_INDEX = 2;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
+constexpr uint8_t SCHEDULE_MODE = 1;
 
 static uint32_t CEIL_DIV(uint32_t x, uint32_t y)
 {
@@ -523,6 +524,7 @@ static ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
     AddLayerNormGradTilingData tiling;
     TilingStruct tilingStruct;
     OP_LOGD(context, "Begin to do Tiling4AddLayerNormGrad");
+    context->SetScheduleMode(SCHEDULE_MODE);
     bool hasDxInput = false;
     OP_CHECK_IF(!BasicCheck(context, tilingStruct, hasDxInput), OP_LOGE(context, "Basic check is Invaild."),
         return ge::GRAPH_FAILED);

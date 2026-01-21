@@ -56,7 +56,7 @@ constexpr uint64_t DUPLICATE_FP16_MASK = (static_cast<uint64_t>(0x80) << 8) | (s
 
 __aicore__ inline constexpr bool IsDataCopyPadSupport()
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     return true;
 #else
     return false;
@@ -247,7 +247,7 @@ __aicore__ inline void DataCopyCustom(
     GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t processElem, const uint32_t offset, bool is_float,
     const uint16_t blockCount)
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(T)), 0, 0};
     DataCopyPad(dstTensor[offset], srcTensor, dataCopyParamsND);
 #else
@@ -284,7 +284,7 @@ __aicore__ inline void DataCopyAutomicAdd(
     GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor, const uint32_t processElem,
     const uint32_t offset, const uint16_t blockCount)
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(float)), 0, 0};
     DataCopyPad(dstTensor[offset], srcTensor, dataCopyParamsND);
 #else
@@ -295,7 +295,7 @@ __aicore__ inline void InitGmData(
     GlobalTensor<float> outputPdGammaGm, GlobalTensor<float> outputPdBetaGm, const uint32_t dDimNum,
     LocalTensor<float> dbeta, uint32_t elemWithDInUBFp32)
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     InitOutput<float>(outputPdGammaGm, dDimNum, 0);
     InitOutput<float>(outputPdBetaGm, dDimNum, 0);
 #else
@@ -331,7 +331,7 @@ __aicore__ inline void InitGmData(
 template <typename T>
 __aicore__ inline void InitSingleData(GlobalTensor<T> dstGmTensor, LocalTensor<T> srcLocalTensor, uint32_t elemWithDInUBFp32)
 {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     InitOutput<T>(dstGmTensor, elemWithDInUBFp32, 0);
 #else
     uint32_t alignLength = 32 / sizeof(T);

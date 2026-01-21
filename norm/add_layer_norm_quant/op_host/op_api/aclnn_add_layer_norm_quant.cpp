@@ -29,11 +29,11 @@ using namespace op;
 extern "C" {
 #endif
 
-constexpr int IDX_0 = 0;
-constexpr int IDX_1 = 1;
-constexpr int IDX_2 = 2;
-constexpr int IDX_3 = 3;
-constexpr int IDX_4 = 4;
+static constexpr int IDX_0 = 0;
+static constexpr int IDX_1 = 1;
+static constexpr int IDX_2 = 2;
+static constexpr int IDX_3 = 3;
+static constexpr int IDX_4 = 4;
 
 static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_STC = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -281,6 +281,45 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
+aclnnStatus ComputeAddLayerNormQuantEmptyInput(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta,
+    const aclTensor* biasOptional, const aclTensor* scales1Optional, const aclTensor* scales2Optional,
+    const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const char* quantMode, double epsilon,
+    bool additionalOutput, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* outScales1Out,
+    aclTensor* outScales2Out, aclOpExecutor* executor)
+{
+    aclTensor* outScales1ComputeOut = nullptr;
+    aclTensor* outScales2ComputeOut = nullptr;
+
+    auto addLayerNormQuantOuts = l0op::AddLayerNormQuant(
+        x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional, zeroPoints2Optional,
+        quantMode, epsilon, additionalOutput, divMode, executor);
+
+    outScales1ComputeOut = std::get<IDX_3>(addLayerNormQuantOuts);
+    outScales2ComputeOut = std::get<IDX_4>(addLayerNormQuantOuts);
+    
+    bool isDyn = IsDynamicQuant(quantMode);
+    bool isDual = (nullptr != scales2Optional);
+    
+    if(isDyn){
+        OP_LOGD("Copy the scales1Out to the outputScales1.");
+        // 将 outScales1ComputeOut 结果拷贝到 outScales1 上
+        CHECK_RET(outScales1ComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyOutScales1Result = l0op::ViewCopy(outScales1ComputeOut, outScales1Out, executor);
+        CHECK_RET(viewCopyOutScales1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        
+        if(isDual){
+            OP_LOGD("Copy the scales2Out to the outputScales2.");
+            // 将 outScales2ComputeOut 结果拷贝到 outScales2 上
+            CHECK_RET(outScales2ComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto viewCopyOutScales2Result = l0op::ViewCopy(outScales2ComputeOut, outScales2Out, executor);
+            CHECK_RET(viewCopyOutScales2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+    }
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus ComputeAddLayerNormQuant(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta,
     const aclTensor* biasOptional, const aclTensor* scales1Optional, const aclTensor* scales2Optional,
@@ -375,7 +414,9 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
     // 支持空tensor
     bool hasEmptyTensor =
         x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty() || outScales1Out->IsEmpty() || outScales2Out->IsEmpty();
-    if (hasEmptyTensor) {
+    
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if ((hasEmptyTensor && socVersion != SocVersion::ASCEND910_95) || (outScales1Out->IsEmpty() && socVersion == SocVersion::ASCEND910_95)) {
         OP_LOGW("Got empty tensor in aclnnAddLayerNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -399,10 +440,18 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
     auto z1Cont = GetOptTensorContiguous(zeroPoints1Optional, uniqueExecutor.get());
     auto z2Cont = GetOptTensorContiguous(zeroPoints2Optional, uniqueExecutor.get());
 
-    ret = ComputeAddLayerNormQuant(
-        x1Cont, x2Cont, gammaCont, betaCont, biasCont, s1Cont, s2Cont, z1Cont, z2Cont, quantMode, epsilon,
-        additionalOutput, divMode, y1Out, y2Out, xOut, outScales1Out, outScales2Out, uniqueExecutor.get());
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (hasEmptyTensor) {
+        ret = ComputeAddLayerNormQuantEmptyInput(
+            x1Cont, x2Cont, gammaCont, betaCont, biasCont, s1Cont, s2Cont, z1Cont, z2Cont, quantMode, epsilon,
+            additionalOutput, divMode, y1Out, y2Out, xOut, outScales1Out, outScales2Out, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    else {
+        ret = ComputeAddLayerNormQuant(
+            x1Cont, x2Cont, gammaCont, betaCont, biasCont, s1Cont, s2Cont, z1Cont, z2Cont, quantMode, epsilon,
+            additionalOutput, divMode, y1Out, y2Out, xOut, outScales1Out, outScales2Out, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
 
     // 获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

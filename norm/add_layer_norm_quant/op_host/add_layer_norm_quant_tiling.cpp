@@ -48,6 +48,8 @@ static constexpr uint32_t MODE_SOLE_WITH_OFFSETS = 110;
 static constexpr uint32_t MODE_CODE_INPUT_SCALES = 100;
 static constexpr uint32_t MODE_CODE_INPUT_ZEROPOINTS1 = 10;
 static constexpr uint32_t MODE_CODE_INPUT_ZEROPOINTS2 = 1;
+static constexpr int32_t ELEM_PER_REP_FP32 = 64;
+static constexpr int32_t ONE_BLK_SIZE = 32;
 
 const std::string OP_NAME = "AddLayerNormQuant";
 
@@ -131,33 +133,28 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
  * @param colPerTime
  */
 inline TILING_TYPE AddLayerNormQuantTilingImpl(
-    uint64_t maxUbSize, ge::DataType dataType, int32_t bufferNum, int32_t numCol, bool enableXOut,
+    uint64_t maxUbSize, int64_t& dtSize, int32_t bufferNum, int32_t numCol, int32_t firstdimPerCore, bool enableXOut,
     enum BIAS_TYPE biasType, uint32_t& rowPerTime, uint32_t& colPerTime)
 {
-    int64_t dtSize = GetSizeByDataType(dataType);
     int64_t additionalOutputNum = enableXOut ? 1 : 0;
     int64_t biasNum = biasType == BIAS_TYPE::BROADCAST_BIAS ? 1 : 0;
     auto numColAligned = (numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
 
+    uint64_t tmpUbSize = 3 * numColAligned * bufferNum * dtSize + 2 * numColAligned * sizeof(float) +
+                         biasNum * numColAligned * dtSize + ROW_FACTOR * sizeof(float) * 4 + 32 + UB_RESERVED_BYTE;
+    if (firstdimPerCore == 1 && tmpUbSize < maxUbSize) {
+        rowPerTime = 1;
+        colPerTime = numCol;
+        return TILING_TYPE::SINGLE_ROW;
+    }
     // try Normal case:
-    double avaUb = static_cast<double>(
-        static_cast<long>(maxUbSize) -
-        ((2 + biasNum) * numColAligned * dtSize + ROW_FACTOR * sizeof(float) * 4 + 32 + UB_RESERVED_BYTE));
-    double liveTensorFactor =
-        static_cast<double>(3 * numColAligned * bufferNum * dtSize + 2 * numColAligned * sizeof(float) + 2 * 4);
-    double tmpRow = avaUb / liveTensorFactor;
+    float avaUb = static_cast<float>(static_cast<float>(maxUbSize) - 1024);
+    float liveTensorFactor = static_cast<float>(14 * numColAligned + 6 * numColAligned + 8 + 32 + 256 + 4);
+    float tmpRow = avaUb / liveTensorFactor;
     if (tmpRow > 1) {
         rowPerTime = floor(tmpRow);
         colPerTime = numCol;
         return TILING_TYPE::NORMAL;
-    }
-    // try SingleRow case
-    uint64_t tmpUbSize = 3 * numColAligned * bufferNum * dtSize + 2 * numColAligned * sizeof(float) +
-                         biasNum * numColAligned * dtSize + ROW_FACTOR * sizeof(float) * 4 + 32 + UB_RESERVED_BYTE;
-    if (tmpUbSize < maxUbSize) {
-        rowPerTime = 1;
-        colPerTime = numCol;
-        return TILING_TYPE::SINGLE_ROW;
     }
     // try Silce case
     int64_t numPerBlock = 1;
@@ -287,7 +284,7 @@ static inline void GetSocVersion(gert::TilingContext* context, uint64_t& maxUbSi
 }
 
 static inline void ComputeFusedAxis(
-    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow, int32_t& numCol)
+    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow, int32_t& numCol, int64_t& dtSize)
 {
     numRow = 1;
     for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
@@ -296,10 +293,28 @@ static inline void ComputeFusedAxis(
     numCol = context->GetInputShape(0)->GetStorageShape().GetDim(
         context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
     float tempAve = (numCol == 0) ? 0 : float(1.0 / numCol);
+    int32_t numColAligned = numCol;
+    if (dtSize > 0) {
+        numColAligned = ((numCol * dtSize + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE) / dtSize;
+    }
+    int32_t numLastDimRoundUp32 = (numCol + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
+
+    uint32_t mulLoopFp32 = numColAligned / ELEM_PER_REP_FP32;
+    uint32_t mulTailFp32 = numColAligned - mulLoopFp32 * ELEM_PER_REP_FP32;
+    uint8_t dstRepStrideFp32 = numColAligned / 8; 
+
+    uint32_t mulLoopFp16 = numColAligned / 128;
+    uint32_t mulTailFp16 = numColAligned - mulLoopFp16 * 128;
+    uint8_t dstRepStrideFp16 = numColAligned / 16; 
+
     tiling->set_numFirstDim(numRow);
     tiling->set_numLastDim(numCol);
     tiling->set_aveFactor(tempAve);
-    OP_LOGI("AddLayerNormQuant", "numRow = %d, numCol = %d", numRow, numCol);
+    tiling->set_numLastDimAlign(numColAligned);
+    tiling->set_numLastDimAlign32(numLastDimRoundUp32);
+    tiling->set_mulLoopFp32(mulLoopFp32);
+    tiling->set_mulTailFp32(mulTailFp32);
+    tiling->set_dstRepStrideFp32(dstRepStrideFp32);
 }
 
 static inline void DoBlockTiling(
@@ -310,9 +325,13 @@ static inline void DoBlockTiling(
     numCore = CEIL_DIV(tiling->get_numFirstDim(), firstdimPerCore);
     tiling->set_numCore(numCore);
     context->SetBlockDim(numCore);
-    tiling->set_firstDimPerCore(CEIL_DIV(numRow, numCore));
-    nlFirstdimPerCoreNum = tiling->get_firstDimPerCore();
-    tiling->set_firstDimPerCoreTail(numRow - nlFirstdimPerCoreNum * (numCore - 1));
+    firstdimPerCore = CEIL_DIV(numRow, numCore);
+    uint32_t firstDimPerCoreTail = numRow - firstdimPerCore * (numCore - 1);
+    uint32_t gmOffset = firstdimPerCore * tiling->get_numLastDim();
+    
+    tiling->set_firstDimPerCore(firstdimPerCore);
+    tiling->set_firstDimPerCoreTail(firstDimPerCoreTail);
+    tiling->set_gmOffset(gmOffset);
     OP_LOGI("AddLayerNormQuant", "numCore = %u", numCore);
 }
 
@@ -332,12 +351,24 @@ static inline void PostUbTiling(
     AddLayerNormQuantTilingData* tiling, int32_t firstdimPerCore, int32_t numCol, uint32_t colPerTime,
     uint32_t& rowPerTime)
 {
+    uint32_t firstDimPerCoreTail = tiling->get_firstDimPerCoreTail();
+    
     rowPerTime =
         (rowPerTime > static_cast<uint32_t>(firstdimPerCore)) ? static_cast<uint32_t>(firstdimPerCore) : rowPerTime;
-    tiling->set_firstDimPerTime(rowPerTime);
-
+    uint32_t firstDimPerTimeTail = rowPerTime < firstDimPerCoreTail ? rowPerTime : firstDimPerCoreTail;
+    uint32_t tt = 0;
+    if (rowPerTime > 0) {
+        tt = firstdimPerCore % rowPerTime;
+    }
+    uint32_t rowTailPerBlock = tt == 0 ? rowPerTime : tt;
+    uint32_t rowTailLastBlock = (firstDimPerCoreTail % firstDimPerTimeTail == 0) ? firstDimPerTimeTail : (firstDimPerCoreTail % firstDimPerTimeTail);
     int32_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
     int32_t colTail = (numCol % colPerTime == 0) ? colPerTime : (numCol % colPerTime);
+
+    tiling->set_firstDimPerTime(rowPerTime);
+    tiling->set_firstDimPerTimeTail(firstDimPerTimeTail);
+    tiling->set_rowTailPerBlock(rowTailPerBlock);
+    tiling->set_rowTailLastBlock(rowTailLastBlock);
     tiling->set_lastDimPerTime(colPerTime);
     tiling->set_colMoveCnt(colMoveCnt);
     tiling->set_colTail(colTail);
@@ -378,6 +409,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     }
 
     auto dataType = context->GetInputDesc(0)->GetDataType();
+    int64_t dtSize = GetSizeByDataType(dataType);
     int64_t bufferNum = 1;
 
     uint64_t maxUbSize = 0;
@@ -389,7 +421,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     uint32_t firstdimPerCore = 1;
     uint32_t numCore = 1;
     int32_t nlFirstdimPerCoreNum = 1;
-    ComputeFusedAxis(context, &tiling, numRow, numCol);
+    ComputeFusedAxis(context, &tiling, numRow, numCol, dtSize);
     DoBlockTiling(context, &tiling, maxCoreNum, numRow, firstdimPerCore, numCore, nlFirstdimPerCoreNum);
 
     uint32_t rowPerTime;
@@ -398,7 +430,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
 
     // UB Tiling
     auto tilingType = AddLayerNormQuantTilingImpl(
-        maxUbSize, dataType, bufferNum, numCol, enableAdditionalOutput, biasType, rowPerTime, colPerTime);
+        maxUbSize, dtSize, bufferNum, numCol, firstdimPerCore, enableAdditionalOutput, biasType, rowPerTime, colPerTime);
     PostUbTiling(&tiling, firstdimPerCore, numCol, colPerTime, rowPerTime);
 
     SetWorkSapce4AddLayerNormQuant(context, &tiling, tilingType, numRow, numCol);

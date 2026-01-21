@@ -142,7 +142,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0001)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 100);
+    ASSERT_EQ(tiling_key, 600);
     // dlog_setlevel(0, 3, 0);
 }
 

@@ -79,13 +79,13 @@
         op.Process();                                                                                       \
     } while (0)
 
-#define CREATE_STATIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                               \	
-    do {                                                                                                    \	
-        KernelClass<DTYPE_X1, DTYPE_SCALES1, tilingKeyNum, OPT_STATUS, SUCCESSOR_NUMBER_OF_ONE> op(&pipe);  \	
-        op.Init(                                                                                            \	
-            x1, x2, gamma, beta, bias, scales1, scales2, zeroOffset1, zeroOffset2, y1, y2, x, usrWorkspace, \	
-            tilingData);                                                                                    \	
-        op.Process();                                                                                       \	
+#define CREATE_STATIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                               \
+    do {                                                                                                    \
+        KernelClass<DTYPE_X1, DTYPE_SCALES1, tilingKeyNum, OPT_STATUS, SUCCESSOR_NUMBER_OF_ONE> op(&pipe);  \
+        op.Init(                                                                                            \
+            x1, x2, gamma, beta, bias, scales1, scales2, zeroOffset1, zeroOffset2, y1, y2, x, usrWorkspace, \
+            tilingData);                                                                                    \
+        op.Process();                                                                                       \
     } while (0)
 
 #define CREATE_DYNAMIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                                       \

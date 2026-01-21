@@ -1,5 +1,7 @@
 # aclnnAddLayerNormQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_layer_norm_quant)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -110,6 +112,7 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnAddLayerNormQuant(
   void          *workspace,
@@ -145,7 +148,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li></ul></td>
@@ -155,7 +158,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape和`x1`一致。</li></ul></td>
@@ -165,7 +168,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示层归一化中的gamma参数。对应公式中的`gamma`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>数据维度需要和`x1`/`x2`的最后几维相同。</li></ul></td>
@@ -175,7 +178,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>beta</td>
+      <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>对应LayerNorm计算公式中的beta，表示层归一化中的beta参数。对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
@@ -185,7 +188,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占为表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
@@ -195,7 +198,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales1Optional</td>
+      <td>scales1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示第一个被融合的量化计算子中的scale/smooth输入。对应公式中的`scales1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，数据类型支持FLOAT16、BFLOAT16。</li><li>shape和`gamma`一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -205,7 +208,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scales2Optional</td>
+      <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示第二个被融合的量化计算子中的scale/smooth输入。对应公式中的`scales2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，数据类型支持FLOAT16、BFLOAT16。</li><li>shape和`gamma`一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -215,7 +218,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints1Optional</td>
+      <td>zeroPoints1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示第一个被融合的量化计算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的`zeroPoints1Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，数据类型支持FLOAT16、BFLOAT16。</li><li>shape和`gamma`一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -225,7 +228,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>zeroPoints2Optional</td>
+      <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示第二个被融合的量化计算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的`zeroPoints2Optional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，数据类型支持FLOAT16、BFLOAT16。</li><li>shape和`gamma`一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
@@ -235,47 +238,47 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>quantMode</td>
+      <td>quantMode（char*）</td>
       <td>输入</td>
       <td>量化模式，用于确定融合算子融合的是静态还是动态量化算子。对应公式描述中的`quantMode`。取值可以是 "static"或 "dynamic"。</td>
       <td>-</td>
-      <td>STRING</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示对应LayerNorm中的epsilon，添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>additionalOutput</td>
+      <td>additionalOutput（bool）</td>
       <td>输入</td>
       <td>表示是否开启x=x1+x2+biasOptional的输出。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>divMode</td>
+      <td>divMode（bool）</td>
       <td>输入</td>
       <td>仅在quantMode = "static"时有效。表示静态量化处理scale的方法是乘法或除法，当传入true时，算子量化计算中会对scale作除法计算。对应公式描述中的`divMode`。</td>
       <td>-</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示LayerNorm的结果输出y被第一路量化算子量化后的结果。对应公式中的`y1Out`。</td>
       <td>shape需要与输入x1/x2一致。</td>
@@ -285,7 +288,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示LayerNorm的结果输出y被第二路量化算子量化后的结果。对应公式中的`y2Out`。</td>
       <td>shape需要与输入x1/x2一致。</td>
@@ -295,7 +298,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示Add的结果输出x。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，数据类型支持FLOAT16、BFLOAT16。</li><li>shape需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -305,7 +308,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>outScales1Out</td>
+      <td>outScales1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路动态量化计算的outScale结果输出，仅在quantMode="dynamic"时有效。对应公式中的`outScales1Out`。</td>
       <td>shape为输入`x1`的shape剔除掉最后一维。</td>
@@ -315,7 +318,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>outScales2Out</td>
+      <td>outScales2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路动态量化计算的outScale结果输出，仅在quantMode="dynamic"时有效。对应公式中的`outScales2Out`。</td>
       <td>shape为输入`x1`的shape剔除掉最后一维。</td>
@@ -325,7 +328,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -335,7 +338,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>

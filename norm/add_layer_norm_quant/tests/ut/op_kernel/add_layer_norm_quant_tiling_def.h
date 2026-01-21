@@ -1,10 +1,10 @@
 /**
+ * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -35,6 +35,15 @@ struct AddLayerNormQuantTilingData {
     uint32_t scaleOffsetMode = 0;
     uint32_t isPerTensor = 0;
     uint32_t workspaceSize = 0;
+    uint32_t numLastDimAlign = 0;
+    uint32_t numLastDimAlign32 = 0;
+    uint32_t mulLoopFp32 = 0;
+    uint32_t mulTailFp32 = 0;
+    uint32_t dstRepStrideFp32 = 0;
+    uint32_t firstDimPerTimeTail = 0;
+    uint32_t rowTailPerBlock = 0;
+    uint32_t rowTailLastBlock = 0;
+    uint32_t gmOffset = 0;
 };
 
 #pragma pack()
@@ -63,5 +72,14 @@ struct AddLayerNormQuantTilingData {
     (tilingData).isXOut = tilingDataPointer->isXOut;                                 \
     (tilingData).scaleOffsetMode = tilingDataPointer->scaleOffsetMode;               \
     (tilingData).isPerTensor = tilingDataPointer->isPerTensor;                       \
-    (tilingData).workspaceSize = tilingDataPointer->workspaceSize;
+    (tilingData).workspaceSize = tilingDataPointer->workspaceSize;                   \
+    (tilingData).numLastDimAlign = tilingDataPointer->numLastDimAlign;               \
+    (tilingData).numLastDimAlign32 = tilingDataPointer->numLastDimAlign32;           \
+    (tilingData).mulLoopFp32 = tilingDataPointer->mulLoopFp32;                       \
+    (tilingData).mulTailFp32 = tilingDataPointer->mulTailFp32;                       \
+    (tilingData).dstRepStrideFp32 = tilingDataPointer->dstRepStrideFp32;             \
+    (tilingData).firstDimPerTimeTail = tilingDataPointer->firstDimPerTimeTail;       \
+    (tilingData).rowTailPerBlock = tilingDataPointer->rowTailPerBlock;               \
+    (tilingData).rowTailLastBlock = tilingDataPointer->rowTailLastBlock;             \
+    (tilingData).gmOffset = tilingDataPointer->gmOffset;
 #endif

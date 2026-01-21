@@ -87,7 +87,7 @@ public:
         rightPad = FLOAT_ALIGN - colSizeMod;
         isPad = true;
     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     if ASCEND_IS_AIV {
 #endif
       DataCopyParams intriParams;
@@ -102,7 +102,7 @@ public:
       int64_t offset = (colIndex * COL_TEMPLATE) + rowIndex * colAlignV_ * workspaceNum_ * ROW_TEMPLATE;
       DataCopy(buffer1_, workspaceGM_[offset], intriParams);
       DataCopy(buffer3_, workspaceGM_[offset + colAlignV_], intriParams);
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     }
 #endif
   }
@@ -146,7 +146,7 @@ public:
   }
 
   __aicore__ inline void copyOut(int64_t colIndex, int64_t colSize) {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     if ASCEND_IS_AIV {
 #endif
       int64_t offset = colIndex * COL_TEMPLATE;
@@ -170,7 +170,7 @@ public:
         SafeDataCopy(pdGammaOutTensorGM_[offset], buffer2_, colSize);
         SafeDataCopy(pdBetaOutTensorGM_[offset], buffer4_, colSize);
       }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
     }
 #endif
   }

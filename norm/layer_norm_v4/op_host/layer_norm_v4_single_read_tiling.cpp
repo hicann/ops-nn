@@ -21,9 +21,14 @@ constexpr uint64_t FLOAT_SIZE = 4;
 constexpr uint64_t NUM_EIGHT = 8;
 constexpr uint64_t NUM_TWO = 2;
 constexpr uint64_t N_ROW_LIMIT = 32;
+constexpr uint64_t ALLOW_COL1 = 1024;
+constexpr uint64_t ALLOW_COL2 = 4096;
 
 bool LayerNormV4SingleReadTiling::IsCapable()
 {
+    if ((commonParams.rowSize != ALLOW_COL1 && commonParams.rowSize != ALLOW_COL2) || commonParams.tensorDtype != ge::DT_BF16 || commonParams.paramDtype != ge::DT_BF16) {
+        return false;
+    }
     if (commonParams.isRegBase) {
         return false;
     }

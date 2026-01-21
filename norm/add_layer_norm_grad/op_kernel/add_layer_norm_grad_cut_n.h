@@ -36,7 +36,7 @@ public:
             deterministicWorkSpaceSize = roundUpNumLastDimFloatLen * CONSTANT_TWO * selfTiling.numCore;
             workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace, deterministicWorkSpaceSize);
         }
-#if __CCE_AICORE__ != 220
+#if __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310
         if (selfTiling.numLastDim < BLOCK_AlIGN / sizeof(T)) {
             if (GetBlockIdx() == 0) {
                 GlobalTensor<T> dXGmAll;
@@ -64,7 +64,7 @@ public:
             dXGm.SetGlobalBuffer((__gm__ T *)d_x + GetBlockIdx() * selfTiling.ndInOneCoreLength, gmOneCoreElemXY);
             InitTmpBuffer(workspace);
         }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         SyncAll();
 #else
         uint32_t each_core_handle_num = BLOCK_AlIGN / sizeof(int32_t);
@@ -107,7 +107,7 @@ public:
 
         blockNumber = BLOCK_AlIGN / sizeof(float);
 
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
         if constexpr (is_same<T, half>::value) {
@@ -211,7 +211,7 @@ public:
             GammaQue.FreeTensor(inputGamma);
         }
         if(isDeterministicKey) {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
             SyncAll();
 #else
             LocalTensor<int32_t> workLocal1 = dGammaQue.AllocTensor<int32_t>();
@@ -229,7 +229,7 @@ private:
     __aicore__ inline void CopyInGamma(const int32_t d_y_in_ub, const int32_t dyPadRight)
     {
         LocalTensor<T> gammaLocal = GammaQue.AllocTensor<T>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         DataCopyParams gamma_data_copy_params = {1, (uint16_t)(d_y_in_ub * sizeof(T)), 0, 0};
         DataCopyPadParams dy_pad_params{true, 0, (uint8_t)selfTiling.dyPadRight, 0};
         DataCopyPad(gammaLocal, gammaGm[0], gamma_data_copy_params, dy_pad_params);
@@ -253,7 +253,7 @@ private:
         if constexpr (HAS_ADDITIONAL_INPUT) {
             dSumLocal = dSumQue.AllocTensor<T>();
         }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         DataCopyParams dy_data_copy_params{(uint16_t)nInOnceUb, (uint16_t)(d_y_in_ub * sizeof(T)), 0, 0};
         DataCopyPadParams dy_pad_params{true, 0, (uint8_t)selfTiling.dyPadRight, 0};
         DataCopyParams rstd_data_copy_params{(uint16_t)nInOnceUb, (uint16_t)(DRstdInUb * sizeof(float)), 0, 0};
@@ -323,7 +323,7 @@ private:
         LocalTensor<T> outputDx = dXQue.AllocTensor<T>();
         LocalTensor<float> outputDgamma = dGammaQue.AllocTensor<float>();
         LocalTensor<float> outputDbeta = dBetaQue.AllocTensor<float>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         Duplicate<float>(outputDgamma, 0.0, selfTiling.numLastDim);
         Duplicate<float>(outputDbeta, 0.0, selfTiling.numLastDim);
 #else
@@ -334,7 +334,7 @@ private:
         for (int32_t nInnerIndex = 0; nInnerIndex < nInOnceUb; ++nInnerIndex) {
             uint32_t offsetDXY = nInnerIndex * selfTiling.roundUpNumLastDim;
             uint32_t offsetDMeanVar = nInnerIndex * selfTiling.roundUp1Dtype;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
             if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
             if constexpr (is_same<T, half>::value) {

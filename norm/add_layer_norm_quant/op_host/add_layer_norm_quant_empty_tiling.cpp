@@ -211,8 +211,6 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CalcuTilingData() {
         sizeLastCore_ = rowsLastCore_;
     } else {
         uint64_t maxOutputSize = ubSize_ / (KERNEL_BUFFER_NUM * BYTES_OF_FLOAT);
-        OP_CHECK_IF(maxOutputSize < 0, OP_LOGE(context_->GetNodeName(), 
-            "The maxOutputSize size is neg: %ld.", maxOutputSize), return ge::GRAPH_FAILED);
         blockSize_ = std::pow(CONST_TWO, NearestLowerPowerOfTwo(maxOutputSize));
         numBlocks_ = (rowsPerCore_ + blockSize_ - 1) / blockSize_ - 1;
         lastBlockSize_ = rowsPerCore_ - blockSize_ * numBlocks_;
@@ -227,7 +225,8 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CalcuTilingData() {
     return ge::GRAPH_SUCCESS;
 }
 
-void AddLayerNormQuantEmptyTiling::CalcUsedCoreNums() {
+ge::graphStatus AddLayerNormQuantEmptyTiling::CalcUsedCoreNums() {
+    ge::graphStatus ret = ge::GRAPH_SUCCESS;
     if (this->rows_ <= MAX_SIZE_PER_CORE) {
         // 单核计算
         usedCoreNum_ = 1;
@@ -240,13 +239,13 @@ void AddLayerNormQuantEmptyTiling::CalcUsedCoreNums() {
         sizeLastCore_ = rowsLastCore_;
     } else {
         // 多核计算
-        ge::graphStatus ret = ge::GRAPH_SUCCESS;
         usedCoreNum_ = aivCoreNum_;
         rowsPerCore_ = Ops::Base::CeilDiv(rows_, usedCoreNum_);
         blockSize_ = rowsPerCore_;
         rowsLastCore_ = rows_ - rowsPerCore_ * (usedCoreNum_ - 1);
         ret = CalcuTilingData();
     }
+    return ret;
 }
 
 void AddLayerNormQuantEmptyTiling::LogTilingResult()

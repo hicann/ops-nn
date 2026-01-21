@@ -168,3 +168,469 @@ TEST_F(layer_norm_v4_test, test_case_0002)
     AscendC::GmFree(tiling);
     free(path_);
 }
+
+TEST_F(layer_norm_v4_test, test_case_0004)
+{
+    size_t xByteSize = 48 * 200 * sizeof(float);
+    size_t gammaByteSize = 200 * sizeof(float);
+    size_t betaByteSize = 200 * sizeof(float);
+    size_t yByteSize = 48 * 200 * sizeof(float);
+    size_t meanByteSize = 48 * sizeof(float);
+    size_t rstdByteSize = 48 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4CommonTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4CommonTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4CommonTilingData*>(tiling);
+
+    tilingDatafromBin->colSize = 200;
+    tilingDatafromBin->rowSize = 48;
+    tilingDatafromBin->blockDim = 48;
+    tilingDatafromBin->space = 192 * 1024;
+    tilingDatafromBin->eps = 0.00001;
+    tilingDatafromBin->coefficient = 0.005;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(700);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0005)
+{
+    size_t xByteSize = 50 * 200 * sizeof(float);
+    size_t gammaByteSize = 200 * sizeof(float);
+    size_t betaByteSize = 200 * sizeof(float);
+    size_t yByteSize = 50 * 200 * sizeof(float);
+    size_t meanByteSize = 50 * sizeof(float);
+    size_t rstdByteSize = 50 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4CommonTilingData);
+    uint32_t blockDim = 50;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4CommonTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4CommonTilingData*>(tiling);
+
+    tilingDatafromBin->colSize = 200;
+    tilingDatafromBin->rowSize = 48;
+    tilingDatafromBin->blockDim = 48;
+    tilingDatafromBin->space = 192 * 1024;
+    tilingDatafromBin->eps = 0.00001;
+    tilingDatafromBin->coefficient = 0.005;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(700);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0006)
+{
+    size_t xByteSize = 48 * 256 * sizeof(float);
+    size_t gammaByteSize = 256 * sizeof(float);
+    size_t betaByteSize = 256 * sizeof(float);
+    size_t yByteSize = 48 * 256 * sizeof(float);
+    size_t meanByteSize = 48 * sizeof(float);
+    size_t rstdByteSize = 48 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 48;
+    tilingDatafromBin-> rowSize = 256;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 256;
+    tilingDatafromBin-> nRow = 1;
+    tilingDatafromBin-> ableNRow = 10;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 48;
+    tilingDatafromBin-> formerRemainNum = 0;
+    tilingDatafromBin-> tailNRow = 0;
+    tilingDatafromBin-> tailLoop = 0;
+    tilingDatafromBin-> tailNum = 0;
+    tilingDatafromBin-> tailRemainNum = 0;
+    tilingDatafromBin-> tileLength = 256;
+    tilingDatafromBin-> blockLength = 2560;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(1600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0007)
+{
+    size_t xByteSize = 193 * 256 * sizeof(float);
+    size_t gammaByteSize = 256 * sizeof(float);
+    size_t betaByteSize = 256 * sizeof(float);
+    size_t yByteSize = 193 * 256 * sizeof(float);
+    size_t meanByteSize = 193 * sizeof(float);
+    size_t rstdByteSize = 193 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 193;
+    tilingDatafromBin-> rowSize = 256;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 256;
+    tilingDatafromBin-> nRow = 3;
+    tilingDatafromBin-> ableNRow = 3;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 1;
+    tilingDatafromBin-> formerRemainNum = 2;
+    tilingDatafromBin-> tailNRow = 3;
+    tilingDatafromBin-> tailLoop = 1;
+    tilingDatafromBin-> tailNum = 47;
+    tilingDatafromBin-> tailRemainNum = 1;
+    tilingDatafromBin-> tileLength = 784;
+    tilingDatafromBin-> blockLength = 784;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(1600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0008)
+{
+    size_t xByteSize = 48 * 2560 * sizeof(float);
+    size_t gammaByteSize = 2560 * sizeof(float);
+    size_t betaByteSize = 2560 * sizeof(float);
+    size_t yByteSize = 48 * 2560 * sizeof(float);
+    size_t meanByteSize = 48 * sizeof(float);
+    size_t rstdByteSize = 48 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 48;
+    tilingDatafromBin-> rowSize = 2560;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 2560;
+    tilingDatafromBin-> nRow = 1;
+    tilingDatafromBin-> ableNRow = 10;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 48;
+    tilingDatafromBin-> formerRemainNum = 0;
+    tilingDatafromBin-> tailNRow = 0;
+    tilingDatafromBin-> tailLoop = 0;
+    tilingDatafromBin-> tailNum = 0;
+    tilingDatafromBin-> tailRemainNum = 0;
+    tilingDatafromBin-> tileLength = 2560;
+    tilingDatafromBin-> blockLength = 5120;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0009)
+{
+    size_t xByteSize = 193 * 2560 * sizeof(float);
+    size_t gammaByteSize = 2560 * sizeof(float);
+    size_t betaByteSize = 2560 * sizeof(float);
+    size_t yByteSize = 193 * 2560 * sizeof(float);
+    size_t meanByteSize = 193 * sizeof(float);
+    size_t rstdByteSize = 193 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 193;
+    tilingDatafromBin-> rowSize = 2560;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 2560;
+    tilingDatafromBin-> nRow = 3;
+    tilingDatafromBin-> ableNRow = 3;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 1;
+    tilingDatafromBin-> formerRemainNum = 2;
+    tilingDatafromBin-> tailNRow = 3;
+    tilingDatafromBin-> tailLoop = 1;
+    tilingDatafromBin-> tailNum = 47;
+    tilingDatafromBin-> tailRemainNum = 1;
+    tilingDatafromBin-> tileLength = 7840;
+    tilingDatafromBin-> blockLength = 7840;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0010)
+{
+    size_t xByteSize = 48 * 1 * sizeof(float);
+    size_t gammaByteSize = 1 * sizeof(float);
+    size_t betaByteSize = 1 * sizeof(float);
+    size_t yByteSize = 48 * 1 * sizeof(float);
+    size_t meanByteSize = 48 * sizeof(float);
+    size_t rstdByteSize = 48 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 48;
+    tilingDatafromBin-> rowSize = 1;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 8;
+    tilingDatafromBin-> nRow = 1;
+    tilingDatafromBin-> ableNRow = 10;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 48;
+    tilingDatafromBin-> formerRemainNum = 0;
+    tilingDatafromBin-> tailNRow = 0;
+    tilingDatafromBin-> tailLoop = 0;
+    tilingDatafromBin-> tailNum = 0;
+    tilingDatafromBin-> tailRemainNum = 0;
+    tilingDatafromBin-> tileLength = 8;
+    tilingDatafromBin-> blockLength = 5120;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(2600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_case_0011)
+{
+    size_t xByteSize = 193 * 1 * sizeof(float);
+    size_t gammaByteSize = 1 * sizeof(float);
+    size_t betaByteSize = 1 * sizeof(float);
+    size_t yByteSize = 193 * 1 * sizeof(float);
+    size_t meanByteSize = 193 * sizeof(float);
+    size_t rstdByteSize = 193 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4MergeNTilingData);
+    uint32_t blockDim = 48;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    char* path_ = get_current_dir_name();
+    string path(path_);
+
+    LayerNormV4MergeNTilingData* tilingDatafromBin = reinterpret_cast<LayerNormV4MergeNTilingData*>(tiling);
+
+    tilingDatafromBin-> blockDim = 48;
+    tilingDatafromBin-> colSize = 193;
+    tilingDatafromBin-> rowSize = 1;
+    float eps = 0.00001;
+    float coefficient = 0.005;
+    tilingDatafromBin-> rowAlign = 8;
+    tilingDatafromBin-> nRow = 3;
+    tilingDatafromBin-> ableNRow = 3;
+    tilingDatafromBin-> loopCount = 1;
+    tilingDatafromBin-> formerNum = 1;
+    tilingDatafromBin-> formerRemainNum = 2;
+    tilingDatafromBin-> tailNRow = 3;
+    tilingDatafromBin-> tailLoop = 1;
+    tilingDatafromBin-> tailNum = 47;
+    tilingDatafromBin-> tailRemainNum = 1;
+    tilingDatafromBin-> tileLength = 24;
+    tilingDatafromBin-> blockLength = 24;
+    tilingDatafromBin-> nullptrGamma = false;
+    tilingDatafromBin-> nullptrBeta = false;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(2600);
+    ICPU_RUN_KF(
+        layer_norm_v4, blockDim, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+    free(path_);
+}

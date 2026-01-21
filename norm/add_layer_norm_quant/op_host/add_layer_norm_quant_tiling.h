@@ -63,6 +63,15 @@ TILING_DATA_FIELD_DEF(uint32_t, isXOut);
 TILING_DATA_FIELD_DEF(uint32_t, scaleOffsetMode);
 TILING_DATA_FIELD_DEF(uint32_t, isPerTensor);
 TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDimAlign);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDimAlign32);
+TILING_DATA_FIELD_DEF(uint32_t, mulLoopFp32);
+TILING_DATA_FIELD_DEF(uint32_t, mulTailFp32);
+TILING_DATA_FIELD_DEF(uint8_t, dstRepStrideFp32);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimeTail);
+TILING_DATA_FIELD_DEF(uint32_t, rowTailPerBlock);
+TILING_DATA_FIELD_DEF(uint32_t, rowTailLastBlock);
+TILING_DATA_FIELD_DEF(uint32_t, gmOffset);
 END_TILING_DATA_DEF;
 
 
@@ -151,10 +160,10 @@ class AddLayerNormQuantEmptyTiling {
 public:
     explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context)
     {}
-    // Tiling鎵ц妗嗘灦
-    //     1銆丟RAPH_SUCCESS: 鎴愬姛锛屽苟涓斾笉闇�瑕佺户缁墽琛屽悗缁璗iling绫荤殑瀹炵幇
-    //     2銆丟RAPH_FAILED: 澶辫触锛屼腑姝㈡暣涓猅iling娴佺▼
-    //     3銆丟RAPH_PARAM_INVALID: 鏈被涓嶆敮鎸侊紝闇�瑕佺户缁線涓嬫墽琛屽叾浠朤iling绫荤殑瀹炵幇
+    // Tiling执行框架
+    //     1、GRAPH_SUCCESS: 成功，并且不需要继续执行后续Tiling类的实现
+    //     2、GRAPH_FAILED: 失败，中止整个Tiling流程
+    //     3、GRAPH_PARAM_INVALID: 本类不支持，需要继续往下执行其他Tiling类的实现
     ge::graphStatus DoTiling();
 
 protected:
@@ -172,9 +181,9 @@ private:
     uint32_t isDyn_{0};
     uint32_t isDualQuant_{0};
     uint32_t aivCoreNum_{0};
-    int64_t rows_{0};
-    int64_t cols_{0};
-    int64_t usedCoreNum_{0};
+    uint64_t rows_{0};
+    uint64_t cols_{0};
+    uint64_t usedCoreNum_{0};
 
     uint32_t ubSize_{0};
     uint64_t blockSize_{0};
@@ -182,8 +191,8 @@ private:
     uint64_t lastBlockSize_{0};
     uint64_t numBlocksLastCore_{0};
     uint64_t sizeLastCore_{0};
-    int64_t rowsPerCore_{0};
-    int64_t rowsLastCore_{0};
+    uint64_t rowsPerCore_{0};
+    uint64_t rowsLastCore_{0};
 
     uint64_t workspaceSize_{0};
     uint32_t tilingKey_{0};
@@ -192,7 +201,7 @@ private:
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
     void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
-    void CalcUsedCoreNums();
+    ge::graphStatus CalcUsedCoreNums();
     ge::graphStatus CalcuTilingData();
     uint64_t NearestLowerPowerOfTwo(int32_t tmp);
     void LogTilingResult();

@@ -1,9 +1,12 @@
 # aclnnAddLayerNormGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_layer_norm_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
@@ -270,10 +273,13 @@ aclnnStatus aclnnAddLayerNormGrad(
   </tbody>
   </table>
 
+  - <term>Atlas 推理系列产品</term>：参数`dy`、`x1`、`x2`、`gamma`、`dsumOptional`、`dxOut`的数据类型不支持BFLOAT16。
+
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -348,6 +354,7 @@ aclnnStatus aclnnAddLayerNormGrad(
 
 - **功能维度**
   - 数据类型支持
+    - <term>Atlas 推理系列产品</term>：dy、x1、x2、gamma、dsumOptional、dxOut支持FLOAT32、FLOAT16。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：dy、x1、x2、gamma、dsumOptional、dxOut支持FLOAT32、FLOAT16、BFLOAT16。
     - rstd、mean、dgammaOut、dbetaOut支持：FLOAT32。
   - 数据格式支持：ND。

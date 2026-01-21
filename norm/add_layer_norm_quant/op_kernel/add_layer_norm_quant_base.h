@@ -17,6 +17,7 @@
 #define ADD_LAYER_NORM_QUANT_BASE_CLASS_H_
 
 #include "add_layer_norm_quant_helper.h"
+#include "reduce_common.h"
 
 #define IS_BIAS_ELEWISE ((TILING_KEY % 10) == 1)
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
@@ -39,28 +40,23 @@ public:
         this->aveNum = tiling->aveFactor;
         this->eps = tiling->eps;
         this->isXOut = (tiling->isXOut == 1);
-
+        this->numLastDimAligned = tiling->numLastDimAlign;
+        this->numLastDimRoundUp32 = tiling->numLastDimAlign32;
         if (block_idx != this->numCore - 1) {
             this->rowWork = this->firstDimPerCore;
             this->rowStep = this->firstDimPerTime;
+            this->rowTail_ = tiling->rowTailPerBlock;
         } else {
             this->rowWork = this->firstDimPerCoreTail;
-            this->rowStep = TWO_NUMS_MIN(this->firstDimPerTime, this->rowWork);
+            this->rowStep = tiling->firstDimPerTimeTail;
+            this->rowTail_ = tiling->rowTailLastBlock;
         }
-        this->rowTail_ = (this->rowWork % this->rowStep == 0) ? this->rowStep : (this->rowWork % this->rowStep);
-        this->gmOffset_ = this->firstDimPerCore * this->numLastDim;
 
-        // some params for Div
-        this->repsFp32 = this->numLastDim / ELEM_PER_REP_FP32;
-        this->offsetsFp32 = this->repsFp32 * ELEM_PER_REP_FP32;
-        this->remsFp32 = this->numLastDim - this->offsetsFp32;
+        this->gmOffset_ = tiling->gmOffset;
 
-        this->numLastDimAligned = this->numLastDim;
-        if (ROUND_UP32(this->numLastDim * sizeof(T)) != this->numLastDim * sizeof(T)) {
-            lastDimPad = true;
-            this->numLastDimAligned = ROUND_UP32(this->numLastDim * sizeof(T)) / sizeof(T);
-        }
-        this->numLastDimRoundUp32 = ROUND_UP32(this->numLastDim);
+        this->mulLoopFp32 = tiling->mulLoopFp32;
+        this->mulTailFp32 = tiling->mulTailFp32;
+        this->dstRepStrideFp32 = tiling->dstRepStrideFp32;
     }
 
     __aicore__ inline void InitInGlobalTensors(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias)
@@ -105,6 +101,10 @@ protected:
     uint32_t rowTail_;
     uint32_t rowStep;
     uint32_t rowWork;
+
+    uint32_t mulLoopFp32;
+    uint32_t mulTailFp32;
+    uint8_t dstRepStrideFp32;
 
     uint64_t repsFp32;
     uint64_t offsetsFp32;

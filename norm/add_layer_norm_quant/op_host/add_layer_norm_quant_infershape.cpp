@@ -13,6 +13,7 @@
  * \brief
  */
 #include "log/log.h"
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 
 static constexpr size_t X1_IDX = 0;
@@ -34,6 +35,7 @@ static constexpr size_t OUT_SCALE2_IDX = 4;
 static constexpr size_t QUANT_MODE_IDX = 0;
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace ops {
 
@@ -129,6 +131,19 @@ static ge::graphStatus InferShape4AddLayerNormQuant(gert::InferShapeContext* con
         OP_CHECK_IF(
             !CheckDynOptInput(scale1Shape, scale2Shape, zeroPoint1Shape, zeroPoint2Shape),
             OP_LOGE(context, "Bad opt inputs."), return GRAPH_FAILED);
+        // unknown rank
+        if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
+            SetUnknownRank(*outScale1Shape);
+            if (nullptr != scale2Shape) {
+                *y2Shape = *x1Shape;
+                *outScale2Shape = *outScale1Shape;
+            } else {
+                *y2Shape = gert::Shape({1});
+                *outScale2Shape = gert::Shape({1});
+            }
+            OP_LOGD(context, "End to do InferShape4AddLayerNormQuant with unknown rank.");
+            return GRAPH_SUCCESS;
+        }
         OP_CHECK_IF(
             !InferReduceShape(x1Shape, gammaShape, outScale1Shape),
             OP_LOGE(context, "Bad opt inputs."), return GRAPH_FAILED);

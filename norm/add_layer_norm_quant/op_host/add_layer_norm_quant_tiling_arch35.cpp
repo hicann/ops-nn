@@ -620,6 +620,32 @@ bool AddLayerNormQuantRegbaseTiling::CheckTensorAndAttr()
     return true;
 }
 
+static inline bool checkOptionalShape(const size_t x1DimNum, const gert::StorageShape* gammaShape,
+                                      const gert::StorageShape* optionalShape)
+{
+    if (*optionalShape == *gammaShape) {
+        return true;
+    }
+
+    auto optionalDimNum = optionalShape->GetStorageShape().GetDimNum();
+    if (optionalDimNum != x1DimNum) {
+        return false;
+    }
+    auto gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
+    auto diffDimNum = optionalDimNum - gammaDimNum;
+    for (size_t  i = 0; i < diffDimNum; ++i) {
+        if (optionalShape->GetStorageShape().GetDim(i) != 1) {
+            return false;
+        }
+    }
+    for (size_t  i = 0; i < gammaDimNum; ++i) {
+        if (optionalShape->GetStorageShape().GetDim(i + diffDimNum) != gammaShape->GetStorageShape().GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
 {
     const gert::StorageShape* x1Shape = this->context_->GetInputShape(X1_IDX);
@@ -646,19 +672,19 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
     this->offset2Exist_ = (nullptr != offset2Shape);
 
     OP_CHECK_IF(
-        ((this->scale1Exist_) && (*scale1Shape) != (*gammaShape)),
+        ((this->scale1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale1Shape))),
         OP_LOGE("CheckOptionalTensor", "Scale1 exist but its shape not equal to gamma shape, tiling failed."),
         return false);
     OP_CHECK_IF(
-        ((this->scale2Exist_) && (*scale2Shape) != (*gammaShape)),
+        ((this->scale2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale2Shape))),
         OP_LOGE("CheckOptionalTensor", "Scale2 exist but its shape not equal to gamma shape, tiling failed."),
         return false);
     OP_CHECK_IF(
-        ((this->offset1Exist_) && (*offset1Shape) != (*gammaShape)),
+        ((this->offset1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset1Shape))),
         OP_LOGE("CheckOptionalTensor", "ZeroPoints1 exist but its shape not equal to gamma shape, tiling failed."),
         return false);
     OP_CHECK_IF(
-        ((this->offset2Exist_) && (*offset2Shape) != (*gammaShape)),
+        ((this->offset2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset2Shape))),
         OP_LOGE("CheckOptionalTensor", "ZeroPoints2 exist but its shape not equal to gamma shape, tiling failed."),
         return false);
 
@@ -681,7 +707,10 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
     if (this->isDynamicQuant_) {
         OP_CHECK_IF(
             (outScaleDimNum != elewiseDimNum - weightDimNum),
-            OP_LOGE("CheckOptionalTensor", "Invalid outScale1 dim num."), return false);
+            OP_LOGE("CheckOptionalTensor",
+                    "The dim num of x1 %zu should be equal to the sum of the dim num of weight %zu and outScale1 %zu.",
+                    elewiseDimNum, weightDimNum, outScaleDimNum),
+            return false);
         OP_CHECK_IF(
             (this->scale2Exist_) && ((*outScale1Shape) != (*outScale2Shape)),
             OP_LOGE("CheckOptionalTensor", "Got different outScale1 and outScale2, tiling Failed."), return false);

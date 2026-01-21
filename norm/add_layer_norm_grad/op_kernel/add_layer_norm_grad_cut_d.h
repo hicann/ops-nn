@@ -47,7 +47,7 @@ public:
             InitTmpBuffer(workspace);
             dXGm.SetGlobalBuffer((__gm__ T *)d_x + GetBlockIdx() * selfTiling.nInOneCoreLength * selfTiling.numLastDim, gmOneCoreElemXY);
         }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         SyncAll();
 #else
         uint32_t each_core_handle_num = BLOCK_AlIGN / sizeof(int32_t);
@@ -164,7 +164,7 @@ public:
             LocalTensor<float> gammaFp32Local;
             LocalTensor<float> dXLocal;
             LocalTensor<float> dSumFp32Local;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
             if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
             if constexpr (is_same<T, half>::value) {
@@ -203,7 +203,7 @@ public:
                     LocalTensor<T> outputDx = dXQue.AllocTensor<T>();
                     LocalTensor<float> outputDgamma = dGammaQue.AllocTensor<float>();
                     LocalTensor<float> outputDbeta = dBetaQue.AllocTensor<float>();
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
                     if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
                     if constexpr (is_same<T, half>::value) {
@@ -256,7 +256,7 @@ public:
                     if constexpr (HAS_ADDITIONAL_INPUT) {
                         inputDx = dSumQue.DeQue<T>();
                     }
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
                     if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
                     if constexpr (is_same<T, half>::value) {
@@ -302,7 +302,7 @@ public:
             }
         }
         if(selfTiling.isDeterministicKey) {
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
             SyncAll();
 #else
             LocalTensor<int32_t> workLocal = dGammaQue.AllocTensor<int32_t>();
@@ -329,7 +329,7 @@ private:
         LocalTensor<float> meanLocal = meanQue.AllocTensor<float>();
         LocalTensor<T> gammaLocal = gammaQue.AllocTensor<T>();
         LocalTensor<T> dSumLocal;
-#if __CCE_AICORE__ == 220
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310
         DataCopyParams dy_data_copy_params{(uint16_t)n_in_once_ub, (uint16_t)(d_y_in_ub * sizeof(T)), 0, 0};
         uint8_t dyPadRight = ROUND_UP(d_y_in_ub, blockNumberTdtype) - d_y_in_ub;
         DataCopyPadParams dy_pad_params{true, 0, dyPadRight, 0};

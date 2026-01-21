@@ -4,8 +4,10 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+
 
 ## 功能说明
 
@@ -32,7 +34,6 @@
     $$
 
   - 反向公式：
-
     $$
     x= inputx1 + inputx2
     $$
@@ -61,17 +62,17 @@
       $$
       rstd=\frac {1}{\sqrt{\operatorname{Var}(x)}}
       $$
-
+    
     - $\frac{{\rm d}\hat{x_j}}{{\rm d}x_i}$：
-
+    
       $$
       \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x_i)}}-\frac{1}{\operatorname{Var}(x_i)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}
       $$
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
-
+ 
     - $\frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}$：
-
+    
       $$
       \frac{{\rm d}\operatorname{E}(x)}{{\rm d}x_i}=\frac{1}{D}
       $$
@@ -79,7 +80,7 @@
       其中，D为x中参加均值计算的数量。
 
     - $\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}$：
-
+      
       $$
       \frac{\rm d \operatorname{Var}(x_i)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}  (x_i)}}(x_i-\operatorname{E}(x))
       $$
@@ -133,14 +134,14 @@
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>表示正向输入x1、x2之和的标准差的倒数，对应公式中的`rstd`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
+      <td>表示正向输入x1、x2之和的标准差的倒数，对应公式中的`rstd`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>表示正向输入x1、x2之和的均值，对应公式中的`E(x)`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
+      <td>表示正向输入x1、x2之和的均值，对应公式中的`E(x)`。shape需要与`dy`满足broadcast关系（前几维的维度和`dy`前几维的维度相同，前几维指`dy`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -195,6 +196,8 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> ：输入参数`dy`、`x1`、`x2`和输出参数`dsum`、`dx`的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

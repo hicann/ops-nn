@@ -29,6 +29,9 @@ constexpr int32_t ELEM_PER_REP_FP16 = 128;
 constexpr uint32_t TWO_NUMS_MAX_REP_NUM = 255;
 constexpr int32_t ROW_FACTOR = 16;
 constexpr float DYNAMIC_QUANT_DIVIDEND = 127.0;
+constexpr uint32_t UINT32_ZERO = 0;
+constexpr uint32_t UINT32_ONE = 1;
+constexpr uint32_t UINT32_TWO = 2;
 
 template <typename Tp, Tp v>
 struct integral_constant {
