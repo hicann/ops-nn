@@ -22,6 +22,7 @@ constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
 
 constexpr uint32_t SINGLE_UB_SIZE = 25;
+constexpr uint32_t BATCH_MODE = 1;
 
 static std::map<const ge::DataType, const uint32_t> x_dTypeLen = { { ge::DT_FLOAT16, 2 },
     { ge::DT_BF16, 2 },
@@ -94,6 +95,7 @@ ge::graphStatus GetTillingData(gert::TilingContext *context, SwiGluQuantCompileI
 static ge::graphStatus Tiling4SwiGluQuant(gert::TilingContext *context)
 {
     OP_LOGD(context, "Tiling4SwiGluQuant start.");
+    context->SetScheduleMode(BATCH_MODE);
     SwiGluQuantCompileInfo compileInfo;
     SwiGluQuantTilingParam tilingParam;
     SwiGluQuantTilingData tilingData;
