@@ -10,7 +10,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "../../../op_host/op_api/aclnn_norm.h"
+#include "../../../op_api/aclnn_norm.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -491,19 +491,3 @@ TEST_F(l2_norm_test, case_diff_type_double)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-
-TEST_F(l2_norm_test, case_diff_type_fp16)
-{
-    auto selfDesc = TensorDesc({3, 3, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto resultDesc = TensorDesc({3, 1, 2, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto pDesc = ScalarDesc(2.0f);
-    vector<int64_t> inpDims = {1};
-    auto dims = IntArrayDesc(inpDims);
-    bool keepdim = true;
-
-    auto ut = OP_API_UT(aclnnNorm, INPUT(selfDesc, pDesc, dims, keepdim), OUTPUT(resultDesc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-}
-

@@ -1,0 +1,250 @@
+{
+    "op_type": "LpNormV2",
+    "op_list": [
+      {
+        "bin_filename": "LpNormV2_bfloat16_e06f906456e836a696cdad8c8ffd9dcf",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "p",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "keepdim",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "LpNormV2_float16_cf35f027b7d13c44dbb24d10f993d3bd",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "p",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "keepdim",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "LpNormV2_float32_c2256dac216c7845b8f3a710a99850d5",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "p",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "keepdim",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "LpNormV2_bfloat16_2_32_c2256dac216c7845b8f3a710a99850d5",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "p",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "keepdim",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "LpNormV2_float16_2_32_c2256dac216c7845b8f3a710a99850d5",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "p",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "axes",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "keepdim",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          }
+        ]
+      }
+    ]
+}

@@ -1,11 +1,17 @@
 # aclnnNorm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/lp_norm_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -52,9 +58,10 @@
 - **参数说明：**
 
   - self（aclTensor*，计算输入）：公式中的`x`，Device侧的aclTensor。shape支持0-8维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT、FLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
-  - pScalar（aclScalar*，计算输入）：表示范数的类型，公式中的`p`。支持1/2范数、无穷范数以及其他为FLOAT类型的范数计算，数据类型支持FLOAT。
+  - pScalar（aclScalar*，计算输入）：表示范数的类型，公式中的`p`。支持0/1/2/3范数、无穷范数，数据类型支持FLOAT。
 
   - dim（aclIntArray*，计算输入）：计算self范数的维度，支持[-N, N-1]，且dims中的元素不能重复，N为self的维度，支持负数，数据类型支持INT。
 
@@ -63,7 +70,8 @@
   - relType（aclDataType，计算输入）：预留参数，暂不支持使用。
 
   - out（aclTensor*，计算输出）：Device侧的aclTensor。shape支持0-8维。若keepdim为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepdim为false，reduce轴的维度不保留，其余维度shape需要与self一致。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
+    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT、FLOAT16。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
   - workspaceSize（uint64_t*，出参）：返回需要在Device侧申请的workspace大小。
 
