@@ -56,17 +56,16 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     return true;
 }
 
-namespace
-{
+namespace {
 static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* /* gradInput */)
 {
     op::DataType promoteType;
-    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)){
+    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)) {
         return false;
     }
     return true;
 }
-}
+} // namespace
 
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {

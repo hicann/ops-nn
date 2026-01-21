@@ -127,22 +127,22 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/gelu/README.md">gelu</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>高斯误差线性单元激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/gelu_grad/README.md">gelu_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>激活函数的反向传播算子，用于计算Gelu激活函数的梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -393,6 +393,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对应Relu操作的反向传播梯度。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/relu_v2/README.md">relu_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -2496,6 +2506,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/layer_norm_v3/README.md">layer_norm_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对指定层进行均值为0、标准差为1的归一化计算。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_gather_stats_with_counts/README.md">sync_batch_norm_gather_stats_with_counts</a></td>
     <td>✗</td>
     <td>✓</td>
@@ -2533,6 +2553,56 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现adamW优化器功能。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/adam_apply_one/README.md">adam_apply_one</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/adam_apply_one_with_decay/README.md">adam_apply_one_with_decay</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one基础上增加了权重衰减。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/adam_apply_one_with_decay_assign/README.md">adam_apply_one_with_decay_assign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one_with_decay基础上增加了赋值操作，确保更新后的值被正确的地保存。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_gradient_descent/README.md">apply_gradient_descent</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于在梯度下降训练过程中更新模型参数。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_gradient_descent/README.md">apply_gradient_descent</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于在梯度下降训练过程中更新模型参数。</td>
   </tr>
   <tr>
     <td>optim</td>
