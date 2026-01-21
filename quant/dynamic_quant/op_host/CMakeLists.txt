@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 
 message(STATUS "=== Debug: start ops.quant.dynamic_quant.CMakeLists.txt ")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dynamic_quant ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE dynamic_quant ACLNNTYPE aclnn_exclude DEPENDENCIES dynamic_quant_v2)

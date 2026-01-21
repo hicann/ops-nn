@@ -552,6 +552,7 @@ static ge::graphStatus TilingForDynamicQuant(gert::TilingContext* context)
             ret = tilingRegbase.RunFusionKernelTiling(context);
             return ret;
         case platform_ascendc::SocVersion::ASCEND910B:
+        case platform_ascendc::SocVersion::ASCEND910_93:
         case platform_ascendc::SocVersion::KIRINX90:
             static thread_local DynamicQuantTiling tiling;
             ret = tiling.RunFusionKernelTiling(context);
