@@ -22,7 +22,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/transdata.h"
 #include "../../convolution_forward/op_host/op_api/convolution.h"
-#include "pooling/avg_pool3_d_grad/op_host/op_api/dilation.h"
+#include "pooling/avg_pool3_d_grad/op_api/dilation.h"
 #include "level0/fill.h"
 #include "level0/reduce_sum_op.h"
 #include "level0/squeeze.h"

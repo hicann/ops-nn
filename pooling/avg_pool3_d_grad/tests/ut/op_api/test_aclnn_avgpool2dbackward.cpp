@@ -18,7 +18,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
 
-#include "../../../op_host/op_api/aclnn_avgpool2d_backward.h"
+#include "../../../op_api/aclnn_avgpool2d_backward.h"
 
 using namespace op;
 using namespace std;

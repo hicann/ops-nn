@@ -309,7 +309,6 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
 {
     auto gradShape = gradOutput->GetViewShape();
     auto gradDimNum = gradShape.GetDimNum();
-    int64_t num = 1;
     int64_t mergeNC = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) :
         gradShape.GetDim(0) * gradShape.GetDim(1);
     int64_t depth = gradShape.GetDim(gradDimNum - 3);

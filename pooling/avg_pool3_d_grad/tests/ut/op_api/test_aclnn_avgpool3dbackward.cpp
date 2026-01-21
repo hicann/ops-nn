@@ -17,7 +17,7 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
-#include "../../../op_host/op_api/aclnn_avgpool3d_backward.h"
+#include "../../../op_api/aclnn_avgpool3d_backward.h"
 
 using namespace op;
 using namespace std;
