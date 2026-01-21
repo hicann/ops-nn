@@ -22,6 +22,8 @@
 
 #include <cstdint>
 
+#define DTYPE_ZERO_POINT DT_FLOAT
+
 using namespace std;
 
 extern "C" __global__ __aicore__ void fake_quant_affine_cachemask(

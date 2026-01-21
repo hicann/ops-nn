@@ -148,6 +148,154 @@
             "value": 1
           }
         ]
+      },
+      {
+        "bin_filename": "FakeQuantAffineCachemask_fp32_fp32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "zero_point",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mask",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": 1
+          },
+          {
+            "name": "quant_min",
+            "dtype": "int",
+            "value": 1
+          },
+          {
+            "name": "quant_max",
+            "dtype": "int",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "bin_filename": "FakeQuantAffineCachemask_fp16_fp16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "zero_point",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          },
+          {
+            "name": "mask",
+            "index": 0,
+            "dtype": "bool",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": 1
+          },
+          {
+            "name": "quant_min",
+            "dtype": "int",
+            "value": 1
+          },
+          {
+            "name": "quant_max",
+            "dtype": "int",
+            "value": 1
+          }
+        ]
       }
     ]
   }

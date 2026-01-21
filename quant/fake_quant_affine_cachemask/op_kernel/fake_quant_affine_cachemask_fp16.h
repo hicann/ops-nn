@@ -34,7 +34,8 @@ public:
 
         xGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(x) + this->offset, this->blockLength);
         scaleGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(scale) + this->scaleOffset, this->circleNum);
-        zeroGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(zero_point) + this->scaleOffset, this->circleNum);
+        zeroGm.SetGlobalBuffer(
+            reinterpret_cast<__gm__ DTYPE_ZERO_POINT*>(zero_point) + this->scaleOffset, this->circleNum);
         yGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(y) + this->offset, this->blockLength);
         maskGm.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(mask) + this->offset, this->blockLength);
 
@@ -101,13 +102,21 @@ private:
         selectTemp = selectBuf.Get<yType>();
         maskTemp = maskBuf.Get<uint8_t>();
 
-        // tmp = x / scale + zero_point
         Cast(curTemp, xLocal, RoundMode::CAST_NONE, calCount);
         Muls(curTemp, curTemp, static_cast<float>(1.0f / scaleValue), calCount);
-        Cast(curInt32Temp, curTemp, RoundMode::CAST_RINT, calCount);
-        Cast(curTemp, curInt32Temp, RoundMode::CAST_NONE, calCount);
-        Adds(curTemp, curTemp, static_cast<float>(zeroPointValue), calCount);
-        Cast(curHf16Temp, curTemp, RoundMode::CAST_RINT, calCount);
+        if constexpr (IsSameType<DTYPE_ZERO_POINT, int32_t>::value) {
+            // tmp = x / scale + zero_point
+            Cast(curInt32Temp, curTemp, RoundMode::CAST_RINT, calCount);
+            Cast(curTemp, curInt32Temp, RoundMode::CAST_NONE, calCount);
+            Adds(curTemp, curTemp, static_cast<float>(zeroPointValue), calCount);
+            Cast(curHf16Temp, curTemp, RoundMode::CAST_RINT, calCount);
+        } else {
+            // tmp = lrintf(x / scale + zero_point)
+            Adds(curTemp, curTemp, static_cast<float>(zeroPointValue), calCount);
+            Cast(curInt32Temp, curTemp, RoundMode::CAST_RINT, calCount);
+            Cast(curTemp, curInt32Temp, RoundMode::CAST_NONE, calCount);
+            Cast(curHf16Temp, curTemp, RoundMode::CAST_RINT, calCount);
+        }
         PipeBarrier<PIPE_ALL>();
 
         // maskTemp = (round(tmp) >= quant_min) & (round(tmp) <= quant_max)
@@ -130,8 +139,9 @@ private:
         Cast(curTemp, curInt32Temp, RoundMode::CAST_ROUND, calCount);
         Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
         Select(
-            curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, this->mask, repeatTimes, repeatParams);
-        Adds(curTemp, curTemp, static_cast<float>(-1 * zeroPointValue), calCount);
+            curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
+            this->mask, repeatTimes, repeatParams);
+        Adds(curTemp, curTemp, static_cast<float>(-1 * static_cast<float>(zeroPointValue)), calCount);
         Muls(curTemp, curTemp, static_cast<float>(scaleValue), calCount);
         Cast(yLocal, curTemp, RoundMode::CAST_RINT, calCount);
 
@@ -143,12 +153,12 @@ private:
 private:
     TPipe pipe;
 
-    int32_t zeroPointValue = 1;
+    DTYPE_ZERO_POINT zeroPointValue = 1;
     uint8_t repeatTimes = 0;
     float scaleValue = 1.0;
 
     GlobalTensor<yType> xGm, scaleGm, yGm;
-    GlobalTensor<int32_t> zeroGm;
+    GlobalTensor<DTYPE_ZERO_POINT> zeroGm;
     GlobalTensor<uint8_t> maskGm;
 
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueData;
