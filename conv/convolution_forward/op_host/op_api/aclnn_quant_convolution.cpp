@@ -983,7 +983,7 @@ static aclnnStatus TransDataPreProcess(const aclTensor* &input, const aclTensor*
     CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
 
     weight = l0op::TransData(weight, Format::FORMAT_FRACTAL_Z_3D, groups, executor);
-    CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
 
     return ACLNN_SUCCESS;
 }
