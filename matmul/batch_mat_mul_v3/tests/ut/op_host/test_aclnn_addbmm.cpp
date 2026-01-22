@@ -264,6 +264,24 @@ TEST_F(l2_addbmm_test, case_only_one_empty_tensor)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(l2_addbmm_test, addbmm_910_95_case_two_empty_tensor)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    auto self = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({2, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({2, 5, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addbmm_test, case_bmm_not_match1)
 {
     auto self = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);

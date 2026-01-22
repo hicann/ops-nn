@@ -494,7 +494,7 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
 
     // 输入空Tensor处理方法，这种情况下addbmm算子的最终结果就是空Tensor，因此直接返回
     // 若batch1、batch2的第一维是空Tensor，在bmm接口内部会生成一个符合shape的空Tensor，继续参与计算
-    if (isAddBmmProcessEmptyTensor(batch1, batch1)) {
+    if (isAddBmmProcessEmptyTensor(batch1, batch2)) {
         auto emptyOut = addBmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

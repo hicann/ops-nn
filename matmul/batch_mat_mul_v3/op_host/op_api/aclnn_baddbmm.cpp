@@ -341,7 +341,7 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     
     // 输入空Tensor处理方法，直接返回了一个空 Tensor，未做计算
-    if (isProcessEmptyTensor(batch1, batch1)) {
+    if (isProcessEmptyTensor(batch1, batch2)) {
         auto emptyOut = bmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
