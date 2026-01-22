@@ -1,0 +1,113 @@
+{
+    "op_type": "Glu",
+    "op_list": [
+        {
+            "bin_filename": "Glu_9f000368e5df68880e9b3448dfe516db",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "Glu_da437b7854314f192ac1fe904df95c15",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        },
+        {
+            "bin_filename": "Glu_b1035b3d7f6e0f89172a94a5a559e858",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "dim",
+                    "dtype": "int",
+                    "value": 0
+                }
+            ]
+        }
+    ]
+}

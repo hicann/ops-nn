@@ -7,8 +7,8 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OP_API_INC_GLU_H_
-#define OP_API_INC_GLU_H_
+#ifndef ACLNN_GLU_H_
+#define ACLNN_GLU_H_
 
 #include "aclnn/aclnn_base.h"
 #include "aclnn_util.h"
@@ -75,4 +75,4 @@ ACLNN_API aclnnStatus aclnnGlu(void* workspace, uint64_t workspaceSize, aclOpExe
 }
 #endif
 
-#endif  // OP_API_INC_GLU_H_
+#endif  // ACLNN_GLU_H_

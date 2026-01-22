@@ -5,6 +5,6 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-#/
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE threshold_grad_v2_d ACLNNTYPE aclnn DEPENDENCIES relu_grad)
+message(STATUS "=== Debug: start ops.activation.glu.graph_plugin.CMakeLists.txt ")
+add_graph_plugin_sources()
