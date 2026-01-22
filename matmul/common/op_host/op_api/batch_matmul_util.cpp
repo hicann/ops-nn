@@ -261,13 +261,13 @@ const aclIntArray* GetOutputSize(
 }
 
 const aclTensor* TransBmm2Mm(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, bool enableHf32, bool adjX1, bool adjX2,
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, int64_t opImplModeEnum, bool adjX1, bool adjX2,
     const bool offsetX, aclOpExecutor* executor)
 {
     OP_LOGI("Hit bmm2mm scenario.");
     auto x1Bmm2Mm = l0op::Reshape(x1, {-1, x1->GetViewShape().GetDim(x1->GetViewShape().GetDimNum() - 1)}, executor);
     auto x2Bmm2Mm = l0op::Reshape(x2, {-1, x2->GetViewShape().GetDim(x2->GetViewShape().GetDimNum() - 1)}, executor);
-    const aclTensor* mmOut = l0op::MatMulV3Nd(x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, enableHf32, executor);
+    const aclTensor* mmOut = l0op::MatMulV3Nd(x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, opImplModeEnum, executor);
     CHECK_RET(mmOut != nullptr, nullptr);
     auto outShapeIntArray = GetOutputSize(x1, x2, adjX1, adjX2, executor);
     CHECK_RET(outShapeIntArray != nullptr, nullptr);
@@ -358,8 +358,9 @@ const aclTensor* GetBatchMatmulOp(
                 SocVersion::ASCEND910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
              (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
+            int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
             return TransBmm2Mm(
-                selfTransdata, mat2Transdata, bias, matmulOpInfo.enableHf32, adjX1, adjX2, offsetX, executor);
+                selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
         }
         OP_LOGI("Hit batch_mat_mul_v3 scenario.");
         if  ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 || matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) && isBaddbmm) {
