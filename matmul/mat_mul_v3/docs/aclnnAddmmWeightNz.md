@@ -78,7 +78,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>表示bias矩阵，公式中的self。</td>
       <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li> </ul></td>
-      <td>BFLOAT16、FLOAT16</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnAddmmWeightNz(
      </li><li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
       </td>
       <td>BFLOAT16、FLOAT16</td>
-      <td>ND</td>
+      <td>NZ</td>
       <td>2</td>
       <td>√</td>
     </tr>
@@ -132,7 +132,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
       <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
-      <td>BFLOAT16、FLOAT16</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
       <td>-</td>
@@ -264,7 +264,7 @@ aclnnStatus aclnnAddmmWeightNz(
 ## 约束说明
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmmWeightNz默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
 
