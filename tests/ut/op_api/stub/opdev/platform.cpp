@@ -13,6 +13,7 @@
 namespace op {
 
 thread_local SocVersion g_socVersion = SocVersion::ASCEND910B;
+thread_local NpuArch g_npuArch = NpuArch::DAV_2201;
 PlatformInfo *g_platformInfo = new PlatformInfo();
 
 bool PlatformInfo::CheckSupport(SocSpec socSpec, SocSpecAbility ability) const
@@ -41,6 +42,26 @@ void PlatformInfo::SetPlatformImpl(PlatformInfoImpl *impl)
 SocVersion PlatformInfo::GetSocVersion() const
 {
     return g_socVersion;
+}
+
+
+NpuArch PlatformInfo::GetCurNpuArch() const
+{
+    static const std::map<SocVersion, NpuArch> soc2ArchMap = {
+        {SocVersion::ASCEND910, NpuArch::DAV_1001},
+        {SocVersion::ASCEND910B, NpuArch::DAV_2201},
+        {SocVersion::ASCEND910_93, NpuArch::DAV_2201},
+        {SocVersion::ASCEND910_95, NpuArch::DAV_3510},
+        {SocVersion::ASCEND310P, NpuArch::DAV_2002},
+        {SocVersion::ASCEND310B, NpuArch::DAV_3002},
+        {SocVersion::ASCEND610LITE, NpuArch::DAV_3102}
+    };
+    const auto it = soc2ArchMap.find(g_socVersion);
+    if (it != soc2ArchMap.end()) {
+        return it->second;
+    }
+    std::cout << "Error, Unsupported SocVersion, plz modyfy this function" << std::endl;
+    return NpuArch::DAV_RESV;
 }
 
 const std::string PlatformInfo::GetSocLongVersion() const
@@ -126,6 +147,20 @@ SocVersionManager::~SocVersionManager()
 void SocVersionManager::SetPlatformSocVersion(SocVersion socVersion)
 {
     g_socVersion = socVersion;
+}
+
+NpuArchManager::NpuArchManager(NpuArch newArch):originalArch_(GetCurrentPlatformInfo().GetCurNpuArch()){
+    SetPlatformNpuArch(newArch);
+}
+
+NpuArchManager::~NpuArchManager()
+{
+    SetPlatformNpuArch(originalArch_);
+}
+
+void NpuArchManager::SetPlatformNpuArch(NpuArch npuArch)
+{
+    g_npuArch = npuArch;
 }
 
 void SetCubeCoreNum(uint32_t coreNum)

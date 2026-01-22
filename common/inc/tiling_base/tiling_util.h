@@ -16,15 +16,38 @@
 #pragma once
 
 #include "register/op_impl_registry.h"
+#include "platform/soc_spec.h"
+#include "platform/platform_ascendc.h"
+#include "log/log.h"
 
 namespace Ops {
 namespace NN {
 namespace OpTiling {
 static const gert::Shape g_vec_1_shape = {1};
 
-bool IsRegbaseSocVersion(const gert::TilingParseContext* context);
+static bool IsRegbaseNpuArch(NpuArch npuArch)
+{
+    const static std::set<NpuArch> regbaseNpuArchs = {
+        NpuArch::DAV_3510,
+        NpuArch::DAV_5102};
+    return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
+}
 
-bool IsRegbaseSocVersion(const gert::TilingContext* context);
+static inline bool IsRegbaseSocVersion(const gert::TilingParseContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    OP_LOGI(context, "Current NpuArch is %u", static_cast<uint32_t>(npuArch));
+    return IsRegbaseNpuArch(npuArch);
+}
+
+static inline bool IsRegbaseSocVersion(const gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    OP_LOGI(context, "Current NpuArch is %u", static_cast<uint32_t>(npuArch));
+    return IsRegbaseNpuArch(npuArch);
+}
 
 inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
 {

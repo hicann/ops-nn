@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn/aclnn_base.h"
 #include "opdev/platform.h"
 #include "opdev/common_types.h"
@@ -201,14 +202,13 @@ static inline bool CheckDtypeValid1In1OutMatch(
 }
 
 /**
- * l1: ASCEND910B 或者 ASCEND910_93芯片，该算子支持的数据类型列表
+ * l1: DAV_2201 芯片，该算子支持的数据类型列表
  * l2: 其他芯片，该算子支持的数据类型列表
  */
 inline static const std::initializer_list<DataType>& GetDtypeSupportListV1(
     const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
         return l1;
     } else {
         return l2;
@@ -216,14 +216,14 @@ inline static const std::initializer_list<DataType>& GetDtypeSupportListV1(
 }
 
 /**
- * l1: ASCEND910B ~ ASCEND910E芯片，该算子支持的数据类型列表
+ * l1: DAV_2201 和 DAV_3510芯片，该算子支持的数据类型列表
  * l2: 其他芯片，该算子支持的数据类型列表
  */
 inline static const std::initializer_list<DataType>& GetDtypeSupportListV2(
     const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return l1;
     } else {
         return l2;
@@ -233,14 +233,13 @@ inline static const std::initializer_list<DataType>& GetDtypeSupportListV2(
 inline static const std::initializer_list<op::DataType> GetDtypeSupportListV3(
     const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910_95:
-        case SocVersion::ASCEND910B: {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_3510:
+        case NpuArch::DAV_2201: {
             return l1;
         }
-        case SocVersion::ASCEND910: {
+        case NpuArch::DAV_1001: {
             return l2;
         }
         default: {
@@ -363,8 +362,8 @@ static inline bool CheckPromoteTypeGeluBackward(const aclTensor* gradOutput, con
         return false;
     }
 
-    if (!(GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-          GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) && (promoteType == op::DataType::DT_BF16)) {
+    if (!(GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+          Ops::NN::AclnnUtil::IsRegbase()) && (promoteType == op::DataType::DT_BF16)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dtype of gelu is not support bfloat16 in current socversion.");
         return false;
     }
