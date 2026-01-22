@@ -53,7 +53,7 @@ inline static const aclTensor *SigmoidAiCpu(const aclTensor *self, aclTensor *si
     // Sigmoid是算子的OpType，self是算子的输入，sigmoidOut是算子的输出
     L0_DFX(SigmoidAiCpu, self, sigmoidOut);
 
-    static internal::AicpuTaskSpace space("Sigmoid", ge::DEPEND_IN_SHAPE, true);
+    static internal::AicpuTaskSpace space("Sigmoid");
     auto ret = ADD_TO_LAUNCHER_LIST_AICPU(Sigmoid, OP_ATTR_NAMES(), OP_INPUT(self), OP_OUTPUT(sigmoidOut));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
 
