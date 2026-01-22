@@ -12,9 +12,11 @@
  * \brief
  */
 #include "log/log.h"
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace ops {
 
@@ -41,9 +43,11 @@ static ge::graphStatus InferShape4AddRmsNormCast(gert::InferShapeContext* contex
     // get output shapes
     gert::Shape* y1Shape = context->GetOutputShape(IDX_0);
     gert::Shape* y2Shape = context->GetOutputShape(IDX_1);
+    gert::Shape* rstdShape = context->GetOutputShape(IDX_2);
     gert::Shape* xShape = context->GetOutputShape(IDX_3);
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     *y1Shape = *x1Shape;
     *y2Shape = *x1Shape;
@@ -52,7 +56,17 @@ static ge::graphStatus InferShape4AddRmsNormCast(gert::InferShapeContext* contex
     size_t xDimNum = x1Shape->GetDimNum();
     size_t gammaDimNum = gammaShape->GetDimNum();
 
-    gert::Shape* rstdShape = context->GetOutputShape(IDX_2);
+    // unknown rank
+    if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
+        SetUnknownRank(*rstdShape);
+        OP_LOGD(context, "End to do InferShape4AddRmsNormCast with unknown rank.");
+        return GRAPH_SUCCESS;
+    }
+ 
+    OP_CHECK_IF(
+        xDimNum < gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+        return GRAPH_FAILED);
+
     rstdShape->SetDimNum(xDimNum);
     for (size_t i = 0; i < xDimNum; i++) {
         if (i < xDimNum - gammaDimNum) {

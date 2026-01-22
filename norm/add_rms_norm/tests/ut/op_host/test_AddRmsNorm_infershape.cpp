@@ -49,6 +49,28 @@ TEST_F(AddRmsNorm, AddRmsNorm_infershape_case_0)
     EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
 }
 
+TEST_F(AddRmsNorm, AddRmsNorm_infershape_case_1)
+{
+    ge::op::AddRmsNorm op;
+    op.UpdateInputDesc("x1", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_FLOAT16));
+    //   op.SetAttr("epsilon", 0.1);
+    //   Runtime2TestParam param{{"epsilon"},{},{}};
+    //   EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    std::vector<int64_t> expected_y_shape = {-2};
+    std::vector<int64_t> expected_rstd_shape = {-2};
+    std::vector<int64_t> expected_x_shape = {-2};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
+}
+
 TEST_F(AddRmsNorm, AddRmsNorm_InferDtype_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNorm"), nullptr);
