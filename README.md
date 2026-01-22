@@ -1,9 +1,11 @@
 # ops-nn
 
 ## 🔥Latest News
-
-- [2025/12] 开源算子支持Ascend 950PR/Ascend 950DT，可以通过CANN Simulator仿真工具开发调试；支持了conv算子<<<>>>调用示例，方便用户自定义使用。
-- [2025/09] ops-nn项目首次上线。
+- [2026/01] 新增[QuickStart](QUICKSTART.md)，指导新手零基础入门算子项目部署（支持Docker环境）、算子开发和贡献流程。
+- [2025/12] 开源算子支持Ascend 950PR/Ascend 950DT/KirinX90，可以通过[CANN Simulator](docs/zh/debug/cann_simulator.md)仿真工具开发调试；优化指南类文档，聚焦[算子开发指南](docs/zh/develop/aicore_develop_guide.md)，明确最小交付件和关键示例代码，针对Ascend/samples仓算子提供迁移本项目的指导；新支持[稀疏4:2量化matmul算子](matmul/sparse4to2quant_matmul)，针对稀疏矩阵使能硬件加速能力。
+- [2025/11] 新支持算子[index_fill](index/index_fill/)、[masked_scatter](index/masked_scatter/)、[scatter](index/scatter/)、[tf_scatter_add](index/tf_scatter_add/)、[fused_cross_entropy_loss_with_max_sum](loss/fused_cross_entropy_loss_with_max_sum/)。
+- [2025/10] 新增experimental目录，完善[贡献指南](CONTRIBUTING.md)，支持开发者调试并贡献自定义算子。
+- [2025/09] ops-nn项目首次上线，开源算子支持Atlas A2/A3系列产品。
 
 ## 🚀概述
 
@@ -75,3 +77,11 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 - [贡献指南](CONTRIBUTING.md)
 - [安全声明](SECURITY.md)
 - [许可证](LICENSE)
+
+## 🤝联系我们
+
+本项目功能和文档正在持续更新和完善中，建议您关注最新版本。
+
+- **问题反馈**：通过GitCode[【Issues】](https://gitcode.com/cann/ops-nn/issues)提交问题
+- **社区互动**：通过GitCode[【讨论】](https://gitcode.com/cann/ops-nn/discussions)参与交流
+- **技术专栏**：通过GitCode[【Wiki】](https://gitcode.com/cann/ops-nn/wiki)获取技术文章，如系列化教程、优秀实践等
