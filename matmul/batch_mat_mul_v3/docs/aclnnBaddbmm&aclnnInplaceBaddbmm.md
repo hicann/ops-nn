@@ -34,40 +34,40 @@ self必须要支持和batch1@batch2的结果做broadcast。（broadcast，广播
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBaddbmmGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBaddbmm”接口执行计算。
 ```cpp
 aclnnStatus aclnnBaddbmmGetWorkspaceSize(
-  const aclTensor*    self, 
-  const aclTensor*    batch1, 
-  const aclTensor*    batch2, 
-  const aclScalar*    beta, 
-  const aclScalar*    alpha, 
-  aclTensor*          out, 
-  int8_t              cubeMathType, 
-  uint64_t*           workspaceSize, 
+  const aclTensor*    self,
+  const aclTensor*    batch1,
+  const aclTensor*    batch2,
+  const aclScalar*    beta,
+  const aclScalar*    alpha,
+  aclTensor*          out,
+  int8_t              cubeMathType,
+  uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
 ```cpp
 aclnnStatus aclnnBaddbmm(
-  void*           workspace, 
-  uint64_t        workspaceSize, 
-  aclOpExecutor*  executor, 
+  void*           workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor*  executor,
   aclrtStream     stream)
 ```
 
 ```cpp
 aclnnStatus aclnnInplaceBaddbmmGetWorkspaceSize(
-  const aclTensor*    selfRef, 
-  const aclTensor*    batch1, 
-  const aclTensor*    batch2, 
-  const aclScalar*    beta, 
-  const aclScalar*    alpha, 
-  int8_t              cubeMathType, 
-  uint64_t*           workspaceSize, 
+  const aclTensor*    selfRef,
+  const aclTensor*    batch1,
+  const aclTensor*    batch2,
+  const aclScalar*    beta,
+  const aclScalar*    alpha,
+  int8_t              cubeMathType,
+  uint64_t*           workspaceSize,
   aclOpExecutor**     executor)
 ```
 ```cpp
 aclnnStatus aclnnInplaceBaddbmm(
-  void*             workspace, 
-  uint64_t          workspaceSize, 
-  aclOpExecutor*    executor, 
+  void*             workspace,
+  uint64_t          workspaceSize,
+  aclOpExecutor*    executor,
   aclrtStream       stream)
 ```
 
@@ -105,7 +105,7 @@ aclnnStatus aclnnInplaceBaddbmm(
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>3</td>
+      <td>1-3维</td>
       <td>√</td>
     </tr>
     <tr>

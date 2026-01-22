@@ -32,40 +32,40 @@
 - 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddbmmGetWorkspaceSize”或者”aclnnInplaceAddbmmGetWorkspaceSize“接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddbmm”或者”aclnnInplaceAddbmm“接口执行计算。
 ```cpp
 aclnnStatus aclnnAddbmmGetWorkspaceSize(
-  const aclTensor     *self, 
-  const aclTensor     *batch1, 
-  const aclTensor     *batch2, 
-  const aclScalar     *beta, 
-  const aclScalar     *alpha, 
-  aclTensor           *out, 
-  int8_t               cubeMathType, 
-  uint64_t            *workspaceSize, 
+  const aclTensor     *self,
+  const aclTensor     *batch1,
+  const aclTensor     *batch2,
+  const aclScalar     *beta,
+  const aclScalar     *alpha,
+  aclTensor           *out,
+  int8_t               cubeMathType,
+  uint64_t            *workspaceSize,
   aclOpExecutor       **executor)
 ```
 ```cpp
 aclnnStatus aclnnAddbmm(
-  void              *workspace, 
-  uint64_t           workspaceSize, 
-  aclOpExecutor     *executor, 
+  void              *workspace,
+  uint64_t           workspaceSize,
+  aclOpExecutor     *executor,
   aclrtStream        stream)
 ```
 
 ```cpp
 aclnnStatus aclnnInplaceAddbmmGetWorkspaceSize(
-  aclTensor         *selfRef, 
-  const aclTensor   *batch1, 
-  const aclTensor   *batch2, 
+  aclTensor         *selfRef,
+  const aclTensor   *batch1,
+  const aclTensor   *batch2,
   const aclScalar   *beta,
-  const aclScalar   *alpha, 
-  int8_t             cubeMathType, 
-  uint64_t          *workspaceSize, 
+  const aclScalar   *alpha,
+  int8_t             cubeMathType,
+  uint64_t          *workspaceSize,
   aclOpExecutor     **executor)
 ```
 ```cpp
 aclnnStatus aclnnInplaceAddbmm(
-  void             *workspace, 
-  uint64_t          workspaceSize, 
-  aclOpExecutor    *executor, 
+  void             *workspace,
+  uint64_t          workspaceSize,
+  aclOpExecutor    *executor,
   aclrtStream       stream)
 ```
 
@@ -103,7 +103,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>至少1维</td>
+      <td>1-2维</td>
       <td>√</td>
     </tr>
     <tr>
