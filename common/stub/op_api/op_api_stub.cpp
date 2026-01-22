@@ -29,7 +29,6 @@
 #include "level0/avgpool_update.h"
 #include "level0/avgpool_v2.h"
 #include "level0/axpy.h"
-#include "level0/batch_matmul_v2tov3.h"
 #include "level0/batch_norm_backward.h"
 #include "level0/broadcast_to.h"
 #include "level0/concat.h"
@@ -56,7 +55,6 @@
 #include "level0/lp_norm_reduce_v2.h"
 #include "level0/lp_norm_update_v2.h"
 #include "level0/masked_fill.h"
-#include "level0/matmul_v2tov3.h"
 #include "level0/max_pool_grad_with_argmax_v1.h"
 #include "level0/max_pool_grad_with_argmax_v3.h"
 #include "level0/max_pool_with_argmax_v1.h"
@@ -400,21 +398,6 @@ const aclTensor* ReduceMeanWithCount(
 const aclTensor* Rsqrt(const aclTensor* self, aclOpExecutor* /*executor*/)
 {
     return self;
-}
-
-__attribute__((weak)) bool MmCheckHitV3Shape(const aclTensor* /*x1*/, const aclTensor* /*x2*/,
-                                             const aclTensor* /*bias*/, const bool /*transposeX1*/,
-                                             const bool /*transposeX2*/, op::Format /*mat2_format*/,
-                                             bool /*supportSplitK*/)
-{
-    return false;
-}
-
-__attribute__((weak)) bool BmmCheckHitV3Shape(const aclTensor* /*x1*/, const aclTensor* /*x2*/,
-                                              const aclTensor* /*bias*/, const bool /*adjX1*/, const bool /*adjX2*/,
-                                              op::Format /*self_format*/, op::Format /*mat2_format*/, const bool /*enableFp16Bf16InFp32Out*/)
-{
-    return false;
 }
 
 const aclTensor* OnesLike(const aclTensor* self, aclOpExecutor* /*executor*/)

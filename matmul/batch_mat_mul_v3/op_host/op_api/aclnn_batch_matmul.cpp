@@ -18,7 +18,7 @@
 #include "matmul/mat_mul_v3/op_host/op_api/matmul.h"
 #include "level0/fill.h"
 #include "level0/mul.h"
-#include "level0/batch_matmul_v2tov3.h"
+#include "matmul/common/op_host/op_api/matmul_v2tov3.h"
 #include "aclnn_kernels/transdata.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
@@ -447,8 +447,8 @@ static bool CheckAscendCScenario(
         return false;
     }
 
-    return l0op::BmmCheckHitV3Shape(x1, x2, bias, adjX1, adjX2, mmOpInfo.support_info.self_format,
-                                    mmOpInfo.support_info.mat2_format, mmOpInfo.enableFp16Bf16InFp32Out);
+    return Ops::NN::BmmCheckHitV3Shape(x1, x2, bias, adjX1, adjX2, mmOpInfo.support_info.self_format,
+                                       mmOpInfo.support_info.mat2_format, mmOpInfo.enableFp16Bf16InFp32Out);
 }
 
 const aclIntArray* GetOutputSize(

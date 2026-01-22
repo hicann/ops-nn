@@ -13,7 +13,6 @@
 
 #include <string>
 #include <dlfcn.h>
-#include "log/log.h"
 
 namespace Ops {
 namespace NN {
@@ -39,7 +38,6 @@ public:
     template<typename FuncType>
     FuncType GetFunc(const char * symbolName) const
     {
-        OP_LOGI("LegacyCommonMgr", "try to find symbol %s.", symbolName);
         if (handle_ == nullptr || symbolName == nullptr) {
             return nullptr;
         }
@@ -48,7 +46,6 @@ public:
 
         void* symbol = dlsym(handle_, symbolName);
         if (symbol == nullptr) {
-            OP_LOGW("LegacyCommonMgr", "Fail to find symbol %s.", symbolName);
             return nullptr;
         }
 
@@ -58,7 +55,7 @@ public:
 private:
     bool GetLegacyCommonSoPath(std::string& soPath) const;
 
-    bool GetParentPath(std::string& parentPath, std::string& currSoName) const;
+    static bool GetParentPath(std::string& parentPath, std::string& currSoName);
 
     bool GetSoPathForBuiltin(const std::string& parentPath, const std::string& currSoName, std::string& soPath) const;
 

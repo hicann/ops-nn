@@ -18,7 +18,7 @@
 #include "level0/fill.h"
 #include "level0/padv3.h"
 #include "level0/mul.h"
-#include "level0/matmul_v2tov3.h"
+#include "matmul/common/op_host/op_api/matmul_v2tov3.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
@@ -373,8 +373,8 @@ static bool CheckAscendCScenario(
         return false;
     }
     bool alwaysUseV3 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
-    return (alwaysUseV3 || l0op::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
-                                                   mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
+    return (alwaysUseV3 || Ops::NN::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
+                                                      mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
 
 static bool CheckAscendCScenario2(
@@ -1476,7 +1476,7 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         auto dtype_mat1 = mat1->GetDataType();
         auto dtype_mat2 = mat2->GetDataType();
-        if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) || 
+        if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) ||
               (dtype_mat1 == DataType::DT_BF16 && dtype_mat2 == DataType::DT_BF16))) {
                 return false;
               }
@@ -1515,7 +1515,7 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclT
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         auto dtype_mat1 = mat1->GetDataType();
         auto dtype_mat2 = mat2->GetDataType();
-        if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) || 
+        if (!((dtype_mat1 == DataType::DT_FLOAT16 && dtype_mat2 == DataType::DT_FLOAT16) ||
               (dtype_mat1 == DataType::DT_BF16 && dtype_mat2 == DataType::DT_BF16))) {
                 return false;
               }

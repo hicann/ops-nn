@@ -443,6 +443,8 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 )
         target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
             $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+            # 只要尝试跑ophost ut，legacy_common_manager.cpp就不会编译到tiling obj里，此时需要把打桩代码编译进去
+            $<$<OR:$<BOOL:${UT_TEST_ALL}>,$<BOOL:${OP_HOST_UT}>>:${OPS_NN_DIR}/tests/ut/common/legacy_common_manager_stub.cpp>
         )
 
         target_compile_definitions(${opName}_${socVersion}_tiling_tmp PRIVATE
@@ -634,6 +636,8 @@ function(AddOpTestCaseV2 opName opFileValue supportedSocVersion otherCompileOpti
                 )
         target_sources(${opName}_${socVersion}_tiling_tmp PUBLIC
             $<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>
+            # 只要尝试跑ophost ut，legacy_common_manager.cpp就不会编译到tiling obj里，此时需要把打桩代码编译进去
+            $<$<OR:$<BOOL:${UT_TEST_ALL}>,$<BOOL:${OP_HOST_UT}>>:${OPS_NN_DIR}/tests/ut/common/legacy_common_manager_stub.cpp>
         )
 
         target_compile_definitions(${opName}_${socVersion}_tiling_tmp PRIVATE
