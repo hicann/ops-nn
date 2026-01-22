@@ -39,6 +39,7 @@ static constexpr int64_t IDX_OPTIONAL_INPUT__ACCEPTED_NUM = 7;
 static constexpr int64_t IDX_ATTR__NUM_SEQS = 0;
 static constexpr int64_t IDX_ATTR__NUM_QUERIES = 1;
 static constexpr int64_t IDX_ATTR__BLOCK_SIZE = 2;
+static constexpr int64_t MAX_NUMSEQS = 200000000;
 
 inline static int64_t AlignBytes(int64_t elementNum, int64_t bytes = sizeof(int64_t))
 {
@@ -308,6 +309,11 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
         OP_LOGE(
             "CheckAdvTiling", "numSeqs %ld should not be smaller or equal to numQueries %ld ", this->numSeqs_,
             this->numQueries_),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        this->numSeqs_ >= MAX_NUMSEQS,
+        OP_LOGE(
+            "CheckAdvTiling", "numSeqs %ld should be smaller to 200000000", this->numSeqs_),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         input0_storage_shape.GetDim(0) != this->numSeqs_,

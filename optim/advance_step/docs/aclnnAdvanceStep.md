@@ -156,7 +156,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>numSeqs</td>
       <td>输入</td>
       <td>记录输入的seq数量，大小与seqLens的长度一致。</td>
-      <td><ul><li>取值范围是大于0的正整数。</li><li>numSeqs的值大于输入numQueries的值。</li></ul></td>
+      <td><ul><li>取值范围是小于200000000的正整数。</li><li>numSeqs的值大于输入numQueries的值。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
