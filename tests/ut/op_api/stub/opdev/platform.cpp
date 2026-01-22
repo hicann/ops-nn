@@ -60,7 +60,6 @@ NpuArch PlatformInfo::GetCurNpuArch() const
     if (it != soc2ArchMap.end()) {
         return it->second;
     }
-    std::cout << "Error, Unsupported SocVersion, plz modyfy this function" << std::endl;
     return NpuArch::DAV_RESV;
 }
 
