@@ -20,6 +20,8 @@
 #include "activation/swish_grad/op_kernel/arch35/swish_grad_tilingdata.h"
 
 namespace optiling {
+using namespace Ops::Base;
+
 class SwishGradTiling {
 public:
     explicit SwishGradTiling(gert::TilingContext* context) : tilingContext(context){};
@@ -40,7 +42,6 @@ private:
     ge::DataType inputDtype1;
     ge::DataType inputDtype2;
     uint64_t dType = 0;
-    uint64_t schMode = 0;
 };
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_SWISHGRAD_REGBASE_OPTILING

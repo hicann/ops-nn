@@ -22,8 +22,7 @@ using namespace Ops::Base;
 
 struct SwishGradTilingData {
     EleBaseTilingData baseTiling;
-    int64_t value;
-    int64_t scale;
+    float scale;
 };
 
 #endif // _SWISH_GRAD_TILINGDATA_
