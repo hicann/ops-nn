@@ -1,7 +1,7 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -22,6 +22,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -51,7 +52,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT64, op::DataType::DT_UINT64,
     op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910_95 = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_BOOL = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32,
     op::DataType::DT_FLOAT16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_UINT32,
@@ -80,8 +81,8 @@ static const std::initializer_list<op::DataType> VGATHER_DTYPE_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static int64_t GetDtypeSize(const op::DataType dtype) {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
     if (op::CheckType(dtype, ONE_BYTE_DTYPE_LIST_910_95)) {
       return ONE_BYTE;
     }
@@ -134,8 +135,8 @@ static bool IsLastAxisSupport(const aclTensor *self, const aclTensor *index, con
   int64_t repeat_per_core = LEAST_REPEAT_TIME;
   bool if_same_dim_value_except_axis = IsSameDimValueExceptAxis(x_shape, index_shape, axis, dims);
   bool is_last_axis = (axis == static_cast<int64_t>(dims) - 1);
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  bool isSupportSoc = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
+  auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  bool isSupportSoc = (npuArch == NpuArch::DAV_2201);
   int64_t ubSize = isSupportSoc ? SMALL_UB_SIZE : UB_SIZE;
   int64_t available_ub_size = ubSize - RESERVED_UB_SIZE;
   int64_t all_data_size = 0;
@@ -161,7 +162,7 @@ static bool IsLastAxisSupport(const aclTensor *self, const aclTensor *index, con
   // Normal branches
   if (is_last_axis && if_same_dim_value_except_axis) {
     // unaligned cases
-    if (index_axis % large_num_per_block) {
+    if (index_axis % large_num_per_block != 0) {
       while (repeat_per_core * index_axis % large_num_per_block != 0) {
         repeat_per_core++;
       }
@@ -180,9 +181,9 @@ static bool IsLastAxisSupport(const aclTensor *self, const aclTensor *index, con
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
 static bool IsAiCoreSupport(const aclTensor *self, const aclTensor *index, const int64_t axis) {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
-      if (!op::CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910_95)) {
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+      if (!op::CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_WITH_BOOL)) {
           return false;
       }
     } else {
@@ -191,15 +192,17 @@ static bool IsAiCoreSupport(const aclTensor *self, const aclTensor *index, const
       }
     }
 
+    if (Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+        return true;
+    }
+
     if (GetDtypeSize(self->GetDataType()) * GetTensorSize(self) > INT_MAX_NUM) {
         return false;
     }
     if (self->GetViewShape()[axis] > (INT_MAX_NUM / HALF)) {
         return false;
     }
-    if (socVersion == SocVersion::ASCEND910_95) {
-        return true;
-    }
+
     if (IsLastAxisSupport(self, index, axis)) {
         return true;
     }

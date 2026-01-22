@@ -1,12 +1,13 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+ 
 #include "aclnn_topk.h"
 #include "level0/topk.h"
 #include "level0/sort.h"
@@ -21,6 +22,7 @@
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"
 #include "opdev/shape_utils.h"
@@ -48,28 +50,27 @@ const int64_t CONCAT_MAX = 512; // Concat能处理的最大Tensor
 const int64_t SORT_WITH_INDEX_THRESHOLD = 2000; // TopK后调用SortWithIndex的阈值
 const float SORT_AND_TOP_K_THRESHOLD = 0.5; // 走先排序后取前K个值k/n的比值的阈值
 
-static const std::initializer_list<op::DataType> ASCEND910A_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_DOUBLE};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_DOUBLE,
     op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_DOUBLE,
     op::DataType::DT_BF16, op::DataType::DT_UINT64, op::DataType::DT_UINT16, op::DataType::DT_UINT32};
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16;
   }
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-    return ASCEND910_95_DTYPE_SUPPORT_LIST;
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16_AND_UINT;
   }
-  return ASCEND910A_DTYPE_SUPPORT_LIST;
+  return DTYPE_SUPPORT_LIST;
 }
 
 static bool CheckNotNull(const aclTensor *self, const aclTensor *values, const aclTensor *indices) {
@@ -170,8 +171,8 @@ static bool CheckCalcInAiCore(const aclTensor *self, int64_t k) {
 
 static const aclTensor *TopkAdaptGeCastTensor(const aclTensor *self, const aclTensor *value, int64_t k,
                                               op::DataType dataType, aclOpExecutor *executor) {
-  SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
-  if (version == SocVersion::ASCEND910 && CheckCalcInAiCore(self, k) && self->GetDataType() == op::DataType::DT_FLOAT) {
+  NpuArch version = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (version == NpuArch::DAV_1001 && CheckCalcInAiCore(self, k) && self->GetDataType() == op::DataType::DT_FLOAT) {
     return l0op::Cast(value, dataType, executor);
   }
   return value;
@@ -214,8 +215,8 @@ static bool CanDealWith(const aclTensor *self, int64_t k)
 
 static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, bool sorted)
 {
-  // 如果不是910_95,不copy
-  if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+  // 如果不是950,不copy
+  if (!Ops::NN::AclnnUtil::IsRegbase()) {
     return false;
   }
   // 如果排序轴不等于k，不Copy
@@ -337,7 +338,7 @@ static bool indicesOutNeedsCast(int64_t k, bool sorted, bool isHasCasted)
   if (isHasCasted) {
     return false;
   }
-  if ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) &&
+  if ((Ops::NN::AclnnUtil::IsRegbase()) &&
       ((k <= SORT_WITH_INDEX_THRESHOLD) || (sorted == false))) {
     return false;
   }
@@ -353,8 +354,8 @@ static bool indicesOutNeedsCast(int64_t k, bool sorted, bool isHasCasted)
  * @return 是否先排序
  */
 static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue) {
-    // 如果不是910_95,不走该逻辑
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    // 如果不是950,不走该逻辑
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
       return false;
     }
     // 如果不需要排序，不走先排序后取前K个数
@@ -430,7 +431,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
 
     // 进行top计算
     std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-    if (sortDimValue == k && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && CanDealWith(selfTranspose, k)) {
+    if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfTranspose, k)) {
       topkOut = l0op::Sort(selfTranspose, -1, largest, true, indicesDType, uniqueExecutor.get());
       isHasCasted = true;
     } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
@@ -448,7 +449,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
     // 将结果indices_transpose进行transpose，转换成正确的shape
     indicesCastInt32 = l0op::Transpose(std::get<1>(topkOut), axes, uniqueExecutor.get());
   } else {
-    if (k > 0 && k < MAX_AICORE_CALC_DIM && GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (k > 0 && k < MAX_AICORE_CALC_DIM && !Ops::NN::AclnnUtil::IsRegbase()) {
       int64_t kFirst = std::min(PARALLEL_K,selfContiguous->GetViewShape().GetDim(positiveDim));
       auto topkOutFirst = l0op::Topk(selfCast, kFirst, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
 
@@ -462,7 +463,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
       indicesCastInt32 = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
     } else {
       std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-      if (sortDimValue == k && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && CanDealWith(selfCast, k)) {
+      if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfCast, k)) {
         topkOut = l0op::Sort(selfCast, -1, largest, true, indicesDType, uniqueExecutor.get());
         isHasCasted = true;
       } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
