@@ -9,6 +9,7 @@
                     "index": 0,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -18,6 +19,7 @@
                     "index": 1,
                     "dtype": "int8",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -27,6 +29,7 @@
                     "index": 2,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -36,6 +39,7 @@
                     "index": 3,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -45,6 +49,7 @@
                     "index": 4,
                     "dtype": "uint64",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -54,6 +59,7 @@
                     "index": 5,
                     "dtype": "float32",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -63,6 +69,7 @@
                     "index": 6,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -74,6 +81,7 @@
                     "index": 0,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -115,6 +123,7 @@
                     "index": 0,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -124,6 +133,7 @@
                     "index": 1,
                     "dtype": "int8",
                     "format": "FRACTAL_NZ",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -133,6 +143,7 @@
                     "index": 2,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
@@ -142,6 +153,7 @@
                     "index": 3,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -151,6 +163,7 @@
                     "index": 4,
                     "dtype": "uint64",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -160,6 +173,7 @@
                     "index": 5,
                     "dtype": "float32",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -169,6 +183,7 @@
                     "index": 6,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "optional",
                     "shape": [
                         -2
                     ]
@@ -180,6 +195,7 @@
                     "index": 0,
                     "dtype": "float16",
                     "format": "ND",
+                    "paramType": "required",
                     "shape": [
                         -2
                     ]
