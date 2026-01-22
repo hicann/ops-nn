@@ -60,13 +60,13 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       return()
     endif()
   endif()
-  
+
   set(op_type "")
   set(is_valid FALSE)
   set(${op_type_var} "" PARENT_SCOPE)
   set(${is_valid_var} FALSE PARENT_SCOPE)
   set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
-  
+
   if(EXISTS ${binary_json})
     get_op_type_from_binary_json("${binary_json}" op_type)
     message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
@@ -81,7 +81,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       set(${cache_key} "" CACHE INTERNAL "")
       return()
     endif()
-    
+
     set(check_op_supported_result)
     check_op_supported("${op_name}" "${compute_unit}" check_op_supported_result)
     if(NOT check_op_supported_result)
@@ -90,7 +90,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
       return()
     endif()
   endif()
-  
+
   set(is_valid TRUE)
   set(${op_type_var} "${op_type}" PARENT_SCOPE)
   set(${is_valid_var} TRUE PARENT_SCOPE)
@@ -519,8 +519,8 @@ function(gen_ops_info_and_python)
   add_custom_target(common_copy
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
-    COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/matmul_act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
+    COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
@@ -532,8 +532,8 @@ function(gen_ops_info_and_python)
       DESTINATION ${IMPL_INSTALL_DIR}/common/act
     )
     install(
-      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/matmul_act/
-      DESTINATION ${IMPL_INSTALL_DIR}/common/matmul_act
+      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct/
+      DESTINATION ${IMPL_INSTALL_DIR}/common/cmct
     )
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/arch35/
