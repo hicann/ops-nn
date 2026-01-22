@@ -94,7 +94,12 @@ generate_html() {
   if [[ ! -d "${_out_path}" ]]; then
     mk_dir "${_out_path}"
   fi
-  genhtml "${_filtered_file}" -o "${_out_path}"
+
+  if [[ ! -s "${_filtered_file}" ]]; then
+    logging "empty coverage data"
+  else
+    genhtml "${_filtered_file}" -o "${_out_path}"
+  fi
 }
 
 

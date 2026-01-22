@@ -15,7 +15,6 @@ project(${PKG_NAME} VERSION 1.0.0)
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 
-set(CCACHE_PROGRAM "")
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
   set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
@@ -56,6 +55,8 @@ option(OP_KERNEL_UT "Enable kernel ut" OFF)
 option(OP_KERNEL_AICPU_UT "Enable aicpu kernel ut" OFF)
 option(UT_TEST_ALL "Enable all ut" OFF)
 
+set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "cann third party lib path")
+
 if(ENABLE_TEST)
     set(DEFAULT_BUILD_TYPE "Debug")
 else()
@@ -88,8 +89,6 @@ else()
     set(COMPILE_OP_MODE -O2)
   endif()
 endif()
-
-set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "cann third party lib path")
 
 # Cmake Compile配置
 set(CMAKE_CXX_STANDARD
@@ -130,6 +129,7 @@ if(ENABLE_TEST)
 
   # op graph ut
   if(UT_TEST_ALL OR OP_GRAPH_UT)
+    include(cmake/opbuild.cmake)
     set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
   endif()
 

@@ -22,7 +22,6 @@ endif()
 
 set(JSON_DOWNLOAD_PATH ${CANN_3RD_LIB_PATH}/pkg)
 set(JSON_INSTALL_PATH ${CANN_3RD_LIB_PATH}/json)
-
 find_path(JSON_INCLUDE
         NAMES nlohmann/json.hpp
         NO_CMAKE_SYSTEM_PATH
@@ -42,6 +41,7 @@ if(json_FOUND AND NOT FORCE_REBUILD_CANN_3RD)
     set(JSON_INCLUDE ${JSON_INSTALL_PATH}/include)
     add_custom_target(nlohmann_json)
 else()
+    message("not use cache, download the json code")
     include(ExternalProject)
     ExternalProject_Add(nlohmann_json
       URL                         https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip

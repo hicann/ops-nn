@@ -125,7 +125,7 @@ export EAGER_LIBRARY_OPP_PATH="${ASCEND_OPP_PATH}/lib64"
 export EAGER_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
 export GRAPH_LIBRARY_STUB_PATH="${ASCEND_HOME_PATH}/lib64/stub"
 export GRAPH_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
-CANN_3RD_LIB_PATH="${BASE_PATH}/third_party"
+CANN_3RD_LIB_PATH="${BUILD_PATH}/third_party"
 # print usage message
 usage() {
   local specific_help="$1"
@@ -1097,13 +1097,10 @@ build_ut() {
     done
   else
     enable_cov=TRUE
-    local all_targets=$(cmake --build . --target help)
-    if echo "${UT_TARGES[@]}" | grep -q "op_kernel"; then
-      if grep -wq "pre_op_kernel_ut" <<< "${all_targets}"; then
-        echo "exec pre_op_kernel_ut..."
-        cmake --build . --target pre_op_kernel_ut -- ${VERBOSE} -j $THREAD_NUM
-        cmake ${CMAKE_ARGS} ..
-      fi
+    if echo "${UT_TARGES[@]}" | grep -v "aicpu_op_kernel" | grep -q "op_kernel"; then
+      echo "exec pre_op_kernel_ut..."
+      cmake --build . --target pre_op_kernel_ut -- ${VERBOSE} -j $THREAD_NUM
+      cmake ${CMAKE_ARGS} ..
     fi
     cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -j $THREAD_NUM
   fi
@@ -1166,7 +1163,7 @@ build_example() {
   IFS=$'\n'
   files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*"))
   if [[ "$COMPUTE_UNIT" == "ascend910_95" ]]; then
-    files+=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp"))
+    files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp"))
   fi
   IFS=$OLDIFS
 
@@ -1327,7 +1324,7 @@ main() {
   fi
   assemble_cmake_args
   echo "CMAKE_ARGS: ${CMAKE_ARGS}"
-  
+
   if [[ "$ENABLE_RUN_EXAMPLE" == "TRUE" ]]; then
     build_example
     exit $?

@@ -44,6 +44,8 @@ platform_data=$(grep -e "arch" "$_RUN_PKG_INFO_FILE" | cut --only-delimited -d"=
 opp_old_platform_dir=ops_nn_$platform_data-linux
 opp_platform_dir=ops_nn
 upper_opp_platform=$(echo "${opp_platform_dir}" | tr 'a-z' 'A-Z')
+GRAPH_SO_PATH="${_CURR_PATH}/../../../../opp/built-in/op_graph/lib/linux/${platform_data}/libopgraph_nn.so"
+HOST_SO_PATH="${_CURR_PATH}/../../../../opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${platform_data}/libophost_nn.so"
 # defaluts info determinated by user's inputs
 _INSTALL_LOG_DIR="ops_nn/install_log"
 _INSTALL_INFO_SUFFIX="${opp_platform_dir}/ascend_install.info"
@@ -1128,13 +1130,6 @@ done
 
 logandprint "[INFO]: Command install"
 architecture=$(uname -m)
-# check platform
-if [ "${architecture}" != "${platform_data}" ] ; then
-    logandprint "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:the architecture of the run package \
-is inconsistent with that of the current environment. "
-    exitlog
-    exit 1
-fi
 #root install set is_for_all y
 if [ "$(id -u)" = "0" ] ; then
     is_for_all=y
@@ -1384,7 +1379,7 @@ if [ "${is_check}" = "y" ]; then
     if [ $? -ne 0 ]; then
         logandprint "[ERROR]: ERR_NO:${OPP_COMPATIBILITY_CEHCK_ERR};ERR_DES:Check the compatibility of ops_nn package fail,please confirm the true version package."
         exit 1
-	fi
+    fi
 fi
 
 
@@ -1482,7 +1477,27 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
     if [ "$?" != 0 ]; then
         logoperationretstatus "install" "${in_install_type}" "1" "${in_cmd_list}"
     fi
-
+    architecture=$(uname -m)
+    graph_so_dir_path="${target_dir}/opp/built-in/op_graph/lib/linux/${platform_data}"
+    host_so_dir_path="${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${platform_data}"
+    # check platform
+    if [ "${architecture}" != "${platform_data}" ] ; then
+        logandprint "[INFO]: the architecture of the run package is inconsistent with that of the current environment. "
+        # 异构安装场景，拷贝so到指定目录
+        if [ -d "${target_dir}/opp/built-in/op_graph/lib/linux/" ] ; then
+            chmod u+w ${target_dir}/opp/built-in/op_graph/lib/linux/
+        fi
+        if [ -d "${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/" ] ; then
+            chmod u+w ${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/
+        fi
+        mkdir -p ${graph_so_dir_path}
+        mkdir -p ${host_so_dir_path}
+        cp ${GRAPH_SO_PATH} ${graph_so_dir_path}
+        cp ${HOST_SO_PATH} ${host_so_dir_path}
+        chmod u-w ${target_dir}/opp/built-in/op_graph/lib/linux/
+        chmod u-w ${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/
+        exit 0
+    fi
     _FIRST_NOT_EXIST_DIR=$(getfirstnotexistdir "${target_dir}/${opp_platform_dir}")
     #getfirstnotexistdir "/usr/local/tmp/CANN-1.81/ops_nn"
     is_the_last_dir_opp=""
@@ -1507,7 +1522,7 @@ user group (${_DEFAULT_USERGROUP}) for devel mode? [y/n]"
             else
                 chip_type_new=${chip_type_new}
             fi
-            sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "" "n" "${in_feature_new}" "${chip_type_new}" "$$pkg_version_dir"
+            sh "${_UPGRADE_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "${_DEFAULT_USERNAME}" "${_DEFAULT_USERGROUP}" ${in_feature} "${is_quiet}" "${is_for_all}" "${is_setenv}" "${is_docker_install}" "${docker_root}" "" "n" "${in_feature_new}" "${chip_type_new}" "$pkg_version_dir"
             chmod -R 555 "${target_dir}/${opp_platform_dir}/script"> /dev/null 2>&1
             chmod -R 555 "${target_dir}/${opp_platform_dir}/bin"> /dev/null 2>&1
             if [ $(id -u) -eq 0 ]; then
@@ -1590,6 +1605,42 @@ if [ "${is_uninstall}" = "y" ];then
             logoperationretstatus "uninstall" "${install_type}" "1" "${in_cmd_list}"
         exit 0
     fi
+    # 如果是异构卸载
+    if [ "${architecture}" != "${platform_data}" ]; then
+        target_arch="${platform_data}"
+    else
+        # 判断异构so是否存在，存在则删除
+        if [ "${architecture}" = "x86_64" ]; then
+            target_arch="aarch64"
+        else
+            target_arch="x86_64"
+        fi
+    fi
+    graph_so_path="${target_dir}/opp/built-in/op_graph/lib/linux/${target_arch}/libopgraph_nn.so"
+    graph_so_dir_path="${target_dir}/opp/built-in/op_graph/lib/linux/${target_arch}"
+    host_so_path="${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${target_arch}/libophost_nn.so"
+    host_so_dir_path="${target_dir}/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${target_arch}"
+    if [ -f "${graph_so_path}" ]; then
+        rm -f "${graph_so_path}"
+    fi
+    if [ -f "${host_so_path}" ]; then
+        rm -f "${host_so_path}"
+    fi
+    # 判断目录是否存在且是否为空
+    if [ -d "${graph_so_dir_path}" ]; then
+        if [ -z "$(ls -A "${graph_so_dir_path}")" ]; then
+            rm -rf "${graph_so_dir_path}"
+        fi
+    fi
+    if [ -d "${host_so_dir_path}" ]; then
+        if [ -z "$(ls -A "${host_so_dir_path}")" ]; then
+            rm -rf "${host_so_dir_path}"
+        fi
+    fi
+    if [ "${architecture}" != ${platform_data} ]; then
+        return
+    fi      
+
     # call opp_uninstall.sh
 #    aicpuinfofile "remove"
     sh "${_UNINSTALL_SHELL_FILE}" "${_TARGET_INSTALL_PATH}" "uninstall" "${is_quiet}" $in_feature "${is_docker_install}" "${docker_root}" "$pkg_version_dir"

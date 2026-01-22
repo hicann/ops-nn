@@ -338,7 +338,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/pooling/pool_3d_common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
         )
-        ## kernel src copy
+
         kernel_src_copy(
             TARGET ${KERNEL_COPY_TARGET}
             OP_LIST ${COMPILED_OPS_UT}
@@ -514,7 +514,12 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
         set_source_files_properties(${kernelFile} PROPERTIES GENERATED TRUE)
 
         ## add object: ${opName}_${socVersion}_cases_obj
-        file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_${opName}*.cpp)
+        get_target_dir(${lowerSocVersion} target_dir)
+        if(target_dir STREQUAL "")
+            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_${opName}*.cpp)
+        else()
+            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_${opName}*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${target_dir}/test_${opName}*.cpp)
+        endif()
         add_library(${opName}_${socVersion}_cases_obj OBJECT)
         target_sources(${opName}_${socVersion}_cases_obj PRIVATE
             ${kernelFile}

@@ -19,13 +19,21 @@ foreach(OP_RTKB_CATEGORY ${OP_CATEGORY_LIST})
 endforeach()
 
 foreach(RTKB_DATA_FILE ${RTKB_FILE_ALL})
-    string(FIND "${RTKB_DATA_FILE}" "/" last_slash_pos REVERSE)
-    string(SUBSTRING "${RTKB_DATA_FILE}" ${last_slash_pos} -1 RTKB_DATA_FILE_NAME)
-    string(FIND "${RTKB_DATA_FILE_NAME}" "_" first_underscore_pos)
-    string(SUBSTRING "${RTKB_DATA_FILE_NAME}" 0 ${first_underscore_pos} fileSocPath)
+    # 获取文件名（不含路径）
+    get_filename_component(FILENAME "${RTKB_DATA_FILE}" NAME)
+
+    # 使用正则提取：从开头第一个“_数字_AiCore”之前的部分
+    if (FILENAME MATCHES "^([^_]+(_[^_]+)*)_[0-9]+_AiCore_")
+        # 提取第一个部分（即SoC）
+        set(fileSocPath "${CMAKE_MATCH_1}")
+        message(STATUS "Extracted Soc: ${fileSocPath}")
+    else()
+        message(WARNING "Failed to parse Soc from ${FILENAME}")
+        set(fileSocPath "unknown")
+    endif()
 
     install(FILES ${RTKB_DATA_FILE}
-        DESTINATION ${OPS_RTKB_DIR}${fileSocPath}/unified_bank
+        DESTINATION ${OPS_RTKB_DIR}/${fileSocPath}/unified_bank
         OPTIONAL
     )
 endforeach()

@@ -30,6 +30,7 @@ if(NOT TARGET intf_pub)
     -Wl,-z,now
     -Wl,-z,noexecstack
     $<$<CONFIG:Release>:-Wl,--build-id=none>
+    $<$<CONFIG:Release>:-s>
     $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize=leak -fsanitize-recover=address>
     $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
   )

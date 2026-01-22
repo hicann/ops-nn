@@ -14,7 +14,7 @@ unset(GTEST_MAIN_STATIC_LIBRARY CACHE)
 unset(GMOCK_STATIC_LIBRARY CACHE)
 unset(GMOCK_MAIN_STATIC_LIBRARY CACHE)
 
-set(GTEST_INSTALL_PATH ${CANN_3RD_LIB_PATH}/gtestTmp)
+set(GTEST_INSTALL_PATH ${CANN_3RD_LIB_PATH}/gtest)
 message("GTEST_INSTALL_PATH=${GTEST_INSTALL_PATH}")
 find_path(GTEST_INCLUDE
         NAMES gtest/gtest.h
@@ -62,6 +62,7 @@ message("gtest found:${gtest_FOUND}")
 if(gtest_FOUND AND NOT FORCE_REBUILD_CANN_3RD)
     message("gtest found in ${GTEST_INSTALL_PATH}, and not force rebuild cann third_party")
 else()
+    message("not use cache, download the gtest code.")
     set(REQ_URL "https://gitcode.com/cann-src-third-party/googletest/releases/download/v1.14.0/googletest-1.14.0.tar.gz")
     set (gtest_CXXFLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -O2 -D_FORTIFY_SOURCE=2 -fPIC -fstack-protector-all -Wl,-z,relro,-z,now,-z,noexecstack")
     set (gtest_CFLAGS   "-D_GLIBCXX_USE_CXX11_ABI=0 -O2 -D_FORTIFY_SOURCE=2 -fPIC -fstack-protector-all -Wl,-z,relro,-z,now,-z,noexecstack")
@@ -78,8 +79,8 @@ else()
             -DCMAKE_INSTALL_LIBDIR=lib
             -DBUILD_TESTING=OFF
             -DBUILD_SHARED_LIBS=OFF
-            -DCMAKE_C_COMPILER_LAUNCHER=${CCACHE_PROGRAM}
-            -DCMAKE_CXX_COMPILER_LAUNCHER=${CCACHE_PROGRAM}
+            -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+            -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
             <SOURCE_DIR>
             BUILD_COMMAND $(MAKE)
             INSTALL_COMMAND $(MAKE) install

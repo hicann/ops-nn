@@ -69,7 +69,7 @@ function(gen_opgraph_symbol)
     )
 
   target_link_directories(${OPGRAPH_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
-  set_target_properties(${OPGRAPH_NAME} PROPERTIES 
+  set_target_properties(${OPGRAPH_NAME} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/opp/built-in/op_proto
   )
   install(
@@ -150,7 +150,7 @@ function(gen_cust_optiling_symbol)
     cust_opmaster
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     PRIVATE $<$<TARGET_EXISTS:opsbase>:opsbase>
-            -Wl,-Bsymbolic
+    -Wl,-Bsymbolic
     )
 endfunction()
 
@@ -165,6 +165,12 @@ function(gen_cust_proto_symbol)
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
     )
+  merge_graph_headers(TARGET merge_ops_proto ALL OUT_DIR ${ASCEND_GRAPH_CONF_DST})
+  add_dependencies(cust_proto merge_ops_proto)
+
+  target_sources(
+    cust_proto PRIVATE ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp
+  )
   target_link_libraries(
     cust_proto
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
@@ -280,10 +286,6 @@ function(gen_norm_symbol)
   gen_opgraph_symbol()
 
   gen_opapi_symbol()
-
-  gen_aicpu_json_symbol(TRUE)
-
-  gen_aicpu_kernel_symbol(TRUE)
 
   gen_onnx_plugin_symbol()
 endfunction()

@@ -63,11 +63,15 @@ get_filename_component(RUNTIME_INC_DIR ${RUNTIME_INC_DIR} REALPATH)
 
 if(runtime_FOUND)
   if(NOT runtime_FIND_QUIETLY)
-    message(STATUS "Found source npuruntime include dir: ${RUNTIME_INC_DIR}")
+    message(STATUS "[nn]Found source npuruntime include dir: ${RUNTIME_INC_DIR}")
   endif()
   set(NPURUNTIME_INCLUDE_DIRS
     ${ACL_INC_DIR}
+    ${TOP_DIR}/runtime/pkg_inc
+    ${TOP_DIR}/runtime/pkg_inc/runtime
+    ${TOP_DIR}/runtime/pkg_inc/profiling
     ${RUNTIME_INC_DIR}
     ${RUNTIME_INC_DIR}/runtime
+    ${RUNTIME_INC_DIR}/../profiling
   )
 endif()

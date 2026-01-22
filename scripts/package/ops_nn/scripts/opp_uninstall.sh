@@ -115,7 +115,7 @@ is_quiet="$3"
 _CHIP_TYPE="$4"
 is_docker_install="$5"
 docker_root="$6"
-pkg_version_dir="$7"
+pkg_version_dir="${7}"
 paramter_num="$#"
 
 logandprint "[INFO]: Command ops_nn_uninstall"

@@ -521,7 +521,8 @@ const OP_BINARY_RES& {op_type}KernelResource() {{
 
     def _save_op_resource(self, op_type, res_content):
         res_cpp_file = self._op_resource_path / f"{op_type}_op_resource.cpp"
-        res_cpp_file.unlink(missing_ok=True)
+        if os.path.exists(res_cpp_file):
+            res_cpp_file.unlink()
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = stat.S_IWUSR | stat.S_IRUSR

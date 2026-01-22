@@ -8,9 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
- * \file add_example_infer.cpp
+ * \file add_example_aicpu_infer.cpp
  * \brief
  */
 #include "register/op_impl_registry.h"

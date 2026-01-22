@@ -19,11 +19,11 @@ target_compile_definitions(opapi PRIVATE
     LOG_CPP
 )
 
+target_compile_options(opapi PRIVATE -Wno-unused-parameter)
+
 target_include_directories(opapi PRIVATE
     ${OPAPI_INCLUDE}
 )
-
-target_compile_options(opapi PRIVATE -Wno-unused-parameter)
 
 if(ENABLE_TEST)
     add_library(opapi_stub SHARED ${OP_API_FILES})

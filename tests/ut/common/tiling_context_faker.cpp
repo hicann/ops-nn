@@ -41,6 +41,7 @@ TilingContextFaker& TilingContextFaker::IrInstanceNum(
     inputInstanceNum_ = inputInstanceNum;
     outputInstanceNum_ = outputInstanceNum;
     inputInstanceNumPacked_ = inputInstanceNum_;
+    OpTilingContextBuilder::IOInstanceNum(inputInstanceNumPacked_, outputInstanceNum_);
     return *this;
 }
 
@@ -160,7 +161,20 @@ TilingContextFaker& TilingContextFaker::InputShapes(const std::vector<StorageSha
 
 TilingContextFaker& TilingContextFaker::InputTensors(const std::vector<Tensor*>& inputTensors)
 {
-    OpTilingContextBuilder::InputTensors(inputTensors);
+    if (!inputTensorFlag_) {
+        OpTilingContextBuilder::InputTensors(inputTensors);
+        inputTensorFlag_ = true;
+    }
+    return *this;
+}
+
+TilingContextFaker& TilingContextFaker::InputTensors(const std::vector<TensorV2*>& inputTensors)
+{
+    std::vector<Tensor*> inputTensorsV1;
+    for (size_t idx = 0; idx < inputTensors.size(); ++idx) {
+        inputTensorsV1.push_back(reinterpret_cast<Tensor*>(inputTensors[idx]));
+    }
+    InputTensors(inputTensorsV1);
     return *this;
 }
 

@@ -71,6 +71,8 @@ public:
 
     TilingContextFaker& InputTensors(const std::vector<Tensor*>& inputTensors);
 
+    TilingContextFaker& InputTensors(const std::vector<TensorV2*>& inputTensors);
+
     TilingContextFaker& OutputTensors(const std::vector<Tensor*>& outputTensors);
 
     TilingContextFaker& CompileInfo(const void* compileInfo);
@@ -88,6 +90,8 @@ public:
     TilingContextFaker& Workspace(const ContinuousVector* workspace);
 
     KernelRunContextHolder Build();
+
+    bool inputTensorFlag_ = false;
 };
 } // namespace gert
 #endif // OPS_MATH_DEV_TESTS_UT_COMMON_INFERSHAPE_CONTEXT_FAKER_H
