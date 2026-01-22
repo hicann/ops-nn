@@ -36,9 +36,8 @@ static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t FLOATBYTESIZE = 4;
 static constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
 
-static constexpr uint64_t PER_CORE_MAX_SIZE = 4000;
+static constexpr uint64_t PER_CORE_MAX_SIZE = 4096;
 static constexpr uint32_t EMPTY_TENSOR_KEY = 500;
-static const gert::Shape g_vec_1_shape = {1};
 
 const std::string OP_NAME = "AddRmsNormDynamicQuant";
 
@@ -54,14 +53,6 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::CheckDtypeVaild(
         nodeName_.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
         Ops::Base::ToString(srcDtype).c_str());
     return ge::GRAPH_FAILED;
-}
-
-const gert::Shape& AddRmsNormDynamicQuantEmptyTiling::EnsureNotScalar(const gert::Shape& inShape)
-{
-    if (inShape.IsScalar()) {
-        return g_vec_1_shape;
-    }
-    return inShape;
 }
 
 bool AddRmsNormDynamicQuantEmptyTiling::CheckShapeNull()
@@ -101,9 +92,9 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputShapeDim()
 {
     OP_LOGD(nodeName_.c_str(), "Enter AddRmsNormDynamicQuantEmptyTiling CheckInputShapeDim.");
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    auto x1InputShape = EnsureNotScalar(x1Shape->GetStorageShape());
+    auto x1InputShape = optiling::EnsureNotScalar(x1Shape->GetStorageShape());
     const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
-    auto x2InputShape = EnsureNotScalar(x2Shape->GetStorageShape());
+    auto x2InputShape = optiling::EnsureNotScalar(x2Shape->GetStorageShape());
 
     // Not support zero shape.
     size_t x1DimNum = x1InputShape.GetDimNum();
@@ -146,7 +137,7 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputShapeValue()
 
     // Check gamma should be last dim of x
     // Check scale should be not last dim of x
-    auto gammaInputShape = EnsureNotScalar(gammaShape->GetStorageShape());
+    auto gammaInputShape = optiling::EnsureNotScalar(gammaShape->GetStorageShape());
     if ((1 == gammaInputShape.GetDimNum()) &&
         !NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName_, "x1", "gamma", true)) {
         return false;
@@ -193,9 +184,9 @@ ge::graphStatus AddRmsNormDynamicQuantEmptyTiling::SetInputParams()
     OP_LOGD(nodeName_.c_str(), "Enter AddRmsNormDynamicQuantEmptyTiling SetInputParams.");
     // Set input dim
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    auto x1InputShape = EnsureNotScalar(x1Shape->GetStorageShape());
+    auto x1InputShape = optiling::EnsureNotScalar(x1Shape->GetStorageShape());
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
-    auto gammaInputShape = EnsureNotScalar(gammaShape->GetStorageShape());
+    auto gammaInputShape = optiling::EnsureNotScalar(gammaShape->GetStorageShape());
 
     size_t x1DimNum = x1InputShape.GetDimNum();
     size_t gammaDimNum = gammaInputShape.GetDimNum();
@@ -324,7 +315,7 @@ void AddRmsNormDynamicQuantEmptyTiling::CalcUsedCoreNum()
     } else {
         ge::graphStatus result = ge::GRAPH_SUCCESS;
         usedCoreNum_ = aivCoreNum_;
-        mPerCore_ = numM_ / usedCoreNum_;
+        mPerCore_ = Ops::Base::CeilDiv(numM_, usedCoreNum_);
         mPerUB_ = mPerCore_;
         mLastCore_ = numM_ - mPerCore_ * (usedCoreNum_ - 1);
         result = CalcTilingData();

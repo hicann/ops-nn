@@ -49,10 +49,10 @@ using namespace AscendC;
         op.Process();                                                                                \
     } while (0)
 
-#define INIT_AND_PROCESS_EMPTY                                                                       \
-    do {                                                                                             \
-        op.Init(scale1, scale2);                                                         \
-        op.Process();                                                                                \
+#define INIT_AND_PROCESS_EMPTY   \
+    do {                         \
+        op.Init(scale1, scale2); \
+        op.Process();            \
     } while (0)
 
 extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
@@ -92,7 +92,7 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
             // Do nothing
         }
     }
-    
+
 #else
     GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicQuantTilingData, tilingDataIn, tiling);
     const AddRmsNormDynamicQuantTilingData* __restrict tilingData = &tilingDataIn;
@@ -100,13 +100,13 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
     if (TILING_KEY_IS(0)) {
         // 0 Tiling, Do Nothing.
     } else if (TILING_KEY_IS(1)) {
-        KernelAddRmsNormDynamicQuantNormal<DTYPE_X1, 1> op(&pipe);
+        KernelAddRmsNormDynamicQuantNormal<DTYPE_X1, DTYPE_Y1, 1> op(&pipe);
         INIT_AND_PROCESS_WORKSPACE;
     } else if (TILING_KEY_IS(2)) {
-        KernelAddRmsNormDynamicQuantSingleRow<DTYPE_X1, 2> op(&pipe);
+        KernelAddRmsNormDynamicQuantSingleRow<DTYPE_X1, DTYPE_Y1, 2> op(&pipe);
         INIT_AND_PROCESS_WORKSPACE;
     } else if (TILING_KEY_IS(3)) {
-        KernelAddRmsNormDynamicQuantSliceD<DTYPE_X1, 3> op(&pipe);
+        KernelAddRmsNormDynamicQuantSliceD<DTYPE_X1, DTYPE_Y1, 3> op(&pipe);
         INIT_AND_PROCESS_WORKSPACE;
     }
 #endif

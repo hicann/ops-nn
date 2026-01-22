@@ -18,8 +18,8 @@
 
 #include "add_rms_norm_dynamic_quant_base.h"
 
-template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
-class KernelAddRmsNormDynamicQuantNormal : public KernelAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM> {
+template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
+class KernelAddRmsNormDynamicQuantNormal : public KernelAddRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantNormal(TPipe* pipe)
     {
@@ -35,7 +35,7 @@ public:
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2, beta);
         this->InitOutGlobalTensors(y1, y2, x, outScale1, outScale2);
         this->numRowsAligned = (this->rowStep + ELEM_PER_BLK_FP32 - 1) / ELEM_PER_BLK_FP32 * ELEM_PER_BLK_FP32;
-        this->ubAligned = (this->numLastDimAligned - this->numLastDim) >= ELEM_PER_BLK_FP16;
+        this->ubAligned = static_cast<uint32_t>((this->numLastDimAligned - this->numLastDim) / ELEM_PER_BLK_FP16);
         /*
           UB = 3 * this->rowStep * alignedCol * sizeof(T)
               + 2 * this->rowStep * alignedCol * sizeof(float)
@@ -93,8 +93,8 @@ private:
     __aicore__ inline void CopyInX1X2(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
-        DataCopyEx(x1x2LocalIn[0], this->x2Gm[gmOffset], this->numLastDim, rowCount, this->ubAligned);
-        DataCopyEx(x1x2LocalIn[elementCount], this->x1Gm[gmOffset], this->numLastDim, rowCount, this->ubAligned);
+        DataCopyExStride(x1x2LocalIn[0], this->x2Gm[gmOffset], this->numLastDim, rowCount, this->ubAligned);
+        DataCopyExStride(x1x2LocalIn[elementCount], this->x1Gm[gmOffset], this->numLastDim, rowCount, this->ubAligned);
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
@@ -127,7 +127,7 @@ private:
         PipeBarrier<PIPE_V>();
         outRowsQue.EnQue(xOut);
         LocalTensor<T> x = outRowsQue.template DeQue<T>();
-        DataCopyEx(this->xGm[gmOffset], x, this->numLastDim, rowCount, this->ubAligned);
+        DataCopyExStride(this->xGm[gmOffset], x, this->numLastDim, rowCount, this->ubAligned);
         outRowsQue.FreeTensor(x);
     }
 
@@ -143,7 +143,7 @@ private:
             Cast(yOut, yLocal, RoundMode::CAST_RINT, elementCount);
         }
         PipeBarrier<PIPE_ALL>();
-        DataCopyEx(this->xGm[gmOffset], yOut, this->numLastDim, rowCount, this->ubAligned);
+        DataCopyExStride(this->xGm[gmOffset], yOut, this->numLastDim, rowCount, this->ubAligned);
         PipeBarrier<PIPE_ALL>();
     }
 
@@ -211,19 +211,21 @@ private:
 
     __aicore__ inline void ComputeDynamicQuant(int32_t nums, int32_t elementCount)
     {
-        LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();  // xLocalFp32 <-- y
+        LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- y
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
         LocalTensor<float> zLocalFp32 = outRowsQue.template AllocTensor<float>();
-        LocalTensor<int8_t> outQuant01 = zLocalFp32.ReinterpretCast<int8_t>();
+        LocalTensor<T_Y> outQuant01 = zLocalFp32.ReinterpretCast<T_Y>();
         doQuant1withFlag(scaleLocal, xLocalFp32, outQuant01, nums, elementCount);
         doQuant2withFlag(scaleLocal, xLocalFp32, outQuant01, nums, elementCount);
         outRowsQue.EnQue(zLocalFp32);
     }
 
-    __aicore__ inline void doQuant1withFlag(LocalTensor<float> scaleLocal, LocalTensor<float> xLocalFp32, LocalTensor<int8_t> outQuant01, int32_t nums, int32_t elementCount)
+    __aicore__ inline void doQuant1withFlag(
+        LocalTensor<float> scaleLocal, LocalTensor<float> xLocalFp32, LocalTensor<T_Y> outQuant01, int32_t nums,
+        int32_t elementCount)
     {
         if (this->outQuant1Flag == 0 && !this->isOld) {
-            return ;
+            return;
         }
         LocalTensor<float> tmpFp32 = inRowsQue.template AllocTensor<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -242,8 +244,8 @@ private:
         } else {
             for (int32_t rid = 0; rid < nums; ++rid) {
                 Muls(
-                     yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], (float)(1.0),
-                     this->numLastDim); // yLocalFp32 <-- y * 1
+                    yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], (float)(1.0),
+                    this->numLastDim); // yLocalFp32 <-- y * 1
             }
             PipeBarrier<PIPE_V>();
         }
@@ -260,33 +262,33 @@ private:
         Cast(outQuant01, yLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
         PipeBarrier<PIPE_V>();
         inRowsQue.FreeTensor(tmpFp32);
-  }
+    }
 
     __aicore__ inline void doQuant2withFlag(
-        LocalTensor<float> scaleLocal, LocalTensor<float> xLocalFp32, LocalTensor<int8_t> outQuant01, int32_t nums,
+        LocalTensor<float> scaleLocal, LocalTensor<float> xLocalFp32, LocalTensor<T_Y> outQuant01, int32_t nums,
         int32_t elementCount)
     {
         if (this->outQuant2Flag == 0 && !this->oldDouble) {
-            return ;
+            return;
         }
         LocalTensor<float> tmpFp32 = inRowsQue.template AllocTensor<float>();
         LocalTensor<float> scale2Local = scaleLocal[this->numRowsAligned];
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-        LocalTensor<int8_t> outQuant02 = outQuant01[elementCount];
+        LocalTensor<T_Y> outQuant02 = outQuant01[elementCount];
         if (this->smooth2Exist) {
             LocalTensor<T> smooth2Local = weightBuf03.Get<T>();
             Cast(tmpFp32, smooth2Local, RoundMode::CAST_NONE, this->numLastDim);
             PipeBarrier<PIPE_V>();
             for (int32_t rid = 0; rid < nums; ++rid) {
-            Mul(xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], tmpFp32,
-                this->numLastDim); // yLocalFp32 <-- y * smooth2
+                Mul(xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], tmpFp32,
+                    this->numLastDim); // yLocalFp32 <-- y * smooth2
             }
             PipeBarrier<PIPE_V>();
         } else {
             for (int32_t rid = 0; rid < nums; ++rid) {
                 Muls(
-                     xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], (float)(1.0),
-                     this->numLastDim); // yLocalFp32 <-- y * 1
+                    xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], (float)(1.0),
+                    this->numLastDim); // yLocalFp32 <-- y * 1
             }
             PipeBarrier<PIPE_V>();
         }
@@ -297,8 +299,8 @@ private:
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
         Cast(
-             xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-             elementCount);
+            xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+            elementCount);
         PipeBarrier<PIPE_V>();
         Cast(outQuant02, xLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
         PipeBarrier<PIPE_V>();
@@ -307,16 +309,16 @@ private:
 
     __aicore__ inline void CopyOut(int32_t gmOffset, int32_t gmOffsetScale, int32_t rowCount)
     {
-        LocalTensor<int8_t> outY12 = outRowsQue.template DeQue<int8_t>();
+        LocalTensor<T_Y> outY12 = outRowsQue.template DeQue<T_Y>();
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
         if (this->isOld || (this->outQuant1Flag == 1)) {
-            LocalTensor<int8_t> outQuant01 = outY12[0];
+            LocalTensor<T_Y> outQuant01 = outY12[0];
             LocalTensor<float> scale1Local = scaleLocal[0];
             DataCopyEx(this->y1Gm[gmOffset], outQuant01, this->numLastDim, rowCount);
             DataCopyEx(this->outScale1Gm[gmOffsetScale], scale1Local, rowCount);
         }
         if (this->oldDouble || (this->outQuant2Flag == 1)) {
-            LocalTensor<int8_t> outQuant02 = outY12[rowCount * this->numLastDimAligned];
+            LocalTensor<T_Y> outQuant02 = outY12[rowCount * this->numLastDimAligned];
             LocalTensor<float> scale2Local = scaleLocal[this->numRowsAligned];
             DataCopyEx(this->y2Gm[gmOffset], outQuant02, this->numLastDim, rowCount);
             DataCopyEx(this->outScale2Gm[gmOffsetScale], scale2Local, rowCount);
@@ -340,7 +342,7 @@ private:
             SetFlag<HardEvent::V_S>(eventVS);
             WaitFlag<HardEvent::V_S>(eventVS);
             maxTemp = tmpTensor[rid * this->numLastDimAligned].GetValue(0); // Reduce
-            scaleTemp = DYNAMIC_QUANT_DIVIDEND / maxTemp;
+            scaleTemp = this->quantMaxVal / maxTemp;
             scaleTensor.SetValue(rid, 1 / scaleTemp);
             eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
@@ -365,7 +367,7 @@ private:
     TBuf<TPosition::VECCALC> scalesBuf;
 
     uint32_t numRowsAligned;
-    bool ubAligned;
+    uint32_t ubAligned;
 };
 
 #endif // __ADD_RMS_NORM_DYNAMIC_QUANT_NORMAL_KERNEL_H_

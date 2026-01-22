@@ -18,7 +18,7 @@
 
 #include "add_rms_norm_dynamic_quant_helper.h"
 
-template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
+template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddRmsNormDynamicQuantBase {
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantBase()
@@ -57,6 +57,12 @@ public:
         // 2 dynamic quant operator required 2 scale buffer.
         this->smooth2Exist = tiling->smoothNum2;
 
+        // dynamic quant max value
+        if constexpr (IsSameType<T_Y, int8_t>::value) {
+            this->quantMaxVal = DYNAMIC_QUANT_DIVIDEND;
+        } else {
+            this->quantMaxVal = DYNAMIC_QUANT_DIVIDEND_INT4;
+        }
         this->outQuant1Flag = tiling->outQuant1Flag;
         this->outQuant2Flag = tiling->outQuant2Flag;
 
@@ -81,8 +87,12 @@ public:
 
     __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2)
     {
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + blockIdx_ * this->gmOffset_);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + blockIdx_ * this->gmOffset_);
+        int64_t yBufferSize = blockIdx_ * this->gmOffset_;
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            yBufferSize = yBufferSize / 2;
+        }
+        y1Gm.SetGlobalBuffer((__gm__ T_Y*)(y1) + yBufferSize);
+        y2Gm.SetGlobalBuffer((__gm__ T_Y*)(y2) + yBufferSize);
         xGm.SetGlobalBuffer((__gm__ T*)(x) + blockIdx_ * this->gmOffset_);
         outScale1Gm.SetGlobalBuffer((__gm__ float*)outScale1 + blockIdx_ * this->firstDimPerCore);
         outScale2Gm.SetGlobalBuffer((__gm__ float*)outScale2 + blockIdx_ * this->firstDimPerCore);
@@ -98,8 +108,8 @@ protected:
     GlobalTensor<T> smooth1Gm;
     GlobalTensor<T> smooth2Gm;
     GlobalTensor<T> betaGm;
-    GlobalTensor<int8_t> y1Gm;
-    GlobalTensor<int8_t> y2Gm;
+    GlobalTensor<T_Y> y1Gm;
+    GlobalTensor<T_Y> y2Gm;
     GlobalTensor<T> xGm;
     GlobalTensor<float> outScale1Gm;
     GlobalTensor<float> outScale2Gm;
@@ -134,6 +144,7 @@ protected:
     bool oldDouble;
     bool newSingleFirst;
     bool newSingleSecond;
+    float quantMaxVal;
 };
 
 #endif // __ADD_RMS_NORM_DYNAMIC_QUANT_BASE_CLASS_H_

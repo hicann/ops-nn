@@ -50,10 +50,10 @@ extern "C" {
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] epsilon: double 类型，层归一化中用到的防止除0的参数。
  * @param [in] y1Out:
- * 公式中的输出`y1`，数据类型支持INT8，shape需要与x1一致。
+ * 公式中的输出`y1`，数据类型支持INT8,INT4，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] y2Out:
- * 公式中的输出`y2`，数据类型支持INT8，shape需要与x1一致。
+ * 公式中的输出`y2`，数据类型支持INT8,INT4，shape需要与x1一致。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] xOut:
  * 公式中的输出`x`，数据类型支持BFLOAT、FLOAT16且需要与x1一致，shape需要与x1一致。
@@ -70,15 +70,16 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon, const aclBoolArray* outputMask,
-    aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out, aclTensor* scale2Out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon,
+    const aclBoolArray* outputMask, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
+    aclTensor* scale2Out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnAddRmsNormQuant的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。

@@ -18,6 +18,7 @@
 #define __CCE_UT_TEST__
 
 #define DTYPE_X1 bfloat16_t
+#define DTYPE_Y1 int8_t
 
 #pragma pack(1)
 

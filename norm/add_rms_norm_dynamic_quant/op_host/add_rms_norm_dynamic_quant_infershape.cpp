@@ -13,6 +13,7 @@
  * \brief
  */
 #include "log/log.h"
+#include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 
 static constexpr int X1_IDX = 0;
@@ -29,23 +30,26 @@ static constexpr int OUT_SCALE2_IDX = 4;
 static constexpr int ATTR_INDEX_OF_DST_TYPE = 2;
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace ops {
 static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
-    DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
+    DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_INT4};
 static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gammaShape, gert::Shape* reduceShape)
 {
     size_t gammaDimNum = gammaShape->GetDimNum();
     size_t xDimNum = xShape->GetDimNum();
     if (xDimNum < gammaDimNum) {
-      return false;
+        return false;
     }
     int64_t xDimValue1 = 0;
     reduceShape->SetDimNum(xDimNum - gammaDimNum);
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         xDimValue1 = xShape->GetDim(i);
         reduceShape->SetDim(i, xDimValue1);
-        OP_LOGI("InferShape4AddRmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i, reduceShape->GetDim(i));
+        OP_LOGI(
+            "InferShape4AddRmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i,
+            reduceShape->GetDim(i));
     }
     return true;
 }
@@ -53,8 +57,6 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
 static bool CheckOptionalShapeExisting(const gert::Shape* smoothShape)
 {
     OP_CHECK_IF(nullptr == smoothShape, OP_LOGD("CheckOptionalShapeExisting", "Get nullptr smoothShape"), return false);
-    int64_t smoothShapeSize = smoothShape->GetShapeSize();
-    OP_CHECK_IF((smoothShapeSize < 0), OP_LOGD("CheckOptionalShapeExisting", "Get empty smoothShape"), return false);
     return true;
 }
 
@@ -87,21 +89,26 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
     const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
     bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
     bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
-    OP_CHECK_IF(
-        isOnlyExistSmooth2, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(isOnlyExistSmooth2, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support only have scale2."),
+                return GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        smooth1Exist && (*gammaShape != *smooth1Shape), OP_LOGE(context, "GammaShape is not same to smooth1Shape."),
-        return GRAPH_FAILED);
-    OP_CHECK_IF(
-        smooth2Exist && (*gammaShape != *smooth2Shape), OP_LOGE(context, "GammaShape is not same to smooth2Shape."),
-        return GRAPH_FAILED);
+    // unknown rank
+    if (IsUnknownRank(*x1Shape) || IsUnknownRank(*gammaShape)) {
+        SetUnknownRank(*outScale1Shape);
+        if (smooth2Exist) {
+            *outScale2Shape = *outScale1Shape;
+            *y2Shape = *x1Shape;
+        } else {
+            *y2Shape = gert::Shape({1});
+            *outScale2Shape = gert::Shape({1});
+        }
+        OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuant with unknown rank.");
+        return GRAPH_SUCCESS;
+    }
 
     auto ret = InferReduceShape(x1Shape, gammaShape, outScale1Shape);
-    OP_CHECK_IF(
-        !ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
+                return GRAPH_FAILED);
     if (smooth2Exist) {
         *outScale2Shape = *outScale1Shape;
         *y2Shape = *x1Shape;
@@ -125,8 +132,9 @@ static graphStatus InferDataType4AddRmsNormDynamicQuant(gert::InferDataTypeConte
             yDtype = static_cast<ge::DataType>(dstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
-                    "attr dst_type only support 2(int8), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
+                OP_LOGE(
+                    context,
+                    "attr dst_type only support 2(int8), 3(int4), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
                 return ge::GRAPH_FAILED);
         }
     }

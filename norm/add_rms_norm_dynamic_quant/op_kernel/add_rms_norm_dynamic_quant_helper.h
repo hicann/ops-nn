@@ -26,6 +26,7 @@ constexpr uint32_t FLOAT_BLOCK_ELEM = 8;
 constexpr int32_t ROW_FACTOR = 128;
 constexpr uint32_t ELEM_PER_BLK_FP16 = 16;
 constexpr float DYNAMIC_QUANT_DIVIDEND = 127.0;
+constexpr float DYNAMIC_QUANT_DIVIDEND_INT4 = 7.0;
 
 template <typename Tp, Tp v>
 struct integral_constant {
@@ -61,19 +62,49 @@ __aicore__ inline uint32_t TWO_NUMS_MAX(uint32_t x, uint32_t y)
     return x > y ? x : y;
 }
 
+template <typename T>
+__aicore__ inline uint32_t CalculateBlockLen(const uint32_t len)
+{
+    if constexpr (std::is_same_v<T, int4b_t>) {
+        return len / 2;
+    } else {
+        return len * sizeof(T);
+    }
+}
+
 template <typename T, template <typename U> typename R, template <typename U> typename S>
 __aicore__ inline void DataCopyEx(
     const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1, const bool ubAligned = false)
 {
     DataCopyExtParams copyParams;
     copyParams.blockCount = count;
-    copyParams.blockLen = len * sizeof(T);
+    copyParams.blockLen = CalculateBlockLen<T>(len);
+
     if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
         copyParams.srcStride = 0;
         copyParams.dstStride = (ubAligned) ? 1 : 0;
         DataCopyPad(dst, src, copyParams, {});
     } else {
         copyParams.srcStride = (ubAligned) ? 1 : 0;
+        copyParams.dstStride = 0;
+        DataCopyPad(dst, src, copyParams);
+    }
+}
+
+template <typename T, template <typename U> typename R, template <typename U> typename S>
+__aicore__ inline void DataCopyExStride(
+    const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1, const uint32_t ubAligned = 0)
+{
+    DataCopyExtParams copyParams;
+    copyParams.blockCount = count;
+    copyParams.blockLen = CalculateBlockLen<T>(len);
+
+    if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+        copyParams.srcStride = 0;
+        copyParams.dstStride = ubAligned;
+        DataCopyPad(dst, src, copyParams, {});
+    } else {
+        copyParams.srcStride = ubAligned;
         copyParams.dstStride = 0;
         DataCopyPad(dst, src, copyParams);
     }
@@ -145,7 +176,8 @@ __aicore__ inline void DivScalarFP32(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensor, LocalTensor<float>& srcTensor, int32_t size)
+template <typename T>
+__aicore__ inline void RoundFloat2IntQuant(LocalTensor<T>& dstTensor, LocalTensor<float>& srcTensor, int32_t size)
 {
     Cast(srcTensor.ReinterpretCast<int32_t>(), srcTensor, RoundMode::CAST_RINT, size);
     PipeBarrier<PIPE_V>();

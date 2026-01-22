@@ -43,12 +43,14 @@ constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint64_t ROW_FACTOR = 128;
 constexpr uint64_t UB_RESERVED_BYTE = 768;
 constexpr uint32_t MAX_ROW_STEP = 16;
+constexpr uint32_t INT4_ALIGN_SIZE = 64;
 
 constexpr uint32_t UB_TILING_POLICY_NORMAL = 1;
 constexpr uint32_t UB_TILING_POLICY_SINGLE_ROW = 2;
 constexpr uint32_t UB_TILING_POLICY_SLICE_D = 3;
 
 constexpr uint32_t SLICE_COL_LEN = 8864;
+constexpr uint32_t SLICE_COL_LEN_INT4 = 8832;
 
 constexpr int32_t INT_NEGATIVE_ONE = -1;
 constexpr int32_t INT_ZERO = 0;
@@ -178,7 +180,7 @@ bool AddRmsNormDynamicQuantTilingHelper::DoBlockTiling()
     return true;
 }
 
-bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
+bool AddRmsNormDynamicQuantTilingHelper::InitializePlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
@@ -186,11 +188,18 @@ bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
     this->socCoreNums_ = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, this->ubSize_);
     this->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
+    return true;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
+{
+    if (!InitializePlatformInfo()) {
+        return false;
+    }
 
     auto attrs = context_->GetAttrs();
     OP_TILING_CHECK(
-        nullptr == attrs, OP_LOGE(context_->GetNodeName(), "Get attrs nullptr, return false."),
-        return false);
+        nullptr == attrs, OP_LOGE(context_->GetNodeName(), "Get attrs nullptr, return false."), return false);
 
     const float* epsPtr = attrs->GetFloat(EPS_IDX);
     if (epsPtr != nullptr) {
@@ -198,66 +207,82 @@ bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
     }
 
     const gert::ContinuousVector* outputMaskAttr = attrs->GetAttrPointer<gert::ContinuousVector>(OUT_QUANT_1_IDX);
-    if(outputMaskAttr != nullptr && outputMaskAttr->GetSize() == INT_TWO) {
-    const bool* scalesArray = static_cast<const bool*>(outputMaskAttr->GetData());
-    this->outQuant1Flag = (scalesArray[0] == true) ? 1 : 0;
-    this->outQuant2Flag = (scalesArray[1] == true) ? 1 : 0;
+    if (outputMaskAttr != nullptr && outputMaskAttr->GetSize() == INT_TWO) {
+        const bool* scalesArray = static_cast<const bool*>(outputMaskAttr->GetData());
+        this->outQuant1Flag = (scalesArray[0] == true) ? 1 : 0;
+        this->outQuant2Flag = (scalesArray[1] == true) ? 1 : 0;
     } else {
-    this->outQuant1Flag = -1;
-    this->outQuant2Flag = -1;
+        this->outQuant1Flag = -1;
+        this->outQuant2Flag = -1;
     }
     OP_LOGI("outputMask", "outQuant1Flag: %u, outQuant2Flag: %u", this->outQuant1Flag, this->outQuant2Flag);
-    OP_TILING_CHECK(
-        this->eps_ <= 0,
-        OP_LOGE(context_->GetNodeName(), "Epsilon less or equal than zero, please check."),
-        return false);
-    OP_TILING_CHECK(
-        (this->ubSize_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
-        return false);
-    OP_TILING_CHECK(
-        (this->socCoreNums_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."),
-        return false);
-
+    if (!ValidateBaseParameters()) {
+        return false;
+    }
     OP_LOGI(
         "GetBaseInfo", "socCoreNum: %lu, ubSize: %lu, sysWorkspaceSize: %lu, epsilon: %f", this->socCoreNums_,
         this->ubSize_, this->sysWorkspaceSize_, this->eps_);
+
     return true;
 }
 
-bool AddRmsNormDynamicQuantTilingHelper::GetShapeInfo()
+bool AddRmsNormDynamicQuantTilingHelper::ValidateBaseParameters()
 {
     OP_TILING_CHECK(
-        CheckInputOutputShape() == false,
-        OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."), return false);
-    // no fp32 allowed here
+        this->eps_ <= 0,
+        OP_LOGE(context_->GetNodeName(), "Epsilon less or equal than precision threshold, please check."),
+        return false);
+    OP_TILING_CHECK(
+        (this->ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
+        return false);
+    OP_TILING_CHECK(
+        (this->socCoreNums_ <= 0),
+        OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."), return false);
+
+    return true;
+}
+
+ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList)
+{
+    for (const auto& supportedDtype : supportDtypeList) {
+        if (supportedDtype == srcDtype) {
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    return ge::GRAPH_FAILED;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutput()
+{
+    // 检查输入输出形状
+    OP_TILING_CHECK(
+        CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."), return false);
+
+    // 验证输出数据类型
+    auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
+    auto y2DataType = context_->GetOutputDesc(Y2_IDX)->GetDataType();
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4};
+    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes)) ||
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes)) || (y1DataType != y2DataType)) {
+        OP_LOGE(context_->GetNodeName(), "Output dtype should be int8 int4 hifp8 and y1DataType y2DataType need same.");
+        return false;
+    }
+
+    return true;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::CalculateShapeParameters()
+{
+    // 设置数据类型大小
     this->dtSize_ = SIZEOF_B16;
+
+    // 获取输入形状
     auto xShape = context_->GetInputShape(X1_IDX)->GetStorageShape();
     auto gammaShape = context_->GetInputShape(GAMMA_IDX)->GetStorageShape();
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
 
-    const gert::StorageShape* smooth1Shape = this->context_->GetOptionalInputShape(SMOOTH1_IDX);
-    const gert::StorageShape* smooth2Shape = this->context_->GetOptionalInputShape(SMOOTH2_IDX);
-    const gert::StorageShape* betaShape = this->context_->GetOptionalInputShape(BETA_IDX);
-    bool smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
-    bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
-    bool betaExist = CheckOptionalBetaExisting(betaShape);
-
-    this->smoothNum1_ = (smooth1Exist) ? 1 : 0;
-    this->smoothNum2_ = (smooth2Exist) ? 1 : 0;
-    this->betaFlag_ = (betaExist) ? 1 : 0;
-
-    OP_TILING_CHECK(
-        (smooth1Exist && smooth1Shape->GetStorageShape() != gammaShape),
-        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth1Shape."),
-        return false);
-    OP_TILING_CHECK(
-        (smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
-        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth2Shape."),
-        return false);
-
+    // 计算numRow和numCol
     uint64_t numRow = 1;
     uint64_t numCol = 1;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
@@ -266,19 +291,74 @@ bool AddRmsNormDynamicQuantTilingHelper::GetShapeInfo()
     for (size_t i = 0; i < gammaDimNum; i++) {
         numCol *= gammaShape.GetDim(i);
     }
+
+    // 设置对齐大小和目标类型
     this->numFirstDim_ = numRow;
     this->numLastDim_ = numCol;
+    auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
+    uint32_t alignSize = y1DataType == ge::DT_INT4 ? INT4_ALIGN_SIZE : BLOCK_SIZE;
+    this->dstType_ = static_cast<uint32_t>(y1DataType);
     this->numLastDimAligned_ =
-        Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(BLOCK_SIZE)) * static_cast<uint64_t>(BLOCK_SIZE);
+        Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(alignSize)) * static_cast<uint64_t>(alignSize);
+
+    // 计算平均因子
     this->avgFactor_ = 1.0 / ((float)this->numLastDim_);
 
+    return true;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::SetFlagsAndCheckConsistency()
+{
+    // 检查可选输入是否存在
+    const gert::StorageShape* smooth1Shape = this->context_->GetOptionalInputShape(SMOOTH1_IDX);
+    const gert::StorageShape* smooth2Shape = this->context_->GetOptionalInputShape(SMOOTH2_IDX);
+    const gert::StorageShape* betaShape = this->context_->GetOptionalInputShape(BETA_IDX);
+    bool smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
+    bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
+    bool betaExist = CheckOptionalBetaExisting(betaShape);
+
+    // 设置标志位
+    this->smoothNum1_ = (smooth1Exist) ? 1 : 0;
+    this->smoothNum2_ = (smooth2Exist) ? 1 : 0;
+    this->betaFlag_ = (betaExist) ? 1 : 0;
+
+    // 检查形状匹配性
+    auto gammaShape = context_->GetInputShape(GAMMA_IDX)->GetStorageShape();
+    OP_TILING_CHECK(
+        (smooth1Exist && smooth1Shape->GetStorageShape() != gammaShape),
+        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth1Shape."), return false);
+    OP_TILING_CHECK(
+        (smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
+        OP_LOGE(context_->GetNodeName(), "GammaShape is not same to smooth2Shape."), return false);
+
+    // 检查量化标志和可选输入的一致性
     if (this->outQuant1Flag == INT_NEGATIVE_ONE && this->outQuant2Flag == INT_NEGATIVE_ONE) {
         OP_TILING_CHECK(
             (!smooth1Exist) && (smooth2Exist),
-            OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."),
-            return false);
+            OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."), return false);
     }
 
+    return true;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::GetShapeInfo()
+{
+    // 验证输入输出
+    if (!ValidateInputOutput()) {
+        return false;
+    }
+
+    // 计算形状参数
+    if (!CalculateShapeParameters()) {
+        return false;
+    }
+
+    // 设置标志和检查一致性
+    if (!SetFlagsAndCheckConsistency()) {
+        return false;
+    }
+
+    // 打印日志
     OP_LOGI("GetShapeInfo", "[N, D] = [%lu, %lu]", this->numFirstDim_, this->numLastDim_);
     OP_LOGI("GetShapeInfo", "dtSize_=%lu, avgFactor_=%f", this->dtSize_, this->avgFactor_);
     return true;
@@ -346,7 +426,11 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckUbSliceDTiling()
     OP_LOGI(this->context_->GetNodeName(), "CheckUbSliceDTiling success. Compute tiling by yourself.");
     this->ubTilingPolicy_ = UB_TILING_POLICY::SLICE_D;
     this->firstDimPerLoop_ = 1;
-    this->lastDimSliceLen_ = SLICE_COL_LEN;
+    if (this->dstType_ == 29) {
+        this->lastDimSliceLen_ = SLICE_COL_LEN_INT4;
+    } else {
+        this->lastDimSliceLen_ = SLICE_COL_LEN;
+    }
     this->lastDimSliceLenTail_ = (this->numLastDim_ % this->lastDimSliceLen_ == 0) ?
                                      this->lastDimSliceLen_ :
                                      this->numLastDim_ % this->lastDimSliceLen_;
@@ -356,12 +440,12 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckUbSliceDTiling()
 
 ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(
-        nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGI(context->GetNodeName(), "Enter Tiling4AddRmsNormDynamicQuant");
-
-    uint32_t col_val = context->GetInputShape(GAMMA_IDX)->GetStorageShape().GetDim(0);
+    auto colShape = context->GetInputShape(GAMMA_IDX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, colShape);
+    auto colStorageShape = optiling::EnsureNotScalar(colShape->GetStorageShape());
+    uint32_t col_val = colStorageShape.GetDim(0);
     bool isEmptyTensor = (col_val == 0);
     auto ptrCompileInfo = reinterpret_cast<const AddRmsNormDynamicQuantCompileInfo*>(context->GetCompileInfo());
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -380,8 +464,7 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
     AddRmsNormDynamicQuantTilingHelper instanceNormV3TilingHelper(context);
     bool status = instanceNormV3TilingHelper.DoTiling();
     OP_TILING_CHECK(
-        !status, OP_LOGE(context->GetNodeName(), "DoTiling Failed, return Failed."),
-        return ge::GRAPH_FAILED);
+        !status, OP_LOGE(context->GetNodeName(), "DoTiling Failed, return Failed."), return ge::GRAPH_FAILED);
     instanceNormV3TilingHelper.SetTilingDataAndTilingKeyAndWorkSpace(&tiling);
 
     return ge::GRAPH_SUCCESS;
@@ -389,9 +472,7 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepare4AddRmsNormDynamicQuant(gert::TilingParseContext* context)
 {
-    OP_TILING_CHECK(
-        nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "Enter TilingPrepare4AddRmsNormDynamicQuant.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "PlatformInfoPtr is null");

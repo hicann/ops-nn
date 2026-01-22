@@ -172,7 +172,9 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
 
     // 支持空tensor
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
-    if (hasEmptyTensor) {
+    bool hasReduceEmptyTensor = gamma->IsEmpty();
+    // 非reduce轴为0处理
+    if (hasEmptyTensor && (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 || !hasReduceEmptyTensor)) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -190,6 +192,22 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
 
     auto s1Cont = ContiguousX(smoothScale1Optional, uniqueExecutor.get());
     auto s2Cont = ContiguousX(smoothScale2Optional, uniqueExecutor.get());
+
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && hasReduceEmptyTensor) {
+        int dstType = dstTypeMap[y1Out->GetDataType()];
+        auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
+            x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,  
+        scale2Out, uniqueExecutor.get());
+        aclTensor* y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
+        aclTensor* y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
+        aclTensor* xComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_2>(addRmsNormQuantOuts);
+        CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        OP_LOGD("Finish empty tensor aclnnAddRmsNormQuantGetWorkspaceSize.");
+        return ACLNN_SUCCESS;
+    }
 
     ret = ComputeAddRmsNormDynamicQuant(
         x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, epsilon, y1Out, y2Out, xOut, scale1Out, scale2Out,

@@ -52,7 +52,7 @@ namespace ge {
 * @par Attributes
 * @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
 *          The type is float. Defaults to 1e-6.
-* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, 
+* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
 *               DT_FLOAT8_E4M3FN. Defaults to DT_INT8.
 
 * @par Outputs
@@ -75,8 +75,8 @@ REG_OP(AddRmsNormDynamicQuant)
     .OPTIONAL_INPUT(smooth_scale1, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(smooth_scale2, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y1, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
-    .OUTPUT(y2, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
+    .OUTPUT(y1, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN, DT_INT4}))
+    .OUTPUT(y2, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN, DT_INT4}))
     .OUTPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(scale1, TensorType({DT_FLOAT, DT_FLOAT}))
     .OUTPUT(scale2, TensorType({DT_FLOAT, DT_FLOAT}))

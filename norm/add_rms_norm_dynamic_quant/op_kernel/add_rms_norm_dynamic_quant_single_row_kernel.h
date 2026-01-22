@@ -18,8 +18,8 @@
 
 #include "add_rms_norm_dynamic_quant_base.h"
 
-template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
-class KernelAddRmsNormDynamicQuantSingleRow : public KernelAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM> {
+template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
+class KernelAddRmsNormDynamicQuantSingleRow : public KernelAddRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantSingleRow(TPipe* pipe)
     {
@@ -163,7 +163,7 @@ private:
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-        LocalTensor<int8_t> yLocal = yQue.template AllocTensor<int8_t>();
+        LocalTensor<T_Y> yLocal = yQue.template AllocTensor<T_Y>();
 
         LocalTensor<T> smooth1Local = smoothBuf.template Get<T>();
         LocalTensor<T> smooth2Local = inRowsQue.template DeQue<T>();
@@ -186,7 +186,7 @@ private:
                 idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
             inRowsQue.FreeTensor(tmpTensor);
-            RoundFloat2Int8(y2Local, yLocalFp32, this->numLastDim);
+            RoundFloat2IntQuant<T_Y>(y2Local, yLocalFp32, this->numLastDim);
         }
 
         if ((this->outQuant1Flag == 1) || this->isOld) {
@@ -202,7 +202,7 @@ private:
             ScaleTensor(
                 yLocalFp32, xLocalFp32, scalesLocalOut, idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
-            RoundFloat2Int8(y1Local, yLocalFp32, this->numLastDim);
+            RoundFloat2IntQuant<T_Y>(y1Local, yLocalFp32, this->numLastDim);
         }
         PipeBarrier<PIPE_V>();
         yQue.EnQue(yLocal);
@@ -219,7 +219,7 @@ private:
         SetFlag<HardEvent::V_S>(eventVS);
         WaitFlag<HardEvent::V_S>(eventVS);
         float maxTemp = tmpTensor.GetValue(0);
-        float scaleTemp = DYNAMIC_QUANT_DIVIDEND / maxTemp;
+        float scaleTemp = this->quantMaxVal / maxTemp;
         scaleTensor.SetValue(idx, 1 / scaleTemp);
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventSV);
@@ -230,7 +230,7 @@ private:
 
     __aicore__ inline void CopyOut(int32_t gmOffset)
     {
-        LocalTensor<int8_t> res12 = yQue.template DeQue<int8_t>();
+        LocalTensor<T_Y> res12 = yQue.template DeQue<T_Y>();
         auto res1 = res12[0];
         auto res2 = res12[this->numLastDimAligned];
         if (this->isOld || (this->outQuant1Flag == 1)) {

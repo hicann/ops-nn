@@ -104,6 +104,16 @@ enum class UB_TILING_POLICY : std::int32_t
     SLICE_D
 };
 
+static const gert::Shape g_vec_1_shape = {1};
+
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
+}
+
 class AddRmsNormDynamicQuantTilingHelper {
 public:
     explicit AddRmsNormDynamicQuantTilingHelper(gert::TilingContext* context) : context_(context)
@@ -123,6 +133,11 @@ private:
     bool CheckUbNormalTiling();
     bool CheckUbSingleRowTiling();
     bool CheckUbSliceDTiling();
+    bool ValidateBaseParameters();
+    bool InitializePlatformInfo();
+    bool ValidateInputOutput();
+    bool CalculateShapeParameters();
+    bool SetFlagsAndCheckConsistency();
 
     gert::TilingContext* context_;
 
@@ -149,6 +164,8 @@ private:
     uint32_t smoothNum1_{0};
     uint32_t smoothNum2_{0};
     uint32_t betaFlag_{0};
+    uint32_t dstType_{2};
+
     UB_TILING_POLICY ubTilingPolicy_{UB_TILING_POLICY::SINGLE_ROW};
 };
 
@@ -192,7 +209,8 @@ struct AddRmsNormDynamicQuantRegbaseTilingParams {
 
 class AddRmsNormDynamicQuantRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AddRmsNormDynamicQuantRegbaseTiling(gert::TilingContext* tilingContext) : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    explicit AddRmsNormDynamicQuantRegbaseTiling(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
     ~AddRmsNormDynamicQuantRegbaseTiling() override
     {}
@@ -231,14 +249,14 @@ protected:
 
 class AddRmsNormDynamicQuantEmptyTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AddRmsNormDynamicQuantEmptyTiling(gert::TilingContext* tilingContext) : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    explicit AddRmsNormDynamicQuantEmptyTiling(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
     ~AddRmsNormDynamicQuantEmptyTiling() override
     {}
 
     const string nodeName_ = "AddRmsNormDynamicQuantEmpty";
 
-    static inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape);
     ge::graphStatus CheckDtypeVaild(
         ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
     bool CheckShapeNull();

@@ -18,8 +18,8 @@
 
 #include "add_rms_norm_dynamic_quant_base.h"
 
-template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
-class KernelAddRmsNormDynamicQuantSliceD : public KernelAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM> {
+template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
+class KernelAddRmsNormDynamicQuantSliceD : public KernelAddRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantSliceD(TPipe* pipe)
     {
@@ -68,10 +68,12 @@ public:
             this->localMax2 = ZERO;
             for (int32_t colIdx = 0; colIdx < this->lastDimLoopNum; ++colIdx) {
                 ComputeSliceAdd(baseGmOffset, rowGmOffset, this->lastDimSliceLen);
+
                 this->localSum += ReduceSquareSumSlice(this->lastDimSliceLen);
                 PipeBarrier<PIPE_V>();
                 rowGmOffset += this->lastDimSliceLen;
             }
+
             {
                 ComputeSliceAdd(baseGmOffset, rowGmOffset, this->lastDimSliceLenTail);
                 this->localSum += ReduceSquareSumSlice(this->lastDimSliceLenTail);
@@ -90,10 +92,10 @@ public:
                 ComputeRmsNormAndSmoothMax(rowGmOffset, this->lastDimSliceLenTail, rstdLocalTemp);
             }
             if (this->isOld || (this->outQuant1Flag == 1)) {
-                this->localMax1 = DYNAMIC_QUANT_DIVIDEND / this->localMax1;
+                this->localMax1 = this->quantMaxVal / this->localMax1;
             }
             if (this->outQuant2Flag == 1 || this->oldDouble) {
-                this->localMax2 = DYNAMIC_QUANT_DIVIDEND / this->localMax2;
+                this->localMax2 = this->quantMaxVal / this->localMax2;
             }
             PIPE_S_V();
             PIPE_MTE3_MTE2();
@@ -127,23 +129,23 @@ private:
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-        LocalTensor<int8_t> y12Local = outRowQue.template AllocTensor<int8_t>();
+        LocalTensor<T_Y> y12Local = outRowQue.template AllocTensor<T_Y>();
         if (this->outQuant1Flag == 1 || this->isOld) {
             CopyInSmoothNorm(xLocalFp32, 0, rowGmOffset, elementCount, this->localMax1);
             auto y1Local = y12Local[0];
-            RoundFloat2Int8(y1Local, xLocalFp32, elementCount);
+            RoundFloat2IntQuant<T_Y>(y1Local, xLocalFp32, elementCount);
         }
         if ((this->outQuant2Flag == 1) || this->oldDouble) {
             CopyInSmoothNorm(yLocalFp32, this->numLastDim, rowGmOffset, elementCount, this->localMax2);
             auto y2Local = y12Local[this->lastDimSliceLen];
-            RoundFloat2Int8(y2Local, yLocalFp32, elementCount);
+            RoundFloat2IntQuant<T_Y>(y2Local, yLocalFp32, elementCount);
         }
-        outRowQue.template EnQue<int8_t>(y12Local);
+        outRowQue.template EnQue<T_Y>(y12Local);
     }
 
     __aicore__ inline void CopyOutQuant(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount)
     {
-        LocalTensor<int8_t> yOut = outRowQue.template DeQue<int8_t>();
+        LocalTensor<T_Y> yOut = outRowQue.template DeQue<T_Y>();
         if (this->isOld || this->outQuant1Flag == 1) {
             DataCopyEx(this->y1Gm[baseGmOffset + rowGmOffset], yOut, elementCount);
         }
@@ -232,7 +234,8 @@ private:
 
     __aicore__ inline void CopyInSmooth(int32_t rowGmOffset, int32_t elementCount)
     {
-        if (this->newSingleFirst || this->newSingleSecond || (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
+        if (this->newSingleFirst || this->newSingleSecond ||
+            (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
             LocalTensor<T> smooth12CopyIn = inRowsQue.template AllocTensor<T>();
             if (this->newSingleFirst || (this->isOld && this->smooth1Exist)) {
                 LocalTensor<T> smooth1In = smooth12CopyIn[0];
@@ -269,33 +272,34 @@ private:
         LocalTensor<float> yLocalFp32, LocalTensor<float> zLocalFp32, LocalTensor<float> xLocalFp32,
         int32_t rowGmOffset, int32_t elementCount)
     {
-        if (this->newSingleFirst || this->newSingleSecond || (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
+        if (this->newSingleFirst || this->newSingleSecond ||
+            (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
             LocalTensor<T> smooth12Local = inRowsQue.template DeQue<T>();
             if (this->newSingleFirst || (this->isOld && this->smooth1Exist)) {
                 LocalTensor<T> smooth1Local = smooth12Local[0];
-                Cast(yLocalFp32, smooth1Local, RoundMode::CAST_NONE, elementCount);     // yLocalFp32 <- smooth1
+                Cast(yLocalFp32, smooth1Local, RoundMode::CAST_NONE, elementCount); // yLocalFp32 <- smooth1
             }
             if (this->newSingleSecond || this->oldDouble) {
                 LocalTensor<T> smooth2Local = smooth12Local[this->lastDimSliceLen];
-                Cast(zLocalFp32, smooth2Local, RoundMode::CAST_NONE, elementCount);     // zLocalFp32 <- smooth2
+                Cast(zLocalFp32, smooth2Local, RoundMode::CAST_NONE, elementCount); // zLocalFp32 <- smooth2
             }
             inRowsQue.FreeTensor(smooth12Local);
             PipeBarrier<PIPE_V>();
         }
         if (this->outQuant1Flag == 1 || this->isOld) {
             if (this->smooth1Exist) {
-                Mul(yLocalFp32, xLocalFp32, yLocalFp32, elementCount);                // yLocalFp32 <- norm * smooth1
+                Mul(yLocalFp32, xLocalFp32, yLocalFp32, elementCount); // yLocalFp32 <- norm * smooth1
             } else {
-                Muls(yLocalFp32, xLocalFp32, 1.0f, elementCount);                // yLocalFp32 <- norm * smooth1
+                Muls(yLocalFp32, xLocalFp32, 1.0f, elementCount); // yLocalFp32 <- norm * smooth1
             }
             PipeBarrier<PIPE_V>();
             CopyOutSmoothNorm(yLocalFp32, 0, rowGmOffset, elementCount);
         }
         if (this->outQuant2Flag == 1 || this->oldDouble) {
             if (this->smooth2Exist) {
-                Mul(zLocalFp32, xLocalFp32, zLocalFp32, elementCount);                // zLocalFp32 <- norm * smooth2
+                Mul(zLocalFp32, xLocalFp32, zLocalFp32, elementCount); // zLocalFp32 <- norm * smooth2
             } else {
-                Muls(zLocalFp32, xLocalFp32, 1.0f, elementCount);                // zLocalFp32 <- norm * smooth2
+                Muls(zLocalFp32, xLocalFp32, 1.0f, elementCount); // zLocalFp32 <- norm * smooth2
             }
             PipeBarrier<PIPE_V>();
             CopyOutSmoothNorm(zLocalFp32, this->numLastDim, rowGmOffset, elementCount);
