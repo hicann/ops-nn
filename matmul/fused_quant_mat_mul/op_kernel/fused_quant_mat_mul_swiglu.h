@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -386,12 +386,12 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Iterate(LocalTensor<half> &result)
 {
-     while (mm.Iterate()) {
+    while (mm.Iterate()) {
         mm.GetTensorC(result, 0, true);
     }
-    /* 暂未支持FIX_V同步，手动同步，12月底FIX_V规格合入后修改 */
-    set_flag(PIPE_FIX, PIPE_V, EVENT_ID0);
-    wait_flag(PIPE_FIX, PIPE_V, EVENT_ID0);
+    int32_t eventID = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::FIX_V));
+    AscendC::SetFlag<AscendC::HardEvent::FIX_V>(eventID);
+    AscendC::WaitFlag<AscendC::HardEvent::FIX_V>(eventID);
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS

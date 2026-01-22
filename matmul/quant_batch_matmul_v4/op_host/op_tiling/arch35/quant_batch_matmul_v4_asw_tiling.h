@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -75,7 +75,12 @@ protected:
     void CalcTailBasicBlock() override;
     bool IsCalL1TilingDepth4MmadS8S4() const override;
     void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size) override;
-    uint64_t GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype, bool isLut = false) const;
+    bool Is4BitInput(ge::DataType dtype, bool isLut = false) const;
+    bool Is8BitInput(ge::DataType dtype, bool isLut = false) const;
+    // 根据size(字节数)和数据类型，计算得出shape(元素个数)
+    uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype, bool isLut = false) const;
+    // 根据shape(元素个数)和数据类型，计算得出size(字节数)
+    uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype, bool isLut = false) const;
     bool SetPlatformInfoForTiling() override;
 
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;

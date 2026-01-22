@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -75,6 +75,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
         {"INT8", ge::DT_INT8},
         {"INT4", ge::DT_INT4},
         {"INT2", ge::DT_INT2},
+        {"UINT1", ge::DT_UINT1},
         {"UINT64", ge::DT_UINT64},
         {"FP8-E8M0", ge::DT_FLOAT8_E8M0},
         {"FP8-E4M3", ge::DT_FLOAT8_E4M3FN},
@@ -241,10 +242,9 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
         x2ScaleShape.MutableStorageShape() = gert::Shape({1});
     }
     yScaleShape.MutableStorageShape() = gert::Shape({1, n});
-    if (hasX2Table && groupK > 0 && groupN > 0 && x2Dtype == ge::DT_INT2) {
-        x2TableShape.MutableStorageShape() = gert::Shape({(k + groupK -1) / groupK, (n + groupN -1) / groupN * 16});
-    } else if (hasX2Table && groupK > 0 && groupN > 0 && x2Dtype == ge::DT_INT4) {
-        x2TableShape.MutableStorageShape() = gert::Shape({(k + groupK -1) / groupK, (n + groupN -1) / groupN * 16});
+    if (hasX2Table && groupK > 0 && groupN > 0 &&
+        (x2Dtype == ge::DT_INT2 || x2Dtype == ge::DT_INT4 || x2Dtype == ge::DT_UINT1)) {
+        x2TableShape.MutableStorageShape() = gert::Shape({(k + groupK - 1) / groupK, (n + groupN - 1) / groupN * 16});
     }
 
     x2ScaleShape.MutableOriginShape() = x2ScaleShape.MutableStorageShape();
@@ -464,5 +464,7 @@ static QuantBatchMatmulV4TilingTestParam casesParams[] = {
     {"A8W2-LUT-Testcase-1_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
     {"A8W4-LUT-Testcase-2_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
     {"A8W4-LUT-Testcase-3_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
+    {"A8W1-LUT-Testcase-4_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_UINT1_NULL_NULL_UINT64_NULL_INT4_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
+    {"A8W1-LUT-Testcase-5_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_UINT1_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
  };
 INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4Tiling, testing::ValuesIn(casesParams));

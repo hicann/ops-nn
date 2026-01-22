@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -301,7 +301,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     gert::StorageShape biasShape;
     gert::StorageShape outputShape;
 
-    if (yDim == 3) {
+    if (yDim == 6) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
+    } else if (yDim == 3) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, m, n});
     } else if (yDim == 2) {
         outputShape.MutableOriginShape() = gert::Shape({m, n});
@@ -310,7 +312,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     }
 
     if (transA) {
-        if (x1Dim == 3) {
+        if (x1Dim == 6) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, k, m});
         } else if (x1Dim == 2) {
             x1Shape.MutableOriginShape() = gert::Shape({k, m});
@@ -318,7 +322,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
             x1Shape.MutableOriginShape() = gert::Shape({m});
         }
     } else {
-        if (x1Dim == 3) {
+        if (x1Dim == 6) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, m, k});
         } else if (x1Dim == 2) {
             x1Shape.MutableOriginShape() = gert::Shape({m, k});
@@ -328,7 +334,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     }
 
     if (transB) {
-        if (x2Dim == 3) {
+        if (x2Dim == 6) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, n, k});
         } else if (x2Dim == 2) {
             x2Shape.MutableOriginShape() = gert::Shape({n, k});
@@ -336,7 +344,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
             x2Shape.MutableOriginShape() = gert::Shape({n});
         }
     } else {
-        if (x2Dim == 3) {
+        if (x2Dim == 6) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, k, n});
         } else if (x2Dim == 2) {
             x2Shape.MutableOriginShape() = gert::Shape({k, n});
@@ -362,26 +372,34 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
         int64_t scaleK = (k + 127) / 128;
         int64_t scaleN = (n + 127) / 128;
         if (transA) {
-            if (x1Dim == 3) {
+            if (x1Dim == 6) {
+                pertokenShape.MutableStorageShape() = gert::Shape({batchA, batchA, batchA, batchA, scaleK, scaleM});
+            } else if (x1Dim == 3) {
                 pertokenShape.MutableStorageShape() = gert::Shape({batchA, scaleK, scaleM});
             } else if (x1Dim == 2) {
                 pertokenShape.MutableStorageShape() = gert::Shape({scaleK, scaleM});
             }
         } else {
-            if (x1Dim == 3) {
+            if (x1Dim == 6) {
+                pertokenShape.MutableStorageShape() = gert::Shape({batchA, batchA, batchA, batchA, scaleM, scaleK});
+            } else if (x1Dim == 3) {
                 pertokenShape.MutableStorageShape() = gert::Shape({batchA, scaleM, scaleK});
             } else if (x1Dim == 2) {
                 pertokenShape.MutableStorageShape() = gert::Shape({scaleM, scaleK});
             }
         }
         if (transB) {
-        if (x2Dim == 3) {
+            if (x2Dim == 6) {
+                scaleShape.MutableStorageShape() = gert::Shape({batchB, batchB, batchB, batchB, scaleN, scaleK});
+            } else if (x2Dim == 3) {
                 scaleShape.MutableStorageShape() = gert::Shape({batchB, scaleN, scaleK});
             } else if (x2Dim == 2) {
                 scaleShape.MutableStorageShape() = gert::Shape({scaleN, scaleK});
             }
         } else {
-            if (x2Dim == 3) {
+            if (x2Dim == 6) {
+                scaleShape.MutableStorageShape() = gert::Shape({batchB, batchB, batchB, batchB, scaleK, scaleN});
+            } else if (x2Dim == 3) {
                 scaleShape.MutableStorageShape() = gert::Shape({batchB, scaleK, scaleN});
             } else if (x2Dim == 2) {
                 scaleShape.MutableStorageShape() = gert::Shape({scaleK, scaleN});
@@ -474,7 +492,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     gert::StorageShape biasShape;
     gert::StorageShape outputShape;
     cout<<"run case "<<prefix<<std::endl;
-    if (yDim == 3) {
+    if (yDim == 6) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
+    } else if (yDim == 3) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, m, n});
     } else if (yDim == 2) {
         outputShape.MutableOriginShape() = gert::Shape({m, n});
@@ -483,7 +503,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     }
 
     if (transA) {
-        if (x1Dim == 3) {
+        if (x1Dim == 6) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, k, m});
         } else if (x1Dim == 2) {
             x1Shape.MutableOriginShape() = gert::Shape({k, m});
@@ -491,7 +513,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             x1Shape.MutableOriginShape() = gert::Shape({m});
         }
     } else {
-        if (x1Dim == 3) {
+        if (x1Dim == 6) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, m, k});
         } else if (x1Dim == 2) {
             x1Shape.MutableOriginShape() = gert::Shape({m, k});
@@ -501,7 +525,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     }
 
     if (transB) {
-        if (x2Dim == 3) {
+        if (x2Dim == 6) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, n, k});
         } else if (x2Dim == 2) {
             x2Shape.MutableOriginShape() = gert::Shape({n, k});
@@ -509,7 +535,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             x2Shape.MutableOriginShape() = gert::Shape({n});
         }
     } else {
-        if (x2Dim == 3) {
+        if (x2Dim == 6) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, k, n});
         } else if (x2Dim == 2) {
             x2Shape.MutableOriginShape() = gert::Shape({k, n});
@@ -543,26 +571,34 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         int64_t scaleK = (k + 127) / 128;
         int64_t scaleN = (n + 127) / 128;
         if (transA) {
-            if (x1Dim == 3) {
+            if (x1Dim == 6) {
+                pertokenShape.MutableStorageShape() = gert::Shape({batchA, batchA, batchA, batchA, scaleK, scaleM});
+            } else if (x1Dim == 3) {
                 pertokenShape.MutableStorageShape() = gert::Shape({batchA, scaleK, scaleM});
             } else if (x1Dim == 2) {
                 pertokenShape.MutableStorageShape() = gert::Shape({scaleK, scaleM});
             }
         } else {
-            if (x1Dim == 3) {
+            if (x1Dim == 6) {
+                pertokenShape.MutableStorageShape() = gert::Shape({batchA, batchA, batchA, batchA, scaleM, scaleK});
+            } else if (x1Dim == 3) {
                 pertokenShape.MutableStorageShape() = gert::Shape({batchA, scaleM, scaleK});
             } else if (x1Dim == 2) {
                 pertokenShape.MutableStorageShape() = gert::Shape({scaleM, scaleK});
             }
         }
         if (transB) {
-        if (x2Dim == 3) {
+            if (x2Dim == 6) {
+                scaleShape.MutableStorageShape() = gert::Shape({batchB, batchB, batchB, batchB, scaleN, scaleK});
+            } else if (x2Dim == 3) {
                 scaleShape.MutableStorageShape() = gert::Shape({batchB, scaleN, scaleK});
             } else if (x2Dim == 2) {
                 scaleShape.MutableStorageShape() = gert::Shape({scaleN, scaleK});
             }
         } else {
-            if (x2Dim == 3) {
+            if (x2Dim == 6) {
+                scaleShape.MutableStorageShape() = gert::Shape({batchB, batchB, batchB, batchB, scaleK, scaleN});
+            } else if (x2Dim == 3) {
                 scaleShape.MutableStorageShape() = gert::Shape({batchB, scaleK, scaleN});
             } else if (x2Dim == 2) {
                 scaleShape.MutableStorageShape() = gert::Shape({scaleK, scaleN});

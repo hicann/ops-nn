@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -115,7 +115,6 @@ __aicore__ inline void MatmulAswKernelBL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
         CopyInNZB1<x2Type, bTrans>(this->block_, this->block_.params_.nIndex, isNMultiCore_, bl1Local_, this->bGlobal_,
                                    innerX2AlignedBlock);
     }
-    InQueueBL1_.EnQue(bl1Local_);
 
     this->block_.offset_.batchCOffset = 0;
     this->block_.offset_.batchAOffset = 0;
@@ -147,7 +146,6 @@ __aicore__ inline void MatmulAswKernelBL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
             if (this->block_.params_.singleCoreM > 0 && this->block_.params_.singleCoreN > 0) {
                 this->block_.template CalcGMOffset<aTrans, bTrans, scaleType, formatX2>();
                 SetScaleTensor();
-                bl1Local_ = InQueueBL1_.DeQue<x2Type>();
                 if (this->block_.tilingData_->matmulTiling.isBias) {
                     mm_.SetBias(this->biasGlobal_[this->block_.offset_.offsetBias]);
                 }

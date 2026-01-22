@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -80,18 +80,26 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDtypesInRange() const
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Output dtype must be INT8/FLOAT16, actual is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
-    // offset可取FLOAT
+    // x1Offset不存在
+    OP_TILING_CHECK((context_->GetOptionalInputDesc(X1_OFFSET_INDEX_V4) != nullptr &&
+                     context_->GetOptionalInputShape(X1_OFFSET_INDEX_V4) != nullptr),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X1Offset should be null."), return false);
+    // x2ffset可取FLOAT
     auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK((offsetDesc && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr) &&
                         offsetDesc->GetDataType() != ge::DT_FLOAT,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dtype should be FLOAT, actual dtype is %s.",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Offset dtype should be FLOAT, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(offsetDesc->GetDataType()).c_str()),
                     return false);
-    // scale可取UINT64, INT64
+    // yOffset不存在
+    OP_TILING_CHECK((context_->GetOptionalInputDesc(Y_OFFSET_INDEX_V4) != nullptr &&
+                     context_->GetOptionalInputShape(Y_OFFSET_INDEX_V4) != nullptr),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "YOffset should be null."), return false);
+    // x2Scale可取UINT64, INT64
     OP_TILING_CHECK(
         context_->GetOptionalInputDesc(GetScaleIdx()) != nullptr &&
             !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale dtype should be UINT64/INT64, actual dtype is %s.",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Scale dtype should be UINT64/INT64, actual dtype is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
         return false);
     // bias可取INT32
@@ -101,10 +109,14 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDtypesInRange() const
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Bias dtype should be INT32, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
                     return false);
-    // pertokenScale不存在
+    // x1Scale不存在
     OP_TILING_CHECK((context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
                      context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "PertokenScale should be null."), return false);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X1Scale should be null."), return false);
+    // yScale不存在
+    OP_TILING_CHECK((context_->GetOptionalInputDesc(Y_SCALE_INDEX_V4) != nullptr &&
+                     context_->GetOptionalInputShape(Y_SCALE_INDEX_V4) != nullptr),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "YScale should be null."), return false);
     if (inputParams_.isLut) {
         // LUT场景，x2 UINT1/INT2对应x2Table INT4, x2 INT4对应x2Table INT8
         OP_TILING_CHECK((inputParams_.bDtype == ge::DT_INT2 || inputParams_.bDtype == ge::DT_UINT1) &&
@@ -205,7 +217,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
     OP_TILING_CHECK(
         biasShape != nullptr && static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
+                              "Input bias dimension shape should equal n, but it is %zu while n is %lu.",
                               biasShape->GetStorageShape().GetDim(0), inputParams_.nSize),
         return false);
     // offset shape必须是1或shapeN
@@ -213,22 +225,22 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
         offsetShape != nullptr &&
             !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
               static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %ld.",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Offset dimension value must be 1 or n[%lu], but it is %zu.",
                               inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
         return false);
     // scale维数必须存在
-    OP_TILING_CHECK(scaleShape == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale does not exist"),
+    OP_TILING_CHECK(scaleShape == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Scale does not exist"),
                     return false);
     // scale维数必须是1维
     OP_TILING_CHECK(scaleShape->GetStorageShape().GetDimNum() != 1,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale's dimension must be 1, actually is : %zu",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Scale's dimension must be 1, actually is : %zu",
                                           scaleShape->GetStorageShape().GetDimNum()),
                     return false);
     // 当x1为INT8时，支持perchannel量化模式
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT8 && !inputParams_.isPerChannel,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When x1 dtype is INT8, the only supported quant modes are PerChannel"),
+                              "When x1 dtype is INT8, the only supported quant mode is perchannel"),
         return false);
     // LUT场景x2 UIN1/INT2/INT4尾轴shape分别需要关于8/4/2对齐
     if (inputParams_.isLut && (inputParams_.bDtype == ge::DT_INT4 || inputParams_.bDtype == ge::DT_INT2 ||
@@ -313,4 +325,23 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::ExtraInputCheck() const
 
     return true;
 }
+
+bool QuantBatchMatmulV4Checker4MmadS8S4::CheckOffset(const gert::StorageShape* offsetShape) const
+{
+    if (offsetShape != nullptr) {
+        // 当outDtype不为INT8时，x2Offset不存在
+        OP_TILING_CHECK(
+            inputParams_.cDtype != ge::DT_INT8,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When outputDtype is not INT8, x2Offset must be null"),
+            return false);
+        // x2Offset维数只能是1维
+        OP_TILING_CHECK(
+            offsetShape->GetStorageShape().GetDimNum() != 1,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Offset shape should be 1 dimension, but it is %zu",
+                                  offsetShape->GetStorageShape().GetDimNum()),
+            return false);
+    }
+    return true;
+}
+
 }  // namespace optiling

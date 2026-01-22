@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -135,6 +135,11 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::
 
     // 统一申请buff
     pipe_->InitBuffer(InQueueABL1_, 1, bufferSize);
+
+    // 尽可能将mm api init提前做 让ABL1的MTE2和MM的初始化并行起来
+    mm_.SetSubBlockIdx(0);
+    mm_.Init(&this->block_.tilingData_->matmulTiling, pipe_);
+
     abl1Local_ = InQueueABL1_.AllocTensor<int8_t>();
     al1Local_ = abl1Local_[0].template ReinterpretCast<x1Type>();
     CopyInA1<x1Type, aTrans>(this->block_, this->block_.params_.mIndex, isMMultiCore_, al1Local_, this->aGlobal_);
@@ -160,9 +165,6 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::
                                this->biasGlobal_, innerBiasAlignedBlock);
     }
     InQueueABL1_.EnQue(abl1Local_);
-
-    mm_.SetSubBlockIdx(0);
-    mm_.Init(&this->block_.tilingData_->matmulTiling, pipe_);
 
     this->block_.offset_.batchCOffset = 0;
     this->block_.offset_.batchAOffset = 0;

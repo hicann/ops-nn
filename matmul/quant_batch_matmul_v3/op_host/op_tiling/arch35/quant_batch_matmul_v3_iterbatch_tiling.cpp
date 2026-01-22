@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -59,75 +59,83 @@ void QuantBatchMatmulV3IterbatchTiling::Reset()
     }
 }
 
-bool QuantBatchMatmulV3IterbatchTiling::IsCapable()
+void QuantBatchMatmulV3IterbatchTiling::GetBroadCastInfo(
+    uint64_t& broadcastNum, uint64_t& innerBatchNum, bool& isBroadcastA, bool& isBroadcastB)
 {
-    bool isSupportMultibatchOptim =
-        (inputParams_.batchA1 == inputParams_.batchB1 && inputParams_.batchA2 == inputParams_.batchB2 &&
-         inputParams_.batchA3 == inputParams_.batchB3 && inputParams_.batchA4 == inputParams_.batchB4) ||
-        (inputParams_.batchA1 != inputParams_.batchB1 &&
-         (inputParams_.batchA1 == 1UL || inputParams_.batchB1 == 1UL)) ||
-        (inputParams_.batchA2 != inputParams_.batchB2 &&
-         (inputParams_.batchA2 == 1UL || inputParams_.batchB2 == 1UL)) ||
-        (inputParams_.batchA3 != inputParams_.batchB3 &&
-         (inputParams_.batchA3 == 1UL || inputParams_.batchB3 == 1UL)) ||
-        (inputParams_.batchA4 != inputParams_.batchB4 && (inputParams_.batchA4 == 1UL || inputParams_.batchB4 == 1UL));
-
-    uint64_t broadcastNum = 0UL;
-    uint64_t innerBatchNum = 1UL;
     if (inputParams_.batchA4 != inputParams_.batchB4) {
         broadcastNum = broadcastNum + 1UL;
         innerBatchNum = 1UL;
+        isBroadcastA = (inputParams_.batchA4 < inputParams_.batchB4 || isBroadcastA);
+        isBroadcastB = (inputParams_.batchA4 > inputParams_.batchB4 || isBroadcastB);
     }
     if (inputParams_.batchA3 != inputParams_.batchB3) {
         broadcastNum = broadcastNum + 1UL;
         innerBatchNum = inputParams_.batchC4;
+        isBroadcastA = (inputParams_.batchA3 < inputParams_.batchB3 || isBroadcastA);
+        isBroadcastB = (inputParams_.batchA3 > inputParams_.batchB3 || isBroadcastB);
     }
     if (inputParams_.batchA2 != inputParams_.batchB2) {
         broadcastNum = broadcastNum + 1UL;
         innerBatchNum = inputParams_.batchC4 * inputParams_.batchC3;
+        isBroadcastA = (inputParams_.batchA2 < inputParams_.batchB2 || isBroadcastA);
+        isBroadcastB = (inputParams_.batchA2 > inputParams_.batchB2 || isBroadcastB);
     }
     if (inputParams_.batchA1 != inputParams_.batchB1) {
         broadcastNum = broadcastNum + 1UL;
         innerBatchNum = inputParams_.batchC4 * inputParams_.batchC3 * inputParams_.batchC2;
+        isBroadcastA = (inputParams_.batchA1 < inputParams_.batchB1 || isBroadcastA);
+        isBroadcastB = (inputParams_.batchA1 > inputParams_.batchB1 || isBroadcastB);
     }
-    if (!compileInfo_.supportMmadS8S4) {
-        OP_LOGI(inputParams_.opName, "the iter batch template doesn't support current platform");
+}
+
+bool QuantBatchMatmulV3IterbatchTiling::IsCapable()
+{
+    // 在QuantBatchMatmulV3TilingBase::InferOutBatchDim函数
+    // 已经约束了A B矩阵的每对batch轴不能是非1且不相等的，无需重复校验。
+    if (inputParams_.batchB == 1UL && !inputParams_.transA) {
+        OP_LOGI(inputParams_.opName, "When transA = False and batchB = 1, batchA can be co-axial with M");
         return false;
     }
-    if (inputParams_.batchA == 1UL || inputParams_.batchB == 1UL) {
-        OP_LOGI(inputParams_.opName, "the iter batch template doesn't support tensor A or B batch size is 1");
-        return false;
-    }
-    if (!isSupportMultibatchOptim) {
+    if (inputParams_.batchA == 1 && inputParams_.batchB == 1) {
         OP_LOGI(inputParams_.opName,
-                "the multi-batch optimization currently only supports scenarios where all batch axes are equal or one "
-                "batch axis can be broadcasted.");
+                "When both batchA and batchB are equal to 1, there is no need to enable iter batch");
         return false;
     }
-    if (broadcastNum != 0UL && broadcastNum != 1UL) {
-        // 当前最多支持1个轴进行broadcast
-        OP_LOGI(inputParams_.opName,
-                "the multi-batch optimization currently only supports one batch axis can be broadcasted.");
+
+    uint64_t broadcastNum = 0UL;
+    uint64_t innerBatchNum = 1UL;
+    bool isBroadcastA = false; // 矩阵A broadcast
+    bool isBroadcastB = false; // 矩阵B broadcast
+    GetBroadCastInfo(broadcastNum, innerBatchNum, isBroadcastA, isBroadcastB);
+
+    // 当前模板只支持A或B单个矩阵broadcast, 例如 batchA 1 1 2 2, batchB 2 2 1 1不能进行broadcast
+    if (isBroadcastA && isBroadcastB) {
+        OP_LOGI(
+            inputParams_.opName, "The multi-batch optimization currently only supports one matrix being broadcasted");
+        return false;
+    }
+
+    if (!(broadcastNum == 0 || broadcastNum == 1 || broadcastNum == 4)) { // 当前支持1个轴/4个轴进行broadcast
+        OP_LOGI(
+            inputParams_.opName,
+            "The multi-batch optimization currently only supports 1 or 4 batch axis being broadcasted, but it is %lu",
+            broadcastNum);
         return false;
     }
     if (!inputParams_.isPerChannel && !inputParams_.isPerTensor) {
-        OP_LOGI(inputParams_.opName, "the iter batch template only support per-channel or per-tensor mode");
+        OP_LOGI(inputParams_.opName, "The iter batch template only support per-channel or per-tensor mode");
         return false;
     }
     if (inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8) {
         OP_LOGI(inputParams_.opName,
-                "the iter batch template only support input dtype is int8, actual a dtype are %s and b dtype %s",
+                "The iter batch template only support input dtype is int8, actual a dtype are %s and b dtype %s",
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str());
         return false;
     }
-    if (inputParams_.transA) {
-        OP_LOGI(inputParams_.opName, "the iter batch template only support transA is false");
-        return false;
-    }
     uint32_t iterBatch = CalcIterBatch();
     if (iterBatch <= 1UL) {
-        OP_LOGI(inputParams_.opName, "the iter batch template doesn't support iter batch <= 1");
+        OP_LOGI(inputParams_.opName, "The iter batch template doesn't support iter batch <= 1");
         return false;
     } else {
         uint64_t perCoreBatch = ops::CeilDiv(inputParams_.batchC, aicoreParams_.aicNum);
@@ -141,7 +149,7 @@ bool QuantBatchMatmulV3IterbatchTiling::IsCapable()
         }
     }
     basicTiling_.iterBatch = iterBatch;
-    OP_LOGI(inputParams_.opName, "entering iter batch template. iterBatch = %u", basicTiling_.iterBatch);
+    OP_LOGI(inputParams_.opName, "Entering iter batch template. iterBatch = %u", basicTiling_.iterBatch);
     return true;
 }
 
@@ -164,8 +172,9 @@ uint32_t QuantBatchMatmulV3IterbatchTiling::CalcIterBatch()
                             ? alignNValue * ge::GetSizeByDataType(inputParams_.scaleDtype)
                             : ge::GetSizeByDataType(inputParams_.scaleDtype);
     uint64_t l1SizeLeft = aicoreParams_.l1Size - biasSize - scaleSize;
-    uint32_t iterBatch = ops::FloorDiv(l1SizeLeft, (alignMValue * alignKValue * inputParams_.aDtype +
-                                                       alignKValue * alignNValue * inputParams_.bDtype));
+    uint32_t iterBatch = ops::FloorDiv(
+        l1SizeLeft, GetSizeWithDataType(alignMValue * alignKValue, inputParams_.aDtype) +
+                        GetSizeWithDataType(alignKValue * alignNValue, inputParams_.bDtype));
     return iterBatch;
 }
 

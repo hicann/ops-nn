@@ -67,7 +67,7 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
                           static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "The scale dimension value must be 1 or n[%lu], but it is %lu.",
-                                              inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
+                                              inputParams_.nSize, scaleShape->GetStorageShape().GetDim(0)),
                         return false);
     }
 

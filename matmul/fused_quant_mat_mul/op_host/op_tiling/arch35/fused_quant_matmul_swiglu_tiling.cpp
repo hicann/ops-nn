@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -32,14 +32,25 @@ constexpr uint64_t shapeInputWhiteList[][3] = {
     /* m, k, n */
     {1, 4096, 5504},
     {3072, 4096, 5504},
+    {1, 4096, 11008},
+    {3072, 4096, 11008},
+
     {1, 2560, 6144},
     {3072, 2560, 6144},
+    {1, 2560, 12288},
+    {3072, 2560, 12288},
+
     {1, 2560, 1536},
     {3072, 2560, 1536},
+    {1, 2560, 3072},
+    {3072, 2560, 3072},
+
     {1, 3072, 5632},
     {3072, 3072, 5632},
-    {1, 3072, 2816},
-    {3072, 3072, 2816}
+    {1, 3072, 11264},
+    {3072, 3072, 11264},
+
+    {256, 2560, 1536}
 };
 
 static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =

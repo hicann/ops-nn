@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -128,7 +128,12 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeDtype()
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : ge::DT_INT32;
     auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
     inputParams_.x2TableDtype = x2TableDesc != nullptr ? x2TableDesc->GetDataType() : inputParams_.x2TableDtype;
-    inputParams_.isLut = x2TableDesc != nullptr && compileInfoPtr_->supportMmadS8S4;
+
+    // 当前AdaptiveSlidingWindowTilingV4仅支持LUT场景，x2Table必须存在
+    OP_TILING_CHECK(
+        x2TableDesc == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Table does not exist."), return false);
+    inputParams_.isLut = true;
+
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
     isUbQuant_ = inputParams_.cDtype == ge::DT_BF16 || pertokenScaleDesc != nullptr;
     SetFormat();
@@ -287,46 +292,68 @@ bool AdaptiveSlidingWindowTilingV4::IsCalL1TilingDepth4MmadS8S4() const
     return true;
 }
 
-void AdaptiveSlidingWindowTilingV4::CalL1TilingDepth4MmadS8S4(uint64_t /* leftL1Size */)
+void AdaptiveSlidingWindowTilingV4::CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size)
 {
+    // LUT 场景采用mm api Norm模板，stepK无意义，默认1
     basicTiling_.stepKa = 1U;
     basicTiling_.stepKb = 1U;
+
+    // LUT 场景采用mm api Norm模板，depthA1 depthB1尽可能用满L1空间。分asw和al1full两种情况讨论
     basicTiling_.depthA1 = 1U;
     basicTiling_.depthB1 = 1U;
 
-    // 计算shape k约束下的stepKa或stepKb的最大值
-    uint64_t maxStepK = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(basicTiling_.baseK));
+    uint64_t maxDepth = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(basicTiling_.baseK));
 
-    // LUT 场景采用mm api Norm模板，stepK设置为经验值4
-    basicTiling_.stepKa = std::min(STEP_K_VALUE_4, maxStepK);
-    basicTiling_.stepKb = std::min(STEP_K_VALUE_4, maxStepK);
+    uint64_t oneBaseADataSize =
+        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype);
+    uint64_t oneBaseBDataSize = GetSizeWithDataType(
+        static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype, inputParams_.isLut);
 
-    // 计算depthA1和depthB1
-    basicTiling_.stepKa = isAFullLoad_ ? 1U : basicTiling_.stepKa;
-    basicTiling_.depthA1 = isAFullLoad_ ? basicTiling_.stepKa : basicTiling_.stepKa * DB_SIZE;
-    // LUT场景不支持BL1全载
-    basicTiling_.stepKb = basicTiling_.stepKb;
-    basicTiling_.depthB1 = basicTiling_.stepKb * DB_SIZE;
+    if (isAFullLoad_) {
+        basicTiling_.depthB1 =
+            std::min(ops::FloorDiv(leftL1Size - singleCoreASizeWithFullLoad_, oneBaseBDataSize), maxDepth);
+    } else {
+        basicTiling_.depthA1 = std::min(ops::FloorDiv(leftL1Size, oneBaseADataSize + oneBaseBDataSize), maxDepth);
+        basicTiling_.depthB1 = basicTiling_.depthA1;
+    }
 }
-
-uint64_t AdaptiveSlidingWindowTilingV4::GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype, bool isLut) const
+bool AdaptiveSlidingWindowTilingV4::Is4BitInput(ge::DataType dtype, bool isLut) const
 {
     bool is4BitInput = false;
-    bool is8BitInput = false;
     if (isLut) {
         // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
         is4BitInput = (dtype == ge::DT_INT2 || dtype == ge::DT_UINT1);
-        is8BitInput = (dtype == ge::DT_INT4);
     } else {
         is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4);
     }
+    return is4BitInput;
+}
 
-    if (is4BitInput) {
-        return shapeSize + shapeSize;
-    } else if (is8BitInput) {
-        return shapeSize;
+bool AdaptiveSlidingWindowTilingV4::Is8BitInput(ge::DataType dtype, bool isLut) const
+{
+    // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
+    return (isLut == true && dtype == ge::DT_INT4);
+}
+
+uint64_t AdaptiveSlidingWindowTilingV4::GetShapeWithDataType(uint64_t size, ge::DataType dtype, bool isLut) const
+{
+    if (Is4BitInput(dtype, isLut)) {
+        return size + size;
+    } else if (Is8BitInput(dtype, isLut)) {
+        return size;
     } else {
-        return shapeSize / static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+        return size / static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+    }
+}
+
+uint64_t AdaptiveSlidingWindowTilingV4::GetSizeWithDataType(uint64_t shape, ge::DataType dtype, bool isLut) const
+{
+    if (Is4BitInput(dtype, isLut)) {
+        return (shape + 1) >> 1;
+    } else if (Is8BitInput(dtype, isLut)) {
+        return shape;
+    } else {
+        return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
     }
 }
 

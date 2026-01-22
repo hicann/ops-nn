@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -494,10 +494,15 @@ void AdaptiveSlidingWindowTiling::IsAFullLoad()
              : ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
     // supportMmadS8S4平台和david都是阈值256K
     constexpr uint64_t A_L1_LOAD_THRESHOLD = 256 * 1024UL;
+    // supportMmadS8S4平台不需要判断mBlockCnt <= nBlockCnt，更大概率使能AFullLoad
+    bool blockCntCmp = (adaptiveWin_.mBlockCnt <= adaptiveWin_.nBlockCnt);
+    if (compileInfo_.supportMmadS8S4) {
+        blockCntCmp = true;
+    }
     // 当mcnt为1/2/4, 并且coreNum是mcnt的整数倍时，ASW可保证所有核上的计算对M的依赖不换行;
     // coreNum必须大于等于mcnt, 否则A矩阵数据无法载入完全
     isAFullLoad_ =
-        singleCoreASizeWithFullLoad_ <= A_L1_LOAD_THRESHOLD && adaptiveWin_.mBlockCnt <= adaptiveWin_.nBlockCnt &&
+        singleCoreASizeWithFullLoad_ <= A_L1_LOAD_THRESHOLD && blockCntCmp &&
         (((adaptiveWin_.mBlockCnt == 1UL || adaptiveWin_.mBlockCnt == 2UL || adaptiveWin_.mBlockCnt == 4UL) &&
           aicoreParams_.aicNum >= adaptiveWin_.mBlockCnt && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0) ||
          adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum);

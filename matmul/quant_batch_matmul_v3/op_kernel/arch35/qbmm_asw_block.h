@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -399,7 +399,8 @@ __aicore__ inline void QuantBmmAswBlock::CalcGMOffset()
             // (n1, k1, k0, n0)
             uint64_t kAlign = DequantBmm::Align16(tilingData_->matmulTiling.Kb);
             offset_.offsetB = nOffset * kAlign;  // tiling保证切到n1
-            offset_.offsetB += offset_.batchBOffset * DequantBmm::Align32(tilingData_->matmulTiling.N) * kAlign;
+            offset_.offsetB +=
+                offset_.batchBOffset * kAlign * DequantBmm::Align(tilingData_->matmulTiling.N, X2_C0_SIZE);
         }
     }
 

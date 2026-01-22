@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@
 
 namespace {
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
-constexpr int64_t LAST_AXIS_LIMIT = 2097151;  // 2^21-1
 }  // namespace
 
 namespace optiling {
@@ -108,17 +107,22 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtype() const
     return true;
 }
 
-bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInRangeForOptionalInputs(const gert::StorageShape *biasShape,
-                                                                            const gert::StorageShape *offsetShape) const
+bool QuantBatchMatmulV3Checker4MmadS8S4::CheckBias(const gert::StorageShape* biasShape) const
 {
     // bias维数只能是1维
     if (biasShape != nullptr) {
         auto biasDimNum = biasShape->GetStorageShape().GetDimNum();
-        OP_TILING_CHECK(biasDimNum != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias dimension should equal to 1, but it is %zu.", biasDimNum),
-                        return false);
+        OP_TILING_CHECK(
+            biasDimNum != 1,
+            CUBE_INNER_ERR_REPORT(
+                inputParams_.opName, "The bias dimension should equal to 1, but it is %zu.", biasDimNum),
+            return false);
     }
+    return true;
+}
+
+bool QuantBatchMatmulV3Checker4MmadS8S4::CheckOffset(const gert::StorageShape *offsetShape) const
+{
     if (offsetShape != nullptr) {
         // 当outDtype不为INT8时，offset不存在
         OP_TILING_CHECK(inputParams_.cDtype != ge::DT_INT8,
@@ -134,6 +138,12 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInRangeForOptionalInputs(cons
     return true;
 }
 
+bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInRangeForOptionalInputs(const gert::StorageShape *biasShape,
+                                                                            const gert::StorageShape *offsetShape) const
+{
+    return CheckBias(biasShape) && CheckOffset(offsetShape);
+}
+
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInBoundary(const gert::Shape &shape, uint32_t shapeIdx) const
 {
     int64_t mul = 1;
@@ -141,13 +151,6 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInBoundary(const gert::Shape 
     const char *dimName = shapeIdx == GetX1Idx() ? "x1" : "x2";
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
-        // 尾轴不超过2^21-1
-        OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The last dimension size of %s should not be \
-larger than 2097151 but actual is %ld",
-                                              dimName, curDim),
-                        return false);
 
         // x1或x2的shape每一维元素数不超过INT32_MAX
         OP_TILING_CHECK(
