@@ -14,6 +14,7 @@ import os
 import sys
 import logging
 from dependency_parser import OpDependenciesParser
+from parse_changed_files import file_filter
 
 
 logger = logging.getLogger()
@@ -25,6 +26,7 @@ BASE_PATH = os.getenv('BASE_PATH')
 
 if __name__ == '__main__':
     changed_files_info_file = sys.argv[1]
+    is_experimental = sys.argv[2] == 'TRUE'
     changed_files = []
     if not os.path.exists(changed_files_info_file):
         logging.error("[ERROR] change file is not exist, can not get file change info in this pull request.")
@@ -38,11 +40,18 @@ if __name__ == '__main__':
         if not os.path.exists(r'{}'.format(changed_file.strip())):
             continue
         changed_file = str(os.path.relpath(changed_file, BASE_PATH)).strip()
+        if file_filter(changed_file) is False:
+            continue
         files = changed_file.split('/')
-        if len(files) > 2 and files[0] in OP_CATEGORY_LIST:
+        if not is_experimental and len(files) > 2 and files[0] in OP_CATEGORY_LIST:
             op_name = files[1]
             if op_name == 'common':
                 op_name = files[0] + '.common'
+            ops.add(op_name)
+        elif is_experimental and len(files) > 3 and files[1] in OP_CATEGORY_LIST:
+            op_name = files[2]
+            if op_name == 'common':
+                op_name = files[1] + '.common'
             ops.add(op_name)
 
     (_, reverse_op_dependencies) = parser.get_dependencies_by_ops(ops) # 获取反向依赖

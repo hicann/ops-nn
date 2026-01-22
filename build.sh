@@ -1052,7 +1052,7 @@ set_ci_mode() {
   cd ${BASE_PATH}
   if [[ "$ENABLE_TEST" == "TRUE" ]]; then
     {
-      result=$(python3 ${BASE_PATH}/scripts/util/parse_changed_files.py ${CHANGED_FILES})
+      result=$(python3 ${BASE_PATH}/scripts/util/parse_changed_files.py ${CHANGED_FILES} ${ENABLE_EXPERIMENTAL})
     } || {
       echo $result && exit 1
     }
@@ -1063,7 +1063,7 @@ set_ci_mode() {
     done
   else
     {
-      result=$(python3 ${BASE_PATH}/scripts/util/parse_compile_changed_files.py ${CHANGED_FILES})
+      result=$(python3 ${BASE_PATH}/scripts/util/parse_compile_changed_files.py ${CHANGED_FILES} ${ENABLE_EXPERIMENTAL})
     } || {
       echo $result && exit 1
     }
@@ -1159,11 +1159,17 @@ build_example() {
     exit 1
   fi
 
+  local grep_word="-v"
+
+  if [[ "${ENABLE_EXPERIMENTAL}" == "TRUE" ]]; then
+    grep_word=""
+  fi
+
   OLDIFS=$IFS
   IFS=$'\n'
-  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*"))
+  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
   if [[ "$COMPUTE_UNIT" == "ascend910_95" ]]; then
-    files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp"))
+    files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental"))
   fi
   IFS=$OLDIFS
 
