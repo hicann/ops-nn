@@ -99,7 +99,7 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *out
     // 3. 检查指定dim是否在grad_output的维度范围内
     CHECK_RET(CheckDim(gradOutput, dim), ACLNN_ERR_PARAM_INVALID);
 
-    // 4. 检查输入shape和输出shape是否一致PReluGrad
+    // 4. 检查输入shape和输出shape是否一致
     CHECK_RET(CheckShape(gradOutput, output, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
