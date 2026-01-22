@@ -328,6 +328,10 @@ static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"davidCase_1983_1280_1088_1_0_0_1_0_0_128_BF16_INT4_BF16_UINT64_BF16_32_64_1_0", 32, 56153481218UL},
     {"davidCase_1_64_64_0_0_0_1_0_0_32_BF16_INT4_BF16_UINT64_BF16_4_8_1_0", 4, 51858776066UL},
     {"davidCase_8_8192_512_1_0_0_1_0_0_128_BF16_INT4_BF16_UINT64_BF16_32_64_1_0", 32, 56153743362UL},
- };
+    // a16F8 perchannel
+    {"davidCase_8_8192_512_0_0_0_0_0_1_-1_BF16_FP8E4M3_BF16_UINT64_BF16_32_64_0_0", 32, 310517762UL},
+    // a16F8 perchannel support n=1(reuse perchannel)
+    {"davidCase_8_8192_512_0_0_0_0_0_1_0_BF16_FP8E4M3_BF16_UINT64_BF16_32_64_0_0", 32, 310517762UL},
+};
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, testing::ValuesIn(casesParams));

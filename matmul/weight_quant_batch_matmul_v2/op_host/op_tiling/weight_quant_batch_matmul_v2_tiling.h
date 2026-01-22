@@ -151,6 +151,8 @@ protected:
 
     // 平台相关信息
     std::unique_ptr<WeightQuantBatchMatmulV2CompileInfo> compileInfoPtr_;
+
+    void ConfigureReuseScenarios();
 };
 
 ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVersion socVersion);

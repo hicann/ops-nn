@@ -88,7 +88,7 @@ void GetAttrs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext*
     matmulInfo.transB = transposeWeight != nullptr && *transposeWeight;
 }
 
-uint64_t GetBatchSize(const gert::Shape &shape)
+uint64_t GetBatchSize(const gert::Shape& shape)
 {
     uint64_t batch = 1;
     auto shapeLen = shape.GetDimNum();
@@ -98,14 +98,14 @@ uint64_t GetBatchSize(const gert::Shape &shape)
     return batch;
 }
 
-uint64_t InferOutBatchSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape)
+uint64_t InferOutBatchSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape)
 {
     uint64_t batchC = 1U;
     auto x1DimNum = x1Shape.GetDimNum();
     auto x2DimNum = x2Shape.GetDimNum();
     auto outDimNum = std::max(x1DimNum, x2DimNum);
-    const gert::Shape &shapeLong = x1DimNum > x2DimNum ? x1Shape : x2Shape;
-    const gert::Shape &shapeShort = x1DimNum > x2DimNum ? x2Shape : x1Shape;
+    const gert::Shape& shapeLong = x1DimNum > x2DimNum ? x1Shape : x2Shape;
+    const gert::Shape& shapeShort = x1DimNum > x2DimNum ? x2Shape : x1Shape;
     size_t validOffset = outDimNum - std::min(x1DimNum, x2DimNum);
     for (size_t i = 0; i < outDimNum - LAST_SECOND_DIM_INDEX; i++) {
         auto shortDim = i < validOffset ? 1 : shapeShort.GetDim(i - validOffset);
@@ -114,7 +114,6 @@ uint64_t InferOutBatchSize(const gert::Shape &x1Shape, const gert::Shape &x2Shap
     }
     return batchC;
 }
-
 
 void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
 {
@@ -158,8 +157,8 @@ void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext
     if (matmulInfo.bDtype == ge::DT_INT32 || matmulInfo.bDtype == ge::DT_FLOAT) {
         weightLastDim *= INT4_IN_INT32_NUMS;
     }
-    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_SECOND_DIM_INDEX);
-    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_FIRST_DIM_INDEX);
+    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_SECOND_DIM_INDEX);
+    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_FIRST_DIM_INDEX);
     matmulInfo.hasBias = biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0;
     matmulInfo.biasWithBatch = matmulInfo.hasBias && biasShape->GetStorageShape().GetDimNum() > 1;
     matmulInfo.mSize = static_cast<uint64_t>(matmulInfo.transA ? xLastDim : xFirstDim);
@@ -193,6 +192,28 @@ void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext
     }
 }
 
+void WeightQuantBatchMatmulV2Tiling::ConfigureReuseScenarios() {
+    // A16F8场景per-tensor复用per-channel逻辑
+    if ((matmulInfoPtr_->bDtype == ge::DT_FLOAT8_E4M3FN || matmulInfoPtr_->bDtype == ge::DT_HIFLOAT8) &&
+        matmulInfoPtr_->antiQuantType == QuantType::PER_TENSOR) {
+        matmulInfoPtr_->antiQuantType = QuantType::PER_CHANNEL;
+    }
+    // int4pack输入场景修正dtype为int4
+    if (matmulInfoPtr_->bDtype == ge::DT_INT32) {
+        matmulInfoPtr_->bDtype = ge::DT_INT4;
+        OP_LOGI(opName_, "The conversion of weight from int32 to int4 is completed.");
+    }
+    // A16MxF4-NZ场景，PTA图模式下走入在线编译流程，在tiling侧将weight dtype修正为fp4
+    if (matmulInfoPtr_->bDtype == ge::DT_FLOAT) {
+        matmulInfoPtr_->bDtype = ge::DT_FLOAT4_E2M1;
+        OP_LOGI(opName_, "The conversion of weight from fp32 to fp4 is completed.");
+    }
+    if (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ_C0_2) {
+        matmulInfoPtr_->bFormat = ge::FORMAT_FRACTAL_NZ;
+        OP_LOGI(opName_, "The conversion of weight format from fractal_nz_c0_2 to fractal_nz is completed.");
+    }
+}
+
 ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
 {
     try {
@@ -207,16 +228,7 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
     GetInputs(*matmulInfoPtr_, context_);
     GetBatchInfo(*matmulInfoPtr_, context_);
     opName_ = context_->GetNodeName();
-    // int4pack输入场景修正dtype为int4
-    if (matmulInfoPtr_->bDtype == ge::DT_INT32) {
-        matmulInfoPtr_->bDtype = ge::DT_INT4;
-        OP_LOGI(opName_, "The conversion of weight from int32 to int4 is completed.");
-    }
-    // A16MxF4-NZ场景，PTA图模式下走入在线编译流程，在tiling侧将weight dtype修正为fp4
-    if (matmulInfoPtr_->bDtype == ge::DT_FLOAT) {
-        matmulInfoPtr_->bDtype = ge::DT_FLOAT4_E2M1;
-        OP_LOGI(opName_, "The conversion of weight from fp32 to fp4 is completed.");
-    }
+    ConfigureReuseScenarios();
     OP_LOGD(
         opName_,
         "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
@@ -384,8 +396,7 @@ bool CheckInputShape(
     return true;
 }
 
-bool CheckAntiQuantScaleShape(
-    WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* antiQuantScaleShape)
+bool CheckAntiQuantScaleShape(WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* antiQuantScaleShape)
 {
     size_t antiQuantScaleDimNum = antiQuantScaleShape->GetStorageShape().GetDimNum();
     size_t antiQuantScaleShapeSize = static_cast<size_t>(antiQuantScaleShape->GetStorageShape().GetShapeSize());
@@ -604,7 +615,8 @@ The function is check the shape limit:
     6. nk must <= 65535, m <= 65535(trans_a) or int32_max(not trans_a);
     7. group_size < k, align to 32
 */
-bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
+bool CheckShape(
+    gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
     size_t idx = 0;
     auto xShape = context->GetInputShape(idx++);
@@ -642,8 +654,8 @@ bool CheckShape(gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputP
         !CheckBiasShape(inputParams, biasShape),
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check bias shape failed"), return false);
     OP_TILING_CHECK(
-        !CheckShapeDims(inputParams, socVersion), VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check shape dims failed"),
-        return false);
+        !CheckShapeDims(inputParams, socVersion),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check shape dims failed"), return false);
     return true;
 }
 
@@ -872,12 +884,12 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
             return false);
     }
 
-    // A16F8 only support perchannel
+    // A16F8 only support perchannel(include n=1)
     if (std::find(BIT8_WEIGHT_DTYPE_LIST.begin(), BIT8_WEIGHT_DTYPE_LIST.end(), inputParams->bDtype) !=
             BIT8_WEIGHT_DTYPE_LIST.end() &&
         inputParams->bDtype != ge::DT_INT8) {
         OP_TILING_CHECK(
-            inputParams->antiQuantType != QuantType::PER_CHANNEL,
+            inputParams->antiQuantType != QuantType::PER_CHANNEL && inputParams->antiQuantType != QuantType::PER_TENSOR,
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "A16F8 only support perchannel"), return false);
     }
     // A16F4 support Mx and pergroup
@@ -958,8 +970,8 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
         !CheckAttr(context, &inputParams), VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check attr failed"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        !CheckShape(context, &inputParams, socVersion), VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check shape failed"),
-        return ge::GRAPH_FAILED);
+        !CheckShape(context, &inputParams, socVersion),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Check shape failed"), return ge::GRAPH_FAILED);
     if (inputParams.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_TILING_CHECK(
             !CheckNzSupportedScenarios(&inputParams, socVersion),
