@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include <array>
 #include <vector>
-#include "../../../op_host/op_api/aclnn_adaptive_avg_pool2d.h"
+#include "../../../op_api/aclnn_adaptive_avg_pool2d.h"
 #include "op_api_ut_common/array_desc.h"
 #include "op_api_ut_common/inner/types.h"
 #include "op_api_ut_common/op_api_ut.h"

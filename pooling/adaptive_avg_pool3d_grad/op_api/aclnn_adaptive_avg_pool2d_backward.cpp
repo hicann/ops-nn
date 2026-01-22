@@ -31,7 +31,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/fast_vector.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "pooling/adaptive_avg_pool3d/op_host/op_api/shape_op.h"
+#include "pooling/adaptive_avg_pool3d/op_api/shape_op.h"
 
 using namespace op;
 #ifdef __cplusplus

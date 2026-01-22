@@ -14,7 +14,7 @@
  */
 
 #include "aclnn_kernels/contiguous.h"
-#include "pooling/adaptive_avg_pool3d/op_host/op_api/shape_op.h"
+#include "pooling/adaptive_avg_pool3d/op_api/shape_op.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"

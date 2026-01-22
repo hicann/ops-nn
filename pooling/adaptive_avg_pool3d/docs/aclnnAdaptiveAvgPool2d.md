@@ -1,60 +1,207 @@
 # aclnnAdaptiveAvgPool2d
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/pooling/adaptive_avg_pool3d)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
-算子功能：在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。aclnnAdaptiveAvgPool2d与aclnnAvgPool2d不同的是，aclnnAdaptiveAvgPool2d只需要指定输出的大小，就可以自动推导出kernel的大小与对应的步长。
+在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。aclnnAdaptiveAvgPool2d与aclnnAvgPool2d不同的是，aclnnAdaptiveAvgPool2d只需要指定输出的大小，就可以自动推导出kernel的大小与对应的步长。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAdaptiveAvgPool2dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAdaptiveAvgPool2d”接口执行计算。
 
-- `aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)`
-- `aclnnStatus aclnnAdaptiveAvgPool2d(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)`
-
+```Cpp
+aclnnStatus aclnnAdaptiveAvgPool2dGetWorkspaceSize(
+  const aclTensor   *self,
+  const aclIntArray *outputSize,
+  aclTensor         *out,
+  uint64_t          *workspaceSize,
+  aclOpExecutor     **executor)
+```
+```Cpp
+aclnnStatus aclnnAdaptiveAvgPool2d(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 ## aclnnAdaptiveAvgPool2dGetWorkspaceSize
 
 - **参数说明：**
-  - self(aclTensor*, 计算输入)：Device侧的aclTensor；支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)；[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW、NCL。NCL输入时按照(C, Hin, Win)处理。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+  <col style="width: 149px">
+  <col style="width: 121px">
+  <col style="width: 264px">
+  <col style="width: 253px">
+  <col style="width: 262px">
+  <col style="width: 148px">
+  <col style="width: 135px">
+  <col style="width: 146px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>表示待计算的目标张量。</td>
+      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>NCL、NCHW</td>
+      <td>3-4</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>outputSize</td>
+      <td>输入</td>
+      <td>输出Tensor在HW维度上的Size大小。</td>
+      <td>数组长度恒为2。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>输出Tensor，与self的数据类型一致。</td>
+      <td>Shape由self和outputSize共同指定。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>NCL、NCHW</td>
+      <td>3-4</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
 
-  - outputSize(aclIntArray*, 计算输入)：输出Tensor在HW维度上的Size大小，数据类型为int数组，数组长度恒为2。
-  - out(aclTensor*, 计算输出)：Device侧的aclTensor；Shape由self和outputSize共同指定；[数据格式](../../../docs/zh/context/数据格式.md)支持NCHW、NCL。NCL输入时按照(C, Hout, Wout)处理。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-
-  - workspaceSize(uint64_t*, 出参)：返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor**, 出参)：返回op执行器，包含了算子计算流程。
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数`self`、`out`的数据类型不支持BFLOAT16。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-```
-第一段接口完成入参校验，出现以下场景时报错：
-返回161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的self或outputSize或out是空指针。
-返回161002 (ACLNN_ERR_PARAM_INVALID)：1. self的数据类型和数据格式不在支持的范围之内。
-                                      2. self和out数据类型或者数据格式不一致。
-                                      3. outputSize非法, 出现除零，负数，越界等不满足算子正常逻辑的现象。
-                                      4. self的维度不等于3或4。
-                                      5. outputSize的维度不等于2。
-                                      6. self和out维度不一致。
-                                      7. self和out的shape不符合推导。
-```
+  第一段接口完成入参校验，出现以下场景时报错：
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 124px">
+  <col style="width: 775px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self或outputSize或out是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
+      <td>self的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>self和out数据类型或者数据格式不一致。</td>
+    </tr>
+    <tr>
+      <td>outputSize非法, 出现除零，负数，越界等不满足算子正常逻辑的现象。</td>
+    </tr>
+    <tr>
+      <td>self的维度不等于3或4。</td>
+    </tr>
+    <tr>
+      <td>outputSize的维度不等于2。</td>
+    </tr>
+    <tr>
+      <td>self和out维度不一致。</td>
+    </tr>
+    <tr>
+      <td>self和out的shape不符合推导。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnAdaptiveAvgPool2d
 - **参数说明：**
-  - workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool2dGetWorkspaceSize获取。
-  - executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-- **返回值：**
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAdaptiveAvgPool2dGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
+-  **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - 确定性计算：
