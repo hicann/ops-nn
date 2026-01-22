@@ -100,6 +100,7 @@ public:
         FillTilingData();
 
         tilingContext->SetBlockDim(needCoreNum);
+        tilingContext->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
 
         size_t usrSize = (MAX_CORE_CONT + MAX_TENSOR_CONT) * sizeof(float);
         size_t sysWorkspaceSize = WORK_SPACE_SIZE;
