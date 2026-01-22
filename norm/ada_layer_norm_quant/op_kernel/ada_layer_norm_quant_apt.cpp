@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,12 +9,11 @@
  */
 
 /*!
- * \file ada_layer_norm_quant.cpp
+ * \file ada_layer_norm_quant_apt.cpp
  * \brief
  */
 
-#include "../ada_layer_norm/ada_layer_norm_base.h"
-#include "../ada_layer_norm/ada_layer_norm_base_v1.h"
+#include "../ada_layer_norm/arch35/ada_layer_norm_impl.h"
 
 using namespace AdaLayerNormNS;
 
@@ -25,26 +24,21 @@ extern "C" __global__ __aicore__ void ada_layer_norm_quant(
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
 
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
+    GM_ADDR usrWorkspace = GetUserWorkspace(workspace);
+    if (usrWorkspace == nullptr) {
         return;
     }
 
-#define INIT_AND_PROCESS                        \
-    op.InitQuant(&gmAddr, userWS, &tilingData); \
+#define INIT_AND_PROCESS                              \
+    op.InitQuant(&gmAddr, usrWorkspace, &tilingData); \
     op.Process()
 
     GmAddr gmAddr = {x, scale, shift, weight, bias, smooth_scales, out, nullptr, nullptr, quant_scale};
-    if (TILING_KEY_IS(1)) {
-        if constexpr (std::is_same_v<DTYPE_X, half>) {
-            AdaLayerNormND<half, half, QUANT_OP_CODE> op;
-            INIT_AND_PROCESS;
-        }
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
-        if constexpr (std::is_same_v<DTYPE_X, bfloat16_t>) {
-            AdaLayerNormND<bfloat16_t, bfloat16_t, QUANT_OP_CODE> op;
-            INIT_AND_PROCESS;
-        }
-#endif
+    if (TILING_KEY_IS(11)) {
+        AdaLayerNormFullLoad<DTYPE_X, DTYPE_X, DTYPE_OUT, QUANT_OP_CODE> op;
+        INIT_AND_PROCESS;
+    } else if (TILING_KEY_IS(21)) {
+        AdaLayerNormWelford<DTYPE_X, DTYPE_X, DTYPE_OUT, QUANT_OP_CODE> op;
+        INIT_AND_PROCESS;
     }
 }

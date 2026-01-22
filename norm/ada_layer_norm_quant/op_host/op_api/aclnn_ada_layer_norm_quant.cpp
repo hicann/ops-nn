@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 #include "ada_layer_norm_quant.h"
 #include "aclnn_ada_layer_norm_quant.h"
 
@@ -47,6 +48,9 @@ static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
 
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_REGBASE = {
+    op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN};
+
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
 static bool CheckNotNull(AdaLayerNormQuantInputTensor& inputTensor, AdaLayerNormQuantOutputTensor& outputTensor)
@@ -73,7 +77,11 @@ static bool CheckDtypeValid(AdaLayerNormQuantInputTensor& inputTensor, AdaLayerN
     if (inputTensor.smoothScalesOptional != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(inputTensor.smoothScalesOptional, inputTensor.x->GetDataType(), return false);
     }
-    OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.out, OUT_DTYPE_SUPPORT_LIST, return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.out, OUT_DTYPE_SUPPORT_LIST_REGBASE, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.out, OUT_DTYPE_SUPPORT_LIST, return false);
+    }
     OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.quantScale, SCALE_DTYPE_SUPPORT_LIST, return false);
     if (outputTensor.quantOffsetOptional != nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantOffsetOptional should be nullptr.");
@@ -208,9 +216,10 @@ aclnnStatus aclnnAdaLayerNormQuantGetWorkspaceSize(
         CHECK_RET(smoothScalesOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    int32_t dstType = out->GetDataType();
     std::tuple<aclTensor*, aclTensor*> result = l0op::AdaLayerNormQuant(
         x, scale, shift, weightOptional, biasOptional, smoothScalesOptional, static_cast<float>(epsilon), quantMode,
-        uniqueExecutor.get());
+        dstType, uniqueExecutor.get());
     const aclTensor* resultTensor = std::get<0>(result);
     const aclTensor* quantScaleTensor = std::get<1>(result);
     CHECK_RET(resultTensor != nullptr && quantScaleTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);

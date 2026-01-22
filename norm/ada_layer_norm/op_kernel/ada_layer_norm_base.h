@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,46 +15,10 @@
 #ifndef ADA_LAYER_NORM_BASE_H
 #define ADA_LAYER_NORM_BASE_H
 
-#include "kernel_operator.h"
+#include "ada_layer_norm_util.h"
 
 namespace AdaLayerNormNS {
 using namespace AscendC;
-
-constexpr uint8_t BASE_OP_CODE = 1;
-constexpr uint8_t BASE_V2_OP_CODE = 12;
-constexpr uint8_t QUANT_OP_CODE = 2;
-constexpr int32_t MAX_X_SIZE = 16384;
-constexpr int32_t TENSOR_NUM = 7;
-constexpr int32_t DATA_COUNT = 6144;
-constexpr int32_t BATCH_COUNT = 1024;
-constexpr int32_t INT8_BLOCK_NUM = 32;
-constexpr int32_t HALF_BLOCK_NUM = 16;
-constexpr int32_t FLOAT_BLOCK_NUM = 8;
-constexpr float MAX_INT8 = 127.0f;
-constexpr float ONE_FLOAT = 1.0f;
-constexpr float FACTOR_INT8 = 1.0f / 127.0f;
-
-struct RowRange {
-    int64_t rowStart;
-    int64_t rowEnd;
-    int64_t actualRowNum;
-    int64_t batchStart;
-    int64_t batchEnd;
-    int64_t dataCount;
-};
-
-struct GmAddr {
-    const GM_ADDR x = nullptr;
-    const GM_ADDR scale = nullptr;
-    const GM_ADDR shift = nullptr;
-    const GM_ADDR weight = nullptr;
-    const GM_ADDR bias = nullptr;
-    const GM_ADDR smooth_scales = nullptr;
-    const GM_ADDR out = nullptr;
-    const GM_ADDR mean = nullptr;
-    const GM_ADDR rstd = nullptr;
-    const GM_ADDR quant_scale = nullptr;
-};
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 class AdaLayerNormND {
@@ -66,18 +30,6 @@ public:
     __aicore__ inline void Process();
 
 private:
-    template <typename T1, typename T2>
-    __aicore__ inline T1 CeilA2B(T1 a, T2 b)
-    {
-        return (b != 0) ? (a + b - 1) / b : a;
-    };
-
-    template <typename T1, typename T2>
-    __aicore__ inline T1 Min(T1 a, T2 b)
-    {
-        return (a < b) ? a : b;
-    };
-
     __aicore__ inline void InitTensor();
     __aicore__ inline void InitEventId();
     __aicore__ inline void ReleaseEventId();
@@ -97,19 +49,13 @@ private:
     __aicore__ inline void Adaption(RowRange range);
     __aicore__ inline void DynamicQuant(RowRange range, int64_t batchIdx);
 
-    __aicore__ inline void CopyInData(LocalTensor<float> inputFloat, GlobalTensor<X_DTYPE> inputGm, int64_t len);
-    __aicore__ inline void CopyInWeightBias(LocalTensor<float> inputFloat, GlobalTensor<WEIGHT_DTYPE> inputGm, int64_t len);
     __aicore__ inline void CopyInOtherData(int64_t offset, int64_t len);
     __aicore__ inline void CopyInScaleShift(int64_t offset, uint16_t blockCount, int64_t len);
     __aicore__ inline void CopyInSlice(int64_t offset, int64_t scaleOffset, int64_t h, int64_t len);
-    __aicore__ inline void CopyInSliceX(int64_t offset, int64_t len);
     __aicore__ inline void CopyInX(int64_t offset, uint16_t blockCount, int64_t len);
     __aicore__ inline void BaseCopyOut(int64_t offset, uint16_t blockCount, int64_t len);
-    __aicore__ inline void QuantCopyOut(int64_t offset, uint16_t blockCount, int64_t len);
     __aicore__ inline void CopyScaleOut(int64_t offset, int64_t len);
     __aicore__ inline void CopyMeanRstdOut(int64_t offset, int64_t len);
-    __aicore__ inline void CopyNormOut(int64_t h, int64_t len);
-    __aicore__ inline void CopyInNorm(int64_t h, int64_t len);
 
 private:
     TPipe pipe;
@@ -150,7 +96,6 @@ private:
 
     event_t eventIdVToMte2;
     event_t eventIdMte2ToV;
-    event_t eventIdVToMte3;
     event_t eventIdMte3ToV;
     event_t eventIdVToS;
     event_t eventIdMte3ToS;
@@ -302,8 +247,6 @@ template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::InitEventId()
 {
     eventIdVToMte2 = static_cast<event_t>(pipe.AllocEventID<HardEvent::V_MTE2>());
-    eventIdMte2ToV = static_cast<event_t>(pipe.AllocEventID<HardEvent::MTE2_V>());
-    eventIdVToMte3 = static_cast<event_t>(pipe.AllocEventID<HardEvent::V_MTE3>());
     eventIdMte3ToV = static_cast<event_t>(pipe.AllocEventID<HardEvent::MTE3_V>());
     eventIdVToS = static_cast<event_t>(pipe.AllocEventID<HardEvent::V_S>());
     eventIdMte3ToS = static_cast<event_t>(pipe.AllocEventID<HardEvent::MTE3_S>());
@@ -324,20 +267,20 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::SliceProc
         if (hiddenDim > MAX_X_SIZE) {
             for (int64_t h = 0; h < hiddenDim; h += MAX_X_SIZE) {
                 int64_t dataCount = Min(MAX_X_SIZE, hiddenDim - h);
-                CopyInSliceX(offset + h, dataCount);
+                CopyInAndCast(xFloat, xGm[offset + h], dataCount, MAX_X_SIZE);
                 ComputeMean(dataCount, meanValue);
             }
             for (int64_t h = 0; h < hiddenDim; h += MAX_X_SIZE) {
                 int64_t dataCount = Min(MAX_X_SIZE, hiddenDim - h);
-                CopyInSliceX(offset + h, dataCount);
+                CopyInAndCast(xFloat, xGm[offset + h], dataCount, MAX_X_SIZE);
                 ComputeVar(dataCount, meanValue, varValue);
             }
         } else {
-            CopyInSliceX(offset, hiddenDim);
+            CopyInAndCast(xFloat, xGm[offset], hiddenDim, MAX_X_SIZE);
             ComputeMean(hiddenDim, meanValue);
             ComputeVar(hiddenDim, meanValue, varValue);
         }
-        float rstdValue = 1.0f / sqrt(varValue + epsilon);
+        float rstdValue = ONE_FLOAT / sqrt(varValue + epsilon);
 
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             QuantSliceCompute(rowIdx, batchCount, meanValue, rstdValue);
@@ -392,7 +335,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::FastProce
         Adaption(range);
         if constexpr (OP_CODE == QUANT_OP_CODE) {
             DynamicQuant(range, batchCount);
-            QuantCopyOut(range.rowStart * hiddenDim, range.actualRowNum, hiddenDim);
+            CopyOut(quantOutGm[range.rowStart * hiddenDim], yInt, range.actualRowNum, hiddenDim);
         } else {
             BaseCopyOut(range.rowStart * hiddenDim, range.actualRowNum, hiddenDim);
         }
@@ -417,8 +360,6 @@ template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ReleaseEventId()
 {
     pipe.ReleaseEventID<HardEvent::V_MTE2>(eventIdVToMte2);
-    pipe.ReleaseEventID<HardEvent::MTE2_V>(eventIdMte2ToV);
-    pipe.ReleaseEventID<HardEvent::V_MTE3>(eventIdVToMte3);
     pipe.ReleaseEventID<HardEvent::MTE3_V>(eventIdMte3ToV);
     pipe.ReleaseEventID<HardEvent::V_S>(eventIdVToS);
     pipe.ReleaseEventID<HardEvent::MTE3_S>(eventIdMte3ToS);

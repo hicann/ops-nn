@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -90,22 +90,21 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::QuantSlic
         }
         Abs(yFloat, xFloat, dataCount);
         PipeBarrier<PIPE_V>();
-        CopyNormOut(h, dataCount);
+        CopyOut(normGm[normOffset + h], xFloat, 1, dataCount);
         SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-        ReduceMax(reduceFloat, yFloat, yFloat, dataCount);
+        ReduceMaxCustom(reduceFloat, yFloat, dataCount);
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
-        float tmpMax = reduceFloat.GetValue(0);
-        maxValue = (tmpMax != tmpMax) ? tmpMax : (tmpMax > maxValue ? tmpMax : maxValue);
+        maxValue = AscendC::Std::max(reduceFloat.GetValue(0), maxValue);
     }
     quantScaleFloat.SetValue(batchIdx, maxValue / MAX_INT8);
     // 计算量化输出
     for (int64_t h = 0; h < hiddenDim; h += sliceSize) {
         int64_t dataCount = Min(sliceSize, hiddenDim - h);
-        CopyInNorm(h, dataCount);
+        CopyInAndCast(xFloat, normGm[normOffset + h], dataCount, DATA_COUNT);
         ComputeSliceQuant(maxValue, dataCount);
-        QuantCopyOut(offset + h, 1, dataCount);
+        CopyOut(quantOutGm[offset + h], yInt, 1, dataCount);
     }
 }
 
@@ -238,7 +237,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::SingleLay
     }
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
-    float rstdValue = 1.0f / sqrt(reduceFloat.GetValue(0) + epsilon);
+    float rstdValue = ONE_FLOAT / sqrt(reduceFloat.GetValue(0) + epsilon);
     if constexpr (OP_CODE == BASE_V2_OP_CODE) {
         rstdOutFloat.SetValue(batchIdx, rstdValue);
     }
@@ -275,9 +274,9 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::Adaption(
             yOffset += hiddenDimCeil;
         }
     } else {
-        Mul(yFloat, yFloat, scaleFloat, range.dataCount);
+        Mul(yFloat, yFloat, scaleFloat, hiddenDim);
         PipeBarrier<PIPE_V>();
-        Add(yFloat, yFloat, shiftFloat, range.dataCount);
+        Add(yFloat, yFloat, shiftFloat, hiddenDim);
     }
 }
 
@@ -295,8 +294,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::DynamicQu
     PipeBarrier<PIPE_V>();
     if (range.actualRowNum > 1) {
         for (int64_t rowIdx = 0; rowIdx < range.actualRowNum; rowIdx++) {
-            ReduceMax(
-                reduceFloat[rowIdx], xFloat[rowIdx * hiddenDimCeil], xFloat[rowIdx * hiddenDimCeil], hiddenDim, false);
+            ReduceMaxCustom(reduceFloat[rowIdx], xFloat[rowIdx * hiddenDimCeil], hiddenDim);
         }
         PipeBarrier<PIPE_V>();
         SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -315,7 +313,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::DynamicQu
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
     } else {
-        ReduceMax(reduceFloat, xFloat, xFloat, hiddenDim, false);
+        ReduceMaxCustom(reduceFloat, xFloat, hiddenDim);
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -333,55 +331,17 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::DynamicQu
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInData(
-    LocalTensor<float> inputFloat, GlobalTensor<X_DTYPE> inputGm, int64_t len)
-{
-    DataCopyExtParams copyInParams{1, static_cast<uint32_t>(len * sizeof(X_DTYPE)), 0, 0, 0};
-    DataCopyPadExtParams<X_DTYPE> padParams{false, 0, 0, 0};
-    if constexpr (std::is_same_v<X_DTYPE, float>) {
-        DataCopyPad(inputFloat, inputGm, copyInParams, padParams);
-    } else {
-        DataCopyPad(inputFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], inputGm, copyInParams, padParams);
-    }
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    if constexpr (!std::is_same_v<X_DTYPE, float>) {
-        Cast(inputFloat, inputFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], RoundMode::CAST_NONE, len);
-        PipeBarrier<PIPE_V>();
-    }
-}
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInWeightBias(
-    LocalTensor<float> inputFloat, GlobalTensor<WEIGHT_DTYPE> inputGm, int64_t len)
-{
-    DataCopyExtParams copyInParams{1, static_cast<uint32_t>(len * sizeof(WEIGHT_DTYPE)), 0, 0, 0};
-    DataCopyPadExtParams<WEIGHT_DTYPE> padParams{false, 0, 0, 0};
-    if constexpr (std::is_same_v<WEIGHT_DTYPE, float>) {
-        DataCopyPad(inputFloat, inputGm, copyInParams, padParams);
-    } else {
-        DataCopyPad(inputFloat.ReinterpretCast<WEIGHT_DTYPE>()[DATA_COUNT], inputGm, copyInParams, padParams);
-    }
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    if constexpr (!std::is_same_v<WEIGHT_DTYPE, float>) {
-        Cast(inputFloat, inputFloat.ReinterpretCast<WEIGHT_DTYPE>()[DATA_COUNT], RoundMode::CAST_NONE, len);
-        PipeBarrier<PIPE_V>();
-    }
-}
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInOtherData(int64_t offset, int64_t len)
 {
     if (hasWeight) {
-        CopyInWeightBias(weightFloat, weightGm[offset], len);
+        CopyInAndCast(weightFloat, weightGm[offset], len, DATA_COUNT);
     }
     if (hasBias) {
-        CopyInWeightBias(biasFloat, biasGm[offset], len);
+        CopyInAndCast(biasFloat, biasGm[offset], len, DATA_COUNT);
     }
     if constexpr (OP_CODE == QUANT_OP_CODE) {
         if (hasSmooth) {
-            CopyInData(smoothFloat, smoothGm[offset], len);
+            CopyInAndCast(smoothFloat, smoothGm[offset], len, DATA_COUNT);
         }
     }
 }
@@ -403,8 +363,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSca
         DataCopyPad(scaleFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], scaleGm[offset], copyInParams, padParams);
         DataCopyPad(shiftFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], shiftGm[offset], copyInParams, padParams);
     }
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    PIPE_MTE2_V();
     int64_t scaleCount = blockCount > 1 ? blockCount * hiddenDimCeil : len;
     if constexpr (!std::is_same_v<X_DTYPE, float>) {
         Cast(scaleFloat, scaleFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], RoundMode::CAST_NONE, scaleCount);
@@ -419,27 +378,9 @@ template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSlice(
     int64_t offset, int64_t scaleOffset, int64_t h, int64_t len)
 {
-    CopyInData(xFloat, xGm[offset + h], len);
+    CopyInAndCast(xFloat, xGm[offset + h], len, DATA_COUNT);
     CopyInScaleShift(scaleOffset, 1, len);
     CopyInOtherData(h, len);
-}
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSliceX(int64_t offset, int64_t len)
-{
-    DataCopyExtParams copyInParams{1, static_cast<uint32_t>(len * sizeof(X_DTYPE)), 0, 0, 0};
-    DataCopyPadExtParams<X_DTYPE> padParams{false, 0, 0, 0};
-    if constexpr (std::is_same_v<X_DTYPE, float>) {
-        DataCopyPad(xFloat, xGm[offset], copyInParams, padParams);
-    } else {
-        DataCopyPad(xFloat.ReinterpretCast<X_DTYPE>()[MAX_X_SIZE], xGm[offset], copyInParams, padParams);
-    }
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    if constexpr (!std::is_same_v<X_DTYPE, float>) {
-        Cast(xFloat, xFloat.ReinterpretCast<X_DTYPE>()[MAX_X_SIZE], RoundMode::CAST_NONE, len);
-        PipeBarrier<PIPE_V>();
-    }
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
@@ -457,8 +398,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInX(i
     } else {
         DataCopyPad(xFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], xGm[offset], copyInParams, padParams);
     }
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    PIPE_MTE2_V();
     if constexpr (!std::is_same_v<X_DTYPE, float>) {
         Cast(xFloat, xFloat.ReinterpretCast<X_DTYPE>()[DATA_COUNT], RoundMode::CAST_NONE, blockCount * hiddenDimCeil);
         PipeBarrier<PIPE_V>();
@@ -473,19 +413,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseCopyO
         int64_t dataCount = blockCount > 1 ? blockCount * hiddenDimCeil : len;
         Cast(yFloat.ReinterpretCast<X_DTYPE>(), yFloat, RoundMode::CAST_RINT, dataCount);
     }
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    DataCopyExtParams copyOutParams{blockCount, static_cast<uint32_t>(len * sizeof(X_DTYPE)), 0, 0, 0};
-    DataCopyPad(outGm[offset], yFloat.ReinterpretCast<X_DTYPE>(), copyOutParams);
-}
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::QuantCopyOut(int64_t offset, uint16_t blockCount, int64_t len)
-{
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    DataCopyExtParams copyOutParams{blockCount, static_cast<uint32_t>(len * sizeof(int8_t)), 0, 0, 0};
-    DataCopyPad(quantOutGm[offset], yInt, copyOutParams);
+    CopyOut(outGm[offset], yFloat.ReinterpretCast<X_DTYPE>(), blockCount, len);
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
@@ -503,6 +431,7 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyMeanR
     if constexpr (!std::is_same_v<X_DTYPE, float>) {
         Cast(meanOutFloat.ReinterpretCast<X_DTYPE>(), meanOutFloat, RoundMode::CAST_RINT, len);
         Cast(rstdOutFloat.ReinterpretCast<X_DTYPE>(), rstdOutFloat, RoundMode::CAST_RINT, len);
+        event_t eventIdVToMte3 = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
     }
@@ -512,23 +441,3 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyMeanR
     SetFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
     WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
 }
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyNormOut(int64_t h, int64_t dataCount)
-{
-    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-    DataCopyExtParams copyOutParams{1, static_cast<uint32_t>(dataCount * sizeof(float)), 0, 0, 0};
-    DataCopyPad(normGm[normOffset + h], xFloat, copyOutParams);
-}
-
-template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInNorm(int64_t h, int64_t dataCount)
-{
-    DataCopyExtParams copyInParams{1, static_cast<uint32_t>(dataCount * sizeof(float)), 0, 0, 0};
-    DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
-    DataCopyPad(xFloat, normGm[normOffset + h], copyInParams, padParams);
-    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-}
-

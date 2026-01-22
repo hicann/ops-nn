@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,21 +21,21 @@
 
 using namespace std;
 
-class AdaLayerNormTiling : public testing::Test
+class AdaLayerNormQuantTiling : public testing::Test
 {
 protected:
     static void SetUpTestCase()
     {
-        std::cout << "AdaLayerNormTiling SetUp" << std::endl;
+        std::cout << "AdaLayerNormQuantTiling SetUp" << std::endl;
     }
 
     static void TearDownTestCase()
     {
-        std::cout << "AdaLayerNormTiling TearDown" << std::endl;
+        std::cout << "AdaLayerNormQuantTiling TearDown" << std::endl;
     }
 };
 
-TEST_F(AdaLayerNormTiling, AdaLayerNormTiling_001)
+TEST_F(AdaLayerNormQuantTiling, AdaLayerNormQuantTiling_001)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -61,7 +61,7 @@ TEST_F(AdaLayerNormTiling, AdaLayerNormTiling_001)
         bool isRegBase = false;
     } compile_info;
 
-    std::string op_type("AdaLayerNorm");
+    std::string op_type("AdaLayerNormQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
@@ -76,20 +76,24 @@ TEST_F(AdaLayerNormTiling, AdaLayerNormTiling_001)
     gert::StorageShape shift = {{4, 128}, {4, 128}};
     gert::StorageShape weight = {{128}, {128}};
     gert::StorageShape bias = {{128}, {128}};
+    gert::StorageShape smoothScales = {{128}, {128}};
     gert::StorageShape out = {{4, 16, 128}, {4, 16, 128}};
+    gert::StorageShape quantScale = {{4, 16}, {4, 16}};
     auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(5, 1)
-                      .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&x, &scale, &shift, &weight, &bias})
-                      .OutputShapes({&out})
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x, &scale, &shift, &weight, &bias, &smoothScales})
+                      .OutputShapes({&out, &quantScale})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.00001)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)

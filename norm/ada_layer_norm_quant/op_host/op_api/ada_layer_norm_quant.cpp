@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ OP_TYPE_REGISTER(AdaLayerNormQuant);
 const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(
     const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
     const aclTensor* biasOptional, const aclTensor* smoothScalesOptional, float epsilon, const char* quantMode,
-    aclOpExecutor* executor)
+    int32_t dstType, aclOpExecutor* executor)
 {
     L0_DFX(AdaLayerNormQuant, x, scale, shift, weightOptional, biasOptional, smoothScalesOptional, epsilon, quantMode);
 
@@ -36,7 +36,7 @@ const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(
     for (size_t i = 0; i < dimNum - 1; i++) {
         scaleShape.AppendDim(x->GetViewShape().GetDim(i));
     }
-    auto out = executor->AllocTensor(x->GetViewShape(), DataType::DT_INT8, x->GetViewFormat());
+    auto out = executor->AllocTensor(x->GetViewShape(), op::DataType(dstType), x->GetViewFormat());
     auto quantScale = executor->AllocTensor(scaleShape, DataType::DT_FLOAT, op::Format::FORMAT_ND);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(

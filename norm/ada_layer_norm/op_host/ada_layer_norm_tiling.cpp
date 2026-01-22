@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,9 +15,12 @@
 #include "register/op_def_registry.h"
 #include "log/log.h"
 #include "error_util.h"
+#include "tiling_base/tiling_util.h"
 #include "ada_layer_norm_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr int32_t INPUT_TENSOR_NUM = 3;
 constexpr int32_t INDEX_ZERO = 0;
 constexpr int32_t INDEX_ONE = 1;
@@ -25,10 +28,12 @@ constexpr int32_t INDEX_TWO = 2;
 constexpr int32_t INDEX_THREE = 3;
 constexpr int32_t INDEX_FOUR = 4;
 constexpr int32_t INDEX_FIVE = 5;
-constexpr int32_t BLOCK_NUM = 32;
+constexpr int32_t BLOCK_SIZE = 32;
 
 constexpr int64_t MULTI_ROW_SIZE = 3072;
 constexpr int64_t SINGLE_ROW_SIZE = 6144;
+constexpr uint32_t FP32_BYTE = 4;
+constexpr uint32_t FP16_BYTE = 2;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 
 constexpr uint8_t BASE_OP_CODE = 1;
@@ -36,6 +41,7 @@ constexpr uint8_t BASE_V2_OP_CODE = 12;
 constexpr uint8_t QUANT_OP_CODE = 2;
 constexpr uint8_t TILING_KEY_ONE = 1;
 constexpr uint8_t TILING_KEY_TWO = 2;
+constexpr uint8_t TILING_KEY_FACTOR = 10;
 
 class AdaLayerNormTiling
 {
@@ -47,6 +53,8 @@ public:
 private:
     int32_t SplitCore(int32_t coreNumPlatform);
     void FillTilingData();
+    void DoLayerNormTiling();
+    uint8_t GetTilingKey(bool isRegBase);
     template <typename T1, typename T2>
     inline auto CeilA2B(T1 a, T2 b) const -> T1;
 
@@ -115,12 +123,16 @@ ge::graphStatus AdaLayerNormTiling::RunBigKernelTiling()
     }
     seqLen = xShape.GetDim(xDim - INDEX_TWO);
     hiddenDim = xShape.GetDim(xDim - INDEX_ONE);
-    hiddenDimCeil = CeilA2B(hiddenDim, BLOCK_NUM) * BLOCK_NUM;
+    hiddenDimCeil = CeilA2B(hiddenDim, BLOCK_SIZE) * BLOCK_SIZE;
     epsilon = *tilingContext->GetAttrs()->GetAttrPointer<float>(0);
 
     auto compileInfo = reinterpret_cast<const AdaLayerNormCompileInfo*>(tilingContext->GetCompileInfo());
     int32_t coreNumPlatform = compileInfo->coreNum;
     int32_t needCoreNum = SplitCore(coreNumPlatform);
+    if (compileInfo->isRegBase) {
+        DoLayerNormTiling();
+    }
+
     size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
     if (opCode == QUANT_OP_CODE && hiddenDim > SINGLE_ROW_SIZE) {
         workspaces[0] = WORK_SPACE_SIZE + needCoreNum * hiddenDimCeil * sizeof(float);
@@ -128,12 +140,8 @@ ge::graphStatus AdaLayerNormTiling::RunBigKernelTiling()
         workspaces[0] = WORK_SPACE_SIZE;
     }
 
-    tilingContext->SetBlockDim(coreNumPlatform);
-    if (opCode == BASE_V2_OP_CODE && isWeightFloat) {
-        tilingContext->SetTilingKey(TILING_KEY_TWO);
-    } else {
-        tilingContext->SetTilingKey(TILING_KEY_ONE);
-    }
+    tilingContext->SetBlockDim(needCoreNum);
+    tilingContext->SetTilingKey(GetTilingKey(compileInfo->isRegBase));
     FillTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -147,6 +155,7 @@ int32_t AdaLayerNormTiling::SplitCore(int32_t coreNumPlatform)
     } else if (hiddenDim > SINGLE_ROW_SIZE) {
         int64_t batch = CeilA2B(hiddenDim, SINGLE_ROW_SIZE);
         sliceSize = CeilA2B(hiddenDim, batch);
+        sliceSize = CeilA2B(sliceSize, BLOCK_SIZE) * BLOCK_SIZE;
     }
 
     int64_t singleCoreNum = coreNumPlatform != 0 ? (batchSize * seqLen) / coreNumPlatform : 0;
@@ -156,6 +165,41 @@ int32_t AdaLayerNormTiling::SplitCore(int32_t coreNumPlatform)
     tilingData.set_sliceSize(sliceSize);
     tilingData.set_rowNum(rowNum);
     return singleCoreNum > 0 ? coreNumPlatform : tailNum;
+}
+
+uint8_t AdaLayerNormTiling::GetTilingKey(bool isRegBase)
+{
+    uint8_t tilingKey = 0;
+    if (isRegBase) {
+        tilingKey = (hiddenDim > SINGLE_ROW_SIZE) ? TILING_KEY_TWO : TILING_KEY_ONE;
+        tilingKey *= TILING_KEY_FACTOR;
+    }
+    tilingKey += (opCode == BASE_V2_OP_CODE && isWeightFloat) ? TILING_KEY_TWO : TILING_KEY_ONE;
+    return tilingKey;
+}
+
+void AdaLayerNormTiling::DoLayerNormTiling()
+{
+    uint32_t minValue;
+    uint32_t maxValue;
+    if (hiddenDim > SINGLE_ROW_SIZE) {
+        int64_t sliceSize = tilingData.get_sliceSize();
+        int64_t tmpBufferSize = 0;
+        ge::Shape inputShape({1, sliceSize});
+        uint32_t welfordXByte = (dataType == ge::DataType::DT_FLOAT) ? FP32_BYTE : FP16_BYTE;
+        AscendC::GetWelfordUpdateMaxMinTmpSize(inputShape, welfordXByte, FP32_BYTE, false, true, maxValue, minValue);
+        tmpBufferSize += maxValue;
+        AscendC::GetWelfordFinalizeMaxMinTmpSize(inputShape, FP32_BYTE, false, maxValue, minValue);
+        tmpBufferSize += maxValue;
+        AscendC::GetNormalizeMaxMinTmpSize(inputShape, FP32_BYTE, FP32_BYTE, false, true, false, maxValue, minValue);
+        tmpBufferSize += maxValue;
+        tilingData.set_tmpBufferSize(tmpBufferSize);
+    } else {
+        ge::Shape inputShape({tilingData.get_rowNum(), hiddenDim});
+        AscendC::GetLayerNormMaxMinTmpSize(inputShape, FP32_BYTE, true, true, false, maxValue, minValue);
+        AscendC::GetLayerNormNDTilingInfo(inputShape, maxValue, FP32_BYTE, true, true, tilingData.layerNormTiling);
+        tilingData.set_tmpBufferSize(maxValue);
+    }
 }
 
 void AdaLayerNormTiling::FillTilingData()
@@ -213,6 +257,10 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
+    uint64_t ubSizePlatForm = 0;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    compileInfo->ubSizePlatForm = ubSizePlatForm;
+    compileInfo->isRegBase = IsRegbaseSocVersion(context);
 
     OP_TILING_CHECK(
         compileInfo->coreNum <= 0,

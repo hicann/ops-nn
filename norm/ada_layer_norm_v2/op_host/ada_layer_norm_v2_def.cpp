@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -25,49 +25,48 @@ static const std::vector<ge::Format> format =
     class AdaLayerNormV2 : public OpDef {
     public:
         explicit AdaLayerNormV2(const char* name) : OpDef(name) {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Input("scale")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Input("shift")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Input("weight")
-                .ParamType(OPTIONAL)
-                .DataType(weightDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Input("bias")
-                .ParamType(OPTIONAL)
-                .DataType(weightDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Output("out")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Output("mean")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
-            this->Output("rstd")
-                .ParamType(REQUIRED)
-                .DataType(xDataType)
-                .Format(format)
-                .UnknownShapeFormat(format);
+            this->Input("x").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Input("scale").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Input("shift").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Input("weight").ParamType(OPTIONAL).DataType(weightDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Input("bias").ParamType(OPTIONAL).DataType(weightDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Output("out").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Output("mean").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            this->Output("rstd").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
             this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
             this->AICore().AddConfig("ascend910b");
             this->AICore().AddConfig("ascend910_93");
+            
+            OpAICoreConfig config_910_95;
+            config_910_95.Input("x").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Input("scale").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Input("shift").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Input("weight").ParamType(OPTIONAL).DataType(weightDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Input("bias").ParamType(OPTIONAL).DataType(weightDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Output("out").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Output("mean").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.Output("rstd").ParamType(REQUIRED).DataType(xDataType)
+                .Format(format).UnknownShapeFormat(format);
+            config_910_95.DynamicCompileStaticFlag(true)
+                .DynamicRankSupportFlag(true)
+                .DynamicShapeSupportFlag(true)
+                .ExtendCfgInfo("opFile.value", "ada_layer_norm_v2_apt");
+            this->AICore().AddConfig("ascend910_95", config_910_95);
         }
     };
     OP_ADD(AdaLayerNormV2);
