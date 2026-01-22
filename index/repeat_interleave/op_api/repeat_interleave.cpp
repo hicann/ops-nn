@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 
 using namespace op;
 
-static const int64_t AXIS_LIMIT = 8;  // L0算子最大支持8维
+static const int64_t AXIS_LIMIT = 8; // L0算子最大支持8维
 static const int64_t INT32_MAX_NUM = 2147483647;
 static const int64_t MTE_NUM = 256;
 
@@ -31,31 +31,32 @@ namespace l0op {
 OP_TYPE_REGISTER(RepeatInterleave);
 OP_TYPE_REGISTER(RepeatInterleaveV2);
 static const std::initializer_list<op::DataType> AICORE910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
-static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize) {
+static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize)
+{
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
         return false;
     }
 
-    if(outputSize >= INT32_MAX_NUM) {
+    if (outputSize >= INT32_MAX_NUM) {
         return false;
     }
 
     // 这种情况是V1特殊优化场景，走V1
     int64_t xDimNum = x->GetViewShape().GetDimNum();
-    if(xDimNum == 1 && repeats->GetViewShape().GetDimNum() == 1 &&
-       repeats->GetViewShape().GetDim(0) == x->GetViewShape().GetDim(0)) {
+    if (xDimNum == 1 && repeats->GetViewShape().GetDimNum() == 1 &&
+        repeats->GetViewShape().GetDim(0) == x->GetViewShape().GetDim(0)) {
         // repeats and z one-to-one，and rowLength = 1 and not is int64
-        if(x->GetDataType() != op::DataType::DT_INT64) {
+        if (x->GetDataType() != op::DataType::DT_INT64) {
             return false;
         }
     }
 
     if (xDimNum == 0) {
-        return false; //V2 不支持标量tensor
+        return false; // V2 不支持标量tensor
     }
 
     auto xDimSize = x->GetViewShape().GetDimNum();
@@ -81,34 +82,39 @@ static op::Shape RepeatInterleaveInferShape(const aclTensor* x, int64_t axis, in
 }
 
 // 只支持AICORE
-const aclTensor *RepeatInterleave(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
-    aclOpExecutor *executor)
+const aclTensor* RepeatInterleave(
+    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor)
 {
     L0_DFX(RepeatInterleave, x, repeats, axis, outputSize);
     op::Shape outShape = RepeatInterleaveInferShape(x, axis, outputSize);
     auto out = executor->AllocTensor(outShape, x->GetDataType(), x->GetViewFormat());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleave, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-    OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return out;
 }
 
 // 只支持AICORE
-const aclTensor *RepeatInterleaveV2(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
-    aclOpExecutor *executor)
+const aclTensor* RepeatInterleaveV2(
+    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor)
 {
     L0_DFX(RepeatInterleaveV2, x, repeats, axis, outputSize);
     op::Shape outShape = RepeatInterleaveInferShape(x, axis, outputSize);
     auto out = executor->AllocTensor(outShape, x->GetDataType(), x->GetViewFormat());
-    if(IsRepeatInterleaveV2Support(x, repeats, axis, outputSize)) {
+    if (IsRepeatInterleaveV2Support(x, repeats, axis, outputSize)) {
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleaveV2, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-        OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        OP_CHECK(
+            ret == ACLNN_SUCCESS,
+            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
             return nullptr);
     } else {
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleave, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-        OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        OP_CHECK(
+            ret == ACLNN_SUCCESS,
+            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
             return nullptr);
     }
     return out;
 }
-}
+} // namespace l0op

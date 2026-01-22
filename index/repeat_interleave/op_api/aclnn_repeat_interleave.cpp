@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 #include "aclnn_repeat_interleave.h"
 #include "level0/arange.h"
 #include "level0/broadcast_to.h"
@@ -26,44 +27,44 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> ASCEND_DTYPE_SUPPORT_LIST = {op::DataType::DT_UINT8,
-    op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_BOOL, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> ASCEND_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_UINT8, op::DataType::DT_INT8, op::DataType::DT_INT16,   op::DataType::DT_INT32,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_SELF = {op::DataType::DT_UINT8,
-    op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_BOOL, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16,
-    op::DataType::DT_UINT16, op::DataType::DT_UINT32, op::DataType::DT_UINT64};
+static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_SELF = {
+    op::DataType::DT_UINT8, op::DataType::DT_INT8,   op::DataType::DT_INT16,   op::DataType::DT_INT32,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
+    op::DataType::DT_BF16,  op::DataType::DT_UINT16, op::DataType::DT_UINT32,  op::DataType::DT_UINT64};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {op::DataType::DT_UINT8,
-    op::DataType::DT_INT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_BOOL, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_UINT8,   op::DataType::DT_INT8,  op::DataType::DT_INT16,
+    op::DataType::DT_INT32,   op::DataType::DT_INT64, op::DataType::DT_BOOL,
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
-
-static const std::initializer_list<DataType> GetDtypeSupportList() {
+static const std::initializer_list<DataType> GetDtypeSupportList()
+{
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95) {
         return ASCEND910_95_DTYPE_SUPPORT_LIST_SELF;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND_DTYPE_SUPPORT_LIST;
 }
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_REPEATS = {op::DataType::DT_INT64};
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_REPEATS_TENSOR = {op::DataType::DT_INT64,
-    op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_REPEATS_TENSOR = {
+    op::DataType::DT_INT64, op::DataType::DT_INT32};
 
 static const std::string STR_SELF = "self";
 static const std::string STR_REPEATS = "repeats";
 static const std::string STR_OUT = "out";
 
-
 // 得到tensor的维度数
 static inline int64_t GetTensorDimNum(const aclTensor* self)
 {
-    return (int64_t) (self->GetViewShape().GetDimNum());
+    return (int64_t)(self->GetViewShape().GetDimNum());
 }
 
 // 将dim转变为正整数
@@ -111,7 +112,7 @@ static inline bool CheckRepeatsDimRange(const aclTensor* repeats)
 }
 
 // dim的取值范围为 [-N, N-1]。0维场景，不允许传入dim
-static bool CheckDimRange(const aclTensor *self, int64_t dim)
+static bool CheckDimRange(const aclTensor* self, int64_t dim)
 {
     auto selfDim = GetTensorDimNum(self);
     // self为0维的场景，不允许传入dim
@@ -123,8 +124,9 @@ static bool CheckDimRange(const aclTensor *self, int64_t dim)
     auto dimMin = std::min(selfDim - 1, -selfDim);
     auto dimMax = std::max(selfDim - 1, -selfDim);
     if (dim > dimMax || dim < dimMin) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld).",
-                dimMin, dimMax, dim);
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [%ld, %ld], but got %ld).",
+            dimMin, dimMax, dim);
         return false;
     }
 
@@ -132,7 +134,7 @@ static bool CheckDimRange(const aclTensor *self, int64_t dim)
 }
 
 // tensor维度数不能超过8维
-static inline bool CheckTensorDimSize(const aclTensor *self)
+static inline bool CheckTensorDimSize(const aclTensor* self)
 {
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     return true;
@@ -140,7 +142,7 @@ static inline bool CheckTensorDimSize(const aclTensor *self)
 
 // dim已经被校验过是否处于合理的范围内, repeats已经被校验过为 0 / 1维tensor
 // 校验tensor repeats的大小是否允许 有dim场景
-static bool CheckRepeatsSizeDim(const aclTensor *self, const aclTensor *repeats, int64_t dim)
+static bool CheckRepeatsSizeDim(const aclTensor* self, const aclTensor* repeats, int64_t dim)
 {
     // 维度数为0的tensor为允许的
     int64_t repeatDim = GetTensorDimNum(repeats);
@@ -153,10 +155,11 @@ static bool CheckRepeatsSizeDim(const aclTensor *self, const aclTensor *repeats,
     int64_t dimPositive = WrapDim(dim, selfDimNum);
     auto selfSize = (self->GetViewShape())[dimPositive];
     int64_t repeatSize = (repeats->GetViewShape())[0];
-    if (repeatSize != selfSize && repeatSize !=1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-        "Tensor repeats must be size 1 or have the same size %ld as input along dim, but got %ld.",
-        selfSize, repeatSize);
+    if (repeatSize != selfSize && repeatSize != 1) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "Tensor repeats must be size 1 or have the same size %ld as input along dim, but got %ld.", selfSize,
+            repeatSize);
         return false;
     }
     return true;
@@ -164,7 +167,7 @@ static bool CheckRepeatsSizeDim(const aclTensor *self, const aclTensor *repeats,
 
 // dim已经被校验过是否处于合理的范围内, repeats已经被校验过为 0 / 1维tensor
 // 校验tensor repeats的大小是否允许 无dim场景
-static bool CheckRepeatsSize(const aclTensor *self, const aclTensor *repeats)
+static bool CheckRepeatsSize(const aclTensor* self, const aclTensor* repeats)
 {
     // 维度数为0的tensor为允许的
     int64_t repeatDim = GetTensorDimNum(repeats);
@@ -176,15 +179,16 @@ static bool CheckRepeatsSize(const aclTensor *self, const aclTensor *repeats)
     int64_t selfElementsNum = GetTensorElementsNum(self);
     int64_t repeatSize = (repeats->GetViewShape())[0];
     if (repeatSize != selfElementsNum && repeatSize != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-        "Tensor repeats size %ld must be 1 or the number of elements in tensor self %ld.", repeatSize, selfElementsNum);
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Tensor repeats size %ld must be 1 or the number of elements in tensor self %ld.",
+            repeatSize, selfElementsNum);
         return false;
     }
     return true;
 }
 
 // 校验self为空tensor场景时，tensor repeats必须为empty / 0维1元素场景 / 1维1元素场景
-static bool CheckEmptyTensor(const aclTensor *self, const aclTensor *repeats)
+static bool CheckEmptyTensor(const aclTensor* self, const aclTensor* repeats)
 {
     if (self->IsEmpty()) {
         if (repeats->IsEmpty()) {
@@ -196,15 +200,18 @@ static bool CheckEmptyTensor(const aclTensor *self, const aclTensor *repeats)
         } else if (repeatDimNum == 1 && GetTensorElementsNum(repeats) == 1) {
             return true;
         }
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When tensor self is empty, repeats should be empty / 0 dim tensor / 1 dim \
-tensor with only 1 elements, but got shape %s.", op::ToString(repeats->GetViewShape()).GetString());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When tensor self is empty, repeats should be empty / 0 dim tensor / 1 dim \
+tensor with only 1 elements, but got shape %s.",
+            op::ToString(repeats->GetViewShape()).GetString());
         return false;
     }
     return true;
 }
 
 // 校验repeatInterleave算子计算后生成的tensor与out的shape一致
-static bool CheckRepeatresOutShape(const aclTensor *repeatRes, aclTensor *out)
+static bool CheckRepeatresOutShape(const aclTensor* repeatRes, aclTensor* out)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(repeatRes, out, return false);
     return true;
@@ -244,14 +251,12 @@ static const aclTensor* IntToTensor(int64_t repeats, aclOpExecutor* executor)
     }
 
     FVector<int64_t> tmpVector = {static_cast<int64_t>(repeats)};
-    auto repeatsScalar = executor->AllocScalar(repeats);
     auto repeatsTensor = executor->ConvertToTensor(tmpVector.data(), tmpVector.size(), op::DataType::DT_INT64);
     return repeatsTensor;
 }
 
-
 // 无dim, tensor repeats
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *repeats, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* repeats, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
@@ -280,7 +285,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *repeats, 
 }
 
 // 有dim, tensor repeats
-static aclnnStatus CheckParamsDim(const aclTensor *self, const aclTensor *repeats, int64_t dim, const aclTensor *out)
+static aclnnStatus CheckParamsDim(const aclTensor* self, const aclTensor* repeats, int64_t dim, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
@@ -309,7 +314,7 @@ static aclnnStatus CheckParamsDim(const aclTensor *self, const aclTensor *repeat
 }
 
 // 无dim, int repeats
-static aclnnStatus CheckParamsInt(const aclTensor *self, int64_t repeats, const aclTensor *out)
+static aclnnStatus CheckParamsInt(const aclTensor* self, int64_t repeats, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
@@ -330,7 +335,7 @@ static aclnnStatus CheckParamsInt(const aclTensor *self, int64_t repeats, const 
 }
 
 // 有dim, int repeats
-static aclnnStatus CheckParamsDimInt(const aclTensor *self, int64_t repeats, int64_t dim, const aclTensor *out)
+static aclnnStatus CheckParamsDimInt(const aclTensor* self, int64_t repeats, int64_t dim, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
@@ -354,7 +359,7 @@ static aclnnStatus CheckParamsDimInt(const aclTensor *self, int64_t repeats, int
 }
 
 // repeatinterleave.Tensor
-static aclnnStatus CheckParamsTensor(const aclTensor *repeats, const aclTensor *out)
+static aclnnStatus CheckParamsTensor(const aclTensor* repeats, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     OP_CHECK_NULL(repeats, return ACLNN_ERR_PARAM_NULLPTR);
@@ -376,7 +381,8 @@ static aclnnStatus CheckParamsTensor(const aclTensor *repeats, const aclTensor *
 }
 
 // 在需要的场景下，进行cast操作
-static const aclTensor* CastIfNeeded(const aclTensor* x, bool needCast, op::DataType dtype, aclOpExecutor* executor) {
+static const aclTensor* CastIfNeeded(const aclTensor* x, bool needCast, op::DataType dtype, aclOpExecutor* executor)
+{
     if (needCast) {
         x = l0op::Cast(x, dtype, executor);
         if (x == nullptr) {
@@ -387,8 +393,9 @@ static const aclTensor* CastIfNeeded(const aclTensor* x, bool needCast, op::Data
 }
 
 // 无dim, tensor repeats
-aclnnStatus aclnnRepeatInterleaveGetWorkspaceSize(const aclTensor *self, const aclTensor* repeats, int64_t outputSize,
-    aclTensor *out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRepeatInterleaveGetWorkspaceSize(
+    const aclTensor* self, const aclTensor* repeats, int64_t outputSize, aclTensor* out, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -437,8 +444,8 @@ aclnnStatus aclnnRepeatInterleaveGetWorkspaceSize(const aclTensor *self, const a
     auto flattenSelf = l0op::Reshape(selfContiguous, flattenShape, uniqueExecutor.get());
     CHECK_RET(flattenSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto repeatInterleaveOut = l0op::RepeatInterleave(flattenSelf, repeatsContiguous, 0, outputSize,
-        uniqueExecutor.get());
+    auto repeatInterleaveOut =
+        l0op::RepeatInterleave(flattenSelf, repeatsContiguous, 0, outputSize, uniqueExecutor.get());
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
@@ -455,8 +462,9 @@ aclnnStatus aclnnRepeatInterleaveGetWorkspaceSize(const aclTensor *self, const a
 }
 
 // 有dim, tensor repeats
-aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(const aclTensor* self, const aclTensor* repeats,
-    int64_t dim, int64_t outputSize, aclTensor *out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(
+    const aclTensor* self, const aclTensor* repeats, int64_t dim, int64_t outputSize, aclTensor* out,
+    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -467,7 +475,8 @@ aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(const aclTensor* self, 
     auto ret = CheckParamsDim(self, repeats, dim, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 【self + repeats为空tensor】+ 【self为空tensor, repeats非空 1元素】+ 【self非空但是repeats为0】场景，直接返回空tensor
+    // 【self + repeats为空tensor】+ 【self为空tensor, repeats非空 1元素】+
+    // 【self非空但是repeats为0】场景，直接返回空tensor
     if (self->IsEmpty() || outputSize == 0) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -491,8 +500,8 @@ aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(const aclTensor* self, 
     int64_t selfDimNum = GetTensorDimNum(self);
     dim = WrapDim(dim, selfDimNum); // 将负数dim转为正数dim
 
-    auto repeatInterleaveOut = l0op::RepeatInterleaveV2(selfContiguous, repeatsContiguous, dim, outputSize,
-        uniqueExecutor.get());
+    auto repeatInterleaveOut =
+        l0op::RepeatInterleaveV2(selfContiguous, repeatsContiguous, dim, outputSize, uniqueExecutor.get());
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
@@ -509,8 +518,9 @@ aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(const aclTensor* self, 
 }
 
 // 无dim, int repeats
-aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(const aclTensor *self, int64_t repeats, int64_t outputSize,
-    aclTensor *out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(
+    const aclTensor* self, int64_t repeats, int64_t outputSize, aclTensor* out, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -573,8 +583,9 @@ aclnnStatus aclnnRepeatInterleaveIntGetWorkspaceSize(const aclTensor *self, int6
 }
 
 // 有dim, int repeats
-aclnnStatus aclnnRepeatInterleaveIntWithDimGetWorkspaceSize(const aclTensor* self, int64_t repeats, int64_t dim,
-    int64_t outputSize, aclTensor *out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRepeatInterleaveIntWithDimGetWorkspaceSize(
+    const aclTensor* self, int64_t repeats, int64_t dim, int64_t outputSize, aclTensor* out, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -614,8 +625,8 @@ aclnnStatus aclnnRepeatInterleaveIntWithDimGetWorkspaceSize(const aclTensor* sel
     int64_t selfDimNum = GetTensorDimNum(self);
     dim = WrapDim(dim, selfDimNum);
 
-    auto repeatInterleaveOut = l0op::RepeatInterleaveV2(selfContiguous, repeatsTensor, dim, outputSize,
-        uniqueExecutor.get());
+    auto repeatInterleaveOut =
+        l0op::RepeatInterleaveV2(selfContiguous, repeatsTensor, dim, outputSize, uniqueExecutor.get());
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
@@ -632,8 +643,8 @@ aclnnStatus aclnnRepeatInterleaveIntWithDimGetWorkspaceSize(const aclTensor* sel
 }
 
 // repeatInterleave.Tensor
-aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(const aclTensor* repeats, int64_t outputSize, aclTensor *out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(
+    const aclTensor* repeats, int64_t outputSize, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -668,13 +679,13 @@ aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(const aclTensor* repeats
     auto repeatsContiguous = InitializeTensor(repeats, uniqueExecutor.get());
     CHECK_RET(repeatsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto repeatInterleaveOut = l0op::RepeatInterleave(selfContiguous, repeatsContiguous, 0, outputSize,
-        uniqueExecutor.get());
+    auto repeatInterleaveOut =
+        l0op::RepeatInterleave(selfContiguous, repeatsContiguous, 0, outputSize, uniqueExecutor.get());
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
-    repeatInterleaveOut = CastIfNeeded(repeatInterleaveOut, needCastInt32, op::DataType::DT_INT32,
-        uniqueExecutor.get());
+    repeatInterleaveOut =
+        CastIfNeeded(repeatInterleaveOut, needCastInt32, op::DataType::DT_INT32, uniqueExecutor.get());
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewcopyResult = l0op::ViewCopy(repeatInterleaveOut, out, uniqueExecutor.get());
@@ -686,46 +697,44 @@ aclnnStatus aclnnRepeatInterleaveTensorGetWorkspaceSize(const aclTensor* repeats
     return ACLNN_SUCCESS;
 }
 
-
 // 无dim, tensor repeats
-aclnnStatus aclnnRepeatInterleave(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)
+aclnnStatus aclnnRepeatInterleave(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRepeatInterleave);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 // 有dim, tensor repeats
-aclnnStatus aclnnRepeatInterleaveWithDim(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnRepeatInterleaveWithDim(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRepeatInterleaveWithDim);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 // 无dim, int repeats
-aclnnStatus aclnnRepeatInterleaveInt(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnRepeatInterleaveInt(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRepeatInterleaveInt);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 // 有dim, int repeats
-aclnnStatus aclnnRepeatInterleaveIntWithDim(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnRepeatInterleaveIntWithDim(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRepeatInterleaveIntWithDim);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 // repeatInterleave.Tensor
-aclnnStatus aclnnRepeatInterleaveTensor(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnRepeatInterleaveTensor(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRepeatInterleaveTensor);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-    const aclTensor *RepeatInterleave(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
-        aclOpExecutor *executor);
+const aclTensor* RepeatInterleave(
+    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor);
 
-    const aclTensor *RepeatInterleaveV2(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
-        aclOpExecutor *executor);
-}
+const aclTensor* RepeatInterleaveV2(
+    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_REPEAT_INTERLEAVE_OP_H_
