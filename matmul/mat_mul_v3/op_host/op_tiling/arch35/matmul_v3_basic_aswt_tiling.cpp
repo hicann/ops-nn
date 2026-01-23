@@ -289,7 +289,12 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         DoBL1FullLoad();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
         // 非全载 非fixpipe 负载均衡实现
-        return MatMulV3AswTiling::DoOpTiling();
+        MatMulV3AswTiling::DoOpTiling();
+        uint64_t remainSizeForAL1BL1 =
+            args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) : compileInfo_.l1Size;
+        runInfo_.stepKa =
+            remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) / args_.aDtypeSize;
+        runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
     }
     return ge::GRAPH_SUCCESS;
 }
