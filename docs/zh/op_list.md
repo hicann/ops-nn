@@ -396,6 +396,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/relu_grad_v2/README.md">relu_grad_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对应ReluV2操作的反向传播梯度。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/relu_v2/README.md">relu_v2</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1537,12 +1547,12 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/repeat_interleave/README.md">repeat_interleave</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>将tensor self进行flatten后，重复Tensor repeats中的相应次数。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -2343,6 +2353,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>aclnnGroupNormSwish的反向操作。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/group_norm_v2/README.md">group_norm_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算输入x的组归一化结果out，均值meanOut，以及标准差的倒数rstdOut。</td>
   </tr>
   <tr>
     <td>norm</td>
