@@ -222,6 +222,7 @@ public:
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
+        SetMMLayoutTransform(true);
         blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
             problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetSliceParams());
         // Process tiles in ping-pong mode
@@ -272,6 +273,7 @@ public:
                 }
             }
         }
+        SetMMLayoutTransform(false);
         UnsetHf32(isHf32);
     }
 };
