@@ -21,7 +21,7 @@
 namespace optiling {
 
 struct FlatQuantCompileInfo {
-  int64_t coreNum;
+    int64_t coreNum;
 };
 
 BEGIN_TILING_DATA_DEF(FlatQuantTilingData)
@@ -36,6 +36,6 @@ TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTilingL);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(FlatQuant, FlatQuantTilingData)
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_FLAT_QUANT_TILING_H
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_FLAT_QUANT_TILING_H

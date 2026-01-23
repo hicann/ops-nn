@@ -31,21 +31,25 @@ namespace ge {
  * The format support ND. \n
  *
  * @par Outputs:
- * @li out: A 3-D tensor of type int4. Output result data. Shape is same as input "x". The format support ND.
- * @li quant_scale: A tensor of type float32. Output quantization factor. 1-D with shape [K].
- * The value of K is same as input "x". The format support ND. \n
+ * @li out: When the output data type is int4,the shape is consistent with the input parameter x.When the output data
+ type is int32,the shape is [K,M,N/8].When the output data type is float4_e2m1,the shape is [K,M*N].
+ * @li quant_scale: When the output data type is int4 or int32,the shape is [K].When the output data type is
+ float4_e2m1,the shape is [K,ceilDiv(M*N,64),2].
+ * The values of K,M,and N are same as that of "x". \n
 
  * @par Attributes:
  * clip_ratio: An optional float. Used to control the quantization cropping ratio. Defaults to 1. \n
+ * dst_dtype: An optional int. Used to control the quantization dst_type. Defaults to 29. \n
  */
 REG_OP(FlatQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(kronecker_p1, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(kronecker_p2, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(out, TensorType({DT_INT4}))
-    .OUTPUT(quant_scale, TensorType({DT_FLOAT}))
+    .OUTPUT(out, TensorType({DT_INT4, DT_FLOAT4_E2M1}))
+    .OUTPUT(quant_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
     .ATTR(clip_ratio, Float, 1)
+    .ATTR(dst_dtype, Int, DT_INT4)
     .OP_END_FACTORY_REG(FlatQuant)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_FLAT_QUANT_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_FLAT_QUANT_H_

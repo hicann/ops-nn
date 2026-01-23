@@ -37,17 +37,29 @@ constexpr uint8_t VEC_SYNC_ID = 5;
 constexpr uint8_t TWO_VEC_SYNC_ID = 6;
 
 constexpr int32_t DOUBLE = 2;
+constexpr int32_t NUM_TWO = 2;
+constexpr int32_t NUM_EIGHT = 8;
 constexpr int32_t CEIL_SIZE = 16;
+constexpr int32_t BATCH_SIZE = 16;
 constexpr int32_t UB_SIZE = 192 * 1024;
 constexpr int32_t HIGH_UB_SIZE = 148 * 1024;
+constexpr int32_t ONE_UB_SIZE = 128 * 1024;
 constexpr int32_t L1_SIZE = 512 * 1024;
 constexpr int32_t DATA_COUNT = 16384;
+constexpr int32_t DATA_COUNT_ONE = 10240;
+constexpr int32_t DATA_COUNT_ONE_HALF = DATA_COUNT_ONE >> 1;
+constexpr int32_t DATA_COUNT_ONE_HALF_HALF = DATA_COUNT_ONE >> 2;
+constexpr int32_t CAST_COUNT = 8192;
 constexpr int32_t SCALE_COUNT = 2048;
 constexpr int32_t BASE_SIZE = 128;
-constexpr int32_t LOG2_128 = 7;
+constexpr int32_t FLOAT_BASE_SIZE = 64;
+constexpr int32_t MAX_REPEAT_TIMES = 255;
 constexpr float NUM_FLOAT_SEVEN = 7.0f;
 constexpr int32_t K_PER_VEC = 4; // batch number. Each loop processes K_PER_VEC*M*N
+constexpr int32_t K_PER_VEC_ONE = 4;
 constexpr int32_t K_DOUBLE_VEC = DOUBLE * K_PER_VEC;
+constexpr int32_t LOG2_128 = 7;
+constexpr int32_t LOG2_16 = 4;
 
 struct FlatQuantShapeInfo {
     int64_t K;
@@ -173,6 +185,52 @@ __aicore__ inline void CalReduceMax(LocalTensor<T> srcTensor, int32_t len, event
     WholeReduceMax(srcTensor, srcTensor, BASE_SIZE, 1, 1, 1, DEFAULT_REPEAT_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
+}
+
+template <HardEvent evt>
+__aicore__ inline void SetEvtFlag() {
+    event_t eventFlag = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
+    SetFlag<evt>(eventFlag);
+    WaitFlag<evt>(eventFlag);
+}
+
+struct DataCopyStruct {
+uint32_t blockCount = 0;
+uint32_t blockLen = 0;
+uint32_t srcStride = 0;
+uint32_t dstStride = 0;
+bool isPad = false;
+uint8_t leftPad = 0;
+uint8_t rightPad = 0;
+};
+
+template <typename T>
+__aicore__ inline void DataCopyInContiguous(LocalTensor<T> dstTensor, GlobalTensor<T> srcTensor, DataCopyStruct dataCopyStruct, uint32_t tileLength) {
+    DataCopyExtParams dataCopyParams;
+    DataCopyPadExtParams<T> padParams{dataCopyStruct.isPad, dataCopyStruct.leftPad, dataCopyStruct.rightPad, 0};
+    dataCopyParams.blockLen = dataCopyStruct.blockLen;
+    dataCopyParams.blockCount = dataCopyStruct.blockCount;
+    dataCopyParams.srcStride = dataCopyStruct.srcStride;
+    dataCopyParams.dstStride = dataCopyStruct.dstStride;
+    DataCopyPad(dstTensor[(sizeof(T) == 2) * tileLength],
+        srcTensor,
+        dataCopyParams,
+        padParams);
+}
+
+__aicore__ inline void CalReduceMaxOne(LocalTensor<half> srcTensor, int32_t rowNum, int32_t colAlign, int32_t colSize)
+{
+    int32_t repeatTimes = colSize >> LOG2_128;   // 除128
+    uint8_t repeatStride = colAlign >> LOG2_16;
+    BinaryRepeatParams repeatParams = {1, 1, 1, repeatStride, repeatStride, repeatStride};
+    for (int64_t i = 0; i < repeatTimes - 1; i++) {
+        Max(srcTensor, srcTensor[i * BASE_SIZE], srcTensor, BASE_SIZE, rowNum, repeatParams);
+        PipeBarrier<PIPE_V>();
+    }
+    Max(srcTensor, srcTensor[repeatTimes * BASE_SIZE], srcTensor, colSize % BASE_SIZE, rowNum, repeatParams);
+    PipeBarrier<PIPE_V>();
+    WholeReduceMax(srcTensor, srcTensor, colSize < BASE_SIZE ? colSize : BASE_SIZE, rowNum, 1, 1, repeatStride, ReduceOrder::ORDER_ONLY_VALUE);
+    PipeBarrier<PIPE_V>();
 }
 } // namespace FlatQuantNS
 

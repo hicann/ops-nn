@@ -24,13 +24,14 @@ extern "C" {
  *
  * 算子功能：为矩阵x依次进行两次小矩阵乘法，然后针对矩阵乘的结果进行量化处理。
  *
- * @param [in] x: Device侧的aclTensor，shape为[K, M, N]，其中K和N必须是16的整数倍。
+ * @param [in] x: Device侧的aclTensor，shape为[K, M, N]。
+ * 出参`out`的数据类型为INT32时，N必须是8的整数倍；出参`out`的数据类型为INT4时，N必须是偶数。
  * 支持非连续的Tensor，数据格式支持ND，数据类型支持FLOAT16、BFLOAT16。
  * @param [in] kroneckerP1: Device侧的aclTensor，shape为[M, M]，M与x中M维一致。
  * 支持非连续的Tensor，数据格式支持ND，数据类型与入参`x`的数据类型一致，数据类型支持FLOAT16、BFLOAT16。
  * @param [in] kroneckerP2: Device侧的aclTensor，shape为[N, N]，N与x中N维一致。
  * 支持非连续的Tensor，数据格式支持ND，数据类型与入参`x`的数据类型一致，数据类型支持FLOAT16、BFLOAT16。
- * @param [in] clipRatio: Host侧的double型参数，用于控制量化的裁剪比例，输入数据范围为[0, 1]，默认值为1。
+ * @param [in] clipRatio: Host侧的double型参数，用于控制量化的裁剪比例，输入数据范围为(0, 1]，默认值为1。
  * @param [out] out: Device侧的aclTensor，支持非连续的Tensor，数据格式支持ND，数据类型支持INT4，INT32。
  * 类型为INT32时，shape的最后一维是入参`x`最后一维的1/8，其余维度和x一致；类型为INT4时，shape与入参`x`一致。
  * @param [out] quantScale: Device侧的aclTensor，shape为[K]，K与x中K维一致。

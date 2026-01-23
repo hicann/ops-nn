@@ -15,9 +15,25 @@
 
 #include "flat_quant_vec.h"
 #include "flat_quant_cube.h"
+#include "flat_quant_vec_one.h"
+#include "flat_quant_cube_one.h"
 #include "flat_quant_high.h"
 
 using namespace FlatQuantNS;
+
+#define INVOKE_FLAT_QUANT_IMPL(Ttype, Mode)                                \
+    do {                                                                                  \
+        if ASCEND_IS_AIV {                                                                \
+            FlatQuantVecOne<Ttype, Mode> op;                                                 \
+            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);              \
+            op.Process();                                                                 \
+        }                                                                                 \
+        if ASCEND_IS_AIC {                                                                \
+            FlatQuantCubeOne<Ttype, Mode> op;                                                \
+            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);               \
+            op.Process();                                                                 \
+        }                                                                                 \
+    } while (0)
 
 extern "C" __global__ __aicore__ void flat_quant(
                                                  GM_ADDR x,
@@ -73,5 +89,8 @@ extern "C" __global__ __aicore__ void flat_quant(
         REGIST_MATMUL_OBJ(&op.pipe, GetSysWorkSpacePtr(), op.matmulR, mmTilingR, op.matmulL, mmTilingL);
         op.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        INVOKE_FLAT_QUANT_IMPL(DTYPE_X, MM_SPLIT_MODE);
+        return;
     }
 }

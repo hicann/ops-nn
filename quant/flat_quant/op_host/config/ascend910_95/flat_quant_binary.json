@@ -61,7 +61,12 @@
                 {
                     "name": "clip_ratio",
                     "dtype": "float",
-                    "value": 0.0
+                    "value": 1.0
+                },
+                {
+                    "name": "dst_dtype",
+                    "dtype": "int",
+                    "value": 3
                 }
             ]
         },
@@ -125,9 +130,153 @@
                 {
                     "name": "clip_ratio",
                     "dtype": "float",
-                    "value": 0.0
+                    "value": 1.0
+                },
+                {
+                    "name": "dst_dtype",
+                    "dtype": "int",
+                    "value": 3
+                }
+            ]
+        },
+        {
+            "bin_filename": "FlatQuant_a7818aaf4806a97b1c7975db76f43236",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "kronecker_p1",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "kronecker_p2",
+                    "index": 2,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "out",
+                    "index": 0,
+                    "dtype": "float4_e2m1",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 1,
+                    "dtype": "float8_e8m0",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "clip_ratio",
+                    "dtype": "float",
+                    "value": 1.0
+                },
+                {
+                    "name": "dst_dtype",
+                    "dtype": "int",
+                    "value": 40
+                }
+            ]
+        },
+        {
+            "bin_filename": "FlatQuant_126fa1393b8f982901d46078f3323b8d",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "kronecker_p1",
+                    "index": 1,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "kronecker_p2",
+                    "index": 2,
+                    "dtype": "bfloat16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "out",
+                    "index": 0,
+                    "dtype": "float4_e2m1",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                },
+                {
+                    "name": "quant_scale",
+                    "index": 1,
+                    "dtype": "float8_e8m0",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "clip_ratio",
+                    "dtype": "float",
+                    "value": 1.0
+                },
+                {
+                    "name": "dst_dtype",
+                    "dtype": "int",
+                    "value": 40
                 }
             ]
         }
+        
     ]
 }

@@ -86,7 +86,12 @@ public:
             shape.calFractalM = shape.fractalM << 1;
             shape.calFractalN = shape.fractalN << 1;
         }
-        invalidK = static_cast<int64_t>(static_cast<float>(shape.K * shape.M - shape.Mceil) / static_cast<float>(shape.M));
+        if (shape.K * shape.M - shape.Mceil < 0) {
+            invalidK = -1;
+        } else {
+            invalidK =
+                static_cast<int64_t>(static_cast<float>(shape.K * shape.M - shape.Mceil) / static_cast<float>(shape.M));
+        }
     }
 
     aifunc void Process(){

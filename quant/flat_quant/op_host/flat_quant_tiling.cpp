@@ -16,14 +16,17 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "tiling_base/tiling_base.h"
+#include "tiling_base/tiling_util.h"
 #include "tiling_base/tiling_templates_registry.h"
 #include "flat_quant_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr uint8_t INPUT_TENSOR_NUM = 3;
-constexpr uint8_t INDEX_ZERO = 0;
-constexpr uint8_t INDEX_ONE = 1;
 constexpr uint8_t INDEX_TWO = 2;
+constexpr uint8_t INDEX_ONE = 1;
+constexpr uint8_t INDEX_ZERO = 0;
 constexpr uint8_t DIM_THREE = 3;
 constexpr uint8_t DIM_TWO = 2;
 
@@ -31,6 +34,7 @@ constexpr uint8_t BYTE_LEN_2 = 2;
 constexpr uint8_t BYTE_LEN_4 = 4;
 constexpr uint8_t CEIL_SIZE = 16;
 constexpr int32_t MAX_K_SIZE = 262144;
+constexpr int32_t NUM_EIGHT = 8;
 constexpr int32_t MAX_MN_SIZE = 256;
 constexpr int32_t FACTOR_TWO = 2;
 constexpr int32_t K_PER_VEC = 4;
@@ -44,7 +48,9 @@ constexpr uint8_t MM_BASE_MODE = 1;
 constexpr uint8_t MM_DOUBLE_MODE = 2;
 constexpr uint8_t MM_SPLIT_MODE = 3;
 constexpr uint8_t MM_HIGH_MODE = 4;
+constexpr uint8_t MM_ONE_MODE = 5;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
+constexpr uint64_t WORK_SPACE_SIZE_APT = 48 * 1024 * 1024;
 
 class FlatQuantTiling {
 public:
@@ -108,6 +114,7 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
     tilingData.set_N(xShape.GetDim(INDEX_TWO));
     tilingData.set_clipRatio(*clipRatio);
     auto compileInfo = tilingContext->GetCompileInfo<FlatQuantCompileInfo>();
+    
     int64_t aivNum = FACTOR_TWO * compileInfo->coreNum;
     GetKernelMode(aivNum);
     if (mmMode == MM_HIGH_MODE && GetTCubeTiling() != ge::GRAPH_SUCCESS) {
@@ -125,38 +132,58 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
 
 void FlatQuantTiling::GetKernelMode(int64_t aivNum)
 {
-    int64_t K = xShape.GetDim(INDEX_ZERO);
-    int64_t M = xShape.GetDim(INDEX_ONE);
-    int64_t Mceil = CeilA2B(M, CEIL_SIZE) * CEIL_SIZE;
     int64_t N = xShape.GetDim(INDEX_TWO);
+    int64_t M = xShape.GetDim(INDEX_ONE);
+    int64_t K = xShape.GetDim(INDEX_ZERO);
     int64_t Nceil = CeilA2B(N, CEIL_SIZE) * CEIL_SIZE;
-    if (Mceil <= BASE_SIZE / FACTOR_TWO && Nceil <= BASE_SIZE && K > 1) {
-        mmMode = MM_DOUBLE_MODE;
-    } else if (Mceil * Mceil + Nceil * Nceil + FACTOR_TWO * FACTOR_TWO * Mceil * Nceil > L1_SIZE / BYTE_LEN_2) {
-        mmMode = MM_HIGH_MODE;
-    } else if (Mceil > BASE_SIZE || Nceil > BASE_SIZE) {
-        mmMode = MM_SPLIT_MODE;
+    int64_t Mceil = CeilA2B(M, CEIL_SIZE) * CEIL_SIZE;
+    auto outDtype = tilingContext->GetOutputDesc(0)->GetDataType();
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    // 使用soc和out_dtype区分 mxfp4和int的tiling
+    if (outDtype == ge::DT_FLOAT4_E2M1) {
+        if (IsRegbaseSocVersion(tilingContext)) {
+            mmMode = MM_HIGH_MODE;
+            size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
+            int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
+            workspaces[0] =
+                useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * Mceil * N * BYTE_LEN_4) +
+                WORK_SPACE_SIZE_APT;
+        }
     } else {
-        mmMode = MM_BASE_MODE;
-    }
+        if (M == 1 && N % NUM_EIGHT == 0) {
+            mmMode = MM_ONE_MODE;
+        } else if (Mceil <= BASE_SIZE / FACTOR_TWO && Nceil <= BASE_SIZE && K > 1) {
+            mmMode = MM_DOUBLE_MODE;
+        } else if (Mceil * Mceil + Nceil * Nceil + FACTOR_TWO * FACTOR_TWO * Mceil * Nceil > L1_SIZE / BYTE_LEN_2) {
+            mmMode = MM_HIGH_MODE;
+        } else if (Mceil > BASE_SIZE || Nceil > BASE_SIZE) {
+            mmMode = MM_SPLIT_MODE;
+        } else {
+            mmMode = MM_BASE_MODE;
+        }
 
-    size_t *workspaces = tilingContext->GetWorkspaceSizes(1);
-    if (mmMode == MM_HIGH_MODE) {
-        int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
-        workspaces[0] = useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * Mceil * N * BYTE_LEN_4) + WORK_SPACE_SIZE;
-    } else if (mmMode == MM_DOUBLE_MODE) {
-        K += (K % FACTOR_TWO);
-        workspaces[0] = (K * Mceil * N + Mceil * Mceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
-    } else {
-        workspaces[0] = (K * Mceil * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+        size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
+        if (mmMode == MM_HIGH_MODE) {
+            int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
+            workspaces[0] =
+                useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * Mceil * N * BYTE_LEN_4) +
+                WORK_SPACE_SIZE;
+        } else if (mmMode == MM_DOUBLE_MODE) {
+            K += (K % FACTOR_TWO);
+            workspaces[0] = (K * Mceil * N + Mceil * Mceil) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+        } else if (mmMode == MM_ONE_MODE) {
+            workspaces[0] = K * Mceil * Nceil * BYTE_LEN_2 + WORK_SPACE_SIZE;
+        } else {
+            workspaces[0] = (K * Mceil * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+        }
     }
 }
 
 ge::graphStatus FlatQuantTiling::GetTCubeTiling()
 {
-    int64_t K = xShape.GetDim(INDEX_ZERO);
-    int64_t M = xShape.GetDim(INDEX_ONE);
     int64_t N = xShape.GetDim(INDEX_TWO);
+    int64_t M = xShape.GetDim(INDEX_ONE);
+    int64_t K = xShape.GetDim(INDEX_ZERO);
     auto mmDataType = static_cast<matmul_tiling::DataType>(dataType);
 
     matmul_tiling::MatmulApiTiling mmTilingR;

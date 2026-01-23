@@ -309,3 +309,59 @@ TEST_F(flat_quant_test, test_case_float16_4)
 
     system("cd ./flat_quant_data/ && python3 compare_data.py");
 }
+
+TEST_F(flat_quant_test, test_case_float16_5)
+{
+    system(
+        "cp -rf "
+        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
+    system("chmod -R 755 ./flat_quant_data/");
+    system("cd ./flat_quant_data/ && python3 gen_data.py '(2, 1, 16)' '(1, 1)' '(16, 16)' 'float16'");
+
+    size_t xByteSize = 2 * 1 * 16 * sizeof(half);
+    size_t p1ByteSize = 1 * 1 * sizeof(half);
+    size_t p2ByteSize = 16 * 16 * sizeof(half);
+    size_t outByteSize = 2 * 1 * 16 * sizeof(int8_t) / 2;
+    size_t scaleByteSize = 2 * sizeof(float);
+    size_t workspaceSize = 2 * 16 * 16 * sizeof(half) + 16 * 1024 * 1024;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* kronecker_p1 = (uint8_t*)AscendC::GmAlloc(p1ByteSize);
+    uint8_t* kronecker_p2 = (uint8_t*)AscendC::GmAlloc(p2ByteSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outByteSize);
+    uint8_t* quant_scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(FlatQuantTilingData));
+
+    ReadFile("./flat_quant_data/float16_input_x_flat_quant.bin", xByteSize, x, xByteSize);
+    ReadFile("./flat_quant_data/float16_input_kronecker_p1_flat_quant.bin", p1ByteSize, kronecker_p1, p1ByteSize);
+    ReadFile("./flat_quant_data/float16_input_kronecker_p2_flat_quant.bin", p2ByteSize, kronecker_p2, p2ByteSize);
+
+    FlatQuantTilingData* tilingDatafromBin = reinterpret_cast<FlatQuantTilingData*>(tiling);
+
+    tilingDatafromBin->dataType = 1;
+    tilingDatafromBin->K = 2;
+    tilingDatafromBin->M = 1;
+    tilingDatafromBin->N = 16;
+    tilingDatafromBin->clipRatio = 1.0f;
+
+    uint32_t blockDim = 1;
+    ICPU_SET_TILING_KEY(5);
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+    ICPU_RUN_KF(
+        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+        (uint8_t*)(tilingDatafromBin));
+
+    WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
+
+    AscendC::GmFree((void*)(x));
+    AscendC::GmFree((void*)(kronecker_p1));
+    AscendC::GmFree((void*)(kronecker_p2));
+    AscendC::GmFree((void*)(out));
+    AscendC::GmFree((void*)(quant_scale));
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./flat_quant_data/ && python3 compare_data.py");
+}
