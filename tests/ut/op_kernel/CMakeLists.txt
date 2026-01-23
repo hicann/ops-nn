@@ -17,22 +17,6 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
     ## add opkernel ut cases dynamic lib: libnn_op_kernel_ut_cases.so
     add_opkernel_ut_modules(${OP_KERNEL_MODULE_NAME})
 
-    ## add op tiling so
-    add_library(${OP_KERNEL_MODULE_NAME}_tiling SHARED
-            $<$<TARGET_EXISTS:${OPHOST_NAME}_tiling_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_tiling_obj>>
-            $<$<TARGET_EXISTS:${COMMON_NAME}_obj>:$<TARGET_OBJECTS:${COMMON_NAME}_obj>>
-            )
-    target_link_libraries(${OP_KERNEL_MODULE_NAME}_tiling PRIVATE
-            $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
-            -Wl,--no-as-needed
-                $<$<TARGET_EXISTS:opsbase>:opsbase>
-            -Wl,--as-needed
-            -Wl,--whole-archive
-                rt2_registry_static
-            -Wl,--no-whole-archive
-            tiling_api
-            )
-
     ## add op kernel ut exe for each socVersion
     foreach (socVersion ${fastOpTestSocVersions})
         ## append all exe
@@ -45,7 +29,13 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
         target_include_directories(${OP_KERNEL_UT_EXE}_${socVersion} PRIVATE
             ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc
         )
-        add_dependencies(${OP_KERNEL_UT_EXE}_${socVersion} ${OP_KERNEL_MODULE_NAME}_tiling)
+        get_property(lib_list GLOBAL PROPERTY OPKERNEL_OBJECT_LIBS)
+        foreach(lib_name ${lib_list})
+            target_link_libraries(${OP_KERNEL_UT_EXE}_${socVersion} PRIVATE
+                    -Wl,--no-as-needed
+                    ${lib_name}
+                    )
+        endforeach()
         target_link_libraries(${OP_KERNEL_UT_EXE}_${socVersion} PRIVATE
                 $<BUILD_INTERFACE:intf_llt_pub_asan>
                 -Wl,--no-as-needed

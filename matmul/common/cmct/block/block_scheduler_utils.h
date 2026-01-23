@@ -87,6 +87,7 @@ __aicore__ inline int64_t MMLcm(int64_t m, int64_t n)
     return total / m;
 }
 
+#ifndef __NPU_ARCH__
 // device -> kernel -> scheduler
 static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape &shape)
 {
@@ -104,6 +105,7 @@ static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape &shape)
     }
     return blockNum;
 }
+#endif
 
 template <class ProblemShape_>
 __host_aicore__ static Status DoCheckArgs(const ProblemShape_ &shape, int64_t l1M, int64_t l1N, int64_t l1K,

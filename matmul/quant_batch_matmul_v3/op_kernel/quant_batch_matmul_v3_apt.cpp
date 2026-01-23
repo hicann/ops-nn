@@ -32,6 +32,12 @@
 #endif
 #include "kernel_operator.h"
 
+#ifdef __CCE_KT_TEST__
+#define UT_STATIC static
+#else
+#define UT_STATIC
+#endif
+
 // if run with ttk without bias, can't get DTYPE_BIAS macro
 #undef DTYPE_BIAS
 #if defined(ORIG_DTYPE_X1) && defined(DT_INT8) && ORIG_DTYPE_X1 == DT_INT8
@@ -128,7 +134,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
 template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BIASMODE, int TPL_KERNELTYPE>
-__global__ __aicore__ void quant_batch_matmul_v3(
+UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR pertokenScale, GM_ADDR y,
     GM_ADDR workSpace, GM_ADDR tiling)
 {

@@ -158,23 +158,14 @@ function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
     )
 
     foreach(socVersion ${fastOpTestSocVersions})
-        ## add op kernel ut cases obj: nn_op_kernel_ut_${socVersion}_cases
-        if(NOT TARGET ${OP_KERNEL_MODULE_NAME}_${socVersion}_cases_obj)
-            add_library(${OP_KERNEL_MODULE_NAME}_${socVersion}_cases_obj OBJECT)
-        endif()
-        target_link_libraries(${OP_KERNEL_MODULE_NAME}_${socVersion}_cases_obj PRIVATE
-            gcov
-            )
-
         ## add op kernel ut cases dynamic lib: libnn_op_kernel_ut_${socVersion}_cases.so
         add_library(${OP_KERNEL_MODULE_NAME}_${socVersion}_cases SHARED
             $<TARGET_OBJECTS:${OP_KERNEL_MODULE_NAME}_common_obj>
-            $<TARGET_OBJECTS:${OP_KERNEL_MODULE_NAME}_${socVersion}_cases_obj>
             )
         target_link_libraries(${OP_KERNEL_MODULE_NAME}_${socVersion}_cases PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
             ${OP_KERNEL_MODULE_NAME}_common_obj
-            ${OP_KERNEL_MODULE_NAME}_${socVersion}_cases_obj
+            gcov
         )
     endforeach()
 endfunction()
@@ -297,7 +288,19 @@ endif()
 
 # supportedSocVersion: ascend310p ascend910B1 ascend910_9599
 function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
-    set(DEPENDENCY_OPS ${ARGN})
+    list(LENGTH ARGN EXTRA_NUM)
+    if(EXTRA_NUM EQUAL 1)
+        list(GET ARGN 0 arg)
+        if("${arg}" STREQUAL "MULTI_KERNEL_TARGET")
+            set(multi_kernel_target "TRUE")
+        else()
+            set(DEPENDENCY_OPS ${arg})
+        endif()
+    elseif(EXTRA_NUM EQUAL 2)
+        list(GET ARGN 0 arg)
+        set(multi_kernel_target "TRUE")
+        set(DEPENDENCY_OPS ${arg})
+    endif()
 
     string(REPLACE "${OPS_NN_DIR}/" "" opCategoryDir ${CMAKE_CURRENT_SOURCE_DIR})
     string(FIND "${opCategoryDir}" "/" firstSlashPos)
@@ -506,32 +509,39 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
         endforeach()
         message("compileOptions: ${compileOptions}")
 
-        if(NOT ${kernel_cpp_name} STREQUAL "")
-            set(cpp_file "${ASCEND_KERNEL_SRC_DST}/${opName}/${kernel_cpp_name}.cpp")
-        else()
-            set(cpp_file "${ASCEND_KERNEL_SRC_DST}/${opName}/${opName}.cpp")
+        if("${kernel_cpp_name}" STREQUAL "")
+            set(kernel_cpp_name ${opName})
         endif()
 
-        set(kernelFile ${cpp_file})
+        set(kernelFile ${ASCEND_KERNEL_SRC_DST}/${opName}/${kernel_cpp_name}.cpp)
         set_source_files_properties(${kernelFile} PROPERTIES GENERATED TRUE)
+
+        set(testCaseFileName "test_${kernel_cpp_name}")
 
         ## add object: ${opName}_${socVersion}_cases_obj
         get_target_dir(${lowerSocVersion} target_dir)
         if(target_dir STREQUAL "")
-            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_${opName}*.cpp)
+            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/${testCaseFileName}*.cpp)
         else()
-            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_${opName}*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${target_dir}/test_${opName}*.cpp)
+            file(GLOB OPKERNEL_CASES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/${testCaseFileName}*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${target_dir}/${testCaseFileName}*.cpp)
         endif()
-        add_library(${opName}_${socVersion}_cases_obj OBJECT)
-        target_sources(${opName}_${socVersion}_cases_obj PRIVATE
-            ${kernelFile}
-            ${OPKERNEL_CASES_SRC}
-        )
-        add_dependencies(${opName}_${socVersion}_cases_obj ${gen_tiling_head_tag} ${KERNEL_COPY_TARGET})
-        target_compile_options(${opName}_${socVersion}_cases_obj PRIVATE
-            -g ${compileOptions} -DUT_SOC_VERSION="${socVersion}"
-        )
-        target_include_directories(${opName}_${socVersion}_cases_obj PRIVATE
+
+        get_property(LIBSEXIST GLOBAL PROPERTY OPKERNEL_OBJECT_LIBS)
+        if(NOT LIBSEXIST)
+            set_property(GLOBAL PROPERTY OPKERNEL_OBJECT_LIBS "")
+        endif()
+        if(NOT DEFINED multi_kernel_target)
+            add_library(opkernel_${opName} OBJECT ${OPKERNEL_CASES_SRC} ${kernelFile})
+            add_dependencies(opkernel_${opName} ${gen_tiling_head_tag} ${KERNEL_COPY_TARGET})
+            target_compile_options(opkernel_${opName} PRIVATE
+                -g ${compileOptions} -DUT_SOC_VERSION="${socVersion}" -DKERNELUT=1
+            )
+            target_link_libraries(opkernel_${opName} PRIVATE
+                $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+                tikicpulib::${oriSocVersion}
+                gtest
+            )
+            target_include_directories(opkernel_${opName} PRIVATE
                 ${ASCEND_DIR}/include/base/context_builder
                 ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
                 ${PROJECT_SOURCE_DIR}/tests/ut/common
@@ -539,24 +549,33 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 ${kernel_dependency_files}
                 ${CMAKE_BINARY_DIR}/tbe/ascendc/
                 ${CMAKE_BINARY_DIR}/tbe/ascendc/common
+            )
+            set_property(GLOBAL APPEND PROPERTY OPKERNEL_OBJECT_LIBS opkernel_${opName})
+        else()
+            foreach(src_file ${OPKERNEL_CASES_SRC})
+                get_filename_component(src_name ${src_file} NAME_WE)
+                add_library(opkernel_${src_name} OBJECT ${src_file})
+                add_dependencies(opkernel_${src_name} ${gen_tiling_head_tag} ${KERNEL_COPY_TARGET})
+                target_compile_options(opkernel_${src_name} PRIVATE
+                    -g ${compileOptions} -DUT_SOC_VERSION="${socVersion}"
                 )
-        target_link_libraries(${opName}_${socVersion}_cases_obj PRIVATE
-                $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
-                tikicpulib::${oriSocVersion}
-                gtest
+                target_link_libraries(opkernel_${src_name} PRIVATE
+                    $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+                    tikicpulib::${oriSocVersion}
+                    gtest
                 )
-
-        ## add object: nn_op_kernel_ut_${oriSocVersion}_cases_obj
-        if(NOT TARGET ${OP_KERNEL_MODULE_NAME}_${oriSocVersion}_cases_obj)
-            add_library(${OP_KERNEL_MODULE_NAME}_${oriSocVersion}_cases_obj OBJECT
-                $<TARGET_OBJECTS:${opName}_${socVersion}_cases_obj>
+                target_include_directories(opkernel_${src_name} PRIVATE
+                    ${ASCEND_DIR}/include/base/context_builder
+                    ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
+                    ${PROJECT_SOURCE_DIR}/tests/ut/common
+                    ${PROJECT_SOURCE_DIR}/conv/conv3d_backprop_input_v2/op_kernel
+                    ${kernel_dependency_files}
+                    ${CMAKE_BINARY_DIR}/tbe/ascendc/
+                    ${CMAKE_BINARY_DIR}/tbe/ascendc/common
                 )
+                set_property(GLOBAL APPEND PROPERTY OPKERNEL_OBJECT_LIBS opkernel_${src_name})
+            endforeach()
         endif()
-        target_link_libraries(${OP_KERNEL_MODULE_NAME}_${oriSocVersion}_cases_obj PRIVATE
-                $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
-                $<TARGET_OBJECTS:${opName}_${socVersion}_cases_obj>
-                )
-
         list(FIND fastOpTestSocVersions "${oriSocVersion}" index)
         if(index EQUAL -1)
             set(fastOpTestSocVersions ${fastOpTestSocVersions} ${oriSocVersion} CACHE STRING "fastOp Test SocVersions" FORCE)

@@ -41,6 +41,8 @@ function(kernel_src_copy)
           DESTINATION ${IMPL_INSTALL_DIR}/${OP_NAME}
         )
       endif()
+    else()
+      add_dependencies(${KNCPY_TARGET} ${OP_NAME}_src_copy)
     endif()
   endforeach()
 endfunction()

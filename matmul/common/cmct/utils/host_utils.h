@@ -17,7 +17,7 @@
 #define UTILS_HOST_UTILS_H
 #ifndef __NPU_ARCH__
 #include "tiling/platform/platform_ascendc.h"
-#endif
+
 namespace Cmct {
 namespace Gemm {
 
@@ -44,4 +44,5 @@ static size_t GetSysWorkspaceSize()
 }
 } // namespace Gemm
 } // namespace Cmct
+#endif
 #endif
