@@ -310,8 +310,18 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
         auto foldReduceNum = this->mode2OneLoopSize_;
         xMainTensor = this->inQueX_.template AllocTensor<T>();
         dyMainTensor = this->inQueDy_.template AllocTensor<T>();
-        DataCopy(xMainTensor, this->xGm_[mainOffset], mainReduceNum);
-        DataCopy(dyMainTensor, this->dyGm_[mainOffset], mainReduceNum);
+        DataCopyPadExtParams<T> dataCopyPadExtParamsX;
+        dataCopyPadExtParamsX.isPad = false;
+        dataCopyPadExtParamsX.leftPadding = 0;
+        dataCopyPadExtParamsX.rightPadding = 0;
+        dataCopyPadExtParamsX.paddingValue = 0;
+        DataCopyExtParams copyInParamsX;
+        copyInParamsX.blockCount = 1;
+        copyInParamsX.blockLen = mainReduceNum * sizeof(T);
+        copyInParamsX.srcStride = 0;
+        copyInParamsX.dstStride = 0;
+        DataCopyPad(xMainTensor, this->xGm_[mainOffset], copyInParamsX, dataCopyPadExtParamsX);
+        DataCopyPad(dyMainTensor, this->dyGm_[mainOffset], copyInParamsX, dataCopyPadExtParamsX);
         xFoldTensor = xMainTensor[this->mode2OneLoopSize_];
         dyFoldTensor = dyMainTensor[this->mode2OneLoopSize_];
         if (loopIdx < this->mode2FoldLoopCnt_ - 1) {
@@ -396,8 +406,18 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
         } else {
             xTensor = this->inQueX_.template AllocTensor<T>();
             dyTensor = this->inQueDy_.template AllocTensor<T>();
-            DataCopy(xTensor, this->xGm_[offset], CeilAlign(this->mode2UbTailNum_, this->elemTPerBlock_));
-            DataCopy(dyTensor, this->dyGm_[offset], CeilAlign(this->mode2UbTailNum_, this->elemTPerBlock_));
+            DataCopyPadExtParams<T> dataCopyPadExtParamsX;
+            dataCopyPadExtParamsX.isPad = false;
+            dataCopyPadExtParamsX.leftPadding = 0;
+            dataCopyPadExtParamsX.rightPadding = 0;
+            dataCopyPadExtParamsX.paddingValue = 0;
+            DataCopyExtParams copyInParamsX;
+            copyInParamsX.blockCount = 1;
+            copyInParamsX.blockLen = this->mode2UbTailNum_ * sizeof(T);
+            copyInParamsX.srcStride = 0;
+            copyInParamsX.dstStride = 0;
+            DataCopyPad(xTensor, this->xGm_[offset], copyInParamsX, dataCopyPadExtParamsX);
+            DataCopyPad(dyTensor, this->dyGm_[offset], copyInParamsX, dataCopyPadExtParamsX);
             this->inQueX_.EnQue(xTensor);
             this->inQueDy_.EnQue(dyTensor);
             xTensor = this->inQueX_.template DeQue<T>();
