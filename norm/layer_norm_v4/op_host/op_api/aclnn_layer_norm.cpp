@@ -7,10 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
-#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
-#include "aclnn/aclnn_base.h"
-#include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -21,6 +17,10 @@
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn/aclnn_base.h"
+#include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
+#include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "level0/fill.h"
 #include "layer_norm_v3.h"
 #include "layer_norm_v4.h"
@@ -58,8 +58,8 @@ static const std::initializer_list<DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -235,23 +235,22 @@ static bool CheckImplMode(
 
 inline static bool IsV4SocCheck(const aclTensor* input, const aclTensor* weight, int64_t reduceAxis)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return true;
     }
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool v4SingleReadTemplateSup = input->GetDataType() == weight->GetDataType() &&
                                    input->GetDataType() == DataType::DT_BF16 &&
                                    (reduceAxis == MIN_V4_REDUCE_AXIS || reduceAxis == MAX_V4_REDUCE_AXIS) &&
-                                   (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                    GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+                                   (curArch == NpuArch::DAV_2201);
     bool v4TransposeTemplate310pSup =
         (input->GetDataType() == DataType::DT_FLOAT16) &&
         (reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MIN || reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MAX) &&
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P);
+        (curArch == NpuArch::DAV_2002);
     int64_t inputBlockAlign = (input->GetDataType() == DataType::DT_FLOAT ? B32_BLOCK_ALIGN_NUM : B16_BLOCK_ALIGN_NUM);
     bool v4TransposeTemplate910bSup = ((reduceAxis % inputBlockAlign) != 0) &&
                                       (reduceAxis < V4_TRANSPOSE_REDUCE_AXIS_LIMIT) &&
-                                      (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                                       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+                                      (curArch == NpuArch::DAV_2201);
     return (v4SingleReadTemplateSup || v4TransposeTemplate310pSup || v4TransposeTemplate910bSup);
 }
 
@@ -333,7 +332,7 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
     CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 判定设备类型，后续做不同处理
-    bool forwardV4Compute = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool forwardV4Compute = Ops::NN::AclnnUtil::IsRegbase();
 
     // 构造新的weightContiguous
     const aclTensor* weightContiguous = nullptr;

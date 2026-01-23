@@ -13,9 +13,11 @@
  * \brief
  */
 
+#include "tiling_base/tiling_util.h"
 #include "layer_norm_v4_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 static ge::graphStatus Tiling4LayerNormV4(gert::TilingContext* context)
 {
@@ -28,7 +30,8 @@ ge::graphStatus TilingPrepare4CompileInfo(gert::TilingParseContext* context, Lay
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    compileInfo->isAscend310P = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P;
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfo->isAscend310P = npuArch == NpuArch::DAV_2002;
     OP_CHECK_IF(
         (compileInfo->coreNum <= 0),
         OP_LOGE(context, "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
@@ -42,8 +45,8 @@ ge::graphStatus TilingPrepare4CompileInfo(gert::TilingParseContext* context, Lay
         OP_LOGE(context, "Get ub size failed, ub size: %u", static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
         return ge::GRAPH_FAILED);
     compileInfo->isRegBase =
-        (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
+        (IsRegbaseSocVersion(context) ||
+         npuArch == NpuArch::DAV_5102) ? true : false;
     compileInfo->blockSize = Ops::Base::GetUbBlockSize(context);
     compileInfo->vectorLength = Ops::Base::GetVRegSize(context);
     OP_LOGD(context, "TilingPrepare4LayerNormV4 exit.");

@@ -13,9 +13,11 @@
  * \brief
  */
 #include <vector>
+#include "tiling_base/tiling_util.h"
 #include "add_layer_norm_quant_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 static constexpr int64_t UB_RESERVED_BYTE = 256;
 static constexpr int64_t BLOCK_SIZE = 32;
@@ -84,12 +86,13 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
     auto platformInfo = context->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        useRegbase = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-                      ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A);
+        auto npuArch = ascendcPlatform.GetCurNpuArch();
+        useRegbase = (IsRegbaseSocVersion(context) ||
+                      npuArch == NpuArch::DAV_5102);
     } else {
         auto compileInfo = reinterpret_cast<const AddLayerNormQuantCompileInfo*>(context->GetCompileInfo());
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-        useRegbase = compileInfo->isAscend910_95_;
+        useRegbase = compileInfo->isRegbase;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -457,9 +460,10 @@ static ge::graphStatus TilingPrepare4AddLayerNormQuant(gert::TilingParseContext*
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
-    compileInfo->isAscend910_95_ =
-        (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfo->isRegbase =
+        (IsRegbaseSocVersion(context) ||
+         npuArch == NpuArch::DAV_5102) ? true : false;
     uint64_t ubSizePlatform;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSize_ = ubSizePlatform;
@@ -467,9 +471,9 @@ static ge::graphStatus TilingPrepare4AddLayerNormQuant(gert::TilingParseContext*
     compileInfo->blockSize_ = Ops::Base::GetUbBlockSize(context);
     OP_LOGW(
         context,
-        "aivCoreNum %u, ubSize %lu, blockSize %u, vecRegSize %u, sysWorkspaceSize %u, isAscend910_95 %d",
+        "aivCoreNum %u, ubSize %lu, blockSize %u, vecRegSize %u, sysWorkspaceSize %u, isRegbase %d",
         compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
-        compileInfo->sysWorkspaceSize_, compileInfo->isAscend910_95_);
+        compileInfo->sysWorkspaceSize_, compileInfo->isRegbase);
     return ge::GRAPH_SUCCESS;
 }
 

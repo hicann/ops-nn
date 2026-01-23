@@ -297,7 +297,7 @@ struct AddLayerNormQuantCompileInfo {
     uint64_t ubSize_ = 0;
     uint32_t vecRegSize_ = 0;
     uint32_t blockSize_ = 0;
-    bool isAscend910_95_ = false;
+    bool isRegbase = false;
 };
 
 } // namespace optiling
