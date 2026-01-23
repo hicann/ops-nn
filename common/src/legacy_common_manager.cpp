@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "legacy_common_manager.h"
 
@@ -17,11 +17,14 @@
 
 // 兼容opp整包场景：整包不编译本文件，仅子包编译
 namespace {
-static const std::string BUILTIN_SO_NAME = "libophost_nn.so";
-static const std::string CUSTOM_SO_NAME = "libcust_opmaster_rt2.0.so";
+static const std::string OPHOST_BUILTIN_SO_NAME = "libophost_nn.so";
+static const std::string OPHOST_CUSTOM_SO_NAME = "libcust_opmaster_rt2.0.so";
+static const std::string OPAPI_BUILTIN_SO_NAME = "libopapi_nn.so";
+static const std::string OPAPI_CUSTOM_SO_NAME = "libcust_opapi.so";
 static const std::string LEGACY_SO_NAME = "libophost_comm_legacy.so";
+static const std::string OPHOST_PATH = "/built-in/op_impl/ai_core/tbe/op_host/lib/linux/";
 static const Ops::NN::LegacyCommonMgr LEGACY_COMMMON_MGR;
-}
+} // namespace
 
 namespace Ops {
 namespace NN {
@@ -61,7 +64,8 @@ bool LegacyCommonMgr::GetLegacyCommonSoPath(std::string& soPath) const
         return false;
     }
 
-    if (currSoName != BUILTIN_SO_NAME && currSoName != CUSTOM_SO_NAME) {
+    if (currSoName != OPHOST_BUILTIN_SO_NAME && currSoName != OPHOST_CUSTOM_SO_NAME &&
+        currSoName != OPAPI_BUILTIN_SO_NAME && currSoName != OPAPI_CUSTOM_SO_NAME) {
         OP_LOGW("LegacyCommonMgr", "Invalid current so name[%s].", currSoName.c_str());
         return false;
     }
@@ -82,16 +86,11 @@ bool LegacyCommonMgr::GetLegacyCommonSoPath(std::string& soPath) const
     return true;
 }
 
-static void* GetThisSoAddress()
-{
-    return reinterpret_cast<void*>(&GetThisSoAddress);
-}
-
-bool LegacyCommonMgr::GetParentPath(std::string& parentPath, std::string& currSoName) const
+bool LegacyCommonMgr::GetParentPath(std::string& parentPath, std::string& currSoName)
 {
     Dl_info dlInfo;
-    void* addr = GetThisSoAddress();
-    if (dladdr(addr, &dlInfo) == 0 || dlInfo.dli_fname == nullptr) {
+    if (dladdr(reinterpret_cast<const void*>(&LegacyCommonMgr::GetParentPath), &dlInfo) == 0 ||
+        dlInfo.dli_fname == nullptr) {
         OP_LOGW("LegacyCommonMgr", "Fail to get current so path from dladdr.");
         return false;
     } else {
@@ -117,16 +116,25 @@ bool LegacyCommonMgr::GetParentPath(std::string& parentPath, std::string& currSo
 bool LegacyCommonMgr::GetSoPathForBuiltin(
     const std::string& parentPath, const std::string& currSoName, std::string& soPath) const
 {
-    if (currSoName != BUILTIN_SO_NAME) {
-        return false;
+    if (currSoName == OPHOST_BUILTIN_SO_NAME) {
+        // ophost built-in场景两个so在相同路径下
+        soPath = parentPath + std::string("/") + LEGACY_SO_NAME;
+        OP_LOGD("LegacyCommonMgr", "try to find %s by path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
+        if (access(soPath.c_str(), F_OK) == 0) {
+            OP_LOGI("LegacyCommonMgr", "get %s path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
+            return true;
+        }
     }
 
-    // built-in场景两个so在相同路径下
-    soPath = parentPath + std::string("/") + LEGACY_SO_NAME;
-    OP_LOGD("LegacyCommonMgr", "try to find %s by path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
-    if (access(soPath.c_str(), F_OK) == 0) {
-        OP_LOGI("LegacyCommonMgr", "get %s path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
-        return true;
+    if (currSoName == OPAPI_BUILTIN_SO_NAME) {
+        // opapi场景需要先向上找到opp入口
+        const char* oppPath = "/../../opp";
+        soPath = parentPath + std::string(oppPath) + OPHOST_PATH + GetCpuArch() + std::string("/") + LEGACY_SO_NAME;
+        OP_LOGD("LegacyCommonMgr", "try to find %s by path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
+        if (access(soPath.c_str(), F_OK) == 0) {
+            OP_LOGI("LegacyCommonMgr", "get %s path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
+            return true;
+        }
     }
 
     return false;
@@ -135,15 +143,19 @@ bool LegacyCommonMgr::GetSoPathForBuiltin(
 bool LegacyCommonMgr::GetSoPathForCustomOp(
     const std::string& parentPath, const std::string& currSoName, std::string& soPath) const
 {
-    if (currSoName != CUSTOM_SO_NAME) {
+    // 自定义算子场景需要先向上找到opp入口
+    std::string oppPath;
+    if (currSoName == OPHOST_CUSTOM_SO_NAME) {
+        // 路径：opp/vendors/custom_nn/op_impl/ai_core/tbe/op_tiling/lib/linux/$(arch)/libcust_opmaster_rt2.0.so
+        oppPath = "/../../../../../../../../../../opp";
+    } else if (currSoName == OPAPI_CUSTOM_SO_NAME) {
+        // 路径：opp/vendors/custom_nn/op_api/lib/libcust_opapi.so
+        oppPath = "/../../../../../opp";
+    } else {
         return false;
     }
 
-    // 自定义算子场景需要先向上找到opp入口
-    const char* oppPath = "/../../../../../../../../../../opp";
-    const char* ophostPath = "/built-in/op_impl/ai_core/tbe/op_host/lib/linux/";
-    soPath =
-        parentPath + std::string(oppPath) + std::string(ophostPath) + GetCpuArch() + std::string("/") + LEGACY_SO_NAME;
+    soPath = parentPath + oppPath + OPHOST_PATH + GetCpuArch() + std::string("/") + LEGACY_SO_NAME;
     OP_LOGD("LegacyCommonMgr", "try to find %s by path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());
     if (access(soPath.c_str(), F_OK) == 0) {
         OP_LOGI("LegacyCommonMgr", "get %s path[%s].", LEGACY_SO_NAME.c_str(), soPath.c_str());

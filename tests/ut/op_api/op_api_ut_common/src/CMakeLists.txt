@@ -9,7 +9,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-file(GLOB_RECURSE op_api_ut_common_src CONFIGURE_DEPENDS "*.cpp")
+file(GLOB_RECURSE op_api_ut_common_src CONFIGURE_DEPENDS "*.cpp" ${OPS_NN_DIR}/tests/ut/common/legacy_common_manager_stub.cpp)
 add_library(op_api_ut_common SHARED ${op_api_ut_common_src})
 add_dependencies(op_api_ut_common json)
 
@@ -23,10 +23,13 @@ target_include_directories(op_api_ut_common PRIVATE
         ${ASCEND_DIR}/pkg_inc
         ${ASCEND_DIR}/include
         ${ASCEND_DIR}/include/aclnn
+        ${OPS_NN_DIR}
+        ${OPBASE_INC_DIRS}
         )
 
 target_link_libraries(op_api_ut_common PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        $<BUILD_INTERFACE:dlog_headers>
         op_api_ut_common_inc
         dl
         pthread
