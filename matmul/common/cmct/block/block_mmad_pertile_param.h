@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -17,16 +17,16 @@
 #define MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
 
 #include "kernel_operator.h"
-#include "../../utils/common_utils.h"
-#include "../../utils/layout_utils.h"
-#include "../../utils/tuple_utils.h"
-#include "../../utils/grouped_matmul_constant.h"
+#include "../utils/common_utils.h"
+#include "../utils/layout_utils.h"
+#include "../utils/tuple_utils.h"
+#include "../utils/grouped_matmul_constant.h"
 
-namespace Act {
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-using namespace Act::Gemm::GroupedMatmul;
+using namespace Cmct::Gemm::GroupedMatmul;
 
 template <bool aTrans, bool bTrans>
 class MatMulCommonParam {
@@ -213,17 +213,17 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsA(AscendC::LoadData2DParamsV2
         AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (aTrans) {
         // For b8 input in transpose scenarios: use two 16x32 fractals
-        loadData2dParams.mStep = Align(Act::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
-        loadData2dParams.kStep = Act::Gemm::CeilDiv(currM, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride = Align(Act::Gemm::CeilDiv(isTailAL1 ? kA1Tail_ : kA1_, GMM_k0_FLOAT16), 2UL);
-        loadData2dParams.dstStride = Align(Act::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(K0_B8));
+        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailAL1 ? kA1Tail_ : kA1_, GMM_k0_FLOAT16), 2UL);
+        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
         loadData2dParams.ifTranspose = true;
     } else {
-        loadData2dParams.mStep = Act::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.kStep = Act::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
+        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
         loadData2dParams.srcStride =
-            Act::Gemm::CeilDiv(currM * Get<0>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.dstStride = Act::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
+            Cmct::Gemm::CeilDiv(currM * Get<0>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
     }
 }
 
@@ -236,22 +236,22 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(AscendC::LoadData2DParamsV2
     uint64_t currK =
         AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (bTrans) {
-        loadData2dParams.mStep = Act::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.kStep = Act::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
+        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
         loadData2dParams.srcStride =
-            Act::Gemm::CeilDiv(currN * Get<1>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.dstStride = Act::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
+            Cmct::Gemm::CeilDiv(currN * Get<1>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
     } else {
         loadData2dParams.ifTranspose = true;
         // For b8 input in transpose scenarios: use two 16x32 fractals
-        loadData2dParams.mStep = Align(Act::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
-        loadData2dParams.kStep = Act::Gemm::CeilDiv(currN, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride = Align(Act::Gemm::CeilDiv(isTailBL1 ? kB1Tail_ : kB1_, GMM_k0_FLOAT16), 2UL);
-        loadData2dParams.dstStride = Align(Act::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(K0_B8));
+        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailBL1 ? kB1Tail_ : kB1_, GMM_k0_FLOAT16), 2UL);
+        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
     }
 }
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
+} // namespace Cmct
 
 #endif

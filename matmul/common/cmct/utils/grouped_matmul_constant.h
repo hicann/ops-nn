@@ -21,6 +21,7 @@ constexpr uint32_t GMM_BUFFER_NUM = 2;
 constexpr uint16_t GMM_FLAG_ID_MAX = 16;
 constexpr uint16_t GMM_AIV_SYNC_AIC_FLAG = 6;
 constexpr uint16_t GMM_AIC_SYNC_AIV_FLAG = 8;
+constexpr int32_t GMM_CUBE_SYNC_MTE1_FLAG = 3;
 constexpr uint8_t GMM_AIC_SYNC_AIV_MODE = 4;
 constexpr uint64_t GMM_MAX_STEP_SCALEA_K = 16;
 constexpr uint32_t GMM_UB_ALIGN_SIZE = 32;
@@ -36,6 +37,18 @@ constexpr uint32_t GMM_BMM_BLOCK_NUM = 16;
 constexpr uint32_t K0_B8 = 32;
 constexpr uint32_t GMM_k0_FLOAT16 = 16;
 constexpr uint16_t GMM_DATA_BLOCK = 32;
+
+enum class QuantMode : uint32_t
+{
+    DEFAULT = 0x0U,
+    PERTENSOR_MODE = 0x1U,
+    PERCHANNEL_MODE = 0x1U << 1,
+    PERTOKEN_MODE = 0x1U << 2,
+    MX_PERGROUP_MODE = 0x1U << 3,
+    PERGROUP_MODE = 0x1U << 4,
+    PERBLOCK_MODE = 0x1U << 5,
+};
+
 } // namespace GroupedMatmul
 } // namespace Gemm
 } // namespace Cmct

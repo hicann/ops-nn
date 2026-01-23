@@ -25,7 +25,10 @@
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
 #include "arch35/qbmm_mix_online_dynamic.h"
 #include "arch35/qbmm_mix_online_dynamic_al1_full_load.h"
-#include "arch35/qbmm_mix_perblock_act.h"
+#include "arch35/qbmm_mix_perblock_cmct.h"
+#endif
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#include "arch35/qbmm_mx_basic_api_cmct.h"
 #endif
 #include "kernel_operator.h"
 
@@ -63,6 +66,15 @@ using namespace matmul;
 
 #ifndef FORMAT_FRACTAL_NZ
 #define FORMAT_FRACTAL_NZ
+#endif
+
+#if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
+#define USE_BASIC_API                                                                                              \
+        ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&                                     \
+         (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) &&                                     \
+         ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0 && FORMAT_X2 == FORMAT_ND)
+#else
+#define USE_BASIC_API false
 #endif
 
 #if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_FRACTAL_NZ
@@ -106,6 +118,15 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         op.Process();                                                                                                \
     } while (0)
 
+#if defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0
+#define QUANT_BMMV3_MX_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                                         \
+    do {                                                                                                               \
+        QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>(x1, x2, scale, bias, \
+                                                                                                   pertokenScale, y,   \
+                                                                                                   &tilingData);       \
+    } while (0)
+#endif
+
 template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BIASMODE, int TPL_KERNELTYPE>
 __global__ __aicore__ void quant_batch_matmul_v3(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR pertokenScale, GM_ADDR y,
@@ -129,7 +150,6 @@ __global__ __aicore__ void quant_batch_matmul_v3(
                 format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS),
                 QuantBatchMatmulV3::QuantBmmPertokenRegbaseKernel, QuantBatchMatmulV3::QuantBmmAswBlock,
                 MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
-
         }
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 3;
             QUANT_BMMV3_IMPL_CLASS(
@@ -140,6 +160,37 @@ __global__ __aicore__ void quant_batch_matmul_v3(
     }
 #endif
     if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
+#if USE_BASIC_API
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
+            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, 0);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, 0);
+            }
+        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
+            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                                              Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+            }
+        }
+#else
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0;
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 MatMulASWKernel<
@@ -161,6 +212,7 @@ __global__ __aicore__ void quant_batch_matmul_v3(
                 op.Process();
             }
         }
+#endif
     } else {
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
@@ -183,23 +235,23 @@ __global__ __aicore__ void quant_batch_matmul_v3(
     }
 #define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                             \
     do {                                                                                                               \
-        QbmmActPerTileKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_SCALE, float, DTYPE_Y, xLayout, wLayout, yLayout, \
+        QbmmCmctPerTileKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_SCALE, float, DTYPE_Y, xLayout, wLayout, yLayout, \
                             DTYPE_LOC_LOCAL>(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);  \
     } while (0)
 
 #if SUPPORT_PERBLOCK
     if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_CUSTOM_MM ) {             // Bias Mode = 0; Kernel Type = 4;
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) { 
-            QBMM_QUANT_GB_IMPL_CLASS(Act::Gemm::layout::RowMajor, Act::Gemm::layout::RowMajor, Act::Gemm::layout::RowMajorAlign);
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
         }
         if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-            QBMM_QUANT_GB_IMPL_CLASS(Act::Gemm::layout::ColumnMajor, Act::Gemm::layout::RowMajor, Act::Gemm::layout::RowMajorAlign);
+            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
         }
         if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Act::Gemm::layout::RowMajor, Act::Gemm::layout::ColumnMajor, Act::Gemm::layout::RowMajorAlign);
+            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
         }
         if constexpr(TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Act::Gemm::layout::ColumnMajor, Act::Gemm::layout::ColumnMajor, Act::Gemm::layout::RowMajorAlign);
+            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
         }
     }
 #endif
@@ -236,6 +288,5 @@ __global__ __aicore__ void quant_batch_matmul_v3(
             op.Process();
         }
     }
-    
 #endif
 }

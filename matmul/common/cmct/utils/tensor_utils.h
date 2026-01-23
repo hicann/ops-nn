@@ -269,18 +269,6 @@ __aicore__ inline constexpr bool PosIsL0C()
     return AscendC::PhyPosIsL0C(pos);
 }
 
-/**
- * @brief Check if is quantization scenario
- * @param [in] OutType: data type of output
- * @param [in] InType: data type of input
- * @return Return true if is quantization scenario
- */
-template <class OutType, class InType>
-__aicore__ inline constexpr bool IsQuantSenario()
-{
-    return AscendC::Impl::Detail::IsQuantSenario<OutType, InType>();
-}
-
 } // namespace Gemm
 } // namespace Cmct
 #endif

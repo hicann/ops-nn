@@ -8,19 +8,19 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef ACT_QBMM_BLOCK_SCHEDULER_H
-#define ACT_QBMM_BLOCK_SCHEDULER_H
-
-#include "./block_scheduler_utils.h"
-#include "./block_scheduler_policy.h"
-#include "../../utils/common_utils.h"
-
-/*!
+ /*!
  * \file qbmm_block_scheduler.h
  * \brief
  */
 
-namespace Act {
+#ifndef CMCT_QBMM_BLOCK_SCHEDULER_H
+#define CMCT_QBMM_BLOCK_SCHEDULER_H
+
+#include "./block_scheduler_utils.h"
+#include "./block_scheduler_policy.h"
+#include "../utils/common_utils.h"
+
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 
@@ -58,6 +58,7 @@ public:
     int64_t nSplitAddrOffset_{0};
     int64_t mainRow_{0};
     int64_t usedCoreNum_{0};
+    int64_t batchIdx_{0};
 
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
@@ -86,8 +87,8 @@ public:
         b_ = shape.b;
         baseM_ = static_cast<int64_t>(params.baseM);
         baseN_ = static_cast<int64_t>(params.baseN);
-        mCnt_ = Act::Gemm::CeilDiv(m_, baseM_);
-        nCnt_ = Act::Gemm::CeilDiv(n_, baseN_);
+        mCnt_ = Cmct::Gemm::CeilDiv(m_, baseM_);
+        nCnt_ = Cmct::Gemm::CeilDiv(n_, baseN_);
         singleBatchCnt_ = mCnt_ * nCnt_;
         totalCnt_ = b_ * singleBatchCnt_;
         mBaseNormCnt_ = mCnt_ - params.mBaseTailSplitCnt;
@@ -98,14 +99,21 @@ public:
         mBaseTailLast_ = mBaseTail - (params.mBaseTailSplitCnt - 1) * mBaseTailMain_;
         nBaseTailMain_ = params.nBaseTailSplitCnt == 1 ? nBaseTail : params.nTailMain;
         nBaseTailLast_ = nBaseTail - (params.nBaseTailSplitCnt - 1) * nBaseTailMain_;
-        mCoreNum_ = Act::Gemm::Min(WINDOW_LEN, mCnt_);
+        mCoreNum_ = Cmct::Gemm::Min(WINDOW_LEN, mCnt_);
         mainRow_ = mCnt_ / mCoreNum_ - 1;
         mTailCoreNum_ = mCnt_ - mCoreNum_ * mainRow_;
         blockIdx_ = AscendC::GetBlockIdx();
         blockNum_ = AscendC::GetBlockNum();
         endBlockIdx_ = singleBatchCnt_ % blockNum_ - 1;
         roundIdx_ = 0;
-        round_ = Act::Gemm::CeilDiv(singleBatchCnt_, blockNum_);
+        round_ = Cmct::Gemm::CeilDiv(singleBatchCnt_, blockNum_);
+        if (b_ > 1) {
+            if (startBlockIdx_ > endBlockIdx_ && (blockIdx_ > endBlockIdx_ && blockIdx_ < startBlockIdx_)) {
+                round_ -= 1;
+            } else if (startBlockIdx_ <= endBlockIdx_ && (blockIdx_ > endBlockIdx_ || blockIdx_ < startBlockIdx_)) {
+                round_ -= 1;
+            }
+        }
         mTailTile_ = static_cast<int64_t>(params.mTailTile);
         nTailTile_ = static_cast<int64_t>(params.nTailTile);
         totalTailTile_ = mTailTile_ * nTailTile_;
@@ -133,31 +141,30 @@ public:
             singleCoreN = Get<MNK_N>(blockCoord) >= nCnt_ - 1 ? nBaseTailLast_ : nBaseTailMain_;
         }
 
-        if (totalTailTile_ == 1 || b_ > 1) {
+        if (totalTailTile_ == 1 || b_ > 1 || roundIdx_ != round_ - 1) {
             return {singleCoreM, singleCoreN, 0, 0};
         }
 
-        if (roundIdx_ == round_ - 1) {
-            int64_t singleCoreMSplit = Act::Gemm::CeilDiv(singleCoreM, mTailTile_);
-            int64_t singleCoreNSplit = Act::Gemm::CeilDiv(singleCoreN, nTailTile_);
-            int64_t mSplitIdx = (blockIdx_ % totalTailTile_) % mTailTile_;
-            int64_t nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
-            mSplitAddrOffset_ = mSplitIdx * singleCoreMSplit;
-            nSplitAddrOffset_ = nSplitIdx * singleCoreNSplit;
-            if (mSplitAddrOffset_ >= singleCoreM || nSplitAddrOffset_ >= singleCoreN) {
-                singleCoreM = 0;
-                singleCoreN = 0;
-                return {singleCoreM, singleCoreN, mSplitAddrOffset_, nSplitAddrOffset_};
-            }
-            singleCoreM = Act::Gemm::Min(singleCoreM - mSplitAddrOffset_, singleCoreMSplit);
-            singleCoreN = Act::Gemm::Min(singleCoreN - nSplitAddrOffset_, singleCoreNSplit);
+        int64_t singleCoreMSplit = Cmct::Gemm::CeilDiv(singleCoreM, mTailTile_);
+        int64_t singleCoreNSplit = Cmct::Gemm::CeilDiv(singleCoreN, nTailTile_);
+        int64_t mSplitIdx = (blockIdx_ % totalTailTile_) % mTailTile_;
+        int64_t nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
+        mSplitAddrOffset_ = mSplitIdx * singleCoreMSplit;
+        nSplitAddrOffset_ = nSplitIdx * singleCoreNSplit;
+        if (mSplitAddrOffset_ >= singleCoreM || nSplitAddrOffset_ >= singleCoreN) {
+            singleCoreM = 0;
+            singleCoreN = 0;
             return {singleCoreM, singleCoreN, mSplitAddrOffset_, nSplitAddrOffset_};
         }
+        singleCoreM = Cmct::Gemm::Min(singleCoreM - mSplitAddrOffset_, singleCoreMSplit);
+        singleCoreN = Cmct::Gemm::Min(singleCoreN - nSplitAddrOffset_, singleCoreNSplit);
+        return {singleCoreM, singleCoreN, mSplitAddrOffset_, nSplitAddrOffset_};
     }
 
-    __aicore__ inline BlockShape GetLoadBalanceInfo()
+    __aicore__ inline AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> GetLoadBalanceInfo()
     {
-        return {mBaseNormCnt_, mBaseTailMain_, nBaseNormCnt_, nBaseTailMain_};
+        return {static_cast<uint32_t>(mBaseNormCnt_), static_cast<uint32_t>(mBaseTailMain_),
+                static_cast<uint32_t>(nBaseNormCnt_), static_cast<uint32_t>(nBaseTailMain_)};
     }
 
     __aicore__ inline void ResetAddrOffsets()
@@ -166,18 +173,25 @@ public:
         nSplitAddrOffset_ = 0;
     }
 
+    __aicore__ inline void IncrementRoundIdx()
+    {
+        roundIdx_++;
+    }
+
     __aicore__ inline void UpdateNextBatchBlockRoundParams()
     {
         startBlockIdx_ = (endBlockIdx_ + 1) % blockNum_;
         endBlockIdx_ = (singleBatchCnt_ + startBlockIdx_ - 1) % blockNum_;
 
         roundIdx_ = 0;
-        round_ = Act::Gemm::CeilDiv(singleBatchCnt_, blockNum_);
+        round_ = Cmct::Gemm::CeilDiv(singleBatchCnt_, blockNum_);
         if (startBlockIdx_ > endBlockIdx_ && (blockIdx_ > endBlockIdx_ && blockIdx_ < startBlockIdx_)) {
             round_ -= 1;
         } else if (startBlockIdx_ <= endBlockIdx_ && (blockIdx_ > endBlockIdx_ || blockIdx_ < startBlockIdx_)) {
             round_ -= 1;
         }
+
+        batchIdx_++;
     }
 
     __aicore__ inline bool GetTileIdx(BlockCoord &blockCoord)
@@ -186,11 +200,20 @@ public:
             return false;
         }
 
-        int64_t newBlockIdx = (roundIdx_ == round_ - 1) ? blockIdx_ / totalTailTile_ : blockIdx_;
+        int64_t newBlockIdx = (b_ == 1 && roundIdx_ == round_ - 1) ? blockIdx_ / totalTailTile_ : blockIdx_;
         int64_t tileIdx = newBlockIdx + roundIdx_ * usedCoreNum_;
+        if (b_ > 1) {
+            if (blockIdx_ < startBlockIdx_) {
+                tileIdx += blockNum_ - startBlockIdx_;
+            } else {
+                tileIdx -= startBlockIdx_;
+            }
+        }
 
-        int64_t batchIdx = tileIdx / singleBatchCnt_;
-        Get<MNK_B>(blockCoord) = batchIdx;
+        if (batchIdx_ >= b_) {
+            return false;
+        }
+        Get<MNK_B>(blockCoord) = batchIdx_;
 
         int64_t inBatchIdx = tileIdx % singleBatchCnt_;
         int64_t rowIdx = inBatchIdx / nCnt_ / mCoreNum_;
@@ -207,17 +230,16 @@ public:
             Get<MNK_N>(blockCoord) = nCnt_ - 1 - Get<MNK_N>(blockCoord);
         }
 
-        roundIdx_++;
         return true;
     }
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
-struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Act::Gemm::QuantBatchMatmulV3Scheduler,
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler,
                               TransA_, TransB_> {
     using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, TransA_, TransB_>;
 };
 }  // namespace Block
 }  // namespace Gemm
-}  // namespace Act
+}  // namespace Cmct
 #endif

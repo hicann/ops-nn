@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -17,9 +17,9 @@
 #define MATMUL_BLOCK_BLOCK_SCHEDULER_GMM_ASWT_WITH_TAIL_SPLIT_H
 #include "./block_scheduler_utils.h"
 #include "./block_scheduler_policy.h"
-#include "../../utils/status_utils.h"
+#include "../utils/status_utils.h"
 
-namespace Act {
+namespace Cmct {
 namespace Gemm {
 namespace Block {
 constexpr int64_t INNER_AXIS_MIN_SPLIT_VAL = 128; // ND2NZ cacheline 128
@@ -45,11 +45,6 @@ private:
     int64_t m_{0};
     int64_t n_{0};
     int64_t k_;
-    int32_t baseM_;
-    int32_t baseN_;
-    int32_t baseK_;
-    int32_t mBaseTail_;
-    int32_t nBaseTail_;
     int64_t mTailCnt_{1};
     int64_t nTailCnt_{1};
     int64_t tailCnt_{1}; // only update when last group
@@ -58,15 +53,30 @@ private:
     int64_t mainRow_;
     int64_t round_;
     int64_t roundIdx_;
+    int32_t baseM_;
+    int32_t baseN_;
+    int32_t baseK_;
+    int32_t mBaseTail_;
+    int32_t nBaseTail_;
+    int32_t mBaseNormCnt_;
+    int32_t mBaseTailMain_;
+    int32_t mBaseTailLast_;
     uint32_t blockNum_ = AscendC::GetBlockNum();
     uint32_t blockIdx_ = AscendC::GetBlockIdx() / AscendC::GetTaskRation();
     uint32_t startBlockIdx_;
     uint32_t endBlockIdx_{blockNum_ - 1};
 
 public:
-    __aicore__ inline BlockSchedulerGmmAswtWithTailSplit(int32_t baseM, int32_t baseN, int32_t baseK) :
-        baseM_(baseM), baseN_(baseN), baseK_(baseK)
+    __aicore__ inline BlockSchedulerGmmAswtWithTailSplit(int32_t baseM, int32_t baseN, int32_t baseK)
+        : baseM_(baseM), baseN_(baseN), baseK_(baseK)
     {}
+
+    __aicore__ inline void SetLoadBalanceParam(uint32_t mBaseNormCnt, uint32_t mBaseTailMain, uint32_t mBaseTailLast)
+    {
+        mBaseNormCnt_ = mBaseNormCnt;
+        mBaseTailMain_ = mBaseTailMain;
+        mBaseTailLast_ = mBaseTailLast;
+    }
 
     __aicore__ inline void UpdateNextProblem(const TupleShape& problemShape)
     {
@@ -145,9 +155,20 @@ public:
         return true;
     }
 
-    __aicore__ inline TupleShape GetBlockShape(const BlockCoord& blockCoord)
+    __aicore__ inline TupleShape GetBlockShape(const BlockCoord& blockCoord, bool enableLoadBalance = false)
     {
-        int64_t singleCoreM = Get<MNK_M>(blockCoord) != (mCnt_ - 1) ? baseM_ : mBaseTail_;
+        int64_t singleCoreM = baseM_;
+        if (enableLoadBalance) {
+            if constexpr (!TransA_) {
+                if (Get<MNK_M>(blockCoord) >= mBaseNormCnt_) {
+                    singleCoreM = Get<MNK_M>(blockCoord) < mCnt_ - 1 ? mBaseTailMain_ : mBaseTailLast_;
+                }
+            } else {
+                singleCoreM = Get<MNK_M>(blockCoord) != (mCnt_ - 1) ? baseM_ : mBaseTail_;
+            }
+        } else {
+            singleCoreM = Get<MNK_M>(blockCoord) != (mCnt_ - 1) ? baseM_ : mBaseTail_;
+        }
         int64_t singleCoreN = Get<MNK_N>(blockCoord) != (nCnt_ - 1) ? baseN_ : nBaseTail_;
         if (tailCnt_ == 1 || roundIdx_ < round_) { // roundIdx++ in GetTileIdx
             return {singleCoreM, singleCoreN, 0, 0};
@@ -187,24 +208,14 @@ public:
     {
         return DoGetBlockNum(l1M, l1N, shape);
     }
-
-    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape)
-    {
-        return 0;
-    }
-
-    __host_aicore__ static Status CanImplement(ProblemShape shape)
-    {
-        return Status::success;
-    }
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
 struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_,
-                              Act::Gemm::GroupedMatmulAswtWithTailSplitScheduler, TransA_, TransB_> {
+                              Cmct::Gemm::GroupedMatmulAswtWithTailSplitScheduler, TransA_, TransB_> {
     using SchedulerOp = BlockSchedulerGmmAswtWithTailSplit<ProblemShape_, L1TileShape_, L0TileShape_, TransA_, TransB_>;
 };
 } // namespace Block
 } // namespace Gemm
-} // namespace Act
+} // namespace Cmct
 #endif

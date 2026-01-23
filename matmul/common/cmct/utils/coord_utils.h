@@ -17,17 +17,20 @@
 #define UTILS_COORD_UTILS_H
 
 #include "common_utils.h"
+#include "grouped_matmul_constant.h"
 namespace Cmct {
 namespace Gemm {
 
 constexpr uint32_t OUTER_SIZE = 16;
-constexpr int32_t MXFP_DIVISOR_SIZE = 64;
-constexpr int32_t MXFP_MULTI_BASE_SIZE = 2;
+constexpr int IDX_M_BASE_NORM_CNT = 0;
+constexpr int IDX_M_BASE_TAIL_MAIN = 1;
+constexpr int IDX_N_BASE_NORM_CNT = 2;
+constexpr int IDX_N_BASE_TAIL_MAIN = 3;
 
 template <class BlockCoord_, class ProblemShape_, class ATensorType_, class BTensorType_, class CTensorType_>
-__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t>
-GetOffset(BlockCoord_ blockCoord, ProblemShape_ problemShape, ATensorType_ aTensor, BTensorType_ bTensor,
-          CTensorType_ cTensor, bool transA, bool transB)
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffset(
+    BlockCoord_ blockCoord, ProblemShape_ problemShape, ATensorType_ aTensor, BTensorType_ bTensor,
+    CTensorType_ cTensor, bool transA, bool transB)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -53,11 +56,12 @@ GetOffset(BlockCoord_ blockCoord, ProblemShape_ problemShape, ATensorType_ aTens
 
     return {offsetA, offsetB, offsetC};
 }
+
 // GetOffsetWithoutLayout
 template <class BlockCoord, class ProblemShape, class ATensorType, class BTensorType, class CTensorType>
-__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(BlockCoord blockCoord,
-    ProblemShape problemShape, ATensorType aTensor, BTensorType bTensor, CTensorType cTensor, bool transA, bool transB,
-    bool isBias, AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL)
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(
+    BlockCoord blockCoord, ProblemShape problemShape, ATensorType aTensor, BTensorType bTensor, CTensorType cTensor,
+    bool transA, bool transB, bool isBias, AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -68,7 +72,7 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWi
     int64_t realMOffset = Get<0>(blockCoord);
     if (srcNdStride != 1 && sliceM != 0) {
         int64_t oriM = srcNdStride / k;
-        realM = (curML1 / sliceM) * oriM;  // ndNum * oriM
+        realM = (curML1 / sliceM) * oriM; // ndNum * oriM
         realMOffset = Get<2>(blockCoord);
     }
     int64_t offsetA = Get<MNK_B>(blockCoord) * realM * k;
@@ -93,11 +97,10 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWi
 
 // GetOffsetStreamK
 template <class BlockCoord_, class ProblemShape_, class ATensorType_, class BTensorType_, class CTensorType_>
-__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t>
-GetOffsetStreamK(BlockCoord_ blockCoord, ProblemShape_ problemShape,
-                 AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1, int64_t kSingleCore,
-                 ATensorType_ aTensor, BTensorType_ bTensor, CTensorType_ cTensor,
-                 bool transA, bool transB, bool isBias)
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetStreamK(
+    BlockCoord_ blockCoord, ProblemShape_ problemShape, AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1,
+    int64_t kSingleCore, ATensorType_ aTensor, BTensorType_ bTensor, CTensorType_ cTensor, bool transA, bool transB,
+    bool isBias)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -110,22 +113,18 @@ GetOffsetStreamK(BlockCoord_ blockCoord, ProblemShape_ problemShape,
     int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + Get<MNK_M>(blockCoord) * mL1 * n + Get<MNK_N>(blockCoord) * nL1;
     int64_t offsetBias = 0;
     if (transA) {
-        offsetA = Get<MNK_B>(blockCoord) * m * k +
-                  Get<MNK_M>(blockCoord) * mL1 +
-                  Get<MNK_K>(blockCoord) * kSingleCore * m;
+        offsetA =
+            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 + Get<MNK_K>(blockCoord) * kSingleCore * m;
     } else {
-        offsetA = Get<MNK_B>(blockCoord) * m * k +
-                  Get<MNK_M>(blockCoord) * mL1 * k +
-                  Get<MNK_K>(blockCoord) * kSingleCore;
+        offsetA =
+            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 * k + Get<MNK_K>(blockCoord) * kSingleCore;
     }
     if (transB) {
-        offsetB = Get<MNK_B>(blockCoord) * n * k +
-                  Get<MNK_N>(blockCoord) * nL1 * k +
-                  Get<MNK_K>(blockCoord) * kSingleCore;
+        offsetB =
+            Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * k + Get<MNK_K>(blockCoord) * kSingleCore;
     } else {
-        offsetB = Get<MNK_B>(blockCoord) * n * k +
-                  Get<MNK_N>(blockCoord) * nL1 +
-                  Get<MNK_K>(blockCoord) * kSingleCore * n;
+        offsetB =
+            Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 + Get<MNK_K>(blockCoord) * kSingleCore * n;
     }
     if (isBias) {
         offsetBias = Get<MNK_B>(blockCoord) * n + Get<MNK_N>(blockCoord) * nL1;
@@ -136,9 +135,9 @@ GetOffsetStreamK(BlockCoord_ blockCoord, ProblemShape_ problemShape,
 
 // GetOffsetIterBatch
 template <class BlockCoord, class ProblemShape, class ATensorType, class BTensorType, class CTensorType>
-__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t>
-GetOffsetIterBatch(BlockCoord blockCoord, ProblemShape problemShape, ATensorType aTensor, BTensorType bTensor,
-                   CTensorType cTensor, int64_t innerBatch = 0, bool transB = false)
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffsetIterBatch(
+    BlockCoord blockCoord, ProblemShape problemShape, ATensorType aTensor, BTensorType bTensor, CTensorType cTensor,
+    int64_t innerBatch = 0, bool transB = false)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -162,16 +161,16 @@ GetOffsetIterBatch(BlockCoord blockCoord, ProblemShape problemShape, ATensorType
 template <bool isTransA_, bool isTransB_, CubeFormat layoutA_, CubeFormat layoutB_, CubeFormat layoutC_>
 class Coordinate {
 public:
-    __aicore__ inline Coordinate(int64_t m, int64_t n, int64_t k, int64_t l1M, int64_t l1N, int64_t l1K) :
-        m(m), n(n), k(k), l1M(l1M), l1N(l1N), l1K(l1K)
+    __aicore__ inline Coordinate(int64_t m, int64_t n, int64_t k, int64_t l1M, int64_t l1N, int64_t l1K)
+        : m(m), n(n), k(k), l1M(l1M), l1N(l1N), l1K(l1K)
     {}
 
     static constexpr bool isTransA = isTransA_;
     static constexpr bool isTransB = isTransB_;
     static constexpr CubeFormat layoutB = layoutB_;
 
-    __aicore__ inline int64_t GetAOffset(int64_t mTileIdx, int64_t kTileIdx, int64_t batchTileIdx = 0,
-                                         int64_t mSplitOffset = 0)
+    __aicore__ inline int64_t GetAOffset(
+        int64_t mTileIdx, int64_t kTileIdx, int64_t batchTileIdx = 0, int64_t mSplitOffset = 0)
     {
         if (isTransA) {
             return batchTileIdx * m * k + kTileIdx * l1K * m + (mTileIdx * l1M + mSplitOffset);
@@ -179,19 +178,19 @@ public:
         return batchTileIdx * m * k + (mTileIdx * l1M + mSplitOffset) * k + kTileIdx * l1K;
     }
 
-    __aicore__ inline int64_t GetBOffset(int64_t nTileIdx, int64_t kTileIdx, int64_t batchTileIdx = 0, int32_t c0 = 0,
-                                         int64_t nSplitOffset = 0)
+    __aicore__ inline int64_t GetBOffset(
+        int64_t nTileIdx, int64_t kTileIdx, int64_t batchTileIdx = 0, int32_t c0 = 0, int64_t nSplitOffset = 0)
     {
         if constexpr (layoutB == CubeFormat::NZ) {
             if (c0 == 0) {
                 return 0;
             }
             if (isTransB) {
-                return batchTileIdx * CeilAlign(n, OUTER_SIZE) * CeilAlign(k, c0) + (nTileIdx * l1N + nSplitOffset) * c0
-                       + kTileIdx * l1K * CeilAlign(n, OUTER_SIZE);
+                return batchTileIdx * CeilAlign(n, OUTER_SIZE) * CeilAlign(k, c0) +
+                       (nTileIdx * l1N + nSplitOffset) * c0 + kTileIdx * l1K * CeilAlign(n, OUTER_SIZE);
             }
-            return batchTileIdx * CeilAlign(n, c0) * CeilAlign(k, OUTER_SIZE) + kTileIdx * l1K * c0
-                   + (nTileIdx * l1N + nSplitOffset) * CeilAlign(k, OUTER_SIZE);
+            return batchTileIdx * CeilAlign(n, c0) * CeilAlign(k, OUTER_SIZE) + kTileIdx * l1K * c0 +
+                   (nTileIdx * l1N + nSplitOffset) * CeilAlign(k, OUTER_SIZE);
         }
         if (isTransB) {
             return batchTileIdx * n * k + (nTileIdx * l1N + nSplitOffset) * k + kTileIdx * l1K;
@@ -199,8 +198,9 @@ public:
         return batchTileIdx * n * k + kTileIdx * l1K * n + (nTileIdx * l1N + nSplitOffset);
     }
 
-    __aicore__ inline int64_t GetCOffset(int64_t mTileIdx, int64_t nTileIdx, int64_t batchTileIdx = 0,
-                                         int64_t mSplitOffset = 0, int64_t nSplitOffset = 0)
+    __aicore__ inline int64_t GetCOffset(
+        int64_t mTileIdx, int64_t nTileIdx, int64_t batchTileIdx = 0, int64_t mSplitOffset = 0,
+        int64_t nSplitOffset = 0)
     {
         return batchTileIdx * n * m + (mTileIdx * l1M + mSplitOffset) * n + (nTileIdx * l1N + nSplitOffset);
     }
@@ -210,12 +210,44 @@ public:
         return nTileIdx * l1N + nSplitOffset;
     }
 
-    template <bool isMx, bool isGB>
-    __aicore__ inline AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>
-    GetQuantOffset(int64_t mTileIdx, int64_t nTileIdx, int64_t mSplitOffset = 0, int64_t nSplitOffset = 0)
+    template <GroupedMatmul::QuantMode aQuantMode>
+    __aicore__ inline void CalOffsetOfAIV(
+        int64_t mOffset, int64_t nOffset,
+        AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>& offset)
+    {
+        int64_t x1ScaleMOffset = mOffset;
+        if constexpr (aQuantMode == GroupedMatmul::QuantMode::PERBLOCK_MODE) {
+            x1ScaleMOffset = mOffset / PER_BLOCK_SIZE;
+        }
+        if constexpr (isTransA) {
+            Get<2>(offset) = x1ScaleMOffset; // 2: idx of x1Scale
+        } else {
+            Get<2>(offset) = x1ScaleMOffset * CeilDiv(k, PER_BLOCK_SIZE); // 2: idx of x1Scale
+        }
+        if constexpr (isTransB) {
+            Get<3>(offset) = nOffset / PER_BLOCK_SIZE * CeilDiv(k, PER_BLOCK_SIZE); // 3: idx of x2Scale
+        } else {
+            Get<3>(offset) = nOffset / PER_BLOCK_SIZE; // 3: idx of x2Scale
+        }
+    }
+
+    template <GroupedMatmul::QuantMode aQuantMode, bool enableLoadBalance = false>
+    __aicore__ inline AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> GetQuantOffset(
+        int64_t mTileIdx, int64_t nTileIdx, int64_t mSplitOffset = 0, int64_t nSplitOffset = 0,
+        AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceParam = {0u, 0u, 0u, 0u})
     {
         int64_t mOffset = mTileIdx * l1M + mSplitOffset;
         int64_t nOffset = nTileIdx * l1N + nSplitOffset;
+        if constexpr (enableLoadBalance && !(isTransA && !isTransB)) {
+            int32_t mBaseNormCnt = Get<IDX_M_BASE_NORM_CNT>(loadBalanceParam);
+            int32_t nBaseNormCnt = Get<IDX_N_BASE_NORM_CNT>(loadBalanceParam);
+            if (mTileIdx > mBaseNormCnt) {
+                mOffset -= (mTileIdx - mBaseNormCnt) * (l1M - Get<IDX_M_BASE_TAIL_MAIN>(loadBalanceParam));
+            }
+            if (nTileIdx > nBaseNormCnt) {
+                nOffset -= (nTileIdx - nBaseNormCnt) * (l1N - Get<IDX_N_BASE_TAIL_MAIN>(loadBalanceParam));
+            }
+        }
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> offset{0, 0, 0, 0, 0, 0};
         if constexpr (isTransA) {
             Get<0>(offset) = mOffset;
@@ -228,20 +260,13 @@ public:
             Get<1>(offset) = nOffset;
         }
         Get<5>(offset) = mOffset * n + nOffset; // 5: idx of y
-        if constexpr (isGB) {
+        if constexpr (
+            aQuantMode == GroupedMatmul::QuantMode::PERGROUP_MODE ||
+            aQuantMode == GroupedMatmul::QuantMode::PERBLOCK_MODE) {
             if ASCEND_IS_AIV {
-                if constexpr (isTransA) {
-                    Get<2>(offset) = mOffset; // 2: idx of x1Scale
-                } else {
-                    Get<2>(offset) = mOffset * CeilDiv(k, PER_BLOCK_SIZE); // 2: idx of x1Scale
-                }
-                if constexpr (isTransB) {
-                    Get<3>(offset) = CeilDiv(nOffset, PER_BLOCK_SIZE) * CeilDiv(k, PER_BLOCK_SIZE); // 3: idx of x2Scale
-                } else {
-                    Get<3>(offset) = CeilDiv(nOffset, PER_BLOCK_SIZE); // 3: idx of x2Scale
-                }
+                this->CalOffsetOfAIV<aQuantMode>(mOffset, nOffset, offset);
             }
-        } else if constexpr (isMx) {
+        } else if constexpr (aQuantMode == GroupedMatmul::QuantMode::MX_PERGROUP_MODE) {
             if constexpr (isTransA) {
                 Get<2>(offset) = mOffset * MXFP_MULTI_BASE_SIZE; // 2: idx of x1Scale
             } else {

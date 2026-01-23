@@ -366,6 +366,7 @@ static void TransOriginalShape(aclTensor *weightInt4Pack)
     weightInt4Pack->SetOriginalShape(viewShape);
     OP_LOGD("The correction of original shape for weightInt4PackNZ is completed.");
 }
+}
 
 aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight, aclTensor *weightInt4Pack,
     [[maybe_unused]] uint64_t *workspaceSize, [[maybe_unused]] aclOpExecutor **executor)
@@ -411,7 +412,7 @@ aclnnStatus aclnnConvertWeightToINT4Pack([[maybe_unused]] void *workspace, [[may
 {
     return ACLNN_SUCCESS;
 }
-}
+
 #ifdef __cplusplus
 }
 #endif
