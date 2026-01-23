@@ -117,16 +117,6 @@ ge::graphStatus GetGemmV3ShapeMKN(const gert::Shape& aShape, const gert::Shape& 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GemmV3TilingFunc(gert::TilingContext* context)
-{
-    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("GemmV3", "context is null"), return ge::GRAPH_FAILED);
-    return GemmV3Tiling(context).DoTiling();
-}
-
-ge::graphStatus TilingPrepareForGemmV3(gert::TilingParseContext* context)
-{
-    return InitCompileInfo(context);
-}
 
 } // namespace
 
