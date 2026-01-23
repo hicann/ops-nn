@@ -42,7 +42,6 @@ constexpr double FREQUENCY_v100 = 1.6;
 constexpr double HBM_BW_V100 = 1.6;
 constexpr double L2_BW_V100 = 5.4;
 constexpr int32_t ANTI_REG_PRIORITY = 8;
-
 } // namespace
 namespace optiling {
 

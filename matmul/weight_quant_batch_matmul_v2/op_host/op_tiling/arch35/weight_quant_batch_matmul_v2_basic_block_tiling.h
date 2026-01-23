@@ -26,16 +26,10 @@
 namespace optiling {
 
 constexpr double BYTE_BITS = 8;
-constexpr int64_t BITS_8 = 8;
 constexpr int64_t BUFF_NUM_2 = 2;
 constexpr int64_t BUFF_NUM_3 = 3;
 constexpr int64_t BUFF_NUM_4 = 4;
-constexpr int64_t BLOCK_CUBE = 16;
 constexpr int64_t UB_ALIGN_SIZE = 32;
-constexpr int64_t BASE_MN_LIMIT = 256 * 256;
-constexpr int64_t BASE_MK_LIMIT = 256 * 64;
-constexpr int64_t BASE_BLOCK_MIN = 96;
-constexpr int64_t BASE_BLOCK_MAX = 512;
 constexpr int64_t A16W4_MAX_BL1_SIZE_NZ = 96 * 1024;
 constexpr int64_t A16W4_MAX_BUB_ELEM_SIZE_NZ = 24 * 1024; // A16W4 NZ 4-buffer场景，单buffer最大12KB
 constexpr int64_t A16W4_MAX_BUB_ELEM_SIZE_ND = 32 * 1024; // A16W4 ND 4-buffer场景，单buffer最大16KB
@@ -135,7 +129,7 @@ protected:
     void InitL1TilingParam();
     void InitPlatformParam();
     void GetBasicBlockTable();
-    void SingleShapeTiling(const std::vector<BasicBlock>& basicBlockTable);
+    void SingleShapeTiling(const RowView& basicBlockTable);
     bool ValidateInputParam() const;
     bool GetCachelineAlignFlag(int64_t dtypeBits, int64_t cacheline) const;
     int64_t GetBaseK(int64_t baseM, int64_t baseN) const;
@@ -147,7 +141,7 @@ protected:
     bool GetInvalidFlag(bool isCubeBoundSolution, int64_t stepKMax) const;
     void GetL1Param(bool isCubeBoundSolution, int64_t stepKMax, int64_t stepKaTmp, int64_t stepKbTmp);
     void DoL1Tiling(bool isCubeBoundSolution);
-    bool GetHalfSingleShape(const std::vector<BasicBlock>& basicBlockTable, int64_t& halfSingleM, int64_t& halfSingleN);
+    bool GetHalfSingleShape(const RowView& basicBlockTable, int64_t& halfSingleM, int64_t& halfSingleN);
     bool GetFinalResult();
     bool DoL1TilingForCubeBoundResult();
     bool ValidateTilingResult() const;

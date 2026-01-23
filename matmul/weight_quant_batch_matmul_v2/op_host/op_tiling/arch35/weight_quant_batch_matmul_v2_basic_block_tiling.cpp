@@ -664,16 +664,16 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTable()
 }
 
 bool WeightQuantBatchMatmulV2BasicBlockTiling::GetHalfSingleShape(
-    const std::vector<BasicBlock>& basicBlockTable, int64_t& halfSingleM, int64_t& halfSingleN)
+    const RowView& basicBlockTable, int64_t& halfSingleM, int64_t& halfSingleN)
 {
-    if (basicBlockTable.empty()) {
+    if (basicBlockTable.size() == 0) {
         return false;
     }
 
     // 获取基本块集中baseM、baseN的上下限
     // 备注：要求基本块集中，baseM升序排序、baseN降序排序
-    const BasicBlock& frontBasicBlock = basicBlockTable.front();
-    const BasicBlock& backBasicBlock = basicBlockTable.back();
+    const BasicBlock& frontBasicBlock = basicBlockTable[0];
+    const BasicBlock& backBasicBlock = basicBlockTable[basicBlockTable.size() - 1];
 
     int64_t minBaseM, maxBaseN, maxBaseM, minBaseN;
     minBaseM = frontBasicBlock.baseM;
@@ -704,7 +704,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetHalfSingleShape(
  *  要求basicBlockParam_中mSize、nSize、kSize、singleM、singleN、mDim、nDim已设置；
  *  要求basicBlockTable_已存放可选基本块集；
  */
-void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const std::vector<BasicBlock>& basicBlockTable)
+void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const RowView& basicBlockTable)
 {
     InitL1TilingParam();
     int64_t halfSingleM = basicBlockParam_.singleM;
@@ -714,8 +714,8 @@ void WeightQuantBatchMatmulV2BasicBlockTiling::SingleShapeTiling(const std::vect
         return;
     }
 
-    for (const BasicBlock& basicBlock : basicBlockTable) {
-        basicBlockParam_.basicBlock = basicBlock;
+    for (auto it = basicBlockTable.begin(); it < basicBlockTable.end(); ++it) {
+        basicBlockParam_.basicBlock = *it;
         if (GetInvalidFlagForBasicBlock()) {
             continue;
         }
@@ -943,12 +943,14 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTiling()
     Reset();
     std::unique_ptr<WeightQuantBatchMatmulV2BasicBlockTable> basicBlockTablePtr =
         std::make_unique<WeightQuantBatchMatmulV2BasicBlockTable>();
-    auto basicBlockTable =
-        basicBlockTablePtr->GetBasicBlockTable(basicBlockParam_.aDtypeBits, basicBlockParam_.bDtypeBits);
+    auto basicBlockRow = WeightQuantBatchMatmulV2BasicBlockTable::GetBasicBlockTable(
+        basicBlockParam_.aDtypeBits, basicBlockParam_.bDtypeBits);
 
     // 1）遍历分核方式
-    for (auto it = basicBlockTable.begin(); it != basicBlockTable.end(); ++it) {
-        std::tie(basicBlockParam_.mDim, basicBlockParam_.nDim) = it->first;
+    for (size_t i = 0; i < basicBlockRow.size(); ++i) {
+        basicBlockParam_.mDim = 1 << i;
+        // 假设总核数为32
+        basicBlockParam_.nDim = 32 / basicBlockParam_.mDim;
         basicBlockParam_.singleM = CeilAlign(CeilDiv(basicBlockParam_.mSize, basicBlockParam_.mDim), BLOCK_CUBE);
         basicBlockParam_.singleN = CeilAlign(CeilDiv(basicBlockParam_.nSize, basicBlockParam_.nDim), BLOCK_CUBE);
         int64_t mDimFixed = CeilDiv(basicBlockParam_.mSize, basicBlockParam_.singleM);
@@ -958,7 +960,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTiling()
             continue;
         }
         // 2）选取合适基本块对singleM、singleN进行切分
-        SingleShapeTiling(it->second);
+        SingleShapeTiling(basicBlockRow[i]);
     }
 
     // 3）挑选最终解，若无解则进一步获取非满核cube bound解或mte2 bound解
