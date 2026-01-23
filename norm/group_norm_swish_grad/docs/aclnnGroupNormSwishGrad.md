@@ -1,5 +1,7 @@
 # aclnnGroupNormSwishGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/group_norm_swish_grad)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,82 +17,312 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupNormSwishGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSwishGrad”接口执行计算。
 
-- `aclnnStatus aclnnGroupNormSwishGradGetWorkspaceSize(const aclTensor *dy, const aclTensor *mean, const aclTensor *rstd, const aclTensor *x, const aclTensor *gamma, const aclTensor *beta, int64_t numGroups, char *dataFormatOptional, double swishScale, bool dgammaIsRequire, bool dbetaIsRequire, const aclTensor *dxOut, const aclTensor *dgammaOut, const aclTensor *dbetaOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnGroupNormSwishGrad(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```c++
+aclnnStatus aclnnGroupNormSwishGradGetWorkspaceSize(
+    const aclTensor *dy, 
+    const aclTensor *mean, 
+    const aclTensor *rstd, 
+    const aclTensor *x, 
+    const aclTensor *gamma, 
+    const aclTensor *beta, 
+    int64_t          numGroups, 
+    char            *dataFormatOptional, 
+    double           swishScale, 
+    bool             dgammaIsRequire, 
+    bool             dbetaIsRequire, 
+    const aclTensor *dxOut, 
+    const aclTensor *dgammaOut, 
+    const aclTensor *dbetaOut, 
+    uint64_t        *workspaceSize, 
+    aclOpExecutor  **executor)
+```
+
+```c++
+aclnnStatus aclnnGroupNormSwishGrad(
+    void *         workspace, 
+    uint64_t       workspaceSize, 
+    aclOpExecutor *executor, 
+    aclrtStream    stream)
+```
 
 ## aclnnGroupNormSwishGradGetWorkspaceSize
 
-- **参数说明：**
+-   **参数说明：**
+    <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+      <col style="width: 120px">
+      <col style="width: 120px">
+      <col style="width: 287px">
+      <col style="width: 387px">
+      <col style="width: 187px">
+      <col style="width: 187px">
+      <col style="width: 187px">
+      <col style="width: 145px">
+      </colgroup>
+      <thead>
+      <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+          <th>使用说明</th>
+          <th>数据类型</th>
+          <th>数据格式</th>
+          <th>维度(shape)</th>
+          <th>非连续Tensor</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+          <td>dy</td>
+          <td>输入</td>
+          <td>反向计算的梯度。</td>
+          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2-8</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>mean</td>
+          <td>输入</td>
+          <td>正向计算的第二个输出，表示input分组后每个组的均值。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>rstd</td>
+          <td>输入</td>
+          <td>正向计算的第三个输出，表示input分组后每个组的标准差倒数。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型与gamma相同，其中N与dy的第0维度保持一致。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>x</td>
+          <td>输入</td>
+          <td>正向的输入x。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和shape与dy相同。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2-8</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>gamma</td>
+          <td>输入</td>
+          <td>每个channel的缩放系数。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>1</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>beta</td>
+          <td>输入</td>
+          <td>每个channel的偏移系数。</td>
+          <td><ul><li>不支持空tensor。</li><li>数据类型和维度与dy相同，元素个数需要等于C</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>1</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>numGroups</td>
+          <td>输入</td>
+          <td>输入gradOut的C维度分为group组。</td>
+          <td>group需大于0，C必须可以被group整除并且比值不能超过4000。</td>
+          <td>INT64</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>dataFormatOptional</td>
+          <td>输入</td>
+          <td>数据格式。</td>
+          <td>建议值NCHW。</td>
+          <td>CHAR</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>swishScale</td>
+          <td>输入</td>
+          <td>计算系数。</td>
+          <td>建议值1.0。</td>
+          <td>DOUBLE</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>dgammaIsRequire</td>
+          <td>输入</td>
+          <td>是否需要输出dgamma。</td>
+          <td>建议值TRUE。</td>
+          <td>BOOL</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>dbetaIsRequire</td>
+          <td>输入</td>
+          <td>是否需要输出dbeta。</td>
+          <td>建议值TRUE。</td>
+          <td>BOOL</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>dxOut</td>
+          <td>输出</td>
+          <td>公式中的out。</td>
+          <td>数据类型和shape与x相同。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2-8</td>
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>dgammaOut</td>
+          <td>输出</td>
+          <td>公式中的meanOut。</td>
+          <td>数据类型和shape与gamma相同。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>dbetaOut</td>
+          <td>输出</td>
+          <td>公式中的rstdOut。</td>
+          <td>数据类型和shape与gamma相同。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>  
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>workspaceSize</td>
+          <td>输出</td>
+          <td>返回需要在Device侧申请的workspace大小。</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>executor</td>
+          <td>输出</td>
+          <td>返回op执行器，包含了算子计算流程。</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      </tbody></table>
 
-  * dy (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，反向计算的梯度，维度需大于一维，元素个数需要等于N\*C\*HxW，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * mean (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第二个输出，表示input分组后每个组的均值，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * rstd (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向计算的第三个输出，表示input分组后每个组的标准差倒数，元素个数需要等于N\*group，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，其中`N`与$dy$的第0维度保持一致，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * x (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，正向的输入$x$，维度需大于一维，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * gamma (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的缩放系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * beta (aclTensor\*, 计算输入)：输入张量，Device侧的aclTensor，表示每个channel的偏移系数，维度为一维，元素个数需要等于C，数据类型支持FLOAT32、FLOAT16、BFLOAT16，数据类型与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * numGroups (int64_t, 计算输入)：INT64常量，表示将输入gradOut的C维度分为group组，group需大于0，C必须可以被group整除并且比值不能超过4000。
-
-  * dataFormatOptional (char\*, 计算输入)：表示数据格式，建议值NCHW。
-
-  * swishScale (double, 计算输入)：Swish计算公式中的系数，建议值1.0。
-
-  * dgammaIsRequire (bool, 计算输入)：是否需要输出dgamma，建议值true。
-
-  * dbetaIsRequire (bool, 计算输入)：是否需要输出dbeta，建议值true。
-
-  * dxOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，x的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$x$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * dgammaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，gamma的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * dbetaOut (aclTensor\*, 计算输出)：输出Tensor，Device侧的aclTensor，beta的梯度，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据类型和shape与$gamma$相同，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-
-  * workspaceSize (uint64_t\*, 出参)：返回需要在Device侧申请的workspace大小。
-
-  * executor (aclOpExecutor\**, 出参)：返回op执行器，包含算子计算流程。
 
 - **返回值：**
-
+  
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-```
-第一段接口完成入参校验，出现以下场景时报错：
-161001 ACLNN_ERR_PARAM_NULLPTR：1. 传入的dy、mean、rstd、x、gamma、beta、dxOut、dgammaOut、dbetaOut是空指针时。
-161002 ACLNN_ERR_PARAM_INVALID：1. dy数据类型不在支持的范围之内。
-                                2. mean、rstd、x、gamma、beta的数据类型与dy不同。
-                                3. dxOut的数据类型与dy不同。
-                                6. numGroups不大于0。
-                                7. C不能被group整除。
-                                8. dy的元素个数不等于 N * C * HxW。
-                                9. mean的元素个数不等于 N * group。
-                                10. rstd的元素个数不等于 N * group。
-                                11. x的元素个数不等于 N * C * HxW。
-                                12. gamma的元素个数不等于 C。
-                                13. beta的元素个数不等于 C。
-                                14. C与group比值超过4000。
-```
+  第一段接口完成入参校验，出现以下场景时报错：
+
+  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
+  <col style="width: 253px">
+  <col style="width: 140px">
+  <col style="width: 762px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的dy、mean、rstd、x、gamma、beta、dxOut、dgammaOut、dbetaOut是空指针时。</td>
+    </tr>
+    <tr>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>dy数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>mean、rstd、x、gamma、beta的数据类型与dy不同。</td>
+    </tr>
+    <tr>
+      <td>dxOut的数据类型与dy不同。</td>
+    </tr>
+  </tbody></table>
 
 ## aclnnGroupNormSwishGrad
 
 - **参数说明：**
+  <table>
+  <thead>
+      <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGradGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td> op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td> 指定执行任务的Stream。</td>
+      </tr>
+  </tbody></table>
 
-  * workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  * workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGradGetWorkspaceSize获取。
-  * executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  * stream(aclrtStream, 入参)：指定执行任务的Stream。
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
 - 确定性计算
   - aclnnGroupNormSwishGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
+- 输入shape限制：
+    1. numGroups大于0。
+    2. C能被group整除。
+    3. dy的元素个不等于 N * C * HxW。
+    4. mean的元素个数等于 N * group。
+    5. rstd的元素个数等于 N * group。
+    6. x的元素个数等于 N * C * HxW。
+    7. gamma的元素个数等于 C。
+    8. beta的元素个数等于 C。
+    9. C与group比值超不过4000。
 
 ## 调用示例
 
@@ -158,7 +390,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl对外接口列表
+  // 1. （固定写法）device/stream初始化, 参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

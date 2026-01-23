@@ -1,5 +1,7 @@
 # aclnnGroupNormSwish
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/group_norm_swish)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,7 +15,7 @@
 - 计算公式：
   - **GroupNorm:**
     记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-
+    
     $$
     \left\{
     \begin{array} {rcl}
@@ -25,56 +27,263 @@
     $$
 
   - **Swish:**
-
+    
     $$
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
-
+    
     当activateSwish为True时，会计算Swish， 此时swish计算公式的x为GroupNorm公式得到的out。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupNormSwishGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSwish”接口执行计算。
 
-- `aclnnStatus aclnnGroupNormSwishGetWorkspaceSize(const aclTensor *x, const aclTensor *gamma, const aclTensor *beta, int64_t numGroups, char *dataFormatOptional, double eps, bool activateSwish, double swishScale, const aclTensor *yOut, const aclTensor *meanOut, const aclTensor *rstdOut, uint64_t *workspaceSize, aclOpExecutor **executor)`
-- `aclnnStatus aclnnGroupNormSwish(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```c++
+aclnnStatus aclnnGroupNormSwishGetWorkspaceSize(
+    const aclTensor *x, 
+    const aclTensor *gamma, 
+    const aclTensor *beta, 
+    int64_t          numGroups, 
+    char            *dataFormatOptional, 
+    double           eps, 
+    bool             activateSwish, 
+    double           swishScale, 
+    const aclTensor *yOut, 
+    const aclTensor *meanOut, 
+    const aclTensor *rstdOut, 
+    uint64_t        *workspaceSize, 
+    aclOpExecutor  **executor)
+```
+
+```c++
+aclnnStatus aclnnGroupNormSwish(
+    void *         workspace, 
+    uint64_t       workspaceSize, 
+    aclOpExecutor *executor, 
+    aclrtStream    stream)
+```
 
 ## aclnnGroupNormSwishGetWorkspaceSize
 
 - **参数说明：**
-
-  * x（aclTensor*， 计算输入）：表示待组归一化的目标张量，`yOut`计算公式中的$x$，维度需大于一维，要求x第0维和第1维大于0，第1维要求能被group整除，Device侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * gamma（aclTensor*， 计算输入）：表示组归一化中的 gamma 参数，`yOut`计算公式中的$\gamma$，维度为一维，元素数量需与输入$x$的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT，Device侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * beta（aclTensor*， 计算输入）：表示组归一化中的 beta 参数，`yOut`计算公式中的$\beta$，维度为一维，元素数量需与输入$x$的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT，Device侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * numGroups（int64\_t， 计算输入）：表示将输入$x$的第1维度分为group组，值范围大于0，Host侧的整数。
-  * dataFormatOptional（char*，计算输入）：表示数据格式，当前版本只支持输入NCHW，Host侧的字符类型。
-  * eps（double， 计算输入）：用于防止产生除0的偏移，`yOut`和`rstdOut`计算公式中的$eps$值，值范围大于0，Host侧的DOUBLE类型。
-  * activateSwish（bool， 计算输入）：表示是否支持swish计算。如果设置为true，则表示groupnorm计算后继续swish计算，Host侧的BOOL类型。
-  * swishScale（double， 计算输入）：表示Swish计算时的$scale$值，Host侧的DOUBLE类型。
-  * yOut（aclTensor*， 计算输出）：表示组归一化结果，数据类型和shape与$x$相同，Device 侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * meanOut（aclTensor*， 计算输出）：表示x分组后的均值，数据类型与$gamma$相同，shape为`(N， numGroups)`，其中`N`表示$x$第0维度的大小，`numGroups`为计算输入，表示将输入$x$的第1维度分为group组，Device 侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * rstdOut（aclTensor*， 计算输出）：表示x分组后的标准差的倒数，数据类型与$gamma$相同，shape为`(N， numGroups)`，其中`N`表示$x$第0维度的大小，`numGroups`为计算输入，表示将输入$x$的第1维度分为group组，Device 侧的aclTensor。数据类型支持FLOAT32、FLOAT16、BFLOAT16，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
-  * workspaceSize（uint64_t\*， 出参）：返回需要在Device侧申请的workspace大小。
-  * executor（aclOpExecutor **， 出参）：返回op执行器，包含算子计算流程。
+    <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+      <col style="width: 120px">
+      <col style="width: 120px">
+      <col style="width: 287px">
+      <col style="width: 387px">
+      <col style="width: 187px">
+      <col style="width: 187px">
+      <col style="width: 187px">
+      <col style="width: 145px">
+      </colgroup>
+      <thead>
+      <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+          <th>使用说明</th>
+          <th>数据类型</th>
+          <th>数据格式</th>
+          <th>维度(shape)</th>
+          <th>非连续Tensor</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+          <td>x</td>
+          <td>输入</td>
+          <td>待组归一化的目标张量，yOut计算公式中的x。</td>
+          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2-8</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>gamma</td>
+          <td>输入</td>
+          <td>组归一化中的gamma参数，yOut计算公式中的γ。</td>
+          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>1</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>beta</td>
+          <td>输入</td>
+          <td>组归一化中的 beta 参数，yOut计算公式中的β。</td>
+          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>
+          <td>√</td>
+      </tr>
+      <tr>
+          <td>numGroups</td>
+          <td>输入</td>
+          <td>输入gradOut的C维度分为group组。</td>
+          <td>group需大于0。</td>
+          <td>INT64</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>dataFormatOptional</td>
+          <td>输入</td>
+          <td>数据格式。</td>
+          <td>建议值NCHW。</td>
+          <td>CHAR</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>eps</td>
+          <td>输入</td>
+          <td>防止产生除0的偏移，yOut和rstdOut计算公式中的epsepseps值。</td>
+          <td>建议值1.0。</td>
+          <td>DOUBLE</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>activateSwish</td>
+          <td>输入</td>
+          <td>是否支持swish计算。</td>
+          <td>如果设置为true，则表示groupnorm计算后继续swish计算。</td>
+          <td>BOOL</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>swishScale</td>
+          <td>输入</td>
+          <td>Swish计算时的scalescalescale值。</td>
+          <td>建议值1.0。</td>
+          <td>DOUBLE</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>yOut</td>
+          <td>输出</td>
+          <td>组归一化结果。</td>
+          <td>数据类型和shape与x相同。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2-8</td>
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>meanOut</td>
+          <td>x分组后的均值</td>
+          <td>公式中的meanOut。</td>
+          <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>rstdOut</td>
+          <td>输出</td>
+          <td>x分组后的标准差的倒数。</td>
+          <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
+          <td>FLOAT16、FLOAT、BFLOAT16</td>
+          <td>ND</td>
+          <td>2</td>  
+          <td>x</td>
+      </tr>
+      <tr>
+          <td>workspaceSize</td>
+          <td>输出</td>
+          <td>返回需要在Device侧申请的workspace大小。</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>executor</td>
+          <td>输出</td>
+          <td>返回op执行器，包含了算子计算流程。</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+      </tr>
+      </tbody></table>
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-```
 第一段接口完成入参校验，出现以下场景时报错：
-161001 ACLNN_ERR_PARAM_NULLPTR：1. 传入的x、gamma、beta、yOut、meanOut、rstdOut是空指针时。
-161002 ACLNN_ERR_PARAM_INVALID：1. x、gamma、beta、yOut、meanOut、rstdOut数据类型不在支持的范围之内。
-```
+
+  <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
+  <col style="width: 253px">
+  <col style="width: 140px">
+  <col style="width: 762px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的x、gamma、beta、yOut、meanOut、rstdOut是空指针时。</td>
+    </tr>
+    <tr>
+      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="1">161002</td>
+      <td>x、gamma、beta、yOut、meanOut、rstdOut数据类型不在支持的范围之内。</td>
+    </tr>
+  </tbody></table>
 
 ## aclnnGroupNormSwish
 
 - **参数说明：**
-
-  * workspace(void*, 入参)：在Device侧申请的workspace内存地址。
-  * workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGetWorkspaceSize获取。
-  * executor(aclOpExecutor*, 入参)：op执行器，包含了算子计算流程。
-  * stream(aclrtStream, 入参)：指定执行任务的Stream。
+  <table>
+  <thead>
+      <tr>
+          <th>参数名</th>
+          <th>输入/输出</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>workspace</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+          <td>workspaceSize</td>
+          <td>输入</td>
+          <td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+          <td>executor</td>
+          <td>输入</td>
+          <td> op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+          <td>stream</td>
+          <td>输入</td>
+          <td> 指定执行任务的Stream。</td>
+      </tr>
+  </tbody></table>
 
 - **返回值：**
 
@@ -151,7 +360,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl对外接口列表
+  // 1. （固定写法）device/stream初始化, 参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
