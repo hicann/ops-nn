@@ -9,7 +9,7 @@
  */
 
 #include "aclnn_ascend_quant.h"
-#include "quant/ascend_quant_v2/op_host/op_api/ascend_quant_v2.h"
+#include "ascend_quant_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
