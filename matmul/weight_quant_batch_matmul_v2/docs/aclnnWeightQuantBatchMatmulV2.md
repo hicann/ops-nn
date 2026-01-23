@@ -111,7 +111,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
         <td></td>
         <td>INT8、INT4、FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8、INT32、FLOAT、FLOAT4_E2M1</td>
         <td>ND、FRACTAL_NZ</td>
-        <td>支持(k, n)，其中k表示矩阵第1维的大小，n表示矩阵第2维的大小。k、n大小在[1, 65535]范围内。k, n要求32B对齐。其中若数据类型为INT4或FLOAT4_E2M1，则weight的内轴应为偶数。</td>
+        <td>支持(k, n)，其中k表示矩阵第1维的大小，n表示矩阵第2维的大小。<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：k、n大小在[1, 65535]范围内；<term>Ascend 950PR/Ascend 950DT</term>:k，n大小在[1, 2 ^ 31 - 1]。其中若数据类型为INT4或FLOAT4_E2M1，则weight的内轴应为偶数。</td>
         <td>非连续的Tensor仅支持转置场景。</td>
       </tr>
       <tr>

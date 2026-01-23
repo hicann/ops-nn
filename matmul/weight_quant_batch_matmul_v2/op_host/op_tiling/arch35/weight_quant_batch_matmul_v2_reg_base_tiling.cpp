@@ -268,7 +268,11 @@ void WeightQuantBatchMatmulV2RegBase::GetBubTilingA16W8NDPerGroup(int64_t& nBubS
         nBubSize = ops::CeilDiv(nBl1Size, BUFF_NUM_2);
         kBubSize = ops::CeilAlign(kBl1Size, static_cast<int64_t>(GetBlockAlignSizeByDataType(matmulInfoPtr_->bDtype)));
     } else {
-        kBubSize = ops::CeilDiv(kBl1Size, BUFF_NUM_2);
+        if (matmulInfoPtr_->groupSize > 0 && kBl1Size > static_cast<int64_t>(matmulInfoPtr_->groupSize)) {
+            kBubSize = ops::CeilDiv(static_cast<int64_t>(kBl1Size / matmulInfoPtr_->groupSize), BUFF_NUM_2) * matmulInfoPtr_->groupSize;
+        } else {
+            kBubSize = ops::CeilDiv(kBl1Size, BUFF_NUM_2);
+        }
         nBubSize = ops::CeilAlign(nBl1Size, static_cast<int64_t>(GetBlockAlignSizeByDataType(matmulInfoPtr_->bDtype)));
     }
 }
@@ -307,7 +311,11 @@ void WeightQuantBatchMatmulV2RegBase::GetBubTilingA16W4ND(int64_t& nBubSize, int
         }
     } else {
         nBubSize = ops::CeilAlign(nBl1Size, static_cast<int64_t>(GetBlockAlignSizeByDataType(matmulInfoPtr_->bDtype)));
-        kBubSize = ops::CeilDiv(kBl1Size, BUFF_NUM_2);
+        if (matmulInfoPtr_->groupSize > 0 && kBl1Size > static_cast<int64_t>(matmulInfoPtr_->groupSize)) {
+            kBubSize = ops::CeilDiv(static_cast<int64_t>(kBl1Size / matmulInfoPtr_->groupSize), BUFF_NUM_2) * matmulInfoPtr_->groupSize;
+        } else {
+            kBubSize = ops::CeilDiv(kBl1Size, BUFF_NUM_2);
+        }
     }
 }
 

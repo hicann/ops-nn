@@ -900,10 +900,11 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             intriParams.srcStride = (tiling_->nSize - bubNLen) * sizeof(int8_t);
             gmOffset = bubKOffset * tiling_->nSize + bubNOffset;
         } else if constexpr (IS_4BIT_WEIGHT && weightNz) {    // (n1, k1, k0, n0)
-            intriParams.blockCount = bubNLen / BLOCK_CUBE;    // n1
-            intriParams.blockLen = bubKLen * BLOCK_CUBE_INT4; // k1 * k0 * n0
-            int64_t kAlignSize = CeilAlign(tiling_->kSize, BLOCK_CUBE);
-            intriParams.srcStride = (kAlignSize - bubKLen) * BLOCK_CUBE_INT4;
+            auto bubKLenAlign = CeilAlign(bubKLen, BLOCK_CUBE);
+            intriParams.blockCount = CeilDiv(bubNLen, BLOCK_CUBE);
+            intriParams.blockLen = bubKLenAlign * BLOCK_CUBE_INT4;//k1 * k0 * n0
+            int64_t kAlignSize = CeilAlign(tiling_ -> kSize,BLOCK_CUBE);
+            intriParams.srcStride = (kAlignSize - bubKLenAlign) * BLOCK_CUBE_INT4;
             gmOffset = (bubNOffset * kAlignSize + bubKOffset * BLOCK_CUBE);
         } else if constexpr (IsSameType<wType, int4b_t>::value && !weightNz) {
             intriParams.blockCount = bubKLen;
@@ -1185,7 +1186,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     param.groupNum = CeilDiv(param.kBub, param.groupSize) - 1;
     param.groupTail = param.kBub % param.groupSize > 0 ? param.kBub % param.groupSize : param.groupSize;
     param.dataBlockStride = CeilAlign(param.kBub, BLOCK_CUBE) + 1;
-    param.weightOutStride = param.dataBlockStride * (param.vfElemB16 - BLOCK_CUBE) + BLOCK_CUBE;
+    param.weightOutStride = param.dataBlockStride * param.vfElemB16 - bubKLen * BLOCK_CUBE;
     param.repeatStride = 1; // unit: 32B
 
     param.offsetBaseAddr = offsetBaseAddr1_;
@@ -1242,16 +1243,11 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         params.maskWeight1 =
             Max(bubKLen - FloorAlign(bubKLen, 2 * VEC_MAX_ELEM_B16) - VEC_MAX_ELEM_B16, static_cast<int64_t>(0)) +
             bubKLen / (2 * VEC_MAX_ELEM_B16) * VEC_MAX_ELEM_B16;
-        if (params.innerExtend == 1 || params.outerExtend == 1) {
-            AscendC::VF_CALL<AntiquantW4Pergroup32NK<xType, wType, hasAntiQuantOffset, false>>(params);
-        } else {
             AscendC::VF_CALL<AntiquantW4Pergroup32NK<xType, wType, hasAntiQuantOffset, true>>(params);
-        }
     } else if (tiling_->groupSize == 64) {
         ParamsGroupSize64<xType, wType> params;
         params.outerExtend = bubNLen;
         params.innerExtend = CeilDiv(bubKLen, VEC_MAX_ELEM_B16);
-
         params.dataBlockStride = CeilAlign(bubNLen, BLOCK_CUBE) + 1; // uint: 32B
         params.repeatStride = 1;                                     // unit: 32B
         params.outerStride = VEC_MAX_ELEM_B16 * (CeilAlign(bubNLen, BLOCK_CUBE) + 1) - bubNLen * ONE_BLK_X_NUM;
@@ -1268,11 +1264,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         params.weightOutBaseAddr0 = weightOutUbAddr_;
 
         params.maskWeight = bubKLen;
-        if (params.innerExtend == 1 || params.outerExtend == 1) {
-            AscendC::VF_CALL<AntiquantW4Pergroup64NK<xType, wType, hasAntiQuantOffset, false>>(params);
-        } else {
-            AscendC::VF_CALL<AntiquantW4Pergroup64NK<xType, wType, hasAntiQuantOffset, true>>(params);
-        }
+        AscendC::VF_CALL<AntiquantW4Pergroup64NK<xType, wType, hasAntiQuantOffset, true>>(params);
     } else if (tiling_->groupSize == 128) {
         ParamsGroupSize128And256<xType, wType> params;
 
@@ -1379,32 +1371,17 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         // mask
         params.maskWeightOdd = Min(bubKLen, static_cast<int32_t>(tiling_->groupSize));
         params.maskWeightEven = tiling_->groupSize - CROSS_LEN;
-        if ((tiling_->groupSize - CROSS_LEN) % VEC_MAX_ELEM_B16 == 0) {
-            if (bubKLen > tiling_->groupSize) {
-                if (params.evenGroupVLNum == 1) {
-                    AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, true, false>>(
-                        params);
-                } else {
-                    AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, true, true>>(
-                        params);
-                }
+        if (bubKLen > tiling_->groupSize) {
+            if (params.evenGroupVLNum == 1) {
+                AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, true, false>>(
+                    params);
             } else {
-                AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, false, true>>(
+                AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, true, true>>(
                     params);
             }
         } else {
-            if (bubKLen > tiling_->groupSize) {
-                if (params.evenGroupVLNum == 1) {
-                    AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, true, true, false>>(
-                        params);
-                } else {
-                    AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, true, true, true>>(
-                        params);
-                }
-            } else {
-                AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, true, false, true>>(
-                    params);
-            }
+            AscendC::VF_CALL<AntiquantW4Pergroup32OddNK<xType, wType, hasAntiQuantOffset, false, false, true>>(
+                params);
         }
     } else { // group size > 128 && group size != 256，功能模板
         ParamsGroupSizeGt128<xType, wType> params;
@@ -1572,7 +1549,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             params.blockLen = bubKLen;
             params.blockCount = CeilDiv(bubNLen, BLOCK_CUBE);
             params.srcStride = 1 + CeilAlign(bubKLen, BLOCK_CUBE) - bubKLen; // solve bank confilict
-            params.dstStride = twoVectorCoreSplitK_ ? (CeilAlign(kBL1Len_, BLOCK_CUBE) - bubKLen) : 0;
+            params.dstStride = twoVectorCoreSplitK_ ? (CeilAlign(kBL1Len_, BLOCK_CUBE) - bubKLen) : (CeilAlign(bubKLen, BLOCK_CUBE) - bubKLen);
             DataCopy(l1Local_[l1Offset], ubLocal, params);
         } else { // A16W4, NZ 格式输入, (n1, k1, k0, n0)
             params.blockLen = BLOCK_NUM_REG;
@@ -1599,7 +1576,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
                 }
             } else {
                 // 一块 bubNLen * bubKLen一共有多少256B
-                params.blockCount = bubNLen * bubKLen * sizeof(xType) / VECTOR_REG_WIDTH;
+                params.blockCount = CeilAlign(bubNLen, BLOCK_CUBE) * CeilAlign(bubKLen, BLOCK_CUBE) * sizeof(xType) / VECTOR_REG_WIDTH;
                 // 每256B跳1024B(4buffer) / 512B(2buffer)
                 params.srcStride = (bubpingpong_ - 1) * BLOCK_NUM_REG;
                 params.dstStride = 0; // dst地址连续
@@ -1723,10 +1700,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     if constexpr (!weightNz && antiQuantType == QuantType::PER_GROUP) {
         // A16W4-ND-perGroup, A16W8-ND-perGroup
         BL1ProcessNK1Vs1(curBL1BufIdx, nBL1Offset, kBL1Offset, kL1Len, nL0Len);
-    } else if constexpr (IsSameType<wType, int8_t>::value) {
-        // A16W8-ND-perChannel
-        BL1ProcessNK1VsN(curBL1BufIdx, nBL1Offset, kBL1Offset, kL1Len, nL0Len);
-    }
+    } 
 }
 
 TEMPLATE_CLASS_PARAMS
@@ -1760,7 +1734,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
 
     WaitFlag<HardEvent::V_MTE2>(ubInBufIdx_);
 
-    int32_t bubNLen = Min(vecNBL1Len_, static_cast<int64_t>(tiling_->nBubSize));
+    int32_t bubNLen = CeilAlign(Min(vecNBL1Len_, static_cast<int64_t>(tiling_->nBubSize)), BLOCK_CUBE);
     CopyInWeight(kBL1Offset, nBL1Offset, bubKLen, bubNLen);
     CopyInScaleOffset(nBL1Offset, bubNLen, 0, 0, kBL1Offset, 1);
     SetFlag<HardEvent::MTE2_V>(ubInBufIdx_);
@@ -1939,9 +1913,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
 
         int64_t biasOffset = nBlockOffset_ + curNL0Idx_ * biasL1DataSize_;
         if (biasIdx_ == 0) {
-            DataCopy(biasL1LocalBuf0_, biasGlobal_[biasOffset], baseUseN_);
+            DataCopy(biasL1LocalBuf0_, biasGlobal_[biasOffset], CeilAlign(baseUseN_, 16L));
         } else {
-            DataCopy(biasL1LocalBuf1_, biasGlobal_[biasOffset], baseUseN_);
+            DataCopy(biasL1LocalBuf1_, biasGlobal_[biasOffset], CeilAlign(baseUseN_, 16L));
         }
 
         SetFlag<HardEvent::MTE2_MTE1>(biasIdx_ + al1pingpong_);
@@ -2009,25 +1983,6 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
 #endif
         }
-        VectorProcess();
-    } else if (bl1pingpong_ == DOUBLE_BUFFER) {
-        // curBL1BufIdx_ == 0 && AscendC::GetSubBlockIdx() == 0 或者
-        // curBL1BufIdx_ == 1 && AscendC::GetSubBlockIdx() == 1 时进入 VectorProcess 函数
-        if (curBL1BufIdx_ == AscendC::GetSubBlockIdx()) {
-            VectorProcess();
-        }
-    } else if (tiling_->vecCoreParallel == 1) {
-        if (AscendC::GetSubBlockIdx() == 1) {
-            kBL1Offset_ += tiling_->kBubSize;
-            vecKBL1Len_ =
-                Min(tiling_->kSize - kBL1Offset_, static_cast<uint64_t>(kBL1Size_)); // AIV-1 需要对应去搬运的 kBL1 大小
-        } else {
-            vecKBL1Len_ =
-                Min(tiling_->kSize - kBL1Offset_,
-                    static_cast<uint64_t>(tiling_->kBubSize)); // AIV-0 需要对应去搬运的 kBL1 大小
-        }
-        VectorProcess();
-    } else if (AscendC::GetSubBlockIdx() == 0) {
         VectorProcess();
     }
 }

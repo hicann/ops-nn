@@ -865,24 +865,6 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
     OP_TILING_CHECK(
         inputParams->cDtype == ge::DT_INT8,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Not support Output dtype int8"), return false);
-    // shape dim of n and k must align to 32B
-    int32_t alignDim = 32;
-    if (std::find(BIT8_WEIGHT_DTYPE_LIST.begin(), BIT8_WEIGHT_DTYPE_LIST.end(), inputParams->bDtype) ==
-        BIT8_WEIGHT_DTYPE_LIST.end()) {
-        // when dtype is int4, 64 means 32B
-        alignDim = 64;
-    }
-    // k, n not align to 32B, only not support A16W8/W4/F8/F4 pergroup
-    if (inputParams->kSize % alignDim != 0 || inputParams->nSize % alignDim != 0) {
-        OP_TILING_CHECK(
-            inputParams->antiQuantType == QuantType::PER_GROUP,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams->opName,
-                "In A16F4/W4/W8/F8 pergroup, K and N dim must align to 32B, "
-                "which are [%lu] and [%lu].",
-                inputParams->kSize, inputParams->nSize),
-            return false);
-    }
 
     // A16F8 only support perchannel(include n=1)
     if (std::find(BIT8_WEIGHT_DTYPE_LIST.begin(), BIT8_WEIGHT_DTYPE_LIST.end(), inputParams->bDtype) !=

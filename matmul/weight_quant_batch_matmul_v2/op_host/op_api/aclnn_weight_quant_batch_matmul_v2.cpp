@@ -612,13 +612,13 @@ static bool CheckShapeForPerGrp(const aclTensor* weight, int antiquantGroupSize)
             kWeight, antiquantGroupSize);
         return false;
     }
-    if ((nWeight % N_ALIGN_VALUE) != 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize is larger than 0,"
-            "n should be an integer multiple of %ld, actual n is [%ld].",
-            N_ALIGN_VALUE, nWeight);
-        return false;
+    if ((nWeight % N_ALIGN_VALUE) != 0 && op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+       OP_LOGE(
+           ACLNN_ERR_PARAM_INVALID,
+           "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], antiquantGroupSize is larger than 0,"
+           "n should be an integer multiple of %ld, actual n is [%ld].",
+           N_ALIGN_VALUE, nWeight);
+       return false;
     }
     return true;
 }
