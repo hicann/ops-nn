@@ -26,6 +26,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_batch_norm.h"
 
 using namespace op;
@@ -45,21 +46,20 @@ constexpr int64_t PATTERN_A_MIN = 64;
 constexpr int64_t PATTERN_R_MIN = 8192;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType>& GetSupportDtypeList(SocVersion socVersion)
+static const std::initializer_list<op::DataType>& GetSupportDtypeList(NpuArch npuArch)
 {
     static const std::initializer_list<op::DataType> emptyDtypes = {};
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910BCD_LIST = {
         op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {
         op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-    static const std::map<SocVersion, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
-        {SocVersion::ASCEND310P, DTYPE_SUPPORT_310P_910_LIST},
-        {SocVersion::ASCEND910, DTYPE_SUPPORT_310P_910_LIST},
-        {SocVersion::ASCEND910B, DTYPE_SUPPORT_910BCD_LIST},
-        {SocVersion::ASCEND910_93, DTYPE_SUPPORT_910BCD_LIST},
-        {SocVersion::ASCEND910_95, DTYPE_SUPPORT_910BCD_LIST}};
+    static const std::map<NpuArch, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
+        {NpuArch::DAV_2002, DTYPE_SUPPORT_310P_910_LIST},
+        {NpuArch::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
+        {NpuArch::DAV_2201, DTYPE_SUPPORT_910BCD_LIST},
+        {NpuArch::DAV_3510, DTYPE_SUPPORT_910BCD_LIST}};
 
-    auto found = dataTypeSupportedMap.find(socVersion);
+    auto found = dataTypeSupportedMap.find(npuArch);
     if (found == dataTypeSupportedMap.end()) {
         return emptyDtypes;
     }
@@ -81,10 +81,10 @@ static bool CheckNotNull(
 
 static inline bool isBatchNormSupportNcdhw(void)
 {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     return (
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P));
+        (curArch == NpuArch::DAV_2201) ||
+        (curArch == NpuArch::DAV_2002));
 }
 
 static bool isBNV3Supported(const aclTensor* input)
@@ -92,8 +92,8 @@ static bool isBNV3Supported(const aclTensor* input)
     auto inputShape = input->GetViewShape();
     auto inputFormat = input->GetStorageFormat();
     const size_t inputDim = inputShape.GetDimNum();
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isSocSupport = ((socVersion == SocVersion::ASCEND910B) || (socVersion == SocVersion::ASCEND910_93));
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool isSocSupport = curArch == NpuArch::DAV_2201;
     bool isFormatSupport = ((inputFormat == Format::FORMAT_NCDHW) || (inputFormat == Format::FORMAT_NCHW));
     int64_t patternR1 = 1;
     int64_t patternA = 1;
@@ -119,10 +119,10 @@ static bool isBNV3Supported(const aclTensor* input)
 static bool CheckDtypeValid(
     const aclTensor* input, const aclTensor* out, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(socVersion);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(curArch);
     if (DTYPE_SUPPORT_LIST_CURRENT.size() == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented", op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for npuArch %u is not implemented", static_cast<uint32_t>(curArch));
         return false;
     }
 
@@ -139,8 +139,8 @@ static bool CheckDtypeValid(
 static bool CheckOtherDtypeValid(
     const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean, const aclTensor* runningVar)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(socVersion);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(curArch);
     if (weight != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(weight, DTYPE_SUPPORT_LIST_CURRENT, return false);
     }
@@ -165,7 +165,7 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
         return false;
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((input->GetStorageFormat() != Format::FORMAT_NCDHW) &&
              (input->GetStorageFormat() != Format::FORMAT_NDHWC))) {
@@ -236,7 +236,7 @@ static bool CheckOtherShape(
 static int64_t GetDimC(const aclTensor* input)
 {
     auto viewShape = input->GetViewShape();
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (input->GetStorageFormat() == Format::FORMAT_NDHWC || input->GetStorageFormat() == Format::FORMAT_NHWC) {
             return viewShape[viewShape.GetDimNum() - 1];
         }
@@ -268,7 +268,7 @@ static aclnnStatus CheckParams(
 
 static bool isEvalAndNotSupportNcdhw(bool training, size_t dimNum)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
 
@@ -612,28 +612,28 @@ aclnnStatus BatchNorm(
     aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     size_t dimC = GetDimC(input);
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (runningMean == nullptr) {
         runningMean =
-            ((socVersion == SocVersion::ASCEND910_95) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
+            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
                                                         op::FillScalar(dimC, 0, executor));
         CHECK_RET(runningMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (runningVar == nullptr) {
         runningVar =
-            ((socVersion == SocVersion::ASCEND910_95) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
+            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
                                                         op::FillScalar(dimC, 1, executor));
         CHECK_RET(runningVar != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (weight == nullptr) {
         weight =
-            ((socVersion == SocVersion::ASCEND910_95) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
+            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
                                                         op::FillScalar(dimC, 1, executor));
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (bias == nullptr) {
         bias =
-            ((socVersion == SocVersion::ASCEND910_95) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
+            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
                                                         op::FillScalar(dimC, 0, executor));
         CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -648,7 +648,7 @@ aclnnStatus BatchNorm(
     CHECK_RET(inputPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     aclTensor* result = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         CHECK_RET(
             BatchNormProcDavid(
                 inputPre, weight, bias, runningMean, runningVar, momentum, eps, training, &result, saveMean, saveInvstd,

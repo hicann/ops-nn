@@ -26,12 +26,13 @@
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
-#include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
+#include "opdev/data_type_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "batch_norm_backward.h"
 #include "aclnn_batch_norm_backward.h"
 
@@ -60,10 +61,10 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
 
 static inline bool isBatchNormSupportNcdhw(void)
 {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     return (
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P));
+        (curArch == NpuArch::DAV_2201) ||
+        (curArch == NpuArch::DAV_2002));
 }
 
 static bool CheckInputNotNull(const aclTensor* gradOut, const aclTensor* input)
@@ -82,8 +83,7 @@ static bool CheckMaskNotNull(
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask size should not less than 1.");
         return false;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        OP_CHECK_NULL(outputMask, return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (outputMask->Size() != BN_GRAD_V3_RESULT_CNT) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "outputMask size should be %zu, but got %zu.", BN_GRAD_V3_RESULT_CNT,
@@ -105,8 +105,8 @@ static bool CheckMaskNotNull(
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -179,7 +179,7 @@ static bool CheckFormat(
             op::ToString(gradInput->GetStorageFormat()).GetString());
         return false;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((input->GetStorageFormat() != Format::FORMAT_NCDHW) &&
              (input->GetStorageFormat() != Format::FORMAT_NDHWC))) {
@@ -295,13 +295,13 @@ static bool CheckGradWeightGradBiasShape(
 
 static int64_t GetDimC(const aclTensor* input)
 {
-    auto viewShape = input->GetViewShape();
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    auto inputViewShape = input->GetViewShape();
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (input->GetStorageFormat() == Format::FORMAT_NDHWC || input->GetStorageFormat() == Format::FORMAT_NHWC) {
-            return viewShape[viewShape.GetDimNum() - 1];
+            return inputViewShape[inputViewShape.GetDimNum() - 1];
         }
     }
-    return viewShape[1];
+    return inputViewShape[1];
 }
 
 static bool CheckDtypeMatchReferenceOrFloat(
@@ -374,7 +374,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckGradDtypeValid(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckOtherDtypeValid(weight, runningMean, runningVar, saveMean, saveInvstd), ACLNN_ERR_PARAM_INVALID);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(
             DavidCheckDtypeSame(
                 gradOut, gradInput, gradWeight, gradBias, outputMask, weight, runningMean, runningVar, saveMean,
@@ -388,7 +388,7 @@ static aclnnStatus CheckParams(
     int dimC = GetDimC(input);
     CHECK_RET(CheckOtherShape(dimC, weight, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         // 校验saveMean和saveInvstd的shape
         CHECK_RET(CheckSaveMeanSaveInvstdShape(dimC, saveMean, saveInvstd), ACLNN_ERR_PARAM_INVALID);
         // 校验gradWeight和gradBias的shape
@@ -807,7 +807,7 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(
     aclTensor* bnGradWeight = nullptr;
     aclTensor* bnGradBias = nullptr;
     aclnnStatus bnResult;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         bnResult = BatchNormBackwardDavid(
             gradOutContigous, inputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
             outputMask, &bnGradInput, &bnGradWeight, &bnGradBias, uniqueExecutor.get());
