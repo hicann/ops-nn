@@ -19,10 +19,11 @@
 #include "adaptive_sliding_window_basic_api_tiling.h"
 
 using Ops::NN::MathUtil;
+using namespace QuantBatchMatmulV3Arch35TilingKey;
 
 namespace {
-constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2;
-constexpr uint64_t WINDOW_LEN = 4;
+constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
+constexpr uint64_t WINDOW_LEN = 4UL;
 
 constexpr uint32_t SCALER_FACTOR_MAX = 127;
 constexpr uint32_t SCALER_FACTOR_MIN = 1;
@@ -32,11 +33,11 @@ constexpr uint8_t L1_TWO_BUFFER = 2;
 constexpr uint8_t L1_FOUR_BUFFER = 4;
 
 constexpr uint32_t MX_GROUP_SIZE = 32;
-constexpr uint64_t MXFP_DIVISOR_SIZE = 64;
-constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2;
+constexpr uint64_t MXFP_DIVISOR_SIZE = 64UL;
+constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2UL;
 
-constexpr uint64_t CUBE_BLOCK = 16;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32;
+constexpr uint64_t CUBE_BLOCK = 16UL;
+constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
 }
 
 namespace optiling {
@@ -47,8 +48,8 @@ AdaptiveSlidingWindowBasicAPITiling::AdaptiveSlidingWindowBasicAPITiling(gert::T
     Reset();
 }
 
-AdaptiveSlidingWindowBasicAPITiling::AdaptiveSlidingWindowBasicAPITiling(gert::TilingContext *context,
-                                                                         QuantBatchMatmulV3BasicAPITilingData *out)
+AdaptiveSlidingWindowBasicAPITiling::AdaptiveSlidingWindowBasicAPITiling(
+    gert::TilingContext *context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData *out)
     : AdaptiveSlidingWindowTiling(context, nullptr), tilingData_(*out)
 {
     Reset();
@@ -59,7 +60,7 @@ AdaptiveSlidingWindowBasicAPITiling::AdaptiveSlidingWindowBasicAPITiling(gert::T
 void AdaptiveSlidingWindowBasicAPITiling::Reset()
 {
     if (!isTilingOut_) {
-        tilingData_ = QuantBatchMatmulV3BasicAPITilingData();
+        tilingData_ = DequantBmm::QuantBatchMatmulV3BasicAPITilingData();
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return);
@@ -69,8 +70,15 @@ void AdaptiveSlidingWindowBasicAPITiling::Reset()
 ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::GetShapeAttrsInfo()
 {
     inputParams_.Reset();
-    tilingDataSize_ = sizeof(QuantBatchMatmulV3BasicAPITilingData);
+    tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+}
+
+bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()
+{
+    return (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2) &&
+           (inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.bDtype == ge::DT_FLOAT8_E5M2) &&
+           inputParams_.isMxPerGroup && inputParams_.bFormat == ge::FORMAT_ND;
 }
 
 ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
@@ -80,8 +88,17 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
         OP_LOGE(inputParams_.opName, "DoOpTiling fail");
         return ge::GRAPH_FAILED;
     }
+    AdaptiveSlidingWindowTiling::LoadBalanceDataReset();
+    if(!AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()) {
+        OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
+        return ge::GRAPH_FAILED;
+    }
     AdaptiveSlidingWindowTiling::SetBf16Compat();
     AdaptiveSlidingWindowTiling::CalL1Tiling();
+    if (inputParams_.batchC > 1) {
+        basicTiling_.usedCoreNum =
+            std::min(adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt * inputParams_.batchC, aicoreParams_.aicNum);
+    }
     if (inputParams_.isPertoken) {
         AdaptiveSlidingWindowTiling::CalcUbTiling();
     }
@@ -107,12 +124,13 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoLibApiTiling()
             std::min(basicTiling_.scaleFactorA * basicTiling_.stepKa * basicTiling_.baseK,
                      basicTiling_.scaleFactorB * basicTiling_.stepKb * basicTiling_.baseK);
         uint64_t usedL1Size =
-            GetSizeWithDataType(basicTiling_.baseN * tilingData_.matmulTiling.kL1, inputParams_.bDtype) +
+            GetSizeWithDataType(basicTiling_.baseN * tilingData_.matmulTiling.kL1, inputParams_.bDtype) *
+            L1_FOUR_BUFFER;
+        usedL1Size +=
             GetSizeWithDataType(basicTiling_.baseN * ops::CeilDiv(tilingData_.matmulTiling.scaleKL1, MX_GROUP_SIZE),
-                                inputParams_.scaleDtype);
-        usedL1Size *= L1_FOUR_BUFFER;
+                                inputParams_.scaleDtype) * L1_TWO_BUFFER;
         if (inputParams_.hasBias) {
-            usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.biasDtype);
+            usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.biasDtype) * L1_TWO_BUFFER;
         }
         if (isAFullLoad_) {
             uint64_t scaleK = ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE;
@@ -120,10 +138,11 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoLibApiTiling()
             usedL1Size += GetSizeWithDataType(basicTiling_.baseM * kAligned, inputParams_.aDtype) +
                           GetSizeWithDataType(basicTiling_.baseM * scaleK, inputParams_.perTokenScaleDtype);
         } else {
-            usedL1Size += (GetSizeWithDataType(basicTiling_.baseM * tilingData_.matmulTiling.kL1, inputParams_.aDtype) +
-                           GetSizeWithDataType(
-                               basicTiling_.baseM * ops::CeilDiv(tilingData_.matmulTiling.scaleKL1, MX_GROUP_SIZE),
-                               inputParams_.perTokenScaleDtype)) * L1_FOUR_BUFFER;
+            usedL1Size += GetSizeWithDataType(basicTiling_.baseM * tilingData_.matmulTiling.kL1, inputParams_.aDtype) *
+                               L1_FOUR_BUFFER;
+            usedL1Size +=
+                GetSizeWithDataType(basicTiling_.baseM * ops::CeilDiv(tilingData_.matmulTiling.scaleKL1, MX_GROUP_SIZE),
+                                    inputParams_.perTokenScaleDtype) * L1_TWO_BUFFER;
         }
         tilingData_.matmulTiling.nBufferNum = usedL1Size < aicoreParams_.l1Size ? L1_FOUR_BUFFER : L1_TWO_BUFFER;
         if (basicTiling_.scaleFactorA >= SCALER_FACTOR_MIN && basicTiling_.scaleFactorA <= SCALER_FACTOR_MAX &&
@@ -140,8 +159,9 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoLibApiTiling()
 
 uint64_t AdaptiveSlidingWindowBasicAPITiling::GetTilingKey() const
 {
-    return RecursiveSum(inputParams_.transB, inputParams_.transA, GetBiasMode(), GetKernelType(),
-                        false, false, false, false);
+    return GET_TPL_TILING_KEY(
+        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
+        GetKernelType());
 }
 
 ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::PostTiling()
@@ -189,7 +209,7 @@ void AdaptiveSlidingWindowBasicAPITiling::IsAFullLoad()
         GetSizeWithDataType(static_cast<uint64_t>(adaptiveWin_.baseM) * inputParams_.kSize, inputParams_.aDtype);
     isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_A_SCALER &&
                    adaptiveWin_.mBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
-                   adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum;
+                   adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
 }
 
 void AdaptiveSlidingWindowBasicAPITiling::SetTilingData()
@@ -211,12 +231,16 @@ void AdaptiveSlidingWindowBasicAPITiling::SetTilingData()
     tilingData_.params.batchC4 = inputParams_.batchC4;
     tilingData_.params.biasDtype = static_cast<uint32_t>(inputParams_.biasDtype);
     if (inputParams_.isMxPerGroup) {
-        tilingData_.params.x1QuantMode = static_cast<uint32_t>(QuantMode::MX_PERGROUP_MODE);
-        tilingData_.params.x2QuantMode = static_cast<uint32_t>(QuantMode::MX_PERGROUP_MODE);
+        tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
+        tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
     }
     tilingData_.params.biasThreeDim = static_cast<uint32_t>(inputParams_.batchBias > 1U);
     tilingData_.adaptiveSlidingWin.mTailTile = adaptiveWin_.mTailTile;
     tilingData_.adaptiveSlidingWin.nTailTile = adaptiveWin_.nTailTile;
+    tilingData_.adaptiveSlidingWin.mBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.mBaseTailSplitCnt);
+    tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
+    tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
+    tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
     tilingData_.params.groupSizeM = static_cast<uint32_t>(inputParams_.groupSizeM);
     tilingData_.params.groupSizeN = static_cast<uint32_t>(inputParams_.groupSizeN);
     tilingData_.params.groupSizeK = static_cast<uint32_t>(inputParams_.groupSizeK);

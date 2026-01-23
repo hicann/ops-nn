@@ -31,6 +31,7 @@
 #include "test_cube_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_basic_tiling.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
 
 #ifdef USE_LEGACY_COMMON
@@ -688,18 +689,31 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
-        QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
-        QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
-        // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
-        expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
-        // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
-        if (biasFlag == false) {
-            expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+        if (quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2) && !weightNz) {
+             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
+             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
+             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+             if (biasFlag == false) {
+                 expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+             }
+             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                         tilingContext->GetRawTilingData()->GetDataSize());
+             string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr);
+         } else {
+             QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
+             QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
+             // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
+             expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
+             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+             if (biasFlag == false) {
+                 expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+             }
+             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                         tilingContext->GetRawTilingData()->GetDataSize());
+             string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr);
         }
-        string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
-                                                    tilingContext->GetRawTilingData()->GetDataSize());
-        string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
-        ASSERT_EQ(actualTilingDataStr, expectTilingDataStr);
     } else {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
     }

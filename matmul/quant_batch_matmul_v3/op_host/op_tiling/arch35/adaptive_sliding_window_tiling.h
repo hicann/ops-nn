@@ -74,13 +74,13 @@ protected:
                     const std::vector<int64_t> &dimValueOfMKN) const override;
     void CalL1Tiling();
     bool CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c) const;
-    bool AnalyseSlidingWinInfo();
+    virtual bool AnalyseSlidingWinInfo();
     void AdjustBasicBlock();
     void AdjustBasicBlock4MmadS8S4(uint64_t oriBlock);
     bool CalculateOptimalSplit(uint64_t &baseM, uint64_t &baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum,
                                uint64_t baseKAlignNum);
     void SetBf16Compat();
-    void SetTilingData();
+    virtual void SetTilingData();
     uint32_t CalUsedCoreNum();
     virtual bool CalcBasicBlock();
     virtual void CalcTailBasicBlock();
@@ -94,7 +94,7 @@ protected:
     void CalStepKs();
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;
-    void IsAFullLoad();
+    virtual void IsAFullLoad();
     virtual void IsBFullLoad();
     virtual void IsABFullLoad();
     void CalL1TilingDepthAfullload(uint64_t leftL1Size);
@@ -106,7 +106,7 @@ protected:
 
     bool IsInValidPerblockTailSplit(uint64_t splitCnt) const;
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
-    void Reset();
+    virtual void Reset();
 
     bool IsLoadBalanceSupportDtype(ge::DataType inputDtype) const;
     void LoadBalanceDataReset();
