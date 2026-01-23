@@ -49,38 +49,31 @@ static bool checkLastDimCompatibility(const aclTensor* outTensor, int64_t xLastD
 {
     auto outDtype = outTensor->GetDataType();
     auto outShape = outTensor->GetViewShape();
-    int64_t outDimNum = static_cast<int64_t>(outShape.GetDimNum());
-    if (outDimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Output tensor has no dimensions.");
-        return false;
-    }
-    int64_t outLastDim = outShape.GetDim(outDimNum - 1);
 
-    bool isInt32 = (outDtype == op::DataType::DT_INT32);
-    bool isInt4OrInt8 = (outDtype == op::DataType::DT_INT4 || outDtype == op::DataType::DT_INT8);
-    if (isInt32) {
-        OP_CHECK(
-            xLastDim == outLastDim * AddRmsNormDynamicQuantV2ACLNN::INT4_NUMS_IN_INT32_SPACE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "For INT32 output, input last dim must be 1/8 of input last dim,"
-                " Inputl last dim is (%ld), Output last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
-    } else if (isInt4OrInt8) {
-        OP_CHECK(
-            xLastDim == outLastDim,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "For INT4 or INT8 output, input last dim must be equal with out last dim. "
-                "x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+    OP_LOGD("checkLastDimCompatibility,c_shape:%s,xlastdim %d", op::ToString(outShape).GetString(),xLastDim);
+
+    if (outDtype == op::DataType::DT_INT8|| outDtype == op::DataType::DT_INT4){   
+      return true;
     } else {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsuported output data type (%d).", static_cast<int>(outDtype));
-        return false;
+        bool isInt32 = (outDtype == op::DataType::DT_INT32);
+        if (isInt32) {
+            int64_t outDimNum = static_cast<int64_t>(outShape.GetDimNum());
+            if (outDimNum == 0) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y1 out tensor has no dimensions.");
+                return false;
+            }
+            int64_t outLastDim = outShape.GetDim(outDimNum - 1);
+            OP_CHECK(
+                xLastDim == outLastDim * AddRmsNormDynamicQuantV2ACLNN::INT4_NUMS_IN_INT32_SPACE,
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "For INT32 output, output last dim must be 1/8 of input last dim,"
+                    " Input1 last dim is (%ld), Output last dim is (%ld).",
+                    xLastDim, outLastDim),
+                return false);
+        }
+        return true;
     }
-    return true;
 }
 
 static bool CheckDtypeValid(
@@ -109,9 +102,6 @@ static bool CheckDtypeValid(
     int64_t xDimNum = static_cast<int64_t>(x1->GetViewShape().GetDimNum());
     int64_t xLastDim = x1->GetViewShape().GetDim(xDimNum - 1);
     if (!checkLastDimCompatibility(y1Out, xLastDim)) {
-        return false;
-    }
-    if (!checkLastDimCompatibility(y2Out, xLastDim)) {
         return false;
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);

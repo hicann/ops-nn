@@ -258,7 +258,7 @@ private:
         LocalTensor<T> xLocal = xQue.AllocTensor<T>();
         LocalTensor<T> gxLocal = gxQue.AllocTensor<T>();
 
-        uint32_t offsetND = processID * dDimNum + cutDIndex * cutDPerTime;
+        uint64_t offsetND = static_cast<uint64_t>(processID) * static_cast<uint64_t>(dDimNum) + static_cast<uint64_t>(cutDIndex) * static_cast<uint64_t>(cutDPerTime);
 #if __CCE_AICORE__ == 220
         // dy&x&gx
         DataCopyParams dataCopyParamsND{(uint16_t)1, (uint16_t)(processElem * sizeof(T)), 0, 0};
