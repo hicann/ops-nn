@@ -47,11 +47,15 @@ static constexpr size_t EXPECTED_DIM = 3;
 static constexpr int BLOCK_SIZE = 128;
 static constexpr int SUPPORTED_INNER_AXIS = 65536;
 
-inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out)
+inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,
+                                const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
     OP_CHECK_NULL(out, return false);
+    OP_CHECK_NULL(perm_x1, return false);
+    OP_CHECK_NULL(perm_x2, return false);
+    OP_CHECK_NULL(perm_y, return false);
     return true;
 }
 
@@ -175,14 +179,18 @@ static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2,
-                                      const aclTensor* scale, aclTensor* out, const aclIntArray* perm_x1,
-                                      const aclIntArray* perm_x2, int8_t cubeMathType,
-                                      int32_t batch_split_factor)
+inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale, aclTensor* out,
+                                      const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
+                                      int8_t cubeMathType, int32_t batch_split_factor)
 {
-    CHECK_RET(CheckNotNull(x1, x2, out), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(x1, x2, out, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_NULLPTR);
+    // perm必须为3维
+    if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional!");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && cubeMathType == -1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for ASCEND910_95",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for ASCEND910_95.",
             cubeMathType);
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -262,7 +270,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 入参检查
-    auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, cubeMathType, batchSplitFactor);
+    auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     
     // 空tensor 处理

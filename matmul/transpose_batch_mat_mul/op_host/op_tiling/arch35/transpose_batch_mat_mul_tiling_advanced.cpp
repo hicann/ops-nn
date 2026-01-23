@@ -162,7 +162,7 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
     OP_TILING_CHECK((TBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
 
-    if (attrs->GetAttrNum() >= ATTR_NUM) {
+    if (aPermList != nullptr && attrs->GetAttrNum() >= ATTR_NUM) {
         uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
         bool batchSplitFactorPermCheck =
             aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] % batchSplitFactor == 0;
