@@ -43,6 +43,12 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 
 static const int64_t ONE_DIM = 1;
+static const std::string TENSOR_SELF_NAME = "self";
+static const std::string TENSOR_GAMMA_NAME = "gamma";
+static const std::string TENSOR_BETA_NAME = "beta";
+static const std::string TENSOR_OUT_NAME = "out";
+static const std::string TENSOR_MEAN_OUT_NAME = "meanOut";
+static const std::string TENSOR_RSTD_OUT_NAME = "rstdOut";
 
 static bool CheckNotNull(
     const aclTensor* self, const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
@@ -188,10 +194,29 @@ static bool CheckShape(
     return true;
 }
 
+static void CheckFormat(const aclTensor* tensor, const std::string& tensorName)
+{
+    if (tensor == nullptr) {
+        return;
+    }
+    if (tensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("Format of input tensor [%s] gets FRACTAL_NZ, this format may lead to precision failure", 
+                tensorName.c_str());
+    }
+    return;
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
     aclTensor* meanOut, aclTensor* rstdOut, const SocVersion& socVersion)
 {
+    CheckFormat(self, TENSOR_SELF_NAME);
+    CheckFormat(gamma, TENSOR_GAMMA_NAME);
+    CheckFormat(beta, TENSOR_BETA_NAME);
+    CheckFormat(out, TENSOR_OUT_NAME);
+    CheckFormat(meanOut, TENSOR_MEAN_OUT_NAME);
+    CheckFormat(rstdOut, TENSOR_RSTD_OUT_NAME);
+
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out, meanOut, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
 
