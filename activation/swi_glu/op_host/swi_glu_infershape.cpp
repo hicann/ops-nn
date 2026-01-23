@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -42,6 +43,13 @@ static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context) {
     if (split_dim < 0) {
       split_dim += x_shape->GetDimNum();
     }
+
+    if (Ops::Base::IsUnknownRank(*x_shape)) {
+        OP_LOGD("SwiGlu", "inputs have unknown rank, no need check.");
+        *y_shape = *x_shape;
+        return ge::GRAPH_SUCCESS;
+    }
+
     if (split_dim < 0 || split_dim >= static_cast<int64_t>(x_shape->GetDimNum())) {
       OP_LOGE("SwiGlu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
                   x_shape->GetDimNum(), x_shape->GetDimNum() - 1, split_dim);

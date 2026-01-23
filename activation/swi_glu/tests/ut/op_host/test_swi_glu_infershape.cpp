@@ -81,3 +81,15 @@ TEST_F(SwiGluTest, SwiGlu_infer_dtype_test) {
     EXPECT_EQ(context->GetOutputDataType(0), output_ref);
   }
 }
+
+TEST_F(SwiGluTest, SwiGlu_infershape_diff_test_dynamic_input_negative_two) {
+    ge::op::SwiGlu op;
+    op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT16));
+    op.SetAttr("dim", -1);
+    Runtime2TestParam param{{"dim"},{},{}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    std::vector<int64_t> expected_output_shape = {-2};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_output_shape);
+}
