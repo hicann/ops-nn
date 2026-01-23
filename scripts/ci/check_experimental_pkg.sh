@@ -15,6 +15,7 @@ pr_file=$(realpath "${1:-pr_filelist.txt}")
 mkdir -p "${BUILD_PATH}"
 cd "${BUILD_PATH}" && rm -f CMakeCache.txt && cmake -DENABLE_EXPERIMENTAL=TRUE -DPREPROCESS_ONLY=ON ..
 
+cd "${BASE_PATH}"
 {
     result=$(python3 ${BASE_PATH}/scripts/util/parse_compile_changed_files.py ${pr_file} TRUE)
 } || {
