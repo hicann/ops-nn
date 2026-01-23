@@ -208,7 +208,7 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
         }
     }
     OP_TILING_CHECK(isInWhiteList != true,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "shape m:%llu k:%llu n:%llu is not in white list",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "shape m:%lu k:%lu n:%lu is not in white list",
                     inputParams_.mSize, inputParams_.kSize, inputParams_.nSize), return false);
 
     return true;

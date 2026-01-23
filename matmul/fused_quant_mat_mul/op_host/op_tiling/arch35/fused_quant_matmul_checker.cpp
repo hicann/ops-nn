@@ -66,7 +66,7 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
         OP_TILING_CHECK(!(scaleShape->GetStorageShape().GetDim(0) == 1 ||
                           static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The scale dimension value must be 1 or n[%lu], but it is %lu.",
+                                              "The scale dimension value must be 1 or n[%lu], but it is %ld.",
                                               inputParams_.nSize, scaleShape->GetStorageShape().GetDim(0)),
                         return false);
     }
@@ -75,7 +75,7 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
     OP_TILING_CHECK(
         biasShape != nullptr && static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "The biasShape of FusedQuantMatMul should equal n, but it is %zu while n is %lu.",
+                              "The biasShape of FusedQuantMatMul should equal n, but it is %ld while n is %lu.",
                               biasShape->GetStorageShape().GetDim(0), inputParams_.nSize),
         return false);
 
@@ -84,7 +84,7 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
         OP_TILING_CHECK(!(offsetShape->GetStorageShape().GetDim(0) == 1 ||
                           static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "offset dim value must be 1 or n[%lu], but it is %lu", inputParams_.nSize,
+                                              "offset dim value must be 1 or n[%lu], but it is %ld", inputParams_.nSize,
                                               offsetShape->GetStorageShape().GetDim(0)),
                         return false);
     }
