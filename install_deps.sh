@@ -1,9 +1,9 @@
 #!/bin/bash
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
@@ -54,6 +54,9 @@ detect_os() {
             else
                 PKG_MANAGER="yum"
             fi
+        elif grep -qE '^NAME="openEuler"$|^NAME="EulerOS"$' /etc/os-release 2>/dev/null; then
+            OS="euler"
+            PKG_MANAGER="dnf"
         else
             echo "Unsupported Linux distribution, please install manually"
             exit 1
@@ -85,7 +88,7 @@ install_gawk() {
             run_command sudo $PKG_MANAGER update
             run_command sudo $PKG_MANAGER install -y gawk
             ;;
-        rhel)
+        rhel|euler)
             run_command sudo $PKG_MANAGER install -y gawk
             ;;
         macos)
@@ -136,6 +139,9 @@ install_python() {
             echo 'export PATH="/usr/local/opt/python@3.10/bin:$PATH"' >> ~/.zshrc
             run_command source ~/.zshrc
             ;;
+        euler)
+            run_command sudo $PKG_MANAGER install -y python3 python3-pip python3-devel
+            ;;
     esac
 
     if command -v python3 &> /dev/null; then
@@ -159,9 +165,9 @@ install_gcc() {
     local curr_ver=""
 
     if command -v gcc &> /dev/null; then
-        curr_ver=$(gcc --version | awk '/^gcc/ {print $4}')
+        curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}')
     elif command -v g++ &> /dev/null; then
-        curr_ver=$(g++ --version | awk '/^g\+\+/ {print $4}')
+        curr_ver=$(g++ --version | awk '/^g\+\+/ {print $NF}')
     else
         curr_ver="0.0.0"
     fi
@@ -198,10 +204,13 @@ install_gcc() {
             echo 'export CXX=/usr/local/bin/g++-11' >> ~/.zshrc
             run_command source ~/.zshrc
             ;;
+        euler)
+            run_command sudo $PKG_MANAGER install -y gcc gcc-c++
+            ;;
     esac
 
     if command -v gcc &> /dev/null; then
-        curr_ver=$(gcc --version | awk '/^gcc/ {print $4}')
+        curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}')
         if version_ge "$curr_ver" "$req_ver"; then
             echo "GCC installed successfully ($curr_ver)"
         else
@@ -254,6 +263,9 @@ install_cmake() {
         macos)
             run_command brew install cmake
             ;;
+        euler)
+            run_command sudo $PKG_MANAGER install -y cmake make
+            ;;
     esac
 
     if command -v cmake &> /dev/null; then
@@ -294,7 +306,7 @@ install_pigz() {
 
     echo "Installing pigz..."
     case "$OS" in
-        debian|rhel)
+        debian|rhel|euler)
             run_command sudo $PKG_MANAGER install -y pigz
             ;;
         macos)
@@ -320,7 +332,7 @@ install_dos2unix() {
 
     echo "Installing dos2unix..."
     case "$OS" in
-        debian|rhel)
+        debian|rhel|euler)
             run_command sudo $PKG_MANAGER install -y dos2unix
             ;;
         macos)
@@ -332,71 +344,6 @@ install_dos2unix() {
         echo "dos2unix installed successfully"
     else
         echo "dos2unix installation failed"
-        exit 1
-    fi
-}
-
-install_googletest() {
-    # Recommended googletest version: release-1.11.0
-    echo -e "\n==== Checking googletest ===="
-    local req_ver="1.11.0"
-    local curr_ver=""
-    local gtest_src_dir="/usr/src/gtest"
-
-    if pkg-config --exists gtest; then
-        curr_ver=$(pkg-config --modversion gtest)
-        echo "Current googletest version: $curr_ver"
-        if version_ge "$curr_ver" "$req_ver"; then
-            echo "googletest meets requirements"
-            return
-        fi
-    fi
-    read -p "Install googletest? [Y/n] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Skipping googletest installation"
-        return
-    fi
-
-    echo "Installing googletest..."
-    case "$OS" in
-        debian)
-            # Install libgtest-dev
-            run_command sudo $PKG_MANAGER install -y libgtest-dev
-            # Check if gtest source directory exists
-            if [ ! -d "$gtest_src_dir" ]; then
-                echo "googletest source directory not found: $gtest_src_dir"
-                echo "Attempting to reinstall libgtest-dev..."
-                run_command sudo $PKG_MANAGER purge -y libgtest-dev
-                run_command sudo $PKG_MANAGER install -y libgtest-dev
-                # Check directory again
-                if [ ! -d "$gtest_src_dir" ]; then
-                    echo "Still cannot find $gtest_src_dir, please install manually:"
-                    echo "1. Download source: wget https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz"
-                    echo "2. Extract and compile: tar -zxf release-1.11.0.tar.gz && cd googletest-release-1.11.0 && cmake . && make && sudo make install"
-                    exit 1
-                fi
-            fi
-            # Force cmake execution in gtest source directory (even if cd fails)
-            echo "Entering $gtest_src_dir to compile..."
-            run_command sudo cmake -S "$gtest_src_dir" -B "$gtest_src_dir/build"
-            run_command sudo make -C "$gtest_src_dir/build"
-            run_command sudo cp "$gtest_src_dir/build/lib/"*.a /usr/lib
-            ;;
-        rhel)
-            run_command sudo $PKG_MANAGER install -y gtest gtest-devel
-            ;;
-        macos)
-            run_command brew install googletest
-            echo 'export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"'
-            ;;
-    esac
-
-    if pkg-config --exists gtest; then
-        curr_ver=$(pkg-config --modversion gtest)
-        echo "googletest installed successfully ($curr_ver)"
-    else
-        echo "googletest installation failed"
         exit 1
     fi
 }
@@ -413,7 +360,6 @@ main() {
     install_cmake
     install_pigz
     install_dos2unix
-    install_googletest
 
     echo -e "===================================================="
     echo "All dependencies installed successfully!"
