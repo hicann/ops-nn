@@ -3,25 +3,25 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
- * \file block_epilogue.h
+ * \file block_epilogue_cv.h
  * \brief
  */
 
-#ifndef EPILOGUE_BLOCK_EPILOGUE_H
-#define EPILOGUE_BLOCK_EPILOGUE_H
+#ifndef EPILOGUE_BLOCK_EPILOGUE_CV_H
+#define EPILOGUE_BLOCK_EPILOGUE_CV_H
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
 #include "../utils/device_utils.h"
 #include "fusion/default_fusion_op.h"
-#include "fusion/fusion_mul.h"
 #include "fusion/fusion_add.h"
+#include "fusion/fusion_mul.h"
 #include "fusion/fusion_gelu.h"
 #include "../utils/status_utils.h"
 
@@ -30,12 +30,12 @@ namespace Gemm {
 namespace Block {
 
 template <typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename FusionOp_>
-class BlockEpilogue {
+class BlockEpilogueCV {
 public:
     using FusionArguments = typename FusionOp_::Arguments;
     using FusionParams = typename FusionOp_::Params;
 
-    __aicore__ inline BlockEpilogue() {}
+    __aicore__ inline BlockEpilogueCV() {}
 
     struct Arguments {
         GM_ADDR outGmAddr{nullptr};
@@ -50,7 +50,7 @@ public:
     using DataTypeOut = DataTypeOut_;
     using DataTypeIn = DataTypeIn_;
     using FusionOp = FusionOp_;
-
+    static constexpr uint16_t ZERO_FLAG = 0;
     static constexpr int64_t l0M = GetIntegralConstant<MNK_M, L0TileShape_>();
     static constexpr int64_t l0N = GetIntegralConstant<MNK_N, L0TileShape_>();
     // shape
@@ -59,15 +59,8 @@ public:
     using ProblemShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
 
     // GM ADDR
-    using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;
-    using InTrait = AscendC::TensorTrait<DataTypeIn, AscendC::TPosition::VECIN, NDLayout>;
-    AscendC::LocalTensor<InTrait> cLocal_;
-    AscendC::LocalTensor<DataTypeIn> inLocal_;
-    AscendC::LocalTensor<DataTypeIn> ubLocal_;
-    AscendC::LocalTensor<DataTypeIn> outputLocalTmp_;
-    AscendC::LocalTensor<DataTypeOut> outputLocal_;
-    AscendC::GlobalTensor<DataTypeOut> outputGlobal_;
-    AscendC::TBuf<> tBuf_;
+    AscendC::LocalTensor<DataTypeIn> cLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
+    // vector核一次最多计算多少个元素
     int64_t stageSize_ = 0;
     // attribute
     FusionOp fusionOp_;
@@ -75,34 +68,26 @@ public:
 
     __aicore__ inline void Init(Params const& params, int64_t l1M, int64_t l1N, ProblemShape& problemShape)
     {
-        int64_t l1NAlign = AlignBlock<half>(l1N);
-        GetTPipePtr()->InitBuffer(tBuf_, AscendC::TOTAL_UB_SIZE);
-        ubLocal_ = tBuf_.template Get<DataTypeIn>();
-        cLocal_.address_ = ubLocal_[0].address_;
-        inLocal_ = ubLocal_[0];
+        int64_t l1NAlign = AlignBlock<DataTypeOut>(l1N);
         int64_t ubOffset = l1M * l1NAlign;
-        fusionOp_.Init(params.fusionParams, ubLocal_, l1M, l1NAlign, ubOffset, stageSize_);
-        outputLocalTmp_ = ubLocal_[ubOffset];
-        outputLocal_ = outputLocalTmp_.template ReinterpretCast<DataTypeOut>();
-        outputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeOut*>(params.outGmAddr));
+        // 基于剩余UB可用大小确定stageSize_
+        fusionOp_.Init(params.fusionParams, cLocal_, l1M, l1NAlign, ubOffset, stageSize_);
         problemShape_ = problemShape;
-        ASCENDC_ASSERT(sizeof(DataTypeIn) >= sizeof(DataTypeOut), {
-            KERNEL_LOG(KERNEL_EORROR, "Unsupport dtype size %zu, %zu!", sizeof(DataTypeIn), sizeof(DataTypeOut));
-        });
     }
 
-    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset, bool splitM)
-    {
+    __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset)
+    {   
+        // 默认1-2不再基于splitM区分, aiv 0~1分别搬运blockShapeM/2
         int64_t blockShapeM = Get<0>(blockShape);
         int64_t halfBlockShapeM = Cmct::Gemm::CeilDiv(blockShapeM, AscendC::GetTaskRation());
-        if (splitM) {
-            blockShapeM = ((static_cast<uint64_t>(blockShapeM) & 1UL) > 0UL) ?
-                              (halfBlockShapeM - AscendC::GetSubBlockIdx()) :
-                              halfBlockShapeM;
-        }
+        blockShapeM = ((static_cast<uint64_t>(blockShapeM) & 1UL) > 0UL) ?
+                          (halfBlockShapeM - AscendC::GetSubBlockIdx()) :
+                          halfBlockShapeM;
         int64_t blockShapeN = Get<1>(blockShape);
-        int64_t blockShapeNAlign = AlignBlock<half>(blockShapeN);
+        int64_t blockShapeNAlign = AlignBlock<DataTypeOut>(blockShapeN); // 对齐16
         int64_t inputSize = blockShapeM * blockShapeNAlign;
+
+        // 一次计算最多取Min(baseM/2 * baseN, stageSize_)
         int64_t stageSize = AscendC::Std::min(stageSize_, inputSize) / blockShapeNAlign * blockShapeNAlign;
         ASCENDC_ASSERT(stageSize > 0, {
             KERNEL_LOG(KERNEL_EORROR, "stageSize size limit %ld, %ld, %ld!", stageSize_, blockShapeM, blockShapeN);
@@ -112,45 +97,32 @@ public:
         int64_t N = Get<MNK_N>(problemShape_);
         while (stageOffset < inputSize) {
             int64_t offset = dstOffset + loop * stageSize / blockShapeNAlign * N;
+            // aiv1需要多偏移aiv0所处理的数据
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
-            // do add or mul in ub
-            fusionOp_(inLocal_[stageOffset], outputLocalTmp_, offset, blockShapeM, blockShapeN, N, stageSize);
-            if (sizeof(DataTypeIn) >= sizeof(DataTypeOut)) {
-                Cast(outputLocal_, outputLocalTmp_, AscendC::RoundMode::CAST_RINT, stageSize);
-                AscendC::PipeBarrier<PIPE_V>();
-            }
-            // copy result from ub to gm
-            TPipeSetWaitFlag<AscendC::HardEvent::V_MTE3>();
-            AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(stageSize / blockShapeNAlign),
-                                         static_cast<uint32_t>(blockShapeN * sizeof(DataTypeOut)), 0,
-                                         static_cast<uint32_t>((N - blockShapeN) * sizeof(DataTypeOut)), 0};
-            AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[offset], outputLocal_, copyParams);
+            // do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, stageSize, stageOffset);
             stageOffset += stageSize;
             loop++;
         }
     }
 
-    __aicore__ inline auto GetTensor(BlockShape const& blockShape)
+    // GetTensor from ub from current AIV
+    __aicore__ inline auto GetTensor()
     {
-        NDLayout inLayout =
-            AscendC::MakeLayout(AscendC::MakeShape(Get<0>(blockShape), AlignBlock<half>(Get<1>(blockShape))),
-                                AscendC::MakeStride(AlignBlock<half>(Get<1>(blockShape)), static_cast<int64_t>(1)));
-        auto inTensorTrait = InTrait(inLayout);
-        cLocal_.SetTensorTrait(inTensorTrait);
         return cLocal_;
     }
 
-    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0, bool splitM = false)
+    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0)
     {
-        Run(blockShape, dstOffset, splitM);
+        Run(blockShape, dstOffset);
         return;
     }
 
     // static init
-    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspaceGm)
+    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR x3Gm)
     {
-        FusionParams fusionParams = FusionOp::InitParams(args.fusionArgs, workspaceGm);
+        FusionParams fusionParams = FusionOp::InitParams(args.fusionArgs, x3Gm);
         Params params = {args.outGmAddr, fusionParams};
         return params;
     }

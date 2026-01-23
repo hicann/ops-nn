@@ -34,8 +34,13 @@ constexpr int MNK_M0 = 4;
 constexpr int MNK_N0 = 5;
 constexpr static uint64_t B_FULL_LOAD_MODE = 2UL;
 constexpr static uint64_t A_FULL_LOAD_MODE = 1UL;
+constexpr static uint64_t NONE_FULL_LOAD_MODE = 0UL;
 constexpr static int64_t PER_BLOCK_SIZE = 128L;
-
+// FusedMatMul OpType
+constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
+constexpr static uint64_t OP_TYPE_ADD = 1UL;
+constexpr static uint64_t OP_TYPE_MUL = 2UL;
+constexpr static uint64_t OP_TYPE_RELU = 5UL;
 struct MatmulShape {
     int64_t m;
     int64_t n;

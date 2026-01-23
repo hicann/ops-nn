@@ -57,17 +57,17 @@ class KernelMatmulStreamK<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, Bloc
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
                           MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, true>>> ||
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, true>>> ||
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, true>>> ||
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, true>>> ||
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, true>>> ||
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, true>>>>>{
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>>>>{
 public:
     __aicore__ inline KernelMatmulStreamK() {}
     __aicore__ inline ~KernelMatmulStreamK() {}

@@ -132,29 +132,33 @@ struct MatmulMultiBlock {
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  */
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0,
-    bool ENABLE_RELU_ = false>
+    uint64_t FUSED_OP_TYPE_ = 0>
 struct MatmulMultiBlockWithOutQue {
     using ScheduleType = KernelMultiBlockOnKAxis;
     using SingleShape = SingleCoreShape;
     constexpr static uint64_t fullLoadMode = FULL_LOAD_MODE_;
-    constexpr static bool enableRelu = ENABLE_RELU_;
+    constexpr static bool enableRelu = (FUSED_OP_TYPE_ == OP_TYPE_RELU);
+    constexpr static bool enableAdd = (FUSED_OP_TYPE_ == OP_TYPE_ADD);
+    constexpr static bool enableMul = (FUSED_OP_TYPE_ == OP_TYPE_MUL);
 };
 
 /**
  * @struct MatmulMultiBlockWithStreamK
  * @brief Matrix multiplication split k axis processing structure, no quant, no bias, implemented base on layout
- * @param [in] fixpOpti: enum, judge if enabling fixp align optimize, default is ON_THE_FLY
+ * @param [in] FixpOpti: enum, judge if enabling fixp align optimize, default is ON_THE_FLY
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
-template <MatMulL0C2Out fixpOpti = MatMulL0C2Out::ON_THE_FLY, bool ENABLE_RELU = false,
+template <MatMulL0C2Out FixpOpti = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OP_TYPE_ = 0,
     class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulMultiBlockWithStreamK {
     using ScheduleType = KernelMultiBlockStreamK;
     using SingleShape = SingleCoreShape;
     constexpr static bool enableInputDataLenCheck = false;
-    constexpr static bool enableRelu = ENABLE_RELU;
-    constexpr static MatMulL0C2Out fixpOpti_ = fixpOpti;
+    constexpr static bool enableRelu = (FUSED_OP_TYPE_ == OP_TYPE_RELU);
+    constexpr static bool enableAdd = (FUSED_OP_TYPE_ == OP_TYPE_ADD);
+    constexpr static bool enableMul = (FUSED_OP_TYPE_ == OP_TYPE_MUL);
+    constexpr static MatMulL0C2Out fixpOpti_ = FixpOpti;
 };
 
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>

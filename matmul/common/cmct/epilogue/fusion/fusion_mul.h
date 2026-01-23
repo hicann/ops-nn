@@ -37,7 +37,8 @@ public:
         GM_ADDR inputGmAddr{nullptr};
     };
 
-    AscendC::LocalTensor<DataTypeIn> inputLocal_;
+    static constexpr uint16_t ZERO_FLAG = 0;
+    AscendC::LocalTensor<DataTypeIn> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
     AscendC::GlobalTensor<DataTypeIn> inputGlobal_;
     int64_t stageSize_{0};
     int64_t ubCalcM_{0};
@@ -66,13 +67,17 @@ public:
                                       int64_t curAivN, int strideN, int64_t stageSize)
     {
         int64_t curAivNAlign = AlignBlock<DataTypeIn>(curAivN);
-        TPipeSetWaitFlag<AscendC::HardEvent::MTE3_MTE2>();
+
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
         AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(stageSize / curAivNAlign),
                                      static_cast<uint32_t>(curAivN * sizeof(DataTypeOut)),
                                      static_cast<uint32_t>((strideN - curAivN) * sizeof(DataTypeIn)), 0, 0};
         AscendC::DataCopyPadExtParams<DataTypeIn> padParams{true, 0, 0, 0};
         AscendC::DataCopyPad(inputLocal_, inputGlobal_[offset], copyParams, padParams);
-        TPipeSetWaitFlag<AscendC::HardEvent::MTE2_V>();
+
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
         AscendC::Mul(outputLocal, inputLocal_, srcLocal, stageSize);
         AscendC::PipeBarrier<PIPE_V>();
     }
