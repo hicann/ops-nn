@@ -57,6 +57,8 @@ static const size_t INDEX_IN_QUANT_OFFSET = 5;
 static const size_t NUMBER_OF_INPUT_SIZE = 10;
 static const size_t USER_WORKSPACE = 16777216; // 16 * 1024 * 1024
 constexpr uint32_t PERFORMANCE_COL_LEN = 1536;
+constexpr uint32_t PERFORMANCE_ROW_LEN = 128;
+constexpr uint32_t MIN_CORE = 12;
 const int64_t DYNAMIC_INT_X_FLOAT32_BIAS_QUANT_D_PERFORMANCE = 30013;
 
 // Tiling优选参数
@@ -413,7 +415,10 @@ void DequantSwigluQuantTiling::SaveOptBaseShape(
     uint64_t baseTileNum = (baseRowLen_ == 0 ? 0 : (tilingData.get_rowLen() / baseRowLen_)) *
                            (baseColLen_ == 0 ? 0 : (tilingData.get_colLen() / baseColLen_));
     totalUsedCoreNum_ = std::min(totalTileNum, static_cast<uint64_t>(totalAvailableCore));
-
+    if(tilingData.get_colLen() < PERFORMANCE_COL_LEN
+    && tilingData.get_rowLen() < PERFORMANCE_ROW_LEN) {
+        totalUsedCoreNum_ = std::min(totalUsedCoreNum_, static_cast<uint32_t>(MIN_CORE));
+    }
     optTiling.optBaseRowLen = baseRowLen_;
     optTiling.optBaseColLen = baseColLen_;
     optTiling.optTotalTileNum = totalTileNum;
@@ -645,9 +650,9 @@ int64_t DequantSwigluQuantTiling::getTilingKeyDynamic(
 
 bool DequantSwigluQuantTiling::isPerformanceBranch() {
     if(tilingData.get_is32BAligned() == 1
-    && tilingData.get_colLen() == PERFORMANCE_COL_LEN
+    && tilingData.get_colLen() <= PERFORMANCE_COL_LEN
     && tilingData.get_baseRowLen() == 1
-    && tilingData.get_baseColLen() == PERFORMANCE_COL_LEN
+    && tilingData.get_baseColLen() == tilingData.get_colLen()
     && tilingData.get_biasIsEmpty() == 1
     && tilingData.get_activateScaleIsEmpty() == 0) {
         return true;
