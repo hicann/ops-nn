@@ -781,10 +781,10 @@ static inline bool InferGroupSize(TupleInput &inputTensors, TupleQuant &quantTen
     auto inputSizeK = transX1 ? x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM) : x1->GetViewShape().GetDim(x1DimNum - 1);
     auto scaleSizeK = 0;
     if (IsMicroScaling(x1Scale, x2Scale)) {
-        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1);
+        scaleSizeK = x1Scale->GetViewShape().GetDim(transX1 ? 0 : 1) * 2; //when scale type is e8m0, scalex1 shape is [m, k/2, 2] or [k/2, m, 2]
     } else {
-        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1)
-                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM);
+        scaleSizeK = transX1 ? x1Scale->GetViewShape().GetDim(x1ScaleDimNum - PENULTIMATE_DIM)
+                             : x1Scale->GetViewShape().GetDim(x1ScaleDimNum - 1);
     }
     CHECK_RET(ReCalcGroupSize(inputSizeK, scaleSizeK, groupSizeK, "k"), false);
     auto inputSizeN = transX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) : x2->GetViewShape().GetDim(x2DimNum - 1);
