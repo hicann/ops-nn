@@ -179,13 +179,15 @@ struct BatchMatmulToMul {
 /**
  * @struct MatmulIterBatch
  * @brief Matrix multiplication iteration batch processing structure, no quant, no bias, implemented base on layout
+ * @param [in] ENABLE_SYNC: judge if enabling synchronization between AIV and AIC
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
-template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+template <MatMulL0C2Out EnableSync = MatMulL0C2Out::ON_THE_FLY, class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulIterBatch {
     using ScheduleType = KernelIterBatch;
     using SingleShape = SingleCoreShape;
     constexpr static bool ENABLE_INTRINSICS_CHECK = false;
+    constexpr static MatMulL0C2Out enableSync = EnableSync;
 };
 
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>

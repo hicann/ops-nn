@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,20 +23,14 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <class L1TileShape, class L0TileShape, class AT, class BT, class CT, class BiasT, class TileCopy>
-class BlockMmad<MatmulIterBatch<>, L1TileShape, L0TileShape, AT, BT, CT, BiasT, TileCopy,
-    AscendC::Std::enable_if_t<IsMatmulLayoutTypeV<AT>>>
-    : public BlockMmad<MatmulIterBatch<>, L1TileShape, L0TileShape,
-        ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy> {
-    using Base = BlockMmad<MatmulIterBatch<>, L1TileShape, L0TileShape,
-                           ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy>;
-    using Base::Base;
-};
-
-template <class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_,
-          class TileCopy_>
-class BlockMmad<MatmulIterBatch<>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
-    AscendC::Std::enable_if_t<!IsMatmulLayoutTypeV<AType_>>> {
+template <
+    class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+    class BiasType_, class TileCopy_>
+class BlockMmad<
+    DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
+    AscendC::Std::enable_if_t<
+        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -44,7 +38,7 @@ public:
     using A_T = typename AType::T;
     using B_T = typename BType::T;
     using C_T = typename CType::T;
-    using DispatchPolicy = MatmulIterBatch<>;
+    using DispatchPolicy = DispatchPolicy_;
     using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     uint64_t m_;
     uint64_t n_;
@@ -255,29 +249,54 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<float>& l0c,
-                                   const uint64_t mInGM, const uint64_t nInGM, const uint64_t curIterBatchL0)
-    {
-        AscendC::DataCopyCO12DstParams intriParams;
-        intriParams.nSize = nInGM;
-        intriParams.mSize = mInGM;
-        intriParams.dstStride = n_;
-        intriParams.srcStride = Align(mInGM, AscendC::BLOCK_CUBE);
-        if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
-            intriParams.quantPre = QuantMode_t::F322BF16;
-        } else if (AscendC::IsSameType<C_T, half>::value) {
-            intriParams.quantPre = QuantMode_t::F322F16;
-        }
-        intriParams.nz2ndEn = true;
-        intriParams.unitFlag = 0;
+    __aicore__ inline void CopyOut(
+        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<float>& l0c, const uint64_t mInGM,
+        const uint64_t nInGM, const uint64_t curIterBatchL0)
+    {	
+        AscendC::DataCopyCO12DstParams intriParams;	
+        intriParams.nSize = nInGM;	
+        intriParams.mSize = mInGM;	
+        intriParams.dstStride = n_;	
+        intriParams.srcStride = Align(mInGM, AscendC::BLOCK_CUBE);	
+        if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {	
+            intriParams.quantPre = QuantMode_t::F322BF16;	
+        } else if (AscendC::IsSameType<C_T, half>::value) {	
+            intriParams.quantPre = QuantMode_t::F322F16;	
+        }	
+        intriParams.nz2ndEn = true;	
+        intriParams.unitFlag = 0;	
 
-        // When nz2nd loop in copyout, src stride is unit of c0Size, dst stride is unit of one element.
-        AscendC::SetFixpipeNz2ndFlag(curIterBatchL0, Align(mInGM, AscendC::BLOCK_CUBE) *
-                                     Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE, mInGM * nInGM);
+        // When nz2nd loop in copyout, src stride is unit of c0Size, dst stride is unit of one element.	
+        AscendC::SetFixpipeNz2ndFlag(curIterBatchL0, Align(mInGM, AscendC::BLOCK_CUBE) *	
+                                     Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE, mInGM * nInGM);	
         AscendC::DataCopy(cGlobal, l0c, intriParams);
     }
 
-    __aicore__ inline void operator()(AscendC::GlobalTensor<C_T> cGlobal,
+    __aicore__ inline void CopyOut(
+        const AscendC::LocalTensor<C_T>& dstLocal, const AscendC::LocalTensor<float>& l0c, const uint64_t mInGM,
+        const uint64_t nInGM, const uint64_t curIterBatchL0)
+    {
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        fixpipeParams.nSize = Align(nInGM, AscendC::BLOCK_CUBE);
+        fixpipeParams.mSize = Align(mInGM, AscendC::BLOCK_CUBE);
+        fixpipeParams.dstStride = Align(nInGM, AscendC::BLOCK_CUBE);
+        fixpipeParams.srcStride = Align(mInGM, AscendC::BLOCK_CUBE);
+        if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
+            fixpipeParams.quantPre = QuantMode_t::F322BF16;
+        } else if (AscendC::IsSameType<C_T, half>::value) {
+            fixpipeParams.quantPre = QuantMode_t::F322F16;
+        }
+        fixpipeParams.unitFlag = 0;
+        fixpipeParams.params.ndNum = curIterBatchL0;
+        fixpipeParams.params.srcNdStride =
+            Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
+        fixpipeParams.params.dstNdStride = mInGM * Align(nInGM, AscendC::BLOCK_CUBE);
+        fixpipeParams.subBlockId = (l0CEventID_ & 0x1);
+        AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, l0c, fixpipeParams);
+    }
+
+    template <typename T>
+    __aicore__ inline void operator()(T cTensor,
                                       AscendC::GlobalTensor<A_T> aGlobal,
                                       AscendC::GlobalTensor<B_T> bGlobal,
                                       uint64_t blockNum,
@@ -396,10 +415,18 @@ public:
                     AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
 
                     AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0CEventID_ & 0x1);
-                    uint64_t offsetCGMOfCopyOut = iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ +
-                                                  iterNL0 * baseN;
-                    CopyOut(cGlobal[offsetCGMOfCopyOut], l0c[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0,
+                    if constexpr (DispatchPolicy::enableSync == MatMulL0C2Out::ND_FIXPIPE_1_2) {
+                        if (l0CEventID_ > 1) {
+                            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
+                                (l0CEventID_ & 0x1) * FLAG_ID_MAX + SYNC_OFFSET);
+                        }
+                        CopyOut(cTensor, l0c[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0, curIterBatchL0);
+                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>((l0CEventID_ & 0x1) * FLAG_ID_MAX);
+                    } else {
+                        uint64_t offsetCGMOfCopyOut = iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ + iterNL0 * baseN;
+                        CopyOut(cTensor[offsetCGMOfCopyOut], l0c[l0COffset_ * (l0CEventID_ & 0x1)], curML0, curNL0,
                             curIterBatchL0);
+                    }
                     AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0CEventID_ & 0x1);
                     l0CEventID_++;
                 }
@@ -417,6 +444,8 @@ private:
     constexpr static uint16_t FIRST_FLAG = 1;
     constexpr static uint16_t SECOND_FLAG = 2;
     constexpr static uint16_t THIRD_FLAG = 3;
+    constexpr static uint16_t FLAG_ID_MAX = 16;
+    constexpr static uint16_t SYNC_OFFSET = 2;
 };
 } // namespace Block
 } // namespace Gemm

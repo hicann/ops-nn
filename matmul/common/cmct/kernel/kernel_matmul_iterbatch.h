@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "../block/block_mmad_iterbatch.h"
 #include "../block/block_mmad_builder.h"
 #include "../epilogue/block_epilogue_empty.h"
+#include "../epilogue/block_epilogue_iterbatch.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
 
@@ -36,16 +37,24 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
-template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
-          typename Enable_ = void>
+template <
+    class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_, typename Enable_ = void>
 class KernelMatMulIterBatch {
-    static_assert(AscendC::Std::always_false_v<BlockEpilogue_>,
-                  "KernelIterBatch is not implemented for this BlockEpilogue");
+    static_assert(AscendC::Std::always_false_v<BlockEpilogue_>, "BlockMmad is not matched for this BlockEpilogue");
 };
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatMulIterBatch <ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-    AscendC::Std::enable_if_t<AscendC::Std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
+class KernelMatMulIterBatch<
+    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+    AscendC::Std::enable_if_t<
+        (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
+         AscendC::Std::is_same_v<
+             MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY>, typename BlockMmadBuilder_::BlockMatmulPolicy>) ||
+        ((AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<float>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<half>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueIterbatch<bfloat16_t>>)&&AscendC::Std::
+             is_same_v<
+                 MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, typename BlockMmadBuilder_::BlockMatmulPolicy>)>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
     __aicore__ inline ~KernelMatMulIterBatch() {}
@@ -191,18 +200,15 @@ public:
 
     __aicore__ inline void operator()(Params const& params)
     {
-        if ASCEND_IS_AIV {
-            return;
-        }
+        BlockEpilogue epilogueOp;
         // Instantiate mmadOp
         BlockMmadOp blockMmadOp;
         // Get blockIdx 这里是硬件获得的blockidx
-        int64_t curBlockIdx = AscendC::GetBlockIdx();
+        int64_t curBlockIdx = GetCurrentBlockIdx();
         // Get BlockNum 这里是rts获得的核数
         int64_t blockNum = AscendC::GetBlockNum();
         // Init
         Init(params);
-
         BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
         if (bs.GetBL2CacheDisable() && params.mmadParams.aGmAddr != params.mmadParams.bGmAddr) {
             bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
@@ -222,6 +228,11 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
+        AscendC::LocalTensor<CType> cLocal;
+        if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
+            epilogueOp.Init(params.epilogueParams, problemShape_);
+            cLocal = epilogueOp.GetTensor();
+        }
         blockMmadOp.Init(problemShape_, bs.GetInnerBatch());
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(1);
@@ -239,15 +250,31 @@ public:
             int64_t offsetB = Get<1>(blockOffset);
             int64_t offsetC = Get<2>(blockOffset);
             uint64_t curIterBatchL1 = (tileIdx + 1 == tileNum) ? (b_ - tileIdx * mainIterBatchL1) : mainIterBatchL1;
+            bool isLastTurn = (tileIdx + 1 == tileNum); // records if last turn, which do need set CrossCoreFlag
             uint64_t nextIterBatchL1 = (tileIdx + 1 + blockNum == tileNum) ? // if next loop is tail loop, copy tailsize
-                                       (b_ - (tileIdx + blockNum) * mainIterBatchL1) : mainIterBatchL1;
+                                           (b_ - (tileIdx + blockNum) * mainIterBatchL1) :
+                                           mainIterBatchL1;
             if (tileIdx + blockNum >= tileNum) {
                 isFinalRound = true;
             }
-            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], blockNum, curIterBatchL1,
+            if ASCEND_IS_AIC {
+                if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
+                    blockMmadOp(
+                        cLocal, aGlobal_[offsetA], bGlobal_[offsetB], blockNum, curIterBatchL1, nextIterBatchL1,
+                        mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound, isFinalRound);
+                } else {
+                    blockMmadOp(
+                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], blockNum, curIterBatchL1,
                         nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
                         isFinalRound);
-            isPreLoadRound = false;
+                }
+                isPreLoadRound = false;
+            }
+            if ASCEND_IS_AIV {
+                if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
+                    epilogueOp(offsetC, baseM, baseN, curIterBatchL1, mainIterBatchL0, isLastTurn);
+                }
+            }
         }
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(0);
