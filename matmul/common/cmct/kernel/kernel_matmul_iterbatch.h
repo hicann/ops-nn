@@ -204,10 +204,10 @@ public:
         Init(params);
 
         BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
-        if (bs.GetBL2CacheDisable()) {
+        if (bs.GetBL2CacheDisable() && params.mmadParams.aGmAddr != params.mmadParams.bGmAddr) {
             bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
         }
-        if (bs.GetAL2CacheDisable()) {
+        if (bs.GetAL2CacheDisable() && params.mmadParams.aGmAddr != params.mmadParams.bGmAddr) {
             aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
         }
         int64_t tileNum = bs.GetTileNum();
