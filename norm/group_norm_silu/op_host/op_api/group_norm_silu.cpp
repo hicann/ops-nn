@@ -16,6 +16,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/shape_utils.h"
 #include "opdev/op_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
@@ -31,8 +32,8 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSilu(
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
     auto nNum = (x->GetViewShape())[0];
     auto dtypeOut1 = x->GetDataType();
-    const static SocVersion SOC_VERSION = GetCurrentPlatformInfo().GetSocVersion();
-    if (SOC_VERSION == SocVersion::ASCEND910_95) {
+    const static NpuArch SOC_VERSION = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
         if (gamma != nullptr) {
             dtypeOut1 = gamma->GetDataType();
         } else if (beta != nullptr) {

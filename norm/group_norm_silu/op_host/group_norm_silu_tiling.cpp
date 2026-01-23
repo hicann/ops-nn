@@ -13,7 +13,10 @@
  * \brief
  */
 #include "group_norm_silu_tiling.h"
+#include "tiling_base/tiling_util.h"
+
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 static const uint64_t INPUT_IDX_X = 0;
 static const uint64_t INPUT_IDX_GAMMA = 1;
 static const uint64_t INPUT_IDX_BETA = 2;
@@ -172,11 +175,11 @@ static ge::graphStatus TilingPrepare4GroupNormSilu(gert::TilingParseContext* con
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Get core num for ai_core:%d", compileInfo->totalCoreNum);
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P) {
+    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002) {
         compileInfo->is310P = 1;
         compileInfo->totalCoreNum = compileInfo->totalCoreNum + ascendcPlatform.GetCoreNumVector();
     }
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         compileInfo->isRegbase = 1;
         uint32_t vectorLength = Ops::Base::GetVRegSize(context);
         OP_CHECK_IF(
@@ -231,13 +234,11 @@ static void SetTilingParams(const gert::TilingContext* context, GroupNormSiluTil
     tilingData.set_shapeD(tilingData.get_shapeC() / tilingData.get_numGroups());
     tilingData.set_hwNum(hwNum);
     tilingData.set_elemNum(tilingData.get_shapeD() * hwNum);
-
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRINX90) {
-        tilingData.set_processSize(DEFAULT_PROCESSSIZE_KIRINX90);
-    } else {
-        tilingData.set_processSize(DEFAULT_PROCESSSIZE);
-    }
+    uint64_t processSize = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::KIRINX90) ?
+                               DEFAULT_PROCESSSIZE_KIRINX90 :
+                               DEFAULT_PROCESSSIZE;
+    tilingData.set_processSize(static_cast<int64_t>(processSize));
 }
 
 static void SetBlockTiling(const gert::TilingContext* context, GroupNormSiluTilingData& tilingData)

@@ -17,6 +17,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_group_norm_silu.h"
 #include "aclnn/aclnn_base.h"
 
@@ -43,6 +44,12 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 
 static const int64_t ONE_DIM = 1;
+static const std::string TENSOR_SELF_NAME = "self";
+static const std::string TENSOR_GAMMA_NAME = "gamma";
+static const std::string TENSOR_BETA_NAME = "beta";
+static const std::string TENSOR_OUT_NAME = "out";
+static const std::string TENSOR_MEAN_OUT_NAME = "meanOut";
+static const std::string TENSOR_RSTD_OUT_NAME = "rstdOut";
 
 static bool CheckNotNull(
     const aclTensor* self, const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
@@ -54,10 +61,9 @@ static bool CheckNotNull(
     return true;
 }
 
-static const std::initializer_list<DataType>& GetDtypeSupportList(const SocVersion& socVersion)
+static const std::initializer_list<DataType>& GetDtypeSupportList(const NpuArch& npuArch)
 {
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND910_95) {
+    if (npuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND310P_DTYPE_DTYPE_SUPPORT_LIST;
@@ -66,10 +72,10 @@ static const std::initializer_list<DataType>& GetDtypeSupportList(const SocVersi
 
 static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
-    const aclTensor* meanOut, const aclTensor* rstdOut, const SocVersion& socVersion)
+    const aclTensor* meanOut, const aclTensor* rstdOut, const NpuArch& npuArch)
 {
     // 检查self的数据类型是否在支持列表内
-    auto supportList = GetDtypeSupportList(socVersion);
+    auto supportList = GetDtypeSupportList(npuArch);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
     if (gamma != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(gamma, supportList, return false);
@@ -87,7 +93,7 @@ static bool CheckDtypeValid(
     }
     // 检查out, meanOut, rstdOut的数据类型是否与self一致
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
-    if (socVersion != SocVersion::ASCEND910_95) {
+    if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         // 检查out, meanOut, rstdOut的数据类型是否与self一致
         OP_CHECK_DTYPE_NOT_MATCH(meanOut, self->GetDataType(), return false);
         OP_CHECK_DTYPE_NOT_MATCH(rstdOut, self->GetDataType(), return false);
@@ -115,13 +121,13 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckAttr(const aclTensor* self, int64_t group, double eps, const SocVersion& socVersion)
+static bool CheckAttr(const aclTensor* self, int64_t group, double eps, const NpuArch& npuArch)
 {
     // 检查group是否大于0
     OP_CHECK(
         group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
         return false);
-    if (socVersion != SocVersion::ASCEND910_95) {
+    if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         OP_CHECK(
             self->GetViewShape()[0] > 0,
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected N to be greater than 0, got %ld.", self->GetViewShape()[0]),
@@ -188,21 +194,40 @@ static bool CheckShape(
     return true;
 }
 
+static void CheckFormat(const aclTensor* tensor, const std::string& tensorName)
+{
+    if (tensor == nullptr) {
+        return;
+    }
+    if (tensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("Format of input tensor [%s] gets FRACTAL_NZ, this format may lead to precision failure", 
+                tensorName.c_str());
+    }
+    return;
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
-    aclTensor* meanOut, aclTensor* rstdOut, const SocVersion& socVersion)
+    aclTensor* meanOut, aclTensor* rstdOut, const NpuArch& npuArch)
 {
+    CheckFormat(self, TENSOR_SELF_NAME);
+    CheckFormat(gamma, TENSOR_GAMMA_NAME);
+    CheckFormat(beta, TENSOR_BETA_NAME);
+    CheckFormat(out, TENSOR_OUT_NAME);
+    CheckFormat(meanOut, TENSOR_MEAN_OUT_NAME);
+    CheckFormat(rstdOut, TENSOR_RSTD_OUT_NAME);
+
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out, meanOut, rstdOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckDtypeValid(self, gamma, beta, out, meanOut, rstdOut, socVersion), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, gamma, beta, out, meanOut, rstdOut, npuArch), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查shape是否支持
     CHECK_RET(CheckShape(self, gamma, beta, group, out, meanOut, rstdOut), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查属性是否满足约束条件
-    CHECK_RET(CheckAttr(self, group, eps, socVersion), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAttr(self, group, eps, npuArch), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -231,12 +256,12 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
 }
 
 static const aclTensor* GetGamma(
-    const aclTensor* self, const aclTensor* gamma, int64_t size, aclOpExecutor* executor, const SocVersion& socVersion)
+    const aclTensor* self, const aclTensor* gamma, int64_t size, aclOpExecutor* executor, const NpuArch& npuArch)
 {
     const aclTensor* gammaContiguous = nullptr;
     if (gamma) {
         gammaContiguous = l0op::Contiguous(gamma, executor);
-    } else if (socVersion != SocVersion::ASCEND910_95) {
+    } else if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         auto gammaTensor = executor->AllocTensor(op::Shape({size}), self->GetDataType(), self->GetViewFormat());
         CHECK_RET(gammaTensor != nullptr, nullptr);
         gammaContiguous = l0op::OnesLike(gammaTensor, executor);
@@ -245,18 +270,20 @@ static const aclTensor* GetGamma(
 }
 
 static const aclTensor* GetBeta(
-    const aclTensor* self, const aclTensor* beta, int64_t size, aclOpExecutor* executor, const SocVersion& socVersion)
+    const aclTensor* self, const aclTensor* beta, int64_t size, aclOpExecutor* executor, const NpuArch& npuArch)
 {
     const aclTensor* betaContiguous = nullptr;
     if (beta) {
         betaContiguous = l0op::Contiguous(beta, executor);
-    } else if (socVersion != SocVersion::ASCEND910_95) {
+    } else if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         auto betaTensor = executor->AllocTensor(op::Shape({size}), self->GetDataType(), self->GetViewFormat());
         CHECK_RET(betaTensor != nullptr, nullptr);
         betaContiguous = l0op::ZerosLike(betaTensor, executor);
     }
     return betaContiguous;
 }
+
+
 
 aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
     const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
@@ -267,13 +294,13 @@ aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    const static SocVersion SOC_VERSION = GetCurrentPlatformInfo().GetSocVersion();
+    const static NpuArch SOC_VERSION = GetCurrentPlatformInfo().GetCurNpuArch();
     // 固定写法，参数检查
     auto ret = CheckParams(self, gamma, beta, group, eps, out, meanOut, rstdOut, SOC_VERSION);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // 空tensor支持
     if (self->IsEmpty()) {
-        if (SOC_VERSION != SocVersion::ASCEND910_95) {
+        if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
             // meanOut在输入空Tensor情况下，输出0
             ret = FillScalar(meanOut, 0, uniqueExecutor.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -298,7 +325,7 @@ aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
         GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
     auto betaContiguous =
         GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
-    if (SOC_VERSION != SocVersion::ASCEND910_95) {
+    if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
         CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -344,48 +371,48 @@ aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(
     L2_DFX_PHASE_1(
         aclnnGroupNormSiluV2, DFX_IN(self, gamma, beta, group, eps, activateSilu), DFX_OUT(out, meanOut, rstdOut));
     // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto uniqueExecutorV2 = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutorV2.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    const static SocVersion SOC_VERSION = GetCurrentPlatformInfo().GetSocVersion();
+    const static NpuArch SOC_VERSION = GetCurrentPlatformInfo().GetCurNpuArch();
     // 固定写法，参数检查
     auto ret = CheckParams(self, gamma, beta, group, eps, out, meanOut, rstdOut, SOC_VERSION);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // 空tensor支持
     if (self->IsEmpty()) {
-        if (SOC_VERSION != SocVersion::ASCEND910_95) {
+        if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
             // meanOut在输入空Tensor情况下，输出0
-            ret = FillScalar(meanOut, 0, uniqueExecutor.get());
+            ret = FillScalar(meanOut, 0, uniqueExecutorV2.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
             // rstdOut在输入空Tensor情况下，输出NAN
-            ret = FillScalar(rstdOut, NAN, uniqueExecutor.get());
+            ret = FillScalar(rstdOut, NAN, uniqueExecutorV2.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
             *workspaceSize = 0;
-            uniqueExecutor.ReleaseTo(executor);
+            uniqueExecutorV2.ReleaseTo(executor);
             return ACLNN_SUCCESS;
         } else if (self->GetViewShape().GetDim(0) == 0) {
             *workspaceSize = 0;
-            uniqueExecutor.ReleaseTo(executor);
+            uniqueExecutorV2.ReleaseTo(executor);
             return ACLNN_SUCCESS;
         }
     }
 
     // 固定写法，将输入self, gamma, beta转换成连续的tensor
-    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutorV2.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gammaContiguous =
-        GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
+        GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(), SOC_VERSION);
     auto betaContiguous =
-        GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
-    if (SOC_VERSION != SocVersion::ASCEND910_95) {
+        GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(), SOC_VERSION);
+    if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
         CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 调用GroupNormSilu计算
     auto result = l0op::GroupNormSilu(
         selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), activateSilu,
-        uniqueExecutor.get());
+        uniqueExecutorV2.get());
     auto y = std::get<0>(result);
     CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto mean = std::get<1>(result);
@@ -394,20 +421,20 @@ aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(
     CHECK_RET(rstd != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto outViewCopyResult = l0op::ViewCopy(y, out, uniqueExecutor.get());
+    auto outViewCopyResult = l0op::ViewCopy(y, out, uniqueExecutorV2.get());
     CHECK_RET(outViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出meanOut上，meanOut可能是非连续的tensor
-    auto meanOutViewCopyResult = l0op::ViewCopy(mean, meanOut, uniqueExecutor.get());
+    auto meanOutViewCopyResult = l0op::ViewCopy(mean, meanOut, uniqueExecutorV2.get());
     CHECK_RET(meanOutViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出rstdOut上，rstdOut可能是非连续的tensor
-    auto rstdOutViewCopyResult = l0op::ViewCopy(rstd, rstdOut, uniqueExecutor.get());
+    auto rstdOutViewCopyResult = l0op::ViewCopy(rstd, rstdOut, uniqueExecutorV2.get());
     CHECK_RET(rstdOutViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = uniqueExecutorV2->GetWorkspaceSize();
+    uniqueExecutorV2.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

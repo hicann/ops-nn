@@ -330,7 +330,7 @@ TEST_F(group_norm_silu_test, test_case_1062) {
   free(path_);
 }
 
-TEST_F(group_norm_silu_test, test_case_1082) {
+TEST_F(group_norm_silu_test, test_case_108_1) {
   size_t inputByteSize = 3008 * sizeof(float);
   size_t outputByteSize = 1 * 3008 * 1 * 1 * sizeof(float);
   size_t meanByteSize = 1 * 752 * sizeof(float);
@@ -370,6 +370,124 @@ TEST_F(group_norm_silu_test, test_case_1082) {
   tilingDatafromBin->tilingKey = 108;
   tilingDatafromBin->epsilon = 0.00001;
   tilingDatafromBin->activateSilu = true;
+
+  ReadFile(path + "/group_norm_silu_data/input_x.bin", outputByteSize, x, outputByteSize);
+  ReadFile(path + "/group_norm_silu_data/input_gamma.bin", inputByteSize, beta, inputByteSize);
+  ReadFile(path + "/group_norm_silu_data/input_beta.bin", inputByteSize, gamma, inputByteSize);
+  ICPU_SET_TILING_KEY(108);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
+  ICPU_RUN_KF(group_norm_silu, blockDim, x, gamma, beta, silu, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+  AscendC::GmFree(x);
+  AscendC::GmFree(gamma);
+  AscendC::GmFree(beta);
+  AscendC::GmFree(silu);
+  AscendC::GmFree(mean);
+  AscendC::GmFree(rstd);
+  AscendC::GmFree(workspace);
+  AscendC::GmFree(tiling);
+  free(path_);
+}
+
+TEST_F(group_norm_silu_test, test_case_108_2) {
+  size_t inputByteSize = 10 * sizeof(float);
+  size_t outputByteSize = 1 * 10 * 1 * 1 * sizeof(float);
+  size_t meanByteSize = 1 * 10 * sizeof(float);
+  size_t tiling_data_size = sizeof(GroupNormSiluTilingData);
+  uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+  uint8_t* beta = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+  uint8_t* silu = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+  uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+  uint32_t blockDim = 48;
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
+  system("chmod -R 755 ./group_norm_silu_data/");
+  system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
+  system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 10 1 1 float32 float32");
+
+  char* path_ = get_current_dir_name();
+  string path(path_);
+
+  GroupNormSiluTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSiluTilingData*>(tiling);
+
+  tilingDatafromBin->numGroups = 10;
+  tilingDatafromBin->hwNum = 1 * 1;
+  tilingDatafromBin->shapeC = 10;
+  tilingDatafromBin->shapeD = tilingDatafromBin->shapeC / tilingDatafromBin->numGroups;
+  tilingDatafromBin->elemNum = tilingDatafromBin->shapeD * tilingDatafromBin->hwNum;
+  tilingDatafromBin->realCoreNum = 1;
+  tilingDatafromBin->numPerCore = 1;
+  tilingDatafromBin->numLastCore = 1;
+  tilingDatafromBin->processSize = 8192;
+  tilingDatafromBin->loopNum = 1;
+  tilingDatafromBin->loopTail = 1;
+  tilingDatafromBin->innerLoopNum = 1;
+  tilingDatafromBin->innerLoopTail = 1;
+  tilingDatafromBin->tilingKey = 108;
+  tilingDatafromBin->epsilon = 0.00001;
+  tilingDatafromBin->activateSilu = false;
+
+  ReadFile(path + "/group_norm_silu_data/input_x.bin", outputByteSize, x, outputByteSize);
+  ReadFile(path + "/group_norm_silu_data/input_gamma.bin", inputByteSize, beta, inputByteSize);
+  ReadFile(path + "/group_norm_silu_data/input_beta.bin", inputByteSize, gamma, inputByteSize);
+  ICPU_SET_TILING_KEY(108);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
+  ICPU_RUN_KF(group_norm_silu, blockDim, x, gamma, beta, silu, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+
+  AscendC::GmFree(x);
+  AscendC::GmFree(gamma);
+  AscendC::GmFree(beta);
+  AscendC::GmFree(silu);
+  AscendC::GmFree(mean);
+  AscendC::GmFree(rstd);
+  AscendC::GmFree(workspace);
+  AscendC::GmFree(tiling);
+  free(path_);
+}
+
+TEST_F(group_norm_silu_test, test_case_108_3) {
+  size_t inputByteSize = 9000 * sizeof(float);
+  size_t outputByteSize = 1 * 9000 * 1 * 1 * sizeof(float);
+  size_t meanByteSize = 1 * 9000 * sizeof(float);
+  size_t tiling_data_size = sizeof(GroupNormSiluTilingData);
+  uint8_t* x = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+  uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+  uint8_t* beta = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+  uint8_t* silu = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+  uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+  uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+  uint32_t blockDim = 48;
+  system("cp -r ../../../../norm/group_norm_silu/tests/ut/op_kernel/group_norm_silu_data ./");
+  system("chmod -R 755 ./group_norm_silu_data/");
+  system("cd ./group_norm_silu_data/ && rm -rf ./*bin");
+  system("cd ./group_norm_silu_data/ && python3 gen_data.py 1 10 1 1 float32 float32");
+
+  char* path_ = get_current_dir_name();
+  string path(path_);
+
+  GroupNormSiluTilingData* tilingDatafromBin = reinterpret_cast<GroupNormSiluTilingData*>(tiling);
+
+  tilingDatafromBin->numGroups = 9000;
+  tilingDatafromBin->hwNum = 1 * 1;
+  tilingDatafromBin->shapeC = 9000;
+  tilingDatafromBin->shapeD = tilingDatafromBin->shapeC / tilingDatafromBin->numGroups;
+  tilingDatafromBin->elemNum = tilingDatafromBin->shapeD * tilingDatafromBin->hwNum;
+  tilingDatafromBin->realCoreNum = 1;
+  tilingDatafromBin->numPerCore = 1;
+  tilingDatafromBin->numLastCore = 1;
+  tilingDatafromBin->processSize = 8192;
+  tilingDatafromBin->loopNum = 1;
+  tilingDatafromBin->loopTail = 1;
+  tilingDatafromBin->innerLoopNum = 1;
+  tilingDatafromBin->innerLoopTail = 1;
+  tilingDatafromBin->tilingKey = 108;
+  tilingDatafromBin->epsilon = 0.00001;
+  tilingDatafromBin->activateSilu = false;
 
   ReadFile(path + "/group_norm_silu_data/input_x.bin", outputByteSize, x, outputByteSize);
   ReadFile(path + "/group_norm_silu_data/input_gamma.bin", inputByteSize, beta, inputByteSize);

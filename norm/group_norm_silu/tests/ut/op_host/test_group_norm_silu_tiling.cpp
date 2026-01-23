@@ -12,14 +12,9 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
-// #include "test_common.h"
-// #include "pad_ops.h"
 #include "array_ops.h"
 #include "tests/ut/common/ut_op_util.h"
 #include "tests/ut/common/any_value.h"
-// #include "op_tiling/op_tiling_util.h"
-// #include "common_unittest.h"
-// #include "runtime/diag_util.h"
 #include "norm/group_norm_silu/op_host/group_norm_silu_tiling.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
@@ -1105,6 +1100,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_013) {
   map<string, string> aicore_spec;
   map<string, string> intrinsics;
   map<string, string> socversions = {{"Short_SoC_version", "Ascend310P"}};
+  map<string, string> npuarchs = {{"NpuArch", "2002"}};
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
   // platform info
@@ -1127,6 +1123,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_013) {
   ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
+  kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
@@ -1164,6 +1161,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_013) {
   ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
+  holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
   holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
@@ -1198,6 +1196,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_014) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1290,6 +1289,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_015) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1382,6 +1382,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_016) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1471,6 +1472,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_017) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1561,6 +1563,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_018) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1653,6 +1656,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_empty) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
@@ -1745,6 +1749,7 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_mix_type) {
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
   version["Short_SoC_version"] = "Ascend910_95";
   version["SoC_version"] = "Ascend910_9589";
+  version["NpuArch"] = "3510";
 
   // platform info
   fe::PlatFormInfos platform_info;
