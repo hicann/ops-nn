@@ -9,4 +9,4 @@
 
 message(STATUS "=== Debug: start ascend.quant.v2.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE ascend_quant_v2 ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE ascend_quant_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES quantize)

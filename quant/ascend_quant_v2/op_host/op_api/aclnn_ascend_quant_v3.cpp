@@ -18,6 +18,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -26,42 +27,43 @@ static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr uint64_t INT4_NUMS_IN_INT8_SPACE = 2;
 static constexpr int32_t MAX_AXIS_VALUE = 2;
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_ASCEND910B = {
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_ASCEND310P = {
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_ASCEND910B = {
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT = {
     op::DataType::DT_INT8, op::DataType::DT_INT32, op::DataType::DT_INT4};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_ASCEND910_95 = {
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT = {
     op::DataType::DT_INT8,          op::DataType::DT_INT32,       op::DataType::DT_INT4,
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_ASCEND310P = {op::DataType::DT_INT8};
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT8 = {op::DataType::DT_INT8};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B = {
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P = {
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_95: {
-            return X_DTYPE_SUPPORT_LIST_ASCEND910B;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return X_DTYPE_SUPPORT_LIST_WITH_BF16;
+    }
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201:{
+            return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case SocVersion::ASCEND310P:
-            return X_DTYPE_SUPPORT_LIST_ASCEND310P;
+        case NpuArch::DAV_2002:
+            return X_DTYPE_SUPPORT_LIST;
         default: {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented", static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
@@ -69,29 +71,30 @@ static const std::initializer_list<DataType>& GetInDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND310P) {
-        return OUT_DTYPE_SUPPORT_LIST_ASCEND310P;
-    } else if (socVersion == SocVersion::ASCEND910_95) {
-        return OUT_DTYPE_SUPPORT_LIST_ASCEND910_95;
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_2002) {
+        return OUT_DTYPE_SUPPORT_LIST_INT8;
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return OUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT;
     } else {
-        return OUT_DTYPE_SUPPORT_LIST_ASCEND910B;
+        return OUT_DTYPE_SUPPORT_LIST_INT;
     }
 }
 
 static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910_95: {
-            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
+    }
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201:{
+            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case SocVersion::ASCEND310P:
-            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P;
+        case NpuArch::DAV_2002:
+            return SCALE_OFFSET_DTYPE_SUPPORT_LIST;
         default: {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented", static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
@@ -310,7 +313,7 @@ static bool CheckRoundMode(const char* roundMode, int32_t dstType)
 static bool CheckAxis(const aclTensor* x, int32_t axis)
 {
     int32_t xDimNum = static_cast<int32_t>(x->GetViewShape().GetDimNum());
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002) {
         if (axis != -1 && axis != xDimNum - 1) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "axis only support the last dimension in 310P");
             return false;

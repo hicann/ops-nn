@@ -15,8 +15,10 @@
 
 #include "ascend_quant_v2_tiling.h"
 #include "ascend_quant_v2_regbase_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 namespace ascendquantv2 {
 constexpr size_t g_XInputIndex = 0;
 constexpr size_t g_ScaleIndex = 1;
@@ -740,8 +742,8 @@ static ge::graphStatus TilingPrepare4AscendQuantV2(gert::TilingParseContext* con
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    compileInfo->isAscend910B = ((socVersion == platform_ascendc::SocVersion::ASCEND910B) || (socVersion == platform_ascendc::SocVersion::KIRINX90));
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfo->isAscend910B = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003));
 
     return ge::GRAPH_SUCCESS;
 }
@@ -750,8 +752,7 @@ static ge::graphStatus Tiling4AscendQuantV2(gert::TilingContext* context)
 {
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    bool isRegBase = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-                      ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
+    bool isRegBase = IsRegbaseSocVersion(context);
     if (isRegBase) {
         ascendquantv2regbase::AscendQuantV2Regbase tiling(context);
         ge::graphStatus status = tiling.DoAscendQuantV2Tiling();

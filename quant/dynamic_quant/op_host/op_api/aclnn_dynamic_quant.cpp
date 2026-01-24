@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 #include "aclnn_dynamic_quant.h"
 #include "quant/dynamic_quant_v2/op_host/op_api/dynamic_quant_v2.h"
 #include "aclnn_dynamic_quant_v3.h"
@@ -33,6 +33,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -42,6 +43,8 @@ extern "C" {
 namespace {
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int64_t INT4_NUMS_IN_INT8_SPACE = 2;
+static constexpr int64_t NUM_TWO = 2;
+static constexpr int64_t DIM_MAX = 9;
 using DtypeCheck = std::initializer_list<op::DataType>;
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
@@ -49,7 +52,7 @@ static const std::initializer_list<DataType> EMPTY_LIST = {};
 static const std::initializer_list<op::DataType> INPUT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> INPUT_310P_910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> INPUT_DTYPE_SUPPORT_LIST_FP16 = {op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64};
@@ -57,11 +60,11 @@ static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST 
 static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT4, op::DataType::DT_INT8, op::DataType::DT_INT32};
 
-static const std::initializer_list<op::DataType> OUTPUT_310P_910_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
+static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST_INT8 = {op::DataType::DT_INT8};
 
 static const std::initializer_list<op::DataType> INPUT_DTYPE_EMPTY_LIST = {};
 
-static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST_910_95 = {
+static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT = {
     op::DataType::DT_INT4,     op::DataType::DT_INT8,        op::DataType::DT_INT32,
     op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN};
 
@@ -77,45 +80,45 @@ struct DynamicQuantParams {
     const aclTensor* offset = nullptr;
 };
 
-static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportListByNpuArch()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910_95: {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return INPUT_DTYPE_SUPPORT_LIST;
+    }
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201: {
             return INPUT_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910:
-        case SocVersion::ASCEND310P: {
-            return INPUT_310P_910_DTYPE_SUPPORT_LIST;
+        case NpuArch::DAV_1001:
+        case NpuArch::DAV_2002: {
+            return INPUT_DTYPE_SUPPORT_LIST_FP16;
         }
         default: {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented", static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
 }
 
-static inline const std::initializer_list<op::DataType>& GetOutputSupportListBySocVersion()
+static inline const std::initializer_list<op::DataType>& GetOutputSupportListByNpuArch()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93: {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return OUTPUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT;
+    }
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201: {
             return OUTPUT_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910_95: {
-            return OUTPUT_DTYPE_SUPPORT_LIST_910_95;
-        }
-        case SocVersion::ASCEND910:
-        case SocVersion::ASCEND310P: {
-            return OUTPUT_310P_910_DTYPE_SUPPORT_LIST;
+        case NpuArch::DAV_1001:
+        case NpuArch::DAV_2002: {
+            return OUTPUT_DTYPE_SUPPORT_LIST_INT8;
         }
         default: {
             OP_LOGE(
-                ACLNN_ERR_RUNTIME_ERROR, "API aclnnDynamicQuant support for %s is not implemented",
-                op::ToString(socVersion).GetString());
+                ACLNN_ERR_RUNTIME_ERROR, "API aclnnDynamicQuant support for %u is not implemented",
+                static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
@@ -187,12 +190,17 @@ static aclnnStatus CheckAttr(const DynamicQuantParams& dynamicQuantParams)
         return ACLNN_ERR_PARAM_INVALID;
     }
     const std::string mode = std::string(dynamicQuantParams.quantMode);
-    if (mode != "pertensor" && mode != "pertoken") {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantMode only support pertensor and pertoken.");
+    if (mode != "pertensor" && mode != "pertoken" && mode != "perchannel") {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantMode only support pertensor, pertoken and perchannel.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (mode == "pertensor" && dynamicQuantParams.groupIndex != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is pertensor, groupIndexOptional must be nullptr.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    if (mode == "perchannel" && dynamicQuantParams.groupIndex != nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is pertensor, groupIndexOptional must be nullptr.");
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -204,6 +212,9 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     auto xDimNum = dynamicQuantParams.x->GetViewShape().GetDimNum();
     int64_t xLastDimInput = dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - 1);
     CHECK_COND(xDimNum > 1, ACLNN_ERR_PARAM_INVALID, "The dimNum[%lu] of x should be greater than 1", xDimNum);
+    CHECK_COND(xDimNum < DIM_MAX, ACLNN_ERR_PARAM_INVALID, "The dimNum[%lu] of x should be less than 9", xDimNum);
+    int64_t xLastToSecondDimInput = dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - NUM_TWO);
+    const std::string mode = std::string(dynamicQuantParams.quantMode);
 
     if (dynamicQuantParams.smoothScales) {
         if (dynamicQuantParams.groupIndex) {
@@ -216,10 +227,18 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
             CHECK_COND(
                 smoothDimNum == 1, ACLNN_ERR_PARAM_INVALID, "The dimNum[%lu] of smooth_scales should be equal to one.",
                 smoothDimNum);
-            CHECK_COND(
-                dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
-                ACLNN_ERR_PARAM_INVALID, "The last dim[%ld] of x and the dim[%ld] of smooth_scales shoule be equal.",
-                xLastDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
+            if (mode == "perchannel") {
+                CHECK_COND(
+                    dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastToSecondDimInput,
+                    ACLNN_ERR_PARAM_INVALID,
+                    "If quantMode is perchannel, the second to last dim[%ld] of x and the last dim[%ld] of smooth_scales shoule be equal.",
+                    xLastToSecondDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
+            } else {
+                CHECK_COND(
+                    dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1) == xLastDimInput,
+                    ACLNN_ERR_PARAM_INVALID, "The last dim[%ld] of x and the dim[%ld] of smooth_scales shoule be equal.",
+                    xLastDimInput, dynamicQuantParams.smoothScales->GetViewShape().GetDim(smoothDimNum - 1));
+            }
         }
     }
 
@@ -253,7 +272,6 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
     }
 
     // check scale shape
-    const std::string mode = std::string(dynamicQuantParams.quantMode);
     auto scaleNum = dynamicQuantParams.scale->GetViewShape().GetDimNum();
     if (mode == "pertoken") {
         CHECK_COND(
@@ -268,8 +286,21 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
         CHECK_COND(
             dynamicQuantParams.scale->GetViewShape().GetDim(0) == 1, ACLNN_ERR_PARAM_INVALID,
             "If quantMode is pertensor, the shape of scale must be (1,).");
+    } else if (mode == "perchannel") {
+        CHECK_COND(
+            CheckOpDim(
+                dynamicQuantParams.x->GetViewShape(), dynamicQuantParams.scale->GetViewShape(), xDimNum - NUM_TWO,
+                scaleNum - 1) == ACLNN_SUCCESS,
+            ACLNN_ERR_PARAM_INVALID,
+            "If quantMode is perchannel, the shapes of x excluding the last two dimensions "
+            "must be the same as the shape of scale excluding the last dimension.");
+        CHECK_COND(
+            (dynamicQuantParams.scale->GetViewShape().GetDim(scaleNum - 1) == 
+                dynamicQuantParams.x->GetViewShape().GetDim(xDimNum - 1)),
+            ACLNN_ERR_PARAM_INVALID,
+            "If quantMode is perchannel, the last dim of scale must be equal to the last dim of x.");
     } else {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantMode is invalid, must be pertoken or pertensor.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantMode is invalid, must be pertoken, pertensor or perchannel.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -284,7 +315,7 @@ static aclnnStatus CheckShape(const DynamicQuantParams& dynamicQuantParams)
 static aclnnStatus CheckDtype(const DynamicQuantParams& dynamicQuantParams)
 {
     // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListBySocVersion();
+    const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListByNpuArch();
     OP_CHECK_DTYPE_NOT_SUPPORT(dynamicQuantParams.x, dtypeSupportList, return ACLNN_ERR_PARAM_INVALID);
     if (dynamicQuantParams.smoothScales) {
         // 检查smooth的数据类型是否在add算子的支持列表内
@@ -297,7 +328,7 @@ static aclnnStatus CheckDtype(const DynamicQuantParams& dynamicQuantParams)
                 dynamicQuantParams.groupIndex, GROUP_INDEX_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
         }
     }
-    const std::initializer_list<op::DataType> outputSupportList = GetOutputSupportListBySocVersion();
+    const std::initializer_list<op::DataType> outputSupportList = GetOutputSupportListByNpuArch();
     OP_CHECK_DTYPE_NOT_SUPPORT(dynamicQuantParams.y, outputSupportList, return ACLNN_ERR_PARAM_INVALID);
     OP_CHECK_DTYPE_NOT_MATCH(dynamicQuantParams.scale, op::DataType::DT_FLOAT, return ACLNN_ERR_PARAM_INVALID);
     if (dynamicQuantParams.offset) {
@@ -413,9 +444,8 @@ aclnnStatus GetDynamicQuantResultByL0Api(
         OP_LOGD("op dynamicquant real output is int4.");
     }
 
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
-        // DynamicQuantV2 consolidates and remains backward compatible with DynamicQuant in socVersion ASCEND910_95
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        // DynamicQuantV2 consolidates and remains backward compatible with DynamicQuant in socVersion ASCEND950
         auto dynamicQuantV2Result = l0op::DynamicQuantV2(
             x, smoothScales, groupIndex, yDtype, dynamicQuantParams.isSymmetrical, dynamicQuantParams.quantMode,
             uniqueExecutor.get());
@@ -526,9 +556,8 @@ aclnnStatus aclnnDynamicQuantV3GetWorkspaceSize(
     L2_DFX_PHASE_1(
         aclnnDynamicQuantV3, DFX_IN(x, smoothScalesOptional, groupIndexOptional, dstType, isSymmetrical, quantMode),
         DFX_OUT(yOut, scaleOut, offsetOut));
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910_95) {
-        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV3 only support socVersion Ascend910_95");
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_LOGE(ACLNN_ERR_INNER, "aclnnDynamicQuantV3 only support socVersion Ascend950");
         return ACLNN_ERR_INNER;
     }
     DynamicQuantParams dynamicQuantParams{

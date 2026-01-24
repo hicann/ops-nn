@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 /*!
  * \file dynamic_quant_tiling_310P.cpp
  * \brief
@@ -181,7 +181,7 @@ uint64_t DynamicQuantTiling310P::ComputeTilingKey(const gert::TilingContext* con
 
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
 
     if (tiling.get_alignType() == 0) {
         tilingKey += DYNAMIC_QUANT_TILING_KEY_ALIGN;
@@ -189,8 +189,8 @@ uint64_t DynamicQuantTiling310P::ComputeTilingKey(const gert::TilingContext* con
         tilingKey += DYNAMIC_QUANT_TILING_KEY_UNALIGN_MODE;
     }
     if (tiling.get_sizeH() > DYNAMIC_QUANT_FP16_LAST_DIM_LIMITATION_310P &&
-        (socVersion == platform_ascendc::SocVersion::ASCEND310P ||
-         socVersion == platform_ascendc::SocVersion::ASCEND910)) {
+        (npuArch == NpuArch::DAV_1001 ||
+         npuArch == NpuArch::DAV_2002)) {
         tilingKey += DYNAMIC_QUANT_TILING_KEY_LARGE;
     }
 

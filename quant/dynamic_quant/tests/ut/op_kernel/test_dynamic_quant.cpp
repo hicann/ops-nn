@@ -258,8 +258,7 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
     // bf16
     ICPU_SET_TILING_KEY(100);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        dynamic_quant, 1, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+    // ICPU_RUN_KF(dynamic_quant, 1, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);

@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 /*!
  * \file dynamic_quant.cpp
  * \brief
@@ -17,6 +17,8 @@
 #include "dynamic_quant_align_310p.h"
 #include "dynamic_quant_unalign_310p.h"
 #include "dynamic_quant_unalign_large_310p.h"
+#else
+#include "dynamic_quant_single_row.h"
 #endif
 #include "dynamic_quant_db.h"
 #include "dynamic_quant_large_shape_opt.h"
@@ -79,6 +81,10 @@ extern "C" __global__ __aicore__ void dynamic_quant(
     } else if (TILING_KEY_IS(8)) {
         DynamicQuantMoeLargeShape<DTYPE_X, DTYPE_X, int32_t, DTYPE_Y> op(&pipe);
         op.Init(x, smooth_scales, group_index, y, scale, nullptr, workSpace, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(100)) {
+        DynamicQuantSingleRow<DTYPE_X, DTYPE_Y> op(&pipe);
+        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData);
         op.Process();
     }
 #endif

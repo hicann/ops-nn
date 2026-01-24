@@ -19,6 +19,7 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -27,10 +28,10 @@ static constexpr uint64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr uint64_t INT4_NUMS_IN_INT8_SPACE = 2;
 static constexpr int32_t DEFAULT_AXIS = -1;
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_ASCEND910B = {
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_ASCEND310P = {
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
@@ -38,24 +39,23 @@ static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B = {
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P = {
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910B: {
-            return X_DTYPE_SUPPORT_LIST_ASCEND910B;
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201: {
+            return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case SocVersion::ASCEND310P:
-            return X_DTYPE_SUPPORT_LIST_ASCEND310P;
+        case NpuArch::DAV_2002:
+            return X_DTYPE_SUPPORT_LIST;
         default: {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented", static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }
@@ -68,16 +68,15 @@ static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93: {
-            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B;
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201: {
+            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case SocVersion::ASCEND310P:
-            return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P;
+        case NpuArch::DAV_2002:
+            return SCALE_OFFSET_DTYPE_SUPPORT_LIST;
         default: {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented", static_cast<uint32_t>(npuArch));
             return EMPTY_LIST;
         }
     }

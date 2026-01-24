@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
- */
+*/
 /*!
  * \file dynamic_quant_tiling.cpp
  * \brief
@@ -20,6 +20,7 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "tiling_base/tiling_util.h"
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 
@@ -27,6 +28,7 @@ using namespace ge;
 using namespace AscendC;
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 constexpr uint32_t OUTPUT_NUM_DYNAMIC_QUANT = 2;
 constexpr uint32_t OUTPUT_NUM_DYNAMIC_QUANT_V2 = 3;
@@ -70,6 +72,8 @@ constexpr int64_t TILING_KEY_DB_HALF = 3;
 constexpr int64_t TILING_KEY_LARGE_SHAPE = 6;
 constexpr int64_t TILING_KEY_MOE = 7;
 constexpr int64_t TILING_KEY_MOE_LARGE_SHAPE = 8;
+constexpr int64_t TILING_KEY_SPECIAL_LAST_DIM = 100;
+constexpr uint32_t MAX_ROW_LEN_SPECIAL = 16384;
 constexpr int64_t EVEN_FACTOR = 2;
 
 static map<const ge::DataType, const uint32_t> g_dTypeLen = {{ge::DT_INT32, 4}, {ge::DT_INT64, 8}};
@@ -102,6 +106,7 @@ private:
     void ResetLargeTilingParams();
     void SetTilingData(gert::TilingContext* context, ge::DataType xDtype);
     void CalculateMaxUbSizePerRow(ge::DataType xDtype);
+    bool SetSpecialTilingForDs(gert::TilingContext* context);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
 
 private:
@@ -475,6 +480,63 @@ ge::graphStatus DynamicQuantTiling::GetCompileInfo(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
+{
+    auto groupDesc = context->GetOptionalInputDesc(GROUP_INDEX);
+    if (groupDesc != nullptr || yDtype != ge::DataType::DT_INT8) {
+        return false;
+    }
+
+    if (context->GetComputeNodeOutputNum() == OUTPUT_NUM_DYNAMIC_QUANT_V2) {
+        return false;
+    }
+
+    // rowLen必须要尾轴128个数对齐(kernel限制)
+    // 当前只支持尾轴是4096/5120/10240; 最大也只能放到16384(非smooth场景)
+    if (rowLen != 4096 && rowLen != 5120 && rowLen != 10240) {
+        return false;
+    }
+
+    // 只支持 batch轴是[4, 384]. 可以支持全泛化.
+    if (rowNum > 384 || rowNum < 4) {
+        return false;
+    }
+
+    context->SetTilingKey(TILING_KEY_SPECIAL_LAST_DIM);
+    // 先用满ub再分核
+    uint32_t maxHandleRowsPerUb = MAX_ROW_LEN_SPECIAL / rowLen; // ub内最大16384个fp16
+    maxHandleRowsPerUb = std::min(maxHandleRowsPerUb, rowNum);
+    uint32_t rowLoops = Ops::Base::CeilDiv(rowNum, maxHandleRowsPerUb);
+    uint32_t tmpR = Ops::Base::CeilDiv(rowLoops, vectorCoreNum);
+    coreNum = Ops::Base::CeilDiv(rowLoops, tmpR);
+    tmpR = Ops::Base::CeilDiv(rowLoops, coreNum);
+    tilingData.set_coreNum(coreNum);
+    tilingData.set_rowLen(rowLen);
+    tilingData.set_headCoreNum(coreNum - 1); // 非尾行的核数
+    tilingData.set_rowPerHeadCore(tmpR * maxHandleRowsPerUb); // 每个headCore要处理的行数
+
+    int64_t leftRows = static_cast<int64_t>(rowNum) - static_cast<int64_t>((coreNum - 1) * tmpR * maxHandleRowsPerUb);
+    tilingData.set_rowPerTailCore(std::max(leftRows, static_cast<int64_t>(0))); // 尾核处理的行数
+
+    tilingData.set_multiRowNumHeadCore(maxHandleRowsPerUb); // 每次ub最多载入的行数
+    tilingData.set_multiRowNumTailCore(maxHandleRowsPerUb); // 暂时用不到
+
+    tilingData.set_hasSmooth(hasSmooth ? 1 : 0);
+
+    OP_LOGI(context, "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
+        "headCoreNum:%u rowPerHeadCore:%u rowPerTailCore:%u multiRowNumHeadCore:%u multiRowNumTailCore:%u hasSmooth:%d",
+        rowNum, vectorCoreNum, rowLen, tilingData.get_coreNum(), tilingData.get_headCoreNum(),
+        tilingData.get_rowPerHeadCore(), tilingData.get_rowPerTailCore(), tilingData.get_multiRowNumHeadCore(),
+        tilingData.get_multiRowNumTailCore(), hasSmooth);
+
+    size_t* workSpaces = context->GetWorkspaceSizes(1);
+    workSpaces[0] = SYS_WORKSPACE_SIZE;
+    tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    context->SetBlockDim(coreNum);
+    return true;
+}
+
 ge::graphStatus DynamicQuantTiling::RunFusionKernelTiling(gert::TilingContext* context)
 {
     ResetLargeTilingParams();
@@ -499,6 +561,10 @@ ge::graphStatus DynamicQuantTiling::RunFusionKernelTiling(gert::TilingContext* c
         tempHeadCoreNum *= xShape->GetStorageShape().GetDim(i);
     }
     rowNum = tempHeadCoreNum;
+    if (SetSpecialTilingForDs(context)) {
+        return ge::GRAPH_SUCCESS;
+    }
+
     // For 910B
     rowNumPerMinTask = 1U;
     scaleNumPerMinTask = 1U;
@@ -543,21 +609,22 @@ static ge::graphStatus TilingForDynamicQuant(gert::TilingContext* context)
     if (CheckTilingContext(context) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
+    ge::graphStatus ret = ge::GRAPH_FAILED;
+    if (IsRegbaseSocVersion(context)) {
+        static thread_local DynamicQuantRegbaseTiling tilingRegbase;
+        ret = tilingRegbase.RunFusionKernelTiling(context);
+        return ret;
+    }
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    ge::graphStatus ret = ge::GRAPH_FAILED;
-    switch (ascendcPlatform.GetSocVersion()) {
-        case platform_ascendc::SocVersion::ASCEND910_95:
-            static thread_local DynamicQuantRegbaseTiling tilingRegbase;
-            ret = tilingRegbase.RunFusionKernelTiling(context);
-            return ret;
-        case platform_ascendc::SocVersion::ASCEND910B:
-        case platform_ascendc::SocVersion::KIRINX90:
+    switch (ascendcPlatform.GetCurNpuArch()) {
+        case NpuArch::DAV_2201:
+        case NpuArch::DAV_3003:
             static thread_local DynamicQuantTiling tiling;
             ret = tiling.RunFusionKernelTiling(context);
             return ret;
-        case platform_ascendc::SocVersion::ASCEND910:
-        case platform_ascendc::SocVersion::ASCEND310P:
+        case NpuArch::DAV_1001:
+        case NpuArch::DAV_2002:
             static thread_local DynamicQuantTiling310P tiling310P;
             ret = tiling310P.RunFusionKernelTiling(context);
             return ret;
