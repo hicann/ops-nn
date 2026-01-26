@@ -29,4 +29,5 @@ struct BlockMmadAct {
 };
 } // namespace Block
 } // namespace WeightQuantBatchMatmulV2::Arch35::Act
+#include "block_mmad_a_prefetch_b_prologue.h"
 #endif

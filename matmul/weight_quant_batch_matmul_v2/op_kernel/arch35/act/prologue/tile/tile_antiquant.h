@@ -12,11 +12,11 @@
 
 namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Tile {
 
-template <int32_t N_, int32_t K_, bool HasOffset_>
+template <int32_t N_, int32_t K_, bool HasOffset>
 struct AntiquantFixTile {
     static constexpr int32_t N = N_;
     static constexpr int32_t K = K_;
-    static constexpr bool HAS_OFFSET = HasOffset_;
+    static constexpr bool HAS_OFFSET = HasOffset;
 };
 
 template <int32_t N_, int32_t K_, int32_t BufNum, bool HasOffset>
@@ -29,25 +29,27 @@ struct AntiquantFixTilePrivate {
 
 namespace detail {
 template <
-    class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class Shape,
-    typename Enable = void>
+    class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
+    class Shape, typename Enable = void>
 struct AntiquantImpl {
     static_assert(AscendC::Std::always_false_v<ArchTag>, "can not find the specialization.");
     __aicore__ inline static void Run(
         const TensorOut& tensorOut, const TensorIn& tensorIn, const TensorScale& tensorScale,
-        const TensorScale& tensorOffset, const Shape& shape) = delete;
+        const TensorOffset& tensorOffset, const Shape& shape) = delete;
 };
 } // namespace detail
 
-template <class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class Shape>
+template <
+    class ArchTag, class DispatchPolicy, class TensorOut, class TensorIn, class TensorScale, class TensorOffset,
+    class Shape>
 __aicore__ inline void Antiquant(
     const TensorOut& tensorOut, const TensorIn& tensorIn, const TensorScale& tensorScale,
-    const TensorScale& tensorOffset, const Shape& shape)
+    const TensorOffset& tensorOffset, const Shape& shape)
 {
     detail::AntiquantImpl<
         AscendC::Std::remove_cvref_t<ArchTag>, AscendC::Std::remove_cvref_t<DispatchPolicy>,
         AscendC::Std::remove_cvref_t<TensorOut>, AscendC::Std::remove_cvref_t<TensorIn>,
-        AscendC::Std::remove_cvref_t<TensorScale>,
+        AscendC::Std::remove_cvref_t<TensorScale>, AscendC::Std::remove_cvref_t<TensorOffset>,
         AscendC::Std::remove_cvref_t<Shape>>::Run(tensorOut, tensorIn, tensorScale, tensorOffset, shape);
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Tile

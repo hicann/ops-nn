@@ -10,8 +10,9 @@
 #ifndef PROLOGUE_BLOCK_BLOCK_PROLOGUE_B_ANTIQUANT_SCMC_ND_KN_H
 #define PROLOGUE_BLOCK_BLOCK_PROLOGUE_B_ANTIQUANT_SCMC_ND_KN_H
 #include "../constant.h"
-#include "../tile/tile_copy.h"
+#include "../../tile/tile_copy.h"
 #include "../tile/tile_antiquant.h"
+#include "../tile/tile_cast.h"
 #include "../dispatch_policy.h"
 #include "../../utils/underscore.h"
 #include "act/utils/tuple_utils.h"
@@ -25,16 +26,25 @@ namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Block {
 using Act::_;
 using Act::CeilAlign;
 using Act::CeilDiv;
+using ::Act::Gemm::_1;
+using ::Act::Gemm::_16;
+using ::Act::Gemm::_256;
+using ::Act::Gemm::Get;
+using ::Act::Gemm::Int;
+using AscendC::MakeCoord;
+using AscendC::Shape;
+using AscendC::Stride;
 
 // nd-kn场景下，gm和L1的生产消费比为1:1
 template <
     typename ArchTag_, typename HighBitType, typename PrologueScaleType, uint64_t AivNum, bool HasOffset_,
     uint64_t UbInBufNum, uint64_t InnerSize, uint64_t VfN, uint64_t VfK, uint64_t UbOutBufNum, uint64_t UbInSize,
-    uint64_t UbOutSize, uint64_t ScaleSize, uint64_t OffsetSize, class BType_, class ScaleType_, class TileShapeL1_>
+    uint64_t UbOutSize, uint64_t ScaleSize, uint64_t OffsetSize, uint64_t AntiQuantScaleAfterCastSize, class BType_,
+    class ScaleType_, class TileShapeL1_>
 class BlockPrologue<
     BAntiquantScmc<
-        ArchTag_, HighBitType, PrologueScaleType, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
-        UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize>,
+        ArchTag_, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
+        UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize, AntiQuantScaleAfterCastSize>,
     BType_, ScaleType_, TileShapeL1_> {
 public:
     using BType = BType_;
@@ -44,9 +54,10 @@ public:
     using ElementScale = typename ScaleType::Element;
     using LayoutScale = typename ScaleType::Layout;
     using TileShapeL1 = TileShapeL1_;
+    using ElementOut = HighBitType;
     using DispatchPolicy = BAntiquantScmc<
-        Arch::Ascend910_95, HighBitType, PrologueScaleType, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
-        UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize>;
+        Arch::Ascend910_95, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize,
+        VfN, VfK, UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize, AntiQuantScaleAfterCastSize>;
     using ArchTag = Arch::Ascend910_95;
 
     static constexpr bool HAS_OFFSET = DispatchPolicy::HAS_OFFSET;
@@ -64,13 +75,19 @@ public:
     static constexpr uint64_t HIGH_BIT_DATA_UB_TOTAL_SIZE = DispatchPolicy::HIGH_BIT_DATA_UB_TOTAL_SIZE;
     static constexpr uint64_t ANTIQUANT_SCALE_UB_TOTAL_SIZE = DispatchPolicy::ANTIQUANT_SCALE_UB_TOTAL_SIZE;
     static constexpr uint64_t ANTIQUANT_OFFSET_UB_TOTAL_SIZE = DispatchPolicy::ANTIQUANT_OFFSET_UB_TOTAL_SIZE;
+    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_SIZE =
+        DispatchPolicy::ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE;
     static constexpr uint64_t WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE =
         DispatchPolicy::WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE;
-    static constexpr uint64_t ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE =
-        DispatchPolicy::ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE;
+    static constexpr uint64_t ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE =
+        DispatchPolicy::ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE;
     static constexpr uint64_t ANTIQUANT_OFFSET_UB_SINGLE_BUFFER_SIZE =
         DispatchPolicy::ANTIQUANT_OFFSET_UB_SINGLE_BUFFER_SIZE;
     static constexpr uint64_t HIGH_BIT_DATA_UB_SINGLE_BUFFER_SIZE = DispatchPolicy::HIGH_BIT_DATA_UB_SINGLE_BUFFER_SIZE;
+    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE =
+        DispatchPolicy::ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE;
+    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE =
+        DispatchPolicy::ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE;
     struct Arguments {
         GM_ADDR ptrB;
         GM_ADDR ptrScale;
@@ -114,7 +131,7 @@ public:
     __aicore__ inline BlockPrologue(const Params& params)
     {
         // 3 L1kb
-        kbL1Size_ = ::Act::Gemm::Get<3>(params.tileShapeL1);
+        kbL1Size_ = Get<3>(params.tileShapeL1);
         if constexpr (AIV_NUM == 2) {
             // 此时c:v为1：2, cube所需数据由两个v提供
             kMte2BaseSize_ = kbL1Size_ >> 1;
@@ -122,17 +139,21 @@ public:
             // 此时c:v为1：1, cube所需数据由一个v提供
             kMte2BaseSize_ = kbL1Size_;
         }
-        kSize_ = ::Act::Gemm::Get<1>(params.layoutB.GetShape());
-
+        kSize_ = Get<1>(params.layoutB.GetShape());
         ubBInB8_ = Act::CreateTensor<UbInB8TensorTrait>(0);
         ubBOut_ = Act::CreateTensor<UbOutTensorTrait>(WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE);
         ubScale_ = Act::CreateTensor<UbScaleTensorTrait>(
-            WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE + HIGH_BIT_DATA_UB_TOTAL_SIZE * sizeof(ElementScale));
-        ubOffset_ = Act::CreateTensor<UbScaleTensorTrait>(
-            WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE + HIGH_BIT_DATA_UB_TOTAL_SIZE * sizeof(ElementScale) +
-            ANTIQUANT_SCALE_UB_TOTAL_SIZE * sizeof(ElementScale));
-
-        uint64_t weightL1Space = ::Act::Gemm::Get<1>(params.tileShapeL1) * kbL1Size_; // weight单块大小
+            WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE + HIGH_BIT_DATA_UB_TOTAL_SIZE * sizeof(ElementOut));
+        if constexpr (ANTIQUANT_SCALE_AFTER_CAST_UB_SIZE == 0) {
+            ubOffset_ = Act::CreateTensor<UbScaleTensorTrait>(
+                WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE + HIGH_BIT_DATA_UB_TOTAL_SIZE * sizeof(ElementOut) +
+                ANTIQUANT_SCALE_UB_TOTAL_SIZE * sizeof(ElementScale));
+        } else {
+            ubScaleAfterCast_ = Act::CreateTensor<UbScaleAfterCastTensorTrait>(
+                WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE + HIGH_BIT_DATA_UB_TOTAL_SIZE * sizeof(ElementOut) +
+                ANTIQUANT_SCALE_UB_TOTAL_SIZE * sizeof(ElementScale));
+        }
+        uint64_t weightL1Space = Get<1>(params.tileShapeL1) * kbL1Size_; // weight单块大小
         weightF16L1_ = Act::CreateTensor<L1TensorTrait>(0);
         weightF16L1DbOffset_ = L1_SIZE * KB_ELEM<half> - weightL1Space;
         antiQuantGroupSize_ = params.antiQuantGroupSize;
@@ -163,17 +184,13 @@ public:
         const ActualBlockShape& actualBlockShape)
     {
         // nd-kn场景下，搬运消费比为1:1
-        auto nL1Size = ::Act::Gemm::Get<0>(actualBlockShape);
-
+        auto nL1Size = Get<0>(actualBlockShape);
         if constexpr (ANTIQUANT_TYPE == QuantType::PER_CHANNEL) {
-            SetStride(
-                ubScale_,
-                AscendC::MakeStride(::Act::Gemm::_1{}, CeilAlign(nL1Size, static_cast<uint64_t>(VECTOR_REG_WIDTH))));
+            SetStride(ubScale_, AscendC::MakeStride(_1{}, CeilAlign(nL1Size, static_cast<uint64_t>(VECTOR_REG_WIDTH))));
             if constexpr (HasOffset_) {
                 SetStride(ubOffset_, ubScale_.GetStride());
             }
         }
-
         for (uint64_t kMte2Offset = 0; kMte2Offset < kSize_; kMte2Offset += kbL1Size_, cvLoopIdx_++) {
             // l1K的实际大小
             l1RealExternalLen_ = CalcRealLen(kSize_, kMte2Offset, kbL1Size_);
@@ -186,25 +203,37 @@ public:
             uint64_t mte2RealK = AscendC::GetSubBlockIdx() == 0      ? min(kMte2BaseSize_, l1RealExternalLen_) :
                                  l1RealExternalLen_ > kMte2BaseSize_ ? l1RealExternalLen_ - kMte2BaseSize_ :
                                                                        0;
-            auto gBTile =
-                gB[gB.GetLayout()(AscendC::MakeCoord(_, kMte2Offset + AscendC::GetSubBlockIdx() * kMte2BaseSize_))];
+            uint64_t kAivOffset = kMte2Offset + AscendC::GetSubBlockIdx() * kMte2BaseSize_;
+            auto gBTile = gB[gB.GetLayout()(AscendC::MakeCoord(_, kAivOffset))];
             WaitVToMTE2();
-            CopyGmToUb(gBTile, gScale, gOffset, nL1Size, mte2RealK);
+            if constexpr (ANTIQUANT_TYPE != QuantType::MX) {
+                CopyGmToUb(gBTile, gScale, gOffset, nL1Size, mte2RealK);
+            } else {
+                uint64_t offset = gScale.GetLayout()(MakeCoord(_, CeilDiv(kAivOffset, antiQuantGroupSize_)));
+                CopyGmToUb(gBTile, gScale[offset], gOffset, nL1Size, mte2RealK);
+            }
 
             if (cvLoopIdx_ > 1) {
                 WaitAicToAiv();
             }
             uint64_t mte2BufIdx = (ubMte2LoopIdx_ - 1) & (UB_MTE2_BUF_NUM - 1);
             auto ubBInB8 = ubBInB8_[mte2BufIdx * WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE];
-            auto ubScale = ubScale_[mte2BufIdx * ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE];
-            auto ubOffset = ubOffset_[mte2BufIdx * ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE];
+            auto ubScale = ubScale_[mte2BufIdx * ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE];
+            auto ubOffset = ubOffset_[mte2BufIdx * ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE];
+            auto ubScaleAfterCast = ubScaleAfterCast_[mte2BufIdx * ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE];
             SetStride(
-                weightF16L1_,
-                AscendC::MakeStride(
-                    AscendC::MakeStride(::Act::Gemm::_1{}, CeilAlign(l1RealExternalLen_, 16UL) * 16UL),
-                    AscendC::MakeStride(::Act::Gemm::_16{}, ::Act::Gemm::_256{})));
-            WeightAntiQuantCompute(
-                weightF16L1_[(cvLoopIdx_ & 1) * weightF16L1DbOffset_], ubBInB8, ubScale, ubOffset, nL1Size, mte2RealK);
+                weightF16L1_, AscendC::MakeStride(
+                                  AscendC::MakeStride(_1{}, CeilAlign(l1RealExternalLen_, 16UL) * 16UL),
+                                  AscendC::MakeStride(_16{}, _256{})));
+            if constexpr (ANTIQUANT_TYPE == QuantType::MX) {
+                WeightAntiQuantCompute(
+                    weightF16L1_[(cvLoopIdx_ & 1) * weightF16L1DbOffset_], ubBInB8, ubScaleAfterCast, ubOffset, nL1Size,
+                    mte2RealK);
+            } else {
+                WeightAntiQuantCompute(
+                    weightF16L1_[(cvLoopIdx_ & 1) * weightF16L1DbOffset_], ubBInB8, ubScale, ubOffset, nL1Size,
+                    mte2RealK);
+            }
             SetAivToAic();
             SetVToMTE2();
         }
@@ -256,24 +285,23 @@ private:
             ubMte2LoopIdx_++; // 避免当前核无任务时，SetVToMTE2()对同一个flagID重复SetFlag的问题
             return;
         }
-
         if (!weightL2Cacheable_) {
-            Prologue::Tile::Copy<ArchTag, Tile::CacheMode::NOT_ALLOC_KEEP>(
+            Act::Tile::Copy<ArchTag, Act::Tile::CacheMode::NOT_ALLOC_KEEP>(
                 Act::ReinerpretCast<UbInTensorTrait>(
                     ubBInB8_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE]),
                 gB, AscendC::MakeShape(ubMte2NSize, ubMte2KSize));
         } else {
-            Prologue::Tile::Copy<ArchTag>(
+            Act::Tile::Copy<ArchTag>(
                 Act::ReinerpretCast<UbInTensorTrait>(
                     ubBInB8_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE]),
                 gB, AscendC::MakeShape(ubMte2NSize, ubMte2KSize));
         }
         if constexpr (ANTIQUANT_TYPE == QuantType::PER_CHANNEL) {
-            Prologue::Tile::Copy<ArchTag>(
-                ubScale_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE], gScale,
+            Act::Tile::Copy<ArchTag>(
+                ubScale_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE], gScale,
                 AscendC::MakeShape(ubMte2NSize, 1));
             if constexpr (HAS_OFFSET) {
-                Prologue::Tile::Copy<ArchTag>(
+                Act::Tile::Copy<ArchTag>(
                     ubOffset_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_OFFSET_UB_SINGLE_BUFFER_SIZE], gOffset,
                     AscendC::MakeShape(ubMte2NSize, 1));
             }
@@ -285,16 +313,25 @@ private:
                 tmpScale.address_ = gOffset.address_;
                 offsetValue_ = tmpScale.GetValue(0);
             }
-        } else {
+        } else if constexpr (ANTIQUANT_TYPE == QuantType::MX || ANTIQUANT_TYPE == QuantType::PER_GROUP) {
             if constexpr (HAS_OFFSET) {
                 static_assert(
                     AscendC::Std::always_false_v<decltype(HAS_OFFSET)>, "Not support offset in pergroup mode");
             }
-            Prologue::Tile::Copy<ArchTag>(
-                ubScale_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALEE_UB_SINGLE_BUFFER_SIZE], gScale,
+            Act::Tile::Copy<ArchTag>(
+                ubScale_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE], gScale,
                 AscendC::MakeShape(ubMte2NSize, CeilDiv(ubMte2KSize, antiQuantGroupSize_)));
+            // MX场景scale需要进行数据类型转化
+            if constexpr (ANTIQUANT_TYPE == QuantType::MX) {
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(0);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(0);
+                Prologue::Tile::TileCast<ArchTag>(
+                    ubScaleAfterCast_
+                        [(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE],
+                    ubScale_[(ubMte2LoopIdx_ % UB_MTE2_BUF_NUM) * ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE],
+                    AscendC::MakeShape(ubMte2NSize, CeilDiv(ubMte2KSize, antiQuantGroupSize_), antiQuantGroupSize_));
+            }
         }
-
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(0);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(0);
         ubMte2LoopIdx_++;
@@ -309,6 +346,7 @@ private:
         uint64_t nRealLen;
         uint64_t kRealLen;
         static constexpr uint64_t OUTER_SIZE = 64;
+        using PolicyAntiquant = Prologue::Tile::AntiquantFixTile<UB_MTE2_INNER_SIZE, OUTER_SIZE, HAS_OFFSET>;
         for (uint64_t kOffset = 0; kOffset < ubMte2KSize; kOffset += VF_K_STANDARD_LEN) {
             for (uint64_t nOffset = 0; nOffset < ubMte2NSize; nOffset += VF_N_STANDARD_LEN) {
                 if (likely(ubComputeLoopIdx_ > UB_WEIGHT_OUTPUT_HIGH_BIT_BUFFER_NUM - 1)) {
@@ -317,32 +355,32 @@ private:
                 }
                 nRealLen = CalcRealLen(ubMte2NSize, nOffset, VF_N_STANDARD_LEN);
                 kRealLen = CalcRealLen(ubMte2KSize, kOffset, VF_K_STANDARD_LEN);
-
                 auto regBOut = ubBOut_[(ubComputeLoopIdx_ & 1) * HIGH_BIT_DATA_UB_SINGLE_BUFFER_SIZE];
                 auto regBIn = Act::ReinerpretCast<UbInTensorTrait>(
                     ubBInB8[ElemToByte<ElementIn>(ubBInB8.GetLayout()(AscendC::MakeCoord(nOffset, kOffset)))]);
                 if constexpr (ANTIQUANT_TYPE == QuantType::PER_TENSOR) {
-                    Prologue::Tile::Antiquant<
-                        ArchTag, Prologue::Tile::AntiquantFixTile<UB_MTE2_INNER_SIZE, OUTER_SIZE, HAS_OFFSET>>(
+                    Prologue::Tile::Antiquant<ArchTag, PolicyAntiquant>(
                         regBOut, regBIn, scaleValue_, offsetValue_, AscendC::MakeShape(nRealLen, kRealLen));
                 } else if constexpr (ANTIQUANT_TYPE == QuantType::PER_CHANNEL) {
                     auto regScale = ubScale[ubScale.GetLayout()(AscendC::MakeCoord(nOffset, _))];
                     auto regOffset = ubOffset[ubOffset.GetLayout()(AscendC::MakeCoord(nOffset, _))];
-                    Prologue::Tile::Antiquant<
-                        ArchTag, Prologue::Tile::AntiquantFixTile<UB_MTE2_INNER_SIZE, OUTER_SIZE, HAS_OFFSET>>(
+                    Prologue::Tile::Antiquant<ArchTag, PolicyAntiquant>(
                         regBOut, regBIn, regScale, regOffset, AscendC::MakeShape(nRealLen, kRealLen));
+                } else if constexpr (ANTIQUANT_TYPE == QuantType::MX) {
+                    auto regScale =
+                        ubScale[ubScale.GetLayout()(MakeCoord(nOffset, CeilDiv(kOffset, antiQuantGroupSize_)))];
+                    Prologue::Tile::Antiquant<ArchTag, PolicyAntiquant>(
+                        regBOut, regBIn, regScale, ubOffset,
+                        AscendC::MakeShape(nRealLen, kRealLen, antiQuantGroupSize_));
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(ANTIQUANT_TYPE)>, "not support per group");
                 }
-
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(0);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(0);
-
                 uint64_t offset = tensorL1.GetLayout()(AscendC::MakeCoord(
                     AscendC::MakeCoord(_, CeilDiv(nOffset, 16UL)),
-                    AscendC::MakeCoord(
-                        _, CeilDiv(kOffset + AscendC::GetSubBlockIdx() * kMte2BaseSize_, 16UL))));
-                Prologue::Tile::Copy<ArchTag>(tensorL1[offset], regBOut, AscendC::MakeShape(nRealLen, kRealLen));
+                    AscendC::MakeCoord(_, CeilDiv(kOffset + AscendC::GetSubBlockIdx() * kMte2BaseSize_, 16UL))));
+                Act::Tile::Copy<ArchTag>(tensorL1[offset], regBOut, AscendC::MakeShape(nRealLen, kRealLen));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(
                     VEC_EVENT_ID_MTE3_TO_V[ubComputeLoopIdx_ & (UB_WEIGHT_OUTPUT_HIGH_BIT_BUFFER_NUM - 1)]);
                 ubComputeLoopIdx_++;
@@ -362,11 +400,9 @@ private:
     ElementScale offsetValue_;
     // (n1,k1,k0,n0)
     using L1TensorTrait = AscendC::TensorTrait<
-        ElementScale, AscendC::TPosition::B1,
+        ElementOut, AscendC::TPosition::B1,
         AscendC::Layout<
-            AscendC::Shape<AscendC::Shape<::Act::Gemm::_16, uint64_t>, AscendC::Shape<::Act::Gemm::_16, uint64_t>>,
-            AscendC::Stride<
-                AscendC::Stride<::Act::Gemm::_1, uint64_t>, AscendC::Stride<::Act::Gemm::_16, ::Act::Gemm::_256>>>>;
+            Shape<Shape<_16, uint64_t>, Shape<_16, uint64_t>>, Stride<Stride<_1, uint64_t>, Stride<_16, _256>>>>;
     AscendC::LocalTensor<L1TensorTrait> weightF16L1_;
     uint64_t weightF16L1DbOffset_;
     uint64_t kMte2BaseSize_;
@@ -382,34 +418,33 @@ private:
     // (n1,k1,k0,n0) layout ((),()):((),())
     using UbInB8TensorTrait = AscendC::TensorTrait<
         int8_t, AscendC::TPosition::VECIN,
-        AscendC::Layout<
-            AscendC::Shape<::Act::Gemm::Int<UB_MTE2_INNER_SIZE>, uint64_t>,
-            AscendC::Stride<::Act::Gemm::_1, ::Act::Gemm::Int<UB_MTE2_INNER_SIZE>>>>;
+        AscendC::Layout<Shape<Int<UB_MTE2_INNER_SIZE>, uint64_t>, Stride<_1, Int<UB_MTE2_INNER_SIZE>>>>;
     using UbInTensorTrait = AscendC::TensorTrait<
         ElementIn, AscendC::TPosition::VECIN,
-        AscendC::Layout<
-            AscendC::Shape<::Act::Gemm::Int<UB_MTE2_INNER_SIZE>, uint64_t>,
-            AscendC::Stride<::Act::Gemm::_1, ::Act::Gemm::Int<UB_MTE2_INNER_SIZE>>>>;
+        AscendC::Layout<Shape<Int<UB_MTE2_INNER_SIZE>, uint64_t>, Stride<_1, Int<UB_MTE2_INNER_SIZE>>>>;
     // nd (k,n) (n1,k1,k0,n0) layout ((n0,n1),(k0,k1)):((1,k1*k0*n0),(n0,k0*n0))
     using UbOutTensorTrait = AscendC::TensorTrait<
-        ElementScale, AscendC::TPosition::VECIN,
+        ElementOut, AscendC::TPosition::VECIN,
         AscendC::Layout<
-            AscendC::Shape<
-                AscendC::Shape<::Act::Gemm::_16, ::Act::Gemm::Int<CeilDiv(VF_N_STANDARD_LEN, 16UL)>>,
-                AscendC::Shape<::Act::Gemm::_16, ::Act::Gemm::Int<CeilDiv(VF_K_STANDARD_LEN, 16UL)>>>,
-            AscendC::Stride<
-                AscendC::Stride<::Act::Gemm::_1, ::Act::Gemm::Int<(VF_K_STANDARD_LEN + 1) * BLOCK_CUBE>>,
-                AscendC::Stride<::Act::Gemm::_16, ::Act::Gemm::_256>>>>;
-    // PS 这只实现了per-channel场景
-    using UbScaleTensorTrait = AscendC::TensorTrait<
-        ElementScale, AscendC::TPosition::VECIN,
-        AscendC::Layout<AscendC::Shape<uint64_t, ::Act::Gemm::_1>, AscendC::Stride<::Act::Gemm::_1, uint64_t>>>;
+            Shape<Shape<_16, Int<CeilDiv(VF_N_STANDARD_LEN, 16UL)>>, Shape<_16, Int<CeilDiv(VF_K_STANDARD_LEN, 16UL)>>>,
+            Stride<Stride<_1, Int<(VF_K_STANDARD_LEN + 1) * BLOCK_CUBE>>, Stride<_16, _256>>>>;
+    using UbScaleTensorTrait = AscendC::Std::conditional_t<
+        QUANT_TYPE<decltype(LayoutScale{}.GetShape()), ElementScale> != QuantType::MX,
+        AscendC::TensorTrait<
+            ElementScale, AscendC::TPosition::VECIN, AscendC::Layout<Shape<uint64_t, _1>, Stride<_1, uint64_t>>>,
+        AscendC::TensorTrait<
+            ElementScale, AscendC::TPosition::VECIN,
+            AscendC::Layout<Shape<uint64_t, uint64_t>, Stride<_1, Int<UB_MTE2_INNER_SIZE>>>>>;
+    using UbScaleAfterCastTensorTrait = AscendC::TensorTrait<
+        ElementOut, AscendC::TPosition::VECIN,
+        AscendC::Layout<Shape<uint64_t, uint64_t>, Stride<_1, Int<UB_MTE2_INNER_SIZE>>>>;
     AscendC::LocalTensor<UbInB8TensorTrait> ubBInB8_;
     AscendC::LocalTensor<UbOutTensorTrait> ubBOut_;
     AscendC::LocalTensor<UbScaleTensorTrait> ubScale_;
     AscendC::LocalTensor<UbScaleTensorTrait> ubOffset_;
+    AscendC::LocalTensor<UbScaleAfterCastTensorTrait> ubScaleAfterCast_;
 
-    static constexpr QuantType ANTIQUANT_TYPE = QUANT_TYPE<decltype(LayoutScale{}.GetShape())>;
+    static constexpr QuantType ANTIQUANT_TYPE = QUANT_TYPE<decltype(LayoutScale{}.GetShape()), ElementScale>;
 };
 } // namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Block
 #endif

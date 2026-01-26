@@ -11,6 +11,7 @@
 #define ARCH35_ACT_UTILS_MATH_UTILS_H
 
 #include "device_utils.h"
+#include "kernel_operator_intf.h"
 
 namespace WeightQuantBatchMatmulV2::Arch35::Act {
 template <typename T>
@@ -25,6 +26,13 @@ DEVICE constexpr T CeilAlign(T a, T b)
 {
     ASCENDC_ASSERT(b != 0, { X_LOG("Division by zero error!"); });
     return (a + b - 1) / b * b;
+}
+
+template <typename T>
+DEVICE constexpr T FloorAlign(T a, T b)
+{
+    ASCENDC_ASSERT(b != 0, { X_LOG("Division by zero error!"); });
+    return a / b * b;
 }
 
 template <typename T>
@@ -56,9 +64,11 @@ __aicore__ inline Int ElemToByte(Int count)
 {
     static_assert(
         AscendC::SupportType<
-            Dtype, uint8_t, int8_t, half, bfloat16_t, int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t>(),
+            Dtype, uint8_t, int8_t, half, bfloat16_t, int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t,
+            fp4x2_e2m1_t>(),
         "not support this dtype");
-    if (AscendC::Std::is_same_v<Dtype, int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t>) {
+    if (AscendC::Std::is_same_v<Dtype, int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t> ||
+        AscendC::Std::is_same_v<Dtype, fp4x2_e2m1_t>) {
         // int4类型的元素数量必须是2的倍数
         return count >> 1;
     }
@@ -70,9 +80,11 @@ __aicore__ inline Int ElemToByte(AscendC::Std::integral_constant<Int, Count>)
 {
     static_assert(
         AscendC::SupportType<
-            Dtype, uint8_t, int8_t, half, bfloat16_t, int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t>(),
+            Dtype, uint8_t, int8_t, half, bfloat16_t, int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t,
+            fp4x2_e2m1_t>(),
         "not support this dtype");
-    if (AscendC::Std::is_same_v<Dtype, int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t>) {
+    if (AscendC::Std::is_same_v<Dtype, int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t> ||
+        AscendC::Std::is_same_v<Dtype, fp4x2_e2m1_t>) {
         // int4类型的元素数量必须是2的倍数
         return Count >> 1;
     }

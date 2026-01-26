@@ -28,7 +28,7 @@
 
 #include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
-#if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT))
+#if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
 #include "arch35/act_convertor.h"
 using WeightQuantBatchMatmulV2::Arch35::Act::InvokeActKernel;
 #endif
@@ -121,39 +121,11 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
             DtypeBias, WeightQuantBatchMatmulV2RegBaseKernel, TRANS_A, TRANS_B, HAS_ANTIQUANT_OFFSET, antiquantType,
             IS_WEIGHT_NZ);
 #endif
-    } else if constexpr (ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_GROUP) {
-#if defined(A16) && (defined(S4))
-        InvokeActKernel<
-            TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
-            KERNEL_PARAMS);
-#endif
     } else {
-#if defined(A16) && (defined(S8) || defined(WEIGHT_F8_INPUT))
+#if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
         InvokeActKernel<
             TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
             KERNEL_PARAMS);
-#elif defined(A16) && (defined(S4) || defined(MICROSCALING))
-#if defined(MICROSCALING)
-        static constexpr QuantType quantType = static_cast<QuantType>(QUANT_TYPE);
-#if defined(WEIGHT_B8_BRANCH)
-        static constexpr VecAntiQuantConfig defaultVecAntiQuantConfig = VEC_ANTIQUANT_CONFIG_0;
-#else
-        static constexpr VecAntiQuantConfig defaultVecAntiQuantConfig = VEC_ANTIQUANT_CONFIG_1;
-#endif
-        static constexpr VecAntiQuantConfig vecAntiQuantConfig =
-            TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_DEFAULT ?
-                defaultVecAntiQuantConfig :
-                VEC_ANTIQUANT_CONFIGS[TEMPLATE_CUSTOM];
-        static constexpr CubeFormat cubeFormat = IS_WEIGHT_NZ ? CubeFormat::NZ : CubeFormat::ND;
-        static constexpr WqmmConfig wqmmCfg = {TRANS_A,   TRANS_B,   antiquantType, HAS_ANTIQUANT_OFFSET,
-                                               quantType, cubeFormat};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(
-            DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, vecAntiQuantConfig);
-#else
-        InvokeActKernel<
-            TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
-            KERNEL_PARAMS);
-#endif
 #endif
     }
 #elif defined(__DAV_310R6__)

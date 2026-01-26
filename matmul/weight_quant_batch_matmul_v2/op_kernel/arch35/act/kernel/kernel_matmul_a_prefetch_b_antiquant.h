@@ -15,13 +15,16 @@
 #ifndef KERNEL_MATMUL_A_PREFETCH_B_ANTIQUANT_H
 #define KERNEL_MATMUL_A_PREFETCH_B_ANTIQUANT_H
 
-#include "../block/block_mmad_a_prefetch_b_prologue.h"
-#include "../prologue/constant.h"
+#include "act/utils/integral_constant.h"
+#include "act/utils/tuple_utils.h"
 #include "kernel_operator.h"
 #include "kernel_operator_list_tensor_intf.h"
 #include "lib/matmul_intf.h"
-#include "act/utils/integral_constant.h"
+#include "../constant.h"
+#include "../prologue/constant.h"
 #include "../utils/math_utils.h"
+#include "../utils/underscore.h"
+#include "../utils/tensor_utils.h"
 namespace WeightQuantBatchMatmulV2::Arch35::Act::Kernel {
 
 using ::Act::Gemm::Get;
@@ -161,9 +164,10 @@ public:
     }
 
 private:
-    static constexpr bool WEIGHT_NZ = is_2d_zn<typename BlockPrologue::LayoutIn>::value;
-    static constexpr QuantType ANTIQUANT_TYPE =
-        QUANT_TYPE<AscendC::Std::remove_cvref_t<decltype(typename BlockPrologue::LayoutScale{}.GetShape())>>;
+    static constexpr bool WEIGHT_NZ = IsZn2D<typename BlockPrologue::LayoutIn>::value;
+    static constexpr QuantType ANTIQUANT_TYPE = QUANT_TYPE<
+        AscendC::Std::remove_cvref_t<decltype(typename BlockPrologue::LayoutScale{}.GetShape())>,
+        typename BlockPrologue::ElementScale>;
 
     template <typename ScaleOffsetType>
     __aicore__ inline auto GetAntiScaleTile(
@@ -174,6 +178,8 @@ private:
         } else if constexpr (ANTIQUANT_TYPE == QuantType::PER_CHANNEL) {
             return GetTile(scaleOffset, MakeCoord(coordN, _), MakeShape(tileN, ::Act::Gemm::_1{}));
         } else if constexpr (ANTIQUANT_TYPE == QuantType::PER_GROUP) {
+            return GetTile(scaleOffset, MakeCoord(coordN, _), MakeShape(tileN, Get<1>(scaleOffset.GetShape())));
+        } else if constexpr (ANTIQUANT_TYPE == QuantType::MX) {
             return GetTile(scaleOffset, MakeCoord(coordN, _), MakeShape(tileN, Get<1>(scaleOffset.GetShape())));
         } else {
             static_assert(AscendC::Std::always_false_v<ScaleOffsetType>, "not support this ANTIQUANT_TYPE");

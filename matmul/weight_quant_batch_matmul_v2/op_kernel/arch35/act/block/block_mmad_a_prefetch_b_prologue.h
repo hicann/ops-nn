@@ -89,7 +89,6 @@ public:
     struct Params {
         GM_ADDR ptrA = nullptr;
         GM_ADDR ptrC = nullptr;
-        GM_ADDR ptrAScale = nullptr;
         GM_ADDR ptrBias = nullptr;
         LayoutA layoutA;
         LayoutC layoutC;
@@ -242,11 +241,11 @@ public:
     {
         // 考虑到只循环一次时， 只需要同步wait第0块缓存。 不止1次时， 2个同步块都需要wait
         if (cvLoopIdx_ > 1 && al1DbNum_ > SINGLE_BUFFER_NUM) {
-            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[cvLoopIdx_ & 1]);
+            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[cvLoopIdx_ & 1]);
         }
 
         if (cvLoopIdx_ > 0 && al1DbNum_ > SINGLE_BUFFER_NUM) {
-            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[(cvLoopIdx_ + 1) & 1]);
+            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[(cvLoopIdx_ + 1) & 1]);
         }
     }
 
@@ -254,7 +253,7 @@ private:
     __aicore__ inline void SetMTE1ToMTE2(uint64_t cvLoopIdx)
     {
         if (al1DbNum_ > SINGLE_BUFFER_NUM) {
-            SetFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[cvLoopIdx_ & 1]);
+            SetFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[cvLoopIdx_ & 1]);
         }
     }
 
@@ -432,8 +431,8 @@ private:
     __aicore__ inline void ClearAFullLoadFlag()
     {
         if (al1DbNum_ == SINGLE_BUFFER_NUM) {
-            SetFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[0]);
-            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[0]);
+            SetFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[0]);
+            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[0]);
         }
     }
 
@@ -449,7 +448,7 @@ private:
     {
         // 单buffer时保证了A一次全载不需要Wait，Double buffer时首次使用不需要Wait
         if (al1DbNum_ > SINGLE_BUFFER_NUM && cvLoopIdx_ >= DOUBLE_BUFFER_NUM) {
-            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE2_TO_MTE2[cvLoopIdx_ & 1]);
+            WaitFlag<HardEvent::MTE1_MTE2>(EVENT_IDS_MTE1_TO_MTE2[cvLoopIdx_ & 1]);
         }
     }
 
@@ -459,9 +458,9 @@ private:
     static constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
     static constexpr uint64_t SYNC_AIV_AIC_FLAG = 8;
     static constexpr uint64_t SYNC_AIC_AIV_FLAG = 9;
-    static constexpr AscendC::TEventID EVENT_IDS_MTE2_TO_MTE2[DOUBLE_BUFFER_NUM] = {0, 1};
+    static constexpr AscendC::TEventID EVENT_IDS_MTE1_TO_MTE2[DOUBLE_BUFFER_NUM] = {0, 1};
     static constexpr bool A_TRANS = IsColumnMajor2D<LayoutA>::value;
-    static constexpr bool B_TRANS = IsRowMajor2D<LayoutB>::value || is_2d_nz<LayoutB>::value;
+    static constexpr bool B_TRANS = IsRowMajor2D<LayoutB>::value || IsNz2D<LayoutB>::value;
 
     int8_t al1DbNum_;
     uint64_t mL1Len_;
@@ -484,7 +483,7 @@ private:
         AscendC::MatmulType<TPosition::TSCM, CubeFormat::ND, ElementBias>, CFG_MDL>;
     MatmulImplType mmObj_;
     // (n1,k1,k0,n0)
-    using BL1TensorTrait = typename TensorTraitL1<is_2d_zn<LayoutB>::value, ElementA, AscendC::TPosition::B1>::Type;
+    using BL1TensorTrait = typename TensorTraitL1<IsZn2D<LayoutB>::value, ElementA, AscendC::TPosition::B1>::Type;
     AscendC::LocalTensor<BL1TensorTrait> weightF16L1_;
     using AL1TensorTrait = typename TensorTraitL1<!A_TRANS, ElementA, AscendC::TPosition::A1>::Type;
     LocalTensor<AL1TensorTrait> aF16L1_;

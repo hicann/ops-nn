@@ -481,9 +481,8 @@ void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTiling()
 
 void WeightQuantBatchMatmulV2TilingAS::OptimizeMatmulTilingInA16W4Nz()
 {
-    static const std::vector<uint64_t> L0_BASE_K_LIST = {1024UL, 512UL, 256UL, 128UL, 64UL};
-    static const std::vector<uint64_t> L1_K_LIST = {1024UL, 512UL, 256UL};
-
+    static const std::vector<uint64_t> L1_K_LIST = {512UL, 256UL};
+    static const std::vector<uint64_t> L0_BASE_K_LIST = {512UL, 256UL, 128UL, 64UL};
     // 根据M值计算L0A上K的最大值
     uint64_t l0aMaxBaseK = (compileInfoPtr_->l0aSize >> 1) / GetSizeByDataType(matmulInfoPtr_->aDtype) /
                            tilingData_->matmulTiling.singleCoreM / BLOCK_CUBE * BLOCK_CUBE;
@@ -628,13 +627,7 @@ void WeightQuantBatchMatmulV2TilingAS::SetInnerSize()
 
     if (IsWeight4Nz()) {
         if (weightInt4Flag_ && matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP) {
-            if (weightL1K >= MTE2_K_1024) {
-                mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_1024_BUF_NUM_4;
-            } else if (weightL1K >= MTE2_K_512) {
-                mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_4;
-            } else {
-                mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_1024_BUF_NUM_2;
-            }
+            mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_4;
         } else if (weightMxFp4Flag_ && weightL1K >= MTE2_K_512) {
             mte2Config_ = Mte2Configuration::MTE2_INNER_SIZE_512_BUF_NUM_4;
         } else {

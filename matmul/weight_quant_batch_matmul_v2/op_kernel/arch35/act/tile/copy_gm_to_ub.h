@@ -7,53 +7,118 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef ARCH35_ACT_TILE_COPY_GM_TO_UB_H
-#define ARCH35_ACT_TILE_COPY_GM_TO_UB_H
+#ifndef TILE_COPY_GM_TO_UB_H
+#define TILE_COPY_GM_TO_UB_H
 
-#include "../utils/device_utils.h"
+#include "../utils/arch.h"
+#include "../utils/tensor_traits.h"
+#include "../constant.h"
+#include "../utils/math_utils.h"
+#include "act/utils/tuple_utils.h"
 
-namespace WeightQuantBatchMatmulV2::Arch35::Act {
-using AscendC::DataCopyExtParams;
-using AscendC::DataCopyPadExtParams;
-using AscendC::GlobalTensor;
-using AscendC::LocalTensor;
-
-template <typename T>
-DEVICE void CopyGmToUbIntervalDataCopy(
-    const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount, uint32_t blockLen,
-    uint32_t dstInnerLength, uint32_t srcInnerLength)
-{
-#if defined(__CCE_KT_TEST__)
-    ASCENDC_ASSERT(dstInnerLength >= blockLen, {
-        X_LOG("dstInnerLength[%d] should be larger than blockLen[%d].", dstInnerLength, blockLen);
-    });
-#endif
-    DataCopyExtParams params;
-    params.blockCount = blockCount;
-    params.blockLen = blockLen * sizeof(T);
-    params.srcStride = (srcInnerLength - blockLen) * sizeof(T);
-    params.dstStride = (dstInnerLength - blockLen) * sizeof(T) / ONE_BLK_SIZE;
-    DataCopyPadExtParams<T> padParams;
-    if (blockLen % (32 / sizeof(T)) != 0) {
-        padParams.isPad = true;
-        padParams.rightPadding = CeilAlign(blockLen, static_cast<uint32_t>(32 / sizeof(T))) - blockLen;
-        padParams.paddingValue = 0;
+namespace WeightQuantBatchMatmulV2::Arch35::Act::Tile::detail {
+// ND 转置场景(kn)
+template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
+struct CopyImpl<
+    Arch::Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    typename AscendC::Std::enable_if_t<
+        in_gm<SrcTrait> && in_ub<DstTrait> && IsColumnMajor2D<decltype(DstTrait{}.GetLayout())>::value &&
+        IsColumnMajor2D<decltype(SrcTrait{}.GetLayout())>::value>> {
+    __aicore__ inline static void Run(
+        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::GlobalTensor<SrcTrait> const& srcTensor,
+        const Shape& shape)
+    {
+        using PrimType = AscendC::PrimT<DstTrait>;
+        AscendC::DataCopyPadExtParams<PrimType> padParams;
+        AscendC::DataCopyExtParams intriParams;
+        intriParams.blockCount = ::Act::Gemm::Get<1>(shape);
+        intriParams.blockLen = ElemToByte<PrimType>(::Act::Gemm::Get<0>(shape));
+        intriParams.srcStride = ElemToByte<PrimType>(::Act::Gemm::Get<1>(srcTensor.GetStride())) - intriParams.blockLen;
+        intriParams.dstStride =
+            (ElemToByte<PrimType>(::Act::Gemm::Get<1>(dstTensor.GetStride())) - intriParams.blockLen) / BYTE_PER_BLK;
+        DataCopyPadGm2UBImpl(
+            (__ubuf__ PrimType*)(dstTensor.GetPhyAddr()), (__gm__ PrimType*)(srcTensor.GetPhyAddr()), intriParams,
+            padParams, static_cast<uint8_t>(CacheMode));
     }
-    if constexpr (IsSameType<T, int4b_t>::value) {
-        // int4场景下， 跳转的步长、数据长度等需要除2
-        params.blockLen = params.blockLen >> 1;
-        params.srcStride = params.srcStride >> 1;
-        params.dstStride = params.dstStride >> 1;
-        padParams.rightPadding = padParams.rightPadding >> 1;
-    }
-    X_LOG(
-        "DataCopyPad2D blockCount %d blockLen %d srcStride %d dstStride %d", params.blockCount, params.blockLen,
-        params.srcStride, params.dstStride);
-#if defined(__CCE_KT_TEST__)
-    ASCENDC_ASSERT(params.blockLen > 0, { X_LOG("blockLen[%d] should be larger than 0.", params.blockLen); });
-#endif
-    DataCopyPad(dst, src, params, padParams);
-}
+};
 
-} // namespace WeightQuantBatchMatmulV2::Arch35::Act
-#endif
+// ND 转置场景(nk)
+template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
+struct CopyImpl<
+    Arch::Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    typename AscendC::Std::enable_if_t<
+        in_gm<SrcTrait> && in_ub<DstTrait> && IsRowMajor2D<decltype(DstTrait{}.GetLayout())>::value &&
+        IsRowMajor2D<decltype(SrcTrait{}.GetLayout())>::value>> {
+    __aicore__ inline static void Run(
+        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::GlobalTensor<SrcTrait> const& srcTensor,
+        const Shape& shape)
+    {
+        using PrimType = AscendC::PrimT<DstTrait>;
+        AscendC::DataCopyPadExtParams<PrimType> padParams;
+        AscendC::DataCopyExtParams intriParams;
+        intriParams.blockCount = ::Act::Gemm::Get<0>(shape);
+        intriParams.blockLen = ElemToByte<PrimType>(::Act::Gemm::Get<1>(shape));
+        intriParams.srcStride = ElemToByte<PrimType>(::Act::Gemm::Get<0>(srcTensor.GetStride())) - intriParams.blockLen;
+        intriParams.dstStride =
+            (ElemToByte<PrimType>(::Act::Gemm::Get<0>(dstTensor.GetStride())) - intriParams.blockLen) / BYTE_PER_BLK;
+        DataCopyPadGm2UBImpl(
+            (__ubuf__ PrimType*)(dstTensor.GetPhyAddr()), (__gm__ PrimType*)(srcTensor.GetPhyAddr()), intriParams,
+            padParams, static_cast<uint8_t>(CacheMode));
+    }
+};
+
+// Zn 转置场景(kn) (n1,k1,k0,n0)
+// layout ((n0,n1),(k0,k1)):((_1,k1*k0*n0),(_16,_256))
+template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
+struct CopyImpl<
+    Arch::Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    typename AscendC::Std::enable_if_t<
+        in_gm<SrcTrait> && in_ub<DstTrait> && IsZn2D<decltype(DstTrait{}.GetLayout())>::value &&
+        IsZn2D<decltype(SrcTrait{}.GetLayout())>::value>> {
+    __aicore__ inline static void Run(
+        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::GlobalTensor<SrcTrait> const& srcTensor,
+        const Shape& shape)
+    {
+        using PrimType = AscendC::PrimT<DstTrait>;
+        AscendC::DataCopyPadExtParams<PrimType> padParams;
+        AscendC::DataCopyExtParams intriParams;
+        intriParams.blockCount = CeilDiv(::Act::Gemm::Get<0>(shape), static_cast<uint64_t>(BLOCK_CUBE));
+        intriParams.blockLen =
+            ElemToByte<PrimType>(CeilAlign(::Act::Gemm::Get<1>(shape), static_cast<uint64_t>(BLOCK_CUBE)) * BLOCK_CUBE);
+        intriParams.srcStride =
+            ElemToByte<PrimType>(::Act::Gemm::Get<0, 1>(srcTensor.GetStride())) - intriParams.blockLen;
+        intriParams.dstStride =
+            (ElemToByte<PrimType>(::Act::Gemm::Get<0, 1>(dstTensor.GetStride())) - intriParams.blockLen) / BYTE_PER_BLK;
+        DataCopyPadGm2UBImpl(
+            (__ubuf__ PrimType*)(dstTensor.GetPhyAddr()), (__gm__ PrimType*)(srcTensor.GetPhyAddr()), intriParams,
+            padParams, static_cast<uint8_t>(CacheMode));
+    }
+};
+
+// ND 2维表达，实际一维，有效维为0 场景
+// PS per-channel antiquant_scale/offset
+// layout (n,1):(1,n)
+template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
+struct CopyImpl<
+    Arch::Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    typename AscendC::Std::enable_if_t<
+        in_gm<SrcTrait> && in_ub<DstTrait> && Is2D1Dim1<decltype(SrcTrait{}.GetLayout())>::value>> {
+    __aicore__ inline static void Run(
+        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::GlobalTensor<SrcTrait> const& srcTensor,
+        const Shape& shape)
+    {
+        using PrimType = AscendC::PrimT<DstTrait>;
+        AscendC::DataCopyPadExtParams<PrimType> padParams;
+        AscendC::DataCopyExtParams intriParams;
+        intriParams.blockCount = 1;
+        intriParams.blockLen = ElemToByte<PrimType>(::Act::Gemm::Get<0>(shape));
+        intriParams.srcStride = ElemToByte<PrimType>(::Act::Gemm::Get<1>(srcTensor.GetStride())) - intriParams.blockLen;
+        intriParams.dstStride =
+            (ElemToByte<PrimType>(::Act::Gemm::Get<1>(dstTensor.GetStride())) - intriParams.blockLen) / BYTE_PER_BLK;
+        DataCopyPadGm2UBImpl(
+            (__ubuf__ PrimType*)(dstTensor.GetPhyAddr()), (__gm__ PrimType*)(srcTensor.GetPhyAddr()), intriParams,
+            padParams, static_cast<uint8_t>(CacheMode));
+    }
+};
+} // namespace WeightQuantBatchMatmulV2::Arch35::Act::Tile::detail
+#endif // TILE_COPY_GM_TO_UB_H

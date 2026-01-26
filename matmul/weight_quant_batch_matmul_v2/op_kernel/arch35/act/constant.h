@@ -20,6 +20,7 @@ enum class QuantType
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
     PER_GROUP = 3,
+    MX = 4,
 };
 
 namespace detail {
@@ -30,32 +31,40 @@ namespace detail {
 //     layout (n,_1):(_1,n)
 // per-tensor
 //   layout (_1,):(_1,)
-// per-group
+// per-group shape (n,gn)
 //   n,k
-//     layout (n,gn):(gn,_1)
+//     layout (n,!=_1):(gn,_1)
 //   k,n
-//     layout (n,gn):(_1, n)
-template <typename T>
+//     layout (n,!=_1):(_1, n)
+template <typename T, typename U = void>
 struct QuantTypeFrom;
 
-template <>
-struct QuantTypeFrom<AscendC::Std::tuple<::Act::Gemm::_1>> {
+template <typename U>
+struct QuantTypeFrom<AscendC::Std::tuple<::Act::Gemm::_1>, U> {
     static constexpr QuantType VALUE = QuantType::PER_TENSOR;
 };
 
-template <>
-struct QuantTypeFrom<AscendC::Std::tuple<uint64_t, ::Act::Gemm::_1>> {
+template <typename U>
+struct QuantTypeFrom<AscendC::Std::tuple<uint64_t, ::Act::Gemm::_1>, U> {
     static constexpr QuantType VALUE = QuantType::PER_CHANNEL;
 };
 
-template <>
-struct QuantTypeFrom<AscendC::Std::tuple<uint64_t, uint64_t>> {
+template <typename T0, typename T1, typename U>
+struct QuantTypeFrom<AscendC::Std::tuple<T0, T1>, U>
+    : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T1, ::Act::Gemm::_1>> {
     static constexpr QuantType VALUE = QuantType::PER_GROUP;
+};
+
+template <typename T0, typename T1>
+struct QuantTypeFrom<AscendC::Std::tuple<T0, T1>, fp8_e8m0_t>
+    : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T1, ::Act::Gemm::_1>> {
+    static constexpr QuantType VALUE = QuantType::MX;
 };
 } // namespace detail
 
-template <typename Shape>
-constexpr QuantType QUANT_TYPE = detail::QuantTypeFrom<typename AscendC::Std::remove_cvref_t<Shape>>::VALUE;
+template <typename Shape, typename ScaleType = void>
+constexpr QuantType QUANT_TYPE =
+    detail::QuantTypeFrom<typename AscendC::Std::remove_cvref_t<Shape>, AscendC::Std::remove_cvref_t<ScaleType>>::VALUE;
 
 constexpr uint32_t BYTE_PER_BLK = 32;
 static constexpr uint64_t SYNC_MODE4 = 4;
@@ -67,43 +76,42 @@ namespace detail {
 // (1, n) layout (n,_1):(_1,n)
 // (n, 1) layout (n,_1):(_1,_1)
 template <typename Layout>
-struct is_2d_dim1_1_impl : AscendC::Std::false_type {};
+struct Is2D1Dim1Impl : AscendC::Std::false_type {};
 
 template <typename S0, typename S1, typename T0, typename T1>
-struct is_2d_dim1_1_impl<AscendC::Layout<AscendC::Std::tuple<S0, S1>, AscendC::Std::tuple<T0, T1>>>
+struct Is2D1Dim1Impl<AscendC::Layout<AscendC::Std::tuple<S0, S1>, AscendC::Std::tuple<T0, T1>>>
     : AscendC::Std::bool_constant<
           AscendC::Std::is_same_v<S1, ::Act::Gemm::_1> && AscendC::Std::is_same_v<T0, ::Act::Gemm::_1>> {};
 
 template <typename Layout>
-struct IsRowMajor2D_impl : AscendC::Std::false_type {};
+struct IsRowMajor2DImpl : AscendC::Std::false_type {};
 
 template <typename Shape, typename T0>
-struct IsRowMajor2D_impl<AscendC::Layout<Shape, AscendC::Std::tuple<T0, ::Act::Gemm::_1>>>
+struct IsRowMajor2DImpl<AscendC::Layout<Shape, AscendC::Std::tuple<T0, ::Act::Gemm::_1>>>
     : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T0, ::Act::Gemm::_1>> {};
 
 template <typename Layout>
-struct IsColumnMajor2D_impl : AscendC::Std::false_type {};
+struct IsColumnMajor2DImpl : AscendC::Std::false_type {};
 
 // shape(t0, t1) stride(t0, t1)
 template <typename T0, typename T1, typename U1>
-struct IsColumnMajor2D_impl<AscendC::Layout<AscendC::Std::tuple<T0, T1>, AscendC::Std::tuple<::Act::Gemm::_1, U1>>>
+struct IsColumnMajor2DImpl<AscendC::Layout<AscendC::Std::tuple<T0, T1>, AscendC::Std::tuple<::Act::Gemm::_1, U1>>>
     : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T1, ::Act::Gemm::_1> && !AscendC::Std::is_tuple_v<T1>> {};
 
 template <typename Layout>
-struct is_2d_nz_impl : AscendC::Std::false_type {};
-template <typename Shape, typename T0, typename T1, typename U0, typename U1>
-struct is_2d_nz_impl<
-    AscendC::Layout<Shape, AscendC::Std::tuple<AscendC::Std::tuple<T0, T1>, AscendC::Std::tuple<U0, U1>>>>
-    : AscendC::Std::bool_constant<
-          AscendC::Std::is_same_v<T0, ::Act::Gemm::_16> && AscendC::Std::is_same_v<T1, ::Act::Gemm::_256> &&
-          AscendC::Std::is_same_v<U0, ::Act::Gemm::_1>> {};
+struct IsNz2DImpl : AscendC::Std::false_type {};
+template <typename Shape, typename T>
+struct IsNz2DImpl<AscendC::Layout<
+    Shape, AscendC::Std::tuple<
+               AscendC::Std::tuple<::Act::Gemm::_16, ::Act::Gemm::_256>, AscendC::Std::tuple<::Act::Gemm::_1, T>>>>
+    : AscendC::Std::true_type {};
 
 // (a1,b1,b0,a0)
 // layout ((a0,a1),(b0,b1)):((_1,u32),(_16,_256))
 template <typename Layout>
-struct is_2d_zn_impl : AscendC::Std::false_type {};
+struct IsZn2DImpl : AscendC::Std::false_type {};
 template <typename Shape, typename T1>
-struct is_2d_zn_impl<AscendC::Layout<
+struct IsZn2DImpl<AscendC::Layout<
     Shape, AscendC::Std::tuple<
                AscendC::Std::tuple<::Act::Gemm::_1, T1>, AscendC::Std::tuple<::Act::Gemm::_16, ::Act::Gemm::_256>>>>
     : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T1, ::Act::Gemm::_1>> {};
@@ -116,32 +124,32 @@ struct IsRowMajor2DContiguousImpl<
     : AscendC::Std::bool_constant<is_static_v<S1>> {};
 } // namespace detail
 
-// is_2d_dim1_1
+// Is2D1Dim1
 //   (,_1):(_1,)
-// is_2d_nd_no_trans
+// IsRowMajor2D
 //   :(!=_1,_1)
-// is_2d_nd_trans
+// IsColumnMajor2D
 //   (,!=_1):(_1,)
-// is_2d_nz
+// IsNz2D
 //   :((_16,_256),(_1,))
-// is_2d_zn
+// IsZn2D
 //   :((_1,!=_1),(_16,_256))
 // IsRowMajor2DContiguous
 //   (,_x):(_x,_1)
 template <typename Layout>
-struct is_2d_dim1_1 : detail::is_2d_dim1_1_impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
+struct Is2D1Dim1 : detail::Is2D1Dim1Impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
 
 template <typename Layout>
-struct IsColumnMajor2D : detail::IsColumnMajor2D_impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
+struct IsColumnMajor2D : detail::IsColumnMajor2DImpl<typename AscendC::Std::remove_cvref_t<Layout>> {};
 
 template <typename Layout>
-struct IsRowMajor2D : detail::IsRowMajor2D_impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
+struct IsRowMajor2D : detail::IsRowMajor2DImpl<typename AscendC::Std::remove_cvref_t<Layout>> {};
 
 template <typename Layout>
-struct is_2d_nz : detail::is_2d_nz_impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
+struct IsNz2D : detail::IsNz2DImpl<typename AscendC::Std::remove_cvref_t<Layout>> {};
 
 template <typename Layout>
-struct is_2d_zn : detail::is_2d_zn_impl<typename AscendC::Std::remove_cvref_t<Layout>> {};
+struct IsZn2D : detail::IsZn2DImpl<typename AscendC::Std::remove_cvref_t<Layout>> {};
 
 template <typename Layout>
 struct IsRowMajor2DContiguous : detail::IsRowMajor2DContiguousImpl<typename AscendC::Std::remove_cvref_t<Layout>> {};
@@ -174,6 +182,11 @@ template <>
 struct KbElemImpl<bfloat16_t> {
     static constexpr uint32_t VALUE = 512;
 };
+
+template <>
+struct KbElemImpl<AscendC::fp8_e8m0_t> {
+    static constexpr uint32_t VALUE = 1024;
+};
 } // namespace detail
 
 template <typename T>
@@ -186,6 +199,6 @@ template <typename T>
 constexpr uint64_t BLK_ELEM = 32 / sizeof(T);
 
 template <typename T>
-inline constexpr uint32_t C0_SIZE = 32 / sizeof(T);
+inline constexpr uint32_t C0 = 32 / sizeof(T);
 } // namespace WeightQuantBatchMatmulV2::Arch35::Act
 #endif

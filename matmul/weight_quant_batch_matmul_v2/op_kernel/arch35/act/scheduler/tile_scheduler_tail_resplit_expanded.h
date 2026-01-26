@@ -10,6 +10,9 @@
 #ifndef TILE_SCHEDULER_TAIL_RESPLIT_EXPANDED_H
 #define TILE_SCHEDULER_TAIL_RESPLIT_EXPANDED_H
 
+#include "act/utils/tuple_utils.h"
+#include "../utils/device_utils.h"
+
 namespace WeightQuantBatchMatmulV2::Arch35::Act::Scheduler {
 class TileSchedulerTailResplitExpanded {
 public:
@@ -48,8 +51,8 @@ public:
         AscendC::Std::enable_if_t<!AscendC::Std::is_tuple_v<Params>, bool> = true>
     DEVICE TileSchedulerTailResplitExpanded(const ProblemShape& problemShape, const Params& params)
     {
-        auto mSize = get<0>(problemShape);
-        auto nSize = get<1>(problemShape);
+        auto mSize = ::Act::Gemm::Get<0>(problemShape);
+        auto nSize = ::Act::Gemm::Get<1>(problemShape);
         decltype(AscendC::GetBlockIdx()) blockIdx;
         if ASCEND_IS_AIC {
             blockIdx = AscendC::GetBlockIdx();

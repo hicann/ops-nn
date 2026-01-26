@@ -9,6 +9,8 @@
  */
 #ifndef ARCH35_ACT_UTILS_TENSOR_TRAITS_H
 #define ARCH35_ACT_UTILS_TENSOR_TRAITS_H
+#include "kernel_operator.h"
+#include "act/utils/integral_constant.h"
 
 namespace WeightQuantBatchMatmulV2::Arch35::Act {
 

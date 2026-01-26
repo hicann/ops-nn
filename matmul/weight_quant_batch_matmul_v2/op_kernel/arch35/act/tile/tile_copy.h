@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_TILE_TILE_COPY_H
-#define PROLOGUE_TILE_TILE_COPY_H
+#ifndef TILE_TILE_COPY_H
+#define TILE_TILE_COPY_H
 
 #include "kernel_operator_intf.h"
-#include "../../utils/arch.h"
+#include "../utils/arch.h"
 
-namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Tile {
+namespace WeightQuantBatchMatmulV2::Arch35::Act::Tile {
 
 enum class CacheMode
 {
@@ -52,7 +52,7 @@ __aicore__ inline void Copy(const DstTensor& dstTensor, const SrcTensor& srcTens
         AscendC::Std::remove_cvref_t<SrcTensor>, AscendC::Std::remove_cvref_t<Shape>,
         CacheMode>::Run(dstTensor, srcTensor, shape);
 }
-} // namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue::Tile
+} // namespace WeightQuantBatchMatmulV2::Arch35::Act::Tile
 
 #include "copy_gm_to_ub.h"
 #include "copy_ub_to_l1.h"

@@ -15,55 +15,17 @@
 
 namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue {
 namespace detail {
-template <typename Dst, typename Src>
+template <typename Dst, typename Src, typename = void>
 struct VectorRegSize {
     static_assert(AscendC::Std::always_false_v<Src>, "not impl");
 };
 
 template <typename Dst>
-struct VectorRegSize<Dst, Dst> {
-    static_assert(AscendC::SupportType<Dst, uint8_t, int8_t, half, bfloat16_t>(), "not support this dtype");
+struct VectorRegSize<
+    Dst, Dst,
+    AscendC::Std::enable_if_t<
+        AscendC::SupportType<Dst, uint8_t, int8_t, half, bfloat16_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t>()>> {
     static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH / sizeof(Dst);
-};
-template <>
-struct VectorRegSize<bfloat16_t, uint8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<bfloat16_t, int8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<bfloat16_t, fp8_e5m2_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<bfloat16_t, hifloat8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-// 对 half 做同样的处理
-template <>
-struct VectorRegSize<half, uint8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<half, int8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<half, fp8_e5m2_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
-};
-
-template <>
-struct VectorRegSize<half, hifloat8_t> {
-    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
 };
 
 template <>
@@ -71,13 +33,22 @@ struct VectorRegSize<int4x2_t, int4x2_t> {
     static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH << 1;
 };
 
-template <>
-struct VectorRegSize<bfloat16_t, int4x2_t> {
+template <typename Dst, typename Src>
+struct VectorRegSize<
+    Dst, Src,
+    AscendC::Std::enable_if_t<
+        AscendC::SupportType<Dst, bfloat16_t, half>() &&
+        AscendC::SupportType<Src, uint8_t, int8_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t>()>> {
     static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
 };
 
-template <>
-struct VectorRegSize<half, int4x2_t> {
+template <typename Dst>
+struct VectorRegSize<Dst, int4x2_t, AscendC::Std::enable_if_t<AscendC::SupportType<Dst, bfloat16_t, half>()>> {
+    static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
+};
+
+template <typename Dst>
+struct VectorRegSize<Dst, fp4x2_e2m1_t, AscendC::Std::enable_if_t<AscendC::SupportType<Dst, bfloat16_t, half>()>> {
     static constexpr uint32_t VALUE = AscendC::VECTOR_REG_WIDTH >> 1;
 };
 } // namespace detail
@@ -86,12 +57,4 @@ template <typename Dst, typename Src = Dst>
 constexpr uint32_t VECTOR_REG_SIZE = detail::VectorRegSize<
     typename AscendC::Std::remove_cvref_t<Dst>, typename AscendC::Std::remove_cvref_t<Src>>::VALUE;
 } // namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue
-
-// template <typename T>
-// inline constexpr uint32_t VECTOR_REG_SIZE = AscendC::VECTOR_REG_WIDTH / sizeof(T);
-
-// template <>
-// inline constexpr uint32_t VECTOR_REG_SIZE<AscendC::int4b_t> = AscendC::VECTOR_REG_WIDTH << 1;
-// namespace WeightQuantBatchMatmulV2::Arch35::Act::Prologue
-
 #endif
