@@ -278,7 +278,7 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
     static const std::vector<ge::DataType> legalInputDtypes = {
         ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
     static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8,          ge::DT_FLOAT16,  ge::DT_BF16,
-                                                                ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8, ge::DT_FLOAT};
+                                                                ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8, ge::DT_FLOAT, ge::DT_INT32};
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.aDtype) == legalInputDtypes.end(),
         CUBE_INNER_ERR_REPORT(
@@ -298,6 +298,12 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                 "Output dtype must be INT8/FLOAT16/BFLOAT16/FLOAT8_E4M3FN/HIFLOAT8/FLOAT, actual is %s.",
                                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+        return false);
+    OP_TILING_CHECK(
+        inputParams_.cDtype == ge::DT_INT32 && (inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When out is INT32, x1 and x2 should be INT8, actual are %s and %s.",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
         return false);
     auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK(offsetDesc != nullptr && offsetDesc->GetDataType() != ge::DT_FLOAT,

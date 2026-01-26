@@ -101,7 +101,8 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo 
     uint64_t kernelType = 0UL;
     bool isScaleVecPostProcess = inputParams.isPerChannel &&
                                  !(inputParams.scaleDtype == ge::DT_UINT64 || inputParams.scaleDtype == ge::DT_INT64);
-    bool isVecPostProcess = (isScaleVecPostProcess || inputParams.isPertoken || inputParams.isPerBlock || isBf16Mix);
+    bool isVecPostProcess = (isScaleVecPostProcess || inputParams.isPertoken || inputParams.isPerBlock || isBf16Mix) &&
+                            (inputParams.cDtype != ge::DT_INT32);
     if (basicTiling.iterBatch >= 1U) {
         if (basicTiling.baseM == basicTiling.singleCoreM && basicTiling.baseN == basicTiling.singleCoreN) {
             kernelType = static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_BMMAPI);

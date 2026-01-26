@@ -271,15 +271,17 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::ComputeBasic
 LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::SetMMParaAndCompute()
 {
-    if constexpr (DequantBmm::IsMxType<scaleType>()) {
-        mm_.SetTensorScaleA(scaleAGlobal_[block_.offset_.offsetPerTokenScale], aTrans);
-        mm_.SetTensorScaleB(scaleBGlobal_[block_.offset_.offsetScale], bTrans);
-    } else {
-        if (static_cast<bool>(quantBmmTilingData_->params.isPerTensor) ||
-            static_cast<bool>(quantBmmTilingData_->params.isDoubleScale)) {
-            mm_.SetQuantScalar(block_.offset_.scaleScalar);
+    if constexpr (!AscendC::IsSameType<yType, int32_t>::value) {
+        if constexpr (DequantBmm::IsMxType<scaleType>()) {
+            mm_.SetTensorScaleA(scaleAGlobal_[block_.offset_.offsetPerTokenScale], aTrans);
+            mm_.SetTensorScaleB(scaleBGlobal_[block_.offset_.offsetScale], bTrans);
         } else {
-            mm_.SetQuantVector(scaleGlobal_[block_.offset_.offsetScale]);
+            if (static_cast<bool>(quantBmmTilingData_->params.isPerTensor) ||
+                static_cast<bool>(quantBmmTilingData_->params.isDoubleScale)) {
+                mm_.SetQuantScalar(block_.offset_.scaleScalar);
+            } else {
+                mm_.SetQuantVector(scaleGlobal_[block_.offset_.offsetScale]);
+            }
         }
     }
 

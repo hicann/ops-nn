@@ -465,7 +465,7 @@ void AdaptiveSlidingWindowTiling::SetBf16Compat()
                      inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0) &&
                     inputParams_.isPerTensor && inputParams_.aDtype == ge::DT_INT8 && inputParams_.hasBias &&
                     (inputParams_.biasDtype == ge::DT_FLOAT || inputParams_.biasDtype == ge::DT_BF16);
-    isBf16Mix_ = isMix || isCompat;
+    isBf16Mix_ = (isMix || isCompat) && (inputParams_.cDtype != ge::DT_INT32);
 }
 
 bool AdaptiveSlidingWindowTiling::IsMxKOdd() const
@@ -481,7 +481,7 @@ bool AdaptiveSlidingWindowTiling::IsMxBackwardTrans() const
 
 void AdaptiveSlidingWindowTiling::IsAFullLoad()
 {
-    if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans() || isTilingOut_ || inputParams_.isPerBlock) {
+    if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans() || isTilingOut_ || inputParams_.isPerBlock || inputParams_.cDtype == ge::DT_INT32) {
         isAFullLoad_ = false;
         return;
     }
@@ -535,6 +535,9 @@ void AdaptiveSlidingWindowTiling::CalL1Tiling()
 
     uint64_t biasDtypeSize = ge::GetSizeByDataType(inputParams_.biasDtype);
     uint64_t scaleDtypeSize = ge::GetSizeByDataType(inputParams_.scaleDtype);
+    if (inputParams_.cDtype == ge::DT_INT32) {
+        scaleDtypeSize = 0;
+    }
     uint64_t totalL1Size = aicoreParams_.l1Size;
 
     basicTiling_.iterateOrder = 0U;
@@ -1175,7 +1178,8 @@ void AdaptiveSlidingWindowTiling::IsBFullLoad()
     if (!compileInfo_.supportMmadS8S4 || inputParams_.batchA != 1 || inputParams_.batchB != 1 ||
         inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8 ||
         !(inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16) ||
-        !(inputParams_.isPerTensor || inputParams_.isPerChannel) || isAFullLoad_ || isTilingOut_) {
+        !(inputParams_.isPerTensor || inputParams_.isPerChannel) || isAFullLoad_ || isTilingOut_ ||
+        inputParams_.cDtype == ge::DT_INT32) {
         isBFullLoad_ = false;
         return;
     }

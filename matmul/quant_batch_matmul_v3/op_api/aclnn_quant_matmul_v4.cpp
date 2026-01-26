@@ -694,11 +694,6 @@ static aclnnStatus CheckWeightNzParams910_95(const aclTensor *x1, const aclTenso
                 op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (out->GetDataType() == op::DataType::DT_INT32) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data type of out can not be int32, actual is %s.",
-                op::ToString(out->GetDataType()).GetString());
-        return ACLNN_ERR_PARAM_INVALID;
-    }
     OP_LOGD("QuantMatmulWeightNz check params success.");
     return ACLNN_SUCCESS;
 }

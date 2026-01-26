@@ -73,7 +73,7 @@ static const std::initializer_list<op::DataType> UINT64_X2_SCALE_TYPE_SUPPORT_LI
 static const std::initializer_list<op::DataType> X2_INT8_X2_SCALE_TYPE_SUPPORT_LIST = {
     op::DataType::DT_UINT64, op::DataType::DT_INT64, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> INT8_OUT_TYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+    op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT32};
 static const std::initializer_list<op::DataType> HIF8_OUT_TYPE_SUPPORT_LIST = {
     op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> FP8_OUT_TYPE_SUPPORT_LIST = {
@@ -96,7 +96,8 @@ static const std::initializer_list<op::DataType> FOUR_BIT_FLOAT_INPUT_LIST = {op
                                                                               op::DataType::DT_FLOAT4_E1M2};
 static const std::initializer_list<op::DataType> EIGHT_BIT_FLOAT_INPUT_LIST = {op::DataType::DT_FLOAT8_E4M3FN,
                                                                                op::DataType::DT_FLOAT8_E5M2};
-
+static const std::initializer_list<op::DataType> INT32_OUT_X2SCALE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+ 	                                                                               op::DataType::DT_BF16};
 static inline std::string GetInputName(const std::map<int64_t, std::string> &inputNameMap, int64_t interfaceType)
 {
     std::string inputName;
@@ -1072,8 +1073,15 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input() con
     } else if (outType_ == op::DataType::DT_INT8 || outType_ == op::DataType::DT_FLOAT16) {
         CHECK_RET(
             OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST), false);
+    } else if (outType_ == op::DataType::DT_INT32) {
+        CHECK_RET(
+            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, INT32_OUT_X2SCALE_SUPPORT_LIST), false);
     }
     if (bias_ != nullptr) {
+        if (outType_ == op::DataType::DT_INT32 && bias_->GetDataType() != op::DataType::DT_INT32) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,"The dtype of bias_ should be nullptr or INT32 when out is INT32.");
+            return false;
+        }
         if (outType_ == op::DataType::DT_BF16 &&
             (x2ScaleType_ == op::DataType::DT_FLOAT || x2ScaleType_ == op::DataType::DT_BF16)) {
             CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST), false);
@@ -1099,6 +1107,10 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input() con
 
 bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel() const
 {
+    if (outType_ == op::DataType::DT_INT32 && (x1_->GetDataType() != op::DataType::DT_INT8 || x2_->GetDataType() != op::DataType::DT_INT8)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When out is INT32, x1 and x2 should be INT8.");
+        return false;
+    }
     if (IsInt8Input(x1_, x2_)) {
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input(), false);
     } else if (IsHif8Input(x1_, x2_) || IsFp8Input(x1_, x2_)) {
@@ -1229,6 +1241,10 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
                 "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",
                 op::ToString(socVersion_).GetString());
+    }
+    if (outType_ == op::DataType::DT_INT32 && x1Scale_ != nullptr) { 
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,"The pertokenScaleOptional/x1Scale(pertokenScale) should be nullptr when out is INT32."); 
+        return ACLNN_ERR_PARAM_INVALID; 
     }
     if (x1Scale_ == nullptr) { // pertensor/perchannel
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel(), ACLNN_ERR_PARAM_INVALID);
