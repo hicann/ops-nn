@@ -12,6 +12,10 @@
 
 - [ops-nn包](#ops-nn包)：选择整个项目编译生成的包称为ops-nn包，可**完整替换**CANN包对应部分。该包支持aclnn和图模式调用AI Core算子。
 
+- [ops-nn静态库](#ops-nn静态库)：指整个项目编译为一个静态库文件，包含libcann_nn_static.a和aclnn接口头文件。该包仅支持aclnn调用AI Core算子。
+
+  >说明：若您需要**基于本项目进行二次发布**并且对**软件包大小有要求**时，建议采用静态库编译，该库可以链接您的应用开发程序，仅保留业务所需的算子，从而实现软件最小化部署。
+
 ### 自定义算子包
 
 1. **编译自定义算子包**
@@ -95,6 +99,46 @@
     ./${install_path}/cann/share/info/ops_nn/script/uninstall.sh
     ```
 
+### ops-nn静态库
+
+> 说明：静态库仅支持Atlas A2、Atlas A3系列产品。experimental算子暂不支持使用静态库。
+
+1. **编译ops-nn静态库**
+
+   进入项目根目录，执行如下编译命令：
+
+    ```bash
+   bash build.sh --pkg --static --soc=${soc_version}
+    ```
+   \$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"。
+
+   若提示如下信息，说明编译并压缩成功。
+
+    ```bash
+   [SUCCESS] Build static lib success!
+   Successfully created compressed package: ${repo_path}/build_out/cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}.tar.gz
+    ```
+
+   \$\{repo\_path\}表示项目根目录，\$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，压缩包存放于build_out目录下。
+
+
+2. **解压ops-nn静态库**
+
+   进入build_out目录执行解压命令：
+
+    ```bash
+   tar -zxvf ./cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}.tar.gz -C ${static_lib_path}
+    ```
+
+   \$\{static\_lib\_path\}表示静态库解压路径。解压后目录结构如下：
+    ```
+    ├── cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}
+    │   ├── lib64
+    │   │   ├── libcann_nn_static.a               # 静态库文件
+    │   └── include
+    |       ├── ...                                 # aclnn接口头文件
+    ```
+
 ## 本地验证 
 
 通过项目根目录build.sh执行算子和UT用例，验证项目功能是否正常，build参数参见[build参数说明](../context/build.md)。目前算子支持API方式（aclnn接口）和图模式调用，**推荐aclnn调用**。
@@ -102,8 +146,8 @@
 - **执行算子样例**
 
     > **说明**：Ascend 950PR产品使用仿真执行算子样例，请见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
-  
-    - 完成自定义算子包安装后，执行如下命令：
+
+    - 基于**自定义算子包**执行算子样例，包安装后，执行如下命令：
         ```bash
         bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}]
         # 以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
@@ -119,7 +163,7 @@
 
         说明：\$\{mode\}为graph时，不指定\$\{pkg_mode\}和\$\{vendor\_name\}
 
-    - 完成ops-nn包安装后，执行命令如下：
+    - 基于**ops-nn包**执行算子样例，安装后，执行命令如下：
         ```bash
         bash build.sh --run_example ${op} ${mode} [--soc=${soc_version}]
         # 以TransposeBatchMatMul算子example执行为例
@@ -129,6 +173,51 @@
         - \$\{op\}：表示待执行算子，算子名为小写下划线形式，如transpose_batch_mat_mul。
         - \$\{mode\}：表示算子执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
         - \$\{soc_version\}（可选）：表示NPU型号。当设置为"ascend950"时会额外运行"arch35"目录下的示例文件。
+    
+    - 基于**ops-nn静态库**执行算子样例：
+        1. **前提条件**
+
+            ops-nn静态库依赖于ops-legacy静态库和ops-math静态库，将上述静态库准备好，解压并将所有lib64、include目录移动至统一目录\$\{static\_lib\_path\}下。
+
+            > 说明：ops-legacy静态库`cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz`需单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0/)获取， ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
+
+        2. **创建run.sh**
+
+            在待执行算子`examples\test_aclnn_${op_name}.cpp`同级目录下创建run.sh文件。
+
+            以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例，示例如下:
+        
+            ```bash
+            # 环境变量生效
+            if [ -n "$ASCEND_INSTALL_PATH" ]; then
+                _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
+            elif [ -n "$ASCEND_HOME_PATH" ]; then
+                _ASCEND_INSTALL_PATH=$ASCEND_HOME_PATH
+            else
+                _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
+            fi
+
+            source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
+
+            # 编译可执行文件
+            g++ test_aclnn_transpose_batch_mat_mul.cpp -I ${static_lib_path}/include -L ${static_lib_path}/lib64 -L ${ASCEND_HOME_PATH}/lib64 -Wl,--allow-multiple-definition \
+            -Wl,--start-group -lcann_nn_static -lcann_math_static -lcann_legacy_static -Wl,--end-group -lgraph -lgraph_base \
+            -lpthread -lmmpa -lmetadef -lascendalog -lregister -lopp_registry -lops_base -lascendcl -ltiling_api -lplatform \
+            -ldl -lc_sec -lnnopbase -lruntime -lerror_manager -lunified_dlog -o test_aclnn_transpose_batch_mat_mul   # 替换为实际算子可执行文件名
+
+            # 执行程序
+            ./test_aclnn_transpose_batch_mat_mul
+            ```
+
+            \$\{static\_lib\_path}表示静态库统一放置路径；\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/cann；最终可执行文件名请替换为实际算子可执行文件名。
+            
+            其中lcann\_nn\_static、lcann\_math\_static、lcann\_legacy\_static表示算子依赖的静态库文件，从静态库统一放置路径\$\{static\_lib\_path\}中获取；lgraph、lmetadef等表示算子依赖的底层库文件，可在CANN toolkit包获取。
+
+        3. **执行run.sh**
+
+            ```bash
+            bash run.sh
+            ```
     
     执行算子样例后会打印结果，以TransposeBatchMatMul算子执行为例：
 
