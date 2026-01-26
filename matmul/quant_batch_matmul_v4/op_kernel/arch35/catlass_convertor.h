@@ -118,7 +118,7 @@ __aicore__ inline void InvokeActKernel(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_
     using BlockMmad =
         Act::Gemm::Block::BlockMmadNN<DispatchPolicy, TileShapeL1, TileShapeL0, AscendC::Std::tuple<AType, ScaleType>,
                                       BType, CType, BiasType, void, void>;
-    using BlockPrologue = Act::Prologue::BlockPrologueNN<Act::Prologue::BCastScsc, BType, AType, TileShapeL1>;
+    using BlockPrologue = Act::Prologue::BlockPrologueNN<Act::Prologue::BCastScsc, BType, AType, BiasType, TileShapeL1>;
     using BlockScheduler =
         Act::Gemm::Block::BlockSchedulerSwizzleInMnCoreNN<ProblemShape, AscendC::Std::tuple<uint32_t, uint32_t>,
                                                           AscendC::Std::tuple<uint8_t, uint8_t>>;
@@ -130,18 +130,19 @@ __aicore__ inline void InvokeActKernel(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_
         .ptrC = y,
         .ptrAScale = x1_scale,
         .ptrBScale = x2_scale,
-        .ptrBias = bias,
         .layoutA = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.kSize),
                                        AscendC::MakeStride(tilingDataIn.kSize, Act::Gemm::_1{})),
         .layoutC = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
                                        AscendC::MakeStride(tilingDataIn.nSize, Act::Gemm::_1{})),
         .layoutScale = AscendC::MakeLayout(
             AscendC::MakeShape(tilingDataIn.nSize, static_cast<uint64_t>(AscendC::CeilDiv(tilingDataIn.kSize, 32UL))),
-            AscendC::MakeStride(static_cast<uint64_t>(AscendC::CeilDiv(tilingDataIn.kSize, 32UL)), Act::Gemm::_1{})),
+            AscendC::MakeStride(static_cast<uint64_t>(AscendC::CeilDiv(tilingDataIn.kSize, 32UL)), Act::Gemm::_1{}))};
+    typename BlockPrologue::Arguments prologue{
+        .ptrB = x2,
+        .ptrBias = bias,
+        .layoutB = CreateLayoutB<IS_WEIGHT_NZ>{}(tilingDataIn.nSize, tilingDataIn.kSize),
         .layoutBias =
             AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.nSize), AscendC::MakeStride(Act::Gemm::_1{}))};
-    typename BlockPrologue::Arguments prologue{
-        .ptrB = x2, .layoutB = CreateLayoutB<IS_WEIGHT_NZ>{}(tilingDataIn.nSize, tilingDataIn.kSize)};
     typename BlockScheduler::Arguments scheduler{};
     typename KernelMmad::Arguments args{
         .problemShape = problemShape, .mmad = mmad, .prologue = prologue, .scheduler = scheduler};

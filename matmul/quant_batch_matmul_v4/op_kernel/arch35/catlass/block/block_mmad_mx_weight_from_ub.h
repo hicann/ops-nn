@@ -47,11 +47,9 @@ public:
                 .ptrC = args.ptrC,
                 .ptrAScale = args.ptrAScale,
                 .ptrBScale = args.ptrBScale,
-                .ptrBias = args.ptrBias,
                 .layoutA = args.layoutA,
                 .layoutC = args.layoutC,
                 .layoutScale = args.layoutScale,
-                .layoutBias = args.layoutBias,
                 .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
                 .tileShapeL0 = AscendC::MakeShape(baseM, baseN, baseK),
                 .scaleFactor = tiling->matmulTiling.mxTypePara & 0xff,  // 0xff：to obtain the lower 8 bits

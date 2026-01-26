@@ -20,10 +20,10 @@
 
 namespace Act {
 namespace Prologue {
-template <class DispatchPolicy, class InType, class OutType, class TileShapeL1>
-class BlockPrologueNN : public BlockPrologue<DispatchPolicy, InType, OutType, TileShapeL1> {
+template <class DispatchPolicy, class InType, class OutType, class BiasType, class TileShapeL1>
+class BlockPrologueNN : public BlockPrologue<DispatchPolicy, InType, OutType, BiasType, TileShapeL1> {
 public:
-    using PrologueAct = BlockPrologue<DispatchPolicy, InType, OutType, TileShapeL1>;
+    using PrologueAct = BlockPrologue<DispatchPolicy, InType, OutType, BiasType, TileShapeL1>;
     using Arguments = typename PrologueAct::Arguments;
     using Params = typename PrologueAct::Params;
 
@@ -41,11 +41,14 @@ public:
         auto baseM = static_cast<uint32_t>(tiling->matmulTiling.baseM);
         auto baseN = static_cast<uint32_t>(tiling->matmulTiling.baseN);
         return {.ptrB = args.ptrB,
+                .ptrBias = args.ptrBias,
                 .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
                 .layoutB = args.layoutB,
+                .layoutBias = args.layoutBias,
                 .l1BufNum = tiling->BL1Pingpong,
                 .nUbSize = static_cast<int32_t>(tiling->nBubSize),
-                .kUbSize = static_cast<int32_t>(tiling->kBubSize)};
+                .kUbSize = static_cast<int32_t>(tiling->kBubSize),
+                .hasBias = bool(tiling->matmulTiling.isBias)};
     }
 };
 }  // namespace Prologue

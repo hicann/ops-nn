@@ -81,22 +81,31 @@ public:
         BlockPrologue blockPrologue(params.prologue);
         auto tensorB =
             MakeTensor((__gm__ typename BlockPrologue::ElementIn *)params.prologue.ptrB, params.prologue.layoutB);
+        AscendC::GlobalTensor<AscendC::TensorTrait<typename BlockPrologue::ElementBias, AscendC::TPosition::GM,
+                                                   decltype(params.prologue.layoutBias)>>
+            tensorBias;
+        if (params.prologue.hasBias) {
+            tensorBias = MakeTensor((__gm__ typename BlockPrologue::ElementBias *)params.prologue.ptrBias,
+                                    params.prologue.layoutBias);
+        }
         auto curBlockIdx = AscendC::GetBlockIdx() / AscendC::GetTaskRation();
         for (uint32_t loopIdx = curBlockIdx; loopIdx < coreLoops; loopIdx += AscendC::GetBlockNum()) {
             auto blockCoord = scheduler.GetBlockCoord(loopIdx);
             auto actualBlockShape = scheduler.GetActualBlockShape(blockCoord);
             auto coordN = Get<1>(blockCoord);
             auto tileShapeN = Get<1>(actualBlockShape);
+            auto tensorBlockBias =
+                params.prologue.hasBias ? GetTile(tensorBias, MakeCoord(coordN), MakeShape(tileShapeN)) : tensorBias;
             if constexpr (weightNz) {
                 auto tileShape = MakeShape(MakeShape(_16{}, CeilDiv(tileShapeN, 16UL)),
                                            Get<1>(tensorB.GetTensorTrait().GetLayout().GetShape()));
                 auto tensorBlockB =
                     GetTile(tensorB, MakeCoord(MakeCoord(_, CeilDiv(coordN, 16UL)), MakeCoord(_, _)), tileShape);
-                blockPrologue(tensorBlockB, actualBlockShape, params.prologue);
+                blockPrologue(tensorBlockB, tensorBlockBias, actualBlockShape, params.prologue);
             } else {
                 auto tileShape = MakeShape(tileShapeN, Get<1>(tensorB.GetTensorTrait().GetLayout().GetShape()));
                 auto tensorBlockB = GetTile(tensorB, MakeCoord(coordN, 0), tileShape);
-                blockPrologue(tensorBlockB, actualBlockShape, params.prologue);
+                blockPrologue(tensorBlockB, tensorBlockBias, actualBlockShape, params.prologue);
             }
         }
     }
@@ -112,13 +121,6 @@ public:
             MakeTensor((__gm__ typename BlockMmad::ElementScale *)(params.mmad.ptrAScale), params.mmad.layoutScale);
         auto tensorScaleB =
             MakeTensor((__gm__ typename BlockMmad::ElementScale *)(params.mmad.ptrBScale), params.mmad.layoutScale);
-        AscendC::GlobalTensor<AscendC::TensorTrait<typename BlockMmad::ElementBias, AscendC::TPosition::GM,
-                                                   decltype(params.mmad.layoutBias)>>
-            tensorBias;
-        if (params.mmad.isBias) {
-            tensorBias =
-                MakeTensor((__gm__ typename BlockMmad::ElementBias *)(params.mmad.ptrBias), params.mmad.layoutBias);
-        }
         auto tensorC = MakeTensor((__gm__ typename BlockMmad::ElementC *)(params.mmad.ptrC), params.mmad.layoutC);
         auto sizeK = Get<1>(tensorA.GetTensorTrait().GetLayout().GetShape());
         auto sizeGn = Get<1>(tensorScaleA.GetTensorTrait().GetLayout().GetShape());
@@ -133,14 +135,7 @@ public:
             auto tensorBlockScaleA = GetTile(tensorScaleA, MakeCoord(coordM, 0), MakeShape(tileShapeM, sizeGn));
             auto tensorBlockScaleB = GetTile(tensorScaleB, MakeCoord(coordN, 0), MakeShape(tileShapeN, sizeGn));
             auto tensorBlockC = GetTile(tensorC, MakeCoord(coordM, coordN), MakeShape(tileShapeM, tileShapeN));
-            if (params.mmad.isBias) {
-                auto tensorBlockBias = GetTile(tensorBias, MakeCoord(coordN), MakeShape(tileShapeN));
-                blockMmad(tensorBlockA, tensorBlockScaleA, tensorBlockScaleB, tensorBlockBias, tensorBlockC,
-                          actualBlockShape, params.mmad);
-            } else {
-                blockMmad(tensorBlockA, tensorBlockScaleA, tensorBlockScaleB, tensorBias, tensorBlockC,
-                          actualBlockShape, params.mmad);
-            }
+            blockMmad(tensorBlockA, tensorBlockScaleA, tensorBlockScaleB, tensorBlockC, actualBlockShape, params.mmad);
         }
     }
 

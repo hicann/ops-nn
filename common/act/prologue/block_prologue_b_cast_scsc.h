@@ -47,35 +47,44 @@ using AscendC::VECTOR_REG_WIDTH;
 using AscendC::WaitFlag;
 namespace MicroAPI = AscendC::MicroAPI;
 
-template <class InType, class OutType, class TileShapeL1>
-class BlockPrologue<BCastScsc, InType, OutType, TileShapeL1> {
+template <class InType, class OutType, class BiasType, class TileShapeL1>
+class BlockPrologue<BCastScsc, InType, OutType, BiasType, TileShapeL1> {
 public:
     using ElementIn = typename InType::Element;
     using LayoutIn = typename InType::Layout;
     using ElementOut = typename OutType::Element;
     using LayoutOut = typename OutType::Layout;
+    using ElementBias = typename BiasType::Element;
+    using LayoutBias = typename BiasType::Layout;
 
     struct Arguments {
         GM_ADDR ptrB;
+        GM_ADDR ptrBias;
         LayoutIn layoutB;
+        LayoutBias layoutBias;
     };
 
     struct Params {
         GM_ADDR ptrB;
+        GM_ADDR ptrBias;
         TileShapeL1 tileShapeL1;
         LayoutIn layoutB;
+        LayoutBias layoutBias;
         int64_t l1BufNum;
         int32_t nUbSize;
         int32_t kUbSize;
+        bool hasBias;
     };
 
-    template <class TensorB, class ActualBlockShape>
-    __aicore__ inline void operator()(const TensorB &bGlobal, const ActualBlockShape &actualBlockShape,
-                                      const Params &params)
+    template <class TensorB, class TensorBias, class ActualBlockShape>
+    __aicore__ inline void operator()(const TensorB &bGlobal, const TensorBias &biasGlobal,
+                                      const ActualBlockShape &actualBlockShape, const Params &params)
     {
         nL1Len_ = Get<1>(actualBlockShape);
+        ComputeBiasUbParams();
         uint64_t kTileCount = CeilDiv(kSize_, Get<2>(params.tileShapeL1));
         for (uint64_t kLoopIdx = 0; kLoopIdx < kTileCount; kLoopIdx++) {
+            calcBias_ = hasBias_ && kLoopIdx == 0 && nBiasUbLen_ > 0;
             kGmOffset_ = kLoopIdx * kL1Size_;
             kL1Len_ = Min(kSize_ - kGmOffset_, kL1Size_);
             TensorB tensorBlockB;
@@ -93,20 +102,20 @@ public:
             if constexpr (weightNz) {  // weightNz 只有4buffer 1buffer，1buffer直接使用AIV0
                 if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
                     ComputeUbParamsByL1Size();
-                    VectorProcess(tensorBlockB);
+                    VectorProcess(tensorBlockB, biasGlobal);
                 } else if (GetSubBlockIdx() == 0) {
-                    VectorProcess(tensorBlockB);
+                    VectorProcess(tensorBlockB, biasGlobal);
                 }
             } else {  // ND格式有4 buffer 2 buffer 1 buffer场景
                 if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
                     ComputeUbParamsByL1Size();
-                    VectorProcess(tensorBlockB);
+                    VectorProcess(tensorBlockB, biasGlobal);
                 } else if (l1BufNum_ == DOUBLE_BUFFER) {
                     if (l1BufIdx_ == GetSubBlockIdx()) {
-                        VectorProcess(tensorBlockB);
+                        VectorProcess(tensorBlockB, biasGlobal);
                     }
                 } else if (GetSubBlockIdx() == 0) {
-                    VectorProcess(tensorBlockB);
+                    VectorProcess(tensorBlockB, biasGlobal);
                 }
             }
             l1BufIdx_ = (l1BufIdx_ + 1) % l1BufNum_;
@@ -115,6 +124,7 @@ public:
 
     __aicore__ inline BlockPrologue(const Params &params)
     {
+        hasBias_ = params.hasBias;
         l1BufNum_ = params.l1BufNum;
         nUbSize_ = params.nUbSize;
         kUbSize_ = params.kUbSize;
@@ -125,13 +135,14 @@ public:
             nSize_ = Get<0>(params.layoutB.GetShape());
             kSize_ = Get<1>(params.layoutB.GetShape());
         }
+        nL1Size_ = Get<1>(params.tileShapeL1);
         kL1Size_ = Get<3>(params.tileShapeL1);  // 3 in order to obtain k
-        bL1Size_ = Get<1>(params.tileShapeL1) * kL1Size_;
+        bL1Size_ = nL1Size_ * kL1Size_;
         aL1Size_ = Get<0>(params.tileShapeL1) * Get<2>(params.tileShapeL1);  // 2 in order to obtain k
         if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
             if constexpr (weightNz) {
                 vecWeightInLen_ = (l1BufNum_ * nUbSize_ * kUbSize_) >> INT4_DTYPE_PARAM;
-                vecWeightOutLen_ = l1BufNum_ * nUbSize_ * kUbSize_ * sizeof(ElementOut);
+                vecWeightOutLen_ = l1BufNum_ * nUbSize_ * kUbSize_;
             } else {
                 vecWeightInLen_ = (l1BufNum_ * (nUbSize_ * CeilAlign(kUbSize_, OFFSET_64))) >> INT4_DTYPE_PARAM;
                 vecWeightOutLen_ =
@@ -140,7 +151,7 @@ public:
         } else {
             if constexpr (weightNz) {
                 vecWeightInLen_ = (nUbSize_ * kUbSize_) >> INT4_DTYPE_PARAM;
-                vecWeightOutLen_ = nUbSize_ * kUbSize_ * sizeof(ElementOut);
+                vecWeightOutLen_ = nUbSize_ * kUbSize_;
             } else {
                 vecBufNum_ = Min(l1BufNum_, DOUBLE_BUFFER);
                 vecWeightInLen_ = (vecBufNum_ * (nUbSize_ * CeilAlign(kUbSize_, OFFSET_64))) >> INT4_DTYPE_PARAM;
@@ -149,7 +160,17 @@ public:
             }
         }
         weightOutUb_ = AscendC::LocalTensor<ElementOut>(AscendC::TPosition::VECCALC, 0, vecWeightOutLen_);
-        weightInUb_ = AscendC::LocalTensor<ElementIn>(AscendC::TPosition::VECCALC, vecWeightOutLen_, vecWeightInLen_);
+        uint64_t ubOffset = vecWeightOutLen_ * sizeof(ElementOut);
+        weightInUb_ = AscendC::LocalTensor<ElementIn>(AscendC::TPosition::VECCALC, ubOffset, vecWeightInLen_);
+        if (hasBias_) {
+            vecBiasLen_ = l1BufNum_ == QUADRUPLE_BUFFER
+                              ? l1BufNum_ * BIAS_SPLIT_N_L1_SIZE
+                              : l1BufNum_ * CeilAlign(nL1Size_, static_cast<uint64_t>(VEC_MAX_ELEM_B16));
+            ubOffset += vecWeightInLen_ * sizeof(ElementIn);
+            biasOutUb_ = AscendC::LocalTensor<ElementBias>(AscendC::TPosition::VECCALC, ubOffset, vecBiasLen_);
+            ubOffset += vecBiasLen_ * sizeof(ElementBias);
+            biasInUb_ = AscendC::LocalTensor<ElementBias>(AscendC::TPosition::VECCALC, ubOffset, vecBiasLen_);
+        }
         l1Local_ = AscendC::LocalTensor<ElementOut>(AscendC::TPosition::B1, 0, L1_BUFFER_SIZE);
     }
 
@@ -194,15 +215,48 @@ public:
     }
 
 private:
+    struct VfParamsNormal {
+        uint16_t outExtend;
+        uint16_t innerExtend;
+        uint32_t dataBlockStride;
+        uint32_t repeatStride;
+        int32_t outDimOffset;
+        uint32_t maskB8Tail0;
+        uint32_t maskB8Tail1;
+        __ubuf__ int8_t *weightInUbBaseAddr;
+        __ubuf__ ElementOut *weightOutUbAddr;
+        __ubuf__ ElementOut *weightOutUbAddr1;
+    };
+
+    struct VfParamsNz {
+        uint16_t innerExtend;
+        uint32_t innerDstExtend;
+        uint32_t innerSrcExtend;
+        uint32_t shiftLeftSize;
+        uint32_t andMask;
+        __ubuf__ int8_t *weightInUbBaseAddr;
+        __ubuf__ ElementOut *weightOutUbAddr;
+    };
+
+    struct VfParamsBias {
+        uint16_t biasLoopNum;
+        __ubuf__ ElementBias *biasInUbBaseAddr;
+        __ubuf__ ElementBias *biasOutUbAddr;
+    };
+
     __aicore__ inline void WaitForCube() { CrossCoreWaitFlag<SYNC_MODE4, PIPE_MTE3>(SYNC_AIV_AIC_FLAG); }
 
     __aicore__ inline void NotifyCube() { CrossCoreSetFlag<SYNC_MODE4, PIPE_MTE3>(1); }
 
-    template <class TensorB>
-    __aicore__ inline void VectorProcess(const TensorB &tensorBlockB)
+    template <class TensorB, class TensorBias>
+    __aicore__ inline void VectorProcess(const TensorB &tensorBlockB, const TensorBias &tensorBias)
     {
         WaitForCube();
-        ProcessL1(tensorBlockB);
+        if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
+            ProcessL1NK4Buffer(tensorBlockB, tensorBias);
+        } else {
+            ProcessL1NK(tensorBlockB, tensorBias);
+        }
         NotifyCube();
     }
 
@@ -212,36 +266,79 @@ private:
             if (kL1Len_ > kUbSize_) {
                 kUbLen_ = kUbSize_;
                 if (GetSubBlockIdx() == 1) {
-                    kL1Aiv1Offset_ = kUbLen_;
+                    kL1Offset_ = kUbLen_;
                     kUbLen_ = kL1Len_ - kUbLen_;
                 }
             } else {
-                kL1Aiv1Offset_ = 0;
+                kL1Offset_ = 0;
             }
         } else {
             if (nL1Len_ > nUbSize_) {
                 nUbLen_ = nUbSize_;
                 if (GetSubBlockIdx() == 1) {
-                    nL1Aiv1Offset_ = nUbLen_;
+                    nL1Offset_ = nUbLen_;
                     nUbLen_ = nL1Len_ - nUbLen_;
                 }
             } else {
-                nL1Aiv1Offset_ = 0;
+                nL1Offset_ = 0;
             }
         }
     }
 
-    template <class TensorB>
-    __aicore__ inline void ProcessL1(const TensorB &bGlobal)
+    __aicore__ inline void ComputeBiasUbParams()
+    {
+        if (!hasBias_) {
+            return;
+        }
+
+        nBiasUbLen_ = nL1Len_;
+        if (likely(l1BufNum_ == QUADRUPLE_BUFFER)) {
+            nBiasUbLen_ = nL1Len_ < BIAS_SPLIT_N_L1_SIZE ? nL1Len_ : BIAS_SPLIT_N_L1_SIZE;
+            if (GetSubBlockIdx() == 1) {
+                nL1BiasOffset_ = nBiasUbLen_;
+                nBiasUbLen_ = nL1Len_ - nBiasUbLen_;
+            }
+        }
+    }
+
+    template <class TensorB, class TensorBias>
+    __aicore__ inline void ProcessL1NK4Buffer(const TensorB &bGlobal, const TensorBias &biasGlobal)
     {
         int64_t l1Offset = (l1BufIdx_ & 0x1) * Act::Gemm::Max(L1_BUFFER_HALF_SIZE / sizeof(ElementOut),
                                                               DOUBLE_BUFFER * bL1Size_ + aL1Size_) +
                            ((l1BufIdx_ & 0x2) > 1) * bL1Size_;
+        l1Offset += nL1Offset_ * ONE_BLK_SIZE + kL1Offset_ * CeilAlign(nL1Len_, BLOCK_CUBE);
+        ProcessL1(bGlobal, biasGlobal, l1Offset);
+    }
+
+    template <class TensorB, class TensorBias>
+    __aicore__ inline void ProcessL1NK(const TensorB &bGlobal, const TensorBias &biasGlobal)
+    {
+        int32_t bUbNFactor = CeilDiv(nL1Len_, nUbSize_);
+        int32_t bUbKFactor = CeilDiv(kL1Len_, kUbSize_);
+        for (int32_t bUbNLoopIdx = 0; bUbNLoopIdx < bUbNFactor; bUbNLoopIdx++) {
+            nL1Offset_ = bUbNLoopIdx * nUbSize_;
+            nUbLen_ = Min(nL1Len_ - static_cast<int32_t>(nL1Offset_), nUbSize_);
+            for (int32_t bUbKLoopIdx = 0; bUbKLoopIdx < bUbKFactor; bUbKLoopIdx++) {
+                kL1Offset_ = bUbKLoopIdx * kUbSize_;
+                kUbLen_ = Min(kL1Len_ - static_cast<int32_t>(kL1Offset_), kUbSize_);
+                int64_t l1Offset = (l1BufIdx_ & 0x1) * L1_BUFFER_HALF_SIZE / sizeof(ElementOut) +
+                                   CeilAlign(nL1Len_, BLOCK_CUBE) * kL1Offset_ + nL1Offset_ * ONE_BLK_SIZE;
+                calcBias_ = calcBias_ && bUbNLoopIdx == 0 && bUbKLoopIdx == 0;  // 不管weight算几轮，bias只在第一轮计算
+                ProcessL1(bGlobal, biasGlobal, l1Offset);
+            }
+        }
+    }
+
+    template <class TensorB, class TensorBias>
+    __aicore__ inline void ProcessL1(const TensorB &bGlobal, const TensorBias &biasGlobal, int64_t l1Offset)
+    {
         idx_ += 1;
         ubBufIdx_ = idx_ % l1BufNum_;
         if (idx_ >= l1BufNum_) {
             WaitFlag<HardEvent::V_MTE2>(ubBufIdx_);
         }
+        CopyInTensorBias(biasGlobal);
         CopyInTensorWeight(bGlobal);
         SetFlag<HardEvent::MTE2_V>(ubBufIdx_);
         if (idx_ >= l1BufNum_) {
@@ -252,24 +349,13 @@ private:
         SetFlag<HardEvent::V_MTE3>(ubBufIdx_);
         SetFlag<HardEvent::V_MTE2>(ubBufIdx_);
         WaitFlag<HardEvent::V_MTE3>(ubBufIdx_);
-        int64_t nl1Offset = 0;
-        int64_t kl1Offset = 0;
-        if constexpr (weightNz) {
-            if (GetSubBlockIdx() == 1 && kL1Len_ > kUbSize_) {
-                kl1Offset += kUbSize_;
-            }
-        } else {
-            if (GetSubBlockIdx() == 1 && nL1Len_ > nUbSize_) {
-                nl1Offset += nUbSize_;
-            }
-        }
-        l1Offset += nl1Offset * ONE_BLK_SIZE + kl1Offset * CeilAlign(nL1Len_, BLOCK_CUBE);
         if constexpr (weightNz) {
             CopyVecOut2L1(l1Offset, weightOutUb_[ubBufIdx_ * VEC_MAX_ELEM_B8]);
         } else {
             uint64_t weightOutUbOffset = ubBufIdx_ * (vecWeightOutLen_ / sizeof(ElementOut) / l1BufNum_);
             CopyVecOut2L1(l1Offset, weightOutUb_[weightOutUbOffset]);
         }
+        CopyBiasVecOut2L1();
         SetFlag<HardEvent::MTE3_V>(ubBufIdx_);
     }
 
@@ -293,10 +379,26 @@ private:
         AscendC::GlobalTensor<ElementIn> srcTensor;
         srcTensor.SetGlobalBuffer(bGlobal.address_);
         if constexpr (weightNz) {
-            DataCopyPad(weightInUb_[weightInOffset], srcTensor[kL1Aiv1Offset_ * nSize_], intriParams, padParams);
+            DataCopyPad(weightInUb_[weightInOffset], srcTensor[kL1Offset_ * nSize_ + nL1Offset_ * C0_SIZE_B8],
+                        intriParams, padParams);
         } else {
-            DataCopyPad(weightInUb_[weightInOffset], srcTensor[nL1Aiv1Offset_ * kSize_], intriParams, padParams);
+            DataCopyPad(weightInUb_[weightInOffset], srcTensor[nL1Offset_ * kSize_ + kL1Offset_], intriParams,
+                        padParams);
         }
+    }
+
+    template <class TensorBias>
+    __aicore__ inline void CopyInTensorBias(const TensorBias &tensorBias)
+    {
+        if (!calcBias_) {
+            return;
+        }
+        AscendC::DataCopyParams dataCopyParams = {1, static_cast<uint16_t>(nBiasUbLen_ * sizeof(ElementBias)), 0, 0};
+        AscendC::DataCopyPadParams dataCopyPadParams;
+        AscendC::GlobalTensor<ElementBias> srcTensor;
+        srcTensor.SetGlobalBuffer(tensorBias.address_);
+        uint64_t biasInOffset = ubBufIdx_ * vecBiasLen_ / l1BufNum_;
+        AscendC::DataCopyPad(biasInUb_[biasInOffset], srcTensor[nL1BiasOffset_], dataCopyParams, dataCopyPadParams);
     }
 
     __aicore__ inline void CopyVecOut2L1(int64_t l1Offset, const AscendC::LocalTensor<ElementOut> &ubLocal)
@@ -317,74 +419,117 @@ private:
         }
     }
 
-    __aicore__ inline void AntiQuantComputeNormal()
+    __aicore__ inline void CopyBiasVecOut2L1()
     {
-        uint16_t outExtend = static_cast<uint16_t>(nUbLen_);
-        uint16_t innerExtend = CeilDiv(CeilAlign(kUbLen_, UB_ALIGN_SIZE_FOR_4BITS), VECTOR_REG_WIDTH_FOR_4BITS);
-        uint32_t dataBlockStride = CeilAlign(nUbLen_, BLOCK_CUBE) + 1;
-        uint32_t repeatStride = dataBlockStride * BLOCK_CUBE;
-        int32_t outDimOffset = ONE_BLOCK_SIZE - innerExtend * repeatStride * ONE_BLOCK_SIZE;
-        uint32_t maskB8Tail0 = Min(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS, static_cast<int32_t>(VECTOR_REG_WIDTH)) +
-                               kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
-        uint32_t maskB8Tail1 =
-            Act::Gemm::Max(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS - static_cast<int32_t>(VECTOR_REG_WIDTH), 0) +
-            kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
-        RegCompute(outExtend, innerExtend, dataBlockStride, repeatStride, outDimOffset, maskB8Tail0, maskB8Tail1);
+        if (!calcBias_) {
+            return;
+        }
+
+        // l1Local_原始数据类型为B8, biasL1Offset以B计，跳过前面weight所占的L1空间
+        uint64_t biasL1Offset =
+            (l1BufIdx_ & 0x1) * L1_BUFFER_HALF_SIZE + CeilDiv(l1BufNum_, DOUBLE_BUFFER) * bL1Size_ +
+            ((l1BufIdx_ & 0x2) > 1) * CeilAlign(nL1Size_, static_cast<uint64_t>(BLOCK_CUBE)) * sizeof(ElementBias);
+        if (likely(l1BufNum_ == QUADRUPLE_BUFFER) && GetSubBlockIdx() == 1) {
+            biasL1Offset += BIAS_SPLIT_N_L1_SIZE * sizeof(ElementBias);
+        }
+        AscendC::DataCopyParams params;
+        params.blockLen = CeilAlign(nBiasUbLen_, BLOCK_CUBE) * sizeof(ElementBias) / ONE_BLK_SIZE;
+        params.blockCount = 1;
+        params.srcStride = 0;
+        params.dstStride = 0;
+        DataCopy(l1Local_[biasL1Offset].template ReinterpretCast<ElementBias>(),
+                 biasOutUb_[ubBufIdx_ * vecBiasLen_ / l1BufNum_], params);
     }
 
-    __aicore__ inline void RegCompute(uint16_t outExtend, uint16_t innerExtend, uint32_t dataBlockStride,
-                                      uint32_t repeatStride, int32_t outDimOffset, uint32_t maskB8Tail0,
-                                      uint32_t maskB8Tail1)
+    __aicore__ inline void AntiQuantComputeNormal(const VfParamsBias &biasParams)
     {
-        __VEC_SCOPE__
-        {
-            __local_mem__ int8_t *weightInUbBaseAddr = weightInUbBaseAddr_;
-            __local_mem__ ElementOut *weightOutUbAddr = weightOutUbAddr_;
-            __local_mem__ ElementOut *weightOutUbAddr1 = weightOutUbAddr1_;
-            MicroAPI::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, sAnd0, sAnd1, wShr, wShl, s1, wOr0, wOr1, wdup1,
-                wdup4;
-            MicroAPI::RegTensor<int8_t> wdup0, wdup2, wdup3;
-            MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
-            MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
-            MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
-            // 一次处理一个N轴
-            for (uint16_t outIdx = 0; outIdx < outExtend; ++outIdx) {
-                uint32_t maskWeight0Tmp = maskB8Tail0;
-                uint32_t maskWeight1Tmp = maskB8Tail1;
-                for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {
-                    MicroAPI::MaskReg MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
-                    MicroAPI::MaskReg MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
-                    MicroAPI::AddrReg aregWeightB8 =
-                        MicroAPI::CreateAddrReg<uint8_t>(outIdx, kUbLen_ >> 1, repeatIdx, VEC_MAX_ELEM_B8);
-                    MicroAPI::DataCopy(wLoad0, (__local_mem__ uint8_t *&)weightInUbBaseAddr, aregWeightB8);
-                    // 提取E/M
-                    MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg); //vr1
-                    MicroAPI::And(wShr, wShr, wdup1, preg);          //vr1
-                    MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);  //vr2
-                    MicroAPI::And(wShl, wShl, wdup1, preg);          //vr2
-                    // 提取S
-                    MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg);    //vr3
-                    MicroAPI::And(sAnd0, s1, wdup4, preg);           //vr3
-                    MicroAPI::And(sAnd1, wLoad0, wdup4, preg);       //vr4
-                    // 合并S/E/M
-                    MicroAPI::Or(wOr0, wShr, sAnd1, preg);           //odd
-                    MicroAPI::Or(wOr1, wShl, sAnd0, preg);           //even
-                    MicroAPI::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
-                    MicroAPI::DataCopy<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                       MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        (__local_mem__ uint8_t *&)weightOutUbAddr, wDIntlv0, dataBlockStride, repeatStride,
-                        MaskRegB8Tail0);
-                    MicroAPI::DataCopy<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
-                                       MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        (__local_mem__ uint8_t *&)weightOutUbAddr1, wDIntlv1, dataBlockStride, repeatStride,
-                        MaskRegB8Tail1);
-                }
-                weightOutUbAddr += outDimOffset;
-                weightOutUbAddr1 += outDimOffset;
+        VfParamsNormal wParams;
+        wParams.outExtend = static_cast<uint16_t>(nUbLen_);
+        wParams.innerExtend = CeilDiv(CeilAlign(kUbLen_, UB_ALIGN_SIZE_FOR_4BITS), VECTOR_REG_WIDTH_FOR_4BITS);
+        wParams.dataBlockStride = CeilAlign(nUbLen_, BLOCK_CUBE) + 1;
+        wParams.repeatStride = wParams.dataBlockStride * BLOCK_CUBE;
+        wParams.outDimOffset = ONE_BLOCK_SIZE - wParams.innerExtend * wParams.repeatStride * ONE_BLOCK_SIZE;
+        wParams.maskB8Tail0 = Min(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS, static_cast<int32_t>(VECTOR_REG_WIDTH)) +
+                              kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
+        wParams.maskB8Tail1 =
+            Act::Gemm::Max(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS - static_cast<int32_t>(VECTOR_REG_WIDTH), 0) +
+            kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
+        wParams.weightInUbBaseAddr = weightInUbBaseAddr_;
+        wParams.weightOutUbAddr = weightOutUbAddr_;
+        wParams.weightOutUbAddr1 = weightOutUbAddr1_;
+        if (calcBias_) {
+            RegCompute<true>(wParams, biasParams);
+        } else {
+            RegCompute<false>(wParams, biasParams);
+        }
+    }
+
+    __simd_callee__ inline void RegBiasCompute(const VfParamsBias biasParams)
+    {
+        MicroAPI::RegTensor<ElementBias> biasVreg, factorVreg;
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<ElementBias, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::Duplicate<ElementBias, MicroAPI::MaskMergeMode::ZEROING>(factorVreg, BIAS_REDUCE_FACTOR, maskAll);
+
+        for (uint16_t nLoopIdx = 0; nLoopIdx < biasParams.biasLoopNum; ++nLoopIdx) {
+            MicroAPI::AddrReg biasAreg = MicroAPI::CreateAddrReg<ElementBias>(nLoopIdx, VEC_MAX_ELEM_B16);
+            MicroAPI::LoadAlign<ElementBias, MicroAPI::LoadDist::DIST_NORM>(biasVreg, biasParams.biasInUbBaseAddr,
+                                                                            biasAreg);
+            MicroAPI::Mul(biasVreg, biasVreg, factorVreg, maskAll);
+            MicroAPI::StoreAlign<ElementBias, MicroAPI::StoreDist::DIST_NORM_B16>(biasParams.biasOutUbAddr, biasVreg,
+                                                                                  biasAreg, maskAll);
+        }
+    }
+
+    template <bool calcBias>
+    __simd_vf__ inline void RegCompute(const VfParamsNormal wParams, const VfParamsBias biasParams)
+    {
+        if constexpr (calcBias) {
+            RegBiasCompute(biasParams);
+        }
+        __ubuf__ ElementOut *weightOutUbAddr = wParams.weightOutUbAddr;
+        __ubuf__ ElementOut *weightOutUbAddr1 = wParams.weightOutUbAddr1;
+        MicroAPI::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, sAnd0, sAnd1, wShr, wShl, s1, wOr0, wOr1, wdup1, wdup4;
+        MicroAPI::RegTensor<int8_t> wdup0, wdup2, wdup3;
+        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
+        MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
+        MicroAPI::Duplicate<uint8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
+        // 一次处理一个N轴
+        for (uint16_t outIdx = 0; outIdx < wParams.outExtend; ++outIdx) {
+            uint32_t maskWeight0Tmp = wParams.maskB8Tail0;
+            uint32_t maskWeight1Tmp = wParams.maskB8Tail1;
+            for (uint16_t repeatIdx = 0; repeatIdx < wParams.innerExtend; ++repeatIdx) {
+                MicroAPI::MaskReg MaskRegB8Tail0 = MicroAPI::UpdateMask<uint8_t>(maskWeight0Tmp);
+                MicroAPI::MaskReg MaskRegB8Tail1 = MicroAPI::UpdateMask<uint8_t>(maskWeight1Tmp);
+                MicroAPI::AddrReg aregWeightB8 =
+                    MicroAPI::CreateAddrReg<uint8_t>(outIdx, kUbLen_ >> 1, repeatIdx, VEC_MAX_ELEM_B8);
+                MicroAPI::LoadAlign(wLoad0, (__ubuf__ uint8_t *&)wParams.weightInUbBaseAddr, aregWeightB8);
+                // 提取E/M
+                MicroAPI::ShiftRight(wShr, wLoad0, wdup0, preg);  // vr1
+                MicroAPI::And(wShr, wShr, wdup1, preg);           // vr1
+                MicroAPI::ShiftLeft(wShl, wLoad0, wdup2, preg);   // vr2
+                MicroAPI::And(wShl, wShl, wdup1, preg);           // vr2
+                // 提取S
+                MicroAPI::ShiftLeft(s1, wLoad0, wdup3, preg);  // vr3
+                MicroAPI::And(sAnd0, s1, wdup4, preg);         // vr3
+                MicroAPI::And(sAnd1, wLoad0, wdup4, preg);     // vr4
+                // 合并S/E/M
+                MicroAPI::Or(wOr0, wShr, sAnd1, preg);  // odd
+                MicroAPI::Or(wOr1, wShl, sAnd0, preg);  // even
+                MicroAPI::Interleave(wDIntlv0, wDIntlv1, wOr1, wOr0);
+                MicroAPI::StoreAlign<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                     MicroAPI::PostLiteral::POST_MODE_UPDATE>((__ubuf__ uint8_t *&)weightOutUbAddr,
+                                                                              wDIntlv0, wParams.dataBlockStride,
+                                                                              wParams.repeatStride, MaskRegB8Tail0);
+                MicroAPI::StoreAlign<uint8_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                     MicroAPI::PostLiteral::POST_MODE_UPDATE>((__ubuf__ uint8_t *&)weightOutUbAddr1,
+                                                                              wDIntlv1, wParams.dataBlockStride,
+                                                                              wParams.repeatStride, MaskRegB8Tail1);
             }
+            weightOutUbAddr += wParams.outDimOffset;
+            weightOutUbAddr1 += wParams.outDimOffset;
         }
     }
 
@@ -398,52 +543,72 @@ private:
             weightOutUbOffset = ubBufIdx_ * (vecWeightOutLen_ / sizeof(ElementOut) / l1BufNum_);
         }
         weightInUbOffset = ubBufIdx_ * (vecWeightInLen_ << INT4_DTYPE_PARAM) / l1BufNum_;
-        weightInUbBaseAddr_ = (__local_mem__ int8_t *)weightInUb_[weightInUbOffset].GetPhyAddr();
-        weightOutUbAddr_ = (__local_mem__ ElementOut *)weightOutUb_[weightOutUbOffset].GetPhyAddr();
+        weightInUbBaseAddr_ = (__ubuf__ int8_t *)weightInUb_[weightInUbOffset].GetPhyAddr();
+        weightOutUbAddr_ = (__ubuf__ ElementOut *)weightOutUb_[weightOutUbOffset].GetPhyAddr();
+
+        VfParamsBias biasParams;
+        if (calcBias_) {
+            uint64_t biasUbOffset = ubBufIdx_ * vecBiasLen_ / l1BufNum_;
+            biasParams.biasLoopNum = CeilDiv(nBiasUbLen_, VEC_MAX_ELEM_B16);
+            biasParams.biasInUbBaseAddr = (__ubuf__ ElementBias *)biasInUb_[biasUbOffset].GetPhyAddr();
+            biasParams.biasOutUbAddr = (__ubuf__ ElementBias *)biasOutUb_[biasUbOffset].GetPhyAddr();
+        }
+
         if constexpr (!weightNz) {
             uint16_t blockStride = CeilAlign(nUbLen_, BLOCK_CUBE) + 1;
             weightOutUbAddr1_ = weightOutUbAddr_ + VEC_MAX_ELEM_B8 * blockStride;
-            AntiQuantComputeNormal();
+            AntiQuantComputeNormal(biasParams);
         } else {
-            AntiQuantComputeNKMxNz();
+            AntiQuantComputeNKMxNz(biasParams);
         }
     }
 
-    __aicore__ inline void AntiQuantComputeNKMxNz()
+    __aicore__ inline void AntiQuantComputeNKMxNz(const VfParamsBias &biasParams)
     {
         static_assert(SupportType<ElementIn, fp4x2_e2m1_t, fp4x2_e1m2_t>(),
                       "only support fp4x2_e2m1_t and fp4x2_e1m2_t");
-        uint32_t shiftLeftSize =
+        VfParamsNz wParams;
+        wParams.shiftLeftSize =
             IsSameType<ElementIn, fp4x2_e2m1_t>::value ? E2M1_SHIFT_LEFT_SIZE : E1M2_SHIFT_LEFT_SIZE;
-        uint32_t andMask = IsSameType<ElementIn, fp4x2_e2m1_t>::value ? E2M1_AND_MASK : E1M2_AND_MASK;
-        uint16_t innerExtend = CeilDiv(kUbLen_ * nUbLen_, VECTOR_REG_WIDTH);
-        uint32_t innerDstExtend = VECTOR_REG_WIDTH * l1BufNum_;
-        uint32_t innerSrcExtend = VECTOR_REG_WIDTH >> 1;
-        __local_mem__ int8_t *weightInUbBaseAddr = weightInUbBaseAddr_;
-        __local_mem__ ElementOut *weightOutUbAddr = weightOutUbAddr_;
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
-            MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, shiftLeftSize, preg);
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
-            MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, andMask, preg);
-            for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {
-                MicroAPI::AddrReg aregWeightB8In = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, innerSrcExtend);
-                MicroAPI::AddrReg aregWeightB8Out = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, innerDstExtend);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
-                    (MicroAPI::RegTensor<uint8_t> &)wLoad0, (__local_mem__ uint8_t *&)weightInUbBaseAddr,
-                    aregWeightB8In);
-                MicroAPI::ShiftRight(wShr0, wLoad0, wdup0, preg);
-                MicroAPI::ShiftLeft(wShl, wLoad0, wdup1, preg);
-                MicroAPI::ShiftRight(wShr1, wShl, wdup0, preg);
-                MicroAPI::Select(wSel0, wShr1, wShr0, pregVsel);
-                MicroAPI::And(sAnd0, wSel0, wdup2, preg);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_NORM_B8>(
-                    (__local_mem__ uint8_t *&)weightOutUbAddr, (MicroAPI::RegTensor<uint8_t> &)sAnd0, aregWeightB8Out,
-                    preg);
-            }
+        wParams.andMask = IsSameType<ElementIn, fp4x2_e2m1_t>::value ? E2M1_AND_MASK : E1M2_AND_MASK;
+        wParams.innerExtend = CeilDiv(kUbLen_ * nUbLen_, VECTOR_REG_WIDTH);
+        wParams.innerDstExtend = VECTOR_REG_WIDTH * l1BufNum_;
+        wParams.innerSrcExtend = VECTOR_REG_WIDTH >> 1;
+        wParams.weightInUbBaseAddr = weightInUbBaseAddr_;
+        wParams.weightOutUbAddr = weightOutUbAddr_;
+        if (calcBias_) {
+            RegComputeNkNz<true>(wParams, biasParams);
+        } else {
+            RegComputeNkNz<false>(wParams, biasParams);
+        }
+    }
+
+    template <bool calcBias>
+    __simd_vf__ inline void RegComputeNkNz(const VfParamsNz wParams, const VfParamsBias biasParams)
+    {
+        if constexpr (calcBias) {
+            RegBiasCompute(biasParams);
+        }
+        MicroAPI::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
+        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup0, wParams.shiftLeftSize, preg);
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
+        MicroAPI::Duplicate<int8_t, MicroAPI::MaskMergeMode::ZEROING>(wdup2, wParams.andMask, preg);
+        for (uint16_t repeatIdx = 0; repeatIdx < wParams.innerExtend; ++repeatIdx) {
+            MicroAPI::AddrReg aregWeightB8In = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerSrcExtend);
+            MicroAPI::AddrReg aregWeightB8Out = MicroAPI::CreateAddrReg<uint8_t>(repeatIdx, wParams.innerDstExtend);
+            MicroAPI::LoadAlign<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
+                (MicroAPI::RegTensor<uint8_t> &)wLoad0, (__ubuf__ uint8_t *&)wParams.weightInUbBaseAddr,
+                aregWeightB8In);
+            MicroAPI::ShiftRight(wShr0, wLoad0, wdup0, preg);
+            MicroAPI::ShiftLeft(wShl, wLoad0, wdup1, preg);
+            MicroAPI::ShiftRight(wShr1, wShl, wdup0, preg);
+            MicroAPI::Select(wSel0, wShr1, wShr0, pregVsel);
+            MicroAPI::And(sAnd0, wSel0, wdup2, preg);
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_NORM_B8>(
+                (__ubuf__ uint8_t *&)wParams.weightOutUbAddr, (MicroAPI::RegTensor<uint8_t> &)sAnd0, aregWeightB8Out,
+                preg);
         }
     }
 
@@ -469,8 +634,11 @@ private:
     static constexpr uint32_t E2M1_AND_MASK = 0x9C;
     static constexpr uint32_t SHIFT_RIGHT_SIZE = 0x4;
     static constexpr int32_t VEC_MAX_ELEM_B8 = VECTOR_REG_WIDTH / sizeof(ElementOut);
+    static constexpr int32_t VEC_MAX_ELEM_B16 = VECTOR_REG_WIDTH / sizeof(ElementBias);
     static constexpr int32_t VECTOR_REG_WIDTH_FOR_4BITS = 512;
     static constexpr int32_t OFFSET_64 = 64;
+    static constexpr uint64_t BIAS_SPLIT_N_L1_SIZE = 256UL;
+    static constexpr ElementBias BIAS_REDUCE_FACTOR = static_cast<ElementBias>(0.015625f);
 
     uint64_t nSize_;
     uint64_t kSize_;
@@ -478,7 +646,9 @@ private:
     int32_t kUbSize_;
     int32_t nUbLen_;
     int32_t kUbLen_;
+    int32_t nBiasUbLen_ = 0;
     int64_t l1BufNum_;
+    uint64_t nL1Size_;
     uint64_t kL1Size_;
     uint64_t kGmOffset_;
     int32_t nL1Len_;
@@ -487,18 +657,24 @@ private:
     uint64_t bL1Size_;
     uint64_t vecWeightOutLen_;
     uint64_t vecWeightInLen_;
+    uint64_t vecBiasLen_;
     uint64_t ubBufIdx_;
     int64_t l1BufIdx_ = 0;
     int64_t idx_ = -1;
-    uint64_t nL1Aiv1Offset_ = 0;
-    uint64_t kL1Aiv1Offset_ = 0;
+    uint64_t nL1Offset_ = 0;
+    uint64_t kL1Offset_ = 0;
+    uint64_t nL1BiasOffset_ = 0;
     uint8_t vecBufNum_ = SINGLE_BUFFER;
-    uint8_t occupied_ = 0; //unused
-    __local_mem__ ElementOut *weightOutUbAddr_;
-    __local_mem__ ElementOut *weightOutUbAddr1_;
-    __local_mem__ int8_t *weightInUbBaseAddr_;
+    uint8_t occupied_ = 0;  // unused
+    bool hasBias_;
+    bool calcBias_ = false;
+    __ubuf__ ElementOut *weightOutUbAddr_;
+    __ubuf__ ElementOut *weightOutUbAddr1_;
+    __ubuf__ int8_t *weightInUbBaseAddr_;
     AscendC::LocalTensor<ElementIn> weightInUb_;
     AscendC::LocalTensor<ElementOut> weightOutUb_;
+    AscendC::LocalTensor<ElementBias> biasOutUb_;
+    AscendC::LocalTensor<ElementBias> biasInUb_;
     AscendC::LocalTensor<ElementOut> l1Local_;
     static constexpr bool weightNz = Gemm::is_2d_nz_c0_32<decltype(LayoutIn{}.GetStride())>::value;
 };

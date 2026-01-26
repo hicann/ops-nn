@@ -519,7 +519,7 @@ void QuantBatchMatmulV4BasicBlockTiling::GetBasicBlockSolution()
 }
 
 int64_t QuantBatchMatmulV4BasicBlockTiling::GetL1LoadSize(const BasicBlock &basicBlock,
-                                                                const L1TilingParam &l1Param) const
+                                                          const L1TilingParam &l1Param) const
 {
     int64_t l1LoadSize =
         static_cast<int64_t>(basicBlock.baseM * basicBlock.baseK * l1Param.stepKa * l1Param.A1BufferNum * aDtypeBits_ +
@@ -528,6 +528,9 @@ int64_t QuantBatchMatmulV4BasicBlockTiling::GetL1LoadSize(const BasicBlock &basi
     if (isMxType_) {
         l1LoadSize += basicBlock.baseK * (basicBlock.baseM * l1Param.stepKa + basicBlock.baseN * l1Param.stepKb) *
                       l1Param.scaleFactor * BUFF_NUM_2 / basicBlockParam_.groupSize;
+        if (hasBias_) {
+            l1LoadSize += (l1Param.B1BufferNum - 1) * basicBlock.baseN * biasDtypeBits_ / BYTE_SIZE;
+        }
     }
     return l1LoadSize;
 }

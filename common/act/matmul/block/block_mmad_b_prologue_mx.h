@@ -78,11 +78,9 @@ public:
         GM_ADDR ptrC = nullptr;
         GM_ADDR ptrAScale = nullptr;
         GM_ADDR ptrBScale = nullptr;
-        GM_ADDR ptrBias = nullptr;
         LayoutA layoutA;
         LayoutC layoutC;
         LayoutScale layoutScale;
-        LayoutBias layoutBias;
     };
 
     struct Params {
@@ -90,11 +88,9 @@ public:
         GM_ADDR ptrC = nullptr;
         GM_ADDR ptrAScale = nullptr;
         GM_ADDR ptrBScale = nullptr;
-        GM_ADDR ptrBias = nullptr;
         LayoutA layoutA;
         LayoutC layoutC;
         LayoutScale layoutScale;
-        LayoutBias layoutBias;
         L1TileShape tileShapeL1;
         L0TileShape tileShapeL0;
         int64_t scaleFactor;
@@ -102,9 +98,9 @@ public:
         bool isBias;
     };
 
-    template <class TensorA, class TensorAScale, class TensorBScale, class TensorBias, class TensorC, class Shape>
+    template <class TensorA, class TensorAScale, class TensorBScale, class TensorC, class Shape>
     __aicore__ inline void operator()(const TensorA &tensorA, const TensorAScale &scaleA, const TensorBScale &scaleB,
-                                      const TensorBias &tensorBias, const TensorC &tensorC, const Shape &actualShape,
+                                      const TensorC &tensorC, const Shape &actualShape,
                                       [[maybe_unused]] const Params &params)
     {
         mL1Len_ = Get<0>(actualShape);
@@ -118,7 +114,7 @@ public:
             auto tensorBlockA =
                 GetTile(tensorA, MakeCoord(0, kL1Offset_), MakeShape(mL1Len_, static_cast<uint64_t>(kL1Len_)));
             GetAL1(kLoopIdx, scaleA, tensorBlockA);
-            GetBL1(kLoopIdx, scaleB, tensorBias);
+            GetBL1(kLoopIdx, scaleB);
             SetFlag<HardEvent::MTE2_MTE1>(0);
             WaitFlag<HardEvent::MTE2_MTE1>(0);
             IterateMatmul(kLoopIdx);
@@ -195,6 +191,9 @@ private:
             bL1LocalBuf3_ = LocalTensor<ElementA>(AscendC::TPosition::B1, l1BufOffsetPart2, bL1Size_);
             l1BufOffsetPart2 += bL1Size_ * sizeof(ElementA);
         }
+
+        InitBiasBuf(nBL1Size, l1BufOffsetPart1, l1BufOffsetPart2);
+
         aL1LocalBuf0_ = LocalTensor<ElementA>(AscendC::TPosition::B1, l1BufOffsetPart1, aL1Size_);
         l1BufOffsetPart1 += aL1Size_ * sizeof(ElementA);
         if (l1BufNum_ == DOUBLE_BUFFER) {
@@ -216,12 +215,24 @@ private:
         l1BufOffsetPart1 += scaleAL1Size_ * sizeof(ElementScale);
         scaleAL1Buf1_ = LocalTensor<ElementScale>(AscendC::TPosition::A1, l1BufOffsetPart2, scaleAL1Size_);
         l1BufOffsetPart2 += scaleAL1Size_ * sizeof(ElementScale);
+    }
+
+    __aicore__ inline void InitBiasBuf(uint64_t nBL1Size, uint64_t &l1BufOffsetPart1, uint64_t &l1BufOffsetPart2)
+    {
         if (hasBias_) {
-            biasL1Buf0_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart1, nBL1Size);
-            l1BufOffsetPart1 += nBL1Size * sizeof(ElementBias);
-            if (biasBufNum_ > 1) {
-                biasL1Buf1_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart2, nBL1Size);
-                l1BufOffsetPart2 += nBL1Size * sizeof(ElementBias);
+            uint64_t nBiasL1Size = CeilAlign(nBL1Size, static_cast<uint64_t>(BLOCK_CUBE));
+            biasL1Buf0_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart1, nBiasL1Size);
+            l1BufOffsetPart1 += nBiasL1Size * sizeof(ElementBias);
+            if (l1BufNum_ == DOUBLE_BUFFER) {
+                biasL1Buf1_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart2, nBiasL1Size);
+                l1BufOffsetPart2 += nBiasL1Size * sizeof(ElementBias);
+            } else if (l1BufNum_ == QUADRUPLE_BUFFER) {
+                biasL1Buf1_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart2, nBiasL1Size);
+                l1BufOffsetPart2 += nBiasL1Size * sizeof(ElementBias);
+                biasL1Buf2_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart1, nBiasL1Size);
+                l1BufOffsetPart1 += nBiasL1Size * sizeof(ElementBias);
+                biasL1Buf3_ = LocalTensor<ElementBias>(AscendC::TPosition::B1, l1BufOffsetPart2, nBiasL1Size);
+                l1BufOffsetPart2 += nBiasL1Size * sizeof(ElementBias);
             }
         }
     }
@@ -289,12 +300,9 @@ private:
         CopyND2NZ(l1BufIdx_, tensorA);
     }
 
-    template <class TensorBScale, class TensorBias>
-    __aicore__ inline void GetBL1(int64_t kLoopIdx, const TensorBScale &scaleB, const TensorBias &tensorBias)
+    template <class TensorBScale>
+    __aicore__ inline void GetBL1(int64_t kLoopIdx, const TensorBScale &scaleB)
     {
-        if (hasBias_ && kLoopIdx == 0) {
-            CopyBias2L1(tensorBias);
-        }
         if (kLoopIdx % scaleFactor_ == 0) {
             auto tensorBlockScaleB =
                 GetTile(scaleB, MakeCoord(0, kL1Offset_ / GROUP_SIZE_32),
@@ -315,10 +323,11 @@ private:
         fixParams.srcStride = CeilAlign(mL0Len_, static_cast<int64_t>(BLOCK_CUBE));
         fixParams.dstStride = nSize_;
         if constexpr (IsSameType<ElementC, bfloat16_t>::value) {
-            fixParams.quantPre = QuantMode_t::F322BF16;
+            fixParams.quantPre = QuantMode_t::QF322BF16_PRE;
         } else {
-            fixParams.quantPre = QuantMode_t::F322F16;
+            fixParams.quantPre = QuantMode_t::QF322F16_PRE;
         }
+        fixParams.deqScalar = FIXP_QUANT_SACLAR_VALUE;
         fixParams.params.ndNum = 1;
         SetFlag<HardEvent::M_FIX>(0);
         WaitFlag<HardEvent::M_FIX>(0);
@@ -366,10 +375,14 @@ private:
                 scaleBL1Buf1_[(kL1Offset_ - (scaleFactor_ * kL1Size_) * (kLoopIdx / scaleFactor_)) / C0_SIZE_MX_B8];
         }
         if (hasBias_) {
-            if (biasBufIdx_ == IDX_0) {
+            if (l1BufIdx_ == IDX_0) {
                 biasL1Tensor_ = biasL1Buf0_;
-            } else {
+            } else if (l1BufIdx_ == IDX_1) {
                 biasL1Tensor_ = biasL1Buf1_;
+            } else if (l1BufIdx_ == IDX_2) {
+                biasL1Tensor_ = biasL1Buf2_;
+            } else {
+                biasL1Tensor_ = biasL1Buf3_;
             }
         }
         Iterate(kLoopIdx != 0);
@@ -429,9 +442,6 @@ private:
         NotifyVector(l1BufIdx_);
         SetFlag<HardEvent::MTE1_MTE2>(eventIdsMte1ToMte2_[l1BufIdx_]);
         l1BufIdx_ = (l1BufIdx_ + 1) % l1BufNum_;
-        if (hasBias_ && kLoopIdx == kTileCount_ - 1) {
-            biasBufIdx_ = (biasBufIdx_ + 1) % biasBufNum_;
-        }
         if ((kLoopIdx + 1) % scaleFactor_ == 0 || kLoopIdx == (kTileCount_ - 1)) {
             SetFlag<HardEvent::MTE1_MTE2>(eventIdsScaleAMte1ToMte2_[scaleABufIdx_]);
             scaleABufIdx_ = (scaleABufIdx_ + 1) % DOUBLE_BUFFER;
@@ -490,20 +500,6 @@ private:
             lenBurst = CeilAlign(lenBurst, static_cast<uint16_t>(C0_SIZE_MX_B8));
         }
         AscendC::DataCopy(biasBtTensor, biasL1Tensor_, {1, lenBurst, 0, 0});
-    }
-
-    template <class TensorBias>
-    __aicore__ inline void CopyBias2L1(const TensorBias &tensorBias)
-    {
-        AscendC::DataCopyParams dataCopyParams = {1, static_cast<uint16_t>(nL0Len_ * sizeof(ElementBias)), 0, 0};
-        AscendC::DataCopyPadParams dataCopyPadParams;
-        AscendC::GlobalTensor<ElementBias> srcTensor;
-        srcTensor.SetGlobalBuffer(tensorBias.address_);
-        if (biasBufIdx_ == IDX_0) {
-            AscendC::DataCopyPad(biasL1Buf0_, srcTensor, dataCopyParams, dataCopyPadParams);
-        } else {
-            AscendC::DataCopyPad(biasL1Buf1_, srcTensor, dataCopyParams, dataCopyPadParams);
-        }
     }
 
     template <class TensorBScale>
@@ -591,15 +587,15 @@ private:
     LocalTensor<ElementScale> scaleBL1Buf1_;
     LocalTensor<ElementScale> scaleAL1Tensor_;
     LocalTensor<ElementScale> scaleBL1Tensor_;
-    LocalTensor<ElementBias> biasL1Buf1_;
     LocalTensor<ElementBias> biasL1Buf0_;
+    LocalTensor<ElementBias> biasL1Buf1_;
+    LocalTensor<ElementBias> biasL1Buf2_;
+    LocalTensor<ElementBias> biasL1Buf3_;
     LocalTensor<ElementBias> biasL1Tensor_;
     LocalTensor<L0DataType> aL0Tensor_;
     LocalTensor<L0DataType> bL0Tensor_;
 
     bool hasBias_;
-    int8_t biasBufIdx_ = 0;
-    int8_t biasBufNum_ = 2;
     uint8_t l1BufIdx_ = 0;
     int8_t occupied_ = 0;  // unused
     int64_t madLoopIdx_ = 0;
@@ -649,6 +645,7 @@ private:
     static constexpr uint64_t FRACTAL_SIZE = 512;  // 16 * 32
     static constexpr uint64_t C0_SIZE_MX_B8 = 2;
     static constexpr uint8_t MAX_AL1_BUF_NUM = 4;
+    static constexpr uint64_t FIXP_QUANT_SACLAR_VALUE = 0x42800000;  // FP32类型的64的16进制表示
     static constexpr TEventID eventIdsMte1ToMte2_[MAX_AL1_BUF_NUM] = {0, 1, 2, 3};
     static constexpr TEventID eventIdsScaleAMte1ToMte2_[DOUBLE_BUFFER] = {4, 5};
     static constexpr TEventID eventIdsScaleBMte1ToMte2_[DOUBLE_BUFFER] = {6, 7};
