@@ -62,9 +62,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
@@ -110,9 +111,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topk)
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
@@ -155,9 +157,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topp)
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp32");
@@ -185,9 +188,9 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_topp)
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
 {
     size_t sortedValueSize = size_t(1024) * size_t(4096) * sizeof(half);
-    size_t sortedIndicesSize = size_t(48) * sizeof(int32_t);
-    size_t pSize = size_t(48) * sizeof(int32_t);
-    size_t kSize = size_t(48) * size_t(4096) * sizeof(half);
+    size_t sortedIndicesSize = size_t(1024) * size_t(4096) * sizeof(int32_t);
+    size_t pSize = size_t(48) * sizeof(half);
+    size_t kSize = size_t(48) * sizeof(int32_t);
     size_t outSize = size_t(1024) * size_t(4096) * sizeof(half);
     size_t sysWorkspaceSize = size_t(16) * size_t(1024) * size_t(1024);
     size_t usrWorkspaceSize = size_t(38191616);
@@ -203,9 +206,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 fp16");
@@ -235,9 +239,9 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp16)
 TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_bf16)
 {
     size_t sortedValueSize = size_t(1024) * size_t(4096) * sizeof(bfloat16_t);
-    size_t sortedIndicesSize = size_t(48) * sizeof(int32_t);
-    size_t pSize = size_t(48) * sizeof(int32_t);
-    size_t kSize = size_t(48) * size_t(4096) * sizeof(bfloat16_t);
+    size_t sortedIndicesSize = size_t(1024) * size_t(4096) * sizeof(int32_t);
+    size_t pSize = size_t(48) * sizeof(bfloat16_t);
+    size_t kSize = size_t(48) * sizeof(int32_t);
     size_t outSize = size_t(1024) * size_t(4096) * sizeof(bfloat16_t);
     size_t sysWorkspaceSize = size_t(16) * size_t(1024) * size_t(1024);
     size_t usrWorkspaceSize = size_t(38191616);
@@ -253,9 +257,10 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_bf16)
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
 
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../../../../ops/built-in/tests/ut/fast_op_test/apply_top_k_top_p_with_sorted/apply_top_k_top_p_with_sorted_data ./");
+    system("cp -r ../../../../index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data ./");
     system("chmod -R 755 ./apply_top_k_top_p_with_sorted_data/");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && rm -rf ./*bin");
     system("cd ./apply_top_k_top_p_with_sorted_data/ && python3 gen_data.py 4 152064 bf16");

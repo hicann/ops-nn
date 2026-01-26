@@ -124,7 +124,7 @@ aclnnStatus aclnnApplyTopKTopP(
       <td>k</td>
       <td>输入</td>
       <td>表示top-k的阈值，公式中的k。</td>
-      <td>值域为[1, 1024]，且最大值需要小于等于logits.size(1)。<br>shape需要与logits.size(0)一致。</td>
+      <td>值域为[1, logits.size(1)]。<br>shape需要与logits.size(0)一致。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>

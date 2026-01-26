@@ -20,7 +20,7 @@ def gen_golden_data_simple(batch_size, vocab_size, dtype_str):
 
     sorted_value, sorted_indices = torch.from_numpy(logits).sort(dim=-1, descending=False, stable=True)
     sorted_value = sorted_value.numpy()
-    sorted_indices = sorted_indices.numpy()
+    sorted_indices = sorted_indices.to(torch.int32).numpy()
     p = np.random.random([batch_size]).astype(np.float32)
     k = np.random.randint(10, 30, [batch_size]).astype(np.int32)
 
