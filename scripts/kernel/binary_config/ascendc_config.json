@@ -225,6 +225,7 @@
     {"name":"Logit", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"LogitGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"SquaredRelu", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : false},
+    {"name": "HardSwishGradV2", "compute_units": ["ascend910b", "ascend910_93", "ascend910"], "auto_sync": false},
     {"name":"TransformBiasRescaleQkv", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"FatreluMul", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : false},
     {"name":"GeluMul", "compute_units": ["ascend910_93", "ascend910b", "kirinx90"], "auto_sync" : false},
