@@ -308,6 +308,7 @@
     {"name": "DuaQuantizeAddLayerNorm", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"InplaceAddRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend910_95", "kirinx90"], "auto_sync" : false},
     {"name":"AddRmsNormQuant", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend910_95", "kirinx90"], "auto_sync" : false},
+    {"name":"AddRmsNormQuantV2", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : false},
     {"name":"AddRmsNormDynamicQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95", "kirinx90"], "auto_sync" : false},
     {"name":"AddRmsNormDynamicQuantV2", "compute_units": ["ascend910b", "kirinx90"], "auto_sync" : false},
     {"name":"BatchNormGradV3", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
