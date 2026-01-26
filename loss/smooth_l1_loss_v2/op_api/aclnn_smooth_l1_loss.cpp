@@ -25,6 +25,8 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
+
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
@@ -45,16 +47,16 @@ static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {Da
                                                                               DataType::DT_BF16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return ASCEND910B_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_SUPPORT_LIST;
   }
 }
 
-static inline bool IsAscend910D(void) {
-  return op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
+static inline bool IsAscendRegBase(void) {
+  return Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static bool CheckPromoteType(const op::DataType selfDtype, const op::DataType targetDtype,
@@ -82,22 +84,14 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *target) {
   return true;
 }
 
-static bool CheckReduction(int64_t reduction) {
-  // 检查reduction不能超过范围
-  if (reduction > REDUCTION_SUM_NUM || reduction < REDUCTION_NONE_NUM) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld.", reduction);
-      return false;
-  }
-  return true;
-}
-
-static void CheckFormat(const aclTensor* self) {
-  // 检查self的format类型，NZ添加告警
-  if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-      OP_LOGW(
-          "Format of self gets [%s], this format may lead to precision failure.",
-          op::ToString(self->GetStorageFormat()).GetString());
-  }
+static bool CheckReduction(int64_t reduction)
+{
+    // 检查self和other能否做数据类型推导
+    if (reduction > REDUCTION_SUM_NUM || reduction < REDUCTION_NONE_NUM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but current is %ld.", reduction);
+        return false;
+    }
+    return true;
 }
 
 static bool CheckNotNullTensor(const aclTensor *self, const aclTensor *target, const aclTensor *result) {
@@ -109,7 +103,17 @@ static bool CheckNotNullTensor(const aclTensor *self, const aclTensor *target, c
 
 static bool CheckNeed5hdFormat(const aclTensor *tensor, int64_t reduction) {
   return ((tensor->GetStorageFormat() == Format::FORMAT_NCHW || tensor->GetStorageFormat() == Format::FORMAT_NHWC) &&
-          reduction == 0) && !IsAscend910D();
+          reduction == 0) && !IsAscendRegBase();
+}
+
+static void CheckFormat(const aclTensor* self)
+{
+    // 检查self的format类型，NZ添加告警
+    if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW(
+            "Format of self gets [%s], this format may lead to precision failure.",
+            op::ToString(self->GetStorageFormat()).GetString());
+    }
 }
 
 static bool CheckShape(const aclTensor* self,const aclTensor* target, int64_t reduction,
@@ -146,7 +150,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target,
   
   // 5. 检查tensor的shape是否合理
   CHECK_RET(CheckShape(self, target, reduction, result), ACLNN_ERR_PARAM_INVALID);
-  
+
   // 6. 检查tensor的format是否合理，nz添加warning打印
   CheckFormat(self);
 
@@ -277,7 +281,7 @@ aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor *self, const aclTe
   const aclTensor *smoothL1LossResultWithTrans = nullptr;
   if ((smoothL1LossResult->GetStorageShape().GetDimNum() == NC1HWC0_DIM &&
       (result->GetStorageFormat() == Format::FORMAT_NCHW || result->GetStorageFormat() == Format::FORMAT_NHWC))
-     && !IsAscend910D()) {
+     && !IsAscendRegBase()) {
     smoothL1LossResultWithTrans =
         l0op::TransData(smoothL1LossResult, GetPrimaryFormat(result->GetOriginalFormat()), 1, uniqueExecutor.get());
   } else {
