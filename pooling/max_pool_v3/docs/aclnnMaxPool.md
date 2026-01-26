@@ -4,13 +4,16 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Ascend 950PR/Ascend 950DT</term>                     |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                     |    x     |
+| <term>Atlas 推理系列产品</term>                             |    x     |
+| <term>Atlas 训练系列产品</term>                             |    √     |
 
 ## 功能说明
 
-- 算子功能：
+- 接口功能：
 对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。
 - 计算公式：
   - 当ceilMode=False时，out tensor的shape中H和W维度推导公式：
@@ -37,56 +40,251 @@
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPoolGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool”接口执行计算。
 
- * `aclnnStatus aclnnMaxPoolGetWorkspaceSize(const aclTensor *self, const aclIntArray *kernelShape, const aclIntArray *strides, const int64_t autoPad, const aclIntArray *pads, const aclIntArray *dilations, const int64_t ceilMode, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
- * `aclnnStatus aclnnMaxPool(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
-
+```Cpp
+aclnnStatus aclnnMaxPoolGetWorkspaceSize(
+  const aclTensor   *self,
+  const aclIntArray *kernelShape,
+  const aclIntArray *strides,
+  const int64_t      autoPad,
+  const aclIntArray *pads,
+  const aclIntArray *dilations,
+  const int64_t      ceilMode,
+  aclTensor         *out,
+  uint64_t          *workspaceSize,
+  aclOpExecutor     **executor)
+```
+```Cpp
+aclnnStatus aclnnMaxPool(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
+  aclrtStream    stream)
+```
 ## aclnnMaxPoolGetWorkspaceSize
 
 - **参数说明：**
-  - self（aclTensor\*，计算输入）：Device侧的aclTensor输入，对应公式中的H_in和W_in。维度需要是3D（维度分别代表C，H，W）或4D（维度分别代表N，C，H，W），N为Batchsize大小，C为Tensor通道大小，H为Tensor高度，W为Tensor宽度，不支持其他维度。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
-  - kernelShape（aclIntArray\*，计算输入）：表示最大池化的窗口大小，对应公式中的k_h和k_w，长度为1或2，且数组元素必须都大于0。
-  - strides（aclIntArray\*，计算输入）：窗口移动的步长，对应公式中的s_h和s_w，数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。
-  - autoPad（int64_t，计算输入）：指定padding的方式。其中0代表"NOTSET"，并且只支持数值0。
-  - pads（aclIntArray\*，计算输入）：沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。长度为0、1、2或4。当数组长度为0时，不进行填充。当数组长度为1时，H_top、H_bottom、W_left、W_right填充同一个值。当数组长度为2时，H_top、H_bottom分别填充数组第1个值，W_left、W_right分别填充数组第2个值。当数组长度为4时，按[H_top、W_left、H_bottom、W_right]位置关系进行填充。单个空间轴方向填充量之和需小于等于对应方向kernelShape。
-  - dilations（aclIntArray\*，计算输入）：沿着核空间轴方向的膨胀值，对应公式中的dilation_size，并且只支持数值为1的输入场景。长度为0、1、2或4。
-  - ceilMode（int64_t，计算输入）：计算输出形状的取整模式，为0时，代表False，向下取整；非0值时，代表True，向上取整。
-  - out（aclTensor\*，计算输出）：数据类型和self一致。shape由上述公式推导出。数据格式和维度与输入self一致。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
-  - workspaceSize（uint64_t\*，出参）：返回需要在Device侧申请的workspace大小。
-  - executor（aclOpExecutor\*\*，出参）：返回op执行器，包含了算子计算流程。
+  <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
+  <col style="width: 149px">
+  <col style="width: 121px">
+  <col style="width: 264px">
+  <col style="width: 253px">
+  <col style="width: 262px">
+  <col style="width: 148px">
+  <col style="width: 135px">
+  <col style="width: 146px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>待计算张量。</td>
+      <td>-</td>
+      <td>FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
+      <td>ND</td>
+      <td>3-4</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>kernelShape</td>
+      <td>输入</td>
+      <td>最大池化的窗口大小。</td>
+      <td>长度为1或2，且数组元素必须都大于0。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>strides</td>
+      <td>输入</td>
+      <td>窗口移动的步长。</td>
+      <td>数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>autoPad</td>
+      <td>输入</td>
+      <td>指定padding的方式。</td>
+      <td>其中0代表"NOTSET"，并且只支持数值0。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>pads</td>
+      <td>输入</td>
+      <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。</td>
+      <td>长度为0、1、2或4。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dilations</td>
+      <td>输入</td>
+      <td>沿着核空间轴方向的膨胀值，对应公式中的dilation_size。</td>
+      <td>只支持数值为1的输入场景，长度为0、1、2或4。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>ceilMode</td>
+      <td>输入</td>
+      <td>计算输出形状的取整模式。</td>
+      <td>为0时，代表False，向下取整；非0值时，代表True，向上取整。</td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>输出的tensor。</td>
+      <td>数据类型和self一致。shape由上述公式推导出。数据格式和维度与输入self一致。</td>
+      <td>FLOAT16、FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。</td>
+      <td>ND</td>
+      <td>3-4</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody></table>
+  <term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持FLOAT、BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
 
+  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：参数self、out的数据类型不支持BF16、INT32、INT64、UINT8、INT16、INT8、UINT16。
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
-  ```
+  
   第一段接口完成入参校验，出现以下场景时报错：
-  返回161001 (ACLNN_ERR_PARAM_NULLPTR)：1. 传入的self或out是空指针。
-  返回161002 (ACLNN_ERR_PARAM_INVALID)：1. self的数据类型和数据格式不在支持的范围之内。
-                                        2. self的维度不是3D或4D。
-                                        3. 根据最大池化语义计算的output shape与指定shape不一致。
-                                        4. kernelShape的长度不等于1或2。
-                                        5. kernelShape的数值中存在小于等于0。
-                                        6. strides的长度不等于0、1或2。
-                                        7. strides的数值中存在小于等于0。
-                                        8. pads的长度不等于0、1、2或4。
-                                        9. 单个空间轴方向pad填充量之和需小于等于对应方向kernelShape。
-                                        10. dilation的长度不等于0、1、2或4。
-                                        11. dilation的数值不等于1。
-  ```
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 267px">
+  <col style="width: 124px">
+  <col style="width: 775px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回码</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self或out是空指针。</td>
+    </tr>
+    <tr>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
+      <td>self的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>self的维度不是3D或4D。</td>
+    </tr>
+    <tr>
+      <td>根据最大池化语义计算的output shape与指定shape不一致。</td>
+    </tr>
+    <tr>
+      <td>kernelShape的长度不等于1或2。</td>
+    </tr>
+    <tr>
+      <td>kernelShape的数值中存在小于等于0。</td>
+    </tr>
+    <tr>
+      <td>strides的长度不等于0、1或2。</td>
+    </tr>
+    <tr>
+      <td>strides的数值中存在小于等于0。</td>
+    </tr>
+    <tr>
+      <td>单个空间轴方向pad填充量之和需小于等于对应方向kernelShape。</td>
+    </tr>
+    <tr>
+      <td>dilation的长度不等于0、1、2或4。</td>
+    </tr>
+    <tr>
+      <td>dilation的数值不等于1。</td>
+    </tr>
+  </tbody>
+  </table>
 
 ## aclnnMaxPool
 - **参数说明：**
-  - workspace(void\*, 入参)：在Device侧申请的workspace内存地址。
-  - workspaceSize(uint64_t, 入参)：在Device侧申请的workspace大小，由第一段接口aclnnMaxPoolGetWorkspaceSize获取。
-  - executor(aclOpExecutor\*, 入参)：op执行器，包含了算子计算流程。
-  - stream(aclrtStream, 入参)：指定执行任务的Stream。
-- **返回值：**
+  <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
+  <col style="width: 173px">
+  <col style="width: 133px">
+  <col style="width: 860px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnMaxPoolGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
+-  **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 - 确定性计算：
