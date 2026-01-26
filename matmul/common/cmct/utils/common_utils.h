@@ -41,7 +41,6 @@ constexpr int MNK_N0 = 5;
 
 constexpr static uint64_t A_FULL_LOAD_MODE = 1UL;
 constexpr static uint64_t B_FULL_LOAD_MODE = 2UL;
-constexpr static uint64_t A_FULL_LOAD_MODE = 1UL;
 constexpr static uint64_t NONE_FULL_LOAD_MODE = 0UL;
 constexpr static int64_t PER_BLOCK_SIZE = 128LL;
 constexpr int32_t MXFP_DIVISOR_SIZE = 64;
@@ -147,6 +146,15 @@ struct is_static : AscendC::Std::bool_constant<std::is_empty<T>::value> {};
 
 template <class T>
 constexpr bool is_static_v = is_static<AscendC::Std::remove_cvref_t<T>>::value;
+
+template <class T>
+struct all_static : AscendC::Std::bool_constant<is_static_v<T>> {};
+
+template <class... Ts>
+struct all_static<AscendC::Std::tuple<Ts...>> : AscendC::Std::bool_constant<(all_static<Ts>::value && ...)> {};
+
+template <class T>
+constexpr bool all_static_v = all_static<AscendC::Std::remove_cvref_t<T>>::value;
 
 template <typename Stride>
 struct is_2d_nz_c0_32_impl : AscendC::Std::false_type {};

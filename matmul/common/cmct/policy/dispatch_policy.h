@@ -15,8 +15,9 @@
 #ifndef MATMUL_POLICY_DISPATCH_POLICY_H
 #define MATMUL_POLICY_DISPATCH_POLICY_H
 
-#include "../utils/integral_constant.h"
 #include "../utils/arch.h"
+#include "../utils/common_utils.h"
+#include "../utils/integral_constant.h"
 
 namespace Cmct {
 namespace Gemm {
@@ -309,6 +310,12 @@ struct UbAntiquantWithScSc {
     using ScheduleType = KernelMixWithWeightPrologue;
     using ArchTag = Cmct::Gemm::Arch::Ascend910_95;
 };
+
+template <uint64_t AivNum>
+struct MmadAPrefetchBAntiquantScmc {
+    constexpr static uint64_t AIV_NUM = AivNum;
+};
+
 } // namespace Gemm
 } // namespace Cmct
 #endif

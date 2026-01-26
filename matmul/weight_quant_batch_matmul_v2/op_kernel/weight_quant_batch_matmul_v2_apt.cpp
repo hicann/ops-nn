@@ -29,8 +29,8 @@
 #include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
 #if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
-#include "arch35/act_convertor.h"
-using WeightQuantBatchMatmulV2::Arch35::Act::InvokeActKernel;
+#include "arch35/cmct_convertor.h"
+using WeightQuantBatchMatmulV2::InvokeKernel;
 #endif
 #endif
 
@@ -123,7 +123,7 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
 #endif
     } else {
 #if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
-        InvokeActKernel<
+        InvokeKernel<
             TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
             KERNEL_PARAMS);
 #endif

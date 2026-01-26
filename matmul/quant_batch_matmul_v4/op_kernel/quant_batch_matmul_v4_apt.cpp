@@ -30,8 +30,8 @@
 #include "arch35/quant_batch_matmul_v4_tiling_key.h"
 #include "arch35/quant_batch_matmul_v4_tiling_data.h"
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-// define DTYPE_X2 should before catlass
-#include "arch35/catlass_convertor.h"
+// define DTYPE_X2 should before cmct
+#include "arch35/cmct_convertor.h"
 #include "arch35/quant_batch_matmul_v4_constant.h"
 #include "arch35/quant_batch_matmul_v4_perchannel.h"
 #else
@@ -82,7 +82,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
             WEIGHTNZ>>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
     } else if (QUANT_TYPE == QBMMV4_MX) {
-        QuantBatchMatmulV4::Arch35::Catlass::InvokeActKernel<WEIGHTNZ>(KERNEL_PARAMS);
+        QuantBatchMatmulV4::InvokeKernel<WEIGHTNZ>(KERNEL_PARAMS);
     }
 #else
     GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);

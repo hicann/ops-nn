@@ -103,4 +103,6 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
+#include "block_mmad_a_prefetch_b_prologue.h"
+#include "block_mmad_b_prologue_mx.h"
 #endif

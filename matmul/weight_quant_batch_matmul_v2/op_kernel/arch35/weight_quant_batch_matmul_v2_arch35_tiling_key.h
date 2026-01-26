@@ -17,6 +17,7 @@
 #define WEIGHT_QUANT_BATCH_MATMUL_V2_ARCH35_TILING_KEY_H
 
 #include "ascendc/host_api/tiling/template_argument.h"
+#include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 #if defined(ORIG_DTYPE_X) && ((defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16)) || \
     ((defined(DT_FLOAT16) && ORIG_DTYPE_X == DT_FLOAT16))
@@ -200,6 +201,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || (defined(MICROSCALING) && defined(WEIGHT_ND))
@@ -220,6 +222,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
@@ -238,6 +241,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
@@ -258,6 +262,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S4) || defined(F4)) && !defined(WEIGHT_ND))
@@ -278,6 +283,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
@@ -298,6 +304,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
@@ -318,6 +325,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
@@ -338,6 +346,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
@@ -358,6 +367,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
@@ -378,6 +388,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
@@ -398,6 +409,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || (defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16)
@@ -419,6 +431,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || (defined(MICROSCALING) && defined(WEIGHT_ND))
@@ -439,6 +452,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
@@ -457,6 +471,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
@@ -477,6 +492,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || ((defined(S4) || defined(F4)) && !defined(WEIGHT_ND))
@@ -497,6 +513,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
@@ -517,6 +534,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
@@ -537,6 +555,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 1),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
@@ -557,6 +576,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
@@ -577,6 +597,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
 
@@ -598,6 +619,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
         #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
@@ -618,6 +640,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
     #endif
@@ -641,6 +664,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),
@@ -659,6 +683,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
     #if !defined(__CCE_AICORE__) || (defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16)
@@ -679,6 +704,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),
@@ -697,6 +723,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 1),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
 #endif
@@ -719,6 +746,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_BOOL_SEL(HAS_BIAS, 0, 1),
         ASCENDC_TPL_BOOL_SEL(IS_BIAS_FP32, 0),
         ASCENDC_TPL_BOOL_SEL(IS_WEIGHT_NZ, 0),
+        ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams)
     ),
     #endif
 #endif

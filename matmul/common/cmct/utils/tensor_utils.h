@@ -15,6 +15,7 @@
 
 #ifndef UTILS_TENSOR_UTILS_H
 #define UTILS_TENSOR_UTILS_H
+#include "common_utils.h"
 #include "integral_constant.h"
 #include "kernel_operator_list_tensor_intf.h"
 #include "lib/matmul_intf.h"
@@ -115,8 +116,8 @@ __aicore__ inline AscendC::GlobalTensor<CTensorTrait_> GetWorkSpaceGlobal(BlockS
 {
     int64_t blockShapeM = Get<0>(blockShape);
     int64_t blockShapeN = Get<1>(blockShape);
-    Layout_ cLayout = AscendC::MakeLayout(AscendC::MakeShape(blockShapeM, blockShapeN),
-                        AscendC::MakeStride(blockShapeN, static_cast<int64_t>(1)));
+    Layout_ cLayout = AscendC::MakeLayout(
+        AscendC::MakeShape(blockShapeM, blockShapeN), AscendC::MakeStride(blockShapeN, static_cast<int64_t>(1)));
     CTensorTrait_ cTensorTrait = AscendC::MakeTensorTrait<CType_, AscendC::TPosition::GM>(cLayout);
     AscendC::GlobalTensor<CTensorTrait_> workspaceGlobal;
     workspaceGlobal.SetTensorTrait(cTensorTrait);
@@ -133,41 +134,79 @@ __aicore__ inline AscendC::GlobalTensor<CTensorTrait_> GetWorkSpaceGlobal(BlockS
 template <typename T>
 __aicore__ inline __gm__ T* GetTensorAddr(uint64_t index, GM_ADDR tensorPtr)
 {
+    // depend on kernel_operator_list_tensor_intf.h
     AscendC::ListTensorDesc listTensorDesc(reinterpret_cast<__gm__ void*>(tensorPtr));
     return listTensorDesc.GetDataPtr<T>(index);
 }
 
 template <class T, AscendC::TPosition Pos, class Layout, class Coord, class Shape>
-__aicore__ inline constexpr auto GetTile(AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const &tensor,
-                                         Coord const &coord, Shape const &shape)
+__aicore__ inline constexpr auto GetTile(
+    AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const& tensor, Coord const& coord, Shape const& shape)
 {
     auto layout = tensor.GetTensorTrait().GetLayout();
     auto offset = layout(coord);
     typename AscendC::Std::remove_cvref_t<decltype(tensor)> newTensor;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 3102)
-    if constexpr (AscendC::IsSameTypeV<T, fp4x2_e2m1_t> || AscendC::IsSameTypeV<T, fp4x2_e1m2_t>) {
-        newTensor.address_ = (__gm__ T *)((__gm__ uint8_t *)tensor.address_ + (offset >> 1));
+    if constexpr (
+        AscendC::IsSameType<T, fp4x2_e2m1_t>::value || AscendC::IsSameType<T, fp4x2_e1m2_t>::value ||
+        AscendC::IsSameType<T, AscendC::int4b_t>::value) {
+        newTensor.address_ = (__gm__ T*)((__gm__ uint8_t*)tensor.address_ + (offset >> 1));
     } else {
-        newTensor.address_ = (__gm__ T *)((__gm__ uint8_t *)tensor.address_ + offset * sizeof(T));
+        newTensor.address_ = (__gm__ T*)((__gm__ uint8_t*)tensor.address_ + offset * sizeof(T));
     }
 #else
-    newTensor.address_ = (__gm__ T *)((__gm__ uint8_t *)tensor.address_ + offset * sizeof(T));
+    newTensor.address_ = (__gm__ T*)((__gm__ uint8_t*)tensor.address_ + offset * sizeof(T));
 #endif
     newTensor.SetTensorTrait(
         AscendC::MakeTensorTrait<T, Pos>(AscendC::MakeLayout(shape, tensor.GetTensorTrait().GetLayout().GetStride())));
     return newTensor;
 }
 
+// 不设置layout，需要手动更新
+template <typename CAST_T, typename T>
+__aicore__ inline auto ReinerpretCast(const AscendC::LocalTensor<T>& tensorIn)
+{
+    static_assert(
+        AscendC::is_tensorTrait_v<CAST_T> && AscendC::is_tensorTrait_v<T>, "only support TensorTrait type Tensor!");
+    if constexpr (AscendC::Std::is_same_v<CAST_T, T>) {
+        return tensorIn;
+    }
+    static_assert(all_static_v<decltype(CAST_T{}.GetStride())> && all_static_v<decltype(T{}.GetStride())>);
+    AscendC::LocalTensor<CAST_T> tensorOut;
+    tensorOut.address_.logicPos = static_cast<uint8_t>(tensorIn.GetPosition());
+    tensorOut.address_.bufferHandle = tensorIn.GetBufferHandle();
+    tensorOut.address_.bufferAddr = tensorIn.address_.bufferAddr;
+    return tensorOut;
+}
+
 template <class T, class Layout, AscendC::TPosition Pos = AscendC::TPosition::GM>
-__aicore__ inline constexpr auto MakeTensor(__gm__ T *addr, Layout const &layout)
+__aicore__ inline constexpr auto MakeTensor(__gm__ T* addr, Layout const& layout)
 {
     using TensorTraitType = AscendC::TensorTrait<T, Pos, Layout>;
-    using TensorType =
-        AscendC::Std::conditional_t<Pos == AscendC::TPosition::GM, AscendC::GlobalTensor<TensorTraitType>,
-                                    AscendC::LocalTensor<TensorTraitType>>;
+    using TensorType = AscendC::Std::conditional_t<
+        Pos == AscendC::TPosition::GM, AscendC::GlobalTensor<TensorTraitType>, AscendC::LocalTensor<TensorTraitType>>;
     TensorType tensor;
     tensor.address_ = addr;
     tensor.SetTensorTrait(AscendC::MakeTensorTrait<T, Pos>(layout));
+    return tensor;
+}
+
+template <typename T, AscendC::TPosition Pos, typename Layout, typename Stride>
+__aicore__ inline auto SetStride(
+    AscendC::LocalTensor<AscendC::TensorTrait<T, Pos, Layout>>& tensor, Stride const& stride)
+{
+    tensor.SetTensorTrait(AscendC::MakeTensorTrait<T, Pos>(AscendC::MakeLayout(tensor.GetShape(), stride)));
+    return tensor;
+}
+
+template <typename TensorTrait>
+__aicore__ inline auto CreateTensor(uint32_t addr)
+{
+    static_assert(AscendC::is_tensorTrait_v<TensorTrait>, "only support TensorTrait type Tensor!");
+    AscendC::LocalTensor<TensorTrait> tensor;
+    tensor.address_.dataLen = 32;
+    tensor.address_.bufferAddr = addr;
+    tensor.address_.logicPos = static_cast<uint8_t>(TensorTrait::tPos);
     return tensor;
 }
 
@@ -181,8 +220,8 @@ __aicore__ inline constexpr auto MakeTensor(__gm__ T *addr, Layout const &layout
 template <class DataType, class Tensor>
 __aicore__ inline auto ConvertToTensorWithoutLayout(const Tensor& tensor)
 {
-    typename AscendC::Std::conditional_t<AscendC::is_global_tensor_v<Tensor>, AscendC::GlobalTensor<DataType>,
-                                         AscendC::LocalTensor<DataType>>
+    typename AscendC::Std::conditional_t<
+        AscendC::is_global_tensor_v<Tensor>, AscendC::GlobalTensor<DataType>, AscendC::LocalTensor<DataType>>
         normalTensor;
     if constexpr (AscendC::is_global_tensor_v<Tensor>) {
         normalTensor.address_ = tensor.address_;

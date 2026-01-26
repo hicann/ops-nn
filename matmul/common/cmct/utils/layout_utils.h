@@ -16,6 +16,12 @@
 #ifndef UTILS_LAYOUT_UTILS_H
 #define UTILS_LAYOUT_UTILS_H
 
+// dependency of matmul_utils.h
+#include "matmul/tiling.h"
+// CubeFormat
+#include "matmul/matmul_config.h"
+// AscendC::CeilAlign
+#include "detail/matmul/utils/matmul_utils.h"
 #include "./integral_constant.h"
 
 namespace Cmct {

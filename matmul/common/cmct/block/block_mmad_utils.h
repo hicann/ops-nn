@@ -33,8 +33,8 @@ namespace Block {
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsF16F16F16()
 {
-    return AscendC::IsSameTypeV<typename AType::T, half> && AscendC::IsSameTypeV<typename BType::T, half> &&
-           AscendC::IsSameTypeV<typename CType::T, half>;
+    return AscendC::IsSameType<typename AType::T, half>::value && AscendC::IsSameType<typename BType::T, half>::value &&
+           AscendC::IsSameType<typename CType::T, half>::value;
 }
 
 /**
@@ -47,8 +47,8 @@ __aicore__ inline constexpr bool IsF16F16F16()
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsF16F16F32()
 {
-    return AscendC::IsSameTypeV<typename AType::T, half> && AscendC::IsSameTypeV<typename BType::T, half> &&
-           AscendC::IsSameTypeV<typename CType::T, float>;
+    return AscendC::IsSameType<typename AType::T, half>::value && AscendC::IsSameType<typename BType::T, half>::value &&
+           AscendC::IsSameType<typename CType::T, float>::value;
 }
 
 /**
@@ -61,8 +61,9 @@ __aicore__ inline constexpr bool IsF16F16F32()
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsBf16Bf16Bf16()
 {
-    return AscendC::IsSameTypeV<typename AType::T, bfloat16_t> && AscendC::IsSameTypeV<typename BType::T, bfloat16_t> &&
-           AscendC::IsSameTypeV<typename CType::T, bfloat16_t>;
+    return AscendC::IsSameType<typename AType::T, bfloat16_t>::value &&
+           AscendC::IsSameType<typename BType::T, bfloat16_t>::value &&
+           AscendC::IsSameType<typename CType::T, bfloat16_t>::value;
 }
 
 /**
@@ -75,8 +76,9 @@ __aicore__ inline constexpr bool IsBf16Bf16Bf16()
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsBf16Bf16F32()
 {
-    return AscendC::IsSameTypeV<typename AType::T, bfloat16_t> && AscendC::IsSameTypeV<typename BType::T, bfloat16_t> &&
-           AscendC::IsSameTypeV<typename CType::T, float>;
+    return AscendC::IsSameType<typename AType::T, bfloat16_t>::value &&
+           AscendC::IsSameType<typename BType::T, bfloat16_t>::value &&
+           AscendC::IsSameType<typename CType::T, float>::value;
 }
 
 /**
@@ -103,8 +105,8 @@ __aicore__ inline constexpr bool IsF16OrBf16AB()
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsF32F32F32()
 {
-    return AscendC::IsSameTypeV<typename AType::T, float> && AscendC::IsSameTypeV<typename BType::T, float> &&
-           AscendC::IsSameTypeV<typename CType::T, float>;
+    return AscendC::IsSameType<typename AType::T, float>::value &&
+           AscendC::IsSameType<typename BType::T, float>::value && AscendC::IsSameType<typename CType::T, float>::value;
 }
 
 /**
@@ -117,8 +119,9 @@ __aicore__ inline constexpr bool IsF32F32F32()
 template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsI8I8I32()
 {
-    return AscendC::IsSameTypeV<typename AType::T, int8_t> && AscendC::IsSameTypeV<typename BType::T, int8_t> &&
-           AscendC::IsSameTypeV<typename CType::T, int32_t>;
+    return AscendC::IsSameType<typename AType::T, int8_t>::value &&
+           AscendC::IsSameType<typename BType::T, int8_t>::value &&
+           AscendC::IsSameType<typename CType::T, int32_t>::value;
 }
 
 /**
@@ -130,8 +133,8 @@ template <class MatmulType>
 __aicore__ inline constexpr bool IsF8()
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-    return AscendC::IsSameTypeV<typename MatmulType::T, fp8_e5m2_t> ||
-           AscendC::IsSameTypeV<typename MatmulType::T, fp8_e4m3fn_t>;
+    return AscendC::IsSameType<typename MatmulType::T, fp8_e5m2_t>::value ||
+           AscendC::IsSameType<typename MatmulType::T, fp8_e4m3fn_t>::value;
 #else
     return false;
 #endif
@@ -148,7 +151,7 @@ template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsFp8Fp8F32()
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-    return IsF8<AType>() && IsF8<BType>() && AscendC::IsSameTypeV<typename CType::T, float>;
+    return IsF8<AType>() && IsF8<BType>() && AscendC::IsSameType<typename CType::T, float>::value;
 #else
     return false;
 #endif
@@ -165,8 +168,9 @@ template <class AType, class BType, class CType>
 __aicore__ inline constexpr bool IsHIF8HIF8F32()
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-    return AscendC::IsSameTypeV<typename AType::T, hifloat8_t> && AscendC::IsSameTypeV<typename BType::T, hifloat8_t> &&
-           AscendC::IsSameTypeV<typename CType::T, float>;
+    return AscendC::IsSameType<typename AType::T, hifloat8_t>::value &&
+           AscendC::IsSameType<typename BType::T, hifloat8_t>::value &&
+           AscendC::IsSameType<typename CType::T, float>::value;
 #else
     return false;
 #endif
@@ -210,19 +214,20 @@ __aicore__ inline constexpr bool IsTileShapeValid()
     constexpr auto l0K = GetIntegralConstant<MNK_K, L0TileShape>();
 
     // Check L1 buffer L0 buffer
-    if constexpr ((l1M * l1Ka * sizeof(typename AType::T) + l1N * l1Kb * sizeof(typename BType::T)) * l1BufferNum >
-                  L1_SIZE) {
+    if constexpr (
+        (l1M * l1Ka * sizeof(typename AType::T) + l1N * l1Kb * sizeof(typename BType::T)) * l1BufferNum > L1_SIZE) {
         return false;
     }
-    if constexpr (l0M * l0K * sizeof(typename AType::T) > L0A_SIZE ||
-                  l0N * l0K * sizeof(typename BType::T) > L0B_SIZE ||
-                  l0M * l0N * sizeof(typename AscendC::GetMmDstType<typename AType::T>::Type) > L0C_SIZE) {
+    if constexpr (
+        l0M * l0K * sizeof(typename AType::T) > L0A_SIZE || l0N * l0K * sizeof(typename BType::T) > L0B_SIZE ||
+        l0M * l0N * sizeof(typename AscendC::GetMmDstType<typename AType::T>::Type) > L0C_SIZE) {
         return false;
     }
     // Check align
-    if constexpr (!(l1M % MATMUL_MNK_ALIGN == 0 && l1N % MATMUL_MNK_ALIGN == 0 && l1Ka % MATMUL_MNK_ALIGN == 0 &&
-                    l1Kb % MATMUL_MNK_ALIGN == 0) ||
-                  !(l0M % MATMUL_MNK_ALIGN == 0 && l0N % MATMUL_MNK_ALIGN == 0 && l0K % MATMUL_MNK_ALIGN == 0)) {
+    if constexpr (
+        !(l1M % MATMUL_MNK_ALIGN == 0 && l1N % MATMUL_MNK_ALIGN == 0 && l1Ka % MATMUL_MNK_ALIGN == 0 &&
+          l1Kb % MATMUL_MNK_ALIGN == 0) ||
+        !(l0M % MATMUL_MNK_ALIGN == 0 && l0N % MATMUL_MNK_ALIGN == 0 && l0K % MATMUL_MNK_ALIGN == 0)) {
         return false;
     }
     // Check L1 L0 shape

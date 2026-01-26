@@ -81,11 +81,11 @@ constexpr const char* GetStatusString(Status status)
         }                                                                                                              \
     } while (0)
 
-#define ACT_CHECK(status)                                                                                              \
+#define CMCT_CHECK(status)                                                                                              \
     do {                                                                                                               \
         Status ret = status;                                                                                           \
         if (ret != Status::success) {                                                                                  \
-            std::cerr << "Got act error: " << GetStatusString(ret) << std::endl;                                       \
+            std::cerr << "Got cmct error: " << GetStatusString(ret) << std::endl;                                       \
             return;                                                                                                    \
         }                                                                                                              \
     } while (0)
