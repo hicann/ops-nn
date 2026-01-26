@@ -83,4 +83,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_gelu_backward](./examples/test_aclnn_gelu_backward.cpp) | 通过[aclnnGelu](./docs/aclnnGeluBackward)接口方式调用GeluGrad算子。    |
+| aclnn调用 | [test_aclnn_gelu_backward](./examples/test_aclnn_gelu_backward.cpp) | 通过[aclnnGeluBackward](./docs/aclnnGeluBackward.md)接口方式调用GeluGrad算子。    |
