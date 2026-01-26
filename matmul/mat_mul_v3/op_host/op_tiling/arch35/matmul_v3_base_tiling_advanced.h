@@ -94,7 +94,7 @@ protected:
     bool CheckIterBatchBasicApi(uint64_t tilingkey) const
     {
         return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
-                MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::MULTI_BATCH_MODEL);
+                MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::SINGLE_BIAS_MODEL);
     }
 
     bool CheckMatMulToMulBasicApi(uint64_t tilingkey) const

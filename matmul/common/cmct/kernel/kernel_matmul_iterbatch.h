@@ -82,6 +82,7 @@ public:
     using AType = typename BlockMmadBuilder::AType;
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
+    using BiasType = typename BlockMmadBuilder::BiasType;
     using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = Coord<int64_t, int64_t, int64_t, int64_t>;
@@ -93,8 +94,10 @@ public:
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
     AscendC::GlobalTensor<CType> cGlobal_;
+    AscendC::GlobalTensor<BiasType> biasGlobal_;
     // Shape
     TupleShape problemShape_{};
+    bool isBias_ = false;
     uint64_t m_{0};
     uint64_t n_{0};
     uint64_t k_{0};
@@ -138,6 +141,10 @@ public:
         aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType*>(blockMmadParams_.aGmAddr));
         bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType*>(blockMmadParams_.bGmAddr));
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
+        if (blockMmadParams_.biasGmAddr != nullptr) {
+            isBias_ = true;
+            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType *>(blockMmadParams_.biasGmAddr));
+        }
     }
 
     __host_aicore__ static Status CheckShape(ProblemShape const& shape)
@@ -233,7 +240,7 @@ public:
             epilogueOp.Init(params.epilogueParams, problemShape_);
             cLocal = epilogueOp.GetTensor();
         }
-        blockMmadOp.Init(problemShape_, bs.GetInnerBatch());
+        blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_);
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
@@ -244,7 +251,8 @@ public:
         for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
             auto blockShape = bs.GetBlockShape(tileIdx);
             auto blockCoord = bs.GetBlockCoord(tileIdx);
-            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_, bs.GetInnerBatch(), transB);
+            auto blockOffset =
+                GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_, bs.GetInnerBatch(), transB);
             // calculate block-level offset
             int64_t offsetA = Get<0>(blockOffset);
             int64_t offsetB = Get<1>(blockOffset);
@@ -259,12 +267,12 @@ public:
             }
             if ASCEND_IS_AIC {
                 if constexpr (!AscendC::Std::is_same_v<BlockEpilogue, Block::BlockEpilogueEmpty>) {
-                    blockMmadOp(
-                        cLocal, aGlobal_[offsetA], bGlobal_[offsetB], blockNum, curIterBatchL1, nextIterBatchL1,
-                        mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound, isFinalRound);
+                    blockMmadOp(cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_, blockNum, curIterBatchL1,
+                                nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
+                                isFinalRound);
                 } else {
                     blockMmadOp(
-                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], blockNum, curIterBatchL1,
+                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_, blockNum, curIterBatchL1,
                         nextIterBatchL1, mainIterBatchL1, mainIterBatchL0, baseM, baseN, baseK, isPreLoadRound,
                         isFinalRound);
                 }
