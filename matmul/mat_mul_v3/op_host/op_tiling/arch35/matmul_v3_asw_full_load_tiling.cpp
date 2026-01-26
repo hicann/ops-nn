@@ -276,5 +276,9 @@ uint64_t MatMulV3AswFullLoadTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
+ge::graphStatus MatMulV3AswFullLoadTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<MatMulV3TilingData>(tiling);
+}
 } // namespace matmul_v3_advanced
 } // namespace optiling

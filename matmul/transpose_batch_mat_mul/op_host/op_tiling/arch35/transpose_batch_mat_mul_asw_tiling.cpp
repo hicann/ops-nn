@@ -71,10 +71,16 @@ uint64_t TransposeBatchMatMulAswTiling::GetBlockDim() const
     return compileInfo_.aicNum;
 }
 
-ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingData(BatchMatMulV3TilingData& tilingData) const
+ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3TilingData>(tiling);
+}
+
+ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const
 {
     tilingData.batchSplitFactor = batchSplitFactor_;
-    return MatMulV3BaseTiling::GetTilingData(tilingData);
+    return MatMulV3BaseTiling::GetTilingDataProcess(tilingData);
 }
+
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling

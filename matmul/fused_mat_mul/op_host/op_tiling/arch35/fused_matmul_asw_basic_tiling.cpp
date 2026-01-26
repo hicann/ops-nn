@@ -43,5 +43,9 @@ uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
+ge::graphStatus FusedMatMulAswBasicApiTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
+}
 } // namespace fused_matmul
 } // namespace optiling

@@ -125,5 +125,10 @@ uint64_t BatchMatMulV3IterBatchTiling::GetBlockDim() const
 {
     return compileInfo_.aicNum;
 }
+
+ge::graphStatus BatchMatMulV3IterBatchTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3TilingData>(tiling);
+}
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

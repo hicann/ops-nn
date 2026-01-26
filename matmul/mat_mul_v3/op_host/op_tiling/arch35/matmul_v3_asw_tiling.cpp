@@ -540,5 +540,10 @@ uint64_t MatMulV3AswTiling::GetTilingKey() const
         .SetL0C2Out(MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_))
         .GetTilingKey();
 }
+
+ge::graphStatus MatMulV3AswTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<MatMulV3TilingData>(tiling);
+}
 } // namespace matmul_v3_advanced
 } // namespace optiling

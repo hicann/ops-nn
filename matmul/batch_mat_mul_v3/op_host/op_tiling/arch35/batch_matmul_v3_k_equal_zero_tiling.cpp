@@ -59,5 +59,10 @@ uint64_t BatchMatMulV3KEqZeroTiling::GetTilingKey() const
         .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .GetTilingKey();
 }
+
+ge::graphStatus BatchMatMulV3KEqZeroTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<MatMulV3KEqZeroBasicTilingData>(tiling);
+}
 }
 }

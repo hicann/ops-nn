@@ -39,6 +39,8 @@ protected:
 
     uint64_t GetBlockDim() const override;
 
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+
     bool IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const;
 
     bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;

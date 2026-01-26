@@ -41,7 +41,9 @@ protected:
 
     uint64_t GetBlockDim() const override;
 
-    ge::graphStatus GetTilingData(BatchMatMulV3TilingData& tilingData) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+
+    ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const override;
 
 private:
     void GetTransposeBatchMatMulInfo();

@@ -35,6 +35,7 @@ protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
     void DoBL1FullLoad(uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
     void DoAL1FullLoad(uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
 

@@ -35,6 +35,8 @@ protected:
 
     std::vector<size_t> GetWorkspaceSize() const override;
 
+    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+
 private:
     bool CheckStreamKSKTiling() const;
 

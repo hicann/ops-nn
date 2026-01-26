@@ -38,6 +38,8 @@ protected:
     void DoBL1FullLoad(bool isKFullLoad, uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
     void DoAL1FullLoad(bool isKFullLoad, uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
 
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+
 private:
     void FullLoadPre();
     bool CheckABL1FullLoad() const;

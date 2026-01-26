@@ -37,6 +37,7 @@ protected:
 
     uint64_t GetTilingKey() const override;
 
+    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
 private:
     struct CalcParams {
         uint64_t baseStart;

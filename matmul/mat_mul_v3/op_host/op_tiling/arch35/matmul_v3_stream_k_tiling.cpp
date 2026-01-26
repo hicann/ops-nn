@@ -224,5 +224,10 @@ std::vector<size_t> MatMulV3StreamKTiling::GetWorkspaceSize() const
     OP_LOGI(args_.opName, "MatMulV3 tiling workspace size is %lu", workspaceSize);
     return { workspaceSize };
 }
+
+ge::graphStatus MatMulV3StreamKTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<MatMulV3TilingData>(tiling);
+}
 } // namespace matmul_v3
 } // namespace optiling

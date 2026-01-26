@@ -115,5 +115,10 @@ uint64_t BatchMatMulV3ToMulTiling::GetBlockDim() const
 {
     return runInfo_.toMulInfo.usedCoreNum;
 }
+
+ge::graphStatus BatchMatMulV3ToMulTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulToMulBasicTilingData>(tiling);
+}
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

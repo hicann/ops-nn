@@ -35,6 +35,8 @@ protected:
     uint64_t GetTilingKey() const override;
 
     uint64_t GetBlockDim() const override;
+
+    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
 };
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

@@ -38,6 +38,8 @@ protected:
 
     uint64_t GetBlockDim() const override;
 
+    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+
 private:
     uint64_t iterBatch_{1};
     uint64_t batchOutNum_{1};

@@ -247,5 +247,11 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
         runInfo_.baseM, runInfo_.baseN);
     return ge::GRAPH_SUCCESS;
 }
+
+ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3IterBatchBasicTilingData>(tiling);
+}
+
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

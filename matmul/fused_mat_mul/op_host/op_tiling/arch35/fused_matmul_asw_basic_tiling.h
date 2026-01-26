@@ -31,6 +31,7 @@ public:
 protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 };
 } // namespace fused_matmul
 } // namespace optiling

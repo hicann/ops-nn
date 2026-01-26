@@ -62,6 +62,11 @@ uint64_t BatchMatMulV3AswBasicTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
+ge::graphStatus BatchMatMulV3AswBasicTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
+}
+
 uint64_t BatchMatMulV3AswBasicTiling::GetBlockDim() const
 {
     return compileInfo_.aicNum;

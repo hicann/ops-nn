@@ -33,6 +33,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
     uint64_t GetBlockDim() const override;
+    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
     uint64_t alignNum_ = BLOCK_BYTE_SIZE / args_.aDtypeSize;
 };
 } // namespace batch_matmul_v3_advanced

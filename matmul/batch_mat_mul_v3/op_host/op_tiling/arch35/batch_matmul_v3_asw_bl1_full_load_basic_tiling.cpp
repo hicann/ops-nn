@@ -84,5 +84,11 @@ uint64_t BatchMatMulV3AswBL1FullLoadBasicTiling::GetTilingKey() const
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }
+
+ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::GetTilingData(TilingResult& tiling) const
+{
+    return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
+}
+
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

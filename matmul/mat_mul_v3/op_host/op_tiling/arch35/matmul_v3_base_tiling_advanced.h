@@ -97,17 +97,6 @@ protected:
                 MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::SINGLE_BIAS_MODEL);
     }
 
-    bool CheckMatMulToMulBasicApi(uint64_t tilingkey) const
-    {
-        return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
-                MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::BATCH_MATMUL_TO_MUL);
-    }
-
-    bool CheckMatMulKEqZero(uint64_t tilingkey) const
-    {
-        return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::K_EQUAL_ZERO);
-    }
-
     bool CheckMatMulStreamK(uint64_t tilingkey) const
     {
         return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K);
@@ -159,55 +148,35 @@ protected:
         return cacheMode;
     }
 
+    //子类中指定模版
+    virtual ge::graphStatus GetTilingData(TilingResult& tiling) const = 0;
+
+    //根据模版赋值TilingData
+    template <typename TilingDataType>
+    ge::graphStatus GetTilingDataImpl(TilingResult& tiling) const
+    {
+        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;
+        std::shared_ptr<TilingDataType> tilingDataPtr;
+        try {
+            tilingDataPtr = std::make_shared<TilingDataType>();
+        } catch (const std::bad_alloc& e) {
+            OP_LOGE(context_->GetNodeName(), "Failed to allocate memory for tilingData ");
+            return ge::GRAPH_FAILED;
+        }
+        getTilingRet = GetTilingDataProcess(*tilingDataPtr);
+        tiling.tilingData = tilingDataPtr;
+        tiling.tilingDataSize = sizeof(TilingDataType);
+        return getTilingRet;
+    }
+
     ge::graphStatus PostTiling() override
     {
         TilingResult tiling;
         tiling.tilingKey = GetTilingKey();
         tiling.workspaceSize = GetWorkspaceSize();
         tiling.blockDim = GetBlockDim();
-        MatMulV3TilingData tilingData;
-        BatchMatMulV3TilingData batchTilingData;
-        BatchMatMulV3BasicTilingData batchBasicTilingData;
-        MatMulV3BasicTilingData tilingBasicData;
-        BatchMatMulV3IterBatchBasicTilingData iterbatchTilingBasicData;
-        BatchMatMulToMulBasicTilingData matmulToMulBasicData;
-        MatMulV3KEqZeroBasicTilingData kEqZeroBasicTilingData;
-        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;
-        if (std::string(context_->GetNodeType()) == "TransposeBatchMatMul") {
-            OP_LOGI(args_.opName, "Enter BatchMatMulV3TilingData tiling getTiling.");
-            getTilingRet = GetTilingData(batchTilingData);
-            tiling.tilingData = static_cast<void*>(&batchTilingData);
-            tiling.tilingDataSize = sizeof(BatchMatMulV3TilingData);
-        }else if (CheckMatMulKEqZero(tiling.tilingKey)) {
-            getTilingRet = GetTilingData(kEqZeroBasicTilingData);
-            tiling.tilingData = static_cast<void *>(&kEqZeroBasicTilingData);
-            tiling.tilingDataSize = sizeof(MatMulV3KEqZeroBasicTilingData);
-        } else if (CheckMatMulToMulBasicApi(tiling.tilingKey)) {
-            OP_LOGI(args_.opName, "Enter matmul2mul tiling getTiling.");
-            getTilingRet = GetTilingData(matmulToMulBasicData);
-            tiling.tilingData = static_cast<void *>(&matmulToMulBasicData);
-            tiling.tilingDataSize = sizeof(BatchMatMulToMulBasicTilingData);
-        } else if (CheckBasicApiTilingKey(tiling.tilingKey) && batchInfo_ == nullptr) {
-            getTilingRet = GetTilingData(tilingBasicData);
-            tiling.tilingData = static_cast<void *>(&tilingBasicData);
-            tiling.tilingDataSize = sizeof(MatMulV3BasicTilingData);
-        } else if (CheckIterBatchBasicApi(tiling.tilingKey)) {
-            getTilingRet = GetTilingData(iterbatchTilingBasicData);
-            tiling.tilingData = static_cast<void *>(&iterbatchTilingBasicData);
-            tiling.tilingDataSize = sizeof(BatchMatMulV3IterBatchBasicTilingData);
-        } else if (batchInfo_ == nullptr) {
-            getTilingRet = GetTilingData(tilingData);
-            tiling.tilingData = static_cast<void *>(&tilingData);
-            tiling.tilingDataSize = sizeof(MatMulV3TilingData);
-        } else if (CheckBasicApiTilingKey(tiling.tilingKey)) {
-            GetTilingData(batchBasicTilingData);
-            tiling.tilingData = static_cast<void *>(&batchBasicTilingData);
-            tiling.tilingDataSize = sizeof(BatchMatMulV3BasicTilingData);
-        } else {
-            getTilingRet = GetTilingData(batchTilingData);
-            tiling.tilingData = static_cast<void *>(&batchTilingData);
-            tiling.tilingDataSize = sizeof(BatchMatMulV3TilingData);
-        }
+        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;  
+ 	    getTilingRet = GetTilingData(tiling);
         if (getTilingRet == ge::GRAPH_FAILED) {
             OP_LOGE(context_->GetNodeName(), "Get tiling data from api failed");
             return ge::GRAPH_FAILED;
@@ -277,7 +246,7 @@ protected:
             for (uint64_t i = 0; i < TILINGDATA_SPLIT_NUM; ++i) {
                 errno_t ret = memcpy_s((uint8_t*)context_->GetRawTilingData()->GetData() + i * TILINGDATA_OFFSET,
                                        context_->GetRawTilingData()->GetCapacity() - i * TILINGDATA_OFFSET,
-                                       tiling.tilingData, tiling.tilingDataSize);
+                                       tiling.tilingData.get(), tiling.tilingDataSize);
                 if (ret != EOK) {
                     OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
                     return ge::GRAPH_FAILED;
@@ -287,7 +256,7 @@ protected:
                                                       tiling.tilingDataSize);
         } else {
             errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                                   tiling.tilingData, tiling.tilingDataSize);
+                                   tiling.tilingData.get(), tiling.tilingDataSize);
             if (ret != EOK) {
                 OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
                 return ge::GRAPH_FAILED;
@@ -308,8 +277,8 @@ protected:
         return 1UL;
     }
 
-    // MM高阶API模板GetTilingData
-    virtual ge::graphStatus GetTilingData(MatMulV3TilingData& tilingData) const
+    // MM高阶API模板GetTilingDataProcess
+    virtual ge::graphStatus GetTilingDataProcess(MatMulV3TilingData& tilingData) const
     {
         ge::graphStatus ret = InitTCubeTilingData(tilingData.tCubeTiling);
         tilingData.tCubeTiling.usedCoreNum = runInfo_.usedCoreNum;
@@ -345,7 +314,7 @@ protected:
         return ret;
     };
 
-    virtual ge::graphStatus GetTilingData(BatchMatMulV3TilingData &tilingData) const
+    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData &tilingData) const
     {
         tilingData.aBatchDimAll = batchInfo_->batchA;
         tilingData.bBatchDimAll = batchInfo_->batchB;
@@ -365,18 +334,18 @@ protected:
         tilingData.cBatchDim3 = batchInfo_->batchC3;
         tilingData.iterBatch = runInfo_.bmmRunInfo.iterBatch;
         tilingData.batchOutNum = runInfo_.bmmRunInfo.batchOutNum;
-        return GetTilingData(tilingData.matMulTilingData);
+        return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 
-    virtual ge::graphStatus GetTilingData(BatchMatMulV3BasicTilingData &tilingData) const
+    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulV3BasicTilingData &tilingData) const
     {   
         // A全载和B全载基础API当前只支持单边batch, 后续放开后不能再用batchC
         tilingData.batchDimAll = batchInfo_->batchC;
-        return GetTilingData(tilingData.matMulTilingData);
+        return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 
-    // MM基础API模板GetTilingData
-    virtual ge::graphStatus GetTilingData(MatMulV3BasicTilingData &tilingData) const
+    // MM基础API模板GetTilingDataProcess
+    virtual ge::graphStatus GetTilingDataProcess(MatMulV3BasicTilingData &tilingData) const
     {
         tilingData.usedCoreNum = runInfo_.usedCoreNum;
         tilingData.m = args_.mValue;
@@ -421,7 +390,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     };
 
-    virtual ge::graphStatus GetTilingData(BatchMatMulV3IterBatchBasicTilingData &iterbatchTilingBasicData) const
+    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulV3IterBatchBasicTilingData &iterbatchTilingBasicData) const
     {
         iterbatchTilingBasicData.m = args_.mValue;
         iterbatchTilingBasicData.n = args_.nValue;
@@ -439,7 +408,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     };
 
-    virtual ge::graphStatus GetTilingData(BatchMatMulToMulBasicTilingData &matmulToMulBasicData) const
+    virtual ge::graphStatus GetTilingDataProcess(BatchMatMulToMulBasicTilingData &matmulToMulBasicData) const
     {
         matmulToMulBasicData.m = runInfo_.toMulInfo.m;
         matmulToMulBasicData.n = runInfo_.toMulInfo.n;
@@ -454,7 +423,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     };
 
-    virtual ge::graphStatus GetTilingData(MatMulV3KEqZeroBasicTilingData &kEqZeroBasicTilingData) const
+    virtual ge::graphStatus GetTilingDataProcess(MatMulV3KEqZeroBasicTilingData &kEqZeroBasicTilingData) const
     {
         kEqZeroBasicTilingData.totalDataAmount = runInfo_.totalDataAmount;
         kEqZeroBasicTilingData.aivNum = runInfo_.usedCoreNum;
