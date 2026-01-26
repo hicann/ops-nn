@@ -43,7 +43,6 @@ protected:
     ge::graphStatus CheckShape();
     ge::graphStatus TilingEle();
     ge::graphStatus TilingReduce(const MseLossCompileInfo* compileInfo);
-    void ConvertReduceOpTilingData(ReduceOpTilingDataV2* dst, const Ops::Base::ReduceOpTilingData* src);
 
 private:
     ge::DataType outputDtype;

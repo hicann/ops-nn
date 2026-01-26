@@ -17,30 +17,13 @@
 #define __MSE_LOSS_TILING_DATA_H__
 
 #include "atvoss/elewise/elewise_base_struct.h"
+#include "atvoss/reduce/reduce_tiling_data.h"
 
 using namespace Ops::Base;
-struct ReduceOpTilingDataV2 {
-    uint64_t factorACntPerCore;
-    uint64_t factorATotalCnt;
-    uint64_t ubFactorA;
-    uint64_t factorRCntPerCore;
-    uint64_t factorRTotalCnt;
-    uint64_t ubFactorR;
-    uint64_t groupR;
-    uint64_t outSize;
-    uint64_t basicBlock;
-    uint64_t resultBlock;
-    int32_t coreNum;
-    int32_t useNddma;
-    float meanVar;
-    uint64_t shape[Ops::Base::ReduceOpTmpl::MAX_DIM];
-    uint64_t stride[Ops::Base::ReduceOpTmpl::MAX_DIM];
-    uint64_t dstStride[Ops::Base::ReduceOpTmpl::MAX_DIM];
-};
 
 struct MseLossTilingData {
     EleBaseTilingData baseTiling;
-    ReduceOpTilingDataV2 reduceTiling;
+    ReduceOpTilingData reduceTiling;
 };
 
 #endif

@@ -36,28 +36,6 @@ static const std::map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1
 static const std::map<ge::DataType, uint32_t> DTYEP_2_INT_KEY{
     {ge::DT_FLOAT16, 10}, {ge::DT_FLOAT, 20}, {ge::DT_BF16, 30}};
 
-void MseLossTiling::ConvertReduceOpTilingData(ReduceOpTilingDataV2* dst, const Ops::Base::ReduceOpTilingData* src)
-{
-    dst->factorACntPerCore = src->factorACntPerCore;
-    dst->factorATotalCnt = src->factorATotalCnt;
-    dst->ubFactorA = src->ubFactorA;
-    dst->factorRCntPerCore = src->factorRCntPerCore;
-    dst->factorRTotalCnt = src->factorRTotalCnt;
-    dst->ubFactorR = src->ubFactorR;
-    dst->groupR = src->groupR;
-    dst->outSize = src->outSize;
-    dst->basicBlock = src->basicBlock;
-    dst->resultBlock = src->resultBlock;
-    dst->coreNum = src->coreNum;
-    dst->useNddma = src->useNddma;
-    dst->meanVar = src->meanVar;
-    for (int32_t i = 0; i < Ops::Base::ReduceOpTmpl::MAX_DIM; i++) {
-        dst->shape[i] = src->shape[i];
-        dst->stride[i] = src->stride[i];
-        dst->dstStride[i] = src->dstStride[i];
-    }
-}
-
 ge::graphStatus MseLossTiling::CheckShape()
 {
     auto predictStorageShape = tilingContext->GetInputShape(0);
@@ -142,33 +120,31 @@ ge::graphStatus MseLossTiling::TilingReduce(const MseLossCompileInfo* compileInf
     for (size_t i = 0; i < opInput.shape.size(); i++) {
         opInput.axes[i] = i;
     }
-    ReduceOpTilingData optiling;
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<MseLoss::MseLossSumDag<half, float>::OpDag>(
-                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &optiling) == ge::GRAPH_FAILED),
+                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<MseLoss::MseLossMeanDag<half, float>::OpDag>(
-                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &optiling) == ge::GRAPH_FAILED),
+                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<MseLoss::MseLossSumDag<float, float>::OpDag>(
-                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &optiling) == ge::GRAPH_FAILED),
+                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<MseLoss::MseLossMeanDag<float, float>::OpDag>(
-                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &optiling) == ge::GRAPH_FAILED),
+                     tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext->GetNodeName(), "MseLoss Tiling failed"), return ge::GRAPH_FAILED);
         }
     }
-    ConvertReduceOpTilingData(&tiling->reduceTiling, &optiling);
     return ge::GRAPH_SUCCESS;
 }
 
