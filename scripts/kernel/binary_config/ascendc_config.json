@@ -470,7 +470,7 @@
     {"name":"PpMatMul", "compute_units": ["ascend910b"], "auto_sync" : false},
     {"name":"PpMatmulW8A8", "compute_units": ["ascend910b", "ascend310p"], "auto_sync" : false},
     {"name":"PpMatmulW8A8Compress", "compute_units": ["ascend310p"], "auto_sync" : false},
-    {"name":"TransQuantParamV2", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : false},
+    {"name":"TransQuantParamV2", "compute_units": ["ascend910b", "ascend310p", "ascend910_93", "kirinx90"], "auto_sync" : false},
     {"name":"ThreeInterpolateBackward", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"GroupedMatMulAllReduce", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"GroupedMatMulAlltoAllv", "compute_units": ["ascend910_93", "ascend910_95"], "auto_sync": false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
