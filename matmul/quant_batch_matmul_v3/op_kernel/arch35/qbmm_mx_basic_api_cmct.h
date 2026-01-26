@@ -70,6 +70,7 @@ __aicore__ inline void QbmmMxBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR sc
                           quantBmmTilingData_->params.batchC2,
                           quantBmmTilingData_->params.batchC3,
                           quantBmmTilingData_->params.batchC4,
+                          quantBmmTilingData_->params.biasThreeDim,
                           matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
                           static_cast<uint32_t>(matmulTiling.isBias), static_cast<uint32_t>(matmulTiling.dbL0C)};
     Params params = {

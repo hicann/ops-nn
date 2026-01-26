@@ -99,6 +99,7 @@ public:
         uint32_t batchC2;
         uint32_t batchC3;
         uint32_t batchC4;
+        uint32_t biasThreeDim;
         uint32_t baseM;
         uint32_t baseN;
         uint32_t baseK;
@@ -144,6 +145,7 @@ private:
     uint64_t batchCOffset_{0};
     uint64_t batchAOffset_{0};
     uint64_t batchBOffset_{0};
+    bool isBiasThreeDim_{false};
     bool isBias_{false};
 };
 
@@ -177,6 +179,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
     bGlobal_.SetGlobalBuffer((__gm__ BType*)params.mmadParams.bGmAddr);
     cGlobal_.SetGlobalBuffer((__gm__ CType*)params.mmadParams.cGmAddr);
     if (params.qbmmParams.isBias == 1) {
+        isBiasThreeDim_ = params.qbmmParams.biasThreeDim == 1;
         isBias_ = true;
         biasGlobal_.SetGlobalBuffer((__gm__ BiasType*)params.mmadParams.biasGmAddr);
     }
@@ -259,6 +262,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
         Get<IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
         Get<IDX_B_OFFSET>(blockOffset_) += batchBOffset_ * params.problemShape.n * params.problemShape.k;
         Get<IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m * params.problemShape.n;
+        if (isBiasThreeDim_) {
+            Get<IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
+        }
 
         mmadOp_(aGlobal_[Get<IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<IDX_B_OFFSET>(blockOffset_)],
                 x1scaleGlobal_[Get<IDX_X1SCALE_OFFSET>(blockOffset_)],
