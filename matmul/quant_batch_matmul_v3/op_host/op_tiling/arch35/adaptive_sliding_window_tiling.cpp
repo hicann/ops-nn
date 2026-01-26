@@ -65,11 +65,9 @@ constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2;
 constexpr uint32_t DATA_SIZE_L0C = 4;
 constexpr uint32_t VEC_CORE_GROUP_NUM = 2;
 
-constexpr uint64_t WINDOW_LEN = 4; // v100 的滑窗大小
-constexpr uint64_t MTE2_CACHELINE_SIZE = 256; // MTE2 的一个 CACHELINE
-constexpr uint64_t LOAD_BALANCE_THRESHOLD = 1792; // 内轴非 256 对齐时，外轴执行负载均衡的阈值
-static const std::initializer_list<ge::DataType> LOAD_BALANCE_DTYPE_SUPPORT_LIST = {ge::DT_FLOAT8_E5M2,
-                                                                                    ge::DT_FLOAT8_E4M3FN};
+constexpr uint64_t WINDOW_LEN = 4;                // v100 的滑窗大小
+constexpr uint64_t MTE2_CACHELINE_SIZE = 256;     // MTE2 CACHELINE大小
+constexpr uint64_t LOAD_BALANCE_THRESHOLD = 1792; // 执行外轴负载均衡优化时，M轴或N轴的最小尺寸阈值
 
 // supportMmadS8S4平台
 constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32 * 1024UL;
@@ -120,14 +118,15 @@ void AdaptiveSlidingWindowTiling::LoadBalanceDataReset()
 
 bool AdaptiveSlidingWindowTiling::CheckDtype() const
 {
-    QuantBatchMatmulV3CheckerBase *qmmV3Checker = nullptr;
+    QuantBatchMatmulV3CheckerBase* qmmV3Checker = nullptr;
     if (compileInfo_.supportMmadS8S4) {
-         qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker4MmadS8S4(context_, inputParams_);
+        qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker4MmadS8S4(context_, inputParams_);
     } else {
-         qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker(context_, inputParams_);
+        qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker(context_, inputParams_);
     }
-    OP_TILING_CHECK(qmmV3Checker == nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "failed to instantiate qmmV3Checker"), return false);
+    OP_TILING_CHECK(
+        qmmV3Checker == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "failed to instantiate qmmV3Checker"),
+        return false);
     bool res = qmmV3Checker->CheckDtype();
     delete qmmV3Checker;
     OP_TILING_CHECK(!res, CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype fail"), return false);
@@ -179,7 +178,7 @@ ge::graphStatus AdaptiveSlidingWindowTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
     LoadBalanceDataReset();
-    if(!OptimizeEdgeBasicBlock()) {
+    if (!OptimizeEdgeBasicBlock()) {
         OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
         return ge::GRAPH_FAILED;
     }
@@ -291,7 +290,7 @@ bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
     adaptiveWin_.mTail = inputParams_.mSize - (adaptiveWin_.mBlockCnt - 1UL) * adaptiveWin_.baseM;
     adaptiveWin_.nTail = inputParams_.nSize - (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, aicoreParams_.aicNum);
-    adaptiveWin_.tailWinBlockCnt = (adaptiveWin_.totalBlockCnt) % aicoreParams_.aicNum;
+    adaptiveWin_.tailWinBlockCnt = adaptiveWin_.totalBlockCnt % aicoreParams_.aicNum;
     IsABFullLoad();
     if (isABFullLoad_) {
         adaptiveWin_.useTailWinLogic = false;
@@ -1030,50 +1029,33 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
     return true;
 }
 
-bool AdaptiveSlidingWindowTiling::IsLoadBalanceSupportDtype(ge::DataType inputDtype) const
-{
-    return std::find(LOAD_BALANCE_DTYPE_SUPPORT_LIST.begin(), LOAD_BALANCE_DTYPE_SUPPORT_LIST.end(), inputDtype) !=
-           LOAD_BALANCE_DTYPE_SUPPORT_LIST.end();
-}
-
 bool AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
 {
-    // supportMmadS8S4平台
-    if (compileInfo_.supportMmadS8S4) {
+    if (compileInfo_.supportMmadS8S4 || isAFullLoad_ || (inputParams_.transA && !inputParams_.transB) ||
+        (inputParams_.isPerBlock && inputParams_.groupSizeM != 1UL)) {
         return true;
     }
-    if (!(inputParams_.isMxPerGroup && !isAFullLoad_ && IsLoadBalanceSupportDtype(inputParams_.aDtype) &&
-          IsLoadBalanceSupportDtype(inputParams_.bDtype) && !inputParams_.transA && inputParams_.transB)) {
-        return true;
-    }
-    OP_TILING_CHECK(adaptiveWin_.baseM == 0UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "The divisor is zero: MathUtil::CeilDivision(inputParams_.mSize, \
-adaptiveWin_.baseM(%lu)).",
-                                          adaptiveWin_.baseM),
-                    return false);
-    OP_TILING_CHECK(adaptiveWin_.baseN == 0UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "The divisor is zero: MathUtil::CeilDivision(inputParams_.nSize, \
-adaptiveWin_.baseN(%lu)).",
-                                          adaptiveWin_.baseN),
-                    return false);
+
     uint64_t mCore = MathUtil::CeilDivision(inputParams_.mSize, adaptiveWin_.baseM);
     uint64_t nCore = MathUtil::CeilDivision(inputParams_.nSize, adaptiveWin_.baseN);
     if (mCore == 1UL || nCore == 1UL) {
         return true;
     }
+
     uint64_t mBaseTail = static_cast<uint64_t>(inputParams_.mSize % adaptiveWin_.baseM);
     uint64_t nBaseTail = static_cast<uint64_t>(inputParams_.nSize % adaptiveWin_.baseN);
-
-    bool balanceAfterFixp = inputParams_.kSize <= BASIC_BLOCK_SIZE_1024;
-    bool isInnerAxisAligned = inputParams_.kSize % MTE2_CACHELINE_SIZE == 0UL;
-    if (mBaseTail > 0UL && (isInnerAxisAligned || inputParams_.mSize > LOAD_BALANCE_THRESHOLD)) {
+    bool isMxfp4 = inputParams_.isMxPerGroup &&
+                   (inputParams_.aDtype == ge::DT_FLOAT4_E2M1 || inputParams_.aDtype == ge::DT_FLOAT4_E1M2);
+    bool balanceAfterFixp = inputParams_.kSize < static_cast<uint64_t>(BASIC_BLOCK_SIZE_1024);
+    bool isInnerAxisAlign = GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) % MTE2_CACHELINE_SIZE == 0UL;
+    if (mBaseTail > 0UL && !inputParams_.transA &&
+        (isInnerAxisAlign || (inputParams_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         if (!GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain)) {
             return false;
         };
     }
-    if (nBaseTail > 0UL && !balanceAfterFixp && (isInnerAxisAligned || inputParams_.nSize > LOAD_BALANCE_THRESHOLD)) {
+    if (nBaseTail > 0UL && inputParams_.transB && !balanceAfterFixp && !inputParams_.isPerBlock && !isMxfp4 &&
+        (isInnerAxisAlign || (inputParams_.nSize >= LOAD_BALANCE_THRESHOLD))) {
         if (!GetOuterNAxisTailCnt(adaptiveWin_.nBaseTailSplitCnt, adaptiveWin_.nTailMain)) {
             return false;
         };
