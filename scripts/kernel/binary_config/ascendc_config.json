@@ -15,7 +15,7 @@
     {"name":"ApplyCamePart1", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"ApplyAdamWV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"ApplyFtrl", "compute_units": ["ascend910_95"], "auto_sync" : false, "compile_options": {"ascend910_95":["--cce-simd-vf-fusion=true", "-mllvm -cce-aicore-dcci-before-kernel-end=true"]}},
-    {"name":"ApplyTopKTopPWithSorted", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : true},
+    {"name":"ApplyTopKTopPWithSorted", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95", "kirinx90"], "auto_sync" : true},
     {"name":"ExpandIntoJaggedPermute", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"DequantRopeQuantKvcache", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"DeformableOffsets", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
