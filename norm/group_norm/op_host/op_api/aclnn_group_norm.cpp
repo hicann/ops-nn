@@ -35,6 +35,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/level2_base.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_group_norm.h"
 
 using namespace op;
@@ -43,10 +44,10 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
 
 static const int64_t ONE_DIM = 1;
@@ -57,12 +58,11 @@ static const int64_t TWO_DIM = 2;
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND910_95) {
-        return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+        return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
-        return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
+        return DTYPE_DTYPE_SUPPORT_LIST;
     }
 }
 
@@ -259,7 +259,7 @@ static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormOutCastProcess(
     aclTensor* meanCast = const_cast<aclTensor*>(mean);
     aclTensor* varianceCast = const_cast<aclTensor*>(variance);
     if (x->GetDataType() == op::DataType::DT_FLOAT16 &&
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910) {
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_1001) {
         yCast = const_cast<aclTensor*>(l0op::Cast(y, op::DataType::DT_FLOAT16, executor));
         meanCast = const_cast<aclTensor*>(l0op::Cast(mean, op::DataType::DT_FLOAT16, executor));
         varianceCast = const_cast<aclTensor*>(l0op::Cast(variance, op::DataType::DT_FLOAT16, executor));
@@ -352,10 +352,9 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
 
     // 根据芯片确定调用GroupNorm，还是GroupNormSilu
     std::tuple<aclTensor*, aclTensor*, aclTensor*> result;
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool isNormSocLists =
-        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND310P || socVersion == SocVersion::ASCEND910_95);
+        (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_2002 || Ops::NN::AclnnUtil::IsRegbase(npuArch));
     if (isNormSocLists) {
         result = l0op::GroupNormSilu(
             selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), false,
@@ -364,7 +363,7 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(
         const aclTensor* xCast = selfContiguous;
         const aclTensor* gammaCast = gammaContiguous;
         const aclTensor* betaCast = betaContiguous;
-        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && socVersion == SocVersion::ASCEND910) {
+        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && npuArch == NpuArch::DAV_1001) {
             xCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
             CHECK_RET(xCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             gammaCast = l0op::Cast(gammaContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
