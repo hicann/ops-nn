@@ -255,7 +255,7 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     op::Shape bmmEmptyShape = {(self->GetViewShape())[0], (self->GetViewShape())[1], (mat2->GetViewShape())[2]};
     auto output = executor->AllocTensor(bmmEmptyShape, self->GetDataType());
     if (output->IsEmpty()) {
-        OP_LOGI("Returning an empty tensor without actually doing calculation");
+        OP_LOGI("Returning an empty tensor without actually doing calculation.");
         return output;
     }
     FVector<int64_t> fillShape = GetShape(output);
@@ -423,7 +423,7 @@ static bool CheckAscendCScenario(
 {
     if (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
         mmOpInfo.support_info.mat2_format != ge::FORMAT_ND) {
-        OP_LOGI("Hit batch_mat_mul_v3 weightnz");
+        OP_LOGI("Hit batch_mat_mul_v3 weightNz.");
         return true;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
@@ -443,7 +443,7 @@ static bool CheckAscendCScenario(
         return false;
     }
     if (bias != nullptr) {
-        OP_LOGI("batch_mat_mul_v3 case does not support bias yet");
+        OP_LOGI("batch_mat_mul_v3 case does not support bias yet.");
         return false;
     }
 
@@ -564,7 +564,7 @@ bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat
     bool lessThanL0b = (alignKbValue * alignNValue * dtypeSize * pingPong <= l0bSize);
     bool lessThanL0c = (alignMValue * alignNValue * floatSize * pingPong <= l0cSize);
     bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSize * pingPong <= l1Size;
-    OP_LOGI("Checking If IterBatch Template in this socversion: %ld", static_cast<int64_t>(batchEqual &&
+    OP_LOGI("Checking If IterBatch Template in this SOC version: %ld.", static_cast<int64_t>(batchEqual &&
             batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1));
     bool fitIterBatch = batchEqual && batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
     bool fitBatchMatMulToMul = CheckShapeEqualToMul(mDim, nDim, batchNum, dtypeSize, c0);
@@ -659,7 +659,7 @@ static inline int64_t ProcessEqual1Cases(
         CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
         aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2Cast, mat2Reshape, adjX2, executor);
         CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
-        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
+        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate.");
     } else {
         aclnnStatus mEqual1SelfToMKRes =
             IfMEqual1SelfToMK(selfCast, selfReshape, matmulOpInfo.support_info.self_format, adjX1, executor);
@@ -668,7 +668,7 @@ static inline int64_t ProcessEqual1Cases(
             IfNEqual1Mat2ToNK(mat2Cast, mat2Reshape, matmulOpInfo.support_info.mat2_format, adjX2, executor);
         CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
     }
-    return 0;
+    return 0L;
 }
 
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
@@ -840,17 +840,17 @@ const aclTensor* ExecBmmOpWithBias(
         // 不支持NZ
         if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
             self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGI("format NZ is not supported for transpose.");
+            OP_LOGI("Format NZ is not supported for transpose.");
             isTransposeMat2Contiguous = false;
         }
         if (!CheckTransNonContiguousShapeSupport(self, mat2, bias, transposeSelf)) {
-            OP_LOGI("shape is not supported for transpose");
+            OP_LOGI("Shape is not supported for transpose.");
             isTransposeMat2Contiguous = false;
         }
     }
     const aclTensor* reformatMat2 = nullptr;
     if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ && !isTransposeMat2Contiguous) {
-        OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
+        OP_LOGI("Mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
         reformatMat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
     } else {
         reformatMat2 = mat2;

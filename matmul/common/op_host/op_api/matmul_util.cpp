@@ -586,7 +586,8 @@ static bool IsUseNonContiguous(const aclTensor* tensor)
 
 // Transpose场景下原始stride和shape满足：stride[i] = stride[i+1] * shape[i+1]
 // StrideIndexPairs: {stride, {index, viewShape}}
-static bool IsContiguousStride(StrideIndexPairs &strideIndexPairs) {
+static bool IsContiguousStride(StrideIndexPairs& strideIndexPairs)
+{
     int64_t expectStride = 1;
     for (auto it = strideIndexPairs.rbegin(); it != strideIndexPairs.rend(); it++) {
         if (it->first != expectStride) {
@@ -744,7 +745,7 @@ bool IsSliceNonContiguous(const aclTensor* tensor)
     auto lastStride = viewStrides[0];
     for (int64_t i = 1; i < dimNum; i++) {
         int64_t curStride = viewStrides[i];
-        if (curStride == 0  || viewShape[i] == 1) { // Only support slice
+        if (curStride == 0 || viewShape[i] == 1) { // Only support slice
             return false;
         }
         // stride严格按照逆序排序且能依次整除

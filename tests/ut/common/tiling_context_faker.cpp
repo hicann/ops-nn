@@ -32,6 +32,7 @@ TilingContextFaker& TilingContextFaker::NodeIoNum(size_t inputNum, size_t output
     inputInstanceNum_.resize(inputNum, 1);
     outputInstanceNum_.resize(outputNum, 1);
     inputInstanceNumPacked_ = inputInstanceNum_;
+    OpTilingContextBuilder::IOInstanceNum(inputInstanceNumPacked_, outputInstanceNum_);
     return *this;
 }
 

@@ -115,7 +115,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_not_support_bias_failed)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_3)

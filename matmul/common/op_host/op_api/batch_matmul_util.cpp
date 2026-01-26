@@ -65,7 +65,7 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     op::Shape bmmEmptyShape = {(self->GetViewShape())[0], (self->GetViewShape())[1], (mat2->GetViewShape())[2]};
     auto output = executor->AllocTensor(bmmEmptyShape, self->GetDataType());
     if (output->IsEmpty()) {
-        OP_LOGI("Returning an empty tensor without actually doing calculation");
+        OP_LOGI("Returning an empty tensor without actually doing calculation.");
         return output;
     }
     FVector<int64_t> fillShape = GetShape(output);
@@ -202,7 +202,7 @@ static bool CheckAscendCScenario(
 {
     if (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
         mmOpInfo.support_info.mat2_format != ge::FORMAT_ND) {
-        OP_LOGI("Hit batch_mat_mul_v3 weightnz");
+        OP_LOGI("Hit batch_mat_mul_v3 weightnz.");
         return true;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
@@ -222,7 +222,7 @@ static bool CheckAscendCScenario(
         return false;
     }
     if (bias != nullptr) {
-        OP_LOGI("batch_mat_mul_v3 case does not support bias yet");
+        OP_LOGI("Batch_mat_mul_v3 case does not support bias yet.");
         return false;
     }
 
@@ -334,7 +334,7 @@ bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat
     bool lessThanL0b = (alignKbValue * alignNValue * dtypeSize * pingPong <= l0bSize);
     bool lessThanL0c = (alignMValue * alignNValue * floatSize * pingPong <= l0cSize);
     bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSize * pingPong <= l1Size;
-    OP_LOGI("Checking If IterBatch Template in this socversion: %ld", static_cast<int64_t>(batchEqual &&
+    OP_LOGI("Checking If IterBatch Template in this socversion: %ld.", static_cast<int64_t>(batchEqual &&
             batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1));
     bool fitIterBatch = batchEqual && batchLargerThanAicNum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
     bool fitBatchMatMulToMul = CheckShapeEqualToMul(mDim, nDim, batchNum, dtypeSize, c0);
@@ -409,10 +409,10 @@ const aclTensor* GetBatchMatmulOp(
 bool CheckTransNonContiguousShapeSupport(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, bool adjX1)
 {
-    if (bias) {
+    uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
+ 	if (bias || aicoreNum == 0) {
         return false;
     }
-    uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
     uint64_t dtypeSize = static_cast<uint64_t>(op::TypeSize(self->GetDataType()));
     constexpr uint64_t floatSize = 4UL;
     constexpr uint64_t pingPong = 2UL;
@@ -437,7 +437,7 @@ bool CheckTransNonContiguousShapeSupport(
     bool lessThanL0b = (alignKbValue * alignNValue * dtypeSize * pingPong <= l0bSize);
     bool lessThanL0c = (alignMValue * alignNValue * floatSize * pingPong <= l0cSize);
     bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSize * pingPong <= l1Size;
-    if (!batchEqual || !batchLargerThanAicNum) {
+    if (!batchEqual || !batchLargerThanAicNum || !lessThanL1) {
         return false;
     }
     bool l0CanLoadBatch = lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
@@ -454,7 +454,7 @@ bool CheckTransNonContiguousShapeSupport(
             iterBatchL1);                                              // calculate one of the core load max batch
         double balanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
         if (balanceRateOfBatch < defaultBalanceOfBatch) {              // balance of batch lower than 0.8
-            OP_LOGI("FormulteBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
+            OP_LOGI("FormulteBalanceRate lower than 0.8, unable to enter in bmm iterbatch module.");
             return false;
         }
     }
@@ -470,17 +470,17 @@ bool CheckNonContiguousTranspose(
     // 不支持NZ
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
         self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGI("format NZ is not supported for transpose.");
+        OP_LOGI("Format NZ is not supported for transpose.");
         return false;
     }
     // 对shape校验，只支持多batch载入模板
     if (!CheckTransNonContiguousShapeSupport(self, mat2, bias, adjX1)) {
-        OP_LOGI("shape is not supported for transpose");
+        OP_LOGI("Shape is not supported for transpose.");
         return false;
     }
     // transpose场景下，增加dtype判断，仅支持左右矩阵dtype相同
     if (self->GetDataType() != mat2->GetDataType()) {
-        OP_LOGI("The data type of the self does not match the type of mat2 for transpose");
+        OP_LOGI("The data type of the self does not match the type of mat2 for transpose.");
         return false;
     }
     return true;
@@ -514,7 +514,7 @@ static inline int64_t ProcessEqual1Cases(
         CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
         aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2Cast, mat2Reshape, adjX2, executor);
         CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
-        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
+        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate.");
     } else {
         aclnnStatus mEqual1SelfToMKRes =
             IfMEqual1SelfToMK(selfCast, selfReshape, matmulOpInfo.support_info.self_format, adjX1, executor);
@@ -523,7 +523,7 @@ static inline int64_t ProcessEqual1Cases(
             IfNEqual1Mat2ToNK(mat2Cast, mat2Reshape, matmulOpInfo.support_info.mat2_format, adjX2, executor);
         CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
     }
-    return 0;
+    return 0L;
 }
 
 } // namespace
@@ -553,7 +553,7 @@ const aclTensor* ExecBmmOpWithBiasV2(
 
     const aclTensor* reformatMat2 = nullptr;
     if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ && !isTransposeMat2Contiguous) {
-        OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
+        OP_LOGI("Mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
         reformatMat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
     } else {
         reformatMat2 = mat2;
