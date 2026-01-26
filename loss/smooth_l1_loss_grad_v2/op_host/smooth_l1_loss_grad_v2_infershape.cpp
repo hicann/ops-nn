@@ -19,10 +19,20 @@
 using namespace ge;
 namespace ops {
 
+constexpr uint32_t INPUT_PREDICT_IDX = 0;
+constexpr uint32_t OUTPUT_LOSS_GRAD_IDX = 0;
+
+static ge::graphStatus InferDataTypeForSmoothL1LossGradV2(gert::InferDataTypeContext *context)
+{
+    const ge::DataType predictDtype = context->GetInputDataType(INPUT_PREDICT_IDX);
+    context->SetOutputDataType(OUTPUT_LOSS_GRAD_IDX, predictDtype);
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus Infershape4SmoothL1LossGradV2(gert::InferShapeContext* context) {
   const size_t inputCount = 3;
   return Ops::Base::InferShape4Broadcast(context, inputCount);
 }
 
-IMPL_OP_INFERSHAPE(SmoothL1LossGradV2).InferShape(Infershape4SmoothL1LossGradV2);
+IMPL_OP_INFERSHAPE(SmoothL1LossGradV2).InferShape(Infershape4SmoothL1LossGradV2).InferDataType(InferDataTypeForSmoothL1LossGradV2);
 }  // namespace ops

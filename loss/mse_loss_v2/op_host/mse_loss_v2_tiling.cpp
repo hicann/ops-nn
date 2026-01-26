@@ -24,7 +24,7 @@ constexpr uint32_t TWO_BYTES = 2u;
 constexpr const char* REDUCTION_MEAN = "mean";
 constexpr const char* REDUCTION_SUM = "sum";
 constexpr const char* REDUCTION_NONE = "none";
-
+constexpr uint32_t BATCH_MODE = 1;
 // tiling key
 constexpr uint64_t TILING_KEY_DTYPE_FLOAT32 = 1ULL;
 constexpr uint64_t TILING_KEY_DTYPE_FLOAT16 = 2ULL;
@@ -107,6 +107,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
         optiling::tilingKey += TILING_KEY_ATTR_NONE;
     } else if (optiling::reduction == optiling::REDUCTION_SUM) {
         optiling::tilingKey += TILING_KEY_ATTR_SUM;
+        context->SetScheduleMode(BATCH_MODE);
     } else if (optiling::reduction == optiling::REDUCTION_MEAN) {
         optiling::tilingKey += TILING_KEY_ATTR_MEAN;
     } else {

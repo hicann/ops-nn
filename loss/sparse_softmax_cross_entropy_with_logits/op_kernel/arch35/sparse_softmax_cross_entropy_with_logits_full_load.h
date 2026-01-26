@@ -318,8 +318,11 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
 		AscendC::MicroAPI::RegTensor<T1> featuresReg1;
 		AscendC::MicroAPI::RegTensor<float> maxReg;
         AscendC::MicroAPI::RegTensor<T1> featuresReg;
-        AscendC::MicroAPI::RegTensor<T1> featuresRegTemp;
-        AscendC::MicroAPI::RegTensor<float> featuresReg32;
+        AscendC::MicroAPI::RegTensor<T1> featuresRegLowest;
+        AscendC::MicroAPI::RegTensor<T1> featuresRegHighest;
+        AscendC::MicroAPI::RegTensor<float> featuresRegLowest32;
+        AscendC::MicroAPI::RegTensor<float> featuresRegHighest32;
+        AscendC::MicroAPI::RegTensor<float> maxRegTemp;
 
 		AscendC::MicroAPI::MaskReg pregMain = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
 		AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(tailNum);
@@ -338,9 +341,16 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
                 AscendC::MicroAPI::Max(featuresReg, featuresReg1, featuresReg, pregMain);
             }
             if constexpr (sizeof(T1) == 2) {
-                AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<int32_t>&)featuresRegTemp, (AscendC::MicroAPI::RegTensor<int16_t>&)featuresReg);
-				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresReg32, featuresRegTemp, pregReduce);
-			    AscendC::MicroAPI::ReduceMax(maxReg, featuresReg32, pregReduce);
+                AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(
+                    (AscendC::MicroAPI::RegTensor<int32_t>&)featuresRegLowest,
+                    (AscendC::MicroAPI::RegTensor<int16_t>&)featuresReg);
+                AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
+                    (AscendC::MicroAPI::RegTensor<int32_t>&)featuresRegHighest,
+                    (AscendC::MicroAPI::RegTensor<int16_t>&)featuresReg);
+				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegLowest32, featuresRegLowest, pregReduce);
+				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegHighest32, featuresRegHighest, pregReduce);
+                AscendC::MicroAPI::Max(maxRegTemp, featuresRegLowest32, featuresRegHighest32, pregReduce);
+			    AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
 		    } else {
 			    AscendC::MicroAPI::ReduceMax(maxReg, featuresReg, pregReduce);
 		    }

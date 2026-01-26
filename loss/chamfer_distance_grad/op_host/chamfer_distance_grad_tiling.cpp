@@ -32,6 +32,7 @@ uint64_t RESERVE_SAPCE = 1024;
 uint32_t FLOAT_DTYPE_BYTES = 4;
 uint32_t BFLOAT16_DTYPE_BYTES = 2;
 uint32_t FLOAT16_DTYPE_BYTES = 2;
+constexpr uint32_t BATCH_MODE = 1;
 class ChamferDistanceGradTiling {
 public:
     explicit ChamferDistanceGradTiling(gert::TilingContext* context) : TilingContext(context) {};
@@ -103,6 +104,7 @@ ge::graphStatus ChamferDistanceGradTiling::RunKernelTiling()
         TilingContext->GetRawTilingData()->GetData(), TilingContext->GetRawTilingData()->GetCapacity());
     TilingContext->GetRawTilingData()->SetDataSize(TilingData.GetDataSize());
     TilingDataPrint();
+    TilingContext->SetScheduleMode(BATCH_MODE);
     OP_LOGD(TilingContext, "Tiling end.");
     return ge::GRAPH_SUCCESS;
 }

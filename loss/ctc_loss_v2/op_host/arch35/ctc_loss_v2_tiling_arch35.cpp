@@ -255,6 +255,7 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     const uint64_t tilingKey = GET_TPL_TILING_KEY(isFP32, threadTypeInt32);
     OP_LOGI(context->GetNodeName(), "tilingKey is %lu", tilingKey);
     context->SetTilingKey(tilingKey);
+    context->SetScheduleMode(1);
     int32_t gridY = (batchSize + threadsBatch - 1) / threadsBatch;
     tilingData.set_gridY(gridY);
     int32_t usedCoreNum = min(gridY, totalCoreNum);

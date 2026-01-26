@@ -110,6 +110,7 @@ static ge::graphStatus TilingForL2Loss(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForL2Loss(gert::TilingParseContext* context)
 {
+    (void) context;
     return ge::GRAPH_SUCCESS;
 }
 

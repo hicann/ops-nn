@@ -115,7 +115,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
             if (inputShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputShape.GetDim(i);
             } else {
-                OP_LOGE(context_->GetNodeName(), "the shape[%d] of output is 0, do not supported", i);
+                OP_LOGE(context_->GetNodeName(), "the shape[%u] of output is 0, do not supported", i);
                 return ge::GRAPH_FAILED;
             }
         }

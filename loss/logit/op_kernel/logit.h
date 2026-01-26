@@ -49,6 +49,7 @@ private:
 
     LocalTensor<uint8_t> selMaskOne;
     LocalTensor<uint8_t> selMaskTwo;
+    LocalTensor<uint8_t> selMaskThree;
 
     LocalTensor<T> x1Tmp;
     LocalTensor<T> x2Tmp;
@@ -177,12 +178,17 @@ __aicore__ inline void LogitND<T>::ComputeStepOne(int64_t dataCount)
 {
     // 对x用eps进行处理
     int64_t elementByte = PP_ELEMENT_NUM * sizeof(float);
+    float nanValue = sqrt(static_cast<float>(-1.0));
     selMaskOne = pingPongFlag ? tmpTensor[elementByte * 2 + MAX_UB_SIZE / 2] : tmpTensor[elementByte * 2];
     selMaskTwo = pingPongFlag ? tmpTensor[elementByte * 2 + elementByte / 2 + MAX_UB_SIZE / 2] :
                                 tmpTensor[elementByte * 2 + elementByte / 2];
+    selMaskThree = x2TensorFp32.template ReinterpretCast<uint8_t>();
 
     float hi = static_cast<float>(1.0) - eps;
     auto tmpDataCount = (dataCount + ONE_REPEAT_ELE_NUM_FP32 - 1) / ONE_REPEAT_ELE_NUM_FP32 * ONE_REPEAT_ELE_NUM_FP32;
+    Compare(selMaskThree, x1TensorFp32, x1TensorFp32, CMPMODE::EQ, tmpDataCount);
+    PipeBarrier<PIPE_V>();
+
     CompareScalar(selMaskOne, x1TensorFp32, (float)eps, CMPMODE::GE, tmpDataCount);
     PipeBarrier<PIPE_V>();
 
@@ -193,6 +199,9 @@ __aicore__ inline void LogitND<T>::ComputeStepOne(int64_t dataCount)
     PipeBarrier<PIPE_V>();
 
     Select(x1TensorFp32, selMaskOne, x1TensorFp32, (float)eps, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
+    PipeBarrier<PIPE_V>();
+
+    Select(x1TensorFp32, selMaskThree, x1TensorFp32, (float)nanValue, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
     PipeBarrier<PIPE_V>();
 }
 

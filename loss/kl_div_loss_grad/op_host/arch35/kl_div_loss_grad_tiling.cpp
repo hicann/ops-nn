@@ -157,7 +157,7 @@ float KlDivLossGradTiling::CalcReductionCof()
             if (inputLabelShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputLabelShape.GetDim(i);
             } else {
-                OP_LOGE(context_->GetNodeName(), "The  [%d]  axis of the input is 0, which is not supported", i);
+                OP_LOGE(context_->GetNodeName(), "The  [%u]  axis of the input is 0, which is not supported", i);
                 return ge::GRAPH_FAILED;
             }
         }
@@ -358,6 +358,7 @@ ge::graphStatus KlDivLossGradTilingPrepareAscendC(gert::TilingParseContext* cont
 
 ge::graphStatus TilingPrepare4KlDivLossGrad(gert::TilingParseContext* context)
 {
+    (void) context;
     return ge::GRAPH_SUCCESS;
 }
 

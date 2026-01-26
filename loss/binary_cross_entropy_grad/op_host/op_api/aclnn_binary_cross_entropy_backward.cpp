@@ -38,12 +38,12 @@ enum Reduction {
   END
 };
 
-static const std::initializer_list<DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {
   DataType::DT_FLOAT16,
   DataType::DT_FLOAT
 };
 
-static const std::initializer_list<DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
   DataType::DT_FLOAT16,
   DataType::DT_FLOAT,
   DataType::DT_BF16
@@ -108,7 +108,7 @@ static bool CheckPromoteType(const aclTensor *gradOutput, const aclTensor *self,
 
 static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self,
     const aclTensor *target, const aclTensor *weightOptional, aclTensor *out) {
-  const auto& supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_DTYPE_SUPPORT_LIST);
+  const auto& supportList = GetDtypeSupportListV2(DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16, DTYPE_DTYPE_SUPPORT_LIST);
   OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
   OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
   OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);

@@ -111,7 +111,7 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
                 reduceEltsTemp = reduceEltsTemp / inputLabelShape.GetDim(i);
                 this->reduceElts_ = reduceEltsTemp;
             } else {
-                OP_LOGE(context_->GetNodeName(), "the shape[%d] is 0, do not supported", i);
+                OP_LOGE(context_->GetNodeName(), "the shape[%u] is 0, do not supported", i);
                 return ge::GRAPH_FAILED;
             }
         }
@@ -218,7 +218,8 @@ ge::graphStatus L1LossGradTiling::DoOpTiling()
  }
 
 static ge::graphStatus TilingPrepareForL1LossGrad(gert::TilingParseContext* context) {
-  return ge::GRAPH_SUCCESS;
+    (void) context;
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus Tiling4L1LossGrad(gert::TilingContext* tilingContextGen)
