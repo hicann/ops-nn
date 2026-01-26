@@ -335,6 +335,7 @@
     {"name":"ReverseSequence", "compute_units": ["ascend310p"], "auto_sync" : false},
     {"name":"ReverseV2", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"GroupNormSilu", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend910_95", "kirinx90"], "auto_sync" : {"ascend910_93": true, "ascend910b": true, "ascend310p": true, "ascend910_95": false}},
+    {"name":"GroupNormSiluQuant", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
     {"name":"GroupNormSwish", "compute_units": ["ascend910_93", "ascend910b", "kirinx90"], "auto_sync" : false},
     {"name":"GroupNormSwishGrad", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync" : true},
     {"name":"NLLLossGrad310p", "compute_units": ["ascend310p"], "auto_sync" : false, "compile_options": {"ascend310p":["-mllvm -cce-aicore-jump-expand=true"]}},
