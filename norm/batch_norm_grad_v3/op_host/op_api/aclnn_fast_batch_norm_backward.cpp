@@ -372,13 +372,12 @@ const aclTensor* TransposeRevert(const aclTensor* output, const aclTensor* input
     auto inputShape = input->GetViewShape();
     int64_t inputDim = inputShape.GetDimNum();
 
-    // nchw -> ndchw
-    const int64_t orignShape4d[] = {inputShape[1], inputShape[0], inputShape[2], inputShape[3]};
-    const int64_t orignShape5d[] = {inputShape[1], inputShape[0], inputShape[2], inputShape[3], inputShape[4]};
     aclIntArray* ndchwArray;
     if (inputDim == BN2D_INPUT_DIMS) {
+        const int64_t orignShape4d[] = {inputShape[1], inputShape[0], inputShape[2], inputShape[3]};
         ndchwArray = executor->AllocIntArray(orignShape4d, sizeof(orignShape4d) / sizeof(int64_t));
     } else {
+        const int64_t orignShape5d[] = {inputShape[1], inputShape[0], inputShape[2], inputShape[3], inputShape[4]};
         ndchwArray = executor->AllocIntArray(orignShape5d, sizeof(orignShape5d) / sizeof(int64_t));
     }
     auto outputReshape = l0op::Reshape(output, ndchwArray, executor);
@@ -408,7 +407,8 @@ bool FastBatchNormBackwardProcTransposeCalc(
     for (size_t i = 2; i < gradOutDims; i++) {
         hwShape *= gradOutShape[i];
     }
-    if (gradOutShape[0] > BN_TRANSPOSE_N_LIMIT && gradOutShape[1] > 1 && hwShape <= BN_TRANSPOSE_HW_LIMIT) {
+    if (static_cast<size_t>(gradOutShape[0]) > BN_TRANSPOSE_N_LIMIT && gradOutShape[1] > 1 &&
+        hwShape <= BN_TRANSPOSE_HW_LIMIT) {
         *gradOutContiguous = Transpose(*gradOutContiguous, executor);
         CHECK_RET(*gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

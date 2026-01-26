@@ -66,7 +66,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckShapesEqual(gert::Shape& shape0, ge
     OP_CHECK_IF(
         shape0.GetDimNum() != shape1.GetDimNum(),
         OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %ld vs %ld", shape0.GetDimNum(),
+            context_->GetNodeName(), "DimNum of shapes are not equal: %lu vs %lu", shape0.GetDimNum(),
             shape1.GetDimNum()),
         return ge::GRAPH_FAILED);
 
@@ -89,7 +89,7 @@ const gert::Shape& RmsNormGradEmptyTiling::EnsureNotScalar(const gert::Shape& in
     return inShape;
 }
 
-void RmsNormGradEmptyTiling::CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape)
+void RmsNormGradEmptyTiling::CalcRowsAndCols(gert::Shape& gammaShape)
 {
     rows_ = 0;
     cols_ = 1;
@@ -142,7 +142,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
         return ge::GRAPH_FAILED;
     }
 
-    CalcRowsAndCols(storageShape0, storageShape3);
+    CalcRowsAndCols(storageShape3);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -221,7 +221,7 @@ ge::graphStatus RmsNormGradEmptyTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-void RmsNormGradEmptyTiling::CalcUsedCoreNumGamma()
+ge::graphStatus RmsNormGradEmptyTiling::CalcUsedCoreNumGamma()
 {
     if (cols_ <= MAX_CORE_COLS) {
         // 单核计算单colset
@@ -241,7 +241,9 @@ void RmsNormGradEmptyTiling::CalcUsedCoreNumGamma()
         colsPerUBDG_ = colsPerCoreDG_;
         colsLastCoreDG_ = cols_ - colsPerCoreDG_ * (usedCoreNumDG_ - 1);
         result = CalcTilingDataDgamma();
+        return result;
     }
+    return ge::GRAPH_SUCCESS;
 }
 
 int32_t RmsNormGradEmptyTiling::NearestLowerPowerOfTwo(int32_t temp)
@@ -257,7 +259,7 @@ int32_t RmsNormGradEmptyTiling::NearestLowerPowerOfTwo(int32_t temp)
 
 ge::graphStatus RmsNormGradEmptyTiling::CalcTilingDataDgamma()
 {
-    if (static_cast<int64_t>(ubSize_) >= BUFFER_NUM * (colsPerCoreDG_ * FLOATBYTESIZE)) {
+    if (static_cast<uint64_t>(ubSize_) >= BUFFER_NUM * (colsPerCoreDG_ * FLOATBYTESIZE)) {
         // full-load
         coreUbBlockCount_ = 0;
         tailUbCols_ = colsPerCoreDG_;
@@ -269,7 +271,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CalcTilingDataDgamma()
         int maxRowsNumDG_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
         colsPerUBDG_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNumDG_));
         OP_CHECK_IF(
-            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %ld.", maxRowsNumDG_),
+            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
             return ge::GRAPH_FAILED);
         coreUbBlockCount_ = (colsPerCoreDG_ + colsPerUBDG_ -1) / colsPerUBDG_ - 1;
         tailUbCols_ = colsPerCoreDG_ - colsPerUBDG_ * coreUbBlockCount_;
@@ -293,7 +295,10 @@ ge::graphStatus RmsNormGradEmptyTiling::DoOpTiling()
 {
     tilingKey_ = EMPTY_TENSOR_KEY;
     // split cores
-    CalcUsedCoreNumGamma();
+    ge::graphStatus result = CalcUsedCoreNumGamma();
+    if (result != ge::GRAPH_SUCCESS) {
+        return result;
+    }
 
     tilingData_.set_colsPerUBDG(colsPerUBDG_);
     tilingData_.set_tailUbCols(tailUbCols_);

@@ -202,10 +202,10 @@ private:
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtypeAndFormat();
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
-    void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
+    void CalcRowsAndCols(gert::Shape& gammaShape);
     ge::graphStatus CalcTilingDataDgamma();
     int32_t NearestLowerPowerOfTwo(int32_t temp);
-    void CalcUsedCoreNumGamma();
+    ge::graphStatus CalcUsedCoreNumGamma();
     void LogTilingResult();
 };
 

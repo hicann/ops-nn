@@ -716,7 +716,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
             colsPerLoop_ = colsPerLoop_ / (blockSize_ / TWO) * (blockSize_ / TWO);
         } else {
             OP_LOGE(
-                context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%u) is zero", dataTypeSize, blockSize_);
+                context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%ld) is zero", dataTypeSize, blockSize_);
             return ge::GRAPH_FAILED;
         }
         rowsPerLoop_ = 1;

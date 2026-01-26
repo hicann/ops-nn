@@ -193,7 +193,7 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
 
     auto yDtype = context->GetOutputDesc(static_cast<int>(NormOutputIndex::Y))->GetDataType();
     if (yDtype == ge::DT_INT4 && numCol % static_cast<int32_t>(CONST_ROUR) != 0) {
-      OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%ld) of x should be divisible by 8.", numCol);
+      OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%u) of x should be divisible by 8.", numCol);
       return ge::GRAPH_FAILED;
     }
 

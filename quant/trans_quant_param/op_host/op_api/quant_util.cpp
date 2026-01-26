@@ -39,7 +39,7 @@ aclnnStatus TransQuantScaleToM1(const float* scaleArray, uint64_t scaleSize, uin
         float scaleFloat;
         uint32_t scaleUint32;
     } quantScale;
-    for (int64_t idx = 0; idx < scaleSize; idx++) {
+    for (int64_t idx = 0; idx < static_cast<int64_t>(scaleSize); idx++) {
         quantScale.scaleFloat = scaleArray[idx];
         (*quantParam)[idx] = static_cast<uint64_t>(quantScale.scaleUint32) | kQuantScale;
     }
@@ -48,7 +48,6 @@ aclnnStatus TransQuantScaleToM1(const float* scaleArray, uint64_t scaleSize, uin
 
 aclnnStatus TransQuantOffsetToToM1(const float* offsetArray, uint64_t offsetSize, uint64_t** quantParam)
 {
-    float offsetFloat;
     int int9Value;
     uint64_t int9bits;
     for (uint64_t idx = 0; idx < offsetSize; idx++) {
