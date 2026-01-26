@@ -54,6 +54,9 @@ protected:
     __aicore__ inline void CopyOut(
         const LocalTensor<float>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset,
         const uint32_t len);
+    __aicore__ inline void CopyOutNoCast(
+        const LocalTensor<OriT>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset, 
+        const uint32_t len);
     __aicore__ inline void CopyWeightIn(const uint64_t offset, const uint32_t len);
     __aicore__ inline void GetReduceSum(
         const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
@@ -284,9 +287,9 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::CopyOut(
     }
 }
 
-template <>
-__aicore__ inline void CrossEntropyLossBase<float>::CopyOut(
-    const LocalTensor<float>& srcLocal, const LocalTensor<float>& dstLocal, const uint64_t offset, const uint32_t len)
+template <typename OriT>
+__aicore__ inline void CrossEntropyLossBase<OriT>::CopyOutNoCast(
+    const LocalTensor<OriT>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset, const uint32_t len)
 {
     event_t eventVMTE3 = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventVMTE3);

@@ -35,10 +35,12 @@ __aicore__ inline void CrossEntropyLoss<float>::GetLogProbOut(
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         this->CopyIn(inputBuf, offset, uint32_t(this->inputUbSize));
         AscendC::Adds(inputBuf, inputBuf, -logBatchSum, this->inputUbSize);
-        if (target >= offset && target < offset + this->inputUbSize) {
+        if (isIgnore) {
+            batchLogProb = 0.0;
+        } else if (target >= offset && target < offset + this->inputUbSize) {
             batchLogProb = inputBuf(target - offset);
         }
-        this->CopyOut(inputBuf, this->probOutBuf, offset, this->inputUbSize);
+        this->CopyOutNoCast(inputBuf, this->probOutBuf, offset, this->inputUbSize);
         if (this->isSmoothing && !isIgnore) {
             GetSmoothingLoss(inputBuf, workLocal, smoothingLoss, this->inputUbSize, weightOffset);
             weightOffset += this->inputUbSize;
@@ -51,10 +53,12 @@ __aicore__ inline void CrossEntropyLoss<float>::GetLogProbOut(
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         this->CopyIn(inputBuf, offset, uint32_t(this->ubTailNum));
         AscendC::Adds(inputBuf, inputBuf, -logBatchSum, this->ubTailNum);
-        if (target >= offset) {
+        if (isIgnore) {
+            batchLogProb = 0.0;
+        } else if (target >= offset) {
             batchLogProb = inputBuf(target - offset);
         }
-        this->CopyOut(inputBuf, this->probOutBuf, offset, this->ubTailNum);
+        this->CopyOutNoCast(inputBuf, this->probOutBuf, offset, this->ubTailNum);
         if (this->isSmoothing && !isIgnore) {
             GetSmoothingLoss(inputBuf, workLocal, smoothingLoss, this->ubTailNum, weightOffset);
             weightOffset += this->inputUbSize;
@@ -134,7 +138,7 @@ template <>
 __aicore__ inline void CrossEntropyLoss<float>::ProcessFp32()
 {
     uint64_t offset = 0;
-    uint64_t batchTarget = 0;
+    int64_t batchTarget = 0;
     uint64_t batchTargetOffset = 0;
     float batchWeight = 0.0;
     float rowMax = 0.0;
@@ -151,7 +155,9 @@ __aicore__ inline void CrossEntropyLoss<float>::ProcessFp32()
 
         batchTarget = this->targetGm.GetValue(this->startBatchIndex + batchIdx);
         bool isIgnore = batchTarget == this->ignoreIndex;
-        if (this->defaultWeight == NUM_1) {
+        if (isIgnore) {
+            batchWeight = 0.0;
+        } else if (this->defaultWeight == NUM_1) {
             batchWeight = 1.0;
         } else {
             batchWeight = this->weightGm.GetValue(batchTarget);
@@ -166,11 +172,6 @@ __aicore__ inline void CrossEntropyLoss<float>::ProcessFp32()
         smoothingLoss = 0.0;
         GetLogProbOut(this->inputLocal, offset, logBatchSum, batchLogProb, batchTargetOffset, smoothingLoss, isIgnore);
         this->smoothingLossLocal.SetValue(batchIdx, -smoothingLoss);
-        if (isIgnore) {
-            this->lnLocal.SetValue(batchIdx, float(0.0));
-            this->weightLocal.SetValue(batchIdx, float(0.0));
-            continue;
-        }
         this->lnLocal.SetValue(batchIdx, batchLogProb);
     }
     AscendC::Mul(this->lnLocal, this->lnLocal, this->weightLocal, this->batchNum);

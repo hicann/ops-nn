@@ -274,6 +274,11 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
     }
     crossEntropyLossTiling.set_reduction(reduction);
 
+    // reduction为None时，不需要全核同步
+    if (reduction != REDUCTION_NONE) {
+        context->SetScheduleMode(1);
+    }
+
     int64_t ignoreIndex = DEFAULT_IGNORE_INDEX;
     const int64_t* ignoreIndexAttr = attrs->GetAttrPointer<int64_t>(ATTR_IGNORE_INDEX_IDX);
     ignoreIndex = ignoreIndexAttr == nullptr ? DEFAULT_IGNORE_INDEX : *ignoreIndexAttr;

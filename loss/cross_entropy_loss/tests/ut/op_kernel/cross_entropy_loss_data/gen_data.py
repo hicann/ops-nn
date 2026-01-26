@@ -27,7 +27,7 @@ def gen_input_data(dtype, batchSize, targetNum):
     targetNum = int(targetNum)
     dtype = d_type_dict.get(dtype)
     input = np.random.uniform(0, 1, [batchSize, targetNum]).astype(dtype)
-    target = np.random.randint(0, targetNum, size=[batchSize], dtype= np.int64)
+    target = np.ones([batchSize, ], dtype=np.int64)
     weight = np.random.uniform(0.9, 0.9999, targetNum).astype(np.float32)
     return input, target, weight
 

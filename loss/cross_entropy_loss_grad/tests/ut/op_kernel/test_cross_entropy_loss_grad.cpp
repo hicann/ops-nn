@@ -218,3 +218,63 @@ TEST_F(cross_entropy_loss_grad_test, test_case_weight_none_fp32) {
   AscendC::GmFree(workspace);
   AscendC::GmFree(tiling);
 }
+
+TEST_F(cross_entropy_loss_grad_test, test_case_weight_not_none_fp32) {
+  size_t gradLossByteSize = 1 * sizeof(float);
+  size_t logProbByteSize = 30 * 1024 * sizeof(float);
+  size_t targetByteSize = 30 * sizeof(int64_t);
+  size_t weightByteSize = 1024 * sizeof(float);
+  // output
+  size_t xGradByteSize = 30 * 1024 * sizeof(float);
+  size_t tilingDataSize = sizeof(CrossEntropyLossGradTilingData);
+  AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+  uint8_t* grad_loss = (uint8_t*)AscendC::GmAlloc(gradLossByteSize + 32);
+  uint8_t* log_prob = (uint8_t*)AscendC::GmAlloc(logProbByteSize + 32);
+  uint8_t* target = (uint8_t*)AscendC::GmAlloc(targetByteSize + 32);
+  uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightByteSize + 32);
+  uint8_t* grad_zloss = (uint8_t*)AscendC::GmAlloc(0);
+  uint8_t* lse_for_zloss = (uint8_t*)AscendC::GmAlloc(0);
+  uint8_t* x_grad = (uint8_t*)AscendC::GmAlloc(xGradByteSize + 32);
+
+  uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024 + 32);
+  uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize + 32);
+  uint32_t blockDim = 30;
+
+  CrossEntropyLossGradTilingData* tilingDatafromBin = reinterpret_cast<CrossEntropyLossGradTilingData*>(tiling);
+
+  tilingDatafromBin->reduction = 1;
+  tilingDatafromBin->ignoreIndex = -100;
+  tilingDatafromBin->labelSmoothing = 0;
+  tilingDatafromBin->rowVal = 30;
+  tilingDatafromBin->colVal = 1024;
+  tilingDatafromBin->frontCoreNum = 30;
+  tilingDatafromBin->tailCoreNum = 0;
+  tilingDatafromBin->usedCoreNum = 30;
+  tilingDatafromBin->frontRowNum = 1;
+  tilingDatafromBin->tailRowNum = 0;
+  tilingDatafromBin->alignColLoopNum = 1024;
+  tilingDatafromBin->colLoop = 1;
+  tilingDatafromBin->colLoopNumTail = 0;
+  tilingDatafromBin->targetSize = 32;
+  tilingDatafromBin->targetCastSize = 32;
+  tilingDatafromBin->gradLossSize = 0;
+  tilingDatafromBin->gradLossFp32Size = 0;
+  tilingDatafromBin->ignoreSize = 32;
+  tilingDatafromBin->maskSize = 32;
+  tilingDatafromBin->targetWeightSize = 128;
+  tilingDatafromBin->tBuf2Size = 32;
+  tilingDatafromBin->tBuf3Size = 192;
+
+  ICPU_SET_TILING_KEY(31);
+  ICPU_RUN_KF(cross_entropy_loss_grad, blockDim, grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss,
+              x_grad, workspace, (uint8_t*)(tilingDatafromBin));
+
+  AscendC::GmFree(grad_loss);
+  AscendC::GmFree(log_prob);
+  AscendC::GmFree(target);
+  AscendC::GmFree(weight);
+  AscendC::GmFree(x_grad);
+  AscendC::GmFree(workspace);
+  AscendC::GmFree(tiling);
+}

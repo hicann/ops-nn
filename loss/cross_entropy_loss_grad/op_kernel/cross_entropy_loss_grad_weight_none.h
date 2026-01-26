@@ -32,7 +32,7 @@ protected:
   __aicore__ inline void ComputerEachBatch(uint64_t nLoopIdx, uint64_t nLoopNum);
   __aicore__ inline void ComputeLog(uint64_t nLoopIdx, uint64_t cLoopIdx, uint64_t calcLen);
   __aicore__ inline void LogProbGradLoss(uint64_t nLoopIdx, uint64_t calcLen, uint64_t cloopOffset,
-                                         uint64_t targetValue, uint64_t posIdx);
+                                         int64_t targetValue, int64_t posIdx);
   __aicore__ inline void WeightAfterMaskSum(uint64_t targetNum);
 
 private:
@@ -85,11 +85,14 @@ __aicore__ inline void CrossEntropyLossGradWeightNone<T>::WeightAfterMaskSum(uin
 
 template <typename T>
 __aicore__ inline void CrossEntropyLossGradWeightNone<T>::LogProbGradLoss(uint64_t nLoopIdx, uint64_t calcLen,
-                          uint64_t cloopOffset, uint64_t targetValue, uint64_t posIdx) {
+                          uint64_t cloopOffset, int64_t targetValue, int64_t posIdx) {
   float nllLossGradScalar = this->targetCast.GetValue(nLoopIdx);
   Muls(fp32Buf4Local, fp32Buf4Local, nllLossGradScalar, calcLen);
-  if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
-    fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+  // 当target=ignoreIndex<0时，视为合法target，不需要减去nllLossGrad。其他负数lable场景报错内存越界符合预期。
+  if (!(targetValue < 0 && targetValue == this->ignoreIndex)) { 
+    if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
+      fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+    }
   }
 }
 
@@ -99,8 +102,8 @@ __aicore__ inline void CrossEntropyLossGradWeightNone<T>::ComputeLog(uint64_t nL
   LocalTensor<T> logProbLocal = this->inQueLogProb.template DeQue<T>();
   xGradLocal = this->outQueXGrad.template AllocTensor<T>();
   uint64_t cloopOffset = cLoopIdx * this->alignColLoopNum;    // 一个核内，一行的偏移量
-  uint64_t targetValue = this->targetGm.GetValue(this->targetOffset + nLoopIdx);
-  uint64_t posIdx = targetValue - cLoopIdx * this->alignColLoopNum;
+  int64_t targetValue = this->targetGm.GetValue(this->targetOffset + nLoopIdx);
+  int64_t posIdx = targetValue - cLoopIdx * this->alignColLoopNum;
 
   if constexpr (!IsSameType<T, float>::value) {
     Cast(fp32Buf4Local, logProbLocal, RoundMode::CAST_NONE, calcLen);

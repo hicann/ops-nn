@@ -49,6 +49,8 @@ constexpr uint64_t TILING_KEY_NONE = 0;
 constexpr uint64_t TILING_KEY_MEAN = 1;
 constexpr uint64_t TILING_KEY_SUM = 2;
 
+constexpr uint32_t BATCH_MODE = 1;
+
 uint64_t maxUbSize;
 uint64_t coreNum;
 
@@ -280,6 +282,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context, uint64_t& red
   } else if (strcmp(reduction, "mean") == 0) {
     OP_LOGD(nodeName, "Attr reduction is mean.");
     reductionKey = TILING_KEY_MEAN;
+    context->SetScheduleMode(BATCH_MODE);
   } else if (strcmp(reduction, "sum") == 0) {
     OP_LOGD(nodeName, "Attr reduction is sum.");
     reductionKey = TILING_KEY_SUM;

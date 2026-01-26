@@ -79,7 +79,12 @@ __aicore__ inline void CrossEntropyLossGradWeightNotNone<T>::Init(GM_ADDR grad_l
 template <typename T>
 __aicore__ inline void CrossEntropyLossGradWeightNotNone<T>::TargetWeight(uint64_t targetOffset, uint64_t targetNum) {
   for (uint64_t targetIdx = 0; targetIdx < targetNum; targetIdx++) {  // 确定一个核要处理多少个数
-    targetWeightLocal.SetValue(targetIdx, this->weightGm.GetValue(this->targetGm.GetValue(targetOffset + targetIdx)));
+    int64_t target = this->targetGm.GetValue(targetOffset + targetIdx);
+    if (target < 0 && target == this->ignoreIndex) {
+      targetWeightLocal.SetValue(targetIdx, 0);
+    } else {
+      targetWeightLocal.SetValue(targetIdx, this->weightGm.GetValue(target));
+    }
   }
 }
 
@@ -104,18 +109,21 @@ __aicore__ inline void CrossEntropyLossGradWeightNotNone<T>::ComputeLog(uint64_t
   LocalTensor<T> logProbLocal = this->inQueLogProb.template DeQue<T>();
   xGradLocal = this->outQueXGrad.template AllocTensor<T>();
   uint64_t cloopOffset = cLoopIdx * this->alignColLoopNum;    // 一个核内，一行的偏移量
-  uint64_t targetValue = this->targetGm.GetValue(this->targetOffset + nLoopIdx);
+  int64_t targetValue = this->targetGm.GetValue(this->targetOffset + nLoopIdx);
   uint64_t posIdx = targetValue - cLoopIdx * this->alignColLoopNum;
   float nllLossGradScalar = targetWeightLocal.GetValue(nLoopIdx);  // 拿到一行要乘的值
-
-  if constexpr (!IsSameType<T, float>::value) {
+  bool isNegIgnoreIndex = targetValue < 0 && targetValue == this->ignoreIndex;
+  if constexpr (!IsSameType<T, float>::value) { // 非fp32分支，需要cast
     Cast(fp32Buf4Local, logProbLocal, RoundMode::CAST_NONE, calcLen);
     this->inQueLogProb.template FreeTensor(logProbLocal);
     Exp(fp32Buf4Local, fp32Buf4Local, calcLen);
     Muls(fp32Buf4Local, fp32Buf4Local, nllLossGradScalar, calcLen);
-    if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
-      // 找到log_prob需要修改的位置，减去对应nll_grad的值
-      fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+    // 当target=ignoreIndex<0时，视为合法target，不需要减去nllLossGrad。其他负数lable场景报错内存越界符合预期。
+    if (!isNegIgnoreIndex) {
+      if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
+        // 找到log_prob需要修改的位置，减去对应nll_grad的值
+        fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+      }
     }
     if (this->labelSmoothing == 0) {
       Cast(xGradLocal, fp32Buf4Local, RoundMode::CAST_RINT, calcLen);
@@ -124,8 +132,10 @@ __aicore__ inline void CrossEntropyLossGradWeightNotNone<T>::ComputeLog(uint64_t
     Exp(fp32Buf4Local, logProbLocal, calcLen);
     this->inQueLogProb.template FreeTensor(logProbLocal);
     Muls(fp32Buf4Local, fp32Buf4Local, nllLossGradScalar, calcLen);
-    if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
-      fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+    if (!isNegIgnoreIndex) {
+      if (cloopOffset <= targetValue && targetValue <= cloopOffset + calcLen) {
+        fp32Buf4Local.SetValue(posIdx, fp32Buf4Local.GetValue(posIdx) - nllLossGradScalar);
+      }
     }
     if (this->labelSmoothing == 0) {
       Copy(xGradLocal, fp32Buf4Local, MASK, (calcLen + MASK -1) / MASK, {1, 1, 8, 8});
