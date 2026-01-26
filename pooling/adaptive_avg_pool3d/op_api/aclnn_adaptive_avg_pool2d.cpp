@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_adaptive_avg_pool2d.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
@@ -326,10 +327,10 @@ static aclnnStatus DoAdaptiveAvgPool2D(
     auto rightMatrixCast = l0op::Cast(rightMatrixUnsqueeze, self->GetDataType(), executor);
     CHECK_RET(rightMatrixCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    leftMatrixBmmv2 = ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1, executor);
+    leftMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(inputContiguous, leftMatrixCast, inputContiguous, true, true, 1, executor);
     CHECK_RET(leftMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    rightMatrixBmmv2 = ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1, executor);
+    rightMatrixBmmv2 = Ops::NN::ExecBatchMatmulOp(leftMatrixBmmv2, rightMatrixCast, inputContiguous, true, false, 1, executor);
     CHECK_RET(rightMatrixBmmv2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto mulMatrixCast = l0op::Cast(mulMatrixUnsqueeze, rightMatrixBmmv2->GetDataType(), executor);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -34,9 +34,6 @@
 using namespace std;
 using namespace op;
 using namespace Ops::NN;
-#ifdef __cplusplus
-extern "C" {
-#endif
 static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
@@ -136,7 +133,7 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
-    
+
     auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
     auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
@@ -264,7 +261,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
 {
     L2_DFX_PHASE_1(aclnnTransposeBatchMatMul,
         DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
-    
+
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
     CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -272,7 +269,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     // 入参检查
     auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    
+
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnTransposeBatchMatMul do not support empty tensor!");
@@ -313,7 +310,3 @@ aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, a
 
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

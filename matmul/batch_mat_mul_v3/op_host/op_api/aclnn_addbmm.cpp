@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -36,9 +36,6 @@
 
 using namespace Ops::NN;
 using namespace op;
-#ifdef __cplusplus
-extern "C" {
-#endif
 namespace {
 static const int32_t BMM_SHAPE_LIMIT = 3;
 static const int32_t FIRST_DIM = 0;
@@ -325,10 +322,10 @@ public:
         bool isBaddbmm = false;
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        
+
         const int64_t dim[] = {0};
         const aclTensor* reduceSumOut = l0op::ReduceSumOp(bmmOut, executor->AllocIntArray(dim, 1), false, executor);
-        
+
         // mulOut = reduceSumOut * alpha
         const aclTensor* mulOut = l0op::Muls(reduceSumOut, alpha->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -397,7 +394,7 @@ public:
         bool isBaddbmm = false;
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        
+
         const int64_t dim[] = {0};
         const aclTensor* reduceSumOut = l0op::ReduceSumOp(bmmOut, executor->AllocIntArray(dim, 1), false, executor);
         CHECK_RET(reduceSumOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -462,7 +459,7 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
         matmulGraph = std::make_shared<AddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
     }
-    
+
     // 以下全部是 alpha != 0 && beta != 0
     // beta == 1 && alpha == 1 && self.shape[0] == mat2.shape[1] && 不属于切k，直接走matmul的bias模式
     if (NeedToConvertBias(self, batch1, batch2, beta, alpha)) {
@@ -544,7 +541,3 @@ aclnnStatus aclnnInplaceAddbmm(void* workspace, uint64_t workspaceSize, aclOpExe
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

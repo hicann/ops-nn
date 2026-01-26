@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include "level0/mul.h"
 #include "level0/unsqueeze.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -375,7 +376,7 @@ static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(
 
     // 创建BMM left
     aclTensor* bmmOutDesc = const_cast<aclTensor*>(input);
-    auto bmmOutForward = ExecBatchMatmulOp(vmOut, leftMaitrixUnsqueeze, bmmOutDesc, true, false, 1, executor);
+    auto bmmOutForward = Ops::NN::ExecBatchMatmulOp(vmOut, leftMaitrixUnsqueeze, bmmOutDesc, true, false, 1, executor);
     CHECK_RET(bmmOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
     checkRetReFormat(bmmOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR, gradOutput, gradOutputOriFormat);
 
@@ -385,7 +386,7 @@ static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(
     }
 
     // 创建BMM right
-    auto bmmOut = ExecBatchMatmulOp(bmmOutForward, rightMaitrixUnsqueeze, bmmOutDesc, true, true, 1, executor);
+    auto bmmOut = Ops::NN::ExecBatchMatmulOp(bmmOutForward, rightMaitrixUnsqueeze, bmmOutDesc, true, true, 1, executor);
     CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     checkRetReFormat(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR, gradOutput, gradOutputOriFormat);
 

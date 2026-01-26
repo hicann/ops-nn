@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -33,9 +33,6 @@
 
 using namespace Ops::NN;
 using namespace op;
-#ifdef __cplusplus
-extern "C" {
-#endif
 namespace {
 static const int32_t SHAPE_LIMIT = 3;
 static const int32_t FIRST_DIM = 0;
@@ -200,7 +197,7 @@ static aclnnStatus CheckInputParams(
 // 对于一个 [B, M, N] 的 batch，batch1 的 B 或 M 为 0；或者 batch2 的 N 为 0
 static inline bool isProcessEmptyTensor(const aclTensor* batch1, const aclTensor* batch2)
 {
-    return (batch1->GetViewShape())[FIRST_DIM] == 0 || 
+    return (batch1->GetViewShape())[FIRST_DIM] == 0 ||
            (batch1->GetViewShape())[SHAPE_LIMIT - PENULTIMATE_DIM] == 0 ||
            (batch2->GetViewShape())[SHAPE_LIMIT - LAST_DIM] == 0;
 }
@@ -269,7 +266,7 @@ public:
         bool isBaddbmm = true;
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        
+
         // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
         auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
         // 将输入的数据类型转换成隐式数据类型，根据具体算子语义按需调用
@@ -329,7 +326,7 @@ std::shared_ptr<MatmulGraphImpl> CreateBaddbmmGraphImpl(
 
 aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor) 
+    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnBaddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
     // 参数检查
@@ -339,7 +336,7 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    
+
     // 输入空Tensor处理方法，直接返回了一个空 Tensor，未做计算
     if (isProcessEmptyTensor(batch1, batch2)) {
         auto emptyOut = bmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
@@ -391,7 +388,3 @@ aclnnStatus aclnnInplaceBaddbmm(void* workspace, uint64_t workspaceSize, aclOpEx
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

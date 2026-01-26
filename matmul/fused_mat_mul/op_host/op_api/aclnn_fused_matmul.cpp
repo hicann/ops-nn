@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
-    
+
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
     CHECK_RET(CheckShape(x, x2, x3, y), ACLNN_ERR_PARAM_INVALID);
 
@@ -240,10 +240,6 @@ static const aclTensor* BuildFusedMatMulGraph(
 
 } // namespace
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 aclnnStatus aclnnFusedMatmulGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const char* fusedOpType,
     int8_t cubeMathType, const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -278,7 +274,3 @@ aclnnStatus aclnnFusedMatmul(void* workspace, uint64_t workspaceSize, aclOpExecu
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

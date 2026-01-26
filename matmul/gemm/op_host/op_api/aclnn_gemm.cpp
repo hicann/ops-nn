@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -34,9 +34,6 @@
 
 using namespace Ops::NN;
 using namespace op;
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> dtypeSupportList = {
@@ -285,7 +282,3 @@ aclnnStatus aclnnGemm(void* workspace, uint64_t workspaceSize, aclOpExecutor* ex
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,9 +21,6 @@
 #include "aclnn_kernels/transdata.h"
 
 using namespace op;
-#ifdef __cplusplus
-extern "C" {
-#endif
 namespace {
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> BIAS_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT};
@@ -76,7 +73,7 @@ inline static aclnnStatus CheckParam(const aclTensor* x, const aclTensor* weight
     return ACLNN_SUCCESS;
 }
 
-inline static const aclTensor *PreProcessWeight(const aclTensor *x, const op::Format& format, aclOpExecutor *executor) 
+inline static const aclTensor *PreProcessWeight(const aclTensor *x, const op::Format& format, aclOpExecutor *executor)
 {
     auto formatTensor = executor == nullptr ? const_cast<aclTensor *>(x)
                                             : executor->CreateView(x, x->GetViewShape(), x->GetViewOffset());
@@ -86,7 +83,7 @@ inline static const aclTensor *PreProcessWeight(const aclTensor *x, const op::Fo
     return formatTensor;
 }
 
-inline static const aclTensor *PreProcessX(const aclTensor *x, aclOpExecutor *executor) 
+inline static const aclTensor *PreProcessX(const aclTensor *x, aclOpExecutor *executor)
 {
     op::Shape newShape;
     newShape.AppendDim(x->GetStorageShape().GetDim(0)); // 第0维不变
@@ -100,7 +97,7 @@ inline static const aclTensor *PreProcessX(const aclTensor *x, aclOpExecutor *ex
     return reshapeTensor;
 }
 
-inline static const aclTensor *PostProcessC(const aclTensor *x, aclOpExecutor *executor) 
+inline static const aclTensor *PostProcessC(const aclTensor *x, aclOpExecutor *executor)
 {
     op::Shape newShape;
     newShape.AppendDim(x->GetStorageShape().GetDim(0)); // 第0维不变
@@ -138,10 +135,10 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTen
     // 调用transdata算子ND->NZ
     auto xNZ = l0op::TransData(x, Format::FORMAT_FRACTAL_NZ, 1, uniqueExecutor.get());
     CHECK_RET(xNZ != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    
+
     const aclTensor *xNZReshape = PreProcessX(xNZ, uniqueExecutor.get());
     const aclTensor *weightNZ = PreProcessWeight(weight, op::Format::FORMAT_FRACTAL_NZ, uniqueExecutor.get());
-    
+
     // 调用MatmulCompress算子Kernel
     auto outC = l0op::MatmulCompress(xNZReshape, weightNZ, bias, compressIndex, false, true, 8, 8, uniqueExecutor.get());
     CHECK_RET(outC != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -167,7 +164,3 @@ aclnnStatus aclnnMatmulCompress(void *workspace, uint64_t workspaceSize, aclOpEx
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-
-#ifdef __cplusplus
-}
-#endif

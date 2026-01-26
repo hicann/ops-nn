@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 #include "weightQuantBatchmatmul.h"
 
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 
 using namespace std;
 using namespace op;
@@ -332,7 +333,7 @@ const aclTensor *WeightQuantMatmulSingleOp(const aclTensor *x1, const aclTensor 
     }
     // matmul 有一个大于等于2 就为batchmatmul
     if ((x1->GetViewShape().GetDimNum() > 2) || (x2->GetViewShape().GetDimNum() > 2)) {
-        matmulOut = ExecBatchMatmulOpWithBiasAndAttrs(x1, antiquantX2, bias, out, transposeX1, transposeX2,
+        matmulOut = Ops::NN::ExecBatchMatmulOpWithBiasAndAttrs(x1, antiquantX2, bias, out, transposeX1, transposeX2,
                                                       0, executor);
     } else {
         // 先直调l0 完成功能

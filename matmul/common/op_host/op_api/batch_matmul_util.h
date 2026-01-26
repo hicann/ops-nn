@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 namespace Ops {
 namespace NN {
 const aclTensor *ExecBmmOpWithBiasV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
@@ -31,11 +27,22 @@ const aclTensor *ExecBatchMatmulOpWithBiasAndAttrsV2(const aclTensor *self, cons
 const aclTensor *ExecBmmOpV2(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
     aclOpExecutor *executor, bool isBaddbmm = false);
 
+const aclTensor* ExecBmmOpWithBias(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    aclOpExecutor* executor, bool isBaddbmm = false);
+
+const aclTensor *ExecBatchMatmulOpWithBiasAndAttrs(const aclTensor *self, const aclTensor *mat2, const aclTensor *bias,
+                                                   const aclTensor *out, bool adjX1, bool adjX2, int8_t cubeMathType,
+                                                   aclOpExecutor *executor, bool isTransposeMat2Contiguous = false,
+                                                   bool isBaddbmm = false);
+
+const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, bool adjX1,
+                                   bool adjX2, int8_t cubeMathType, aclOpExecutor *executor);
+
+const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
+                           aclOpExecutor *executor, bool isBaddbmm = false);
+
 }  // namespace Ops
 }  // namespace NN
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // OP_API_SRC_LEVEL2_BATCH_MATMUL_UTIL_H_
