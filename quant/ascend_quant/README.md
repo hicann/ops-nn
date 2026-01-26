@@ -101,6 +101,6 @@
 
   ## 调用说明
 
-  | 调用方式   | 样例代码           | 说明                                         |
-  | ---------------- | --------------------------- | --------------------------------------------------- |
-  | aclnn接口  | [test_aclnn_ascend_quant](examples/test_aclnn_ascend_quant.cpp) | 通过[aclnnAscendQuant](docs/aclnnAscendQuant.md)接口方式调用AscendQuant算子。 |
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| 图模式 | -  | 通过[算子IR](op_graph/ascend_quant_proto.h)构图方式调用AscendQuant算子。         |
