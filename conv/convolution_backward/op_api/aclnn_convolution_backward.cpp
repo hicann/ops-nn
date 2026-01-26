@@ -1696,13 +1696,12 @@ static aclnnStatus GenConvMmDwOutputByMode(aclTensor *&mmDwOutputNDFp32,
                                        aclOpExecutor *executor,
                                        [[maybe_unused]] Conv3DBp2MmMode conv2MmMode)
 {
-    auto gradInput = outputTensor.gradInput;
     auto gradWeight = outputTensor.gradWeight;
     op::Shape mmDwOutShape2d = op::Shape({
       1,
       gradWeight->GetViewShape()[0],  //cout
-      CalcCountByAxisVec(gradInput->GetViewShape(), {1, 2, 3, 4})});
-    auto mmDwOutput2d = ViewWithShape(gradInput, mmDwOutShape2d, executor);
+      CalcCountByAxisVec(gradWeight->GetViewShape(), {1, 2, 3, 4})});
+    auto mmDwOutput2d = ViewWithShape(gradWeight, mmDwOutShape2d, executor);
     CHECK_RET(mmDwOutput2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto mmDwOutputND = l0op::ReFormat(mmDwOutput2d, op::Format::FORMAT_ND);
