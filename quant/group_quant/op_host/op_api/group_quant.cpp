@@ -32,7 +32,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion() {
   const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> socSupportDtypes = {
     {SocVersion::ASCEND910B, &AICORE_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_93, &AICORE_DTYPE_SUPPORT_LIST}
+    {SocVersion::ASCEND910_93, &AICORE_DTYPE_SUPPORT_LIST},
+    {SocVersion::ASCEND910_95, &AICORE_DTYPE_SUPPORT_LIST}
   };
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   auto found = socSupportDtypes.find(socVersion);

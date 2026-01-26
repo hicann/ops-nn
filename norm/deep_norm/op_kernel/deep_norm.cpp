@@ -412,7 +412,7 @@ private:
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -442,7 +442,7 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 ||  (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -888,7 +888,7 @@ private:
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         uint32_t offset2 = proc_id * row_step;
 
         DataCopyParams copyOutput;
@@ -938,7 +938,7 @@ private:
     {
         LocalTensor<T> x_local = x_que.AllocTensor<T>();
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyInput;
 
@@ -959,7 +959,7 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyPadParams temp;
         DataCopyParams copyParams;
 
@@ -1596,7 +1596,7 @@ private:
     __aicore__ inline void CommonCopyOutRes(int32_t offset, int32_t length)
     {
         LocalTensor<T> result = z_que.DeQue<T>();
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyParams copyParams;
         copyParams.blockLen = length * sizeof(T);
         copyParams.blockCount = 1;
@@ -1628,7 +1628,7 @@ private:
         LocalTensor<float> mean = mean_que_fp32.DeQue<float>();
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         DataCopyParams copyParams;
 
         copyParams.blockLen = sizeof(float);
@@ -1691,7 +1691,7 @@ private:
     float varVal;
 };
 
-#if __CCE_AICORE__ != 220
+#if __CCE_AICORE__ != 220 && __CCE_AICORE__ != 310
 #define bfloat16_t int16_t
 #endif
 

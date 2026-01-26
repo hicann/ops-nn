@@ -99,6 +99,7 @@ public:
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend910b", config910b);
         this->AICore().AddConfig("ascend910_93", config910b);
+        this->AICore().AddConfig("ascend910_95", config910b);
 
         OpAICoreConfig config310p;
         config310p.Input("var")

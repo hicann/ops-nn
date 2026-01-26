@@ -62,6 +62,7 @@ public:
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910_95");
 
         OpAICoreConfig config_310p;
         config_310p.Input("x")

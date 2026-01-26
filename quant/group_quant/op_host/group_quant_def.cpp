@@ -172,6 +172,7 @@ class GroupQuant : public OpDef {
           .NeedCheckSupportFlag(false);
     this->AICore().AddConfig("ascend910b", config);
     this->AICore().AddConfig("ascend910_93", config);
+    this->AICore().AddConfig("ascend910_95", config);
 
     OpAICoreConfig config_kirin = GetKirinCoreConfig();
     this->AICore().AddConfig("kirinx90", config_kirin);
