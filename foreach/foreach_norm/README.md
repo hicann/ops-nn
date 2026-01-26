@@ -4,16 +4,19 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 算子功能：对输入张量列表的每个张量进行范数运算。
 - 计算公式：
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
@@ -21,6 +24,23 @@
     $$
     y = \left(\sum_{i=0}^{n-1}|x_i|^{p}\right)^{\frac{1}{{p}}}  (i=0,1,...n-1)
     $$
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    $$
+    x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
+    $$
+    - scalar = +Inf:
+      $$
+      y = \max|x_i|
+      $$
+    - int(scalar) = 1:
+      $$
+      y = \sum_{i=0}^{n-1}|x_i|
+      $$
+    - other:
+      $$
+      y = \left(\sum_{i=0}^{n-1}|x_i|^{2}\right)^{\frac{1}{{2}}}
+      $$
 
 ## 参数说明
 
@@ -64,6 +84,7 @@
   </tbody></table>
 
 
+<term>Ascend 950PR/Ascend 950DT</term>：
 - 输入`x`、输出`y`支持的最大长度为256个。
 - 输入`scalar`的取值，仅支持1或者2。
 

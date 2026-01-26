@@ -4,9 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -58,7 +62,7 @@
       <td>weight</td>
       <td>输入</td>
       <td>表示进行线性插值计算的插值系数，对应公式中的`weight`。</td>
-      <td>FLOAT32</td>
+      <td>FLOAT32</td><!--aclnn中还有double，看一下算子是不是少了？-->
       <td>ND</td>
     </tr>
     <tr>
@@ -71,6 +75,8 @@
   </tbody></table>
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`x1`的shape与入参`x2`、出参`y`的一致。
+- <term>Ascend 950PR/Ascend 950DT</term>：`x1`的shape size与入参`x2`、出参`y`的一致。支持包含的最大Tensor个数为50。
+
 ## 约束说明
 
 无

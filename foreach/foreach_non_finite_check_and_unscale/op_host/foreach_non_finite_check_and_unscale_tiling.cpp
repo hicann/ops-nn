@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
  * \brief
  */
 #include "foreach_non_finite_check_and_unscale_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 constexpr int32_t SCALE_GRADS_INDEX = 0;
 constexpr int32_t INV_SCALE_INDEX_OFFSET = 1;
@@ -319,7 +321,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+        if (IsRegbaseSocVersion(context_)) {
             return false;
         }
         return true;

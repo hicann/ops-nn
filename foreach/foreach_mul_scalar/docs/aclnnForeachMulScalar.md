@@ -1,12 +1,18 @@
 # aclnnForeachMulScalar
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_mul_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |    √    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -128,6 +134,13 @@ aclnnStatus aclnnForeachMulScalar(
     参数`scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
     - 当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。
     - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
+  - <term>Ascend 950PR/Ascend 950DT</term>：数据类型与入参`x`的数据类型具有一定对应关系：
+    - 参数`x`、`out`支持包含的最大Tensor个数均为50。
+    - 参数`scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
+      - 当`x`的数据类型为FLOAT32、INT32时，数据类型与`x`的数据类型保持一致。
+      - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
+      - 当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32。
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

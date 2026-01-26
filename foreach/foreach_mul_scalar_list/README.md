@@ -4,9 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -68,6 +72,11 @@
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。
   - 当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。
+- <term>Ascend 950PR/Ascend 950DT</term>：`scalars`的ScalarList长度需要与`x`的TensorList长度相等，且与入参`x`的数据类型具有一定对应关系：
+  - 当`x`的数据类型为BFLOAT16、FLOAT32、FLOAT16时，数据类型支持FLOAT32。<!--、DOUBLE（aclnn多了个double）-->。
+  - 当`x`的数据类型为INT32时，数据类型支持INT64。
+  - `x`支持包含的最大Tensor个数为50。
+
 ## 约束说明
 
 无

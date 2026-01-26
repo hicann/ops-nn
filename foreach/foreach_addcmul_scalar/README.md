@@ -4,15 +4,18 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 算子功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
 - 计算公式：
-
+  
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -80,7 +83,6 @@
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，`scalar`数据类型与`x1`的数据类型保持一致。
   - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。
-
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - 当`x1`的数据类型为FLOAT32、INT32时，`scalar`数据类型与`x1`的数据类型保持一致。
   - 当`x1`的数据类型为BFLOAT16时，`scalar`数据类型支持FLOAT32。

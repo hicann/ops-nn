@@ -1,19 +1,24 @@
 # aclnnForeachAddcmulScalar
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_addcmul_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
 
 - 计算公式：
-
+  
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -146,7 +151,7 @@ aclnnStatus aclnnForeachAddcmulScalar(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
+    
     参数`scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
     - 当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。
     - 当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
@@ -154,13 +159,15 @@ aclnnStatus aclnnForeachAddcmulScalar(
     - 参数`x1`、`x2`、`x3`、`out`支持包含的最大Tensor个数均为50。
     - 参数`scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
       - 当`x1`的数据类型为FLOAT32、INT32时，数据类型与`x1`的数据类型保持一致。
-      - 当`x1`的数据类型为BFLOAT16、FLOAT16时，数据类型支持FLOAT32。
+      - 当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
+      - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32。
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -332,7 +339,7 @@ int main() {
   std::vector<int64_t> anotherShape1 = {2, 3};
   std::vector<int64_t> anotherShape2 = {1, 3};
   std::vector<int64_t> outShape1 = {2, 3};
-  std::vector<int64_t> outShape2 = {1, 3};
+  std::vector<int64_t> outShape2 = {1, 3};  
   std::vector<int64_t> alphaShape = {1};
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
@@ -382,7 +389,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclTensor
   ret = CreateAclTensor(alphaValueHostData, alphaShape, &alphaDeviceAddr, aclDataType::ACL_FLOAT, &alpha);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, return ret); 
   // 创建out1 aclTensor
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

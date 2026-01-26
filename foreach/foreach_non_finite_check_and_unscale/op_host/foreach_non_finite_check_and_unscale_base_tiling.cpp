@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    socVersion = ascendcPlatform.GetSocVersion();
+    npuArch = ascendcPlatform.GetCurNpuArch();
     return ge::GRAPH_SUCCESS;
 }
 

@@ -1,12 +1,17 @@
 # aclnnForeachAddcmulScalarV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_addcmul_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -143,23 +148,23 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
   </tbody>
   </table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  
     `scalar`的数据类型与入参`x1`的数据类型具有一定对应关系：
     - 当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
     - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - `scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
- 	    - 当`x1`的数据类型为BFLOAT16、FLOAT32时，数据类型支持FLOAT32、DOUBLE。
- 	    - 当`x1`的数据类型为FLOAT16，数据类型支持FLOAT16、FLOAT32、DOUBLE。
- 	    - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
- 	  - 入参`x1`、`x2`、`x3`和出参`y`支持包含的最大Tensor个数均为50。
+      - 当`x1`的数据类型为BFLOAT16、FLOAT32时，数据类型支持FLOAT32、DOUBLE。
+      - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32、DOUBLE。
+      - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
+    - 入参`x1`、`x2`、`x3`和出参`y`支持包含的最大Tensor个数均为50。
 
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -336,7 +341,7 @@ int main() {
   void* another1DeviceAddr = nullptr;
   void* another2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* other1 = nullptr;
@@ -375,7 +380,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);
+  CHECK_RET(alpha != nullptr, return ret); 
   // 创建out1 aclTensor
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

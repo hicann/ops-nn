@@ -1,12 +1,18 @@
 # aclnnForeachLerpScalar
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_lerp_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -136,12 +142,16 @@ aclnnStatus aclnnForeachLerpScalar(
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`x1`、`x2`的shape保持一致。
     - 参数`out`的shape size大于等于入参`x1`的shape size。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    
+    参数`x1`、`x2`、`out`的shape size保持一致。支持包含的最大Tensor个数为50。
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -314,7 +324,7 @@ int main() {
   void* other1DeviceAddr = nullptr;
   void* other2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclTensor* other1 = nullptr;

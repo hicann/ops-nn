@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,10 +8,12 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+
 #include "aclnn_foreach_mul_scalar_v2.h"
 #include "foreach_mul_scalar_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
@@ -23,7 +25,7 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                     DataType::DT_FLOAT16,
                                                                                     DataType::DT_BF16,
                                                                                     DataType::DT_INT32};
@@ -60,12 +62,12 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910_95) {
-    return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+      Ops::NN::AclnnUtil::IsRegbase()) {
+    return TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+            static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
     return EMPTY_LIST;
   }
 }
@@ -74,7 +76,7 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+            static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
         return false;
     }
     if (self->Size() == 0) {
@@ -99,7 +101,7 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT_SUPPORT_LIST, return false);
     } else if (selfDtyte == DataType::DT_FLOAT16) {
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
             OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST_910D, return false);
         } else {
             OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST, return false);
@@ -169,7 +171,7 @@ static aclnnStatus ExecForeachMulScalarV2GetWorkspaceSize(const aclTensorList *x
     const aclTensor* otherTensor;
     if ((*x)[0]->GetDataType() ==  DataType::DT_BF16) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
-    } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+    } else if (Ops::NN::AclnnUtil::IsRegbase() &&
                (*x)[0]->GetDataType() == DataType::DT_FLOAT16 &&
                (scalar->GetDataType() == DataType::DT_FLOAT || scalar->GetDataType() == DataType::DT_DOUBLE)) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);

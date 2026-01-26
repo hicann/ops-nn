@@ -1,18 +1,23 @@
 # aclnnForeachAddScalarV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_add_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 接口功能：将指定的标量值加到张量列表中的每个张量中。本接口相较于[aclnnForeachAddScalar](aclnnForeachAddScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
-
+  
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -132,16 +137,17 @@ aclnnStatus aclnnForeachAddScalarV2(
    - 当`x`的数据类型为INT32时，数据类型支持INT32、INT64。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
+  - 入参`x`支持包含的最大Tensor个数为50。
+  - 入参`scalar`与入参`x`的数据类型具有一定对应关系：
+    - 当`x`的数据类型为BFLOAT16、FLOAT32时，数据类型支持FLOAT32、DOUBLE。
+    - 当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32、DOUBLE。
+    - 当`x`的数据类型为INT32时，数据类型支持INT32、INT64。
+  - 出参`out`支持包含的最大Tensor个数为50。
 
-  入参`scalar`与入参`x`的数据类型具有一定对应关系：
-
-   - 当`x`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
-   - 当`x`的数据类型为FLOAT16时，数据类型支持FLOAT32、FLOAT16、DOUBLE。
-   - 当`x`的数据类型为INT32时，数据类型支持INT32、INT64。
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -167,7 +173,7 @@ aclnnStatus aclnnForeachAddScalarV2(
       <td rowspan="6">161002</td>
     </tr>
     <tr>
-      <td>x、scalar和out的数据类型不在支持的范围之内。</td>
+      <td>x、scalar和out的数据类型不在支持的范围之内。</td>  
     </tr>
     <tr>
       <td>x和out的数据类型不一致。
@@ -176,7 +182,7 @@ aclnnStatus aclnnForeachAddScalarV2(
       <td>x与out的shape不满足约束。
     <tr>
       <td>x或out中的Tensor的数据类型不一致。
-    </tr>
+    </tr> 
     <tr>
       <td>x或out中的Tensor维度超过8维。
     </tr>

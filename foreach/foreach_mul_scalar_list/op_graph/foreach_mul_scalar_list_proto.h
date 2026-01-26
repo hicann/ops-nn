@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ namespace ge {
  * in scalar list
  * @par Inputs:
  * Two inputs:
- * @li x: A tensor list containing multiple tensors
+ * @li x: A tensor list containing multiple tensors,
+ * maximum length of x is 50
  * @li scalars: A scalar list in form of tensor with only multiple elements
  * @par Outputs:
  * @li y: A tensor list which store the tensors whose value are mul by the scalars in scalar list

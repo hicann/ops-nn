@@ -1,19 +1,24 @@
 # aclnnForeachNonFiniteCheckAndUnscale
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_non_finite_check_and_unscale)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
-
   $$
   foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
     foundInf, &其他.

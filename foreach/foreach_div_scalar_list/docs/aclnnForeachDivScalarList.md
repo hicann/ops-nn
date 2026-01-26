@@ -1,12 +1,18 @@
 # aclnnForeachDivScalarList
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_div_scalar_list)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -75,7 +81,7 @@ aclnnStatus aclnnForeachDivScalarList(
       <td>x</td>
       <td>输入</td>
       <td>表示进行除法运算的第一个输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>TensorList包含的最大Tensor个数为50。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>TensorList支持包含的Tensor个数为1-50。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -129,7 +135,7 @@ aclnnStatus aclnnForeachDivScalarList(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -303,7 +309,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
+  void* out2DeviceAddr = nullptr; 
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclScalar* alpha1 = nullptr;
