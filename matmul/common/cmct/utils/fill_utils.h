@@ -16,7 +16,7 @@
 #ifndef UTILS_FILL_UTILS_H
 #define UTILS_FILL_UTILS_H
 #include "common_utils.h"
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 
 namespace Cmct {
 namespace Gemm {

@@ -15,7 +15,8 @@
 
 #ifndef EPILOGUE_FUSION_FUSION_GELU_H
 #define EPILOGUE_FUSION_FUSION_GELU_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
+#include "math/erf.h"
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
 

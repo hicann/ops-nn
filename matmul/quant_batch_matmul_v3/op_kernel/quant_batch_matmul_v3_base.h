@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 #define QUANT_BATCH_MATMUL_V3_BASE_H
 
 #include <cstdint>
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
+#include "quantization/ascend_dequant_utils.h"
+#include "pad/broadcast.h"
+#include "quantization/ascend_dequant.h"
 #include "kernel_type.h"
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"

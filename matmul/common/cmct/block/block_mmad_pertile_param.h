@@ -16,7 +16,7 @@
 #ifndef MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
 #define MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
 
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"

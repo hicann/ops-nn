@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #include "weight_quant_batch_matmul_v2_constant.h"
 #include "tool.h"
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
 #if (                                      \
     defined(ORIG_DTYPE_ANTIQUANT_SCALE) && \
     ((ORIG_DTYPE_ANTIQUANT_SCALE == DT_UINT64) || (ORIG_DTYPE_ANTIQUANT_SCALE == DT_INT64)))

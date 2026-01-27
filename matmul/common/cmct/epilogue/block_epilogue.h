@@ -16,7 +16,7 @@
 #ifndef EPILOGUE_BLOCK_EPILOGUE_H
 #define EPILOGUE_BLOCK_EPILOGUE_H
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
 #include "../utils/device_utils.h"
 #include "fusion/default_fusion_op.h"

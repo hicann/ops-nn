@@ -22,7 +22,7 @@
 #include "../utils/tuple_utils.h"
 #include "../policy/dispatch_policy.h"
 #include "block_mmad.h"
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "lib/matmul_intf.h"
 
 namespace Cmct::Gemm::Block {

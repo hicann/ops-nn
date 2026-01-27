@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,20 +15,19 @@
 
 #define ENABLE_L2_CACHE
 #include "weight_quant_batch_matmul_v2_constant.h"
-#include "kernel_operator.h"
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "lib/matmul_intf.h"
 #include "arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 #if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-#if defined(A16) && (defined(S4) || defined(F4) || defined(S8))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || defined(WQBMMV2_S8))
 #include "arch35/weight_quant_batch_matmul_v2_reg_base.h"
 #endif
 
 #include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
-#if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
 #include "arch35/cmct_convertor.h"
 using WeightQuantBatchMatmulV2::InvokeKernel;
 #endif
@@ -116,13 +115,13 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
     using DtypeBias = AscendC::Std::conditional_t<IS_BIAS_FP32, float, DTYPE_X>;
     static constexpr QuantType antiquantType = static_cast<QuantType>(ANTIQUANT_TYPE);
     if constexpr (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ANTI_REG_SCSC) {
-#if defined(A16) && (defined(S4) || defined(F4) || defined(S8))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || defined(WQBMMV2_S8))
         INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(
             DtypeBias, WeightQuantBatchMatmulV2RegBaseKernel, TRANS_A, TRANS_B, HAS_ANTIQUANT_OFFSET, antiquantType,
             IS_WEIGHT_NZ);
 #endif
     } else {
-#if defined(A16) && (defined(S4) || defined(S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
+#if defined(A16) && (defined(WQBMMV2_S4) || defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
         InvokeKernel<
             TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
             KERNEL_PARAMS);

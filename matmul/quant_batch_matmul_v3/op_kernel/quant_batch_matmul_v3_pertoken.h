@@ -16,6 +16,8 @@
 #define QUANT_BATCH_MATMUL_V3_PERTOKEN_H
 
 #include "quant_batch_matmul_v3_base.h"
+#include "kernel_operator.h"
+#include "kernel_operator_intf.h"
 
 namespace AscendC {
 

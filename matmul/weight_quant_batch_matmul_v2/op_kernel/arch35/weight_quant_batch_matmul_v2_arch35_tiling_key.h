@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 #endif
 #if defined(ORIG_DTYPE_WEIGHT) && \
     ((defined(DT_INT4) && ORIG_DTYPE_WEIGHT == DT_INT4) || (defined(DT_INT32) && ORIG_DTYPE_WEIGHT == DT_INT32))
-#define S4
+#define WQBMMV2_S4
 #undef DTYPE_WEIGHT
 #define DTYPE_WEIGHT AscendC::int4b_t
 #undef ORIG_DTYPE_WEIGHT
@@ -45,7 +45,7 @@
 #endif
 #endif
 #if defined(ORIG_DTYPE_WEIGHT) && (defined(DT_INT8) && ORIG_DTYPE_WEIGHT == DT_INT8)
-#define S8
+#define WQBMMV2_S8
 #endif
 #if defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16
 #define X_BF16
@@ -244,7 +244,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -265,7 +265,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S4) || defined(F4)) && !defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S4) || defined(F4)) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -286,7 +286,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || (defined(WQBMMV2_S4) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -307,7 +307,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || (defined(WQBMMV2_S4) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -328,7 +328,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -349,7 +349,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -370,7 +370,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -391,7 +391,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
     #endif
-    #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
+    #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -474,7 +474,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -495,7 +495,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || ((defined(S4) || defined(F4)) && !defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S4) || defined(F4)) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -516,7 +516,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || (defined(WQBMMV2_S4) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -537,7 +537,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || (defined(S4) && !defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || (defined(WQBMMV2_S4) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -558,7 +558,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -579,7 +579,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -601,7 +601,7 @@ ASCENDC_TPL_SEL(
     ),
         #endif
 
-        #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(S4)) && defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),
@@ -622,7 +622,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams)
     ),
         #endif
-        #if !defined(__CCE_AICORE__) || ((defined(S8) || defined(WEIGHT_F8_INPUT) || defined(S4)) && defined(WEIGHT_ND))
+        #if !defined(__CCE_AICORE__) || ((defined(WQBMMV2_S8) || defined(WEIGHT_F8_INPUT) || defined(WQBMMV2_S4)) && defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(SOC_VERSION_TYPE, ASCENDC_TPL_UI_LIST, WQBMMV2_SOC_SUPPORT_L1_TO_BT_BF16),

@@ -15,7 +15,7 @@
 
 #ifndef EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
 #define EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
 #include "../utils/grouped_matmul_constant.h"
 #include "../utils/layout_utils.h"

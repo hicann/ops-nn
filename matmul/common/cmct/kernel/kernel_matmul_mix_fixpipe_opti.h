@@ -17,7 +17,7 @@
 #define CMCT_INCLUDE_MATMUL_KERNEL_KERNEL_MATMUL_MIX_FIXPIPE_OPTI_H
 
 #define ASCENDC_CUBE_ONLY
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "lib/matmul_intf.h"
 
 #include "../utils/common_utils.h"

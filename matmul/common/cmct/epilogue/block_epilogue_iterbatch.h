@@ -15,7 +15,7 @@
 
 #ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_ITERBATCH_H
 #define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_ITERBATCH_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "fusion/default_fusion_op.h"
 #include "../utils/common_utils.h"
 #include "../utils/device_utils.h"

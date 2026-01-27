@@ -16,7 +16,7 @@
 #ifndef MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
 #define MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
 
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "lib/matmul_intf.h"
 
 #include "../utils/common_utils.h"

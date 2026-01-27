@@ -15,7 +15,7 @@
 
 #ifndef EPILOGUE_BLOCK_EPILOGUE_EMPTY_H
 #define EPILOGUE_BLOCK_EPILOGUE_EMPTY_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "fusion/default_fusion_op.h"
 #include "../utils/common_utils.h"
 #include "../utils/device_utils.h"

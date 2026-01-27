@@ -10,7 +10,7 @@
 #ifndef PROLOGUE_CONSTANT_H
 #define PROLOGUE_CONSTANT_H
 
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "../utils/tensor_traits.h"
 
 namespace Cmct::Prologue {

@@ -14,7 +14,7 @@
  */
 #ifndef UTILS_INTEGRAL_CONSTANT_H
 #define UTILS_INTEGRAL_CONSTANT_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 
 namespace AscendC {
 namespace Std {

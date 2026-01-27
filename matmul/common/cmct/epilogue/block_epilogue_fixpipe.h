@@ -16,7 +16,7 @@
 #ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
 #define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3101)
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "fusion/default_fusion_op.h"
 
 namespace Cmct {

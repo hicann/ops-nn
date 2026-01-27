@@ -22,7 +22,7 @@
 #include "cmct/policy/dispatch_policy.h"
 #include "cmct/utils/gemm_type.h"
 #include "cmct/utils/integral_constant.h"
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "lib/std/type_traits.h"
 #include "quant_batch_matmul_v4_tiling_data.h"
 

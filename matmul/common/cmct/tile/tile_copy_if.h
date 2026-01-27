@@ -10,7 +10,7 @@
 #ifndef TILE_TILE_COPY_IF_H
 #define TILE_TILE_COPY_IF_H
 
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "../utils/arch.h"
 
 namespace Cmct::Gemm::Tile {

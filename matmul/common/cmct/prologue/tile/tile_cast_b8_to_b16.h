@@ -10,7 +10,7 @@
  */
 #ifndef PROLOGUE_TILE_CAST_MX_H
 #define PROLOGUE_TILE_CAST_MX_H
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "../../utils/math_utils.h"
 #include "../../utils/underscore.h"
 

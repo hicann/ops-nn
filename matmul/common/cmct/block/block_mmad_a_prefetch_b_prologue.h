@@ -21,7 +21,7 @@
 #include "../utils/tensor_utils.h"
 #include "../policy/dispatch_policy.h"
 #include "../utils/tuple_utils.h"
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "../utils/underscore.h"
 #include "../utils/tensor_traits.h"
 #include "../utils/math_utils.h"

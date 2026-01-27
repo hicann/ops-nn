@@ -15,7 +15,7 @@
 
 #ifndef EPILOGUE_FUSION_EPILOGUE_FUSION_ADD_H
 #define EPILOGUE_FUSION_EPILOGUE_FUSION_ADD_H
-#include "kernel_operator.h"
+#include "kernel_basic_intf.h"
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
 

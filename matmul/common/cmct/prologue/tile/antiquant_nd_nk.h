@@ -9,7 +9,7 @@
  */
 #ifndef PROLOGUE_TILE_ANTIQUANT_ND_NK_H
 #define PROLOGUE_TILE_ANTIQUANT_ND_NK_H
-#include "kernel_operator_intf.h"
+#include "kernel_basic_intf.h"
 #include "../../utils/underscore.h"
 #include "../../utils/constant.h"
 #include "kernel_micro_datacopy_intf_impl.h"
