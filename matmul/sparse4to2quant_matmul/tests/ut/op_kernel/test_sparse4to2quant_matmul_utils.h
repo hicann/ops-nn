@@ -43,14 +43,14 @@ struct Sparse4to2QuantMatmulTestParam {
     size_t quantMode;
     // output
     bool result; // false means tiling fail
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint64_t tilingKey;
     std::string tilingData;
 };
 
 class Sparse4to2QuantMatmulTestUtils {
 public:
-    static constexpr uint32_t MAX_BLOCK_DIM = 4;
+    static constexpr uint32_t MAX_NUM_BLOCKS = 4;
     static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
     {
         auto delimiterLen = delimiter.size();
@@ -131,7 +131,7 @@ public:
             idx++;  // skip format
             idx++;  // skip wformat
             param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-            param.blockDim = stol(testParam[idx++]);
+            param.numBlocks = stol(testParam[idx++]);
             param.tilingKey = stol(testParam[idx++]);
             param.tilingData = testParam[idx++];
             params.push_back(param);
@@ -183,7 +183,7 @@ public:
 
         AscendC::SetKernelMode(KernelMode::MIX_AIC_1_1);
         ICPU_SET_TILING_KEY(param.tilingKey);
-        ICPU_RUN_KF(sparse4to2quant_matmul, std::min(MAX_BLOCK_DIM, param.blockDim), x1, x2, index, pertokenScale, scale, bias,
+        ICPU_RUN_KF(sparse4to2quant_matmul, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, index, pertokenScale, scale, bias,
                     y, workspace, tiling);
 
         AscendC::GmFree(x1);

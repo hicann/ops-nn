@@ -144,7 +144,7 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
     return true;
 }
 
-uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetBlockDim() const
+uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetNumBlocks() const
 {
     return compileInfo_.aicNum;
 }

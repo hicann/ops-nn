@@ -24,8 +24,8 @@
 namespace qbmmv4_tiling {
 #pragma pack(push, 8)
 struct QuantBatchMatmulV4TilingDataParams {
-    uint8_t cubeBlockDimN = 0;
-    uint8_t cubeBlockDimM = 0;
+    uint8_t cubeNumBlocksN = 0;
+    uint8_t cubeNumBlocksM = 0;
     uint8_t vecCoreParallel = 0;
     uint8_t reserve1 = 0;
     uint16_t AL1Pingpong = 0;

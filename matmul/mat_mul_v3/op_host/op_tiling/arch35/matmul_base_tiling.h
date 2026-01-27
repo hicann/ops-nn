@@ -64,8 +64,8 @@ protected:
     virtual uint64_t GetTilingKey() const = 0;
     // 6、计算Workspace 大小
     virtual std::vector<size_t> GetWorkspaceSize() const = 0;
-    // 7、计算blockDim大小
-    virtual uint64_t GetBlockDim() const = 0;
+    // 7、计算NumBlocks大小
+    virtual uint64_t GetNumBlocks() const = 0;
     // 8、计算tiling, 保存结果
     virtual ge::graphStatus PostTiling() = 0;
     // 9、Dump Tiling数据

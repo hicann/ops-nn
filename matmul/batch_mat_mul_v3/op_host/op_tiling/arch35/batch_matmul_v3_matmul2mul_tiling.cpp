@@ -111,7 +111,7 @@ uint64_t BatchMatMulV3ToMulTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3ToMulTiling::GetBlockDim() const
+uint64_t BatchMatMulV3ToMulTiling::GetNumBlocks() const
 {
     return runInfo_.toMulInfo.usedCoreNum;
 }

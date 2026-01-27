@@ -510,15 +510,15 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     bL1DataSize_ = tiling_->matmulTiling.baseN * kBL1Size_;
     biasL1DataSize_ = tiling_->matmulTiling.baseN;
 
-    uint64_t singleM = CeilAlign(CeilDiv(tiling_->mSize, tiling_->cubeBlockDimM), 16);
-    uint64_t singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeBlockDimN), 16);
+    uint64_t singleM = CeilAlign(CeilDiv(tiling_->mSize, tiling_->cubeNumBlocksM), 16);
+    uint64_t singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeNumBlocksN), 16);
     kSingleCoreIterNum_ = CeilDiv(tiling_->kSize, Min(kAL1Size_, kBL1Size_));
 
-    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeBlockDimM - 1) * singleM; // 尾核 m 大小
-    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeBlockDimN - 1) * singleN; // 尾核 n 大小
+    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeNumBlocksM - 1) * singleM; // 尾核 m 大小
+    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeNumBlocksN - 1) * singleN; // 尾核 n 大小
 
-    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeBlockDimM - 1 ? mTailCoreSize_ : singleM; // 单核内 m 方向大小
-    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeBlockDimN - 1 ? nTailCoreSize_ : singleN; // 单核内 n 方向大小
+    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeNumBlocksM - 1 ? mTailCoreSize_ : singleM; // 单核内 m 方向大小
+    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeNumBlocksN - 1 ? nTailCoreSize_ : singleN; // 单核内 n 方向大小
 
     tailL1M_ = mSingleCoreSize_ % tiling_->matmulTiling.baseM; // 单核内l1上m方向尾块
     if (tailL1M_ == 0) {
@@ -586,8 +586,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     } else {
         curBlockIdx_ = GetBlockIdx();
     }
-    nDimIdx_ = curBlockIdx_ / tiling_->cubeBlockDimM;
-    mDimIdx_ = curBlockIdx_ % tiling_->cubeBlockDimM;
+    nDimIdx_ = curBlockIdx_ / tiling_->cubeNumBlocksM;
+    mDimIdx_ = curBlockIdx_ % tiling_->cubeNumBlocksM;
 
     InitTilingData();
 

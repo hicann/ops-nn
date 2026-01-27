@@ -42,7 +42,7 @@ template <
 __aicore__ inline void WeightQuantBatchMatmulV2RegBaseKernel<
     xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType, weightNz>::Process()
 {
-    uint16_t usedCoreNum = this->tiling_->cubeBlockDimM * this->tiling_->cubeBlockDimN;
+    uint16_t usedCoreNum = this->tiling_->cubeNumBlocksM * this->tiling_->cubeNumBlocksN;
     if ((this->curBlockIdx_) >= usedCoreNum) {
         return;
     }

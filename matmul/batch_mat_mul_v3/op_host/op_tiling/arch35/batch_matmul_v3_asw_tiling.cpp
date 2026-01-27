@@ -41,7 +41,7 @@ uint64_t BatchMatMulV3AswTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3AswTiling::GetBlockDim() const
+uint64_t BatchMatMulV3AswTiling::GetNumBlocks() const
 {
     return compileInfo_.aicNum;
 }

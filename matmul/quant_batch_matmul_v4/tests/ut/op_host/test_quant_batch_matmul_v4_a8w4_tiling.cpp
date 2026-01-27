@@ -35,7 +35,7 @@ struct QuantBatchMatmulV4TilingMsdTestParam {
     string caseName;
 
     // output
-    uint32_t blockDim;
+    uint32_t numBlocks;
     ge::graphStatus tilingResult;
     uint64_t tilingKey;
 };
@@ -264,7 +264,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     ASSERT_EQ(ret, param.tilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), param.blockDim);
+        ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
     }
 }
 

@@ -44,7 +44,7 @@ ge::graphStatus MatMulV3KEqZeroTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t MatMulV3KEqZeroTiling::GetBlockDim() const
+uint64_t MatMulV3KEqZeroTiling::GetNumBlocks() const
 {
     return compileInfo_.aivNum;
 }

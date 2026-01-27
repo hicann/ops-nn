@@ -725,9 +725,9 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
             inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    uint32_t usedAicNum = tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN;
-    uint32_t usedAivNum = tilingData_->vecBlockDimK * tilingData_->vecBlockDimN;
-    context_->SetBlockDim(std::max(usedAicNum, CalcTschBlockDim(usedAivNum, aicNum_, aivNum_)));
+    uint32_t usedAicNum = tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN;
+    uint32_t usedAivNum = tilingData_->vecNumBlocksK * tilingData_->vecNumBlocksN;
+    context_->SetBlockDim(std::max(usedAicNum, CalcTschNumBlocks(usedAivNum, aicNum_, aivNum_)));
 
     OP_TILING_CHECK(
         !CheckFinalTilingData(), PrintTilingData(false);
@@ -757,8 +757,8 @@ void QuantBatchMatmulV4TilingBase::PrintTilingData(bool debugLevel)
     ss << "kAlign: " << tilingData_->kAlign << " nAlign: " << tilingData_->nAlign
        << " kSize: " << tilingData_->kSize << " nSize: " << tilingData_->nSize
        << " mSize: " << tilingData_->mSize << " groupSize: " << tilingData_->groupSize
-       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
-       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->cubeBlockDimM);
+       << " cubeNumBlocksN: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksN)
+       << " cubeNumBlocksM: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksM);
 
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());

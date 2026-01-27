@@ -26,8 +26,8 @@ public:
         uint64_t mainBlockSize;
         uint64_t firstTailBlockSize;
         uint64_t secondTailBlockSize;
-        uint64_t cubeBlockDimM;
-        uint64_t cubeBlockDimN;
+        uint64_t cubeNumBlocksM;
+        uint64_t cubeNumBlocksN;
     };
 
     template <typename ProblemShape, typename Tiling>
@@ -42,8 +42,8 @@ public:
             .mainBlockSize = tiling->mainBlockL1Size,
             .firstTailBlockSize = tiling->firstTailBlockL1Size,
             .secondTailBlockSize = tiling->secondTailBlockL1Size,
-            .cubeBlockDimM = tiling->cubeBlockDimM,
-            .cubeBlockDimN = tiling->cubeBlockDimN};
+            .cubeNumBlocksM = tiling->cubeNumBlocksM,
+            .cubeNumBlocksN = tiling->cubeNumBlocksN};
     }
 
     template <
@@ -62,28 +62,28 @@ public:
         }
 
         // 连续访问
-        auto singleCoreM = (mSize + params.cubeBlockDimM - 1) / params.cubeBlockDimM;
-        mStart = blockIdx / params.cubeBlockDimN * singleCoreM;
+        auto singleCoreM = (mSize + params.cubeNumBlocksM - 1) / params.cubeNumBlocksM;
+        mStart = blockIdx / params.cubeNumBlocksN * singleCoreM;
         mStep = params.mL1Tile;
         mStop = Min(mStart + singleCoreM, mSize);
         mTile = mStep;
 
-        auto nDimIdx = blockIdx % params.cubeBlockDimN;
+        auto nDimIdx = blockIdx % params.cubeNumBlocksN;
         n0Tile = params.mainBlockSize;
         n0Start = nDimIdx * n0Tile;
-        n0Step = params.cubeBlockDimN * n0Tile;
+        n0Step = params.cubeNumBlocksN * n0Tile;
         n0Stop = n0Start + params.mainBlockCount * n0Tile;
 
         n1Tile = params.firstTailBlockSize;
         n1Start = params.mainBlockCount * n0Tile + nDimIdx * n1Tile;
-        n1Step = params.cubeBlockDimN * n1Tile;
+        n1Step = params.cubeNumBlocksN * n1Tile;
         n1Stop = Min(params.mainBlockCount * params.mainBlockSize + params.firstTailBlockCount * n1Tile, nSize);
 
         n2Tile = params.secondTailBlockSize;
-        auto x = Cmct::CeilAlign(params.firstTailBlockCount - nDimIdx, params.cubeBlockDimN);
+        auto x = Cmct::CeilAlign(params.firstTailBlockCount - nDimIdx, params.cubeNumBlocksN);
         n2Start = params.mainBlockCount * n0Tile + params.firstTailBlockCount * n1Tile +
                   (x + nDimIdx - params.firstTailBlockCount) * params.secondTailBlockSize;
-        n2Step = params.cubeBlockDimN * n2Tile;
+        n2Step = params.cubeNumBlocksN * n2Tile;
         n2Stop = nSize;
     }
 

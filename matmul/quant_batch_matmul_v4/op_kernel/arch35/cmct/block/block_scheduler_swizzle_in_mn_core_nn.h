@@ -58,7 +58,7 @@ public:
         return {.iterateOrder = tiling->matmulTiling.iterateOrder,
                 .problemShape = problemShape,
                 .tileShape = AscendC::MakeShape(baseM, baseN),
-                .blockShape = AscendC::MakeShape(tiling->cubeBlockDimM, tiling->cubeBlockDimN)};
+                .blockShape = AscendC::MakeShape(tiling->cubeNumBlocksM, tiling->cubeNumBlocksN)};
     }
 };
 }  // namespace Block

@@ -91,7 +91,7 @@ struct QuantBatchMatmulV3TestParam {
 
     // output
     bool result; // false means tiling fail
-    uint32_t blockDim;
+    uint32_t numBlocks;
     // Tiling defined in quant_batch_matmul_v3_tiling_key.h
     uint64_t trans;
     uint64_t kernel_template_type;
@@ -104,7 +104,7 @@ struct QuantBatchMatmulV3TestParam {
 
 class QuantBatchMatmulV3TestUtils {
 public:
-    static constexpr uint32_t MAX_BLOCK_DIM = 4;
+    static constexpr uint32_t MAX_NUM_BLOCKS = 4;
     static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
     {
         auto delimiterLen = delimiter.size();
@@ -191,7 +191,7 @@ public:
             param.fmapNz = testParam[idx++] == "NZ";
             param.weightNz = testParam[idx++] == "NZ";
             param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-            param.blockDim = stol(testParam[idx++]);
+            param.numBlocks = stol(testParam[idx++]);
             param.trans = stol(testParam[idx++]);
             param.kernel_template_type = stol(testParam[idx++]);
             param.pertoken = stol(testParam[idx++]);
@@ -264,7 +264,7 @@ public:
         };
 
         ICPU_RUN_KF(
-            wrapper, std::min(MAX_BLOCK_DIM, param.blockDim), x1, x2, scale, offset, bias, pertokenScale, y, workspace,
+            wrapper, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset, bias, pertokenScale, y, workspace,
             tiling);
 
         AscendC::GmFree(x1);
@@ -300,7 +300,7 @@ public:
         auto biasFlag = param.biasFlag;
         auto offsetFlag = param.offsetFlag;
         auto pertokenFlag = param.pertokenFlag;
-        auto blockDim = param.blockDim;
+        auto numBlocks = param.numBlocks;
         size_t shape_x1 = batchA * M * K * sizeof(int8_t);
         size_t shape_x2 = batchB * K * N * sizeof(int8_t);
         size_t shape_scale = N * sizeof(uint64_t);
@@ -333,7 +333,7 @@ public:
         ASSERT_EQ(tilingDataInt.size() * sizeof(int32_t), tiling_data_size);
         memcpy(tiling, tilingDataInt.data(), tiling_data_size);
 
-        ICPU_RUN_KF(func, std::min(QuantBatchMatmulV3TestUtils::MAX_BLOCK_DIM, param.blockDim), x1, x2, scale, offset, bias, pertokenScale, y, workspace, tiling);
+        ICPU_RUN_KF(func, std::min(QuantBatchMatmulV3TestUtils::MAX_NUM_BLOCKS, param.numBlocks), x1, x2, scale, offset, bias, pertokenScale, y, workspace, tiling);
         AscendC::GmFree((void *)x1);
         AscendC::GmFree((void *)x2);
         AscendC::GmFree((void *)scale);

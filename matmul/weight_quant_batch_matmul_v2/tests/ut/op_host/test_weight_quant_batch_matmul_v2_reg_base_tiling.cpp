@@ -29,7 +29,7 @@ struct WeightQuantBatchMatmulV2TilingRegBaseTestParam {
     string caseName;
 
     // output
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint64_t tilingKey;
 };
 
@@ -252,7 +252,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
     if (expectedStatus == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), param.blockDim);
+        ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
     } else {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
     }

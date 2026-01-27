@@ -144,9 +144,9 @@ TEST_F(quant_matmul_reduce_sum_test, general_test_01)
     tilingData->matmulTiling.CLayoutInfoS2 = 0;
     tilingData->matmulTiling.BatchNum = 0;
 
-    uint32_t blockDim = 1;
+    uint32_t numBlocks = 1;
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(quant_matmul_reduce_sum, blockDim,
+    ICPU_RUN_KF(quant_matmul_reduce_sum, numBlocks,
                 x1Gm, x2Gm, dimsGM, nullptr, x1ScaleGm, x2ScaleGm,  // null:bias
                 nullptr, nullptr, nullptr, nullptr, nullptr, // null: yScale, x1Offset, x2Offset, yOffset, x2Table
                 yGM, workspace, tiling);

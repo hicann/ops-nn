@@ -66,7 +66,7 @@ uint64_t TransposeBatchMatMulAswTiling::GetTilingKey() const
     return tilingKey;
 }
 
-uint64_t TransposeBatchMatMulAswTiling::GetBlockDim() const
+uint64_t TransposeBatchMatMulAswTiling::GetNumBlocks() const
 {
     return compileInfo_.aicNum;
 }

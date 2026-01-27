@@ -29,7 +29,7 @@ struct WeightQuantBatchMatmulV2TilingTestParam {
     string caseName;
 
     // output
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint64_t tilingKey;
 };
 
@@ -252,7 +252,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 
     ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-    ASSERT_EQ(tilingContext->GetBlockDim(), param.blockDim);
+    ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
 }
 
 TEST_P(TestWeightQuantBatchMatmulV2AdaptiveSlidingWindowTiling, generalTest)

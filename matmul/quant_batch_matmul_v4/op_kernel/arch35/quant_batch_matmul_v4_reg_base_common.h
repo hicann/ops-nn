@@ -505,24 +505,24 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     scaleAL1DataSize_ = aL1DataSize_ * scaleAFactor_ / GROUP_SIZE_32;
     scaleBL1DataSize_ = bL1DataSize_ * scaleBFactor_ / GROUP_SIZE_32;
 
-    uint64_t singleM = CeilAlign(CeilDiv(tiling_->mSize, tiling_->cubeBlockDimM), 16);
+    uint64_t singleM = CeilAlign(CeilDiv(tiling_->mSize, tiling_->cubeNumBlocksM), 16);
     uint64_t singleN;
     // singleN按c0对齐
     if constexpr (weightNz && !bTrans) {
         // weightNz非转置 shape为(n1, k1, k0, n0) n0 = 32B/sizeof(A8) = 32
-        singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeBlockDimN), C0_SIZE_B8);
+        singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeNumBlocksN), C0_SIZE_B8);
     } else {
         // 其它转置场景 shape为(k1, n1, n0, k0) n0为固定值16
-        singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeBlockDimN), BLOCK_CUBE);
+        singleN = CeilAlign(CeilDiv(tiling_->nSize, tiling_->cubeNumBlocksN), BLOCK_CUBE);
     }
 
     kSingleCoreIterNum_ = CeilDiv(tiling_->kSize, Min(kAL1Size_, kBL1Size_));
 
-    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeBlockDimM - 1) * singleM;  // 尾核 m 大小
-    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeBlockDimN - 1) * singleN;  // 尾核 n 大小
+    int64_t mTailCoreSize_ = tiling_->mSize - (tiling_->cubeNumBlocksM - 1) * singleM;  // 尾核 m 大小
+    int64_t nTailCoreSize_ = tiling_->nSize - (tiling_->cubeNumBlocksN - 1) * singleN;  // 尾核 n 大小
 
-    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeBlockDimM - 1 ? mTailCoreSize_ : singleM;  // 单核内 m 方向大小
-    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeBlockDimN - 1 ? nTailCoreSize_ : singleN;  // 单核内 n 方向大小
+    mSingleCoreSize_ = mDimIdx_ == tiling_->cubeNumBlocksM - 1 ? mTailCoreSize_ : singleM;  // 单核内 m 方向大小
+    nSingleCoreSize_ = nDimIdx_ == tiling_->cubeNumBlocksN - 1 ? nTailCoreSize_ : singleN;  // 单核内 n 方向大小
 
     tailL1M_ = mSingleCoreSize_ % mAL1Size_;  // 单核内l1上m方向尾块
     if (tailL1M_ == 0) {

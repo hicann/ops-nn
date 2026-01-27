@@ -24,7 +24,7 @@ namespace optiling {
 using namespace optiling::matmul_v3_advanced;
 struct TilingResult {
     uint64_t tilingKey;
-    uint64_t blockDim;
+    uint64_t numBlocks;
     std::shared_ptr<void> tilingData;
     size_t tilingDataSize;
     std::vector<size_t> workspaceSize;

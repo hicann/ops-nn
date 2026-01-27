@@ -67,8 +67,8 @@ __aicore__ inline void QuantBatchMatmulV4PerChannelKernel<
     } else {
         this->curBlockIdx_ = GetBlockIdx();
     }
-    this->nDimIdx_ = this->curBlockIdx_ / this->tiling_->cubeBlockDimM;
-    this->mDimIdx_ = this->curBlockIdx_ % this->tiling_->cubeBlockDimM;
+    this->nDimIdx_ = this->curBlockIdx_ / this->tiling_->cubeNumBlocksM;
+    this->mDimIdx_ = this->curBlockIdx_ % this->tiling_->cubeNumBlocksM;
 
     this->InitTilingData();
 
@@ -242,7 +242,7 @@ __aicore__ inline void
 QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans, hasAntiQuantOffset, antiQuantType,
                                    scaleType, weightNz>::Process()
 {
-    uint64_t usedCoreNum = this->tiling_->cubeBlockDimM * this->tiling_->cubeBlockDimN;
+    uint64_t usedCoreNum = this->tiling_->cubeNumBlocksM * this->tiling_->cubeNumBlocksN;
     if ((this->curBlockIdx_) >= usedCoreNum) {
         return;
     }

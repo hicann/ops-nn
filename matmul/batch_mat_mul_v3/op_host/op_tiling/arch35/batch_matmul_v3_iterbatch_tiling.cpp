@@ -121,7 +121,7 @@ uint64_t BatchMatMulV3IterBatchTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3IterBatchTiling::GetBlockDim() const
+uint64_t BatchMatMulV3IterBatchTiling::GetNumBlocks() const
 {
     return compileInfo_.aicNum;
 }

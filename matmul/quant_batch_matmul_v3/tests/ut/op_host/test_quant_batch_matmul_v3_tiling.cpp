@@ -75,7 +75,7 @@ public:
 
     // output
     bool result; // false means tiling fail
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint64_t tilingKey;
     std::string tilingData;
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
@@ -287,7 +287,7 @@ static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::strin
         param.fmapNz = testParam[idx++] == "NZ";
         param.weightNz = testParam[idx++] == "NZ";
         param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-        param.blockDim = stol(testParam[idx++]);
+        param.numBlocks = stol(testParam[idx++]);
         param.tilingKey = stol(testParam[idx++]);
         param.tilingData = testParam[idx++];
         param.tilingStub = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
@@ -686,7 +686,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
-        ASSERT_EQ(tilingContext->GetBlockDim(), blockDim)
+        ASSERT_EQ(tilingContext->GetBlockDim(), numBlocks)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
 
         std::vector<std::string> tilingDataStrs;

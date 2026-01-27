@@ -81,7 +81,7 @@ protected:
         return workspaceSize; // 20MB workspace for RPC
     };
 
-    uint64_t GetBlockDim() const override
+    uint64_t GetNumBlocks() const override
     {
         return runInfo_.usedCoreNum;
     };
@@ -174,7 +174,7 @@ protected:
         TilingResult tiling;
         tiling.tilingKey = GetTilingKey();
         tiling.workspaceSize = GetWorkspaceSize();
-        tiling.blockDim = GetBlockDim();
+        tiling.numBlocks = GetNumBlocks();
         ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;  
  	    getTilingRet = GetTilingData(tiling);
         if (getTilingRet == ge::GRAPH_FAILED) {
@@ -190,7 +190,7 @@ protected:
         if (SetTilingData(tiling) == ge::GRAPH_FAILED) {
             return ge::GRAPH_FAILED;
         }
-        context_->SetBlockDim(tiling.blockDim);
+        context_->SetBlockDim(tiling.numBlocks);
         context_->SetTilingKey(tiling.tilingKey);
         if (CheckMatMulStreamK(tiling.tilingKey)) {
             context_->SetScheduleMode(1);

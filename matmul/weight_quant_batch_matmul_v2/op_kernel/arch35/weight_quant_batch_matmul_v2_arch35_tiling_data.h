@@ -24,8 +24,8 @@
 namespace wqbmmv2_tiling {
 #pragma pack(push, 8)
 struct WeightQuantBatchMatmulV2RegBaseTilingDataParams {
-    uint8_t cubeBlockDimN = 0;
-    uint8_t cubeBlockDimM = 0;
+    uint8_t cubeNumBlocksN = 0;
+    uint8_t cubeNumBlocksM = 0;
     uint8_t vecCoreParallel = 0;
     uint8_t reserve1 = 0;
 
@@ -44,8 +44,8 @@ struct WeightQuantBatchMatmulV2RegBaseTilingDataParams {
 
 #pragma pack(push, 8)
 struct WeightQuantBatchMatmulV2ASTilingDataParams {
-    uint32_t cubeBlockDimM = 0;
-    uint32_t cubeBlockDimN = 0;
+    uint32_t cubeNumBlocksM = 0;
+    uint32_t cubeNumBlocksN = 0;
     uint32_t hasBias = 0;
     uint32_t firstTailBlockCount = 0;
     uint32_t secondTailBlockCount = 0;

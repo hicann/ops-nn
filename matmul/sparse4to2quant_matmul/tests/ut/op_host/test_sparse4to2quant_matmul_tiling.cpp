@@ -64,7 +64,7 @@ public:
 
     // output
     bool result; // false means tiling fail
-    uint32_t blockDim;
+    uint32_t numBlocks;
     uint64_t tilingKey;
     std::string tilingData;
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
@@ -235,7 +235,7 @@ static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::st
         param.yDtype = dtypeMap[testParam[idx++]];
 
         param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
-        param.blockDim = stol(testParam[idx++]);
+        param.numBlocks = stol(testParam[idx++]);
         param.tilingKey = stol(testParam[idx++]);
         param.tilingData = testParam[idx++];
         param.tilingStub = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
@@ -383,7 +383,7 @@ void Sparse4to2QuantMatmulTilingTestParam::InvokeTilingFunc(Sparse4to2QuantMatmu
             return;
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), blockDim);
+        ASSERT_EQ(tilingContext->GetBlockDim(), numBlocks);
     } else {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
     }

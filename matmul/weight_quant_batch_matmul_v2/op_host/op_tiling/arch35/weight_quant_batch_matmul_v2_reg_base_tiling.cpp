@@ -147,7 +147,7 @@ uint64_t WeightQuantBatchMatmulV2RegBase::GetTilingKey() const
 ge::graphStatus WeightQuantBatchMatmulV2RegBase::GetWorkspaceSize()
 {
     workspaceSize_ = WORKSPACE_SIZE;
-    workspaceSize_ += tilingData_->cubeBlockDimN * tilingData_->cubeBlockDimM * sizeof(uintptr_t);
+    workspaceSize_ += tilingData_->cubeNumBlocksN * tilingData_->cubeNumBlocksM * sizeof(uintptr_t);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -160,7 +160,7 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::PostTiling()
         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    context_->SetBlockDim(tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN);
+    context_->SetBlockDim(tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     workspaces[0] = workspaceSize_;
@@ -195,8 +195,8 @@ void WeightQuantBatchMatmulV2RegBase::SetBubTiling()
 void WeightQuantBatchMatmulV2RegBase::SetMatmulTiling()
 {
     const BasicBlockParam& tilingRes = tilingSolver_.GetTilingResult();
-    tilingData_->cubeBlockDimM = static_cast<uint8_t>(tilingRes.mDim);
-    tilingData_->cubeBlockDimN = static_cast<uint8_t>(tilingRes.nDim);
+    tilingData_->cubeNumBlocksM = static_cast<uint8_t>(tilingRes.mDim);
+    tilingData_->cubeNumBlocksN = static_cast<uint8_t>(tilingRes.nDim);
 
     tilingData_->matmulTiling.M = tilingRes.mSize;
     tilingData_->matmulTiling.Ka = tilingRes.kSize;
@@ -344,8 +344,8 @@ void WeightQuantBatchMatmulV2RegBase::PrintCVTilingData(bool debugLevel) const
     std::stringstream ss;
     ss << " kSize: " << tilingData_->kSize << " groupSize: " << tilingData_->groupSize
        << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
-       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
-       << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->cubeBlockDimM)
+       << " cubeNumBlocksN: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksN)
+       << " cubeNumBlocksM: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksM)
        << " vecCoreParallel: " << static_cast<uint32_t>(tilingData_->vecCoreParallel)
        << " nBubSize: " << tilingData_->nBubSize << " kBubSize: " << tilingData_->kBubSize
        << " AL1Pingpong: " << tilingData_->AL1Pingpong << " BL1Pingpong: " << tilingData_->BL1Pingpong;
