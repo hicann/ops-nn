@@ -12,6 +12,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "graph/operator.h"
 
 namespace {
 constexpr int32_t DYNAMIC_DIM = -1;
