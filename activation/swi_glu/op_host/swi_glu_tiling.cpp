@@ -14,11 +14,14 @@
  */
 #include "swi_glu_tiling.h"
 #include "error_util.h"
+#include "tiling_base/tiling_util.h"
 #include <chrono>
 #include "../../swi_glu_grad/op_host/swi_glu_grad_tiling_regbase.h"
 #include "register/op_impl_registry.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 const uint32_t UB_RESERVED_BUFF = 0; // reserve 0k
 const uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
 const uint32_t UB_MIN_BLOCK_SIZE = 32; // align unit in cache 32B
@@ -85,13 +88,13 @@ public:
     explicit GluSingleTilingCalculator(SwiGluTilingData *iTilingData, const std::string& opName) : tilingData(iTilingData), opName_(opName) {}
 
     template<GLU_FLAG Glu_Flag>
-    bool CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype, platform_ascendc::SocVersion socVersion_);
+    bool CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype, NpuArch npuArch);
 
     template <GLU_FLAG Glu_Flag>
     bool SetTotalShape(const gert::Shape &inShape, const int32_t inDim);
 
     void SaveTilingData(gert::TilingContext *context);
-    inline bool isSupportSocV(uint32_t dtype, platform_ascendc::SocVersion socVersion_) const;
+    inline bool isSupportSocV(uint32_t dtype, NpuArch npuArch) const;
     SwiGluTilingData *tilingData;
 
     uint32_t totalUsedCoreNum_ = 0; // 最终实际使用的核数
@@ -320,9 +323,9 @@ inline bool GluSingleTilingCalculator::isValidTailCol(uint32_t baseRowlen_, uint
     return !(baseRowlen_ > static_cast<uint32_t>(1) && MustBeSingleBaseRowLen(tailColLen));
 }
 
-inline bool GluSingleTilingCalculator::isSupportSocV(uint32_t dtype, platform_ascendc::SocVersion socVersion_) const
+inline bool GluSingleTilingCalculator::isSupportSocV(uint32_t dtype, NpuArch npuArch) const
 {
-    if ((socVersion_ == platform_ascendc::SocVersion::ASCEND310P) && (dtype == ge::DT_BF16)) {
+    if ((npuArch == NpuArch::DAV_2002) && (dtype == ge::DT_BF16)) {
         return false; //310p dont support BF16
     } else {
         return true;
@@ -383,7 +386,7 @@ bool GluSingleTilingCalculator::CalcOptTiling(uint64_t ubSize, int32_t dtype, Gl
 }
 
 template <GLU_FLAG Glu_Flag>
-bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype,  platform_ascendc::SocVersion socVersion_)
+bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype,  NpuArch npuArch)
 {
     totalAvailableCore = totalCore;
     if (!GetLengthByType(dtype, inputDTypeLen)) {
@@ -398,7 +401,7 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     tilingData->set_is32BAligned(tilingData->get_colLen() % ubMinBlockLen == 0);
     // 310p not support Non-64B
     uint32_t blockSizeOf64B = BLOCK_SIZE_OF_64B / inputDTypeLen;
-    if (((socVersion_ == platform_ascendc::SocVersion::ASCEND310P)) && (tilingData->get_colLen() % blockSizeOf64B != 0)) {
+    if (((npuArch == NpuArch::DAV_2002)) && (tilingData->get_colLen() % blockSizeOf64B != 0)) {
         OP_LOGE(opName_, "input shape is not support Non-64B aligned");
         return false;
     }
@@ -464,19 +467,13 @@ inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const ui
     return ge::GRAPH_SUCCESS;
 }
 
-bool inline IsRegbase(const platform_ascendc::SocVersion& curShortSocName)
-{
-    return curShortSocName == platform_ascendc::SocVersion::ASCEND910_95;
-}
-
 template <GLU_FLAG Glu_Flag>
 ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     OP_LOGD(context->GetNodeName(), "Tiling4SwiGlu enter.");
     auto platformInfo = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t totalCore = platformInfo.GetCoreNumAiv();
-    auto curShortSocName_ = platformInfo.GetSocVersion();
-    if ((curShortSocName_ == platform_ascendc::SocVersion::ASCEND910_95 ||
-        curShortSocName_ == platform_ascendc::SocVersion::ASCEND910_55) && GetSelfIdx<Glu_Flag>() == 1) {
+    auto npuArch = platformInfo.GetCurNpuArch();
+    if ((IsRegbaseSocVersion(context)) && GetSelfIdx<Glu_Flag>() == 1) {
         OP_LOGD(context->GetNodeName(), "Tiling SwiGluGrad RegBase start");
         GluBaseTiling4RegBase tilingObj(context);
         return tilingObj.DoTiling();
@@ -491,7 +488,7 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     auto inputShape = context->GetInputShape(INPUT_OUTPUT_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context, inputShape);
     auto xTotalLength = inputShape->GetStorageShape().GetShapeSize();
-    if (xTotalLength == 0 && IsRegbase(curShortSocName_) && Glu_Flag == GLU_FLAG::SWIGLU_SINGLE) {
+    if (xTotalLength == 0 && IsRegbaseSocVersion(context) && Glu_Flag == GLU_FLAG::SWIGLU_SINGLE) {
         return processEmptyTensor(context, totalCore);
     }
 
@@ -510,12 +507,12 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     uint32_t inDim = *(attrs->GetInt(0));
 
     GluSingleTilingCalculator tilingCalculator(&tilingData, context->GetNodeName());
-    if (!tilingCalculator.isSupportSocV(dataType, curShortSocName_)) {
+    if (!tilingCalculator.isSupportSocV(dataType, npuArch)) {
         return ge::GRAPH_FAILED;
     }
 
     if (!tilingCalculator.SetTotalShape<Glu_Flag>(inShape, inDim) ||
-        !tilingCalculator.CalcTiling<Glu_Flag>(totalCore, ubSize, dataType, curShortSocName_)) {
+        !tilingCalculator.CalcTiling<Glu_Flag>(totalCore, ubSize, dataType, npuArch)) {
         return ge::GRAPH_FAILED;
     }
 
