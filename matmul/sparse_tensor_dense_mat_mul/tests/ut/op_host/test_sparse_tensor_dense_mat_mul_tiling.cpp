@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -58,8 +58,10 @@ void TestSparseTensorDenseMatMulTiling(
     ge::DataType x1_values_dtype, ge::DataType x1_shape_dtype, ge::DataType x2_dtype, ge::DataType y_dtype,
     bool adjoint_a_value, bool adjoint_b_value, ge::graphStatus expectTilingResult, uint64_t expectTilingKey)
 {
+    constexpr size_t INPUT_IDX_X1_SHAPE = 2;
+    constexpr int INPUT_SIZE_X1_SHAPE = 2;
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
-    SetConstInput(2, ge::DT_INT64, x1_shape_value, 2, const_tensors);
+    SetConstInput(INPUT_IDX_X1_SHAPE, ge::DT_INT64, x1_shape_value, INPUT_SIZE_X1_SHAPE, const_tensors);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",

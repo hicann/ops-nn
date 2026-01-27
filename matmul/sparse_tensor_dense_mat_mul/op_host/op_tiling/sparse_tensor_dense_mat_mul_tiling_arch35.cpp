@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -93,10 +93,10 @@ protected:
     uint64_t GetTilingKey() const override;
 
 private:
-    bool isEmptyOutput() const;
-    bool isZeroingOutput() const;
-    bool isValuesTypeB16() const; // 输入的Values类型是否为B16（目前仅float16）
-    void logTilingInfo() const;   // 用LOGI打印tiling计算的各种值的日志
+    bool IsEmptyOutput() const;
+    bool IsZeroingOutput() const;
+    bool IsValuesTypeB16() const; // 输入的Values类型是否为B16（目前仅float16）
+    void LogTilingInfo() const;   // 用LOGI打印tiling计算的各种值的日志
 
     ge::graphStatus GetValueDependTensorInfo(); // 获取x_shape这个ValueDepend输入携带的x1的shape信息
     ge::graphStatus CheckInputShapes();         // 校验输入tensor的shape信息是否正确
@@ -105,11 +105,11 @@ private:
     ge::graphStatus CheckOutputShapes();      // 校验输出tensor的shape信息是否正确
     ge::graphStatus CheckOutputDTypes();
 
-    void tilingForInit();    // 计算init阶段需要的tilingData
-    void tilingForCompute(); // 计算compute阶段需要的tilingData
-    void tilingForOutput();  // 计算(B16 only)output阶段需要的tilingData
-    void setTilingData();    // 写入tilingData
-    void setGlobalBlockDim(); // 计算&&设置整个算子要用到的（最大）核数，即context_->SetBlockDim()里面要传的值
+    void TilingForInit();    // 计算init阶段需要的tilingData
+    void TilingForCompute(); // 计算compute阶段需要的tilingData
+    void TilingForOutput();  // 计算(B16 only)output阶段需要的tilingData
+    void SetTilingData();    // 写入tilingData
+    void SetGlobalBlockDim(); // 计算&&设置整个算子要用到的（最大）核数，即context_->SetBlockDim()里面要传的值
 
     // PlatformInfos
     platform_ascendc::SocVersion socVersion_{platform_ascendc::SocVersion::RESERVED_VERSION};
@@ -286,9 +286,9 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::DoOpTiling()
     }
 
     // 计算init阶段分核心，由于output阶段复用init阶段的计算，tilingForInit必须在tilingForOutput之前调用
-    tilingForInit();
-    tilingForCompute();
-    tilingForOutput();
+    TilingForInit();
+    TilingForCompute();
+    TilingForOutput();
 
     return ge::GRAPH_SUCCESS;
 }
@@ -299,7 +299,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetWorkspaceSize()
 
     // 计算需要用的ws大小
     int64_t userWsSize = 0;
-    if (!(isEmptyOutput() || isZeroingOutput()) && isValuesTypeB16()) {
+    if (!(IsEmptyOutput() || IsZeroingOutput()) && IsValuesTypeB16()) {
         // 如果是空Tensor输出，或是全0输出，则不需要workspace中转，直接对output写0即可
         // 如果是B16模板，预留y.numel()*sizeof(B32)的workspace大小，作为yWorkspace，放临时结果
         userWsSize += m_ * p_ * SIZEOF_B32;
@@ -317,15 +317,15 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::PostTiling()
     OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::PostTiling()");
 
     // 写入tilingData
-    setTilingData();
+    SetTilingData();
     // 计算&&设置好整个算子用到的核数BlockDim
-    setGlobalBlockDim();
+    SetGlobalBlockDim();
     // 设置ub可用大小（这里是ub原始大小减去simt用掉的dcache大小）
     context_->SetLocalMemorySize(availUbSize_);
     // 涉及核间同步的算子必须设置schedule_mode为1
     context_->SetScheduleMode(1);
     // 打印TilingInfo
-    logTilingInfo();
+    LogTilingInfo();
 
     return ge::GRAPH_SUCCESS;
 }
@@ -334,16 +334,16 @@ uint64_t SparseTensorDenseMatMulTilingArch35::GetTilingKey() const
 {
     OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::GetTilingKey()");
 
-    if (isEmptyOutput()) {
+    if (IsEmptyOutput()) {
         // (0,n)*(n,p)->(0,p), (m,n)*(n,0)->(m,0)
         return TILING_KEY_EMPTY_Y;
-    } else if (isZeroingOutput()) {
+    } else if (IsZeroingOutput()) {
         // (m,0)*(0,p)->(m,p), 里面的元素全为0
         return TILING_KEY_ZEROING_Y;
     }
 
     uint64_t tilingKey = 0ULL;
-    if (isValuesTypeB16()) {
+    if (IsValuesTypeB16()) {
         if (adjointA_ && adjointB_) {
             tilingKey = TILING_KEY_B16_ADJA_ADJB;
         } else if (adjointA_) {
@@ -368,17 +368,17 @@ uint64_t SparseTensorDenseMatMulTilingArch35::GetTilingKey() const
     return tilingKey;
 }
 
-inline bool SparseTensorDenseMatMulTilingArch35::isEmptyOutput() const
+inline bool SparseTensorDenseMatMulTilingArch35::IsEmptyOutput() const
 {
     return m_ == 0 || p_ == 0;
 }
 
-inline bool SparseTensorDenseMatMulTilingArch35::isZeroingOutput() const
+inline bool SparseTensorDenseMatMulTilingArch35::IsZeroingOutput() const
 {
     return n_ == 0;
 }
 
-inline bool SparseTensorDenseMatMulTilingArch35::isValuesTypeB16() const
+inline bool SparseTensorDenseMatMulTilingArch35::IsValuesTypeB16() const
 {
     static const std::unordered_set<ge::DataType> SUPPORTED_B16_VALUES_DTYPES = {ge::DataType::DT_FLOAT16};
     return SUPPORTED_B16_VALUES_DTYPES.count(x1ValuesDType_) != 0;
@@ -610,9 +610,9 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputDTypes()
     return ge::GRAPH_SUCCESS;
 }
 
-void SparseTensorDenseMatMulTilingArch35::tilingForInit()
+void SparseTensorDenseMatMulTilingArch35::TilingForInit()
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::tilingForInit()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::TilingForInit()");
 
     // 计算init/output阶段要处理的元素个数，也就是y的元素个数
     initAndOutElemNum_ = m_ * p_;
@@ -633,9 +633,9 @@ void SparseTensorDenseMatMulTilingArch35::tilingForInit()
     initAndOutTailCoreElemNum_ = initAndOutElemNum_ - (initAndOutUsedCoreNum_ - 1) * initAndOutFormerCoreElemNum_;
 }
 
-void SparseTensorDenseMatMulTilingArch35::tilingForCompute()
+void SparseTensorDenseMatMulTilingArch35::TilingForCompute()
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::tilingForCompute()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::TilingForCompute()");
 
     // 用元素总数，每核线程数，计算需要启动多少核（SIMT计算用）
     computeTotalElemNum_ = nnz_ * p_;
@@ -644,9 +644,9 @@ void SparseTensorDenseMatMulTilingArch35::tilingForCompute()
         std::min<int64_t>(Ops::Base::CeilDiv(computeTotalElemNum_, computePerCoreThreadNum_), aivCoreNum_);
 }
 
-void SparseTensorDenseMatMulTilingArch35::tilingForOutput()
+void SparseTensorDenseMatMulTilingArch35::TilingForOutput()
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::tilingForOutput()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::TilingForOutput()");
 
     if (initAndOutElemNum_ == 0) {
         // 当init/output阶段的数据量为0，相关tilingData全部为0，无需再计算
@@ -680,9 +680,9 @@ void SparseTensorDenseMatMulTilingArch35::tilingForOutput()
     outTailCoreUbTailFactor_ = initAndOutTailCoreElemNum_ - (outTailCoreUbLoopTimes_ - 1) * outTailCoreUbFactor_;
 }
 
-void SparseTensorDenseMatMulTilingArch35::setTilingData()
+void SparseTensorDenseMatMulTilingArch35::SetTilingData()
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::setTilingData()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::SetTilingData()");
 
     tilingDataPtr_ = context_->GetTilingData<SparseTensorDenseMatMulTilingData>();
     tilingDataPtr_->initAndOutUsedCoreNum = initAndOutUsedCoreNum_;
@@ -703,9 +703,9 @@ void SparseTensorDenseMatMulTilingArch35::setTilingData()
     tilingDataPtr_->outTailCoreUbLoopTimes = outTailCoreUbLoopTimes_;
 }
 
-void SparseTensorDenseMatMulTilingArch35::setGlobalBlockDim()
+void SparseTensorDenseMatMulTilingArch35::SetGlobalBlockDim()
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::setGlobalBlockDim()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::SetGlobalBlockDim()");
 
     // 取init/compute/out阶段用到的核数的最大值（这些最大值已经设置为小于等于aivCoreNum_了）
     globalBlockDim_ = std::max<int64_t>(initAndOutUsedCoreNum_, computeUsedCoreNum_);
@@ -713,9 +713,9 @@ void SparseTensorDenseMatMulTilingArch35::setGlobalBlockDim()
     context_->SetBlockDim(globalBlockDim_);
 }
 
-void SparseTensorDenseMatMulTilingArch35::logTilingInfo() const
+void SparseTensorDenseMatMulTilingArch35::LogTilingInfo() const
 {
-    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::logTilingInfo()");
+    OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::LogTilingInfo()");
 
     std::stringstream ss;
     ss << "\n[PlatformInfo]\n";

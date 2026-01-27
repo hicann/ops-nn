@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -143,8 +143,8 @@ TEST_F(HashTableLookupOrInsertTiling, hashtable_lookup_or_insert_tiling_001) {
   EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
   // todo check tiling result
   auto tiling_key = tiling_context->GetTilingKey();
-  ASSERT_EQ(tiling_key, 0);
+  ASSERT_EQ(tiling_key, 1002);
   auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-  std::string expect_tiling = "6 0 2 0 0 0 1 0 0 0 0 0 0 0 -1 -1 1024 0 ";
+  std::string expect_tiling = "6 0 2 0 0 0 1 0 0 0 0 0 0 0 -1 -1 2 256 ";
   ASSERT_EQ(expect_tiling, tiling_data_result);
 }

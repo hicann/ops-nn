@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file sparse_tensor_dense_mat_mul_b16.h
+ * \file sparse_tensor_dense_mat_mul_zeroing.h
  * \brief
  */
 #ifndef SPARSE_TENSOR_DENSE_MAT_MUL_ZEROING_H
@@ -20,7 +20,7 @@
 namespace SparseTensorDenseMatMul {
 using namespace AscendC;
 
-template <typename Tvalues>
+template <typename T_VAL>
 class SparseTensorDenseMatMulZeroing {
 public:
     __aicore__ inline SparseTensorDenseMatMulZeroing(TPipe* pipe, const SparseTensorDenseMatMulTilingData* tiling)
@@ -28,23 +28,23 @@ public:
     __aicore__ inline void InitAndProcessZeroing(GM_ADDR y);
 
 private:
-    TPipe* pipe_;
+    TPipe* pipe_{nullptr};
     const SparseTensorDenseMatMulTilingData* tilingData_;
 };
 
-template <typename Tvalues>
-__aicore__ inline void SparseTensorDenseMatMulZeroing<Tvalues>::InitAndProcessZeroing(GM_ADDR y)
+template <typename T_VAL>
+__aicore__ inline void SparseTensorDenseMatMulZeroing<T_VAL>::InitAndProcessZeroing(GM_ADDR y)
 {
     uint32_t currCoreIdx = static_cast<uint32_t>(GetBlockIdx());
-    GlobalTensor<Tvalues> yOutputGm;
+    GlobalTensor<T_VAL> yOutputGm;
     yOutputGm.SetGlobalBuffer(
-        reinterpret_cast<__gm__ Tvalues*>(y) + currCoreIdx * tilingData_->initAndOutFormerCoreElemNum);
+        reinterpret_cast<__gm__ T_VAL*>(y) + currCoreIdx * tilingData_->initAndOutFormerCoreElemNum);
 
     if (currCoreIdx < tilingData_->initAndOutUsedCoreNum) {
         uint64_t initEleNumPerCore = (currCoreIdx == tilingData_->initAndOutUsedCoreNum - 1) ?
                                          tilingData_->initAndOutTailCoreElemNum :
                                          tilingData_->initAndOutFormerCoreElemNum;
-        InitGlobalMemory(yOutputGm, initEleNumPerCore, static_cast<Tvalues>(0));
+        InitGlobalMemory(yOutputGm, initEleNumPerCore, static_cast<T_VAL>(0));
     }
 }
 
