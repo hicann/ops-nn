@@ -863,6 +863,15 @@ uint64_t WeightQuantBatchMatmulV2TilingAS::GetTilingKey() const
     bool hasBias = 0;
     bool isBiasFp32 = matmulInfoPtr_->biasDtype == ge::DT_FLOAT && matmulInfoPtr_->hasBias;
     bool isWeightNz = matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ;
+    OP_LOGD(
+        opName_,
+        "tiling key params: socVersionType[%lu], subSocVersionType[%lu], antiquantScenario[%lu], algorithm[%lu],"
+        "subAlgorithm[%lu], templateCustom[%lu], apiConstexpr[%lu], transA[%s], transB[%s], antiquantType[%lu],"
+        "quantType[%lu], hasAntiquantOffset[%s], hasBias[%s], isBiasFp32[%s], isWeightNz[%s]",
+        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm,
+        templateCustom, apiConstexpr, transA ? "true" : "false", transB ? "true" : "false", antiquantType,
+        quantType, hasAntiquantOffset ? "true" : "false", hasBias ? "true" : "false",
+        isBiasFp32 ? "true" : "false", isWeightNz ? "true" : "false");
     uint64_t tilingKey = GET_TPL_TILING_KEY(
         socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, templateCustom, apiConstexpr,
         transA, transB, antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz);

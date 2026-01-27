@@ -327,14 +327,14 @@ public:
                      ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                      ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                      ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
-                     ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                     ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
+                     ge::FORMAT_ND,         ge::FORMAT_ND,    ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2,
+                     ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_ND,    ge::FORMAT_ND,         ge::FORMAT_ND,
                      ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ,
                      ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
                      ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                     ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                     ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,
-                     ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ})
+                     ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ_C0_2,
+                     ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_ND,         ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2})
             .UnknownShapeFormat(
                 {ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
@@ -343,14 +343,14 @@ public:
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
-                 ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
+                 ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2,
+                 ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,
                  ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ,
                  ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
                  ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
-                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND,         ge::FORMAT_ND,
-                 ge::FORMAT_ND,         ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ});
+                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ_C0_2,
+                 ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_ND,         ge::FORMAT_ND,
+                 ge::FORMAT_ND,    ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2, ge::FORMAT_FRACTAL_NZ_C0_2});
         aicore_config_910_95.Input("antiquant_scale")
             .ParamType(REQUIRED)
             .DataType(

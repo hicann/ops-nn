@@ -10,6 +10,7 @@
 
 #include "aclnn_weight_quant_batch_matmul_v2.h"
 #include "aclnn_weight_quant_batch_matmul_v3.h"
+#include "aclnn_weight_quant_batch_matmul_nz.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "weight_quant_batch_matmul_v2.h"
 #include "aclnn_kernels/contiguous.h"
@@ -46,9 +47,6 @@ static constexpr int INDEX_ANTIQUANT_GROUPSIZE_IN_ATTR_TUPLE = 0;
 static constexpr int INDEX_TRANSPOSE_X_IN_ATTR_TUPLE = 1;
 static constexpr int INDEX_TRANSPOSE_WEIGHT_IN_ATTR_TUPLE = 2;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 namespace {
 const size_t ANTIQUANT_DIM_MAX_VALUE = 2;
 const size_t WEIGHT_K_OFFSET = 2;
@@ -751,6 +749,26 @@ static aclnnStatus CheckSocValid()
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CheckNzSocValid()
+{
+    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    switch (socVersion) {
+        case SocVersion::ASCEND910_95:
+            break;
+        default: {
+            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "aclnn nz support for %s is not implemented", op::ToString(socVersion).GetString());
+            return ACLNN_ERR_RUNTIME_ERROR;
+        }
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus IsNzFormat(const aclTensor* weight)
+{
+    return weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
+           weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2;
+}
+
 static bool CheckNotNull(
     const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale, const aclTensor* y)
 {
@@ -860,7 +878,37 @@ static bool CheckXDtypeValidForNormal(
     return true;
 }
 
-static bool CheckBiasDtypeValid(const aclTensor* x, const aclTensor* biasOptional)
+static bool CheckBiasWithXBf16(const aclTensor* weight, const aclTensor* biasOptional) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        if (weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E5M2 ||
+            weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN || weight->GetDataType() == DataType::DT_HIFLOAT8) {
+            if (biasOptional->GetDataType() != DataType::DT_BF16) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_BF16], actual is [%s].",
+                    op::ToString(biasOptional->GetDataType()).GetString());
+                return false;
+            }
+        } else {
+            if (biasOptional->GetDataType() != DataType::DT_BF16 && biasOptional->GetDataType() != DataType::DT_FLOAT) {
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT]/[DT_BF16], actual is [%s].",
+                    op::ToString(biasOptional->GetDataType()).GetString());
+                return false;
+            }
+        }
+    } else {
+        if (biasOptional->GetDataType() != DataType::DT_FLOAT) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT], actual is [%s].",
+                op::ToString(biasOptional->GetDataType()).GetString());
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool CheckBiasDtypeValid(const aclTensor* x, const aclTensor* weight, const aclTensor* biasOptional)
 {
     if (biasOptional == nullptr) {
         return true;
@@ -874,21 +922,7 @@ static bool CheckBiasDtypeValid(const aclTensor* x, const aclTensor* biasOptiona
         return false;
     }
     if (x->GetDataType() == DataType::DT_BF16) {
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-            if (biasOptional->GetDataType() != DataType::DT_BF16 && biasOptional->GetDataType() != DataType::DT_FLOAT) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT]/[DT_BF16], actual is [%s].",
-                    op::ToString(biasOptional->GetDataType()).GetString());
-                return false;
-            }
-        } else {
-            if (biasOptional->GetDataType() != DataType::DT_FLOAT) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT], actual is [%s].",
-                    op::ToString(biasOptional->GetDataType()).GetString());
-                return false;
-            }
-        }
+        CHECK_RET(CheckBiasWithXBf16(weight, biasOptional), false);
     }
     return true;
 }
@@ -1156,7 +1190,7 @@ static aclnnStatus BasicParamsScaleCheck(
 static aclnnStatus BasicParamsBiasCheck(
     const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale, const aclTensor* biasOptional)
 {
-    CHECK_RET(CheckBiasDtypeValid(x, biasOptional), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckBiasDtypeValid(x, weight, biasOptional), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckFormatValid(x, weight, antiquantScale, biasOptional), ACLNN_ERR_PARAM_INVALID);
 
@@ -1373,6 +1407,15 @@ static aclnnStatus ModifyTensorDtype(
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus SetNZC0FormatToNZFormat(aclTensor* input) {
+    if (input->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ_C0_2) {
+        input->SetViewFormat(op::Format::FORMAT_ND);
+        input->SetOriginalFormat(op::Format::FORMAT_ND);
+        input->SetStorageFormat(op::Format::FORMAT_FRACTAL_NZ);
+    }
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus PackedWeightPreProcess(
     const aclTensor* weight, const aclTensor*& tensorWeight, aclOpExecutor* executor)
 {
@@ -1402,8 +1445,9 @@ static aclnnStatus PackedWeightPreProcess(
         newStrides[strideSize - 1] *= INT4_NUMS_IN_INT32;
         weightTemp->SetViewStrides(newStrides);
     }
-    if (weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+    if (IsNzFormat(weight)) {
         CHECK_RET(SetShapeStrideForNZ(weight, weightTemp, transposeWeight), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(SetNZC0FormatToNZFormat(weightTemp) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
     if (weight->GetDataType() == DataType::DT_INT32) {
         CHECK_RET(
@@ -1602,7 +1646,11 @@ aclnnStatus AclnnWeightQuantBatchMatmulGetWorkspaceSizeCommonProcess(
 
     return ACLNN_SUCCESS;
 }
+} // namespace
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
     const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
     const aclTensor* antiquantOffsetOptional, const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
@@ -1707,6 +1755,56 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
+aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
+    const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
+    const aclTensor* antiquantOffsetOptional, const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
+    const aclTensor* biasOptional, int antiquantGroupSize, const aclTensor* y, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(
+        aclnnWeightQuantBatchMatmulNz,
+        DFX_IN(
+            x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional, biasOptional),
+        DFX_OUT(y));
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    aclnnStatus socRes = CheckNzSocValid();
+    CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
+    CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK(
+        IsNzFormat(weight), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support weight tensor is FRACTAL_NZ."),
+        return ACLNN_ERR_PARAM_INVALID);
+    const aclTensor* tensorWeight = weight;
+    const aclTensor* antiquantScaleRef = antiquantScale;
+    const aclTensor* tensorQuantScaleOptional = quantScaleOptional;
+    const aclTensor* reservedRef = nullptr;
+    bool transposeX = IsTransposeLastTwoDims(x);
+    bool transposeWeight = IsTransposeLastTwoDims(tensorWeight);
+    aclnnStatus processRes = AclnnWeightQuantBatchMatmulGetWorkspaceSizeCommonProcess(
+        std::tie(x, weight, tensorWeight, antiquantScale, y, antiquantScaleRef),
+        std::tie(
+            antiquantOffsetOptional, quantScaleOptional, tensorQuantScaleOptional, quantOffsetOptional, biasOptional,
+            reservedRef),
+        std::tie(antiquantGroupSize, transposeX, transposeWeight), uniqueExecutor.get());
+    CHECK_RET(processRes == ACLNN_SUCCESS, processRes);
+
+    // dtype=-1表示输出dtype和输入x dtype一致
+    int64_t dtype = tensorQuantScaleOptional != nullptr ? static_cast<int64_t>(y->GetDataType()) : -1;
+    auto l0Result = l0op::WeightQuantBatchMatmulV2(
+        x, tensorWeight, antiquantScaleRef, antiquantOffsetOptional, tensorQuantScaleOptional, quantOffsetOptional,
+        biasOptional, transposeX, transposeWeight, antiquantGroupSize, dtype, 0,
+        uniqueExecutor.get()); // 0:v2接口innerPrecise参数默认传0
+    CHECK_RET(l0Result != nullptr, ACLNN_ERR_PARAM_INVALID);
+
+    auto viewCopyResult = l0op::ViewCopy(l0Result, y, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_PARAM_INVALID);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnWeightQuantBatchMatmulV2(
     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
@@ -1720,7 +1818,14 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     L2_DFX_PHASE_2(aclnnWeightQuantBatchMatmulV3)
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
-} // namespace
+
+aclnnStatus aclnnWeightQuantBatchMatmulNz(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnWeightQuantBatchMatmulNz)
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
 #ifdef __cplusplus
 }
 #endif

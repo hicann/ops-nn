@@ -469,16 +469,16 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   | FLOAT8_E4M3FN | FLOAT4_E2M1/FLOAT32 | null         | BFLOAT16         | null         | null                        | INT64/UINT64 | [0, 0, 32]/[1, 1, 32] | BFLOAT16          |
   | INT8          | INT8                | null         | FLOAT32/BFLOAT16 | null         | null/INT32                  | null         | 0                     | INT32             |
 
-伪量化场景下dtype和shape要求如下：
-  |x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   |x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM，groupSizeN，groupSizeK]取值|量化类型|
-  |---------------| ------------| -------------- |--------------|-------------|--------- | --------| --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-  |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|（m, k）  |（n, k）  |（m, k/32）    |（n, k/32）        |（1, n）    | null        | [0, 0, 32] / [1, 1, 32]                | G-G量化 |
-  |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|（m, k）  |（n, k/8）|（m, k/32）    |（n, k/32）        |（1, n）    | null        | [0, 0, 32] / [1, 1, 32]                | G-G量化 |
-  |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |null         |（m, k）  |（k, n）  |null           |（k/32, n）        |null       |（1, n）      | [0, 0, 32] / [1, 1, 32]                | T-CG量化 |
-  |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |null         |（m, k）  |（k, n/8）|null           |（k/32, n）        |null       |（1, n）      | [0, 0, 32] / [1, 1, 32]                | T-CG量化 |
-- 约束说明：
-  - k, n大小要求64对齐。
-  - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
+  伪量化场景下dtype和shape要求如下：
+    |x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype   |x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM，groupSizeN，groupSizeK]取值|量化类型|
+    |---------------| ------------| -------------- |--------------|-------------|--------- | --------| --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
+    |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|（m, k）  |（n, k）  |（m, k/32）    |（n, k/32）        |（1, n）    | null        | [0, 0, 32] / [1, 1, 32]                | G-G量化 |
+    |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16|（m, k）  |（n, k/8）|（m, k/32）    |（n, k/32）        |（1, n）    | null        | [0, 0, 32] / [1, 1, 32]                | G-G量化 |
+    |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16      |null         |（m, k）  |（k, n）  |null           |（k/32, n）        |null       |（1, n）      | [0, 0, 32] / [1, 1, 32]                | T-CG量化 |
+    |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16      |null         |（m, k）  |（k, n/8）|null           |（k/32, n）        |null       |（1, n）      | [0, 0, 32] / [1, 1, 32]                | T-CG量化 |
+  - 约束说明：
+    - k, n大小要求64对齐。
+    - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

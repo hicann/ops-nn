@@ -161,8 +161,9 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, int64_t 
             return false;
         }
     } else {            // A8W4 FLOAT
-        if (groupSize != SUPPORTED_GROUP_SIZE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [fp8/4] only support groupSize equal to 32.");
+        uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+        if (groupSizeK != SUPPORTED_GROUP_SIZE) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [fp8/4] only support groupSizeK equal to 32.");
             return false;
         }
     }
@@ -750,6 +751,29 @@ the %s dimension of %s [%lu], the real groupSize in %s dimension can not be infe
     return true;
 }
 
+static inline bool validGroupSize(uint64_t groupSizeM, uint64_t groupSizeN) {
+    return (groupSizeM == 0 && groupSizeN == 0) || (groupSizeM == 1 && groupSizeN == 1);
+}
+
+static inline bool A8W4InferGroupSize(int64_t& groupSize) {
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
+    if (!validGroupSize(groupSizeM, groupSizeN)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "The valid groupSizeM and groupSizeN must be 0 or 1, actual groupSizeM [%lu], groupSizeN [%lu]!",
+            groupSizeM, groupSizeN);
+        return false;
+    }
+
+    OP_LOGD(
+        "A8W4 Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+        groupSizeK);
+    groupSize = groupSizeK;
+    return true;
+}
+
 static inline bool InferGroupSize(TupleInput &inputTensors, TupleQuant &quantTensors, int64_t &groupSize, const TupleAttr &boolsTrans)
 {
     auto &x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
@@ -818,10 +842,14 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     bool &transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool &transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
     bool isA8W4 = false;
+    bool isA8W4F = isA8W4Float(x1, x2);
+    if (isA8W4F) {
+        CHECK_RET(A8W4InferGroupSize(groupSize), ACLNN_ERR_PARAM_INVALID);
+        OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
+    }    
     auto ret = PreMatmulCalcProcess(inputTensors, quantTensors, boolsTrans, out, isA8W4, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    bool isA8W4F = isA8W4Float(x1, x2);
     auto reformatedX1 = SetTensorToNDFormat(x1);
     const aclTensor *reformatedX2 = x2;
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {

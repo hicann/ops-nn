@@ -21,6 +21,7 @@
 #include "opdev/platform.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "quant_matmul_v3.h"
+#include "matmul/quant_batch_matmul_v4/op_host/op_api/quant_matmul_v4.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/contiguous.h"
@@ -33,6 +34,7 @@ using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
 using Ops::Base::CeilDiv;
 using TupleTensor = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>;
+using TupleOptional = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &>;
 using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
 using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
                               const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &, const int64_t &>;
@@ -45,6 +47,8 @@ static constexpr int INDEX_SCALE_IN_MANDTORY_TUPLE = 2;
 static constexpr int INDEX_OFFSET_IN_OPTIONAL_TUPLE = 0;
 static constexpr int INDEX_PERTOKEN_IN_OPTIONAL_TUPLE = 1;
 static constexpr int INDEX_BIAS_IN_OPTIONAL_TUPLE = 2;
+static constexpr int INDEX_Y_SCALE_IN_OPTIONAL_TUPLE = 3;
+static constexpr int INDEX_GROUP_SIZE_IN_OPTIONAL_TUPLE = 4;
 static constexpr int INDEX_OUT_IN_TUPLE = 2;
 static constexpr int INDEX_ISA4W4_IN_BOOL_TUPLE = 2;
 static constexpr size_t LAST_SECOND_DIM_INDEX = 2;
@@ -71,6 +75,14 @@ static const int64_t N_VALUE = 8192;
 static const int64_t M_RANGE1_LEFT = 128;
 static const int64_t M_RANGE1_RIGHT = 512;
 static const int32_t CORE_NUM_20 = 20;
+static const int64_t SUPPORTED_GROUP_SIZE = 32;
+static constexpr uint64_t B4_PER_B32 = 8UL;
+static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
+static const int64_t SUPPORTED_N_ALIGN_NUM = 64;
+static const size_t MAX_DIM_VALUE = 2;
+static const uint64_t GROUP_M_OFFSET = 32;
+static const uint64_t GROUP_N_OFFSET = 16;
+static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 
 static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
                                                                          op::DataType::DT_INT8};
@@ -86,6 +98,13 @@ static const std::initializer_list<op::DataType> BIAS_TYPE_SUPPORT_LIST = {op::D
                                                                            op::DataType::DT_BF16,
                                                                            op::DataType::DT_FLOAT16,
                                                                            op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> Y_SCALE_SUPPORT_LIST = {op::DataType::DT_UINT64};
+
+static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+           (x2->GetDataType() == op::DataType::DT_FLOAT || x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1);
+}
 
 static inline bool CheckNotNull(TupleTensor mandatoryTensors, const aclTensor *out) {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -98,7 +117,7 @@ static inline bool CheckNotNull(TupleTensor mandatoryTensors, const aclTensor *o
     return true;
 }
 
-static inline bool CheckDtypeValidOnOnlyL0c2ub(TupleTensor mandatoryTensors, TupleTensor optionalTensors,
+static inline bool CheckDtypeValidOnOnlyL0c2ub(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
                                                const aclTensor *out)
 {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -134,7 +153,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2ub(TupleTensor mandatoryTensors, Tup
     return true;
 }
 
-static inline bool CheckDtypeValidOnOnlyL0c2outForA4W4(TupleTensor mandatoryTensors, TupleTensor optionalTensors,
+static inline bool CheckDtypeValidOnOnlyL0c2outForA4W4(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
                                                        const aclTensor *out)
 {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -167,7 +186,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2outForA4W4(TupleTensor mandatoryTens
     return true;
 }
 
-static inline bool CheckDtypeValidOnOnlyL0c2outForPertoken(TupleTensor mandatoryTensors, TupleTensor optionalTensors,
+static inline bool CheckDtypeValidOnOnlyL0c2outForPertoken(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
                                                            const aclTensor *out)
 {
     auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -218,7 +237,7 @@ scale dtype should not be FLOAT.");
 }
 
 static inline bool CheckDtypeValidOnOnlyL0c2outForUnclassified(TupleTensor mandatoryTensors,
-                                                               TupleTensor optionalTensors, const aclTensor *out)
+                                                               TupleOptional optionalTensors, const aclTensor *out)
 {
     auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
@@ -265,7 +284,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2outForUnclassified(TupleTensor manda
     return true;
 }
 
-static inline bool CheckDtypeValidOnOnlyL0c2out(TupleTensor mandatoryTensors, TupleTensor optionalTensors,
+static inline bool CheckDtypeValidOnOnlyL0c2out(TupleTensor mandatoryTensors, TupleOptional optionalTensors,
                                                 const aclTensor *out, bool isA4W4)
 {
     // 对A4W4场景/非A4W4场景进行校验
@@ -281,7 +300,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2out(TupleTensor mandatoryTensors, Tu
     return true;
 }
 
-static inline bool CheckDtypeValid(TupleTensor mandatoryTensors, TupleTensor optionalTensors, const aclTensor *out,
+static inline bool CheckDtypeValid(TupleTensor mandatoryTensors, TupleOptional optionalTensors, const aclTensor *out,
                                    bool isA4W4)
 {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -340,7 +359,7 @@ static inline bool CheckFormatInt4(const aclTensor *x1, const aclTensor *x2) {
     return true;
 }
 
-static inline bool CheckFormat(TupleTensor mandatoryTensors, TupleTensor optionalTensors, bool isA4W4) {
+static inline bool CheckFormat(TupleTensor mandatoryTensors, TupleOptional optionalTensors, bool isA4W4) {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -599,7 +618,7 @@ static inline bool CheckShapeInt4(const aclTensor *x1, const aclTensor *x2, bool
     return true;
 }
 
-static inline bool CheckShape(TupleTensor &mandatoryTensors, TupleTensor &optionalTensors,
+static inline bool CheckShape(TupleTensor &mandatoryTensors, TupleOptional &optionalTensors,
                              TupleAttr &boolsTrans, bool isA4W4, const aclTensor *out) {
     auto transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     auto transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
@@ -661,8 +680,208 @@ static inline bool CheckEmptyTensor(TupleTensor mandatoryTensors) {
     return true;
 }
 
-static aclnnStatus CheckParams910_95(TupleTensor mandatoryTensors, TupleTensor optionalTensors, TupleAttr boolsTrans,
+static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+    if (x1Scale == nullptr) {
+        return false;
+    }
+    return x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+           x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+}
+
+static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors) {
+    auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto yScale = std::get<INDEX_Y_SCALE_IN_OPTIONAL_TUPLE>(optionalTensors);
+
+    if (x1Scale == nullptr) {
+        // A8W4 mode
+        if (bias != nullptr || yScale == nullptr) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "In A8W4 t-cg quant mode, bias must be null and yScale cannot be null.");
+            return false;
+        }
+        if (x2Scale == nullptr || x2Scale->GetDataType() != DataType::DT_BF16) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mode, x2Scale must be bf16.");
+            return false;            
+        }
+
+        OP_CHECK_DTYPE_NOT_SUPPORT(yScale, Y_SCALE_SUPPORT_LIST, return false);
+    } else if (IsMicroScaling(x1Scale, x2Scale)) {
+        // MxA8W4 mode
+        if (bias != nullptr && bias->GetDataType() != DataType::DT_BF16) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mx quant mode, bias dtype must be bfloat16.");
+            return false;
+        }
+        if (yScale != nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mx quant mode, yScale must be null.");
+            return false;
+        }
+    } else {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unexpected quant mode, A8W4 only support t-cg and mx quant mode!");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckA8W4Format(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors,
+                                   const aclTensor *out) {
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+
+    auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto yScale = std::get<INDEX_Y_SCALE_IN_OPTIONAL_TUPLE>(optionalTensors);
+
+    CHECK_RET(x1->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    CHECK_RET(x2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
+    CHECK_RET(x2Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
+
+    if (x1Scale != nullptr) {
+        CHECK_RET(x1Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    }
+    if (bias != nullptr) {
+        CHECK_RET(bias->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    }
+    if (yScale != nullptr) {
+        CHECK_RET(yScale->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    }
+    CHECK_RET(out->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    return true;
+}
+
+static inline bool CheckA8W4ScaleX1Shape(const TupleOptional& optionalTensors, int64_t groupDimM, int64_t groupDimK) {
+    auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    if (x1Scale != nullptr) {
+        if (x1Scale->GetViewShape().GetDim(0) != groupDimM ||
+            x1Scale->GetViewShape().GetDim(1) != groupDimK) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The x1scale shape must be [%ld, %ld], which are [%ld, %ld]",
+                    groupDimM, groupDimK,
+                    x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1));
+            return false;
+        }
+    }
+    return true;
+}
+
+static inline bool CheckA8W4ScaleX2Shape(const TupleTensor &mandatoryTensors, int64_t groupDimN,
+                                         int64_t groupDimK, bool transposeX2){
+    auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    int64_t x2ScaleNDim = transposeX2 ? x2Scale->GetViewShape().GetDim(0) : x2Scale->GetViewShape().GetDim(1);
+    int64_t x2ScaleGroupDim = transposeX2 ? x2Scale->GetViewShape().GetDim(1) : x2Scale->GetViewShape().GetDim(0);
+    if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != groupDimK) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld], which are [%ld, %ld]",
+                groupDimN, groupDimK, x2ScaleNDim, x2ScaleGroupDim);
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors, int64_t x1MDim, int64_t x2NDim,
+                                            const aclTensor* out)
+{
+    auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto yScale = std::get<INDEX_Y_SCALE_IN_OPTIONAL_TUPLE>(optionalTensors);
+    if (bias != nullptr) {
+        if (bias->GetViewShape().GetDim(0) != 1 || bias->GetViewShape().GetDim(1) != x2NDim) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias shape must be [1, %ld], which are [%ld, %ld]", x2NDim,
+                    bias->GetViewShape().GetDim(0), bias->GetViewShape().GetDim(1));
+            return false;
+        }
+    }
+
+    if (out->GetViewShape().GetDim(0) != x1MDim || out->GetViewShape().GetDim(1) != x2NDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The output shape must be [%ld, %ld], which are [%ld, %ld]", x1MDim, x2NDim,
+                out->GetViewShape().GetDim(0), out->GetViewShape().GetDim(1));
+        return false;
+    }
+
+    if (yScale != nullptr) {
+        if (yScale->GetViewShape().GetDim(1) != x2NDim || yScale->GetViewShape().GetDim(0) != 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The yScale shape must be [1, %ld], which are [%ld, %ld]",
+                    x2NDim, yScale->GetViewShape().GetDim(0), yScale->GetViewShape().GetDim(1));
+            return false;
+        }
+    }
+    return true;
+}
+
+static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2NDim) {
+    // CHECK x1KDim
+    if (x1KDim <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must be at least 1, which is %ld", x1KDim);
+        return false;
+    }
+    if (x2NDim <= 0) { // A8W4Float
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the n-dim must be at least 1, which is %ld", x2NDim);
+        return false;
+    }
+
+    if (x1KDim != x2KDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim of x1 and x2 must be same, which are %ld and %ld", x1KDim, x2KDim);
+        return false;
+    }
+    if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM, x1KDim);
+        return false;
+    }
+    if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ the n dim must be align to %ld, which is %ld", SUPPORTED_N_ALIGN_NUM,
+                x2NDim);
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckA8W4Shape(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors,
+                                  const TupleAttr &boolsTrans, const aclTensor *out) {
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    bool transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
+    bool transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
+
+    auto x1DimNum = x1->GetViewShape().GetDimNum();
+    const op::Shape x1Shape = x1->GetViewShape();
+    int64_t x1KDim = transposeX1 ? x1Shape[x1DimNum - PENULTIMATE_DIM] : x1Shape[x1DimNum - 1];
+    int64_t x1MDim = transposeX1 ? x1Shape[x1DimNum - 1] : x1Shape[x1DimNum - PENULTIMATE_DIM];
+
+    const op::Shape x2Shape = x2->GetViewShape();
+    auto x2DimNum = x2->GetViewShape().GetDimNum();
+    int64_t x2KDim = transposeX2 ? x2Shape[x2DimNum - 1] : x2Shape[x2DimNum - PENULTIMATE_DIM];
+    int64_t x2NDim = transposeX2 ? x2Shape[x2DimNum - PENULTIMATE_DIM] : x2Shape[x2DimNum - 1];
+    if (x1MDim <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the m-dim must at least 1, which is %ld", x1MDim);
+        return false;
+    }
+    CHECK_RET(CheckA8W4X1X2Shape(x1KDim, x2KDim, x2NDim), false);
+    int64_t groupDimK = (x2KDim + SUPPORTED_GROUP_SIZE - 1) / SUPPORTED_GROUP_SIZE;
+    int64_t groupDimM = x1MDim;
+    int64_t groupDimN = x2NDim;
+    CHECK_RET(CheckA8W4ScaleX1Shape(optionalTensors, groupDimM, groupDimK), false);
+    CHECK_RET(CheckA8W4ScaleX2Shape(mandatoryTensors, groupDimN, groupDimK, transposeX2), false);
+    CHECK_RET(CheckA8W4OutAndBiasShape(optionalTensors, x1MDim, x2NDim, out), false);
+    return true;
+}
+
+static inline aclnnStatus CheckParamsA8W4Float(const TupleTensor &mandatoryTensors, const TupleOptional &optionalTensors,
+                                          const TupleAttr &boolsTrans, const aclTensor *out) {
+    // 1. 校验dtype是否符合要求
+    CHECK_RET(CheckA8W4Dtype(mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查format是否符合要求
+    CHECK_RET(CheckA8W4Format(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查shape是否符合要求
+    CHECK_RET(CheckA8W4Shape(mandatoryTensors, optionalTensors, boolsTrans, out), ACLNN_ERR_PARAM_INVALID);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckParams910_95(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
                                      const aclTensor *out) {
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);                                    
+    if (isA8W4Float(x1, x2)) {
+        return CheckParamsA8W4Float(mandatoryTensors, optionalTensors, boolsTrans, out);
+    }
     const TupleInput inputTensors = std::tie(std::get<0>(mandatoryTensors), std::get<1>(mandatoryTensors));
     const aclTensor *yScale = nullptr;
     const aclTensor *x1Offset = nullptr;
@@ -678,11 +897,40 @@ static aclnnStatus CheckParams910_95(TupleTensor mandatoryTensors, TupleTensor o
     return qmmV3Checker.CheckParams();
 }
 
+static bool IsFormatNZ(const aclTensor* tensor) {
+    return ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ ||
+           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_4 ||
+           ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32;
+}
+
 static aclnnStatus CheckWeightNzParams910_95(const aclTensor *x1, const aclTensor *x2, const aclTensor *out)
 {
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
         return ACLNN_SUCCESS;
     }
+
+    if (x1 == nullptr || x2 == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 and x2 can not be null");
+        return ACLNN_ERR_PARAM_INVALID;        
+    }
+
+    if (isA8W4Float(x1, x2)) {
+        if (!IsFormatNZ(x2)) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "in A8W4 case, Format of x2 must be FRACTAL_NZ or FRACTAL_NZ_C0_4 or FRACTAL_NZ_C0_32, actual is %s.",
+                op::ToString(x2->GetStorageFormat()).GetString());
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+
+        if (out->GetDataType() != op::DataType::DT_BF16) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data type of out only support bfloat16, actual is %s.",
+                    op::ToString(out->GetDataType()).GetString());
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) != Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
                 op::ToString(x2->GetStorageFormat()).GetString());
@@ -698,7 +946,7 @@ static aclnnStatus CheckWeightNzParams910_95(const aclTensor *x1, const aclTenso
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleTensor optionalTensors, TupleAttr boolsTrans,
+static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
                                bool isA4W4, const aclTensor *out) {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
         return CheckParams910_95(mandatoryTensors, optionalTensors, boolsTrans, out);
@@ -960,8 +1208,94 @@ static aclnnStatus PostMatmulCalcProcess(const aclTensor *matmulRet, TupleTensor
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleAttr &boolsTrans, bool &isA4W4,
-                                        const aclTensor *out, aclOpExecutor *executor) {
+static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, const TupleTensor &mandatoryTensors,
+                                           const TupleOptional &optionalTensors)
+{
+    auto &x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_OPTIONAL_TUPLE>(optionalTensors);
+    bool transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
+    bool transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
+    if (transposeX1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support transposeX1 is false.");
+        return false;
+    }
+
+    bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
+    if (!isX2Nz) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 x2 only support nz format.");
+        return false;       
+    }
+
+    auto &x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto &x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    if (x1Scale == nullptr && transposeX2) {
+        // A8W4 mode
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ T-CG quantization mode only support transposeX2 is false.");
+        return false;
+    } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) {
+            // MxA8W4 mode
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ mx quantization mode only support transposeX2 is true.");
+        return false;
+    }
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    if (groupSizeK != SUPPORTED_GROUP_SIZE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 only support groupSizeK equal to 32.");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckDimRangeA8W4(const TupleTensor& mandatoryTensors, const TupleOptional& optionalTensors,
+                                     const aclTensor* out) {
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto yScale = std::get<INDEX_Y_SCALE_IN_OPTIONAL_TUPLE>(optionalTensors);
+
+    if (x1->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of x1 should be 2. Actual x1 dimension is: %zu.",
+                x1->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (x2->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of x2 should be 2. Actual x2 dimension is: %zu.",
+                x2->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (bias != nullptr && bias->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of bias should be 2. Actual bias dimension is: %zu.",
+                bias->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (x1Scale != nullptr && x1Scale->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of x1Scale should be 2. Actual x1Scale dimension is: %zu.",
+                x1Scale->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (x2Scale->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of x2Scale should be 2. Actual x2Scale dimension is: %zu.",
+                x2Scale->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (yScale != nullptr && yScale->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of yScale should be 2. Actual yScale dimension is: %zu.",
+                yScale->GetViewShape().GetDimNum());
+        return false;
+    }
+    if (out->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of out should be 2. Actual out dimension is: %zu.",
+                out->GetViewShape().GetDimNum());
+        return false;
+    }
+    OP_LOGD("QuantMatmul check dimension range success.");
+    return true;
+}
+
+static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleOptional &optionalTensors,
+                                        TupleAttr &boolsTrans, bool &isA4W4, const aclTensor *out,
+                                        aclOpExecutor *executor) {
     auto &x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -972,7 +1306,14 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleAttr
     CHECK_RET(TensorContiguousProcess(x1, transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
     auto ret = WeightNZCaseProcess(x2, transposeX2, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_RET(CheckDimRange(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
+    if (isA8W4Float(x1, x2)) {
+        CHECK_RET(
+            CheckInputAttrExistence(boolsTrans, mandatoryTensors, optionalTensors),
+            ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckDimRangeA8W4(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
+    } else {
+        CHECK_RET(CheckDimRange(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
+    }
     A4W4CaseProcess(x1, x2, isA4W4, executor);
     return ACLNN_SUCCESS;
 }
@@ -1034,8 +1375,82 @@ static bool IsX1Transdata(const aclTensor *x1, const aclTensor *x2, int64_t dtyp
     return true;
 }
 
+static void A8W4ProcessYScaleTensor(const aclTensor *x1Scale, const aclTensor *yScale) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        // A8W4场景输入的INT64转为UINT64
+        if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
+            auto castYScale = const_cast<aclTensor*>(yScale);
+            castYScale->SetDataType(op::DataType::DT_UINT64);
+            yScale = castYScale;
+            OP_LOGD("The conversion from INT64 to UINT64 has been completed.");
+        }
+    }
+}
+
+static inline bool A8W4ValidGroupSize(uint64_t groupSizeM, uint64_t groupSizeN) {
+    return (groupSizeM == 0 && groupSizeN == 0) || (groupSizeM == 1 && groupSizeN == 1);
+}
+
+static inline bool A8W4InferGroupSize(int64_t& groupSize) {
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
+    if (!A8W4ValidGroupSize(groupSizeM, groupSizeN)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "The valid groupSizeM and groupSizeN must both be 0 or 1, actual groupSizeM [%lu], groupSizeN [%lu]!",
+            groupSizeM, groupSizeN);
+        return false;
+    }
+
+    OP_LOGD(
+        "A8W4 after Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+        groupSizeK);
+    groupSize = groupSizeK;
+    return true;
+}
+
+static aclnnStatus TensorPreProcess(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* yScale, int64_t& groupSize)
+{
+    bool isA8W4F = isA8W4Float(x1, x2);
+    if (isA8W4F) {
+        A8W4ProcessYScaleTensor(x1Scale, yScale);
+        CHECK_RET(A8W4InferGroupSize(groupSize), ACLNN_ERR_PARAM_INVALID);
+        OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus SetReformtedX2(const aclTensor *&reformatedX1, const aclTensor *&reformatedX2, bool& transposeX1,
+                                       bool& transposeX2, aclOpExecutor* executor) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+        auto ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2,
+                                             executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    } else {
+        reformatedX2 = SetTensorToNDFormat(reformatedX2);
+    }
+    return ACLNN_SUCCESS;
+}
+
+static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTensor *&reformatedX1, aclOpExecutor* executor) {
+    auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
+    bool checkSocLongVersion =
+        (socLongVersion == "Ascend910B3" || socLongVersion == "Ascend910B4" || socLongVersion == "Ascend910B4-1");
+    auto coreNum = static_cast<int32_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
+    if (isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) {
+        auto ret = TransdataForX1(reformatedX1, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+
+    return ACLNN_SUCCESS;
+}
+
+
 static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryTensors,
-                                                                 TupleTensor optionalTensors,
+                                                                 TupleOptional optionalTensors,
                                                                  TupleAttr boolsTrans, const aclTensor *out,
                                                                  aclOpExecutor *executor) {
     auto &x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -1044,47 +1459,51 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     auto &offset = std::get<INDEX_OFFSET_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto &pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     auto &bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto &yScale = std::get<INDEX_Y_SCALE_IN_OPTIONAL_TUPLE>(optionalTensors);
+    int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_OPTIONAL_TUPLE>(optionalTensors);
     bool &transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     bool &transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
+    bool isA8W4F = isA8W4Float(x1, x2);
+    auto ret = TensorPreProcess(x1, x2, pertokenScaleOptional, yScale, groupSize);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     bool isA4W4 = false;
-    auto ret = PreMatmulCalcProcess(mandatoryTensors, boolsTrans, isA4W4, out, executor);
+    ret = PreMatmulCalcProcess(mandatoryTensors, optionalTensors, boolsTrans, isA4W4, out, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     bool biasTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
     auto reformatedX1 = SetTensorToNDFormat(x1);
     const aclTensor* reformatedX2 = x2;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
-        ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2,
-                                             executor);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    } else {
-        reformatedX2 = SetTensorToNDFormat(x2);
-    }
+    ret = SetReformtedX2(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     const aclTensor* reformatedpertokenScaleOptional = GetNDFormat(pertokenScaleOptional);
     const aclTensor* reformatedBias = GetNDFormat(bias);
+    const aclTensor* reformatedYScale = GetNDFormat(yScale);
 
     ret = CheckParams(std::tie(reformatedX1, reformatedX2, scale),
-                      std::tie(offset, reformatedpertokenScaleOptional, reformatedBias),
+                      std::tie(offset, reformatedpertokenScaleOptional, reformatedBias, reformatedYScale, groupSize),
                       std::tie(transposeX1, transposeX2), isA4W4, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     auto castedScale = ProcessScaleTensor(scale);
     int64_t dtype = 0;
     GetDtypeAndTranspose(std::tie(reformatedX1, reformatedX2, out), dtype, transposeX1, transposeX2);
     bool isX1TransdataFlag = IsX1Transdata(reformatedX1, reformatedX2, dtype, transposeX1, transposeX2);
-    auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
-    bool checkSocLongVersion =
-        (socLongVersion == "Ascend910B3" || socLongVersion == "Ascend910B4" || socLongVersion == "Ascend910B4-1");
-    auto coreNum = static_cast<int32_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
-    if (isX1TransdataFlag && checkSocLongVersion && coreNum == CORE_NUM_20) {
-        ret = TransdataForX1(reformatedX1, executor);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    
+    const aclTensor *matmulRet = nullptr;
+    if (isA8W4F) {
+        // 调用l0算子QuantBatchMatmulV4进行计算
+        matmulRet = l0op::QuantBatchMatmulV4(
+            reformatedX1, reformatedX2, reformatedBias, reformatedpertokenScaleOptional, castedScale, reformatedYScale,
+            nullptr, nullptr, nullptr, nullptr, dtype, -1, transposeX1, transposeX2, groupSize, executor);
+    } else {
+        // 调用l0算子QuantBatchMatmulV3进行计算
+        matmulRet = l0op::QuantBatchMatmulV3(reformatedX1, reformatedX2, castedScale, offset, reformatedBias,
+                                            reformatedpertokenScaleOptional, dtype, transposeX1, transposeX2,
+                                            groupSize, executor);
     }
-    int64_t groupSize = 0;
-    // 调用l0算子QuantBatchMatmulV3进行计算
-    auto matmulRet = l0op::QuantBatchMatmulV3(reformatedX1, reformatedX2, castedScale, offset, reformatedBias,
-                                              reformatedpertokenScaleOptional, dtype, transposeX1, transposeX2,
-                                              groupSize, executor);
+
     CHECK_RET(PostMatmulCalcProcess(matmulRet, std::tie(x1, x2, out), executor) == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }
@@ -1097,8 +1516,10 @@ aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor *x1, const aclTen
     L2_DFX_PHASE_1(aclnnQuantMatmulV3, DFX_IN(x1, x2, scale, offset, bias), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor *tempPtr = nullptr;
+    const aclTensor *tempYScalePtr = nullptr;
+    int64_t groupSize = 0;
     auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(std::tie(x1, x2, scale),
-                                                             std::tie(offset, tempPtr, bias),
+                                                             std::tie(offset, tempPtr, bias, tempYScalePtr, groupSize),
                                                              std::tie(transposeX1, transposeX2),
                                                              out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -1114,10 +1535,11 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor *x1, const aclTen
                                                aclOpExecutor **executor) {
     L2_DFX_PHASE_1(aclnnQuantMatmulV4, DFX_IN(x1, x2, scale, offset, pertokenScaleOptional, bias), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
-    auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(std::tie(x1, x2, scale),
-                                                             std::tie(offset, pertokenScaleOptional, bias),
-                                                             std::tie(transposeX1, transposeX2),
-                                                             out, uniqueExecutor.get());
+    const aclTensor *tempYScalePtr = nullptr;
+    int64_t groupSize = 0;
+    auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
+        std::tie(x1, x2, scale), std::tie(offset, pertokenScaleOptional, bias, tempYScalePtr, groupSize),
+        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
@@ -1178,12 +1600,12 @@ static const aclTensor *SetTensorToNZFormat(const aclTensor *input, op::Shape &s
     return formatTensor;
 }
 
-bool checkNotSupportParam(const aclTensor *yScale, const aclTensor *x1Offset, const aclTensor *yOffset, int64_t groupSize)
+bool checkNotSupportParam(
+    TupleTensor mandatoryTensors, const aclTensor* yScale, const aclTensor* x1Offset, const aclTensor* yOffset,
+    int64_t groupSize)
 {
-    if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
-        return false;
-    }
+    auto& x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto& x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
 
     if (x1Offset != nullptr && x1Offset->GetViewShape().GetShapeSize() != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support x1Offset.");
@@ -1195,13 +1617,115 @@ bool checkNotSupportParam(const aclTensor *yScale, const aclTensor *x1Offset, co
         return false;
     }
 
-    if (groupSize != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support groupSize.");
-        return false;
+    if (!isA8W4Float(x1, x2)) {
+        if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
+            return false;
+        }
+
+        if (groupSize != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support groupSize.");
+            return false;
+        }
     }
 
     return true;
 }
+
+static void SetStorageShapeForNZ(aclTensor* tensor)
+{
+    // storageShape的倒数第一维要放大8倍， 比如(n/32,k/16,16,4) -> (n/32,k/16,16,32)
+    auto storageShape = tensor->GetStorageShape();
+    auto storageShapeDim = storageShape.GetDimNum();
+    storageShape[storageShapeDim - 1] *= B4_PER_B32;
+    tensor->SetStorageShape(storageShape);
+}
+
+static void UnpackB32ToB4(const aclTensor* tensorB32)
+{
+    DataType b32Dtype = tensorB32->GetDataType();
+    DataType b4Dtype = DataType::DT_INT4;
+    if (b32Dtype == DataType::DT_FLOAT) {
+        b4Dtype = DataType::DT_FLOAT4_E2M1;
+    }
+
+    OP_LOGD("Unpack from %s to %s start.", op::ToString(b32Dtype).GetString(), op::ToString(b4Dtype).GetString());
+    auto tensorB4 = const_cast<aclTensor*>(tensorB32);
+    op::Shape tensorShape = tensorB4->GetViewShape();
+    op::Strides newStride = tensorB4->GetViewStrides();
+    auto viewShapeDim = tensorShape.GetDimNum();
+    bool transposeTensor = false;
+    auto changeDimIdx = viewShapeDim - 1;
+    // 轴大于等于2才判断是否转置
+    if (viewShapeDim >= 2 && IsTransposeLastTwoDims(tensorB4)) {
+        transposeTensor = true;
+        // 转置场景扩大倒数第2维
+        changeDimIdx = viewShapeDim - 2;
+    }
+    tensorShape[changeDimIdx] = tensorShape[changeDimIdx] * B4_PER_B32;
+    tensorB4->SetViewShape(tensorShape);
+    tensorB4->SetDataType(b4Dtype);
+    if (IsFormatNZ(tensorB4)) {
+        SetStorageShapeForNZ(tensorB4);
+    }
+
+    if (transposeTensor) {
+        auto strideSize = newStride.size();
+        // 转置场景，B32承载B4时strides缩小了8倍，需要放大， 即（k*n/8, 1，k/8）->(k*n, 1, k)
+        newStride[strideSize - 1] *= B4_PER_B32;
+        tensorB4->SetViewStrides(newStride);
+    }
+    OP_LOGD("Current tensor transpose status: %d.", transposeTensor);
+    OP_LOGD("Unpack from %s to %s finished.", op::ToString(b32Dtype).GetString(), op::ToString(b4Dtype).GetString());
+}
+} // namespace
+
+static aclnnStatus modifyScaleStorageShape(const aclTensor *scale) {
+    auto scaleShape = scale->GetViewShape();
+    auto scaleStorageShape = scale->GetStorageShape();    
+    int64_t dimNum = scaleStorageShape.GetDimNum();
+    // 1维的storage shape需要修正为2维的viewShape，
+    if (dimNum == 1) {
+        uint64_t viewShapeMultiply = 1;
+        uint64_t viewShapeDimNum = scaleShape.GetDimNum();
+        for (uint64_t i = 0; i < viewShapeDimNum; i++) {
+            viewShapeMultiply *= scaleShape[i];
+        }
+
+        uint64_t storageShapeMultiply = 1;
+        storageShapeMultiply *= scaleStorageShape[0];
+        if (viewShapeMultiply != storageShapeMultiply) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The product of view shape dimensions %ld does not equal the product of storage shape dimensions %ld .",
+                viewShapeMultiply, storageShapeMultiply);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+
+        scale->SetStorageShape(scaleShape);
+        OP_LOGD("modify storage shape to view shape finish.");
+    }
+
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus preProcessTensor(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale)
+{
+    if (x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT) {
+        UnpackB32ToB4(x2);
+        // mx场景下修正x1_scale和x2_scale的1维的storage shape
+        if (x1Scale != nullptr) {
+            auto ret = modifyScaleStorageShape(x1Scale);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+
+        if (x2Scale != nullptr) {
+            auto ret = modifyScaleStorageShape(x2Scale);
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+    }
+
+    return ACLNN_SUCCESS;
 }
 
 aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const aclTensor *x2, const aclTensor *x1Scale,
@@ -1216,7 +1740,7 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const 
                           groupSize),
                    DFX_OUT(out));
 
-    if (!checkNotSupportParam(yScale, x1Offset, yOffset, groupSize)) {
+    if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), yScale, x1Offset, yOffset, groupSize)) {
         return ACLNN_ERR_PARAM_INVALID;
     }
     auto ret = CheckWeightNzParams910_95(x1, x2, out);
@@ -1232,6 +1756,10 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const 
         return ACLNN_ERR_PARAM_INVALID;
     }
 
+    // 修改传入tensor的format和shape
+    ret = preProcessTensor(x1, x2, x1Scale, x2Scale);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     transposeX2 = GetTransposeAttrValue(x2, transposeX2, false);
 
     op::Shape weightNzShape = GetWeightNzShape(x2, transposeX2);
@@ -1245,8 +1773,9 @@ affinity format.");
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     x2 = SetTensorToNZFormat(x2, weightNzShape, uniqueExecutor.get());
-    ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(std::tie(x1, x2, x2Scale), std::tie(x2Offset, x1Scale, bias),
-                                                      std::tie(transposeX1, transposeX2), out, uniqueExecutor.get());
+    ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
+        std::tie(x1, x2, x2Scale), std::tie(x2Offset, x1Scale, bias, yScale, groupSize),
+        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);

@@ -232,10 +232,10 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
     OP_LOGD(
         opName_,
         "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
-        "group size[%lu]",
+        "group size[%lu], bformat[%s]",
         matmulInfoPtr_->mSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize, matmulInfoPtr_->transA ? "true" : "false",
         matmulInfoPtr_->transB ? "true" : "false", matmulInfoPtr_->hasBias ? "true" : "false",
-        matmulInfoPtr_->groupSize);
+        matmulInfoPtr_->groupSize, ge::TypeUtils::FormatToAscendString(matmulInfoPtr_->bFormat).GetString());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -638,6 +638,9 @@ bool CheckShape(
             antiQuantScaleShape->GetStorageShape().GetShapeSize() == 0,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Not yet support empty tensor"), return false);
     inputParams->bFormat = GetInputStorageFormat(context, 1);
+    if (inputParams->bFormat == ge::FORMAT_FRACTAL_NZ_C0_2) {
+        inputParams->bFormat = ge::FORMAT_FRACTAL_NZ;
+    }
     OP_TILING_CHECK(
         inputParams->bFormat == ge::FORMAT_NULL,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Input weight format is null"), return false);
@@ -659,6 +662,53 @@ bool CheckShape(
     return true;
 }
 
+bool CheckBiasDtype(
+    gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
+{
+    // the bias is the 6th input
+    auto biasDesc = context->GetOptionalInputDesc(6);
+    if (biasDesc == nullptr) {
+        return true;
+    }
+    auto biasDtype = biasDesc->GetDataType();
+    if (inputParams->aDtype == ge::DT_BF16) {
+        if (socVersion == platform_ascendc::SocVersion::ASCEND910B) {
+            OP_TILING_CHECK(
+                biasDtype != ge::DT_FLOAT,
+                VECTOR_INNER_ERR_REPORT_TILIING(
+                    inputParams->opName, "Bias dtype must be fp32 when x is bf16, but is [%s]",
+                    ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
+                return false);
+        } else {
+            if (socVersion == platform_ascendc::SocVersion::ASCEND910_95 && 
+                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT)) {
+                OP_TILING_CHECK(
+                    biasDtype != inputParams->aDtype,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        inputParams->opName, "Bias dtype must be bf16 when x dtype is bf16, but is [%s]",
+                        ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
+                    return false);
+            } else {
+                OP_TILING_CHECK(
+                    biasDtype != ge::DT_FLOAT && biasDtype != ge::DT_BF16,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        inputParams->opName, "Bias dtype must be fp32 or bf16 when x is bf16, but is [%s]",
+                        ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
+                    return false);
+            }
+        }
+    } else {
+        OP_TILING_CHECK(
+            biasDtype != inputParams->aDtype,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams->opName, "Bias dtype must be fp16 when x dtype is fp16, but is [%s]",
+                ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
+            return false);
+    }
+
+    return true;    
+}
+
 bool CheckInputDtype(
     gert::TilingContext* context, WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
@@ -676,36 +726,8 @@ bool CheckInputDtype(
             "float4_e2m1, float4_e1m2, but is [%s]",
             ge::TypeUtils::DataTypeToAscendString(inputParams->bDtype).GetString()),
         return false);
-    // the bias is the 6th input
-    auto biasDesc = context->GetOptionalInputDesc(6);
-    if (biasDesc != nullptr) {
-        auto biasDtype = biasDesc->GetDataType();
-        if (inputParams->aDtype == ge::DT_BF16) {
-            if (socVersion == platform_ascendc::SocVersion::ASCEND910B) {
-                OP_TILING_CHECK(
-                    biasDtype != ge::DT_FLOAT,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
-                        inputParams->opName, "Bias dtype must be fp32 when x is bf16, but is [%s]",
-                        ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
-                    return false);
-            } else {
-                OP_TILING_CHECK(
-                    biasDtype != ge::DT_FLOAT && biasDtype != ge::DT_BF16,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
-                        inputParams->opName, "Bias dtype must be fp32 or bf16 when x is bf16, but is [%s]",
-                        ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
-                    return false);
-            }
-        } else {
-            OP_TILING_CHECK(
-                biasDtype != inputParams->aDtype,
-                VECTOR_INNER_ERR_REPORT_TILIING(
-                    inputParams->opName, "Bias dtype must be fp16 when x dtype is fp16, but is [%s]",
-                    ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
-                return false);
-        }
-    }
-    return true;
+
+    return CheckBiasDtype(context, inputParams, socVersion);
 }
 
 bool CheckAntiQuantDtype(

@@ -50,7 +50,12 @@
 #if defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16
 #define X_BF16
 #endif
-#if defined(FORMAT_WEIGHT) && defined(FORMAT_FRACTAL_NZ) && FORMAT_WEIGHT != FORMAT_FRACTAL_NZ
+
+#ifndef FORMAT_FRACTAL_NZ_C0_2
+#define FORMAT_FRACTAL_NZ_C0_2 52
+#endif
+#if defined(FORMAT_WEIGHT) && defined(FORMAT_FRACTAL_NZ) && defined(FORMAT_FRACTAL_NZ_C0_2) && \
+    FORMAT_WEIGHT != FORMAT_FRACTAL_NZ && FORMAT_WEIGHT != FORMAT_FRACTAL_NZ_C0_2
 #define WEIGHT_ND
 #endif
 
