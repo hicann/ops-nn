@@ -63,9 +63,9 @@ static inline bool CheckDtypeValid(
 }
 static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, const aclTensor* out)
 {
-    bool formatValid = gradOutput->GetStorageFormat() == op::Format::FORMAT_ND &&
-                       y->GetStorageFormat() == op::Format::FORMAT_ND &&
-                       out->GetStorageFormat() == op::Format::FORMAT_ND;
+    bool formatValid = gradOutput->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+                       y->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+                       out->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ;
     if (!formatValid) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
@@ -75,7 +75,7 @@ static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, 
         return false;
     }
     if (mask != nullptr) {
-        formatValid = (formatValid && mask->GetStorageFormat() == op::Format::FORMAT_ND);
+        formatValid = (formatValid && mask->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ);
     }
     if (!formatValid) {
         OP_LOGE(

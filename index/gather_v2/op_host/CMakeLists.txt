@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE gather_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES gather_elements renorm scatter_update)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE gather_v2 ACLNNTYPE aclnn_exclude DEPENDENCIES scatter_update median_dim renorm gather_elements gather_v3 linear_index_v2 index_put_with_sort)

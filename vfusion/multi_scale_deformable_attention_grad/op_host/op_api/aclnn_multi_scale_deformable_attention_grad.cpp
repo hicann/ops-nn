@@ -50,6 +50,13 @@ static const int64_t NUM_HEADS = 2;
 static const int64_t NUM_LEVELS = 4;
 static const int64_t NUM_POINTS = 5;
 
+static const int32_t INPUT_DIM_1 = 1;
+static const int32_t INPUT_DIM_2 = 2;
+static const int32_t INPUT_DIM_3 = 3;
+static const int32_t INPUT_DIM_4 = 4;
+static const int32_t INPUT_DIM_5 = 5;
+static const int32_t INPUT_DIM_6 = 6;
+
 static const std::initializer_list<DataType> VALUE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {
@@ -105,6 +112,111 @@ static bool CheckDtypeValid(const aclTensor *value, const aclTensor *spatialShap
     return true;
 }
 
+static bool CheckFormat(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
+                        const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
+                        const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+    // 检查输入tensor格式，不支持NZ格式
+    if (value->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'value' format does not support NZ");
+        return false;
+    }
+    if (spatialShape->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' format does not support NZ");
+        return false;
+    }
+    if (levelStartIndex->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'levelStartIndex' format does not support NZ");
+        return false;
+    }
+    if (location->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'location' format does not support NZ");
+        return false;
+    }
+    if (attnWeight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'attnWeight' format does not support NZ");
+        return false;
+    }
+    if (gradOutput->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'gradOutput' format does not support NZ");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckShape(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
+                            const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
+                            const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+    if (value->GetViewShape().GetDimNum() != INPUT_DIM_4) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'value' expects 4 dimensions, but got %lu",
+            value->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (spatialShape->GetViewShape().GetDimNum() != INPUT_DIM_2) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects 2 dimensions, but got %lu",
+            spatialShape->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (spatialShape->GetViewShape().GetDim(SECOND_DIM) != INPUT_DIM_2) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects the last dimension to be 2, but got %lu",
+            spatialShape->GetViewShape().GetDim(SECOND_DIM));
+        return false;    
+    }
+
+    if (levelStartIndex->GetViewShape().GetDimNum() != INPUT_DIM_1) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'levelStartIndex' expects 1 dimensions, but got %lu",
+            levelStartIndex->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (location->GetViewShape().GetDimNum() != INPUT_DIM_6) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects 6 dimensions, but got %lu",
+            location->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (location->GetViewShape().GetDim(SIXTH_DIM) != INPUT_DIM_2) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects the last dimension to be 2, but got %lu",
+            location->GetViewShape().GetDim(SIXTH_DIM));
+        return false;    
+    }
+
+    if (attnWeight->GetViewShape().GetDimNum() != INPUT_DIM_5) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'attnWeight' expects 5 dimensions, but got %lu",
+            attnWeight->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    if (gradOutput->GetViewShape().GetDimNum() != INPUT_DIM_3) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "parameter 'gradOutput' expects 3 dimensions, but got %lu",
+            gradOutput->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    int64_t num_heads = value->GetViewShape().GetDim(THIRD_DIM);
+    int64_t channels = value->GetViewShape().GetDim(FOURTH_DIM);
+    int64_t num_levels = spatialShape->GetViewShape().GetDim(FIRST_DIM);
+    int64_t num_queries = location->GetViewShape().GetDim(SECOND_DIM);
+    int64_t num_points = location->GetViewShape().GetDim(FIFTH_DIM);
+
+    bool isInputValid = (channels % 8 == 0 && channels <= 256 && num_queries < 500000 && num_levels <= 16 && num_heads <= 16 && num_points <= 16);
+    if (!isInputValid) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "invalid parameter: constraints are not satisfied");
+        return false;
+    }
+
+    return true;
+}
 static aclnnStatus CheckParams(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
                                const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
                                const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
@@ -115,6 +227,14 @@ static aclnnStatus CheckParams(const aclTensor *value, const aclTensor *spatialS
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(value, spatialShape, levelStartIndex, location, attnWeight,
                               gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
+ 
+    // 3. 检查输入的格式是否为ND，不支持NZ格式
+    CHECK_RET(CheckFormat(value, spatialShape, levelStartIndex, location, attnWeight,
+                        gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查输入的shape是否符合要求
+    CHECK_RET(CheckShape(value, spatialShape, levelStartIndex, location, attnWeight,
+                        gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

@@ -44,8 +44,6 @@ aclnnStatus aclnnScaledMaskedSoftmax(
 
 ## aclnnScaledMaskedSoftmaxGetWorkspaceSize
 
-- **参数说明：**
-
 - **参数说明**：
   <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
   <col style="width: 170px">
@@ -319,7 +317,7 @@ int main() {
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   // input
   std::vector<float> xHostData = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  std::vector<float> maskHostData = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0};
+  std::vector<char> maskHostData = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0};
   std::vector<float> yHostData(16, 0);
   std::vector<int64_t> xShape = {2, 2, 2, 2};
   std::vector<int64_t> maskShape = {2, 2, 2, 2};

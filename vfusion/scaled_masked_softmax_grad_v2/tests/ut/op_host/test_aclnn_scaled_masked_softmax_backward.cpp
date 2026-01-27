@@ -125,10 +125,10 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
 
 TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_backward_wrong_format)
 {
-    TensorDesc yGradDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    TensorDesc yDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_NCHW);
-    TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    TensorDesc yGradDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc yDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
 
     auto ut =
         OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));

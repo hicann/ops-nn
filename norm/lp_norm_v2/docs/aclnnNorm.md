@@ -54,7 +54,7 @@
   - self（aclTensor*，计算输入）：公式中的`x`，Device侧的aclTensor。shape支持0-8维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16。
 
-  - pScalar（aclScalar*，计算输入）：表示范数的类型，公式中的`p`。支持1/2范数、无穷范数以及其他为FLOAT类型的范数计算，数据类型支持FLOAT。
+  - pScalar（aclScalar*，计算输入）：表示范数的类型，公式中的`p`。支持0/1/2/3范数、无穷范数，数据类型支持FLOAT。
 
   - dim（aclIntArray*，计算输入）：计算self范数的维度，支持[-N, N-1]，且dims中的元素不能重复，N为self的维度，支持负数，数据类型支持INT。
 
