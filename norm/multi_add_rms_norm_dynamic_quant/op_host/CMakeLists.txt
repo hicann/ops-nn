@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 
 message(STATUS "=== Debug: start ops.norm.multi_add_rms_norm_dynamic_quant.op_host.CMakeLists.txt")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn_exclude )
