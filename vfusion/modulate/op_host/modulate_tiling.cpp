@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
  */
 
 #include "modulate_tiling.h"
+#include "modulate_regbase_tiling.h"
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "platform/platform_info.h"
 #include "register/op_def_registry.h"
 #include "register/op_impl_registry.h"
+#include "tiling_base/tiling_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "util/math_util.h"
 
@@ -214,6 +216,18 @@ void ModulateTilingOp::CalcTilingParam(int64_t TilingDim, int64_t totalElements,
 
 static ge::graphStatus ModulateTilingFunc(gert::TilingContext* context)
 {
+    const ModulateCompileInfo* compileInfo =
+        static_cast<const ModulateCompileInfo*>(context->GetCompileInfo());
+    if (compileInfo->isRegBase) {
+        OP_LOGD(context, "ModulateTilingForRegbase start.");
+        ModulateTilingForRegbase tilingOp(context);
+        auto ret = tilingOp.DoTiling();
+        OP_CHECK_IF(
+            (ret == ge::GRAPH_FAILED), OP_LOGD(context, "ModulateTilingForRegbase tiling failed!"), return ge::GRAPH_FAILED);
+        OP_LOGD(context, "ModulateTilingForRegbase end.");
+        return ge::GRAPH_SUCCESS;
+    }
+    
     OP_LOGD(context, "Tiling for Modulate start.");
     ModulateTilingOp tilingOp(context);
     tilingOp.Init();
@@ -234,6 +248,7 @@ ge::graphStatus TilingPrepareForModulate(gert::TilingParseContext* context)
         OP_LOGE(context, "coreNum %d", compileInfo->totalCoreNum);
         return ge::GRAPH_FAILED;
     }
+    compileInfo->isRegBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;

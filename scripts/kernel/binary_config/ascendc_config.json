@@ -102,7 +102,7 @@
     {"name":"SplitV", "compute_units": ["ascend910_95"], "auto_sync" : false},
     {"name":"StatelessDropOutGenMask", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"StatelessBernoulli", "compute_units": ["ascend910_95"], "auto_sync" : false, "impl_mode" : ""},
-    {"name":"Modulate", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
+    {"name":"Modulate", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : true},
     {"name":"MoeInitRouting", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : true},
     {"name":"MoeInitRoutingV3", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : true},
     {"name":"MoeInitRoutingV2Grad", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : true},
