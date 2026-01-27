@@ -60,15 +60,11 @@ static constexpr size_t MAX_DIM_LEN = 8;
 static const std::initializer_list<op::DataType> AXPY_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT8,
-    op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
-
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
 
@@ -84,21 +80,11 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* other, const ac
 }
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion() {
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  switch (socVersion) {
-    case SocVersion::ASCEND910B:
-    case SocVersion::ASCEND910_93: {
-      return ASCEND910B_DTYPE_SUPPORT_LIST;
-    }
-    case SocVersion::ASCEND910_95: {
-      return ASCEND910_95_DTYPE_SUPPORT_LIST;
-    }
-    case SocVersion::ASCEND910: {
-      return ASCEND910_DTYPE_SUPPORT_LIST;
-    }
-    default: {
-      return ASCEND910_DTYPE_SUPPORT_LIST;
-    }
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_3510) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16;
+  } else {
+    return DTYPE_SUPPORT_LIST_WITHOUT_BF16;
   }
 }
 
