@@ -209,7 +209,7 @@ bool QuantBatchMatmulV3IterbatchTiling::CheckShape(const std::vector<gert::Shape
 ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetPlatformInfo()
 {
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfo fail");
-    if (!aicoreParams_.aicNum || !aicoreParams_.l1Size || !aicoreParams_.l0cSize) {
+    if (aicoreParams_.aicNum == 0 || aicoreParams_.l1Size == 0 || aicoreParams_.l0cSize == 0) {
         OP_LOGE(inputParams_.opName, "coreNum/L1Size/L0cSize should not be 0. coreNum: %lu, L1Size: %lu, L0cSize: %lu",
                 aicoreParams_.aicNum, aicoreParams_.l1Size, aicoreParams_.l0cSize);
         return ge::GRAPH_FAILED;
