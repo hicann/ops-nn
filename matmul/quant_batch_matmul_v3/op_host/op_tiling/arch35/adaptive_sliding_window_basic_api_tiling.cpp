@@ -83,6 +83,11 @@ bool AdaptiveSlidingWindowBasicAPITiling::IsCapable()
              (inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.bDtype == ge::DT_FLOAT8_E5M2)));
 }
 
+uint64_t AdaptiveSlidingWindowBasicAPITiling::GetBatchCoreCnt() const
+{
+    return inputParams_.batchC;
+}
+
 ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
 {
     OP_LOGD(inputParams_.opName, "DoOpTiling of adaptive sliding window basic api tiling strategy.");
@@ -97,10 +102,6 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
     }
     AdaptiveSlidingWindowTiling::SetBf16Compat();
     AdaptiveSlidingWindowTiling::CalL1Tiling();
-    if (inputParams_.batchC > 1) {
-        basicTiling_.usedCoreNum =
-            std::min(adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt * inputParams_.batchC, aicoreParams_.aicNum);
-    }
     if (inputParams_.isPertoken) {
         AdaptiveSlidingWindowTiling::CalcUbTiling();
     }
@@ -209,7 +210,7 @@ bool AdaptiveSlidingWindowBasicAPITiling::AnalyseSlidingWinInfo()
     }
     adaptiveWin_.mBlockCnt = ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM);
     adaptiveWin_.nBlockCnt = ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
-    adaptiveWin_.totalBlockCnt = adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt;
+    adaptiveWin_.totalBlockCnt = GetBatchCoreCnt() * adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt;
     adaptiveWin_.mTail = inputParams_.mSize - (adaptiveWin_.mBlockCnt - 1UL) * adaptiveWin_.baseM;
     adaptiveWin_.nTail = inputParams_.nSize - (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, aicoreParams_.aicNum);
