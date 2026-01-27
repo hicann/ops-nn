@@ -111,7 +111,7 @@ public:
     ge::Format cFormat = ge::FORMAT_ND; // 新增数据成员要修改Reset函数
 };
 
-enum class QuantBatchMatmulV3Trans : uint32_t{
+enum class QuantBatchMatmulV3Trans : uint32_t {
     NO_TRANS = 0, // transA 0 transB 0
     A_TRANS = 1,  // transA 1 transB 0
     B_TRANS = 2,  // transA 0 transB 1
@@ -125,6 +125,7 @@ enum class BasicQuantMode : uint32_t {
     PERTOKEN_MODE = 0x1U << 2,
     MX_PERGROUP_MODE = 0x1U << 3,
     PERBLOCK_MODE = 0x1U << 4,
+    PERGROUP_MODE = 0x1U << 5,
 };
 
 class QuantBatchMatmulV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {

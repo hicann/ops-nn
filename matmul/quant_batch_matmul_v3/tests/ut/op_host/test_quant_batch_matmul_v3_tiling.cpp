@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -33,8 +33,6 @@
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
-
-#ifdef USE_LEGACY_COMMON
 
 using namespace std;
 using namespace ge;
@@ -91,7 +89,6 @@ static string TilingData2Str(const void *tilingData, size_t tilingSize)
         result += std::to_string((reinterpret_cast<const int32_t *>(tilingData)[i / sizeof(int32_t)]));
         result += " ";
     }
-
     return result;
 }
 
@@ -141,6 +138,13 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
                              int64_t coreNum = -1)
 {
     map<string, string> soc_version_infos = {{"SoC_version", socVersion},};
+    map<string, string> soc2Arch = {
+        {"Ascend910B2", "2201"},
+        {"Ascend910B4", "2201"},
+        {"Ascend310P3", "2002"},
+        {"Ascend910_95", "3510"},
+        {"MC62CM12AA", "5102"},
+    };
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -182,7 +186,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32,
                           "cube_core_cnt": 32, "vector_core_cnt": 64, "core_type_list": "CubeCore,VectorCore"}
                           })";
-    } else if (socVersion.compare("RESERVED") == 0) {
+    } else if (socVersion.compare("MC62CM12AA") == 0) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                         "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -492,7 +496,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     gert::StorageShape pertokenShape;
     gert::StorageShape biasShape;
     gert::StorageShape outputShape;
-    cout<<"run case "<<prefix<<std::endl;
+    cout << "run case " << prefix << std::endl;
     if (yDim == 6) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
     } else if (yDim == 3) {
@@ -672,14 +676,18 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
-    ASSERT_NE(tilingFunc, nullptr);
+    ASSERT_NE(tilingFunc, nullptr) << "socVersion is: " << socVersion << ", caseName is: " << caseName
+                                   << ", prefix is: " << prefix;
     if (result) {
-        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS)
+            << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         if (tilingStub) {
             return;
         }
-        ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), blockDim);
+        ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)
+            << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
+        ASSERT_EQ(tilingContext->GetBlockDim(), blockDim)
+            << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
 
         std::vector<std::string> tilingDataStrs;
         SplitStr2Vec(tilingData, " ", tilingDataStrs);
@@ -689,33 +697,37 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
-        if (quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2) && !weightNz) {
-             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
-             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
-             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
-             if (biasFlag == false) {
-                 expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
-             }
-             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
-                                                         tilingContext->GetRawTilingData()->GetDataSize());
-             string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
-             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr);
-         } else {
-             QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
-             QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
-             // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
-             expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
-             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
-             if (biasFlag == false) {
-                 expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
-             }
-             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
-                                                         tilingContext->GetRawTilingData()->GetDataSize());
-             string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
-             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr);
+        if (quantMode == 3 || quantMode == 4 || (quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || 
+            x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2) && !weightNz)) {
+            DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
+            DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
+            // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+            if (biasFlag == false) {
+                expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+            }
+            string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                        tilingContext->GetRawTilingData()->GetDataSize());
+            string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+            ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
+                << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
+        } else {
+            QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
+            QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
+            // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
+            expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
+            // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
+            if (biasFlag == false) {
+                expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+            }
+            string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                        tilingContext->GetRawTilingData()->GetDataSize());
+            string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+            ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
+                << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         }
     } else {
-        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
+        ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED)
+            << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
     }
 }
 
@@ -736,7 +748,7 @@ INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::Valu
 INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B4")));
 INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend310P3")));
 INSTANTIATE_TEST_CASE_P(QUANTMM910_95, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910_95")));
-INSTANTIATE_TEST_CASE_P(QUANTMMRESERVED, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("RESERVED")));
+INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("MC62CM12AA")));
 
 static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)
@@ -821,5 +833,3 @@ TEST_F(TestQuantBatchMatmulV3Tiling, multiThread910_95)
     auto casesParams910_95 = GetParams("Ascend910_95");
     TestMultiThread(casesParams910_95.data(), casesParams910_95.size(), 3);
 }
-
-#endif

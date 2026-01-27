@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -20,13 +20,13 @@
 #include "../utils/common_utils.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"
-#include "../utils/grouped_matmul_constant.h"
+#include "../utils/quant_batch_matmul_constant.h"
 
 namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-using namespace Cmct::Gemm::GroupedMatmul;
+using namespace Cmct::Gemm::QuantBatchMatmul;
 
 template <bool aTrans, bool bTrans>
 class MatMulCommonParam {
@@ -37,7 +37,7 @@ public:
 public:
     __aicore__ inline MatMulCommonParam(){};
     __aicore__ inline void Init(const TupleShape& l0Shape, const TupleTileShape& tileL12L0);
-    __aicore__ inline void UpdateForNextGroup(const TupleShape& problemShape);
+    __aicore__ inline void UpdateProblemParams(const TupleShape& problemShape);
     __aicore__ inline void UpdateNextBlockParams(const TupleShape& actualSingleShape);
     __aicore__ inline uint64_t CalcAGMOffsetInnerLoop(uint64_t mOffset, uint64_t kOffset);
     __aicore__ inline uint64_t CalcBGMOffsetInnerLoop(uint64_t nOffset, uint64_t kOffset);
@@ -51,20 +51,21 @@ public:
                                              bool isTailBL1);
 
 protected:
+    uint64_t stepM_;
+    uint64_t stepN_;
     uint64_t kA1_;
     uint64_t kB1_;
+    uint64_t kA1Tail_;
+    uint64_t kB1Tail_;
     uint64_t mA1C0_;
     uint64_t nB1C0_;
     uint64_t kB1C0_;
     uint64_t kA1C0_;
-    uint64_t kA1Tail_;
-    uint64_t kB1Tail_;
 
 private:
     TupleShape problemShape_;
     TupleShape actualSingleShape_;
     TupleShape l0Shape_;
-    TupleTileShape tileL12L0_;
 };
 
 template <bool aTrans, bool bTrans>
@@ -72,7 +73,10 @@ __aicore__ inline void MatMulCommonParam<aTrans, bTrans>::Init(const TupleShape&
                                                                const TupleTileShape& tileL12L0)
 {
     l0Shape_ = l0Shape;
-    tileL12L0_ = tileL12L0;
+    stepM_ = Get<0>(tileL12L0); // 0: idx of stepM in tileshape
+    stepN_ = Get<1>(tileL12L0); // 1: idx of stepN in tileshape
+    kA1_ = Get<2>(tileL12L0);   // 2: idx of kaL1 in tileshape
+    kB1_ = Get<3>(tileL12L0);   // 3: idx of kbL1 in tileshape
 
     if constexpr (bTrans) {
         nB1C0_ = AscendC::BLOCK_CUBE;
@@ -88,17 +92,14 @@ __aicore__ inline void MatMulCommonParam<aTrans, bTrans>::Init(const TupleShape&
         kA1C0_ = K0_B8;
         mA1C0_ = AscendC::BLOCK_CUBE;
     }
-    kA1_ = Get<MNK_K>(l0Shape_) * Get<2>(tileL12L0_); // 2: idx of stepKa in tileshape
-    kB1_ = Get<MNK_K>(l0Shape_) * Get<3>(tileL12L0_); // 3: idx of stepKb in tileshape
 }
 
 template <bool aTrans, bool bTrans>
-__aicore__ inline void MatMulCommonParam<aTrans, bTrans>::UpdateForNextGroup(const TupleShape& problemShape)
+__aicore__ inline void MatMulCommonParam<aTrans, bTrans>::UpdateProblemParams(const TupleShape& problemShape)
 {
     problemShape_ = problemShape;
-
-    kB1Tail_ = Get<MNK_K>(problemShape_) % kB1_ == 0 ? kB1_ : Get<MNK_K>(problemShape_) % kB1_;
     kA1Tail_ = Get<MNK_K>(problemShape_) % kA1_ == 0 ? kA1_ : Get<MNK_K>(problemShape_) % kA1_;
+    kB1Tail_ = Get<MNK_K>(problemShape_) % kB1_ == 0 ? kB1_ : Get<MNK_K>(problemShape_) % kB1_; 
 }
 
 template <bool aTrans, bool bTrans>
@@ -140,12 +141,12 @@ __aicore__ inline void MatMulCommonParam<aTrans, bTrans>::CalNd2NzParamA(AscendC
         nd2nzParam.nValue = currentK;
         nd2nzParam.dValue = Get<MNK_M>(actualSingleShape_);
         nd2nzParam.srcDValue = Get<MNK_M>(problemShape_);
-        nd2nzParam.dstNzC0Stride = Align(currentK, static_cast<uint64_t>(GMM_DATA_BLOCK)); // Align to 32-byte boundary
+        nd2nzParam.dstNzC0Stride = Align(currentK, static_cast<uint64_t>(QBMM_DATA_BLOCK)); // Align to 32-byte boundary
     } else {
         nd2nzParam.nValue = Get<MNK_M>(actualSingleShape_);
         nd2nzParam.dValue = currentK;
         nd2nzParam.srcDValue = Get<MNK_K>(problemShape_);
-        nd2nzParam.dstNzC0Stride = Align(Get<MNK_M>(actualSingleShape_), static_cast<uint64_t>(GMM_k0_FLOAT16));
+        nd2nzParam.dstNzC0Stride = Align(Get<MNK_M>(actualSingleShape_), static_cast<uint64_t>(QBMM_k0_FLOAT16));
     }
 }
 
@@ -162,12 +163,12 @@ __aicore__ inline void MatMulCommonParam<aTrans, bTrans>::CalNd2NzParamB(AscendC
         nd2nzParam.nValue = Get<MNK_N>(actualSingleShape_);
         nd2nzParam.dValue = currentK;
         nd2nzParam.srcDValue = Get<MNK_K>(problemShape_);
-        nd2nzParam.dstNzC0Stride = Align(Get<MNK_N>(actualSingleShape_), static_cast<uint64_t>(GMM_k0_FLOAT16));
+        nd2nzParam.dstNzC0Stride = Align(Get<MNK_N>(actualSingleShape_), static_cast<uint64_t>(QBMM_k0_FLOAT16));
     } else {
         nd2nzParam.nValue = currentK;
         nd2nzParam.dValue = Get<MNK_N>(actualSingleShape_);
         nd2nzParam.srcDValue = Get<MNK_N>(problemShape_);
-        nd2nzParam.dstNzC0Stride = Align(currentK, static_cast<uint64_t>(GMM_DATA_BLOCK)); // Align to 32-byte boundary
+        nd2nzParam.dstNzC0Stride = Align(currentK, static_cast<uint64_t>(QBMM_DATA_BLOCK)); // Align to 32-byte boundary
     }
 }
 
@@ -213,17 +214,17 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsA(AscendC::LoadData2DParamsV2
         AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (aTrans) {
         // For b8 input in transpose scenarios: use two 16x32 fractals
-        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(QBMM_k0_FLOAT16)), 2UL);
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailAL1 ? kA1Tail_ : kA1_, GMM_k0_FLOAT16), 2UL);
-        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailAL1 ? kA1Tail_ : kA1_, QBMM_k0_FLOAT16), 2UL);
+        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(QBMM_k0_FLOAT16)), 2UL);
         loadData2dParams.ifTranspose = true;
     } else {
-        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
         loadData2dParams.srcStride =
-            Cmct::Gemm::CeilDiv(currM * Get<0>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(GMM_k0_FLOAT16));
+            Cmct::Gemm::CeilDiv(currM * stepM_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
+        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(QBMM_k0_FLOAT16));
     }
 }
 
@@ -236,18 +237,18 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(AscendC::LoadData2DParamsV2
     uint64_t currK =
         AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (bTrans) {
-        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
+        loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
         loadData2dParams.srcStride =
-            Cmct::Gemm::CeilDiv(currN * Get<1>(tileL12L0_), static_cast<uint64_t>(GMM_k0_FLOAT16));
-        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16));
+            Cmct::Gemm::CeilDiv(currN * stepN_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
+        loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(QBMM_k0_FLOAT16));
     } else {
         loadData2dParams.ifTranspose = true;
         // For b8 input in transpose scenarios: use two 16x32 fractals
-        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(QBMM_k0_FLOAT16)), 2UL);
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailBL1 ? kB1Tail_ : kB1_, GMM_k0_FLOAT16), 2UL);
-        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(GMM_k0_FLOAT16)), 2UL);
+        loadData2dParams.srcStride = Align(Cmct::Gemm::CeilDiv(isTailBL1 ? kB1Tail_ : kB1_, QBMM_k0_FLOAT16), 2UL);
+        loadData2dParams.dstStride = Align(Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(QBMM_k0_FLOAT16)), 2UL);
     }
 }
 } // namespace Block

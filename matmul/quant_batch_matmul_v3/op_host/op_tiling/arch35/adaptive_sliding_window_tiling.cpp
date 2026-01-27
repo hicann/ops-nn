@@ -286,7 +286,7 @@ bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
     }
     adaptiveWin_.mBlockCnt = ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM);
     adaptiveWin_.nBlockCnt = ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
-    adaptiveWin_.totalBlockCnt = adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt;
+    adaptiveWin_.totalBlockCnt = GetBatchCoreCnt() * adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt;
     adaptiveWin_.mTail = inputParams_.mSize - (adaptiveWin_.mBlockCnt - 1UL) * adaptiveWin_.baseM;
     adaptiveWin_.nTail = inputParams_.nSize - (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, aicoreParams_.aicNum);
@@ -310,6 +310,11 @@ bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
     return true;
 }
 
+uint64_t AdaptiveSlidingWindowTiling::GetBatchCoreCnt() const
+{
+    return 1UL;
+}
+
 bool AdaptiveSlidingWindowTiling::CalcBasicBlock()
 {
     // baseM/baseN/baseK对齐原则
@@ -326,7 +331,12 @@ bool AdaptiveSlidingWindowTiling::CalcBasicBlock()
         // when m <= 128, baseM is 128.
         // only one of baseM and baseN can be 256, with baseM taking priority.
         if (inputParams_.mSize <= PER_BLOCK_SIZE || inputParams_.mSize % PER_BLOCK_SIZE != 0UL) {
-            adaptiveWin_.baseM = PER_BLOCK_SIZE;
+            adaptiveWin_.baseM =
+                inputParams_.groupSizeM == 1UL && inputParams_.mSize < PER_BLOCK_SIZE ?
+                    (!inputParams_.transA ?
+                         ops::CeilAlign(inputParams_.mSize, CUBE_BLOCK) :
+                         ops::CeilAlign(inputParams_.mSize, GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.aDtype))) :
+                    PER_BLOCK_SIZE;
             if (inputParams_.nSize % PER_BLOCK_SIZE == 0UL) {
                 adaptiveWin_.baseN = PER_BLOCK_BASE_SIZE_256;
             } else {
@@ -374,23 +384,89 @@ bool AdaptiveSlidingWindowTiling::CalcBasicBlock()
             adaptiveWin_.baseK = ops::CeilAlign(minBaseK, maxAlignSize);
         }
     }
-    uint64_t oriBlock =
-        ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM) * ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
+    uint64_t oriBlock = GetBatchCoreCnt() * ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM) *
+                        ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
     bool isSmallBlock = oriBlock < aicoreParams_.aicNum;
-    if (isSmallBlock && !inputParams_.isPerBlock) {
+    if (isSmallBlock) {
         if (compileInfo_.supportMmadS8S4) {
             AdjustBasicBlock4MmadS8S4(oriBlock);
+        } else if (inputParams_.isPerBlock) {
+            AdjustPerblockBasicBlock();
         } else {
             AdjustBasicBlock();
         }
-        OP_TILING_CHECK(adaptiveWin_.baseM == 0UL || adaptiveWin_.baseN == 0UL || adaptiveWin_.baseK == 0UL,
-                        CUBE_INNER_ERR_REPORT(
-                            inputParams_.opName,
-                            "BaseM, baseN and baseK should be greater than 0, but baseM: %lu, baseN: %lu, baseK: %lu,",
-                            adaptiveWin_.baseM, adaptiveWin_.baseN, adaptiveWin_.baseK),
-                        return false);
+        OP_TILING_CHECK(
+            adaptiveWin_.baseM == 0UL || adaptiveWin_.baseN == 0UL || adaptiveWin_.baseK == 0UL,
+            CUBE_INNER_ERR_REPORT(
+                inputParams_.opName,
+                "BaseM, baseN and baseK should be greater than 0, but baseM: %lu, baseN: %lu, baseK: %lu,",
+                adaptiveWin_.baseM, adaptiveWin_.baseN, adaptiveWin_.baseK),
+            return false);
     }
     return true;
+}
+
+void AdaptiveSlidingWindowTiling::AdjustPertileBasicBlock(uint64_t coreNumMN)
+{
+    uint64_t baseMAlignNum =
+        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
+    uint64_t baseNAlignNum =
+        !inputParams_.transB ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype) : CUBE_BLOCK;
+    uint64_t adjustBaseM = adaptiveWin_.baseM;
+    uint64_t adjustBaseN = adaptiveWin_.baseN;
+    uint64_t adjustMCore = MathUtil::CeilDivision(inputParams_.mSize, adjustBaseM);
+    uint64_t adjustNCore = MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN);
+
+    adjustMCore = coreNumMN / adjustNCore;
+    adjustBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, adjustMCore), baseMAlignNum);
+    adjustMCore = MathUtil::CeilDivision(inputParams_.mSize, adjustBaseM);
+
+    while (adjustBaseN / NUM_HALF >= baseNAlignNum &&
+           adjustMCore * MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN / NUM_HALF) <= coreNumMN) {
+        adjustBaseN = adjustBaseN / NUM_HALF;
+        adjustNCore = MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN);
+    }
+    uint64_t adjustUsedCoreNum = adjustMCore * adjustNCore;
+
+    while (adjustBaseN > adjustBaseM * BASEM_BASEN_RATIO && adjustBaseN / NUM_HALF >= baseNAlignNum) {
+        uint64_t tempBaseN = adjustBaseN / NUM_HALF;
+        uint64_t tempNCore = MathUtil::CeilDivision(inputParams_.nSize, tempBaseN);
+        uint64_t tempMCore = coreNumMN / tempNCore;
+        uint64_t tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, tempMCore), baseMAlignNum);
+        tempMCore = MathUtil::CeilDivision(inputParams_.mSize, tempBaseM);
+        uint64_t tempUsedCoreNum = tempMCore * tempNCore;
+
+        if (tempUsedCoreNum > coreNumMN) {
+            break;
+        }
+        adjustBaseM = tempBaseM;
+        adjustBaseN = tempBaseN;
+        adjustMCore = tempMCore;
+        adjustNCore = tempNCore;
+        adjustUsedCoreNum = tempUsedCoreNum;
+    }
+
+    adaptiveWin_.baseM = adjustBaseM;
+    adaptiveWin_.baseN = adjustBaseN;
+}
+
+void AdaptiveSlidingWindowTiling::AdjustPerblockBasicBlock()
+{
+    uint64_t coreNumMN = aicoreParams_.aicNum / GetBatchCoreCnt();
+    if (inputParams_.groupSizeM == 1UL) {
+        AdjustPertileBasicBlock(coreNumMN);
+    } else {
+        if (adaptiveWin_.baseM == PER_BLOCK_BASE_SIZE_256 &&
+            ops::CeilDiv(inputParams_.mSize, PER_BLOCK_SIZE) * ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN) <=
+                coreNumMN) {
+            adaptiveWin_.baseM = PER_BLOCK_SIZE;
+        } else if (
+            adaptiveWin_.baseN == PER_BLOCK_BASE_SIZE_256 &&
+            ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM) * ops::CeilDiv(inputParams_.nSize, PER_BLOCK_SIZE) <=
+                coreNumMN) {
+            adaptiveWin_.baseN = PER_BLOCK_SIZE;
+        }
+    }
 }
 
 void AdaptiveSlidingWindowTiling::AdjustBasicBlock()
@@ -409,34 +485,35 @@ void AdaptiveSlidingWindowTiling::AdjustBasicBlock()
     uint64_t nMaxtile = MathUtil::CeilDivision(inputParams_.nSize, baseNAlignNum);
     uint64_t tempBaseM = adaptiveWin_.baseM;
     uint64_t tempBaseN = adaptiveWin_.baseN;
-    if (mMaxtile * nMaxtile >= aicoreParams_.aicNum || (!inputParams_.transA && inputParams_.transB)) {
+    uint64_t coreNumMN = aicoreParams_.aicNum / GetBatchCoreCnt();
+    if (mMaxtile * nMaxtile >= coreNumMN || (!inputParams_.transA && inputParams_.transB)) {
         uint64_t mCore = MathUtil::CeilDivision(inputParams_.mSize, adaptiveWin_.baseM);
         uint64_t nCore = MathUtil::CeilDivision(inputParams_.nSize, adaptiveWin_.baseN);
         if (mMaxtile < nMaxtile || (mMaxtile == nMaxtile && baseNAlignNum == CUBE_BLOCK)) {
             tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
             mCore = MathUtil::CeilDivision(inputParams_.mSize, tempBaseM);
-            nCore = aicoreParams_.aicNum / mCore;
+            nCore = coreNumMN / mCore;
             tempBaseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, nCore), baseNAlignNum);
         } else {
             tempBaseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, nCore), baseNAlignNum);
             nCore = MathUtil::CeilDivision(inputParams_.nSize, tempBaseN);
-            mCore = aicoreParams_.aicNum / nCore;
+            mCore = coreNumMN / nCore;
             tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
         }
 
-        while (tempBaseN >= tempBaseM * BASEM_BASEN_RATIO && nCore < aicoreParams_.aicNum / NUM_HALF &&
+        while (tempBaseN >= tempBaseM * BASEM_BASEN_RATIO && nCore < coreNumMN / NUM_HALF &&
                tempBaseN != baseNAlignNum) {
             nCore = nCore * DOUBLE_CORE_NUM;
-            mCore = aicoreParams_.aicNum / nCore;
+            mCore = coreNumMN / nCore;
             tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
             tempBaseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, nCore), baseNAlignNum);
             mCore = MathUtil::CeilDivision(inputParams_.mSize, static_cast<uint64_t>(tempBaseM));
             nCore = MathUtil::CeilDivision(inputParams_.nSize, static_cast<uint64_t>(tempBaseN));
         }
-        while (tempBaseM >= tempBaseN * BASEM_BASEN_RATIO && mCore < aicoreParams_.aicNum / NUM_HALF &&
+        while (tempBaseM >= tempBaseN * BASEM_BASEN_RATIO && mCore < coreNumMN / NUM_HALF &&
                tempBaseM != baseMAlignNum) {
             mCore = mCore * DOUBLE_CORE_NUM;
-            nCore = aicoreParams_.aicNum / mCore;
+            nCore = coreNumMN / mCore;
             tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
             tempBaseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, nCore), baseNAlignNum);
             mCore = MathUtil::CeilDivision(inputParams_.mSize, static_cast<uint64_t>(tempBaseM));
@@ -655,7 +732,8 @@ void AdaptiveSlidingWindowTiling::CalStepKs()
     if (basicTiling_.stepKb > basicTiling_.stepKa) {
         basicTiling_.stepKb = basicTiling_.stepKb / basicTiling_.stepKa * basicTiling_.stepKa;
     }
-    if (inputParams_.isPerBlock) {
+    if (inputParams_.isPerBlock || (inputParams_.isMxPerGroup && (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
+                                                                  inputParams_.aDtype == ge::DT_FLOAT8_E5M2))) {
         basicTiling_.stepKa =
             std::min(basicTiling_.stepKa, static_cast<uint32_t>(4)); // 限制stepKa最大为4, 防止issue queue阻塞
         basicTiling_.stepKb =
@@ -843,15 +921,6 @@ uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum(uint32_t mTile, uint32_t nT
     return mTile * nTile * static_cast<uint32_t>(adaptiveWin_.tailWinBlockCnt);
 }
 
-bool AdaptiveSlidingWindowTiling::IsInValidPerblockTailSplit(uint64_t splitCnt) const
-{
-    if (!inputParams_.isPerBlock) {
-        return false;
-    }
-
-    return PER_BLOCK_SIZE % splitCnt != 0UL;
-}
-
 bool AdaptiveSlidingWindowTiling::IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const
 {
     if (inputParams_.bFormat != ge::FORMAT_FRACTAL_NZ ||
@@ -876,16 +945,34 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
     uint64_t secSplit = 1UL;
     auto& preSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTile : nTile;
     auto& secSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTile : mTile;
-    while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum) {
-        preSplit += 1UL;
-        if (!IsInValidPerblockTailSplit(preSplit) && !IsInValidWeighNzTailSplit(preSplit, true)) {
-            preSplitValid = preSplit;
+    uint64_t tileMax = aicoreParams_.aicNum / adaptiveWin_.tailWinBlockCnt;
+    uint64_t baseMAlignNum =
+        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
+    uint64_t baseNAlignNum =
+        !inputParams_.transB ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype) : CUBE_BLOCK;
+    uint64_t mTileMax =
+        std::min(tileMax, MathUtil::CeilDivision(std::min(inputParams_.mSize, adaptiveWin_.baseM), baseMAlignNum));
+    uint64_t nTileMax =
+        std::min(tileMax, MathUtil::CeilDivision(std::min(inputParams_.nSize, adaptiveWin_.baseN), baseNAlignNum));
+    uint64_t preSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTileMax : nTileMax;
+    uint64_t secSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTileMax : mTileMax;
+    if (inputParams_.isPerBlock) {
+        while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax ||
+               CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax) {
+            preSplitValid = CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax ?
+                                ++preSplit :
+                                preSplitValid;
+            secSplitValid = CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax ?
+                                ++secSplit :
+                                secSplitValid;
         }
-
-        if (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum) {
-            secSplit += 1UL;
-            if (!IsInValidPerblockTailSplit(secSplit) && !IsInValidWeighNzTailSplit(secSplit, false)) {
-                secSplitValid = secSplit;
+    } else {
+        while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum) {
+            preSplit += 1UL;
+            preSplitValid = !IsInValidWeighNzTailSplit(preSplit, true) ? preSplit : preSplitValid;
+            if (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum) {
+                secSplit += 1UL;
+                secSplitValid = !IsInValidWeighNzTailSplit(secSplit, false) ? secSplit : secSplitValid;
             }
         }
     }
@@ -1507,4 +1594,4 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlockBfullLoad()
     adaptiveWin_.mTailTile = mTile;
 }
 
-}  // namespace optiling
+} // namespace optiling

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -17,23 +17,24 @@
 #define EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
 #include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
-#include "../utils/grouped_matmul_constant.h"
+#include "../utils/quant_batch_matmul_constant.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tensor_utils.h"
 
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-#define QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS                                                                         \
-    template <typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename DataTypeBias_,              \
-              typename DataTypeX1Scale_, typename DataTypeX2Scale_, typename LayoutX1Scale_, typename LayoutX2Scale_>
-#define QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS                                                                          \
-    L0TileShape_, DataTypeOut_, DataTypeIn_, DataTypeBias_, DataTypeX1Scale_, DataTypeX2Scale_, LayoutX1Scale_,        \
+#define QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS                                              \
+    template <                                                                                      \
+        typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename DataTypeBias_, \
+        typename DataTypeX1Scale_, typename DataTypeX2Scale_, typename LayoutX1Scale_, typename LayoutX2Scale_>
+#define QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS                                                           \
+    L0TileShape_, DataTypeOut_, DataTypeIn_, DataTypeBias_, DataTypeX1Scale_, DataTypeX2Scale_, LayoutX1Scale_, \
         LayoutX2Scale_
 
-using namespace Cmct::Gemm::GroupedMatmul;
+using namespace Cmct::Gemm::QuantBatchMatmul;
 
-struct PerBlockUBParam {
+struct PertileUBParam {
     bool CopyOutWithSplitN = false;
     uint16_t ndNum;
     uint64_t singleM;
@@ -52,10 +53,10 @@ constexpr uint32_t X1SCALE_IDX = 2;
 constexpr uint32_t BIAS_IDX = 3;
 } // namespace
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-class BlockEpiloguePerTile {
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+class BlockEpiloguePertile {
 public:
-    __aicore__ inline BlockEpiloguePerTile()
+    __aicore__ inline BlockEpiloguePertile()
     {
         if ASCEND_IS_AIV {
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(0);
@@ -67,7 +68,7 @@ public:
         }
     }
 
-    __aicore__ inline ~BlockEpiloguePerTile()
+    __aicore__ inline ~BlockEpiloguePertile()
     {
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(0);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(1);
@@ -119,15 +120,15 @@ public:
     __aicore__ inline auto GetL0c2UbPongTensor();
 
 private:
-    __aicore__ inline void ProcessAivSingleKPerTile(int64_t x1ScaleOffset,
+    __aicore__ inline void ProcessAivSingleKPertile(int64_t x1ScaleOffset,
                                                     __gm__ X2ScaleType* x2ScaleAddr[UB_SUB_BANK_NUM]);
 
-    __aicore__ inline void ProcessAivSingleKPerBlock(int64_t x1ScaleOffset,
+    __aicore__ inline void ProcessAivSingleKPerblock(int64_t x1ScaleOffset,
                                                      __gm__ X2ScaleType* x2ScaleAddr[UB_SUB_BANK_NUM]);
     template <class T>
     __aicore__ inline __ubuf__ T* CopyInX1Scale(uint64_t srcOffset, uint64_t m, uint64_t k);
     template <class T>
-    __aicore__ inline T CopyInX1ScalePerblock(__gm__ T* src, uint64_t offset);
+    __aicore__ inline T CopyInX1ScalePertile(__gm__ T* src, uint64_t offset);
     template <class T>
     __aicore__ inline void CopyInX2Scale(T x2Scale[UB_SUB_BANK_NUM], __gm__ T* src[UB_SUB_BANK_NUM], uint64_t offset);
     __aicore__ inline int64_t CalcX1OffsetPerGroup();
@@ -146,15 +147,15 @@ private:
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<YType>& ubRes, uint16_t eventId, uint16_t blkCount,
                                    uint32_t blkLen, uint32_t srcStride, uint32_t dstStride, uint64_t yOffset);
     __aicore__ inline void CastAndCopyOut(const AscendC::LocalTensor<CType>& mmAddUb);
-    __aicore__ inline void UpdatePerBlockUBValidMN();
-    __aicore__ inline void UpdatePerBlockUBParam();
+    __aicore__ inline void UpdatePertileUBValidMN();
+    __aicore__ inline void UpdatePertileUBParam();
     __aicore__ inline void WaitForCube(uint16_t crossPingPongID)
     {
-        AscendC::CrossCoreWaitFlag<GMM_AIC_SYNC_AIV_MODE, PIPE_V>(GMM_AIV_SYNC_AIC_FLAG + crossPingPongID);
+        AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_V>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID);
     }
     __aicore__ inline void NotifyCube(uint16_t crossPingPongID)
     {
-        AscendC::CrossCoreSetFlag<GMM_AIC_SYNC_AIV_MODE, PIPE_V>(GMM_AIC_SYNC_AIV_FLAG + crossPingPongID);
+        AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_V>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID);
     }
 
     AscendC::GlobalTensor<YType> cGlobal_;
@@ -171,7 +172,7 @@ private:
 
 private:
     const Params* params_;
-    PerBlockUBParam ubParams_;
+    PertileUBParam ubParams_;
     TupleShape problemShape_{};
     TupleShape actualSingleShape_{};
     BlockCoord baseOffset_{0, 0, 0, 0};
@@ -186,8 +187,8 @@ private:
     bool isPertile_ = false;
 };
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::Init(const Params* params)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::Init(const Params* params)
 {
     if ASCEND_IS_AIC {
         return;
@@ -203,7 +204,7 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     constexpr uint32_t afterAddOffset = addUbOffset + elems * sizeof(CType); // ub add res 64KB
     if constexpr (!AscendC::IsSameType<CType, YType>::value) {
         ubResPing_ = AscendC::LocalTensor<YType>(AscendC::TPosition::VECCALC, afterAddOffset, elems);
-        ubResPong_ = ubResPing_[elems / GMM_BUFFER_NUM];
+        ubResPong_ = ubResPing_[elems / QBMM_BUFFER_NUM];
     }
 
     isPertile_ = params_->groupSizeM == 1;
@@ -211,23 +212,23 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
         constexpr uint32_t x1ScaleUbOffset =
             (AscendC::IsSameType<CType, YType>::value) ? afterAddOffset : afterAddOffset + elems * sizeof(YType);
         x1ScaleUbPing_ = AscendC::LocalTensor<X1ScaleType>(AscendC::TPosition::VECCALC, x1ScaleUbOffset,
-                                                           PER_BLOCK_SIZE * GMM_MAX_STEP_SCALEA_K);
+                                                           PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K);
         x1ScaleUbPong_ = AscendC::LocalTensor<X1ScaleType>(
-            AscendC::TPosition::VECCALC, x1ScaleUbOffset + PER_BLOCK_SIZE * GMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType),
-            PER_BLOCK_SIZE * GMM_MAX_STEP_SCALEA_K);
+            AscendC::TPosition::VECCALC, x1ScaleUbOffset + PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType),
+            PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K);
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline auto BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::GetL0c2UbPingTensor()
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline auto BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::GetL0c2UbPingTensor()
 {
     constexpr uint32_t elems = UB_TWO_BANK_ELEMS_B32 * PER_BLOCK_SIZE;
     mmResPing_ = AscendC::LocalTensor<CType>(AscendC::TPosition::VECCALC, 0, elems * UB_SUB_BANK_NUM);
     return mmResPing_;
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline auto BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::GetL0c2UbPongTensor()
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline auto BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::GetL0c2UbPongTensor()
 {
     constexpr uint32_t elems = UB_TWO_BANK_ELEMS_B32 * PER_BLOCK_SIZE;
     mmResPong_ = AscendC::LocalTensor<CType>(AscendC::TPosition::VECCALC, UB_SUB_BANK_ELEMS_B32 * sizeof(CType),
@@ -235,9 +236,9 @@ __aicore__ inline auto BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     return mmResPong_;
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdateParamsForNextProblem(const TupleShape& problemShape)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::UpdateParamsForNextProblem(
+    const TupleShape& problemShape)
 {
     problemShape_ = problemShape;
 
@@ -246,9 +247,9 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdateParamsForNext
     scaleK_ = Cmct::Gemm::CeilDiv(Get<MNK_K>(problemShape_), params_->groupSizeK);
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdateGlobalAddr(const BlockCoord& baseOffset)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::UpdateGlobalAddr(
+    const BlockCoord& baseOffset)
 {
     if ASCEND_IS_AIV {
         x1ScaleGlobal_.SetGlobalBuffer((__gm__ X1ScaleType*)params_->x1ScaleGmAddr + Get<X1SCALE_IDX>(baseOffset));
@@ -258,8 +259,8 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdateGlobalAddr(co
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline int64_t BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CalcX1OffsetPerGroup()
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline int64_t BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CalcX1OffsetPerGroup()
 {
     int64_t x1ScaleOffset = Get<X1SCALE_IDX>(blockCoord_);
     if (subBlockIdx_ == 1) {
@@ -272,8 +273,8 @@ __aicore__ inline int64_t BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PA
     return x1ScaleOffset;
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CalcX2OffsetPerGroup(
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CalcX2OffsetPerGroup(
     int64_t x2ScaleOffset[UB_SUB_BANK_NUM])
 {
     if constexpr (transB) {
@@ -285,10 +286,10 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
-__aicore__ inline __ubuf__ T*
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CopyInX1Scale(uint64_t srcOffset, uint64_t m, uint64_t k)
+__aicore__ inline __ubuf__ T* BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CopyInX1Scale(
+    uint64_t srcOffset, uint64_t m, uint64_t k)
 {
     AscendC::DataCopyExtParams x1ScaleGm2UbParams;
     AscendC::DataCopyPadExtParams<X1ScaleType> padParams;
@@ -309,10 +310,10 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CopyInX1Scale(uint6
     return reinterpret_cast<__ubuf__ T*>(x1ScaleUb->GetPhyAddr());
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
-__aicore__ inline T BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CopyInX1ScalePerblock(__gm__ T* src,
-                                                                                                       uint64_t offset)
+__aicore__ inline T BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CopyInX1ScalePertile(
+    __gm__ T* src, uint64_t offset)
 {
     if constexpr (transA) {
         return src[offset * scaleM_];
@@ -321,9 +322,9 @@ __aicore__ inline T BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>:
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CopyInX2Scale(
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CopyInX2Scale(
     T x2Scale[UB_SUB_BANK_NUM], __gm__ T* src[UB_SUB_BANK_NUM], uint64_t offset)
 {
     if constexpr (transB) {
@@ -335,8 +336,8 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdatePerBlockUBValidMN()
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::UpdatePertileUBValidMN()
 {
     int64_t actualN = Get<MNK_N>(actualSingleShape_);
     if (ubParams_.CopyOutWithSplitN) {
@@ -356,8 +357,8 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::UpdatePerBlockUBParam()
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::UpdatePertileUBParam()
 {
     ubParams_.CopyOutWithSplitN =
         Get<MNK_N>(actualSingleShape_) > params_->groupSizeN || Get<MNK_M>(actualSingleShape_) == 1;
@@ -381,7 +382,7 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
         ubParams_.singleN = fixpipeN;
         ubParams_.singleM = CeilDiv(Get<MNK_M>(actualSingleShape_), AscendC::GetTaskRation());
     }
-    UpdatePerBlockUBValidMN();
+    UpdatePertileUBValidMN();
     int64_t offsetM = 0;
     int64_t offsetN0 = 0;
     int64_t offsetN1 = 0;
@@ -401,14 +402,13 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     ubParams_.offsetY[1] = Get<Y_IDX>(blockCoord_) + offsetM * Get<MNK_N>(problemShape_) + offsetN1;
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::operator()(const TupleShape& actualSingleShape,
-                                                                        const BlockCoord& blockCoord)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::operator()(
+    const TupleShape& actualSingleShape, const BlockCoord& blockCoord)
 {
     actualSingleShape_ = actualSingleShape;
     blockCoord_ = blockCoord;
-    UpdatePerBlockUBParam();
+    UpdatePertileUBParam();
     int64_t x1ScaleOffset = CalcX1OffsetPerGroup(); // one block same x1Scale
     int64_t x2ScaleOffset[UB_SUB_BANK_NUM] = {0};   // maybe 2 different x2Scale
     CalcX2OffsetPerGroup(x2ScaleOffset);
@@ -416,17 +416,17 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::operator()(const Tu
                                                         x2ScaleGlobal_ + x2ScaleOffset[1]};
 
     if (isPertile_) {
-        ProcessAivSingleKPerTile(x1ScaleOffset, x2ScaleAddr);
+        ProcessAivSingleKPertile(x1ScaleOffset, x2ScaleAddr);
     } else {
-        ProcessAivSingleKPerBlock(x1ScaleOffset, x2ScaleAddr);
+        ProcessAivSingleKPerblock(x1ScaleOffset, x2ScaleAddr);
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
 __aicore__ inline __ubuf__ T*
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::GetX1ScaleUbAddrPerGroup(int64_t x1ScaleOffset,
-                                                                                      uint64_t kOffset, uint64_t kElem)
+BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::GetX1ScaleUbAddrPerGroup(
+    int64_t x1ScaleOffset, uint64_t kOffset, uint64_t kElem)
 {
     uint64_t scaleX1GmOffset;
     if constexpr (transA) {
@@ -437,12 +437,12 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::GetX1ScaleUbAddrPer
     return CopyInX1Scale<X1ScaleType>(scaleX1GmOffset, ubParams_.validM, kElem);
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::ProcessAivSingleKPerTile(
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::ProcessAivSingleKPertile(
     int64_t x1ScaleOffset, __gm__ X2ScaleType* x2ScaleAddr[UB_SUB_BANK_NUM])
 {
     auto mmAddUbAddr = reinterpret_cast<__ubuf__ CType*>(mmAddUb_.GetPhyAddr());
-    const uint16_t x1ScaleKElem = Min(GMM_MAX_STEP_SCALEA_K, scaleK_);
+    const uint16_t x1ScaleKElem = Min(QBMM_MAX_STEP_SCALEA_K, scaleK_);
     uint64_t kElem;
     __ubuf__ X1ScaleType* x1ScaleUbAddr;
     X2ScaleType x2Scale[UB_SUB_BANK_NUM];
@@ -488,8 +488,8 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     AivPostProcess(mmAddUb_);
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::ProcessAivSingleKPerBlock(
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::ProcessAivSingleKPerblock(
     int64_t x1ScaleOffset, __gm__ X2ScaleType* x2ScaleAddr[UB_SUB_BANK_NUM])
 {
     auto mmAddUbAddr = reinterpret_cast<__ubuf__ CType*>(mmAddUb_.GetPhyAddr());
@@ -497,7 +497,7 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     X2ScaleType x2Scale[UB_SUB_BANK_NUM];
     for (uint64_t kb = 0, kOffset = 0; kb < Get<MNK_K>(problemShape_); kb += params_->baseK, kOffset++) {
         CopyInX2Scale<X2ScaleType>(x2Scale, x2ScaleAddr, kOffset);
-        X1ScaleType x1Scale = CopyInX1ScalePerblock(x1ScaleAddr, kOffset);
+        X1ScaleType x1Scale = CopyInX1ScalePertile(x1ScaleAddr, kOffset);
         WaitForCube(crossPingPongID_);
         auto mmUbInputAddr = crossPingPongID_ == 0 ? reinterpret_cast<uint64_t>(mmResPing_.GetPhyAddr()) :
                                                      reinterpret_cast<uint64_t>(mmResPong_.GetPhyAddr());
@@ -528,14 +528,14 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     AivPostProcess(mmAddUb_);
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <bool isFirstKLoop, uint32_t ndNum>
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::AivPerTensor(
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::AivPerTensor(
     __ubuf__ CType* dst, __ubuf__ CType* l0cOut, __ubuf__ X1ScaleType* x1Scale, uint16_t mSize, uint32_t nSize0,
     uint32_t nSize1, uint16_t kSize, X2ScaleType x2Scale0, X2ScaleType x2Scale1, uint64_t x1ScaleKIdxInCache)
 {
-    uint16_t alignM = Align(mSize, GMM_UB_ALIGN_SIZE / sizeof(X1ScaleType));
-    uint16_t alignK = Align(kSize, GMM_UB_ALIGN_SIZE / sizeof(X1ScaleType));
+    uint16_t alignM = Align(mSize, QBMM_UB_ALIGN_SIZE / sizeof(X1ScaleType));
+    uint16_t alignK = Align(kSize, QBMM_UB_ALIGN_SIZE / sizeof(X1ScaleType));
     __VEC_SCOPE__
     {
         for (uint16_t mIdx = 0; mIdx < mSize; mIdx++) {
@@ -598,9 +598,9 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <bool isFirstKLoop, uint32_t ndNum>
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::AivPerTensor(
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::AivPerTensor(
     __ubuf__ CType* dst, __ubuf__ CType* l0cOut, X1ScaleType x1Scale, uint16_t mSize, uint32_t nSize0, uint32_t nSize1,
     X2ScaleType x2Scale0, X2ScaleType x2Scale1)
 {
@@ -658,9 +658,9 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::AivPostProcess(const AscendC::LocalTensor<CType>& mmAddUb)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::AivPostProcess(
+    const AscendC::LocalTensor<CType>& mmAddUb)
 {
     if (ubParams_.validM == 0) {
         return;
@@ -690,8 +690,8 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::AivPostProcess(cons
     }
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CopyOut(
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CopyOut(
     const AscendC::LocalTensor<YType> &ubRes, uint16_t eventId, uint16_t blkCount, uint32_t blkLen, uint32_t srcStride,
     uint32_t dstStride, uint64_t yOffset)
 {
@@ -701,15 +701,15 @@ __aicore__ inline void BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAM
     AscendC::DataCopyPad<YType>(cGlobal_[yOffset], ubRes, copyParams);
 }
 
-QGMM_BLOCK_EPILOGUE_CLASS_LOCAL_PARAMS
-__aicore__ inline void
-BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CastAndCopyOut(const AscendC::LocalTensor<CType> &mmAddUb)
+QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
+__aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::CastAndCopyOut(
+    const AscendC::LocalTensor<CType>& mmAddUb)
 {
     if (ubParams_.ndNum == 2 && !ubParams_.CopyOutWithSplitN) { // 2: 2ND, opt branch with splitM
         uint32_t sumN = ubParams_.validN[0] + ubParams_.validN[1];
-        uint32_t mSizePing = CeilDiv(ubParams_.validM, static_cast<uint64_t>(GMM_BUFFER_NUM));
-        uint32_t mSize[GMM_BUFFER_NUM] = {mSizePing, static_cast<uint32_t>(ubParams_.validM - mSizePing)};
-        for (uint32_t mDbIdx = 0; mDbIdx < GMM_BUFFER_NUM; ++mDbIdx) {
+        uint32_t mSizePing = CeilDiv(ubParams_.validM, static_cast<uint64_t>(QBMM_BUFFER_NUM));
+        uint32_t mSize[QBMM_BUFFER_NUM] = {mSizePing, static_cast<uint32_t>(ubParams_.validM - mSizePing)};
+        for (uint32_t mDbIdx = 0; mDbIdx < QBMM_BUFFER_NUM; ++mDbIdx) {
             if (mSize[mDbIdx] > 0 && sumN > 0) {
                 auto ubRes = mDbIdx == 0 ? &ubResPing_ : &ubResPong_;
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(mDbIdx);
@@ -733,7 +733,7 @@ BlockEpiloguePerTile<QGMM_BLOCK_EPILOGUE_FUNC_LOCAL_PARAMS>::CastAndCopyOut(cons
                 // write continuously
                 repeatParam.dstRepStride = CeilDiv(ubParams_.singleN, AscendC::ONE_BLK_SIZE / sizeof(YType));
                 // srcStride is 16(512B / 32B), subBank0 256B one repeat
-                repeatParam.srcRepStride = GMM_BMM_BLOCK_NUM;
+                repeatParam.srcRepStride = QBMM_BMM_BLOCK_NUM;
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(ndIdx);
                 AscendC::Cast(*ubRes, mmAddUb[ubParams_.validN[0] * ndIdx], AscendC::RoundMode::CAST_RINT,
                               ubParams_.validN[ndIdx], ubParams_.validM, repeatParam);

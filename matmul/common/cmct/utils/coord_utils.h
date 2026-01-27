@@ -17,7 +17,7 @@
 #define UTILS_COORD_UTILS_H
 
 #include "common_utils.h"
-#include "grouped_matmul_constant.h"
+#include "quant_batch_matmul_constant.h"
 namespace Cmct {
 namespace Gemm {
 
@@ -210,13 +210,13 @@ public:
         return nTileIdx * l1N + nSplitOffset;
     }
 
-    template <GroupedMatmul::QuantMode aQuantMode>
+    template <QuantBatchMatmul::QuantMode aQuantMode>
     __aicore__ inline void CalOffsetOfAIV(
         int64_t mOffset, int64_t nOffset,
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>& offset)
     {
         int64_t x1ScaleMOffset = mOffset;
-        if constexpr (aQuantMode == GroupedMatmul::QuantMode::PERBLOCK_MODE) {
+        if constexpr (aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) {
             x1ScaleMOffset = mOffset / PER_BLOCK_SIZE;
         }
         if constexpr (isTransA) {
@@ -231,7 +231,7 @@ public:
         }
     }
 
-    template <GroupedMatmul::QuantMode aQuantMode, bool enableLoadBalance = false>
+    template <QuantBatchMatmul::QuantMode aQuantMode, bool enableLoadBalance = false>
     __aicore__ inline AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> GetQuantOffset(
         int64_t mTileIdx, int64_t nTileIdx, int64_t mSplitOffset = 0, int64_t nSplitOffset = 0,
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceParam = {0u, 0u, 0u, 0u})
@@ -261,12 +261,12 @@ public:
         }
         Get<5>(offset) = mOffset * n + nOffset; // 5: idx of y
         if constexpr (
-            aQuantMode == GroupedMatmul::QuantMode::PERGROUP_MODE ||
-            aQuantMode == GroupedMatmul::QuantMode::PERBLOCK_MODE) {
+            aQuantMode == QuantBatchMatmul::QuantMode::PERGROUP_MODE ||
+            aQuantMode == QuantBatchMatmul::QuantMode::PERBLOCK_MODE) {
             if ASCEND_IS_AIV {
                 this->CalOffsetOfAIV<aQuantMode>(mOffset, nOffset, offset);
             }
-        } else if constexpr (aQuantMode == GroupedMatmul::QuantMode::MX_PERGROUP_MODE) {
+        } else if constexpr (aQuantMode == QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE) {
             if constexpr (isTransA) {
                 Get<2>(offset) = mOffset * MXFP_MULTI_BASE_SIZE; // 2: idx of x1Scale
             } else {

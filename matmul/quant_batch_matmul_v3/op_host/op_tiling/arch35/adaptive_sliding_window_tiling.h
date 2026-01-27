@@ -68,6 +68,7 @@ public:
 
 protected:
     ge::graphStatus CalcUbTiling() override;
+    virtual uint64_t GetBatchCoreCnt() const;
     bool CheckDtype() const override;
     bool CheckShape(const std::vector<gert::Shape *>& mandtoryShape, const gert::StorageShape* biasShape,
                     const gert::StorageShape* pertokenShape,
@@ -76,6 +77,8 @@ protected:
     bool CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c) const;
     virtual bool AnalyseSlidingWinInfo();
     void AdjustBasicBlock();
+    void AdjustPertileBasicBlock(uint64_t coreNumMN);
+    void AdjustPerblockBasicBlock();
     void AdjustBasicBlock4MmadS8S4(uint64_t oriBlock);
     bool CalculateOptimalSplit(uint64_t &baseM, uint64_t &baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum,
                                uint64_t baseKAlignNum);
@@ -104,7 +107,6 @@ protected:
     virtual bool IsCalL1TilingDepth4MmadS8S4() const;
     virtual void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size);
 
-    bool IsInValidPerblockTailSplit(uint64_t splitCnt) const;
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
     virtual void Reset();
 

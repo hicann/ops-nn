@@ -230,6 +230,7 @@ enum class BasicQuantMode : uint32_t {
     PERTOKEN_MODE = 0x1U << 2,
     MX_PERGROUP_MODE = 0x1U << 3,
     PERBLOCK_MODE = 0x1U << 4,
+    PERGROUP_MODE = 0x1U << 5,
 };
 
 namespace DequantBmm {

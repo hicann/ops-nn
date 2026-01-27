@@ -46,7 +46,8 @@ protected:
     bool AnalyseSlidingWinInfo() override;
     void IsAFullLoad() override;
     void SetTilingData() override;
-
+    void CalculateNBufferNum4Perblock();
+    
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData &tilingData_;
 };

@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,7 +18,7 @@
 #include "kernel_basic_intf.h"
 #include "../utils/common_utils.h"
 #include "../utils/fill_utils.h"
-#include "../utils/grouped_matmul_constant.h"
+#include "../utils/quant_batch_matmul_constant.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"
 #include "../utils/coord_utils.h"
@@ -123,9 +123,10 @@ public:
     }
 
 private:
-    __aicore__ inline void ProcessSingleBatch(const Params& params, BlockSchedulerOp& bs);
+    __aicore__ inline void ProcessSingleBatch(
+        const Params& params, BlockSchedulerOp& bs, uint64_t batchCnt, bool isTailRound);
     __aicore__ inline void ProcessWithBatch(const Params& params, BlockSchedulerOp& bs);
-    __aicore__ inline TupleShape ToShapeTuple(const ProblemShape &problemShape)
+    __aicore__ inline TupleShape ToShapeTuple(const ProblemShape& problemShape)
     {
         return {problemShape.m, problemShape.n, problemShape.k};
     }
@@ -146,6 +147,7 @@ private:
     uint64_t batchBOffset_{0};
     bool isBiasThreeDim_{false};
     bool isBias_{false};
+    bool needUpdateTail_{false};
 };
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
@@ -155,13 +157,12 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     BlockSchedulerOp bs(params.problemShape, params.schParams);
     problemShape_ = ToShapeTuple(params.problemShape);
 
-    BlockShape l0TileShape {params.qbmmParams.baseM, params.qbmmParams.baseN, params.qbmmParams.baseK, 0};
+    BlockShape l0TileShape{params.qbmmParams.baseM, params.qbmmParams.baseN, params.qbmmParams.baseK, 0};
     bool enableL0CPingPong = (params.qbmmParams.dbL0C > 1);
     mmadOp_.Init(problemShape_, l0TileShape, params.l1Params, isBias_, enableL0CPingPong);
 
     if (params.problemShape.b == 1) {
-        bs.ResetAddrOffsets();
-        ProcessSingleBatch(params, bs);
+        ProcessSingleBatch(params, bs, 0, true);
         return;
     }
 
@@ -178,7 +179,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
     bGlobal_.SetGlobalBuffer((__gm__ BType*)params.mmadParams.bGmAddr);
     cGlobal_.SetGlobalBuffer((__gm__ CType*)params.mmadParams.cGmAddr);
     if (params.qbmmParams.isBias == 1) {
-        isBiasThreeDim_ = params.qbmmParams.biasThreeDim == 1;
+        if (params.qbmmParams.biasThreeDim == 1) {
+            isBiasThreeDim_ = true;
+        }
         isBias_ = true;
         biasGlobal_.SetGlobalBuffer((__gm__ BiasType*)params.mmadParams.biasGmAddr);
     }
@@ -187,8 +190,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(const Params &params,
-                                                                                       BlockSchedulerOp &bs)
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(
+    const Params& params, BlockSchedulerOp& bs)
 {
     uint64_t batchC3C4 = static_cast<uint64_t>(params.qbmmParams.batchC3) * params.qbmmParams.batchC4;
     uint64_t batchC2C3C4 = params.qbmmParams.batchC2 * batchC3C4;
@@ -208,6 +211,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
     uint64_t batchC1Offset = 0;
     uint64_t batchA1Offset = 0;
     uint64_t batchB1Offset = 0;
+    uint64_t curBatchC = 1UL;
+    uint64_t totalCnt = bs.GetTotalCnt() * params.problemShape.b;
     for (uint64_t b1Index = 0; b1Index < params.qbmmParams.batchC1; ++b1Index) {
         uint64_t batchC2Offset = batchC1Offset;
         uint64_t batchA2Offset = batchA1Offset;
@@ -221,8 +226,10 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
                 batchAOffset_ = batchA3Offset;
                 batchBOffset_ = batchB3Offset;
                 for (uint64_t b4Index = 0; b4Index < params.qbmmParams.batchC4; ++b4Index) {
-                    bs.ResetAddrOffsets();
-                    ProcessSingleBatch(params, bs);
+                    bool isTailRound =
+                        curBatchC * bs.GetTotalCnt() > (totalCnt / AscendC::GetBlockNum()) * AscendC::GetBlockNum();
+                    ProcessSingleBatch(params, bs, (params.problemShape.b - curBatchC), isTailRound);
+                    curBatchC++;
                     batchCOffset_ += 1;
                     batchAOffset_ += multiA4C4;
                     batchBOffset_ += multiB4C4;
@@ -242,19 +249,30 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(const Params &params,
-                                                                                         BlockSchedulerOp &bs)
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(
+    const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
 {
-    CoordClass coord(params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
-                     params.qbmmParams.baseN, params.qbmmParams.baseK);
+    CoordClass coord(
+        params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
+        params.qbmmParams.baseN, params.qbmmParams.baseK);
     BlockCoord blockIdx;
+    auto& mTailTile = params.schParams.mTailTile;
+    auto& nTailTile = params.schParams.nTailTile;
+    // both tail of current batch and rest batch are tail round
+    if (needUpdateTail_ ||
+        (isTailRound && ((bs.GetEndBlockIdx() + 1) + (restBatch * bs.GetTotalCnt())) * mTailTile * nTailTile <=
+                            AscendC::GetBlockNum())) {
+        needUpdateTail_ = true;
+        bs.UpdateTailTile(mTailTile, nTailTile);
+    }
     while (bs.GetTileIdx(blockIdx)) {
-        BlockShape singleShape = bs.GetBlockShape(blockIdx);
+        BlockShape singleShape = bs.template GetBlockShape<
+            QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE>(blockIdx);
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
         AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
-        blockOffset_ = coord.template GetQuantOffset<Cmct::Gemm::GroupedMatmul::QuantMode::MX_PERGROUP_MODE, true>(
+        blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, true>(
             Get<IDX_M_TILEIDX>(blockIdx), Get<IDX_N_TILEIDX>(blockIdx), Get<IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
 
@@ -265,10 +283,11 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
             Get<IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
         }
 
-        mmadOp_(aGlobal_[Get<IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<IDX_B_OFFSET>(blockOffset_)],
-                x1scaleGlobal_[Get<IDX_X1SCALE_OFFSET>(blockOffset_)],
-                x2scaleGlobal_[Get<IDX_X2SCALE_OFFSET>(blockOffset_)], biasGlobal_[Get<IDX_BIAS_OFFSET>(blockOffset_)],
-                cGlobal_[Get<IDX_C_OFFSET>(blockOffset_)], singleShape);
+        mmadOp_(
+            aGlobal_[Get<IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<IDX_B_OFFSET>(blockOffset_)],
+            x1scaleGlobal_[Get<IDX_X1SCALE_OFFSET>(blockOffset_)],
+            x2scaleGlobal_[Get<IDX_X2SCALE_OFFSET>(blockOffset_)], biasGlobal_[Get<IDX_BIAS_OFFSET>(blockOffset_)],
+            cGlobal_[Get<IDX_C_OFFSET>(blockOffset_)], singleShape);
 
         bs.IncrementRoundIdx();
     }

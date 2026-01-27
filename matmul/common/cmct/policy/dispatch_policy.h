@@ -41,12 +41,12 @@ enum class MatMulL0C2Out : std::uint8_t {
 };
 
 /**
- * @struct GMMPerTile
- * @brief Define a template struct GMMPerTile for configuring block matrix multiplication policies
+ * @struct MmadCAccOnUb
+ * @brief Matrix multiplication multi-block structure, performing accumulation operations on UB
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
-struct GMMPerTile {
+struct MmadCAccOnUb {
     using ScheduleType = KernelMmadPerBaseK;
     using SingleShape = SingleCoreShape;
     constexpr static bool ENABLE_INTRINSICS_CHECK = false;
