@@ -59,7 +59,6 @@ get_filename_component(OPS_NN_COMMON_INC_EXTERNAL "${OPS_NN_COMMON_INC}/external
 get_filename_component(OPS_NN_COMMON_INC_HEADERS  "${OPS_NN_COMMON_INC_EXTERNAL}/aclnn_kernels"       REALPATH)
 get_filename_component(OPS_KERNEL_BINARY_SCRIPT     "${OPS_NN_DIR}/scripts/kernel/binary_script"       REALPATH)
 get_filename_component(OPS_KERNEL_BINARY_CONFIG     "${OPS_NN_DIR}/scripts/kernel/binary_config"       REALPATH)
-get_filename_component(OPS_ADV_ACT                  "${OPS_NN_DIR}/common/act"                        REALPATH)
 get_filename_component(OPS_CMCT               "${OPS_NN_DIR}/matmul/common/cmct"           REALPATH)
 
 # python

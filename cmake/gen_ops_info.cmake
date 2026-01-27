@@ -519,8 +519,6 @@ function(gen_ops_info_and_python)
   endif()
 
   add_custom_target(common_copy
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
-    COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
@@ -529,10 +527,6 @@ function(gen_ops_info_and_python)
   )
 
   if(ENABLE_PACKAGE)
-    install(
-      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act/
-      DESTINATION ${IMPL_INSTALL_DIR}/common/act
-    )
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct/
       DESTINATION ${IMPL_INSTALL_DIR}/common/cmct

@@ -335,8 +335,6 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
     set(KERNEL_COMMON_COPY_TARGET "ascendc_kernel_ut_common_src_copy_${opName}")
     if(NOT TARGET ${KERNEL_COPY_TARGET})
         add_custom_target(${KERNEL_COMMON_COPY_TARGET}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
-            COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/act/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/act
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common

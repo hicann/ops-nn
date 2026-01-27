@@ -180,9 +180,6 @@ if(ENABLE_PACKAGE)
   endif()
 endif()
 
-install(DIRECTORY ${OPS_ADV_ACT}/
-        DESTINATION ${IMPL_INSTALL_DIR}/common/act
-)
 install(DIRECTORY ${OPS_CMCT}/
         DESTINATION ${IMPL_INSTALL_DIR}/common/cmct/
 )
