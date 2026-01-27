@@ -12,7 +12,7 @@
 #define private public
 #define protected public
 #endif
-#include "aicpu_test_utils.h"
+#include "utils/aicpu_test_utils.h"
 #include "cpu_kernel_utils.h"
 #include "node_def_builder.h"
 #undef private

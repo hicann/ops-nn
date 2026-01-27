@@ -179,6 +179,9 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
     file(GLOB OP_KERNEL_UT_COMMON_SRC
         ./stub/*.cpp
     )
+    file(GLOB OP_KERNEL_AICPU_UT_UTILS_SRC
+        utils/*.cpp
+    )
     target_sources(${AICPU_OP_KERNEL_MODULE_NAME}_common_obj PRIVATE ${OP_KERNEL_UT_COMMON_SRC})
     target_include_directories(${AICPU_OP_KERNEL_MODULE_NAME}_common_obj PRIVATE
         ${GTEST_INCLUDE}
@@ -196,6 +199,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
         add_library(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj OBJECT ${UT_PATH}/empty.cpp)
     endif()
     target_link_libraries(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj PRIVATE gcov -ldl)
+    target_sources(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj PRIVATE ${OP_KERNEL_AICPU_UT_UTILS_SRC})
 
     ## add opkernel ut cases shared lib: libnn_aicpu_op_kernel_ut_cases.so
     add_library(${AICPU_OP_KERNEL_MODULE_NAME}_cases SHARED
@@ -767,7 +771,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
     file(GLOB KernelFile "${PROJECT_SOURCE_DIR}/*/${opName}/op_kernel_aicpu/${opName}_aicpu.cpp")
 
     ## add object: ${opName}_cases_obj
-    file(GLOB OPKERNEL_CASES_SRC ${UT_DIR}/tests/ut/op_kernel_aicpu/test_${opName}*.cpp ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel_aicpu/utils/*.cpp)
+    file(GLOB OPKERNEL_CASES_SRC ${UT_DIR}/tests/ut/op_kernel_aicpu/test_${opName}*.cpp)
 
     message(STATUS "aicpu kernel info: ${opName}, ${KernelFile}, ${OPKERNEL_CASES_SRC}")
 
