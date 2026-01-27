@@ -23,6 +23,7 @@
 #include "opdev/platform.h"
 #include "op_api/op_api_def.h"
 #include "op_api/level2_base.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -146,8 +147,7 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
     auto gradInputCasted = l0op::Cast(gradInputContiguous, promoteType, uniqueExecutor.get());
     CHECK_RET(gradInputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95 &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
         auto selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
         CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);

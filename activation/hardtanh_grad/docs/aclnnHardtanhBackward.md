@@ -1,14 +1,17 @@
 # aclnnHardtanhBackward
 
-
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/hardtanh_grad)
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
+| 产品 | 是否支持 |
+| :---- | :----: |
 | <term>Ascend 950PR/Ascend 950DT</term> | √ |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
+| <term>Atlas 200I/500 A2 推理产品</term> | √ |
+| <term>Atlas 推理系列产品</term> | √ |
+| <term>Atlas 训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -54,14 +57,14 @@ aclnnStatus aclnnHardtanhBackward(
 
 - **参数说明：**
 
-<table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
-  <col style="width: 171px">
-  <col style="width: 115px">
-  <col style="width: 220px">
-  <col style="width: 280px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
+<table style="undefined;table-layout: fixed; width: 1312px"><colgroup>
+  <col style="width: 158px">
+  <col style="width: 120px">
+  <col style="width: 333px">
+  <col style="width: 137px">
+  <col style="width: 212px">
+  <col style="width: 100px">
+  <col style="width: 107px">
   <col style="width: 145px">
   </colgroup>
   <thead>
@@ -80,8 +83,12 @@ aclnnStatus aclnnHardtanhBackward(
     <tr>
       <td>gradOutput</td>
       <td>输入</td>
-      <td>反向传播过程中上一步输出的梯度，公式中的grad\_output。</td>
-      <td><ul><li>不支持空Tensor。</li><li>gradOutput、self和out的shape一致。</li><li>gradOutput、self和out的数据类型一致。</li></ul></td>
+      <td>反向传播过程中上一步输出的梯度，公式中的grad_output。</td>
+      <td><ul>
+        <li>不支持空Tensor。</li>
+        <li>gradOutput、self和out的shape一致。</li>
+        <li>gradOutput、self和out的数据类型一致。</li>
+      </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -91,7 +98,11 @@ aclnnStatus aclnnHardtanhBackward(
       <td>self</td>
       <td>输入</td>
       <td>正向的输入数据，公式中的self。</td>
-      <td><ul><li>不支持空Tensor。</li><li>gradOutput、self和out的shape一致。</li><li>gradOutput、self和out的数据类型一致。</li></ul></td>
+      <td><ul>
+        <li>不支持空Tensor。</li>
+        <li>gradOutput、self和out的shape一致。</li>
+        <li>gradOutput、self和out的数据类型一致。</li>
+      </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -120,8 +131,12 @@ aclnnStatus aclnnHardtanhBackward(
      <tr>
       <td>out</td>
       <td>输出</td>
-      <td>计算得到梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>gradOutput、self和out的shape一致。</li><li>gradOutput、self和out的数据类型一致。</li></ul></td>
+      <td>计算得到的梯度结果。</td>
+      <td><ul>
+        <li>不支持空Tensor。</li>
+        <li>gradOutput、self和out的shape一致。</li>
+        <li>gradOutput、self和out的数据类型一致。</li>
+      </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -156,14 +171,14 @@ aclnnStatus aclnnHardtanhBackward(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
-  <col style="width: 272px">
-  <col style="width: 103px">
-  <col style="width: 604px">
+  <table style="undefined;table-layout: fixed;width: 1150px"><colgroup>
+  <col style="width: 283px">
+  <col style="width: 118px">
+  <col style="width: 749px">
   </colgroup>
   <thead>
     <tr>
-      <th>返回码</th>
+      <th>返回值</th>
       <th>错误码</th>
       <th>描述</th>
     </tr>
@@ -172,7 +187,7 @@ aclnnStatus aclnnHardtanhBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的gradOutput、self、out、min、max是空指针时。</td>
+      <td>传入的gradOutput、self、out、min、max存在空指针。</td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
@@ -193,10 +208,10 @@ aclnnStatus aclnnHardtanhBackward(
 ## aclnnHardtanhBackward
 
 - **参数说明：**
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 167px">
+  <col style="width: 134px">
+  <col style="width: 849px">
   </colgroup>
   <thead>
     <tr>
@@ -303,7 +318,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API
+  // 1. （固定写法）device/stream初始化, 参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

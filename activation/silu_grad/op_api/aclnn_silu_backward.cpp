@@ -20,6 +20,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 
 #include "silu_grad.h"
@@ -37,16 +38,16 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static inline bool IsSupportBroadcast() {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    return Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static inline bool IsSupportMixPrecision() {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    return Ops::NN::AclnnUtil::IsRegbase();
 }
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-  return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-    GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
@@ -77,10 +78,10 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     }
 
     bool bf16flag = CheckSocVersionIsSupportBf16();
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || gradOutput->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self or gradOutput dtype %s is unsupported by the current SOC version [%s].",
-        op::ToString(self->GetDataType()).GetString(), op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self or gradOutput dtype %s is unsupported by the current npuArch [%u].",
+        op::ToString(self->GetDataType()).GetString(), static_cast<uint32_t>(curArch));
         return false;
     }
 

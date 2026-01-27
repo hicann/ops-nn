@@ -1,11 +1,17 @@
 # aclnnGeluBackwardV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/gelu_grad_v2)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -18,21 +24,21 @@
   $$
   Gelu(x)=x \cdot \Phi(x)=x/2 \cdot [1+erf(x/\sqrt{2})]
   $$
-
+  
   其中erf的计算公式为：
-
+  
   $$
   erf(x)=\frac{2}{\sqrt \pi}\sum^{\infty}_{n=0}{\frac{(-1)^n \cdot x^{2n+1}}{n! \cdot (2n+1)}}
   $$
-
+  
   gradInput和gradOutput的关系可以表示为：
-
+  
   $$
   gradInput = gradOutput \cdot (\frac{1}{2}+\frac{1}{2} \cdot erf(\frac{x}{\sqrt2})+\frac{x}{\sqrt{2\pi}} \cdot e^{-\frac{x^2}{2}})
   $$
-
+  
   Gelu近似计算公式为：
-
+  
   $$
   Gelu(x)=0.5x(1+tanh(\sqrt{2/\pi}(x+0.044715x^3)))
   $$
@@ -58,6 +64,7 @@ aclnnStatus aclnnGeluBackwardV2(
   aclOpExecutor*    executor,
   const aclrtStream stream)
 ```
+
 
 ## aclnnGeluBackwardV2GetWorkspaceSize
 
@@ -147,6 +154,9 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
+
 
 - **返回值：**
 
@@ -189,6 +199,7 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody></table>
 
+
 ## aclnnGeluBackwardV2
 
 - **参数说明：**
@@ -227,6 +238,7 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 

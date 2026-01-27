@@ -131,7 +131,7 @@ ge::graphStatus EluGradTiling::RunTiling()
                OP_LOGE(tilingContext, "ElewiseBaseTiling failed"), return ge::GRAPH_FAILED);
 
     const uint64_t tilingKey = GET_TPL_TILING_KEY(tiling->scheMode, dType);
-    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu.", tilingKey);
+    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%ld.", tilingKey);
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(tiling->blockNum);
     size_t usrWorkspaceSize = 0;

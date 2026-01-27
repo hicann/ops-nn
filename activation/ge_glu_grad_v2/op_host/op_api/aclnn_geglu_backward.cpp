@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+
 #include "aclnn_geglu_backward.h"
 #include "geglu_grad_v2.h"
 #include "aclnn_kernels/cast.h"
@@ -22,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -29,19 +31,19 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
 
-static const std::initializer_list<DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-        return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
+        return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
-        return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
+        return DTYPE_DTYPE_SUPPORT_LIST;
     }
 }
 

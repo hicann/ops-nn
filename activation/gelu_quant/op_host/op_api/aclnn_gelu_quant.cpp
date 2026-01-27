@@ -26,6 +26,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
@@ -108,10 +109,10 @@ static bool CheckRoundMode(const char* roundMode, int64_t dstType)
 
 static inline bool CheckPlatform()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_CHECK(
-        socVersion == SocVersion::ASCEND910_95,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %s is not implemented.", op::ToString(socVersion).GetString()),
+        Ops::NN::AclnnUtil::IsRegbase(npuArch),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %u is not implemented.", static_cast<uint32_t>(npuArch)),
         return false);
     return true;
 }
@@ -263,7 +264,7 @@ inline static aclnnStatus CheckParams(
     const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, const aclTensor* y,
     const aclTensor* outScaleOptional)
 {
-    // 当前仅支持910_95
+    // 当前仅支持arch3510
     CHECK_RET(CheckPlatform(), ACLNN_ERR_RUNTIME_ERROR);
 
     // 1. 检查参数 quantMode 是否合法

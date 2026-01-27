@@ -18,8 +18,11 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "ge_glu_grad_v2_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr char NODE_NAME[] = "GeGluGradV2";
 
 constexpr uint32_t DY_INDEX = 0;
@@ -38,18 +41,18 @@ constexpr int32_t TANH_BUF_CNT_FP16 = 5 * 2 + 6;
 constexpr int32_t TANH_BUF_CNT_BFP16 = 7 * 2 + 4;
 constexpr int32_t TANH_BUF_CNT_FP32 = 11;
 
-constexpr int32_t TANH_BUF_CNT_FP16_910_95 = 5 * 2 + 6 * 2;
-constexpr int32_t TANH_BUF_CNT_BFP16_910_95 = 5 * 2 + 2 * 2 * 2 + 4 * 2;
-constexpr int32_t TANH_BUF_CNT_FP32_910_95 = 5 + 6 * 2;
+constexpr int32_t TANH_BUF_CNT_FP16_950 = 5 * 2 + 6 * 2;
+constexpr int32_t TANH_BUF_CNT_BFP16_950 = 5 * 2 + 2 * 2 * 2 + 4 * 2;
+constexpr int32_t TANH_BUF_CNT_FP32_950 = 5 + 6 * 2;
 
 /* Erf */
 constexpr int32_t ERF_BUF_CNT_FP16 = 5 * 2 + 6;
 constexpr int32_t ERF_BUF_CNT_BFP16 = 7 * 2 + 4;
 constexpr int32_t ERF_BUF_CNT_FP32 = 11;
 
-constexpr int32_t ERF_BUF_CNT_FP16_910_95 = 3 * 2 + 20;  // 转fp32，调用Ascendc erf接口，3*fp32的buf保留
-constexpr int32_t ERF_BUF_CNT_BFP16_910_95 = 3 * 2 + 20; // 转fp32，调用Ascendc erf接口，3*fp32的buf保留
-constexpr int32_t ERF_BUF_CNT_FP32_910_95 = 3 + 16;      // 调用Ascendc erf接口，3*fp32的buf保留
+constexpr int32_t ERF_BUF_CNT_FP16_950 = 3 * 2 + 20;  // 转fp32，调用Ascendc erf接口，3*fp32的buf保留
+constexpr int32_t ERF_BUF_CNT_BFP16_950 = 3 * 2 + 20; // 转fp32，调用Ascendc erf接口，3*fp32的buf保留
+constexpr int32_t ERF_BUF_CNT_FP32_950 = 3 + 16;      // 调用Ascendc erf接口，3*fp32的buf保留
 
 constexpr int32_t BLOCK_SIZE = 32;
 constexpr int32_t TRANSPOSE_REPEAT_SIZE = 512;
@@ -62,17 +65,17 @@ constexpr int32_t NUM_HUNDRED = 100;
 
 static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH = {
     {ge::DT_BF16, TANH_BUF_CNT_BFP16}, {ge::DT_FLOAT16, TANH_BUF_CNT_FP16}, {ge::DT_FLOAT, TANH_BUF_CNT_FP32}};
-static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH_910_95 = {
-    {ge::DT_BF16, TANH_BUF_CNT_BFP16_910_95},
-    {ge::DT_FLOAT16, TANH_BUF_CNT_FP16_910_95},
-    {ge::DT_FLOAT, TANH_BUF_CNT_FP32_910_95}};
+static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH_950 = {
+    {ge::DT_BF16, TANH_BUF_CNT_BFP16_950},
+    {ge::DT_FLOAT16, TANH_BUF_CNT_FP16_950},
+    {ge::DT_FLOAT, TANH_BUF_CNT_FP32_950}};
 
 static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF = {
     {ge::DT_BF16, ERF_BUF_CNT_BFP16}, {ge::DT_FLOAT16, ERF_BUF_CNT_FP16}, {ge::DT_FLOAT, ERF_BUF_CNT_FP32}};
-static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF_910_95 = {
-    {ge::DT_BF16, ERF_BUF_CNT_BFP16_910_95},
-    {ge::DT_FLOAT16, ERF_BUF_CNT_FP16_910_95},
-    {ge::DT_FLOAT, ERF_BUF_CNT_FP32_910_95}};
+static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF_950 = {
+    {ge::DT_BF16, ERF_BUF_CNT_BFP16_950},
+    {ge::DT_FLOAT16, ERF_BUF_CNT_FP16_950},
+    {ge::DT_FLOAT, ERF_BUF_CNT_FP32_950}};
 
 class GeGluGradV2Tiling {
 public:
@@ -142,7 +145,7 @@ ge::graphStatus GeGluGradV2Tiling::RunTiling4GeGluGradV2()
     OP_CHECK_IF(CheckParams() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "CheckParams failed."), return ge::GRAPH_FAILED);
     CalcValueNM();
     OP_LOGD(
-        NODE_NAME, "Platform info, ubSizePlatForm:%lu, totalCoreNum:%d, curSocVersion:%d.", ubSizePlatForm_,
+        NODE_NAME, "Platform info, ubSizePlatForm:%lu, totalCoreNum:%d, curSocVersion:%u.", ubSizePlatForm_,
         ptrCompileInfo->totalCoreNum, static_cast<int32_t>(ptrCompileInfo->curSocVersion));
     OP_CHECK_IF(
         CaclMaxProcessCount() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "CaclMaxProcessCount failed."),
@@ -184,7 +187,7 @@ ge::graphStatus GeGluGradV2Tiling::Init()
     dimAttr = *ptrDim;
     const int64_t* ptrApproximate = attrs->GetAttrPointer<int64_t>(APPROXIMATE_ATTR_INDEX);
     // 310P donot support bfloat16 and erf mode
-    const bool is310p = ptrCompileInfo->curSocVersion == platform_ascendc::SocVersion::ASCEND310P;
+    const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, ptrApproximate);
     approximateAttr = *ptrApproximate;
     OP_CHECK_IF(
@@ -208,7 +211,7 @@ ge::graphStatus GeGluGradV2Tiling::CheckParams()
         OP_LOGE(NODE_NAME, "Data type support only float16, bfloat16, float32."), return ge::GRAPH_FAILED);
 
     // 310P donot support bfloat16 and erf mode
-    const bool is310p = ptrCompileInfo->curSocVersion == platform_ascendc::SocVersion::ASCEND310P;
+    const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
     OP_CHECK_IF(
         dyDtype == ge::DT_BF16 && is310p, OP_LOGE(NODE_NAME, "Data type donot support only bfloat16 in 310P."),
         return ge::GRAPH_FAILED);
@@ -287,12 +290,12 @@ void GeGluGradV2Tiling::CalcValueNM()
 ge::graphStatus GeGluGradV2Tiling::CaclMaxProcessCount()
 {
     if (approximateAttr == NUM_ONE) {
-        const auto iter = ptrCompileInfo->isAscend910_95 ? DTYPE_BUF_CNT_MAP_TANH_910_95.find(dyDtype) :
+        const auto iter = ptrCompileInfo->isRegbase ? DTYPE_BUF_CNT_MAP_TANH_950.find(dyDtype) :
                                                            DTYPE_BUF_CNT_MAP_TANH.find(dyDtype);
         maxProcCount = AlignA2B(ubSizePlatForm_ / iter->second, BLOCK_SIZE) / dtypeSize;
         tilingKey = GeGluGradV2TilingKey::TILING_KEY_TANH_101;
     } else {
-        const auto iter = ptrCompileInfo->isAscend910_95 ? DTYPE_BUF_CNT_MAP_ERF_910_95.find(dyDtype) :
+        const auto iter = ptrCompileInfo->isRegbase ? DTYPE_BUF_CNT_MAP_ERF_950.find(dyDtype) :
                                                            DTYPE_BUF_CNT_MAP_ERF.find(dyDtype);
         maxProcCount = AlignA2B(ubSizePlatForm_ / iter->second, BLOCK_SIZE) / dtypeSize;
         tilingKey = GeGluGradV2TilingKey::TILING_KEY_ERF_701;
@@ -312,7 +315,7 @@ void GeGluGradV2Tiling::ProcessTilingCore()
     int64_t ubLoopNum = 0;
     int64_t repeatDataCount = static_cast<int64_t>(TRANSPOSE_REPEAT_SIZE / dtypeSize);
     int64_t maxPerfCount = maxProcCount / repeatDataCount;
-    if ((ptrCompileInfo->curSocVersion == platform_ascendc::SocVersion::ASCEND910B || ptrCompileInfo->isAscend910_95) &&
+    if ((ptrCompileInfo->curSocVersion == NpuArch::DAV_2201 || ptrCompileInfo->isRegbase) &&
         valueM <= maxPerfCount) {
         tilingKey = static_cast<GeGluGradV2TilingKey>(static_cast<int32_t>(tilingKey) + NUM_TWO);
         groupNum = AlignA2B(maxProcCount / valueM, repeatDataCount);
@@ -377,9 +380,8 @@ ge::graphStatus TilingPrepare4GeGluGradV2(gert::TilingParseContext* context)
         (compileInfo->ubSizePlatForm <= 0), OP_LOGE(NODE_NAME, "TilingPrepare4GeGluGradV2 get ub size failed."),
         return ge::GRAPH_FAILED);
 
-    compileInfo->curSocVersion = ascendcPlatform.GetSocVersion();
-    compileInfo->isAscend910_95 =
-        compileInfo->curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
+    compileInfo->curSocVersion = ascendcPlatform.GetCurNpuArch();
+    compileInfo->isRegbase = IsRegbaseSocVersion(context);
 
     return ge::GRAPH_SUCCESS;
 }

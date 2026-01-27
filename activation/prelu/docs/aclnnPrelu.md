@@ -1,11 +1,17 @@
 # aclnnPrelu
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/prelu)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -76,7 +82,7 @@ aclnnStatus aclnnPrelu(
       <td>weight</td>
       <td>输入</td>
       <td>待进行计算的入参。</td>
-      <td><ul><li>支持空Tensor。</li><li>元素个数为1或者元素个数与self输入的channels一致（self.shape为1维以下，channels = 1；self.shape大于1维，channels = self.shape[1]）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>元素个数为1或者元素个数与self输入的channels一致（self.shape为1维及以下，channels = 1；self.shape大于1维，channels = self.shape[1]）。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -114,6 +120,9 @@ aclnnStatus aclnnPrelu(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。
+
 
 - **返回值：**
 
@@ -185,6 +194,7 @@ aclnnStatus aclnnPrelu(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 

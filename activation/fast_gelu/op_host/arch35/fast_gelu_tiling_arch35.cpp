@@ -10,18 +10,17 @@
 
 #include <iostream>
 #include <graph/utils/type_utils.h>
-#include "fast_gelu_tiling_arch35.h"
 #include "log/log.h"
 #include "platform/platform_ascendc.h"
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
 #include "activation/fast_gelu/op_kernel/arch35/fast_gelu_dag.h"
 #include "activation/fast_gelu/op_kernel/arch35/fast_gelu_struct.h"
-#include "atvoss/broadcast/broadcast_tiling.h"
 #include "atvoss/elewise/elewise_tiling.h"
+#include "atvoss/broadcast/broadcast_tiling.h"
+#include "fast_gelu_tiling_arch35.h"
 
 using namespace FastGeluOp;
-using namespace Ops::Base;
 
 namespace optiling {
 const int64_t SYSWORKSPACE = 16777216; // 16 * 1024 * 1024
@@ -122,6 +121,9 @@ ge::graphStatus FastGeluTiling::RunTiling()
 
 static ge::graphStatus TilingFuncFastGelu(gert::TilingContext* tilingContext)
 {
+    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(tilingContext->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
+
     OP_LOGD(tilingContext->GetNodeName(), "START FastGelu AscendC Tiling \n");
     FastGeluTiling FastGeluTiling(tilingContext);
     return FastGeluTiling.RunTiling();
@@ -132,5 +134,5 @@ ge::graphStatus TilingPrepareForFastGelu([[maybe_unused]] gert::TilingParseConte
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(FastGelu).Tiling(TilingFuncFastGelu).TilingParse<FastGeluCompileInfo>(TilingPrepareForFastGelu);
+IMPL_OP_OPTILING(FastGelu).Tiling(TilingFuncFastGelu).TilingParse<ElewiseCompileInfo>(TilingPrepareForFastGelu);
 } // namespace optiling

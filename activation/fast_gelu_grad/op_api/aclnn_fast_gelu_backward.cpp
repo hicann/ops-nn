@@ -18,23 +18,22 @@
 #include "opdev/data_type_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> ASCEND910D_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) {
-        return ASCEND910D_DTYPE_SUPPORT_LIST;
+    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        return DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return NULL_SUPPORT_LIST;
     }

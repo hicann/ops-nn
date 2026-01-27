@@ -44,7 +44,6 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test)
     auto input_tensor =
         create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
     op.UpdateInputDesc("x", input_tensor);
-
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
     auto output_desc = op.GetOutputDesc("y");

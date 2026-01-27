@@ -72,10 +72,10 @@ uint64_t SigmoidGradTiling::GenerateTilingKey(uint64_t innerKey)
     return opKey * Ops::Base::OP_KEY_OFFSET + innerKey;
 }
 
-std::map<uint64_t, Ops::Base::ComputeParams> SigmoidGradTiling::GetComputeMap(uint64_t opKey)
+std::map<uint64_t, Ops::Base::ComputeParams> SigmoidGradTiling::GetComputeMap(uint64_t opKeyParam)
 {
     Ops::Base::ComputeParams computeParams0;
-        switch (opKey) {
+        switch (opKeyParam) {
         case OP_KEY_1:
             computeParams0.maxDtypeBits = static_cast<int64_t>(Ops::Base::BITS_SIZE::BITS32_SIZE);
             computeParams0.minDtypeBits = static_cast<int64_t>(Ops::Base::BITS_SIZE::BITS16_SIZE);
@@ -117,7 +117,7 @@ ge::graphStatus SigmoidGradTiling::GetShapeAttrsInfo()
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-// Always capable for current architecture
+
 bool SigmoidGradTiling::IsCapable()
 {
     return true;
@@ -159,16 +159,16 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingData) {
+std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingDataParam) {
     std::string str;
-    str += " dim0:" + std::to_string(tilingData.get_dim0());
-    str += " blockFormer:" + std::to_string(tilingData.get_blockFormer());
-    str += " ubFormer:" + std::to_string(tilingData.get_ubFormer());
-    str += " ubLoopOfFormerBlock:" + std::to_string(tilingData.get_ubLoopOfFormerBlock());
-    str += " ubLoopOfTailBlock:" + std::to_string(tilingData.get_ubLoopOfTailBlock());
-    str += " ubTailOfFormerBlock:" + std::to_string(tilingData.get_ubTailOfFormerBlock());
-    str += " ubTailOfTailBlock:" + std::to_string(tilingData.get_ubTailOfTailBlock());
-    str += " elemNum:" + std::to_string(tilingData.get_elemNum());
+    str += " dim0:" + std::to_string(tilingDataParam.get_dim0());
+    str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());
+    str += " ubFormer:" + std::to_string(tilingDataParam.get_ubFormer());
+    str += " ubLoopOfFormerBlock:" + std::to_string(tilingDataParam.get_ubLoopOfFormerBlock());
+    str += " ubLoopOfTailBlock:" + std::to_string(tilingDataParam.get_ubLoopOfTailBlock());
+    str += " ubTailOfFormerBlock:" + std::to_string(tilingDataParam.get_ubTailOfFormerBlock());
+    str += " ubTailOfTailBlock:" + std::to_string(tilingDataParam.get_ubTailOfTailBlock());
+    str += " elemNum:" + std::to_string(tilingDataParam.get_elemNum());
     return str;
 }
 

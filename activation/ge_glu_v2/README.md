@@ -4,13 +4,16 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
-- 算子功能：高斯误差线性单元激活门函数，针对aclnnGeGlu，扩充了设置激活函数操作数据块方向的功能。
+- 接口功能：高斯误差线性单元激活门函数，针对aclnnGeGlu，扩充了设置激活函数操作数据块方向的功能。
 - 计算公式：
   若activateLeft为true，表示对$self$的左半部分做activate
 
@@ -89,6 +92,8 @@
   </tbody></table>
 
 - GeGlu不包含activateLeft参数。
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：self、out和outGelu的数据类型支持FLOAT、FLOAT16。
+
 ## 约束说明
 
 无

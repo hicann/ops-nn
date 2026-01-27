@@ -17,9 +17,10 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
-
+using namespace Ops::NN::OpTiling;
 static const uint32_t INPUT_IDX = 0;
 static const uint32_t DIM_0 = 0;
 static const uint32_t DIM_1 = 1;
@@ -46,8 +47,8 @@ static const int64_t COMMON_B2_USE_UB_BYTE_COFF = 36;
 static const int64_t COMMON_B4_USE_UB_BYTE_COFF = 40;
 static const int64_t NY1_B4_USE_UB_BYTE_COFF = 48;
 
-static const int64_t COMMON_BUFFER_SIZE_LIMIT_95 = 4880;
-static const int64_t FP32_BUFFER_SIZE_VREDUCE_ERF_95 = 4224;
+static const int64_t COMMON_BUFFER_SIZE_LIMIT_REGBASE = 4880;
+static const int64_t FP32_BUFFER_SIZE_VREDUCE_ERF_REGBASE = 4224;
 static const int64_t COMMON_BUFFER_SIZE_LIMIT = 6144;
 static const int64_t FP32_BUFFER_SIZE_VREDUCE_ERF = 4912;
 
@@ -123,7 +124,7 @@ static void GetTilingDataBig(GeGluV2TilingData& tilingData, TilingParam& tilingP
 
 static void GetFp16TilingData(GeGluV2TilingData& tilingData, TilingParam& tilingParam)
 {
-    int64_t bufSizeLimit = tilingParam.isAscend910_95 ? COMMON_BUFFER_SIZE_LIMIT_95 : COMMON_BUFFER_SIZE_LIMIT;
+    int64_t bufSizeLimit = tilingParam.isRegbase ? COMMON_BUFFER_SIZE_LIMIT_REGBASE : COMMON_BUFFER_SIZE_LIMIT;
     tilingParam.blockSize = FP16_BLOCK_SIZE;
 
     if (tilingParam.ny == 1) {
@@ -154,7 +155,7 @@ static void GetFp16TilingData(GeGluV2TilingData& tilingData, TilingParam& tiling
 
 static void GetBf16TilingData(GeGluV2TilingData& tilingData, TilingParam& tilingParam)
 {
-    int64_t bufSizeLimit = tilingParam.isAscend910_95 ? COMMON_BUFFER_SIZE_LIMIT_95 : COMMON_BUFFER_SIZE_LIMIT;
+    int64_t bufSizeLimit = tilingParam.isRegbase ? COMMON_BUFFER_SIZE_LIMIT_REGBASE : COMMON_BUFFER_SIZE_LIMIT;
     tilingParam.blockSize = BFP16_BLOCK_SIZE;
 
     if (tilingParam.ny == 1) {
@@ -185,9 +186,9 @@ static void GetBf16TilingData(GeGluV2TilingData& tilingData, TilingParam& tiling
 
 static void GetFp32TilingData(GeGluV2TilingData& tilingData, TilingParam& tilingParam)
 {
-    int64_t commBufSizeLimit = tilingParam.isAscend910_95 ? COMMON_BUFFER_SIZE_LIMIT_95 : COMMON_BUFFER_SIZE_LIMIT;
+    int64_t commBufSizeLimit = tilingParam.isRegbase ? COMMON_BUFFER_SIZE_LIMIT_REGBASE : COMMON_BUFFER_SIZE_LIMIT;
     int64_t vReduceErfBufSizeLimit =
-        tilingParam.isAscend910_95 ? FP32_BUFFER_SIZE_VREDUCE_ERF_95 : FP32_BUFFER_SIZE_VREDUCE_ERF;
+        tilingParam.isRegbase ? FP32_BUFFER_SIZE_VREDUCE_ERF_REGBASE : FP32_BUFFER_SIZE_VREDUCE_ERF;
 
     tilingParam.blockSize = FP32_BLOCK_SIZE;
 
@@ -289,7 +290,7 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P) {
+    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002) {
         compileInfo->totalCoreNum = compileInfo->totalCoreNum + ascendcPlatform.GetCoreNumVector();
     }
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
@@ -305,8 +306,8 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
         (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get ub size."),
         return ge::GRAPH_FAILED);
 
-    compileInfo->isAscend310P = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P;
-    compileInfo->isAscend910_95 = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95;
+    compileInfo->isAscend310P = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002;
+    compileInfo->isRegbase = IsRegbaseSocVersion(context);
     OP_LOGD(
         context, "TilingPrepare4GeGluV2 exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
         compileInfo->ubSizePlatForm);
@@ -395,7 +396,7 @@ static ge::graphStatus GetTillingParam(const gert::TilingContext* context, Tilin
     tilingParam.coreNum = compileInfo->totalCoreNum;
     tilingParam.ubSize = compileInfo->ubSizePlatForm;
     tilingParam.isAscend310P = compileInfo->isAscend310P;
-    tilingParam.isAscend910_95 = compileInfo->isAscend910_95;
+    tilingParam.isRegbase = compileInfo->isRegbase;
 
     OP_CHECK_IF(
         GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
@@ -404,9 +405,9 @@ static ge::graphStatus GetTillingParam(const gert::TilingContext* context, Tilin
     OP_LOGI(
         context,
         "tilingParm is x:%ld, coreNum: %ld, ubSize: %lu splitDim: %zu, activate_left: %ld, approximate: %ld, \
-           isAscend310P: %d isAscend910_95: %d.",
+           isAscend310P: %d isRegbase: %d.",
         tilingParam.x, tilingParam.coreNum, tilingParam.ubSize, splitDim, tilingParam.activateLeft,
-        tilingParam.approximate, tilingParam.isAscend310P, tilingParam.isAscend910_95);
+        tilingParam.approximate, tilingParam.isAscend310P, tilingParam.isRegbase);
 
     return ge::GRAPH_SUCCESS;
 }

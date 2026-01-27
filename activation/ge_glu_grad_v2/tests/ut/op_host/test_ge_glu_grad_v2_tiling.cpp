@@ -61,6 +61,7 @@ protected:
     static map<string, string> aicoreSpec;
     static map<string, string> intrinsics;
     static string compileInfoStr;
+
     // platform info
     static fe::PlatFormInfos platformInfo;
     // compile info
@@ -106,7 +107,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_001)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -151,7 +152,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_002)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -196,7 +197,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_003)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -240,7 +241,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_004)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 0;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -284,7 +285,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_001)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -328,7 +329,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_002)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -372,7 +373,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_003)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -416,7 +417,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_004)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 0;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -460,7 +461,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_001)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -504,7 +505,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_002)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -548,7 +549,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_003)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -592,7 +593,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_004)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 0;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND910B, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2201, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -636,7 +637,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_005)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 0;
     bool activateLeftAttr = false;
-    compileInfo = {64, 262144, platform_ascendc::SocVersion::ASCEND910_95, true};
+    compileInfo = {64, 262144, NpuArch::DAV_3510, true};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -680,7 +681,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_310p_erf)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 0;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND310P, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2002, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -723,7 +724,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_310p)
     int64_t dimAttr = -1;
     int64_t approximateAttr = 1;
     bool activateLeftAttr = false;
-    compileInfo = {48, 196608, platform_ascendc::SocVersion::ASCEND310P, false};
+    compileInfo = {48, 196608, NpuArch::DAV_2002, false};
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);

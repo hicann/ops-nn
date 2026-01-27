@@ -22,6 +22,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -31,9 +32,9 @@ extern "C" {
 static constexpr size_t MAX_DIM_LEN = 8;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_910 = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_SUPPORT_BF16 = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 static inline bool CheckNotNull(
@@ -57,13 +58,11 @@ static inline bool CheckDtypeValid(
     // 检查gradOutput和selfOrResult数据类型是否一致
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, selfOrResult, return false);
 
-    // 获取芯片类型,判断是1971还是1980
+    // 获取芯片类型
     bool isSupportBf16 =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_CURRENT =
-        isSupportBf16 ? DTYPE_SUPPORT_LIST_SUPPORT_BF16 : DTYPE_SUPPORT_LIST_910;
+        isSupportBf16 ? DTYPE_SUPPORT_LIST_WITH_BF16 : DTYPE_SUPPORT_LIST;
 
     // 检查gradOutput数据类型是否在EluGradV2算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, DTYPE_SUPPORT_LIST_CURRENT, return false);

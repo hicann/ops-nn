@@ -13,6 +13,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "op_api/op_api_def.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
@@ -28,20 +29,19 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> Ascend910_dtype_support_list = {
+static const std::initializer_list<DataType> dtype_support_list = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<DataType> Ascend910B_dtype_support_list = {
+static const std::initializer_list<DataType> dtype_support_list_with_bf16 = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        return Ascend910B_dtype_support_list;
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
+        return dtype_support_list_with_bf16;
     }
-    return Ascend910_dtype_support_list;
+    return dtype_support_list;
 }
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* out, const aclTensor* outGelu)

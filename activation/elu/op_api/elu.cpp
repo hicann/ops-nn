@@ -18,6 +18,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -26,16 +27,14 @@ OP_TYPE_REGISTER(Elu);
 
 static const std::initializer_list<DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> AICORE_910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
 static inline bool IsAiCoreSupport(const aclTensor* self)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        return CheckType(self->GetDataType(), AICORE_910B_DTYPE_SUPPORT_LIST);
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_WITH_BF16);
     }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }

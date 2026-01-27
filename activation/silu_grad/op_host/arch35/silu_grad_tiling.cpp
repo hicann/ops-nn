@@ -104,10 +104,10 @@ uint64_t SiluGradTiling::GenerateTilingKey(uint64_t innerKey)
     return opKey * Ops::Base::BROADCAST_OP_KEY_OFFSET + innerKey;
 }
 
-std::map<uint64_t, Ops::Base::BroadcastComputeParams> SiluGradTiling::GetComputeMap(uint64_t opKey)
+std::map<uint64_t, Ops::Base::BroadcastComputeParams> SiluGradTiling::GetComputeMap(uint64_t opKeyParam)
 {
     Ops::Base::BroadcastComputeParams computeParams0;
-        switch (opKey) {
+        switch (opKeyParam) {
         case OP_KEY_1:
         case OP_KEY_2:
             computeParams0.maxDtypeBits = static_cast<int64_t>(Ops::Base::BROADCAST_BITS_SIZE::BITS32_SIZE);
@@ -214,17 +214,17 @@ ge::graphStatus SiluGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SiluGradTiling::ToString(SiluGradTilingData &tilingData) {
+std::string SiluGradTiling::ToString(SiluGradTilingData &tilingDataParam) {
     std::string str;
-    str += " blockFormer:" + std::to_string(tilingData.get_blockFormer());
-    str += " ubFormer:" + std::to_string(tilingData.get_ubFormer());
-    str += " ubOuter:" + std::to_string(tilingData.get_ubOuter());
-    str += " ubTail:" + std::to_string(tilingData.get_ubTail());
-    str += " blockTail:" + std::to_string(tilingData.get_blockTail());
-    str += " shapeLen:" + std::to_string(tilingData.get_shapeLen());
-    str += " ubSplitAxis:" + std::to_string(tilingData.get_ubSplitAxis());
-    str += " dimProductBeforeUbInner:" + std::to_string(tilingData.get_dimProductBeforeUbInner());
-    str += " elemNum:" + std::to_string(tilingData.get_elemNum());
+    str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());
+    str += " ubFormer:" + std::to_string(tilingDataParam.get_ubFormer());
+    str += " ubOuter:" + std::to_string(tilingDataParam.get_ubOuter());
+    str += " ubTail:" + std::to_string(tilingDataParam.get_ubTail());
+    str += " blockTail:" + std::to_string(tilingDataParam.get_blockTail());
+    str += " shapeLen:" + std::to_string(tilingDataParam.get_shapeLen());
+    str += " ubSplitAxis:" + std::to_string(tilingDataParam.get_ubSplitAxis());
+    str += " dimProductBeforeUbInner:" + std::to_string(tilingDataParam.get_dimProductBeforeUbInner());
+    str += " elemNum:" + std::to_string(tilingDataParam.get_elemNum());
     return str;
 }
 

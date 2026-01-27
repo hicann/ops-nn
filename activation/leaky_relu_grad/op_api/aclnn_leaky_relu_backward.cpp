@@ -19,6 +19,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_leaky_relu_backward.h"
 
 using namespace op;
@@ -53,9 +54,8 @@ static inline bool CheckNotNull(
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -64,9 +64,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetScalarSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_SCALAR_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_SCALAR_DTYPE_SUPPORT_LIST;

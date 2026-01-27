@@ -4,9 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √   |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -61,7 +64,7 @@
     <tr>
       <td>approximate</td>
       <td>属性</td>
-      <td>取值范围是0('none')、1('tanh')。</td>
+      <td><ul><li>取值范围是0('none')、1('tanh')。</li><li>Atlas 推理系列产品只支持1('tanh')。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -82,6 +85,8 @@
   </tbody></table>
 
 - aclnnGeGluBackward接口不包含activateLeft参数。
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：gradOutput、self、gelu和gradInput的数据类型支持FLOAT32、FLOAT16。
+
 ## 约束说明
 
 无

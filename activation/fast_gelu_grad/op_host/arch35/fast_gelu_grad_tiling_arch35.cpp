@@ -146,6 +146,9 @@ ge::graphStatus FastGeluGradTiling::RunTiling()
 
 static ge::graphStatus TilingFuncFastGeluGrad(gert::TilingContext* tilingContext)
 {
+    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(tilingContext->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
+
     OP_LOGD(tilingContext->GetNodeName(), "START FastGeluGrad AscendC Tiling \n");
     FastGeluGradTiling FastGeluGradTiling(tilingContext);
     return FastGeluGradTiling.RunTiling();
@@ -158,5 +161,5 @@ ge::graphStatus TilingPrepareForFastGeluGrad([[maybe_unused]] gert::TilingParseC
 
 IMPL_OP_OPTILING(FastGeluGrad)
     .Tiling(TilingFuncFastGeluGrad)
-    .TilingParse<FastGeluGradCompileInfo>(TilingPrepareForFastGeluGrad);
+    .TilingParse<ElewiseCompileInfo>(TilingPrepareForFastGeluGrad);
 } // namespace optiling

@@ -71,9 +71,5 @@ const std::map<ge::DataType, std::string> DATATYPE_TO_STRING_MAP = {
     {ge::DT_UINT2, "DT_UINT2"}                    // dt_variant type
 };
 
-struct FastGeluGradCompileInfo {
-    uint64_t coreNum = 0;
-    uint64_t ubSize = 0;
-};
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_FAST_GELU_GRAD_TILING_H

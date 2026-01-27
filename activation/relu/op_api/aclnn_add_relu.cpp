@@ -68,6 +68,10 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
 
+static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT32, op::DataType::DT_INT64};
+
 static const std::initializer_list<op::DataType> FP_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
 
@@ -85,6 +89,9 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
     case SocVersion::ASCEND910B:
     case SocVersion::ASCEND910_93: {
       return ASCEND910B_DTYPE_SUPPORT_LIST;
+    }
+    case SocVersion::ASCEND910_95: {
+      return ASCEND910_95_DTYPE_SUPPORT_LIST;
     }
     case SocVersion::ASCEND910: {
       return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -162,7 +169,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* other, co
   return ACLNN_SUCCESS;
 }
 
-static bool IsSupportAxpy(const DataType promoteType) {
+static bool IsSupportAxpy(const DataType promoteType, const aclScalar* alpha) {
   return CheckType(promoteType, AXPY_DTYPE_SUPPORT_LIST);
 }
 
@@ -227,7 +234,7 @@ aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor*
     // 进行非混合输入类型的Add计算分支判断
     if (!(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
       addOpOut = l0op::Add(selfCasted, otherCasted, uniqueExecutor.get());
-    } else if (IsSupportAxpy(promoteType)) {
+    } else if (IsSupportAxpy(promoteType, alpha)) {
       addOpOut = l0op::Axpy(selfCasted, otherCasted, alpha->ToFloat(), uniqueExecutor.get());
     } else {
       const auto alphaTensor = uniqueExecutor.get()->ConvertToTensor(alpha, promoteType);

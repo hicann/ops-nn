@@ -37,8 +37,8 @@ REGISTER_TILING_DATA_CLASS(GeGluGradV2, GeGluGradV2TilingData)
 struct GeGluGradV2CompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
-    platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
-    bool isAscend910_95{false};
+    NpuArch curSocVersion = NpuArch::DAV_2201;
+    bool isRegbase{false};
 };
 
 enum class GeGluGradV2TilingKey : uint64_t

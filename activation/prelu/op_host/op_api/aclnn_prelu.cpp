@@ -24,6 +24,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_errno.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -38,8 +39,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
       return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
       return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -53,8 +54,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
                                                                                          DataType::DT_BF16};
 
 static bool IsAiCoreSupport(const aclTensor *self) {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
   }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);

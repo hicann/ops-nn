@@ -20,12 +20,13 @@
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "tiling_base/tiling_base.h"
+#include "tiling_base/tiling_util.h"
 #include "tiling_base/tiling_templates_registry.h"
 #include "gelu_quant_tiling.h"
 
-const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {platform_ascendc::SocVersion::ASCEND910_95};
-
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 ge::graphStatus GeluQuantTiling::GetPlatformInfo()
 {
     OP_LOGD(nodeName_, "[GeluQuant] GetPlatformInfo start running.");
@@ -572,9 +573,7 @@ static ge::graphStatus TilingForGeluQuant(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE("GeluQuant", "context should not be nullptr."), return ge::GRAPH_FAILED);
 
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    if (regbaseSocVersions.find(socVersion) != regbaseSocVersions.end()) {
+    if (IsRegbaseSocVersion(context)) {
         geluquantregbase::GeluQuantRegbaseTiling tiling(context);
         ge::graphStatus status = tiling.RunGeluQuantRegbaseTiling();
         return status;

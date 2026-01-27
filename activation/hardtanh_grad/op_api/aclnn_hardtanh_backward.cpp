@@ -12,6 +12,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_hardtanh_backward.h"
 
@@ -24,17 +25,16 @@ extern "C" {
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FP = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
+  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    return DTYPE_SUPPORT_LIST_WITH_BF16;
   } else {
-    return ASCEND910_DTYPE_SUPPORT_LIST;
+    return DTYPE_SUPPORT_LIST_FP;
   }
 }
 

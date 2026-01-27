@@ -104,6 +104,7 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
                           "CORE_NUM": 64}
                           })";
     map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -135,6 +136,7 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -174,6 +176,7 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     // check tiling result
     ge::graphStatus actual_staus = tiling_func(tiling_context);

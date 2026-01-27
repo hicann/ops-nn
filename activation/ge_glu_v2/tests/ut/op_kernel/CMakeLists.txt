@@ -8,5 +8,5 @@
 #/
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(ge_glu_v2 "ascend910B1" "" )
+    AddOpTestCase(ge_glu_v2 "ascend910_9599" "" )
 endif()

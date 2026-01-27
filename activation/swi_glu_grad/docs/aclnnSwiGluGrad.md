@@ -14,7 +14,6 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
-
 - 接口功能：完成[aclnnSwiGlu](../../swi_glu/docs/aclnnSwiGlu.md)的反向计算，完成x的SwiGlu反向梯度计算。
 
 - 计算公式： 
@@ -27,7 +26,6 @@
   其中，A表示输入x根据指定dim维度一分为二后的前部分张量，B表示x均分后的后半部分张量。out<sub>A</sub>和out<sub>B</sub>合并为out。
 
 ## 函数原型
-
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwiGluGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwiGluGrad”接口执行计算。
 
 ```Cpp
@@ -47,6 +45,7 @@ aclnnStatus aclnnSwiGluGrad(
   aclOpExecutor   *executor,
   aclrtStream      stream)
 ```
+
 
 ## aclnnSwiGluGradGetWorkspaceSize
 - **参数说明：**
@@ -171,6 +170,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
   </tbody></table>
 
+
 ## aclnnSwiGluGrad 
 
 - **参数说明：**
@@ -209,6 +209,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 

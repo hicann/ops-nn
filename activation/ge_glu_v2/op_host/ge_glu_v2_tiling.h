@@ -42,7 +42,7 @@ struct GeGluV2CompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
     bool isAscend310P = false;
-    bool isAscend910_95 = false;
+    bool isRegbase = false;
 };
 
 struct TilingParam {
@@ -56,7 +56,7 @@ struct TilingParam {
     int64_t activateLeft = 0;
     int64_t approximate = 0;
     bool isAscend310P = false;
-    bool isAscend910_95 = false;
+    bool isRegbase = false;
 };
 
 enum class GeGluV2TilingKey : int64_t

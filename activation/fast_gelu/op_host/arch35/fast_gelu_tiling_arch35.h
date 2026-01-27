@@ -15,6 +15,7 @@
 #include "register/op_impl_registry.h"
 
 namespace optiling {
+using namespace Ops::Base;
 
 class FastGeluTiling {
 public:
@@ -68,11 +69,6 @@ const std::map<ge::DataType, std::string> DATATYPE_TO_STRING_MAP = {
     {ge::DT_UINT1, "DT_UINT1"},                   // dt_variant type
     {ge::DT_INT2, "DT_INT2"},                     // dt_variant type
     {ge::DT_UINT2, "DT_UINT2"}                    // dt_variant type
-};
-
-struct FastGeluCompileInfo {
-    uint64_t coreNum = 0;
-    uint64_t ubSize = 0;
 };
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_FAST_GELU_TILING_H

@@ -4,53 +4,43 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 
 ## 功能说明
 
-- 算子功能：将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行GELU激活后，对激活的结果进行量化，输出量化后的结果。
+- 接口功能：将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行GELU激活后，对激活的结果进行量化，输出量化后的结果。
 
 - 计算公式：
 1. 先计算GELU计算得到geluOut
   - approximate = tanh
-
   $$
   geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
   $$
-
   - approximate = none
-
   $$
    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
   $$
-
 2. 再对geluOut进行量化操作
   - quant_mode = static
-
   $$
   y = round\_to\_dst\_type(geluOut * inputScaleOptional + inputOffsetOptional, round\_mode)
   $$
-
   - quant_mode = dynamic
-
     $$
     geluOut = geluOut * inputScaleOptional
     $$
-
-
     $$
     Max = max(abs(geluOut))
     $$
-
-
     $$
     outScaleOptional = Max/maxValue
     $$
-
-
     $$
     y = round\_to\_dst\_type(geluOut / outScaleOptional, round\_mode)
     $$

@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_
+#ifndef _ACTIVATION_GRAPH_HARDTANH_GRAD_PROTO_H_
+#define _ACTIVATION_GRAPH_HARDTANH_GRAD_PROTO_H_
 
 #include "graph/operator_reg.h"
 

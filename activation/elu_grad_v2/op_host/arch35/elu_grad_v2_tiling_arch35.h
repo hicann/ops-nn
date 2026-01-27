@@ -23,6 +23,11 @@
 using namespace Ops::Base;
 using namespace EluGradV2Ns;
 namespace optiling {
+struct EluGradV2CompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
+
 class EluGradV2Tiling {
 public:
     explicit EluGradV2Tiling(gert::TilingContext *context) : tilingContext(context){};
@@ -43,11 +48,6 @@ private:
     ge::DataType activationsDtype;
     ge::DataType outputDtype;
     gert::TilingContext *tilingContext;
-};
-
-struct EluGradV2CompileInfo {
-    uint64_t coreNum = 0;
-    uint64_t ubSize = 0;
 };
 } // namespace optiling
  

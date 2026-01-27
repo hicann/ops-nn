@@ -272,7 +272,8 @@ __aicore__ inline void GeGluV2Base<T>::ComputeGeluErf(
     LocalTensor<float>& tmpBuf2, const int64_t length)
 {
     AscendC::Muls(tmpBuf1, ubx2_fp32, ERF_SQRT_TWO_REC, length);
-    AscendC::Erf<float>(tmpBuf2, tmpBuf1, length);
+    static constexpr ErfConfig config = { ErfAlgo::SUBSECTION_POLYNOMIAL_APPROXIMATION };
+    AscendC::Erf<float,false,config>(tmpBuf2, tmpBuf1, length);
     AscendC::Adds(tmpBuf1, tmpBuf2, ERF_ONE, length);
     AscendC::Muls(tmpBuf2, tmpBuf1, ERF_DOT_FIVE, length);
 

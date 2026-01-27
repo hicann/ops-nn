@@ -22,6 +22,8 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
+#include <iostream>
+
 using namespace ge;
 using namespace EluGradV2Op;
 
@@ -227,3 +229,4 @@ IMPL_OP_OPTILING(EluGradV2)
     .Tiling(Tiling4EluGradV2)
     .TilingParse<EluGradV2CompileInfo>(TilingPrepareForEluGradV2);
 }  // namespace optiling
+ 

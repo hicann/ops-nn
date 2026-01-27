@@ -14,6 +14,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "leaky_relu_grad.h"
 
 using namespace op;
@@ -29,9 +30,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
 // 根据芯片类型和数据类型判断算子是否支持走aicore
 static bool IsAiCoreSupport(const aclTensor* self)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
     }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);

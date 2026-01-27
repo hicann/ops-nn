@@ -1,5 +1,7 @@
 # aclnnLeakyReluBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/leaky_relu_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,6 +9,9 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -114,7 +119,7 @@ aclnnStatus aclnnLeakyReluBackward(
       <td>out</td>
       <td>输出</td>
       <td>表示计算输出。</td>
-      <td><ul><li>不需要额外申请空间，其他数据类型（INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、BOOL、COMPLEX64、COMPLEX128）通过自动cast能力支持，但会额外申请空间。</li><li>数据类型需要是gradOutput与self推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
+      <td><ul><li>不需要额外申请空间，数据类型需要是gradOutput与self推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li><li>其他数据类型（INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、BOOL、COMPLEX64、COMPLEX128）通过自动cast能力支持，但会额外申请空间。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
@@ -143,6 +148,9 @@ aclnnStatus aclnnLeakyReluBackward(
   </tbody>
   </table>
   
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：gradOutput、self、和out的数据类型支持FLOAT、FLOAT16、DOUBLE。negativeSlope的数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT8、BOOL、INT16、UINT8。
+
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -174,12 +182,13 @@ aclnnStatus aclnnLeakyReluBackward(
       <td>gradOutput、self或out的shape超过8维。</td>
     </tr>
     <tr>
-      <td>gradOutput、self和out的shape不相同。</td>
+      <td>gradOutput、self的shape不满足广播关系，或out的shape与广播结果不一致。</td>
     </tr>
     <tr>
       <td>selfIsResult为true时，negativeSlope是负数。</td>
     </tr>
   </tbody></table>
+
 
 ## aclnnLeakyReluBackward
 
@@ -219,6 +228,7 @@ aclnnStatus aclnnLeakyReluBackward(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 

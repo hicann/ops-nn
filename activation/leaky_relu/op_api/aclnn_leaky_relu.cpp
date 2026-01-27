@@ -22,6 +22,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -42,19 +43,19 @@ static bool CheckNotNull(const aclTensor *self, const aclScalar *negativeSlope, 
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
   }
 }
 
-static bool CheckDtypeValid(const aclTensor *self) {
+static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
   // 检查输入self的数据类型是否在LeakyRelu算子的支持列表内
   auto supportList = GetDtypeSupportList();
   OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+  OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
   return true;
 }
 
@@ -69,7 +70,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclScalar *negativeS
   CHECK_RET(CheckNotNull(self, negativeSlope, out), ACLNN_ERR_PARAM_NULLPTR);
 
   // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-  CHECK_RET(CheckDtypeValid(self), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
 
   // 3. 检查输入tensor的shape是否异常，输出和输入的shape是否相同
   CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
