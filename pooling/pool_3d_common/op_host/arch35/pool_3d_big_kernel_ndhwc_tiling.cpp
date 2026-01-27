@@ -89,10 +89,10 @@ void Pool3DBigKernelNDHWCTiling::DoUBTiling()
     int64_t blockSize = Ops::Base::GetUbBlockSize(context_) / inputData_.dtypeSize;
     int64_t ubAvailable = static_cast<int64_t>(ubSize_) / inputData_.dtypeSize / BUFFER_NUM - vRegSize;
     int64_t oneOutChannel = std::min(MIN_OUT_BUFFER_LEN / inputData_.dtypeSize, ubAvailable / DIGIT_TWO);
-    int64_t channelAlign = Ops::Base::FloorAlign(inputData_.channels, blockSize);
-    int64_t oneOutChannelAlign = Ops::Base::FloorAlign(oneOutChannel, vRegSize);
+    int64_t channelAlign = Ops::Base::CeilAlign(inputData_.channels, blockSize);
+    int64_t oneOutChannelAlign = Ops::Base::CeilAlign(oneOutChannel, vRegSize);
     if (channelAlign > oneOutChannelAlign) {
-        oneOutChannelAlign = Ops::Base::FloorAlign(channelAlign, vRegSize);
+        oneOutChannelAlign = Ops::Base::CeilAlign(channelAlign, vRegSize);
     }
     const int64_t sumBufferSize = (!isMaxPool3D_ && inputData_.dtypeSize == BYTE_NUM_TWO) ?
         oneOutChannelAlign * DIGIT_TWO : 0;
