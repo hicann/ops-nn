@@ -292,7 +292,13 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 - 确定性计算：
   - aclnnMultiScaleDeformableAttnFunction默认确定性实现。
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas 推理系列产品</term>：
+  - 通道数channels%32 = 0，且channels <= 256
+  - 查询的数量32 <= num_queries< 500000
+  - 特征图的数量num_levels <= 16
+  - 头的数量num_heads = [2, 4, 8]
+  - 采样点的数量num_points = [4, 8]
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 通道数channels%8 = 0，且channels <= 256
   - 查询的数量32 <= num_queries < 500000
   - 特征图的数量num_levels <= 16

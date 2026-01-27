@@ -28,6 +28,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "aclnn_norm.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -55,8 +56,8 @@ static inline bool CheckNotNull(
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
@@ -252,7 +253,7 @@ aclnnStatus aclnnNormGetWorkspaceSize(
     }
 
     // 获取attr p的值
-    auto p = CalculateValP(pScalar);
+    float p = Ops::NN::AclnnUtil::IsRegbase() ? pScalar->ToFloat() : CalculateValP(pScalar);
     // 设置评价精度误差(精度为0)
     auto ops = static_cast<float>(0);
 
@@ -261,7 +262,7 @@ aclnnStatus aclnnNormGetWorkspaceSize(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // On 910B or later chips: self (-> cast) -> LpNormV2 -> out
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         // [LpNormV2] 调用LpNormV2算子kernel function(AI core算子)
         auto normOut = l0op::LpNormV2(selfContiguous, out, p, dim, keepdim, ops, uniqueExecutor.get());
         CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

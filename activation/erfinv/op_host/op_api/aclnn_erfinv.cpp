@@ -32,10 +32,7 @@ static const std::initializer_list<DataType> FLOAT_LIST = {DataType::DT_FLOAT16,
 
 static const std::initializer_list<DataType> GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95) {
-        return FLOAT_LIST;
-    }
-    else if (GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND910B &&
+    if (GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= op::SocVersion::ASCEND910E) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }

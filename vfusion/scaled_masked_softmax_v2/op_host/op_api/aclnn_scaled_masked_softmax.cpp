@@ -20,6 +20,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -98,7 +99,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* mask)
     }
 
     int32_t dDimLimit = D_LIMIT;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         dDimLimit = D_LIMIT_D;
     }
 

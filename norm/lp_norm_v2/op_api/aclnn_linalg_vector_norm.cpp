@@ -25,6 +25,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/level2_base_caculation.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_linalg_vector_norm.h"
 
 using namespace op;
@@ -64,8 +65,8 @@ static inline bool CheckNotNull(
 
 static inline bool IsSocVersionSupportBf16()
 {
-    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 static inline bool CheckDtypeValid(const aclTensor* self, const op::DataType dtype, const aclTensor* out)
@@ -147,7 +148,7 @@ static inline bool CheckPromoteType(const aclTensor* self, const aclTensor* out)
             op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         // 检查推导后的数据类型是否能转换为输出的数据类型
         OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, out->GetDataType(), return false);
     }
@@ -282,13 +283,13 @@ aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
     }
 
     float p =
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 ? ord->ToFloat() : CalculateOrdValue(ord);
+        Ops::NN::AclnnUtil::IsRegbase() ? ord->ToFloat() : CalculateOrdValue(ord);
     auto epsilon = static_cast<float>(0);
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // On Ascend910B or later chips: self (-> cast) -> LpNormV2 -> out
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         aclnnLinalgVectorA5(selfContiguous, inputParams, uniqueExecutor.get());
     } else if (IsSocVersionSupportBf16()) {
         aclnnLinalgVectorA3(selfContiguous, inputParams, uniqueExecutor.get());

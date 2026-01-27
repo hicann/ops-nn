@@ -19,6 +19,7 @@
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/data_type_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -63,9 +64,9 @@ static inline bool CheckDtypeValid(
 }
 static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, const aclTensor* mask, const aclTensor* out)
 {
-    bool formatValid = gradOutput->GetStorageFormat() == op::Format::FORMAT_ND &&
-                       y->GetStorageFormat() == op::Format::FORMAT_ND &&
-                       out->GetStorageFormat() == op::Format::FORMAT_ND;
+    bool formatValid = gradOutput->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+                       y->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ &&
+                       out->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ;
     if (!formatValid) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
@@ -75,7 +76,7 @@ static inline bool CheckFormat(const aclTensor* gradOutput, const aclTensor* y, 
         return false;
     }
     if (mask != nullptr) {
-        formatValid = (formatValid && mask->GetStorageFormat() == op::Format::FORMAT_ND);
+        formatValid = (formatValid && mask->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ);
     }
     if (!formatValid) {
         OP_LOGE(
@@ -101,7 +102,7 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* y, c
     int64_t headDim = gradOutput->GetViewShape().GetDim(DIM_3);
 
     int32_t dDimLimit = D_LIMIT;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         dDimLimit = D_LIMIT_D;
     }
 
@@ -163,7 +164,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* y, 
     CHECK_RET(CheckDtypeValid(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查format是否符合要求
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(CheckFormat(gradOutput, y, mask, out), ACLNN_ERR_PARAM_INVALID);
     }
 

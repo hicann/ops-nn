@@ -119,6 +119,7 @@ namespace optiling {
   ge::graphStatus MultiScaleDeformableAttentionGradTiling::RunKernelTiling(){
     OP_LOGD(TilingContext, "Tiling start.");
     TilingContext->SetBlockDim(core_used);
+    TilingContext->SetScheduleMode(1);
     TilingData.set_batchSize(batch_size);
     TilingData.set_numKeys(spatial_size);
     TilingData.set_numHeads(num_heads);

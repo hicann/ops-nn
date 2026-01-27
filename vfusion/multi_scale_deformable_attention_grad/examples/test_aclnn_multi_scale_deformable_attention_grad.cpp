@@ -83,7 +83,7 @@ int main() {
     std::vector<int64_t> levelStartIndexShape = {1};
     std::vector<int64_t> locationShape = {1, 32, 1, 1, 1, 2};
     std::vector<int64_t> attnWeightShape = {1, 32, 1, 1, 1};
-    std::vector<int64_t> gradOutputShape = {1, 32, 1, 8};
+    std::vector<int64_t> gradOutputShape = {1, 32, 8};
     std::vector<int64_t> gradValueShape = {1, 1, 1, 8};
     std::vector<int64_t> gradLocationShape = {1, 32, 1, 1, 1, 2};
     std::vector<int64_t> gradAttnWeightShape = {1, 32, 1, 1, 1};

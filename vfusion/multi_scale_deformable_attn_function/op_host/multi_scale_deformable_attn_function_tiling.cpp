@@ -190,6 +190,9 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
         TilingKey = 1;
     }
     OP_LOGD(context, "TilingKey = %lu", TilingKey);
+    if (TilingKey == 0) {
+        context->SetScheduleMode(1);
+    }
 
     context->SetTilingKey(TilingKey);
     tiling.set_batchSize(batchSize);

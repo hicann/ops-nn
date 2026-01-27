@@ -57,9 +57,9 @@ static bool Isclose(float a, float b, float rel_tol = FLT_EPSILON, float abs_tol
     }
 
     float diff = std::fabs(b - a);
-    float tol_b = std::fabs(rel_tol * b);
-    float tol_a = std::fabs(rel_tol * a);
-    bool ret = (diff <= tol_b) || (diff <= tol_a) || (diff <= abs_tol);
+
+    auto ret = (((diff <= std::fabs(rel_tol * b)) || (diff <= std::fabs(rel_tol * a))) || (diff <= abs_tol));
+
     return ret;
 }
 
@@ -178,12 +178,6 @@ ge::graphStatus LpNormV2Tiling::HandlePInf(const ReduceOpCompileInfo* compileInf
                 (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, float, float>::OpDag>(
                     tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
                 , return ge::GRAPH_FAILED);
-        } else {
-            // never reach here
-            OP_CHECK_IF(
-                (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<float, float, float>::OpDag>(
-                    tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-                , return ge::GRAPH_FAILED);
         }
     } else if (xDtype_ == ge::DT_FLOAT16) {
         // fp16 inf/-inf场景不需要升精度
@@ -197,7 +191,6 @@ ge::graphStatus LpNormV2Tiling::HandlePInf(const ReduceOpCompileInfo* compileInf
                  tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
             , return ge::GRAPH_FAILED);
     } else {
-        // never reach here
         OP_CHECK_IF(
             (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<float, float, float>::OpDag>(
                  tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),

@@ -121,7 +121,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
       <td>-</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads, channels)</td>
+      <td>(bs, num_queries, num_heads*channels)</td>
       <td>√</td>
     </tr>
     <tr>
@@ -251,7 +251,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
 ## 约束说明
 
 - 确定性计算
-  - aclnnMultiScaleDeformableAttentionGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - aclnnMultiScaleDeformableAttentionGrad默认非确定性实现，暂不支持确定性实现。
 
 - 通道数channels%8 = 0，且channels<=256
 - 查询的数量num_queries < 500000
@@ -339,7 +339,7 @@ int main() {
     std::vector<int64_t> levelStartIndexShape = {1};
     std::vector<int64_t> locationShape = {1, 32, 1, 1, 1, 2};
     std::vector<int64_t> attnWeightShape = {1, 32, 1, 1, 1};
-    std::vector<int64_t> gradOutputShape = {1, 32, 1, 8};
+    std::vector<int64_t> gradOutputShape = {1, 32, 8};
     std::vector<int64_t> gradValueShape = {1, 1, 1, 8};
     std::vector<int64_t> gradLocationShape = {1, 32, 1, 1, 1, 2};
     std::vector<int64_t> gradAttnWeightShape = {1, 32, 1, 1, 1};

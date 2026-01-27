@@ -122,6 +122,18 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *indices) {
   return true;
 }
 
+static bool CheckFormatValid(const aclTensor *self, const aclTensor *indices) {
+  // 检查self和indices的format是否不为NZ
+  if (self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ || indices->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+    OP_LOGE(
+    ACLNN_ERR_PARAM_INVALID,
+    "Input and output format do not support [NZ]. Actual: self:[%s], indices:[%s].",
+    op::ToString(self->GetStorageFormat()).GetString(), op::ToString(indices->GetStorageFormat()).GetString());
+  return false;
+  }
+  return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices) {
   // 1. 检查参数是否为空指针
   CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_INNER_NULLPTR);
@@ -134,6 +146,9 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *indices) 
 
   // 4. 检查indices的维度是否超过8
   CHECK_RET(CheckIndicesDimension(indices), ACLNN_ERR_PARAM_INVALID);
+
+  // 5. 检查self/indices的format是否正确
+  CHECK_RET(CheckFormatValid(self, indices), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
 }

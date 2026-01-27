@@ -18,6 +18,7 @@
 #include "platform/platform_infos_def.h"
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
+#include "tiling_base/tiling_util.h"
 #include "scaled_masked_softmax_v2_tiling.h"
 
 namespace {
@@ -50,6 +51,8 @@ constexpr uint64_t SOFTMAX_BUF_SIZE_D = 64 * 1024;
 } // namespace
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 class ScaledMaskedSoftmaxV2Tiling
 {
 public:
@@ -166,7 +169,7 @@ bool ScaledMaskedSoftmaxV2Tiling::InitInputShape()
     OP_CHECK_NULL_WITH_CONTEXT(context, PlatformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(PlatformInfo);
     uint64_t maxDimLimit = MAX_DIM_NUM;
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         maxDimLimit = MAX_DIM_NUM_D;
     }
     OP_CHECK_IF(
@@ -257,7 +260,7 @@ bool ScaledMaskedSoftmaxV2Tiling::SetUbSplitInfo()
     uint64_t maxByteLine = padedWidth * XY_PARAMS * xDtypeSize + padedWidth * FP32_SIZE + maskPaddedWidth * BOOL_SIZE;
     // 高阶api使用tmpBuf复用
     uint64_t softmaxBuffSize = SOFTMAX_BUF_SIZE;
-    if (ascendCPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         softmaxBuffSize = SOFTMAX_BUF_SIZE_D;
     }
     uint64_t availableLinePerIter = (availableUbSize - softmaxBuffSize) / maxByteLine;
