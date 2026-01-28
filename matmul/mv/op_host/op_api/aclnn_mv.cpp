@@ -34,12 +34,6 @@ using namespace op;
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-// 得到tensor的维度数
-static inline int64_t GetTensorDimNum(const aclTensor* self)
-{
-    return (int64_t)(self->GetViewShape().GetDimNum());
-}
-
 namespace{
     inline bool CheckNotNull(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
     {
@@ -47,6 +41,10 @@ namespace{
         OP_CHECK_NULL(vec, return false);
         OP_CHECK_NULL(out, return false);
         return true;
+    }
+
+    static const aclTensor* MVProcess(const aclTensor* self, const aclTensor* vec, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor){
+        return MatmulCommonProcess(self, vec, nullptr, out, cubeMathType, mmOpInfo, executor, false);
     }
 }
 
@@ -61,6 +59,19 @@ static bool CheckDtype(const aclTensor* self, const aclTensor* vec, const aclTen
         OP_CHECK_DTYPE_NOT_SAME(self, vec, return false);
         // 2. self的dtype为FP16/FP32。
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
+    }
+    return true;
+}
+
+// 1. vec、out的数据类型要与self一致
+static bool CheckDtypeSame(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
+{
+    // 1. vec、out的数据类型要与self一致
+    // 先校验out和vec dtype一致
+    OP_CHECK_DTYPE_NOT_SAME(out, vec, return false);
+    // self不为空tensor时，校验self和vec dtype一致
+    if (!self->IsEmpty()) {
+        OP_CHECK_DTYPE_NOT_SAME(self, vec, return false);
     }
     return true;
 }
@@ -104,6 +115,25 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* vec, aclT
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, vec, out), ACLNN_ERR_PARAM_NULLPTR);
+    // 2. self的dtype支持 + vec、out的数据类型要与self一致
+    CHECK_RET(CheckDtypeSame(self, vec, out), ACLNN_ERR_PARAM_INVALID);
+
+    //  self dtype 按soc校验。
+    auto socRule = SocMatMulRule::getInstance();
+    CHECK_RET(socRule != nullptr, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(socRule->CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. shape: self必须为2维: n x m, vec必须为1维：m, out必须为1维：n
+    CHECK_RET(CheckShape(self, vec, out), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
+
 aclnnStatus aclnnMvGetWorkspaceSize(
     const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
     aclOpExecutor** executor)
@@ -113,7 +143,7 @@ aclnnStatus aclnnMvGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    auto ret = CheckParams(self, vec, out, cubeMathType);
+    auto ret = CheckInputParams(self, vec, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // mv (n x m, m) -> n 。n为0时，返回空tensor
@@ -144,8 +174,13 @@ aclnnStatus aclnnMvGetWorkspaceSize(
     vecContiguous = l0op::UnsqueezeNd(vecContiguous, dims, uniqueExecutor.get());
     CHECK_RET(vecContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto matmulOut = ExecMmOp(selfContiguous, vecContiguous, cubeMathType, uniqueExecutor.get());
+    MmOpInfo opinfo;
+    auto matmulOut = MVProcess(selfContiguous, vecContiguous, out, cubeMathType, opinfo, uniqueExecutor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    matmulOut = l0op::Cast(matmulOut, out->GetDataType(), uniqueExecutor.get());
+    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     matmulOut = l0op::Reshape(matmulOut, out->GetViewShape(), uniqueExecutor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
