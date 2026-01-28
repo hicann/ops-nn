@@ -9,4 +9,4 @@
 # ----------------------------------------------------------------------------
 
 message(STATUS "=== Debug: start quant.swi_glu_quant.op_host.CMakeLists.txt ")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE swi_glu_quant ACLNNTYPE aclnn)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE swi_glu_quant ACLNNTYPE aclnn ACLNN_EXTRA_VERSION v2)
