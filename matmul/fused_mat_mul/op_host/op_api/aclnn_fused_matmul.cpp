@@ -75,6 +75,10 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
+    if (cubeMathType != USE_HF32 && promoteType == DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul is only supported bf16/fp16/hf32, do not surrport fp32.");
+        return false;
+    }
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 

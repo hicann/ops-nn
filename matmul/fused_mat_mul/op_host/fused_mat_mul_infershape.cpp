@@ -33,22 +33,31 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("FusedMatmul", "context is null"), return ge::GRAPH_FAILED);
     auto op_name = context->GetNodeName();
     auto shape_a = context->GetInputShape(kMatMulX1Idx);
+    auto tensor_a = context->GetInputDesc(kMatMulX1Idx);
     auto shape_b = context->GetInputShape(kMatMulX2Idx);
     auto shape_bias = context->GetOptionalInputShape(kMatMulX3Idx);
     auto shape_c = context->GetOptionalInputShape(kFusedMatMulX3Idx);
     auto shape_out = context->GetOutputShape(kOutputIdx);
     auto attrs = context->GetAttrs();
+
     OP_CHECK_IF(
-        shape_a == nullptr || shape_b == nullptr || shape_out == nullptr || attrs == nullptr,
+        shape_a == nullptr || shape_b == nullptr || shape_out == nullptr || attrs == nullptr || tensor_a == nullptr,
         CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);
 
     const bool* trans_a = attrs->GetAttrPointer<bool>(kMatMulX1Idx);
     const bool* trans_b = attrs->GetAttrPointer<bool>(kMatMulX2Idx);
+    const bool* enable_hf32 = attrs->GetAttrPointer<bool>(kMatMulX3Idx);
     const char* fused_op_type = attrs->GetAttrPointer<char>(kFusedMatMulX3Idx);
+
     OP_CHECK_IF(
-        trans_a == nullptr || trans_b == nullptr || fused_op_type == nullptr,
+        trans_a == nullptr || trans_b == nullptr || enable_hf32 == nullptr  || fused_op_type == nullptr,
         CUBE_INNER_ERR_REPORT(op_name, "attribute is null"), return ge::GRAPH_FAILED);
 
+    ge::DataType dtype = tensor_a->GetDataType();
+    OP_CHECK_IF(
+        dtype == ge::DT_FLOAT && !(*enable_hf32),
+        CUBE_INNER_ERR_REPORT(op_name, "fusedmatmul is only supported bf16/fp16/hf32, do not surrport fp32."),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (strcmp(fused_op_type, "") != 0 && strcmp(fused_op_type, "add") != 0 && strcmp(fused_op_type, "mul") != 0 &&
          strcmp(fused_op_type, "gelu_erf") != 0 && strcmp(fused_op_type, "gelu_tanh") != 0 &&

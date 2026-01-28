@@ -249,8 +249,8 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType为gelu_tanh、gelu_erf，传入的bias不是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="6">161002</td>
+        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="7">161002</td>
         <td>x1和x2的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -267,6 +267,9 @@ aclnnStatus aclnnFusedMatmul(
       </tr>
       <tr>
         <td>x1和x2无法做数据类型推导。</td>
+      </tr>
+      <tr>
+        <td>当传入的fusedOpType属于""、"add"、"mul"、"relu"中的一种, 且输入的数据类型为float32时, cubeMathType只支持3。</td>
       </tr>
   </tbody></table>
 
@@ -316,7 +319,7 @@ aclnnStatus aclnnFusedMatmul(
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16、FLOAT32。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(cubeMathType只支持3)、BFLOAT16、FLOAT16。
 
 ## 调用示例
 
