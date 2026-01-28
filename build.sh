@@ -1102,9 +1102,12 @@ build_ut() {
   else
     enable_cov=TRUE
     if echo "${UT_TARGES[@]}" | grep -v "aicpu_op_kernel" | grep -q "op_kernel"; then
-      echo "exec pre_op_kernel_ut..."
-      cmake --build . --target pre_op_kernel_ut -- ${VERBOSE} -j $THREAD_NUM
-      cmake ${CMAKE_ARGS} ..
+      local all_targets=$(cmake --build . --target help)
+      if grep -wq "pre_op_kernel_ut" <<< "${all_targets}"; then
+        echo "exec pre_op_kernel_ut..."
+        cmake --build . --target pre_op_kernel_ut -- ${VERBOSE} -j $THREAD_NUM
+        cmake ${CMAKE_ARGS} ..
+      fi
     fi
     cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -j $THREAD_NUM
   fi
