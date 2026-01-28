@@ -722,21 +722,32 @@ bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
 }
 
 /*
-   判断Tensor是否满足非连续Slice
+   判断是否满足左矩阵非连续Slice
 */
-bool IsSliceNonContiguous(const aclTensor* tensor)
+bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2)
 {
-    if (!IsUseNonContiguous(tensor)) {
+    if (!IsUseNonContiguous(self)) {
         return false;
     }
-    int64_t dimNum = tensor->GetViewShape().GetDimNum();
+    // 不支持NZ
+    if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
+        self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGI("Format NZ is not supported for slice.");
+        return false;
+    }
+    // slice场景下，增加dtype判断，仅支持左右矩阵dtype相同
+    if (self->GetDataType() != mat2->GetDataType()) {
+        OP_LOGI("The data type of the self does not match the type of mat2 for slice");
+        return false;
+    }
+    int64_t dimNum = self->GetViewShape().GetDimNum();
     if (dimNum != 3) { // only support 2D or 3D
         return false;
     }
-    const auto& viewStrides = tensor->GetViewStrides();
-    const auto& viewShape = tensor->GetViewShape();
-    auto viewOffset = tensor->GetViewOffset();
-    auto storageSize = tensor->GetStorageShape().GetShapeSize();
+    const auto& viewStrides = self->GetViewStrides();
+    const auto& viewShape = self->GetViewShape();
+    auto viewOffset = self->GetViewOffset();
+    auto storageSize = self->GetStorageShape().GetShapeSize();
     // Validate view params
     if (dimNum != static_cast<int64_t>(viewStrides.size()) || storageSize <= 0) {
         return false;
@@ -1089,7 +1100,7 @@ const aclTensor* ExecMmOpWithBias(
     CHECK_RET(mat2 != nullptr, nullptr);
     CHECK_RET(CheckDtypeValid(self, mat2, bias, nullptr, cubeMathType), nullptr);
     // 左输入矩阵非连续
-    bool isSelfSlice = IsSliceNonContiguous(self);
+    bool isSelfSlice = IsSliceNonContiguous(self, mat2);
     CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
     CHECK_RET(CheckMathType(self, mat2, cubeMathType), nullptr);
     // 空Tensor处理逻辑
@@ -1104,22 +1115,38 @@ const aclTensor* ExecMmOpWithBias(
     MmOpInfo mmOpInfo = GetMatmulOpInfo(self, mat2, cubeMathType, isSelfSlice);
     // weightNZ转置属性刷新
     mmOpInfo.shapeInfo.transposeX2 = mmOpInfo.shapeInfo.transposeX2 || transposeX2;
+    bool needFoldBatch = false;
     // 校验非连续Slice场景shape
-    if (isSelfSlice) {
-        // 不支持NZ
-        if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
-            self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGI("format NZ is not supported for slice.");
-            isSelfSlice = false;
-        }
-        // check shape
-        if (!CheckNonContiguousShapeSupport(mmOpInfo)) {
-            OP_LOGI("shape is not supported for slice.");
-            isSelfSlice = false;
-        }
+    if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
+        OP_LOGI("Curruent shape is not supported for slice.");
+        isSelfSlice = false;
+        needFoldBatch = true;
     }
     // 非ND转ND
-    if (!isSelfSlice) {
+    auto selfCastOut = self;
+    if (isSelfSlice) {
+        // 刷新oriShape
+        selfCastOut = executor->CreateView(
+            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+        CHECK_RET(selfCastOut != nullptr, nullptr);
+        // 非ND修改format为ND
+        selfCastOut = SetTensorToNDFormat(selfCastOut);
+    } else {
+        // 转连续
+        bool selfCastRes = ContiguousAndCast(
+            self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
+        CHECK_RET(selfCastRes, nullptr);
+        // 再次合并batch和M
+        if (needFoldBatch) {
+            // Fold the batch into the first dimension
+            auto dimTensor1 = selfCastOut->GetViewShape().GetDimNum();
+            op::Shape shape{-1, selfCastOut->GetViewShape().GetDim(dimTensor1 - 1)};
+            selfCastOut = l0op::Reshape(selfCastOut, shape, executor);
+            CHECK_RET(selfCastOut != nullptr, nullptr);
+            // 更新m n k
+            mmOpInfo = GetMatmulOpInfo(self, mat2, cubeMathType, isSelfSlice);
+        }
+        // reformat为ND
         self = l0op::ReFormat(self, op::Format::FORMAT_ND);
         CHECK_RET(self != nullptr, nullptr);
         if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
@@ -1134,21 +1161,6 @@ const aclTensor* ExecMmOpWithBias(
     if (contiguousBias != nullptr) {
         contiguousBias = ContiguousBias(self, bias, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
-    }
-
-    auto selfCastOut = self;
-    if (isSelfSlice) {
-        // 刷新oriShape
-        selfCastOut = executor->CreateView(
-            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
-        CHECK_RET(selfCastOut != nullptr, nullptr);
-        // 非ND修改format为ND
-        selfCastOut = SetTensorToNDFormat(selfCastOut);
-    } else {
-        // 转连续
-        bool selfCastRes = ContiguousAndCast(
-            self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
-        CHECK_RET(selfCastRes, nullptr);
     }
 
     auto mat2CastOut = mat2;
@@ -1233,7 +1245,7 @@ const aclTensor* MatmulCommonProcess (
   */
 
     // 左输入矩阵非连续
-    bool isSelfSlice = IsSliceNonContiguous(self);
+    bool isSelfSlice = IsSliceNonContiguous(self, mat2);
     CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
 
     // 空Tensor处理逻辑
@@ -1251,36 +1263,13 @@ const aclTensor* MatmulCommonProcess (
 
     // weightNZ转置属性刷新
     mmOpInfo.shapeInfo.transposeX2 = mmOpInfo.shapeInfo.transposeX2 || transposeX2;
+    bool needFoldBatch = false;
     // 校验非连续Slice场景shape
-    if (isSelfSlice) {
-        // 不支持NZ
-        if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
-            self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGI("format NZ is not supported for slice.");
-            isSelfSlice = false;
-        }
-        // check shape
-        if (!CheckNonContiguousShapeSupport(mmOpInfo)) {
-            OP_LOGI("shape is not supported for slice.");
-            isSelfSlice = false;
-        }
-        // slice场景下，增加dtype判断，仅支持左右矩阵dtype相同
-        if (self->GetDataType() != mat2->GetDataType()) {
-            OP_LOGI("The data type of the self does not match the type of mat2 for slice");
-            isSelfSlice = false;
-        }
+    if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
+        OP_LOGI("Curruent shape is not supported for slice.");
+        isSelfSlice = false;
+        needFoldBatch = true;
     }
-    // 非ND转ND
-    if (!isSelfSlice) {
-        self = l0op::ReFormat(self, op::Format::FORMAT_ND);
-        CHECK_RET(self != nullptr, nullptr);
-        if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
-            mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
-            CHECK_RET(mat2 != nullptr, nullptr);
-        }
-    }
-    OP_LOGI("mat2 origin storage shape is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // 左输入非连续转连续
     auto selfCastOut = self;
     if (isSelfSlice) {
@@ -1295,7 +1284,28 @@ const aclTensor* MatmulCommonProcess (
         bool selfCastRes = ContiguousAndCast(
             self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
         CHECK_RET(selfCastRes, nullptr);
+        // 再次合并batch和M
+        if (needFoldBatch) {
+            // Fold the batch into the first dimension
+            auto dimTensor1 = selfCastOut->GetViewShape().GetDimNum();
+            op::Shape shape{-1, selfCastOut->GetViewShape().GetDim(dimTensor1 - 1)};
+            selfCastOut = l0op::Reshape(selfCastOut, shape, executor);
+            CHECK_RET(selfCastOut != nullptr, nullptr);
+            // 更新m n k
+            aclnnStatus result = CreateMatmulOpInfo(selfCastOut, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice);
+            CHECK_RET(result == ACLNN_SUCCESS, nullptr);
+        }
+        // reformat为ND
+        self = l0op::ReFormat(self, op::Format::FORMAT_ND);
+        CHECK_RET(self != nullptr, nullptr);
+        if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
+            OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
+            mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
+            CHECK_RET(mat2 != nullptr, nullptr);
+        }
     }
+    OP_LOGI("mat2 origin storage shape is  [%s].", op::ToString(mat2->GetStorageShape()).GetString());
+
     auto mat2CastOut = mat2;
     auto mat2StorageShape = mat2->GetStorageShape();
     bool mat2CastRes = ContiguousAndCast(

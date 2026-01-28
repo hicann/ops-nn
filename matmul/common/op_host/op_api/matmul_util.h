@@ -89,7 +89,7 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor);
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& mmOpInfo,
                                       int8_t cubeMathType);
 
-bool IsSliceNonContiguous(const aclTensor* tensor);
+bool IsSliceNonContiguous(const aclTensor* tensor, const aclTensor* mat2);
 
 bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim);
 
