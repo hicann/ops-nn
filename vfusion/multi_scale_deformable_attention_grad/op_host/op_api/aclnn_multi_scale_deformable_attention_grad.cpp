@@ -113,8 +113,7 @@ static bool CheckDtypeValid(const aclTensor *value, const aclTensor *spatialShap
 }
 
 static bool CheckFormat(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                        const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
-                        const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+                        const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput) {
     // 检查输入tensor格式，不支持NZ格式
     if (value->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'value' format does not support NZ");
@@ -144,8 +143,7 @@ static bool CheckFormat(const aclTensor *value, const aclTensor *spatialShape, c
 }
 
 static inline bool CheckShape(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                            const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
-                            const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+                            const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput) {
     if (value->GetViewShape().GetDimNum() != INPUT_DIM_4) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "parameter 'value' expects 4 dimensions, but got %lu",
@@ -230,11 +228,11 @@ static aclnnStatus CheckParams(const aclTensor *value, const aclTensor *spatialS
  
     // 3. 检查输入的格式是否为ND，不支持NZ格式
     CHECK_RET(CheckFormat(value, spatialShape, levelStartIndex, location, attnWeight,
-                        gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
+                          gradOutput), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入的shape是否符合要求
     CHECK_RET(CheckShape(value, spatialShape, levelStartIndex, location, attnWeight,
-                        gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
+                          gradOutput), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
