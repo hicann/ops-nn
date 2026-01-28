@@ -98,7 +98,7 @@ aclnnStatus aclnnAvgPool3d(
       <td>kernelSize</td>
       <td>输入</td>
       <td>池化窗口大小，公式中的k。</td>
-      <td>长度为1(KD = KH = KW)或3(KD, KH, KW)，数值必须大于0。</td>
+      <td>长度为1(KD = KH = KW)或3(KD, KH, KW)，数值必须大于0且在对应的DHW维度上小于等于self的大小。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -210,15 +210,17 @@ aclnnStatus aclnnAvgPool3d(
       <td>传入的self、kernelSize、stride、padding或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>传入的self或out的数据类型/数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>传入的self和out的数据类型/数据格式不一致。</td>
     </tr>
     <tr>
-      <td>传入的kernelSize、stride存在某维度的值小于等于0，padding的值不在[0, kernelSize/2]的范围内。</td>
+      <td>传入的stride存在某维度的值小于等于0，padding的值不在[0, kernelSize/2]的范围内。</td>
+      <tr>
+      <td>传入的kernelSize存在某维度的值小于等于0或大于self对应维度上的值。</td>
     </tr>
     <tr>
       <td>传入的kernelSize、padding的长度不等于1或者不等于3，stride的长度不等于0或1或3。</td>
