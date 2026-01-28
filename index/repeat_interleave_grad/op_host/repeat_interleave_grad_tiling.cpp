@@ -18,10 +18,12 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
+#include "tiling_base/tiling_util.h"
 #include "repeat_interleave_grad.h"
 #include "repeat_interleave_grad_tiling_arch35.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 constexpr uint32_t DTYPE_KEY_FP16 = 0;
 constexpr uint32_t DTYPE_KEY_BF16 = 1;
@@ -139,7 +141,7 @@ static ge::graphStatus Tiling4RepeatInterleaveGrad(gert::TilingContext* context)
 {
     OP_LOGD("RepeatInterleaveGradTiling tiling start");
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         OP_LOGI("RepeatInterleaveGradDavid tiling start");
         return Tiling4RepeatInterleaveGradDavid(context);
     }

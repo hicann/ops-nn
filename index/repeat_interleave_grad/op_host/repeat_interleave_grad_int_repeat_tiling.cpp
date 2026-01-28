@@ -58,7 +58,7 @@ static ge::graphStatus convertCompileInfo(
     OP_CHECK_IF(
         ubSize <= static_cast<uint64_t>(CACHE_BUF_SIZE),
         OP_LOGE(
-            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.", ubSize,
+            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%ld.", ubSize,
             CACHE_BUF_SIZE),
         return ge::GRAPH_FAILED);
     reduceCompileInfo->ubSize = ubSize;

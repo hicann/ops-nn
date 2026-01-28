@@ -240,6 +240,11 @@ ge::graphStatus RIGDavidTilingImpl::DoTiling(gert::TilingContext* context)
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = templateNum_ == RIG::BLOCK_SPLIT_R ? RIG_WORKSPACE_SIZE + WORKSPACE_SIZE_EXT : RIG_WORKSPACE_SIZE;
+    if (templateNum_ == RIG::BLOCK_SPLIT_R) {
+        OP_CHECK_IF(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context_->GetNodeName(), "Fail to set schedulemode."),
+                    return ge::GRAPH_FAILED);
+    }
 
     OP_LOGD(context_->GetNodeName(), "Exit RIGDavidTilingImpl DoTiling");
     return ge::GRAPH_SUCCESS;
