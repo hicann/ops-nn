@@ -178,9 +178,10 @@ __aicore__ void inline FusedGeluMatMul(
     KernelFunc<MatmulKernel, MmadArgs, EpilogueArgs>(tilingData, mmadArgs, epilogueArgs, workspaceGM);
 }
 #endif
-template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD, int8_t L0C2OUT_MODEL, int8_t OPTYPE>
-__global__ __aicore__ void fused_mat_mul(
-    GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
+          int8_t L0C2OUT_MODEL, int8_t OPTYPE>
+__global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
+                                         GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     __gm__ uint8_t* user = AscendC::GetUserWorkspace(workspaceGM);
 
