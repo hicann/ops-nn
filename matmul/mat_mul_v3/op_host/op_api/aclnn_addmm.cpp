@@ -186,7 +186,9 @@ static aclnnStatus AddmmMulEmptyProcess(
 {
     auto selfContiguous = l0op::Contiguous(self, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+    auto mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+        l0op::MulsInplace(selfContiguous, beta->ToFloat(), executor) :
+        l0op::Muls(selfContiguous, beta->ToFloat(), executor);
     CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // broadcast成和out一个shape
@@ -208,7 +210,7 @@ static aclnnStatus AddmmMulEmptyProcess(
 }
 
 static const aclTensor* AddProcess(
-    const aclTensor* mulOut, const aclTensor* matmulOut, const aclScalar* alpha, aclOpExecutor* executor)
+    const aclTensor* mulOut, const aclTensor* matmulOut, const aclScalar* alpha, bool isInplace, aclOpExecutor* executor)
 {
     // Add算子需要对self和mat1两个输入做隐式数据类型转换，根据具体算子语义按需调用
     auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), matmulOut->GetDataType());
@@ -222,9 +224,13 @@ static const aclTensor* AddProcess(
     // 进行Add计算
     const aclTensor* addOut = nullptr;
     if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
-        addOut = l0op::Add(mulOutCasted, matmulOutCasted, executor);
+        addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace ?
+            l0op::AddInplace(mulOutCasted, matmulOutCasted, executor) :
+            l0op::Add(mulOutCasted, matmulOutCasted, executor);
     } else {
-        addOut = l0op::Axpy(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor);
+        addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace ?
+            l0op::AxpyInplace(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor) :
+            l0op::Axpy(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor);
     }
     return addOut;
 }
@@ -235,7 +241,9 @@ static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scala
     if (fabs(scalar->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulsOut = matContiguous;
     } else {
-        mulsOut = l0op::Muls(matContiguous, scalar->ToFloat(), executor);
+        mulsOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+            l0op::MulsInplace(matContiguous, scalar->ToFloat(), executor) :
+            l0op::Muls(matContiguous, scalar->ToFloat(), executor);
         CHECK_RET(mulsOut != nullptr, nullptr);
     }
     return mulsOut;
@@ -262,7 +270,9 @@ static const aclTensor* MatmulMulProcess(AclnnAddmmTensor& addmmTensor, int8_t c
     if (fabs(addmmTensor.alpha->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulOut = matmulOut;
     } else {
-        mulOut = l0op::Muls(matmulOut, addmmTensor.alpha->ToFloat(), executor);
+        mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+            l0op::MulsInplace(matmulOut, addmmTensor.alpha->ToFloat(), executor) :
+            l0op::Muls(matmulOut, addmmTensor.alpha->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, nullptr);
     }
     auto castOut = l0op::Cast(mulOut, addmmTensor.out->GetDataType(), executor);
@@ -282,7 +292,9 @@ static const aclTensor* AddMatmulProcess(
     if (fabs(addmmTensor.beta->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulOut = selfContiguous;
     } else {
-        mulOut = l0op::Muls(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor);
+        mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+            l0op::MulsInplace(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor) :
+            l0op::Muls(selfContiguous, addmmTensor.beta->ToFloat(), uniqueExecutor);
         CHECK_RET(mulOut != nullptr, nullptr);
     }
 
@@ -290,7 +302,8 @@ static const aclTensor* AddMatmulProcess(
     auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, cubeMathType, uniqueExecutor);
     CHECK_RET(matmulOut != nullptr, nullptr);
 
-    auto addOut = AddProcess(mulOut, matmulOut, addmmTensor.alpha, uniqueExecutor);
+    bool isInplace = false;
+    auto addOut = AddProcess(mulOut, matmulOut, addmmTensor.alpha, isInplace, uniqueExecutor);
     CHECK_RET(addOut != nullptr, nullptr);
 
     auto castOut = l0op::Cast(addOut, addmmTensor.out->GetDataType(), uniqueExecutor);
@@ -465,8 +478,9 @@ public:
         }
         const aclTensor* out2 = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        bool isInplace = bias->GetData() == output->GetData();
         // 执行 Add: out = out1 + out2 或Axpy: out = alpha * out2 + out1
-        const aclTensor* out = AddProcess(out1, out2, alpha, executor);
+        const aclTensor* out = AddProcess(out1, out2, alpha, isInplace, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = out;
         return ACLNN_SUCCESS;

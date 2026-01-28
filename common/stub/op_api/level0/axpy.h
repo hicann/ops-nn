@@ -20,6 +20,7 @@
 
 namespace l0op {
 const aclTensor* Axpy(const aclTensor* self, const aclTensor* other, float alpha, aclOpExecutor* executor);
+__attribute__((weak)) const aclTensor* AxpyInplace(const aclTensor* self, const aclTensor* other, float alpha, aclOpExecutor* executor);
 
 }
 

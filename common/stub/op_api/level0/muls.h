@@ -23,6 +23,9 @@ const aclTensor *Muls(const aclTensor *self,
                       float alpha,
                       aclOpExecutor *executor);
 
+__attribute__((weak)) const aclTensor *MulsInplace(const aclTensor *self,
+                      float alpha,
+                      aclOpExecutor *executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MULS_OP_H_

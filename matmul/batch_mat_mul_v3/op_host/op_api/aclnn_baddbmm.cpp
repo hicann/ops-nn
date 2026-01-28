@@ -228,7 +228,9 @@ public:
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
         CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // mulOut = bmmOut * alpha
-        const aclTensor* mulOut = l0op::Muls(bmmOut, alpha->ToFloat(), executor);
+        const aclTensor* mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+            l0op::MulsInplace(bmmOut, alpha->ToFloat(), executor) :
+            l0op::Muls(bmmOut, alpha->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = mulOut;
         return ACLNN_SUCCESS;
@@ -259,7 +261,9 @@ public:
         // self(bias) * beta
         const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
         CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+        const aclTensor* mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
+            l0op::MulsInplace(selfContiguous, beta->ToFloat(), executor) :
+            l0op::Muls(selfContiguous, beta->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // bmmOut = batch1(matA) @ batch2(matB)
@@ -278,14 +282,19 @@ public:
 
         // 进行Add或Axpy计算
         const aclTensor* addOut = nullptr;
+        bool isInplace = bias->GetData() == output->GetData();
         if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
             // alpha == 0
             // addOut = mulOutCasted + bmmOutCasted
-            addOut = l0op::Add(mulOutCasted, bmmOutCasted, executor);
+            addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
+                l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
+                l0op::Add(mulOutCasted, bmmOutCasted, executor);
         } else {
             // alpha != 0
             // addOut = mulOutCasted + bmmOutCasted * alpha
-            addOut = l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
+            addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape() ?
+                l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
+                l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
         }
         CHECK_RET(addOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = addOut;
