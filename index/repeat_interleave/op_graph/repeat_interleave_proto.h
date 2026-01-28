@@ -18,7 +18,6 @@
 
 namespace ge {
 /**
-/**
 * @brief Repeat elements of input with copies of data along a specified dimension.
 * @par Inputs:
 * Two inputs:

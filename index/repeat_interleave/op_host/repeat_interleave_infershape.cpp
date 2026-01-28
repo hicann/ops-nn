@@ -78,6 +78,7 @@ static graphStatus InferShape4RepeatInterleave(gert::InferShapeContext* context)
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to -2");
         Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
     }
 
     int64_t xDimNum = xShape->GetDimNum();
@@ -120,6 +121,7 @@ static graphStatus InferShape4RepeatInterleave(gert::InferShapeContext* context)
             context->GetNodeName(),
             "If not satisfy that repeats is ConstTensor and input[axisAttr] != -1, then set output shape to -2");
         Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
     }
 
     return ge::GRAPH_SUCCESS;
