@@ -254,7 +254,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                           \
     do {                                                                                                              \
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);            \
-        QbmmCmctPerTileKernel<                                                                                        \
+        QbmmCmctPertileKernel<                                                                                        \
             DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_SCALE, float, DTYPE_Y, xLayout, wLayout, yLayout, DTYPE_LOC_LOCAL>( \
             x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);                                       \
     } while (0)
