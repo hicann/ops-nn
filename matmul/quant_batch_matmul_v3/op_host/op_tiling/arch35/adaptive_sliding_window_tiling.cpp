@@ -426,7 +426,6 @@ void AdaptiveSlidingWindowTiling::AdjustPertileBasicBlock(uint64_t coreNumMN)
         adjustBaseN = adjustBaseN / NUM_HALF;
         adjustNCore = MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN);
     }
-    uint64_t adjustUsedCoreNum = adjustMCore * adjustNCore;
 
     while (adjustBaseN > adjustBaseM * BASEM_BASEN_RATIO && adjustBaseN / NUM_HALF >= baseNAlignNum) {
         uint64_t tempBaseN = adjustBaseN / NUM_HALF;
@@ -443,7 +442,6 @@ void AdaptiveSlidingWindowTiling::AdjustPertileBasicBlock(uint64_t coreNumMN)
         adjustBaseN = tempBaseN;
         adjustMCore = tempMCore;
         adjustNCore = tempNCore;
-        adjustUsedCoreNum = tempUsedCoreNum;
     }
 
     adaptiveWin_.baseM = adjustBaseM;
@@ -957,8 +955,8 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
     uint64_t preSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTileMax : nTileMax;
     uint64_t secSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTileMax : mTileMax;
     if (inputParams_.isPerBlock) {
-        while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax ||
-               CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax) {
+        while ((CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax) ||
+               (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax)) {
             preSplitValid = CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax ?
                                 ++preSplit :
                                 preSplitValid;
