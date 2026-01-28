@@ -189,7 +189,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>公式中的输入x1。</td>
         <td>
           <ul>
-            <li>不支持空Tensor。</li>
+            <li>不支持空Tensor。特殊情况：<term>昇腾910_95 AI处理器</term>：仅对m=0的空Tensor输入，返回空Tensor作为输出；其他情况的空Tensor不支持。</li>
             <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
           </ul>
         </td>
@@ -204,7 +204,8 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>公式中的输入x2。</td>
         <td>
           <ul>
-            <li>不支持空Tensor。</li>
+            <li>不支持空Tensor。特殊情况：<term>昇腾910_95 AI处理器</term>：仅在ND格式下，对n=0的空Tensor输入，返回空Tensor作为输出；其他情况的空Tensor不支持。</li>
+            <li>FRACTAL_NZ格式下，不支持空Tensor。</li>
             <li>FRACTAL_NZ数据格式，shape支持4-8维。</li>
             <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
           </ul>
@@ -401,7 +402,7 @@ aclnnStatus aclnnQuantMatmulV5(
       <tr>
         <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="5">161002</td>
-        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。</td>
+        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。特殊情况：<term>昇腾910_95 AI处理器</term>：若x2为ND格式，对于m或n=0的空tensor，返回空tensor作为输出，不会报错；若x2为FRACTAL_NZ格式，对于m=0的空tensor，返回空tensor作为输出，不会报错。</td>
       </tr>
       <tr>
         <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的数据类型和数据格式不在支持的范围之内。</td>

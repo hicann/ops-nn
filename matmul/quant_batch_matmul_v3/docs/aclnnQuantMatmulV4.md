@@ -310,7 +310,7 @@ aclnnStatus aclnnQuantMatmulV4(
         <td>x1、x2、bias、scale、offset或out的shape不满足校验条件。</td>
     </tr>
     <tr>
-        <td>x1、x2、bias、scale、offset或out是空tensor。</td>
+        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。特殊情况：<term>昇腾910_95 AI处理器</term>：若x2为ND格式，对于m或n=0的空tensor，返回空tensor作为输出，不会报错；若x2为FRACTAL_NZ格式，对于m=0的空tensor，返回空tensor作为输出，不会报错。</td>
     </tr>
     </tbody>
     </table>

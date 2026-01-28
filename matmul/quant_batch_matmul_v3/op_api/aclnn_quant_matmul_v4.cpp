@@ -1464,6 +1464,25 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     bool &transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     bool &transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
     bool isA8W4F = isA8W4Float(x1, x2);
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        auto x1DimNum = x1->GetViewShape().GetDimNum();
+        auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
+                                        x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
+        auto x2DimNum = x2->GetViewShape().GetDimNum();
+        auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
+                                        x2->GetViewShape().GetDim(x2DimNum - 1);
+        if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
+            if (inputSizeM == 0) {
+                OP_LOGD("aclnnV4 nz m=0");
+                return ACLNN_SUCCESS;
+            }
+        } else {
+            if (inputSizeM == 0 || inputSizeN == 0) {
+                OP_LOGD("aclnnV4 nd m/n=0");
+                return ACLNN_SUCCESS;
+            }
+        }
+    }
     auto ret = TensorPreProcess(x1, x2, pertokenScaleOptional, yScale, groupSize);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     bool isA4W4 = false;

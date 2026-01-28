@@ -847,6 +847,25 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
         CHECK_RET(A8W4InferGroupSize(groupSize), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
     }    
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        auto x1DimNum = x1->GetViewShape().GetDimNum();
+        auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
+                                        x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
+        auto x2DimNum = x2->GetViewShape().GetDimNum();
+        auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
+                                        x2->GetViewShape().GetDim(x2DimNum - 1);
+        if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
+            if (inputSizeM == 0) {
+                OP_LOGD("aclnnV5 nz m=0");
+                return ACLNN_SUCCESS;
+            }
+        } else {
+            if (inputSizeM == 0 || inputSizeN == 0) {
+                OP_LOGD("aclnnV5 nd m/n=0");
+                return ACLNN_SUCCESS;
+            }
+        }
+    }
     auto ret = PreMatmulCalcProcess(inputTensors, quantTensors, boolsTrans, out, isA8W4, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
