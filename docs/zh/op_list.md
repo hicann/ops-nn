@@ -2836,6 +2836,26 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/dynamic_dual_level_mx_quant/README.md">dynamic_dual_level_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>通过给定的level0BlockSize和level1BlockSize将输入进行两次划分，以数据块为粒度，进行目的数据类型为FLOAT4类的MX二级量化。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/grouped_dynamic_block_quant/README.md">grouped_dynamic_block_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/grouped_dynamic_mx_quant/README.md">grouped_dynamic_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>

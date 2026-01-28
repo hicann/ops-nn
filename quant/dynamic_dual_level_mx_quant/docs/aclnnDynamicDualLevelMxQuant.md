@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：目的数据类型为FLOAT4类的MX量化。只对尾轴进行量化，前面所有的轴都合轴处理，通过给定的level0BlockSize将输入划分成多个数据块，对每个数据块进行一级量化，输出量化尺度level0ScaleOut；然后将一级量化的结果作为新的输入，并通过给定的level1BlockSize将其划分成多个数据块，对每个数据块进行二级量化，输出量化尺度level1ScaleOut，根据round_mode进行数据类型的转换，得到量化结果yOut，具体参见[图示](../../../docs/zh/figures/二级量化图.png)。
+- 接口功能：目的数据类型为FLOAT4类的MX量化。只对尾轴进行量化，前面所有的轴都合轴处理，通过给定的level0BlockSize将输入划分成多个数据块，对每个数据块进行一级量化，输出量化尺度level0ScaleOut；然后将一级量化的结果作为新的输入，并通过给定的level1BlockSize将其划分成多个数据块，对每个数据块进行二级量化，输出量化尺度level1ScaleOut，根据round_mode进行数据类型的转换，得到量化结果yOut，具体参见[图示](../../../docs/zh/figures/DynamicDualLevelMxQuant.png)。
 
 - 计算公式：
   - 将输入x在尾轴上按$k_0$ = level0BlockSize个数分组，一组$k_0$个数  $\{\{x_i\}_{i=1}^{k_0}\}$ 动态量化为 $\{level0Scale, \{temp_i\}_{i=1}^{k_0}\}$, $k_0$ = level0BlockSize，然后将temp在尾轴上按$k_1$ = level1BlockSize个数分组，一组$k_1$个数  $\{\{temp_i\}_{i=1}^{k_1}\}$ 动态量化为 $\{level1Scale, \{y_i\}_{i=1}^{k_1}\}$, $k_1$ = level1BlockSize
