@@ -14,7 +14,7 @@
 #include "level0/add.h"
 #include "level0/masked_fill.h"
 #include "level0/reduce_min.h"
-#include "index/gather_elements/op_host/op_api/gather_elements.h"
+#include "index/gather_elements/op_api/gather_elements.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/select.h"

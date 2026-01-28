@@ -1,14 +1,18 @@
 # aclnnNonzero
 
-
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/non_zero)
 
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
+| <term>昇腾910_95 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -18,48 +22,168 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnNonzeroGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNonzero”接口执行计算。
 
-* `aclnnStatus aclnnNonzeroGetWorkspaceSize(const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
-* `aclnnStatus aclnnNonzero(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```cpp
+aclnnStatus aclnnNonzeroGetWorkspaceSize(
+  const aclTensor *self, 
+  aclTensor       *out, 
+  uint64_t        *workspaceSize, 
+  aclOpExecutor  **executor)
+```
+
+```cpp
+aclnnStatus aclnnNonzero(
+  void          *workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor *executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnNonzeroGetWorkspaceSize
 
 - **参数说明：**
 
-  * self（aclTensor*, 计算输入）：表示待计算的目标张量，Device侧的aclTensor。shape支持0-8维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、BFLOAT16。
-    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、BFLOAT16、UINT16、UINT32、UINT64。
+  <table style="undefined;table-layout: fixed; width: 1698px"><colgroup>
+  <col style="width: 139px">
+  <col style="width: 120px">
+  <col style="width: 304px">
+  <col style="width: 150px">
+  <col style="width: 385px">
+  <col style="width: 133px">
+  <col style="width: 160px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度（shape）</th>
+      <th>非连续张量Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>self</td>
+      <td>输入</td>
+      <td>表示待计算的目标张量。</td>
+      <td>-</td>
+      <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、BFLOAT16、UINT16、UINT32、UINT64</td>
+      <td>ND</td>
+      <td>0-8</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>out</td>
+      <td>输出</td>
+      <td>-</td>
+      <td>-</td>
+      <td>INT64</td>
+      <td>ND</td>
+      <td>2</td>
+      <td>√</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+  </table>
 
-  * out（aclTensor*, 计算输出）：Device侧的aclTensor，数据类型支持INT64。shape支持2维，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16、UINT16、UINT32、UINT64。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型不支持UINT16、UINT32、UINT64。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：由于硬件资源限制，输出索引要求在int32精度范围内，所以输入的某一维度不能超过int32的表示范围。
 
-  * workspaceSize（uint64_t*, 出参）：返回需要在Device侧申请的workspace大小。
-
-  * executor（aclOpExecutor**, 出参）：返回op执行器，包含了算子计算流程。
-
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的self或out是空指针时。
-  161002 (ACLNN_ERR_PARAM_INVALID): 1. self的数据类型不在支持的范围之内。
-                                    2. self的shape某一维超出int32表示范围。
-  ```
-
+  <table style="undefined;table-layout: fixed; width: 1071px"><colgroup>
+  <col style="width: 265px">
+  <col style="width: 149px">
+  <col style="width: 657px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的self或out是空指针时。</td>
+    </tr>
+    <tr>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
+      <td>self的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>self的shape某一维范围不满足要求。</td>
+    </tr>
+  </tbody>
+  </table>
+ 
 ## aclnnNonzero
 
-- **参数说明：**
+- **参数说明**
 
-  * workspace（void*, 入参）：在Device侧申请的workspace内存地址。
+  <table style="undefined;table-layout: fixed; width: 1042px"><colgroup>
+  <col style="width: 141px">
+  <col style="width: 110px">
+  <col style="width: 791px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnNonzeroGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
-  * workspaceSize（uint64_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnNonzeroGetWorkspaceSize获取。
-
-  * executor（aclOpExecutor*, 入参）：op执行器，包含了算子计算流程。
-
-  * stream（aclrtStream, 入参）：指定执行任务的Stream。
-
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -68,11 +192,12 @@
 - 确定性计算：
   - aclnnNonzero默认确定性实现。
 
-- 由于硬件资源限制，输出索引要求在int32精度范围内。所以输入的某一维度不能超过int32的表示范围。
 - 接口的输出size需要按照最大的输出size申请（即全部非0的场景，实测输出size不能超过2G），同时该接口使用的workspace也比较大，需要关注是否超过device内存大小。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

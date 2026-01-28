@@ -293,5 +293,5 @@ ge::graphStatus IndexFullLoadTiling::PostTiling()
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
-REGISTER_OPS_TILING_TEMPLATE(Index, IndexFullLoadTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(Index, IndexFullLoadTiling, 10);
 } // namespace optiling

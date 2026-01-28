@@ -54,7 +54,7 @@ constexpr int64_t B32_BYTES = 4;
 constexpr int64_t B64_BYTES = 8;
 constexpr int64_t UB_REG_SIZE = 32;
 constexpr int64_t VLEN_SIZE = 256;
-constexpr int64_t UNPACK_NUM = 4;
+constexpr int64_t UNPACK_NUM = 8;
 constexpr int64_t VSQZ_UB_SIZE = 4;
 constexpr int64_t NUM_1 = 1;
 constexpr int64_t NUM_2 = 2;
@@ -388,7 +388,7 @@ void NonZeroAscendCTilingImpl::CalcUbSizeInfoSmallMask()
     }
     loopTailPerCore_ = numPerCore_ - loopNumPerCore_ * ubFactorNum_;
     loopNumTailCore_ = numTailCore_ / ubFactorNum_;
-    if (numTailCore_ % ubFactorNum_ == 0) {
+    if (numTailCore_ > 0 && numTailCore_ % ubFactorNum_ == 0) {
         loopNumTailCore_ = loopNumTailCore_ - 1;
     }
     loopTailTailCore_ = numTailCore_ - loopNumTailCore_ * ubFactorNum_;
@@ -538,6 +538,7 @@ ge::graphStatus NonZeroAscendCTilingImpl::DoTiling()
     // set block dim and tilingKey
     context_->SetBlockDim(realCoreNum_);
     context_->SetTilingKey(tilingData_.get_tilingKey());
+    context_->SetScheduleMode(1);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     workspaces[0] = WORKSPACE_SIZE;

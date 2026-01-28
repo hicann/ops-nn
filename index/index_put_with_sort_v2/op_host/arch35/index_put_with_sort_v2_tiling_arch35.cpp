@@ -13,10 +13,13 @@
  */
 
 #include "util/platform_util.h"
+#include "tiling_base/tiling_util.h"
 #include "index_put_with_sort_v2_tiling_arch35.h"
 
 namespace optiling
 {
+using namespace Ops::NN::OpTiling;
+
 constexpr int64_t INPUT_NUM = 4;
 constexpr int64_t OUTPUT_NUM = 1;
 constexpr int64_t ATTR_INDEX_0 = 0;
@@ -402,10 +405,8 @@ static ge::graphStatus Tiling4IndexPutWithSortV2(gert::TilingContext* context) {
     // IndexPutWithSortV2TilingData tiling;
 
     // calc Tiling Factor
-    auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    platform_ascendc::SocVersion curSocVersion = ascendc_platform.GetSocVersion();
-    bool isAscend910_95_ = curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
-    if (isAscend910_95_) {
+    bool isRegbase = IsRegbaseSocVersion(context) ? true : false;
+    if (isRegbase) {
         OP_LOGD(context->GetNodeName(), "IndexPutWithSortV2 tiling start");
         IndexPutWithSortV2Tiling indexPutWithSortV2Tiling(context);
         return indexPutWithSortV2Tiling.DoTiling();

@@ -399,7 +399,9 @@ void GatherElementsNoContiguousTiling::CoalesceGatherElements()
 
 ge::graphStatus GatherElementsNoContiguousTiling::DoOpTiling()
 {
-    CoalesceGatherElements();
+    if (!isIndexTranspose_) {
+        CoalesceGatherElements();
+    }
     CalcuCore();
     SetTilingData();
     PrintTilingData();

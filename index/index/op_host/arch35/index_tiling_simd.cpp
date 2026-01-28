@@ -294,5 +294,5 @@ ge::graphStatus IndexTilingSimd::PostTiling()
     context_->GetRawTilingData()->SetDataSize(simdTilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
-REGISTER_OPS_TILING_TEMPLATE(Index, IndexTilingSimd, 1);
+REGISTER_OPS_TILING_TEMPLATE(Index, IndexTilingSimd, 20);
 } // namespace optiling

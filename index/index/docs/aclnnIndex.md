@@ -1,11 +1,17 @@
 # aclnnIndex
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/index)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    √     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -115,6 +121,8 @@ aclnnStatus aclnnIndex(
       </tr>
     </tbody></table>
 
+    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16。
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -196,10 +204,9 @@ aclnnStatus aclnnIndex(
 
 - 确定性计算：
   - aclnnIndex默认确定性实现。
-
-  - self非0维Tensor时，indices中tensor的个数需要小于等于self的维度数，self为0维Tensor时，indices中只能有1个tensor。
-  - indices中的各个tensor之间shape需相同或满足broadcast关系，且各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
-  - indices为bool类型时，indices中各个tensor的形状必须和self对应维度的形状完全一样，并且各个tensor通过自身布尔索引过滤生成的新tensor之间shape需满足broadcast关系。
+- self非0维Tensor时，indices中tensor的个数需要小于等于self的维度数，self为0维Tensor时，indices中只能有1个tensor。
+- indices中的各个tensor之间shape需相同或满足broadcast关系，且各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
+- indices为bool类型时，indices中各个tensor的形状必须和self对应维度的形状完全一样，并且各个tensor通过自身布尔索引过滤生成的新tensor之间shape需满足broadcast关系。
 
 ## 调用示例
 

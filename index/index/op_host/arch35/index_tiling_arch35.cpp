@@ -340,5 +340,5 @@ ge::graphStatus IndexSimtTiling::PostTiling()
     context_->SetLocalMemorySize(DCACHE_SIZE);
     return ge::GRAPH_SUCCESS;
 }
-REGISTER_OPS_TILING_TEMPLATE(Index, IndexSimtTiling, 10);
+REGISTER_OPS_TILING_TEMPLATE(Index, IndexSimtTiling, 30);
 } // namespace optiling

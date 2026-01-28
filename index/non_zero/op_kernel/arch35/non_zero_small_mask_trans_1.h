@@ -71,7 +71,11 @@ __aicore__ inline void NonZeroSmallMask1<T1, T2, TILING_KEY>::ComputeIds(
     LocalTensor<int32_t> dstUbInt32 = xUbSize.template ReinterpretCast<int32_t>();
     uint64_t arNum = 0;
 
-    this->VfComputeIds(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    if constexpr (sizeof(T1) == sizeof(int64_t)) {
+        this->VfComputeIdsB64(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    } else {
+        this->VfComputeIds(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    }
     loopGm = loopGm + arNum;
     if (arNum > 0) {
         if constexpr (IsSameType<T2, int32_t>::value) {

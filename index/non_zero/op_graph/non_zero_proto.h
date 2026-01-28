@@ -40,14 +40,15 @@ namespace ge {
 */
 
 REG_OP(NonZero)
-    .INPUT(x, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8,
-                          DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64,
-                          DT_UINT64, DT_BOOL, DT_BF16}))
+    .INPUT(
+        x, TensorType(
+               {DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64,
+                DT_UINT64, DT_BOOL, DT_BF16}))
     .OUTPUT(y, TensorType({DT_INT64, DT_INT32}))
     .ATTR(transpose, Bool, false)
     .ATTR(dtype, Type, DT_INT64)
     .OP_END_FACTORY_REG(NonZero)
 
-}  // namespace ge
+} // namespace ge
 
-#endif  // NON_ZERO_PROTO_H_
+#endif // NON_ZERO_PROTO_H_

@@ -48,7 +48,7 @@ if __name__ == '__main__':
             if op_name == 'common':
                 op_name = files[0] + '.common'
             ops.add(op_name)
-        elif is_experimental and len(files) > 3 and files[1] in OP_CATEGORY_LIST:
+        elif is_experimental and len(files) > 3 and files[0] == "experimental" and files[1] in OP_CATEGORY_LIST:
             op_name = files[2]
             if op_name == 'common':
                 op_name = files[1] + '.common'

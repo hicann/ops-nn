@@ -21,6 +21,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -32,22 +33,22 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
     op::DataType::DT_BOOL,  op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
     op::DataType::DT_FLOAT, op::DataType::DT_INT8,    op::DataType::DT_UINT8};
 
-static const std::initializer_list<op::DataType> ASCEND910D_AICORE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> REGBASE_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_BOOL,  op::DataType::DT_FLOAT16, op::DataType::DT_BF16,  op::DataType::DT_FLOAT,
     op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_INT16, op::DataType::DT_UINT16,
-    op::DataType::DT_INT32, op::DataType::DT_UINT32};
+    op::DataType::DT_INT32, op::DataType::DT_UINT32, op::DataType::DT_INT64};
 
 // 根据芯片类型、dtype判断算子是否支持走AiCore
 static bool IsAiCoreSupport(const aclTensor* self)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201) {
         if (self->GetViewShape().GetDimNum() == 0) {
             return false;
         }
         return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
-    } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        return CheckType(self->GetDataType(), ASCEND910D_AICORE_DTYPE_SUPPORT_LIST);
+    } else if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return CheckType(self->GetDataType(), REGBASE_AICORE_DTYPE_SUPPORT_LIST);
     }
     return false;
 }
@@ -56,7 +57,7 @@ static bool IsAiCoreSupport(const aclTensor* self)
 static aclTensor* NonzeroAiCore(const aclTensor* self, aclTensor* out, bool transpose, aclOpExecutor* executor)
 {
     L0_DFX(NonzeroAiCore, self, out, transpose);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         Shape outShapeShape{NONZERO_TENSOR_DIMS_MAX + 1};
         auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(

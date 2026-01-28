@@ -720,6 +720,78 @@
             "value": null
           }
         ]
+      },
+      {
+        "bin_filename": "NonZero_40f28d2723528f344d5b6f9f09089034",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "transpose",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "NonZero_9112f7dbc721d978a94ae91eb2c25e82",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "transpose",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
       }
     ]
 }

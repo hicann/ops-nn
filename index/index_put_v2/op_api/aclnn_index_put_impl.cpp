@@ -1,12 +1,12 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
- * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
- */
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file aclnn_index_put_impl.cpp
@@ -16,7 +16,7 @@
 #include "index/index_put/op_host/op_api/index_put.h"
 #include "index_put_v2.h"
 #include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
-#include "index/index_put_with_sort_v2/op_host/op_api/index_put_with_sort_v2.h"
+#include "index/index_put_with_sort_v2/op_api/index_put_with_sort_v2.h"
 #include "index/index_put_with_sort/op_host/op_api/index_put_with_sort.h"
 #include "level0/sort.h"
 #include "aclnn_kernels/transpose.h"
@@ -35,6 +35,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/platform.h"
 #include "op_api/level2_base.h"
 #if __has_include("runtime/context.h")
@@ -69,11 +70,7 @@ static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_BOOL};
 
 static const int64_t MAX_INDICES_NUM = 20000;
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000; // 维度小于5时的最大索引数限制
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM5 = 54247424; // 维度5时的最大索引数限制
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM6 = 48611328; // 维度6时的最大索引数限制
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM7 = 44384256; // 维度7时的最大索引数限制
-static const int64_t MAX_SUPPORTTYPE_INDICES_NUM_DIM8 = 40861696; // 维度8时的最大索引数限制
+static const int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000;
 static const int64_t MAX_RESERVE_NUM = 100;
 static const int64_t MULTI_DTYPE_SUPPORT_NUM = 200;
 static const int64_t MULTI_DTYPE_SUPPORT_TAIL = 128;
@@ -149,7 +146,7 @@ static bool CheckDtypeValid(const aclTensor *self,
   return true;
 }
 
-static bool IsAiCPUSupportCheckIndices910_95(const aclTensor *selfRef, const FVector<const aclTensor*, 8> &indices,
+static bool IsAiCPUSupportCheckIndicesArch3510(const aclTensor *selfRef, const FVector<const aclTensor*, 8> &indices,
                                 const aclTensor *value) {
   /**
    * Using AICPU when allDefinedIndices size is more than two or the type of selfRef tensor is double.
@@ -182,39 +179,6 @@ static bool IsAiCPUSupportCheckIndices910_95(const aclTensor *selfRef, const FVe
     }
   }
   return false;
-}
-
-static bool IndexPutV2IndicesNumsLimit(const FVector<const aclTensor*, 8> &indices) {
-  if (indices.size() == 0) {
-    return true;
-  }
-  // 以下情况会在indexPutV2的tiling里被拦截，需要路由到aicpu
-  int64_t indicesNums = static_cast<int64_t>(indices[0]->GetViewShape().GetShapeSize());
-  auto dims = indices.size();
-  OP_LOGD("indices size is %ld, indices nums is %ld", dims, indicesNums);
-  // aclnn中原本的拦截量
-  if (indicesNums > MAX_SUPPORTTYPE_INDICES_NUM) {
-    OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
-    return false;
-  }
-  // 高维需要进一步细化拦截量
-  if (dims == 5 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM5) { // 5 is dims
-    OP_LOGD("IndexPutV2 not support indices num greater than 54247424 when indices size is 5.");
-    return false;
-  }
-  if (dims == 6 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM6) { // 6 is dims
-    OP_LOGD("IndexPutV2 not support indices num greater than 48611328 when indices size is 6.");
-    return false;
-  }
-  if (dims == 7 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM7) { // 7 is dims
-    OP_LOGD("IndexPutV2 not support indices num greater than 44384256 when indices size is 7.");
-    return false;
-  }
-  if (dims == 8 && indicesNums > MAX_SUPPORTTYPE_INDICES_NUM_DIM8) { // 8 is dims
-    OP_LOGD("IndexPutV2 not support indices num greater than 40861696 when indices size is 8.");
-    return false;
-  }
-  return true;
 }
 
 static bool IsAiCPUSupportCheckIndices(const FVector<const aclTensor*, 8>& indices,
@@ -251,6 +215,36 @@ static bool IsAiCPUSupportCheckIndices(const FVector<const aclTensor*, 8>& indic
         }
     }
     return false;
+}
+
+static bool IndexPutV2IndicesNumsLimit(const FVector<const aclTensor*, 8> &indices) {
+  // 以下情况会在indexPutV2的tiling里被拦截，需要路由到aicpu
+  auto indicesNums = indices[0]->GetViewShape().GetShapeSize();
+  auto dims = indices.size();
+  OP_LOGD("indices size is %ld, indices nums is %ld", dims, indicesNums);
+  // aclnn中原本的拦截量
+  if (indicesNums > MAX_SUPPORTTYPE_INDICES_NUM) {
+    OP_LOGD("IndexPutV2 not support indices num greater than 60000000.");
+    return false;
+  }
+  // 高维需要进一步细化拦截量
+  if (dims == 5 && indicesNums > 54247424) { // 5 is dims, 54247424 is indices limits
+    OP_LOGD("IndexPutV2 not support indices num greater than 54247424 when indices size is 5.");
+    return false;
+  }
+  if (dims == 6 && indicesNums > 48611328) { // 6 is dims, 48611328 is indices limits
+    OP_LOGD("IndexPutV2 not support indices num greater than 48611328 when indices size is 6.");
+    return false;
+  }
+  if (dims == 7 && indicesNums > 44384256) { // 7 is dims, 44384256 is indices limits
+    OP_LOGD("IndexPutV2 not support indices num greater than 44384256 when indices size is 7.");
+    return false;
+  }
+  if (dims == 8 && indicesNums > 40861696) { // 8 is dims, 40861696 is indices limits
+    OP_LOGD("IndexPutV2 not support indices num greater than 40861696 when indices size is 8.");
+    return false;
+  }
+  return true;
 }
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
@@ -630,7 +624,7 @@ static std::pair<const aclTensor*, const aclTensor*> ProcessIndices(const aclTen
     return std::make_pair(sortIndice, posIdx);
 }
 
-static const aclTensor* valuesToBroadcast910_95(const aclTensor* selfCast,
+static const aclTensor* valuesToBroadcastArch3510(const aclTensor* selfCast,
                                                 FVector<const aclTensor*> definedIndices,
                                                 const aclTensor* valuesCast, const FVector<int64_t, 8> masks,
                                                 bool iscontiguousIdx, aclOpExecutor* executor)
@@ -718,7 +712,7 @@ static const aclTensor* valuesToBroadcast910_95(const aclTensor* selfCast,
     return valueBroadcast;
 }
 
-static std::pair<const aclTensor*, const aclTensor*> ProcessIndices910_95(const aclTensor* linearIndex,
+static std::pair<const aclTensor*, const aclTensor*> ProcessIndicesArch3510(const aclTensor* linearIndex,
                                                                           aclOpExecutor* executor)
 {
     if (linearIndex == nullptr) {
@@ -811,34 +805,30 @@ static const aclTensor* AicpuProcess(const aclTensor* selfRef, const aclTensor* 
 }
 
 namespace {
-static int searchShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, int i, int index)
+static bool ComputeBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, std::vector<int64_t> &tensorShape)
 {
-    for (int j = 0; j < static_cast<int>(allIndices[index]->GetViewShape().GetDimNum()); j++) {
-      if (allIndices[index]->GetViewShape()[j] < allIndices[i]->GetViewShape()[j]) {
-        index = i;
-        break;
-      }
+    OP_LOGD("Enter ComputeBroadCastShape Function");
+    if (allIndices.size() == 0) {
+        return false;
     }
-    return index;
+    op::Shape broadcastShape = allIndices[0]->GetViewShape();
+    for (size_t i = 1; i < allIndices.size(); i++) {
+        if(!BroadcastInferShape(broadcastShape, allIndices[i]->GetViewShape(), broadcastShape)) {
+            return false;
+        }
+    }
+    uint64_t dimnum = broadcastShape.GetDimNum();
+    // 将最终广播的shape转移到tensorShape
+    for (size_t i = 0; i < dimnum; i++) {
+        tensorShape.push_back(broadcastShape.GetDim(i));
+    }
+    return true;
 }
 
-static int computeBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices)
-{
-    int index = 0;
-    for (int i = 1; i < static_cast<int>(allIndices.size()); i++) {
-      if (allIndices[index]->GetViewShape().GetDimNum() < allIndices[i]->GetViewShape().GetDimNum()) {
-        index = i;
-      } else if (allIndices[index]->GetViewShape().GetDimNum() == allIndices[i]->GetViewShape().GetDimNum()) {
-        index = searchShape(allIndices, i, index);
-      }
-    }
-    return index;
-}
-
-static bool isBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, int i, std::vector<int64_t> tensorShape, int32_t tensorShapeDim)
+static bool isBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, int i, std::vector<int64_t> tensorShape, uint64_t tensorShapeDim)
 {
     bool needBroadcast = false;
-    for (int j = 0; j < static_cast<int>(tensorShapeDim); j++) {
+    for (size_t j = 0; j < tensorShapeDim; j++) {
         if (tensorShape[j] != allIndices[i]->GetViewShape()[j]) {
             needBroadcast = true;
             break;
@@ -850,15 +840,12 @@ static bool isBroadCastShape(FVector<const aclTensor*, DIMLIMIT>& allIndices, in
 static bool IndicesBroadcastUndeter(FVector<const aclTensor*, DIMLIMIT>& allIndices, aclOpExecutor* executor)
 {
     OP_LOGD("Enter IndicesBroadcast");
-    int index = computeBroadCastShape(allIndices);
     bool needBroadcast = false;
-    auto tensorShapeDim = allIndices[index]->GetViewShape().GetDimNum();
-    std::vector<int64_t> tensorShape(tensorShapeDim);
-    for (int i = 0; i < static_cast<int>(tensorShapeDim); i++) {
-      tensorShape[i] = allIndices[index]->GetViewShape().GetDim(i);
-    }
+    std::vector<int64_t> tensorShape;
+    CHECK_RET(ComputeBroadCastShape(allIndices, tensorShape), ACLNN_ERR_PARAM_INVALID);
+    uint64_t tensorShapeDim = tensorShape.size();
+    auto dstDtype = op::DataType::DT_INT64;
     auto valueShapeBroad = executor->AllocIntArray(tensorShape.data(), tensorShapeDim);
-    auto dstDtype = allIndices[index]->GetDataType(); 
     for (int i = 0; i < static_cast<int>(allIndices.size()); i++) {
         needBroadcast = false;
         if (tensorShapeDim == allIndices[i]->GetViewShape().GetDimNum()) {
@@ -871,7 +858,6 @@ static bool IndicesBroadcastUndeter(FVector<const aclTensor*, DIMLIMIT>& allIndi
         }
         if (allIndices[i]->GetDataType() != dstDtype) {
             allIndices[i] = l0op::Cast(allIndices[i], op::DataType::DT_INT32, executor);
-            allIndices[i] = l0op::Cast(allIndices[i], dstDtype, executor);
         }
         if (!allIndices[i]->IsEmpty()) {  // scalar tensor need broadcast, empty tensor not
             OP_LOGD("IndicesBroadcast start, index is %d", i);
@@ -930,7 +916,7 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
     auto allIndicesTensorList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
 
     // Value Broadcast
-    auto valueBroadcast = valuesToBroadcast910_95(selfCast, definedIndices, valuesCast, masks,
+    auto valueBroadcast = valuesToBroadcastArch3510(selfCast, definedIndices, valuesCast, masks,
                                                   iscontiguousIdx, executor);
     CHECK_RET(valueBroadcast != nullptr, nullptr);
 
@@ -975,7 +961,7 @@ static const aclTensor* DeterministicProcess(const aclTensor* selfCast, const ac
     CHECK_RET(linearIndex != nullptr, nullptr);
 
     // Sort
-    auto result = ProcessIndices910_95(linearIndex, executor);
+    auto result = ProcessIndicesArch3510(linearIndex, executor);
     auto sortIdxInt = result.first;
     CHECK_RET(sortIdxInt != nullptr, nullptr);
     auto posIdx = result.second;
@@ -984,7 +970,7 @@ static const aclTensor* DeterministicProcess(const aclTensor* selfCast, const ac
     CHECK_RET(posIdx != nullptr, nullptr);
 
     // Value Broadcast
-    auto valueBroadcast = valuesToBroadcast910_95(selfCast, definedIndices, valuesCast, masks,
+    auto valueBroadcast = valuesToBroadcastArch3510(selfCast, definedIndices, valuesCast, masks,
                                                   iscontiguousIdx, executor);
     CHECK_RET(valueBroadcast != nullptr, nullptr);
 
@@ -998,13 +984,13 @@ static const aclTensor* DeterministicProcess(const aclTensor* selfCast, const ac
     return indexPutOpOut;
 }
 
-static const aclTensor* IndexPutProcess910_95(aclTensor* selfRef, const aclTensor* selfCast, const aclTensor* valuesCast,
+static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTensor* selfCast, const aclTensor* valuesCast,
                                               const aclTensorList* indices,
                                               const FVector<const aclTensor*, 8>& allDefinedIndices,
                                               const bool accumulate, FVector<int64_t, 8> masks, int64_t masksNum,
                                               aclOpExecutor* executor)
 {
-    bool isSupportAiCpu = IsAiCPUSupportCheckIndices910_95(selfCast, allDefinedIndices, valuesCast); // indices [] will go to aicpu
+    bool isSupportAiCpu = IsAiCPUSupportCheckIndicesArch3510(selfCast, allDefinedIndices, valuesCast); // indices [] will go to aicpu
     int64_t deterministicValue = 0;
     rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != RT_ERROR_NONE) {
@@ -1019,7 +1005,7 @@ static const aclTensor* IndexPutProcess910_95(aclTensor* selfRef, const aclTenso
             masks.emplace_back(0);
         }
         for (int i = 0; i < static_cast<int>(masks.size()); i++) {
-            OP_LOGD("Process910_95 masks %d is %ld.", i, masks[i]);
+            OP_LOGD("Process arch3510 masks %d is %ld.", i, masks[i]);
         }
         if (deterministicValue == 0 && !(accumulate && selfRef->GetDataType() == op::DataType::DT_BOOL)) {
             OP_LOGD("Enter IndexPutV2 Process");
@@ -1111,8 +1097,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
       int64_t deterministicValue = 0;
       rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
       if (retRts != RT_ERROR_NONE) {
@@ -1139,7 +1124,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
           CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
           CHECK_RET(valuesCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
       }
-    indexPutOpOut = IndexPutProcess910_95(selfRef, selfCast, valuesCast, indices, allDefinedIndices, accumulate, masks, masksNum, uniqueExecutor.get());
+    indexPutOpOut = IndexPutProcessArch3510(selfRef, selfCast, valuesCast, indices, allDefinedIndices, accumulate, masks, masksNum, uniqueExecutor.get());
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 固定写法，将计算结果转换成输出out的数据类型
     auto castOut = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());

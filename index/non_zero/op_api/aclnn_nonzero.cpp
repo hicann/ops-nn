@@ -27,6 +27,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -46,7 +47,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_DOUBLE,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910D_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64,  op::DataType::DT_FLOAT16,
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8,  op::DataType::DT_DOUBLE,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16,  op::DataType::DT_UINT16, op::DataType::DT_UINT32,
@@ -61,11 +62,11 @@ inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95) {
-        return ASCEND910D_DTYPE_SUPPORT_LIST;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return REGBASE_DTYPE_SUPPORT_LIST;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;

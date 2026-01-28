@@ -40,5 +40,6 @@ struct IndexCompileInfo {
     int32_t after_v200;
     uint64_t ubSize;
 };
+
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_V2_INDEX_H

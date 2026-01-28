@@ -63,7 +63,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_
 static const std::initializer_list<op::DataType> ONE_BYTE_DTYPE_LIST = {
     op::DataType::DT_INT8, op::DataType::DT_UINT8};
 
-static const std::initializer_list<op::DataType> ONE_BYTE_DTYPE_LIST_910_95 = {
+static const std::initializer_list<op::DataType> ONE_BYTE_DTYPE_LIST_REGBASE = {
     op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BOOL};
 
 static const std::initializer_list<op::DataType> TWO_BYTE_DTYPE_LIST = {
@@ -83,7 +83,7 @@ static const std::initializer_list<op::DataType> VGATHER_DTYPE_LIST = {
 static int64_t GetDtypeSize(const op::DataType dtype) {
   auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
   if (Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
-    if (op::CheckType(dtype, ONE_BYTE_DTYPE_LIST_910_95)) {
+    if (op::CheckType(dtype, ONE_BYTE_DTYPE_LIST_REGBASE)) {
       return ONE_BYTE;
     }
   } else {

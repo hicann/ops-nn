@@ -63,6 +63,8 @@ protected:
     __aicore__ inline void VfComputeIds(
         int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t>& outUbSize, LocalTensor<uint32_t>& maskUbSize,
         uint64_t& arNum);
+    __aicore__ inline void VfComputeIdsB64(int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t> &outUbSize,
+        LocalTensor<uint32_t> &maskUbSize, uint64_t &arNum);
     __aicore__ inline void VfPerCoreNonZeroNum1(
         int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
         LocalTensor<uint32_t>& addUbSize);
@@ -72,6 +74,8 @@ protected:
     __aicore__ inline void VfPerCoreNonZeroNum3(
         int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
         LocalTensor<uint32_t>& addUbSize);
+    __aicore__ inline void VfPerCoreNonZeroNum4(int32_t loop, int32_t computeNum, LocalTensor<T1> &xUbSize,
+        LocalTensor<uint32_t> &maskUbSize, LocalTensor<uint32_t> &addUbSize);
     __aicore__ inline void CopyOut(uint64_t arNum, int32_t loopOffset, int32_t alignInt32, LocalTensor<T2>& outUbSize);
     __aicore__ inline void CopyOutTrans(uint64_t arNum, uint64_t looOffset, LocalTensor<T2>& outUbSize);
 
@@ -144,6 +148,8 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::CopyInTail(
         VfPerCoreNonZeroNum2(loopNum, tailNum, xUbSize, maskUbSize, addUbSize);
     } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
         VfPerCoreNonZeroNum3(loopNum, tailNum, xUbSize, maskUbSize, addUbSize);
+    } else if constexpr (sizeof(T1) == sizeof(int64_t)) {
+        VfPerCoreNonZeroNum4(loopNum, tailNum, xUbSize, maskUbSize, addUbSize);
     }
     inQueX_.EnQue<QuePosition::VECCALC, QuePosition::VECOUT>(xUbSize);
     LocalTensor<T1> outUbSize = inQueX_.DeQue<QuePosition::VECCALC, QuePosition::VECOUT, T1>();
@@ -171,6 +177,8 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::CopyInBefore(
             VfPerCoreNonZeroNum2(loopCore, beforeNum, xUbSize, maskUbSize, addUbSize);
         } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
             VfPerCoreNonZeroNum3(loopCore, beforeNum, xUbSize, maskUbSize, addUbSize);
+        } else if constexpr (sizeof(T1) == sizeof(int64_t)) {
+            VfPerCoreNonZeroNum4(loopCore, beforeNum, xUbSize, maskUbSize, addUbSize);
         }
         inQueX_.EnQue<QuePosition::VECCALC, QuePosition::VECOUT>(xUbSize);
         LocalTensor<T1> outUbSize = inQueX_.DeQue<QuePosition::VECCALC, QuePosition::VECOUT, T1>();
@@ -251,6 +259,43 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIds(
             AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 dstPtr, vsqzReg, ureg0);
             Adds(idsReg, idsReg, vfLenInt32, preg);
+        }
+        AscendC::MicroAPI::DataCopyUnAlignPost(dstPtr, ureg0);
+    }
+    arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
+}
+
+template <typename T1, typename T2, int TILING_KEY>
+__aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIdsB64(int32_t loopIndex, int32_t loopNum,
+    LocalTensor<int32_t> &outUbSize, LocalTensor<uint32_t> &maskUbSize, uint64_t &arNum)
+{
+    uint32_t sreg = (uint32_t)loopNum;
+    uint32_t repeatElm = (uint32_t)VF_LEN_INT64;
+    uint16_t repeatTimes = CeilDivision(loopNum, repeatElm);
+    auto dstPtr = (__ubuf__ int32_t *)outUbSize.GetPhyAddr() + tilingData_->offsetInt32Trans;
+    auto maskUbPtr = (__ubuf__ uint64_t *)maskUbSize.GetPhyAddr() + loopIndex * tilingData_->maskLoopNumO;
+    int32_t numPerCore1 = tilingData_->numPerCore;
+    int32_t beforeNumO1 = tilingData_->beforeNumO;
+    int32_t scalar = loopIndex * beforeNumO1;
+    __VEC_SCOPE__
+    {
+        AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
+        AscendC::MicroAPI::UnalignReg ureg0;
+        RegTensor<int32_t> vsqzReg;
+        RegTensor<int32_t> idsReg;
+        MaskReg maskReg, maskHalf;
+        MaskReg preg;
+        preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        Arange(idsReg, scalar);
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, 4);
+            AscendC::MicroAPI::DataCopy(maskReg, maskUbPtr, offset);
+            AscendC::MicroAPI::MaskPack<MicroAPI::HighLowPart::LOWEST>(maskHalf, maskReg);
+            
+            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg, ureg0);
+
+            AscendC::MicroAPI::Adds(idsReg, idsReg, repeatElm, preg);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(dstPtr, ureg0);
     }
@@ -420,6 +465,44 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             preg = UpdateMask<T1>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, repeatElm);
             AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, 8);
+            DataCopy(xSrcReg, xUbPtr, srcOffset);
+            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            Select(selectReg, src1Reg, src0Reg, cmpReg);
+            AscendC::MicroAPI::DataCopy(maskUbPtr, cmpReg, srcOffset1);
+            Add(addReg, selectReg, addReg, addComReg);
+        }
+        DataCopy(dstUbPtr, addReg, addComReg);
+    }
+}
+
+template <typename T1, typename T2, int TILING_KEY>
+__aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum4(int32_t loop, int32_t computeNum,
+    LocalTensor<T1> &xUbSize, LocalTensor<uint32_t> &maskUbSize, LocalTensor<uint32_t> &addUbSize)
+{
+    auto xUbPtr = (__ubuf__ T1 *)xUbSize.GetPhyAddr();
+    auto maskUbPtr = (__ubuf__ uint64_t *)maskUbSize.GetPhyAddr() + static_cast<uint64_t>(loop) * tilingData_->maskLoopNum;
+    auto dstUbPtr = (__ubuf__ uint64_t *)addUbSize.GetPhyAddr();
+    uint32_t sreg = (uint32_t)computeNum;
+    uint32_t repeatElm = (uint32_t)vfLenT1_;
+    uint16_t repeatTimes = CeilDivision(computeNum, repeatElm);
+    uint32_t addMask = VF_LEN_INT64;
+    __VEC_SCOPE__
+    {
+        MaskReg preg, addComReg, cmpReg;
+        RegTensor<T1> xSrcReg;
+        RegTensor<uint64_t> src1Reg;
+        RegTensor<uint64_t> src0Reg;
+        RegTensor<uint64_t> selectReg;
+        RegTensor<uint64_t> addReg;
+
+        DataCopy(addReg, dstUbPtr);
+        Duplicate(src1Reg, (uint64_t)1);
+        Duplicate(src0Reg, (uint64_t)0);
+        addComReg = UpdateMask<uint64_t>(addMask);
+        for (uint16_t maskI = 0; maskI < repeatTimes; maskI++) {
+            preg = UpdateMask<uint64_t>(sreg);
+            AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint64_t>(maskI, repeatElm);
+            AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint64_t>(maskI, 4);
             DataCopy(xSrcReg, xUbPtr, srcOffset);
             CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
@@ -934,7 +1017,11 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::ComputeBefore(
     LocalTensor<T2> xUbSize = inQueX_.DeQue<QuePosition::VECIN, QuePosition::VECCALC, T2>();
     LocalTensor<int32_t> dstUbInt32 = xUbSize.template ReinterpretCast<int32_t>();
     uint64_t arNum = 0;
-    VfComputeIds(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    if constexpr (sizeof(T1) == sizeof(int64_t)) {
+        VfComputeIdsB64(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    } else {
+        VfComputeIds(loopCore, beforeNumOut, dstUbInt32, maskUbSize, arNum);
+    }
     loopGm = loopGm + arNum;
     if constexpr (TILING_KEY == DIM2) {
         ComputOut2(arNum, loopGm, dstUbInt32, xUbSize);

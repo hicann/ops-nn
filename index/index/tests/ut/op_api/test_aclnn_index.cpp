@@ -9,7 +9,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../../op_host/op_api/aclnn_index.h"
+#include "../../../op_api/aclnn_index.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 

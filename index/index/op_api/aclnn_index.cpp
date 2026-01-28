@@ -29,6 +29,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "index/gather_v2/op_api/gather_v2.h"
 
 /* AdvancedIndex operator's flow as:
@@ -56,6 +57,24 @@ static const int64_t MASK_MODE_01_SIZE = 2;
 static const int64_t UB_LIMIT = 256;
 static const int64_t TAIL_SIZE_LIMIT = 32;
 static constexpr size_t MAX_DIM_LEN = 8;
+static constexpr size_t DIM_BOUND_NON_CONTIGUOUS = 4;
+struct IndicesInfo {
+    FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> masks;
+    FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> allDefinedIndices;
+    int64_t indicesNum = 0;
+    int64_t masksNum = 0;
+    int64_t dim = 0;
+    size_t indicesDim = 0;
+};
+struct ChooseInfo {
+    size_t outputDim = 0;
+    size_t tailSize = 1;
+    size_t permMasksNum = 0;
+    op::Shape outputShape;
+    bool isAicore = false;
+    bool isNeedTranspose = false;
+    bool isNonContiguous = false;
+};
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
@@ -71,7 +90,7 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_BOOL,   op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
     op::DataType::DT_DOUBLE, op::DataType::DT_INT16};
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910_95 = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64, op::DataType::DT_INT32,
     op::DataType::DT_BOOL,  op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16};
 
@@ -91,12 +110,11 @@ static bool CheckPtrValid(const aclTensor* self, const aclTensorList* indices, c
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices, const aclTensor* out)
 {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() < op::SocVersion::ASCEND910B) {
-        if (self->GetDataType() == op::DataType::DT_BF16) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "self not implemented for DT_BF16, when SocVersion is less than ASCEND910B.");
-            return false;
-        }
+    bool bf16Invalid = op::GetCurrentPlatformInfo().GetSocVersion() < op::SocVersion::ASCEND910B &&
+                       self->GetDataType() == op::DataType::DT_BF16;
+    if (bf16Invalid) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self not implemented for DT_BF16, when SocVersion is less than ASCEND910B.");
+        return false;
     }
     OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
     // 检查数据类型
@@ -138,10 +156,12 @@ static void CheckShape(const aclTensor* self, const aclTensorList* indices)
     // 索引个数不能大于self维度数量
     size_t indicesSize = indices->Size();
     size_t selfDimNum = self->GetViewShape().GetDimNum();
-    if (selfDimNum == 0 && indicesSize > 1) {
+    bool indicesSizeInvalidForZero = (selfDimNum == 0 && indicesSize > 1);
+    if (indicesSizeInvalidForZero) {
         OP_LOGW("when self dim nums is 0, indices size must be 1 but got %zu", indicesSize);
     }
-    if (selfDimNum > 0 && indicesSize > selfDimNum) {
+    bool indicesSizeInvalid = (selfDimNum > 0 && indicesSize > selfDimNum);
+    if (indicesSizeInvalid) {
         OP_LOGW(
             "indices size must not greater than self dim nums, bug got indices size %zu and self dim nums %zu",
             indicesSize, selfDimNum);
@@ -206,6 +226,17 @@ static aclIntArray* GetPermBack(int64_t maskZerosNum, int64_t indicesDimNum, int
     return perm;
 }
 
+static const inline std::initializer_list<DataType>& GetAicoreSupportDtypeList()
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return AICORE_DTYPE_SUPPORT_LIST_REGBASE;
+    } else if (curArch == NpuArch::DAV_2201) {
+        return AICORE_DTYPE_SUPPORT_LIST_910B;
+    }
+    return AICORE_DTYPE_SUPPORT_LIST;
+}
+
 bool check_index_aicore(
     const aclTensor* self, const FVector<const aclTensor*, 8>& indices, const FVector<int64_t, 8>& masks)
 {
@@ -222,23 +253,15 @@ bool check_index_aicore(
             return false;
         }
     }
-
-    bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
-    // The input of the aicore does not support float64.
-    if (is91095) {
-        if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910_95)) {
-            return false;
-        }
-    } else if (op::GetCurrentPlatformInfo().GetSocVersion() >= op::SocVersion::ASCEND910B) {
-        if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B)) {
-            return false;
-        }
-    } else if (!CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    const auto& dTypeSupportList = GetAicoreSupportDtypeList();
+    if (!CheckType(self->GetDataType(), dTypeSupportList)) {
         return false;
     }
 
+    bool isRegbase = Ops::NN::AclnnUtil::IsRegbase(curArch);
     // indices must be continuous
-    if (!is91095) {
+    if (!isRegbase) {
         for (size_t idx = 1; idx < masks.size(); idx++) {
             if (masks[idx] - masks[idx - 1] < 0) {
                 return false;
@@ -246,12 +269,12 @@ bool check_index_aicore(
         }
     }
 
-    // full_axis only supports data_size < 50W
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if ((socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
-         socVersion != SocVersion::ASCEND910_95) &&
-        self->GetViewShape().GetDimNum() == indices.size() &&
-        indices[0]->GetViewShape().GetShapeSize() > DATA_LIMIT_MULTI_INDEX) {
+    bool dataSizeInvalid =
+        ((curArch != NpuArch::DAV_2201 &&
+          (!isRegbase)) &&
+         self->GetViewShape().GetDimNum() == indices.size() &&
+         indices[0]->GetViewShape().GetShapeSize() > DATA_LIMIT_MULTI_INDEX);
+    if (dataSizeInvalid) {
         return false;
     }
     return true;
@@ -274,12 +297,163 @@ static op::ShapeVector GetTransposedOutputShape(
     return transposedOutputShape;
 }
 
+static bool IsUseNonContiguous(const aclTensor* self, const aclTensorList* indices)
+{
+    if (!(Ops::NN::AclnnUtil::IsRegbase())) {
+        return false;
+    }
+    size_t xDim = self->GetViewShape().GetDimNum();
+    int64_t indicesSize = static_cast<int64_t>(indices->Size());
+    bool isDimBound = xDim > DIM_BOUND_NON_CONTIGUOUS || static_cast<size_t>(indicesSize) > DIM_BOUND_NON_CONTIGUOUS;
+    if (isDimBound) {
+        return false;
+    }
+    FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> allDefinedIndices;
+    FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> masks;
+    bool existIndicesNonContiguous = false;
+    for (int64_t i = 0; i < indicesSize; ++i) {
+        int64_t curMask = 0;
+        const aclTensor* curIndice = (*indices)[i];
+        if (curIndice->GetViewShape().GetShapeSize() != 0) {
+            allDefinedIndices.emplace_back(curIndice);
+            curMask = 1;
+            if (!IsContiguous(curIndice)) {
+                existIndicesNonContiguous = true;
+            }
+        }
+        masks.push_back(curMask);
+    }
+    if (allDefinedIndices.size() <= 1) {
+        return false;
+    }
+    bool selfIsNonContiguous = !IsContiguous(self);
+    bool isContiguous = !selfIsNonContiguous && !existIndicesNonContiguous;
+    if (isContiguous) {
+        return false;
+    }
+    return check_index_aicore(self, allDefinedIndices, masks);
+}
+
+IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* executor, bool isNonContiguous){
+    IndicesInfo indicesInfo;
+    int64_t indicesSize = static_cast<int64_t>(indices->Size());
+    // 封装输入输出Tensor
+    for (int64_t i = 0; i < indicesSize; i++) {
+        const aclTensor* curIndice = (*indices)[i];
+        int64_t curMask = 0;
+        if (curIndice->GetViewShape().GetShapeSize() != 0) {
+            indicesInfo.indicesNum += 1;
+            if (isNonContiguous) {
+                auto indexNonContiguous = executor->CreateView(
+                    curIndice, curIndice->GetViewShape(), curIndice->GetStorageShape(), curIndice->GetViewStrides(),
+                    curIndice->GetViewOffset());
+                indicesInfo.allDefinedIndices.emplace_back(indexNonContiguous);
+            } else {
+                auto indexContiguous = l0op::Contiguous(curIndice, executor);
+                indicesInfo.allDefinedIndices.emplace_back(indexContiguous);
+            }
+            curMask = 1;
+            indicesInfo.dim = i;
+        }
+        indicesInfo.masks.emplace_back(curMask);
+        indicesInfo.masksNum += 1;
+    }
+
+    indicesInfo.indicesDim = indicesInfo.indicesNum > 0 ? indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum() : 0UL;
+    OP_LOGI("masksNum is %zu, indicesNum is %zu", indicesInfo.masksNum, indicesInfo.indicesNum);
+    return indicesInfo;
+}
+
+ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesInfo& indicesInfo){
+    ChooseInfo chooseInfo;
+    size_t xDim = self->GetViewShape().GetDimNum();
+    auto indicesDim = indicesInfo.indicesDim;
+    auto indicesNum = indicesInfo.indicesNum;
+
+    chooseInfo.outputDim = indicesDim + xDim - static_cast<size_t>(indicesNum);
+    OP_LOGI("x dim is %zu, indices dim is %zu, so output dim is %zu", xDim, indicesDim, chooseInfo.outputDim);
+    if (chooseInfo.outputDim > MAX_DIM_LEN) {
+        return chooseInfo;
+    }
+    size_t tailSize = 1;
+    for (size_t i = indicesInfo.masks.size(); i < self->GetViewShape().GetDimNum(); i++) {
+        tailSize = tailSize * self->GetViewShape().GetDim(i);
+    }
+    chooseInfo.tailSize = tailSize;
+
+    chooseInfo.isAicore = check_index_aicore(self, indicesInfo.allDefinedIndices, indicesInfo.masks);
+    // small tail size will use transpose
+    bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    chooseInfo.isNeedTranspose = chooseInfo.isAicore && indicesInfo.masksNum > indicesInfo.indicesNum && chooseInfo.tailSize < TAIL_SIZE_LIMIT && !isRegbase;
+    if (chooseInfo.isNeedTranspose) {
+        indicesInfo.masks.clear();
+        for (int64_t i = 0; i < indicesInfo.indicesNum; i++) {
+           indicesInfo.masks.emplace_back(1);
+        }
+    }
+    return chooseInfo;
+}
+
+const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const IndicesInfo& indicesInfo, const ChooseInfo& chooseInfo, aclOpExecutor* executor) {
+    const aclTensor* selfContiguous;
+    if (!chooseInfo.isNonContiguous){
+        selfContiguous = l0op::Contiguous(self, executor);
+        CHECK_RET(selfContiguous != nullptr, nullptr);
+    }
+    auto IndicesTensorList = executor->AllocTensorList(indicesInfo.allDefinedIndices.data(), indicesInfo.indicesNum);
+    auto MaskArray = executor->AllocIntArray(indicesInfo.masks.data(), chooseInfo.permMasksNum);
+    auto indexedSizes = executor->ConvertToTensor(MaskArray, op::ToOpDataType(ACL_INT64));
+    auto outPutShapeVector = op::ToShapeVector(chooseInfo.outputShape);
+    auto outPutShapeArray = executor->AllocIntArray(outPutShapeVector.data(), outPutShapeVector.size());
+    auto indexedStrides = executor->ConvertToTensor(outPutShapeArray, op::ToOpDataType(ACL_INT64));
+
+    // 调用Index算子kernel
+    const aclTensor* opOut = nullptr;
+    bool aicoreNeedTranspose = (chooseInfo.isAicore && chooseInfo.isNeedTranspose == 1);
+    bool aicoreNotNeedTranspose = (chooseInfo.isAicore && chooseInfo.isNeedTranspose != 1);
+
+    if (aicoreNeedTranspose) {
+        auto selfDimNum = selfContiguous->GetViewShape().GetDimNum();
+        auto outDimNum = out->GetViewShape().GetDimNum();
+        auto indicesDimNum = indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum();
+        auto perm = GetPerm(indicesInfo.masksNum, indicesInfo.indicesNum, selfDimNum, executor);
+        selfContiguous = l0op::Transpose(selfContiguous, perm, executor);
+        opOut = l0op::IndexAiCore(
+            selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+        auto permBack = GetPermBack(indicesInfo.masksNum - indicesInfo.indicesNum, indicesDimNum, outDimNum, executor);
+        opOut = l0op::Transpose(opOut, permBack, executor);
+    } else if (aicoreNotNeedTranspose) {
+        bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+        bool isOutEqualSelf = (!isRegbase) && (selfContiguous->GetViewShape().GetDimNum() == 0);
+        if (isRegbase && indicesInfo.indicesNum == 1) {
+            opOut = l0op::GatherV2(selfContiguous, indicesInfo.dim, indicesInfo.allDefinedIndices[0], executor, 0, true);
+        } else if (isOutEqualSelf) {
+            opOut = selfContiguous;
+        } else if (chooseInfo.isNonContiguous) {
+            auto newself = executor->CreateView(
+                self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+            opOut = l0op::IndexAiCore(
+                newself, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+        } else {
+            opOut = l0op::IndexAiCore(
+                selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+        }
+    } else {
+        if (selfContiguous->GetViewShape().GetDimNum() == 0) {
+            opOut = selfContiguous;
+        } else {
+            opOut = l0op::IndexAiCpu(
+                selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+        }
+    }
+    return opOut;
+}
+
 aclnnStatus aclnnIndexGetWorkspaceSize(
     const aclTensor* self, const aclTensorList* indices, aclTensor* out, uint64_t* workspaceSize,
     aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-
     L2_DFX_PHASE_1(aclnnIndex, DFX_IN(self, indices), DFX_OUT(out));
     // 固定写法，创建OpExecutor，参数检查
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -288,125 +462,38 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
-    if (self->IsEmpty() || out->IsEmpty()) {
+    bool selfOrOutIsEmpty = self->IsEmpty() || out->IsEmpty();
+    if (selfOrOutIsEmpty) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-    op::Shape outputShape;
 
-    FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> masks;
-    FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> allDefinedIndices;
-    int64_t needTranspose = 0;
-    int64_t indicesNum = 0;
-    int64_t masksNum = 0;
-    int64_t permMasksNum = 0;
-    int64_t indicesSize = static_cast<int64_t>(indices->Size());
-    int64_t dim = 0;
-    // 封装输入输出Tensor
-    for (int64_t i = 0; i < indicesSize; i++) {
-        if ((*indices)[i]->GetViewShape().GetShapeSize() != 0) {
-            auto indexContiguous = l0op::Contiguous((*indices)[i], uniqueExecutor.get());
-            allDefinedIndices.emplace_back(indexContiguous);
-            masks.emplace_back(1);
-            indicesNum += 1;
-            dim = i;
-        } else {
-            masks.emplace_back(0);
-        }
-        masksNum += 1;
-    }
-    OP_LOGI("masksNum is %zu, indicesNum is %zu", masksNum, indicesNum);
-    size_t indicesDim = indicesNum > 0 ? allDefinedIndices[0]->GetViewShape().GetDimNum() : 0UL;
-    size_t xDim = self->GetViewShape().GetDimNum();
-    size_t outputDim = indicesDim + xDim - static_cast<size_t>(indicesNum);
-    OP_LOGI("x dim is %zu, indices dim is %zu, so output dim is %zu", xDim, indicesDim, outputDim);
-    if (outputDim > MAX_DIM_LEN) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]", outputDim);
+    bool isNonContiguous = IsUseNonContiguous(self, indices);
+    OP_LOGI("isNonContiguous is %s", isNonContiguous ? "true" : "false");
+
+    IndicesInfo indicesInfo = ProcessIndicesAndMasks(indices, uniqueExecutor.get(), isNonContiguous);
+
+    ChooseInfo chooseInfo = CalculateOutputShapeAndTransposeFlag(self, indicesInfo);
+    chooseInfo.isNonContiguous = isNonContiguous;
+    if (chooseInfo.outputDim > MAX_DIM_LEN) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]", chooseInfo.outputDim);
         return ACLNN_ERR_PARAM_INVALID;
-    }
-    int64_t tailSize = 1;
-    for (size_t i = masks.size(); i < self->GetViewShape().GetDimNum(); i++) {
-        tailSize = tailSize * self->GetViewShape().GetDim(i);
-    }
-    bool isAicore = check_index_aicore(self, allDefinedIndices, masks);
-    bool is91095 = op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95;
-    // small tail size will use transpose
-    if (isAicore && masksNum > indicesNum && tailSize < TAIL_SIZE_LIMIT && !is91095) {
-        needTranspose = 1;
-        masks.clear();
-        for (int64_t i = 0; i < indicesNum; i++) {
-            masks.emplace_back(1);
-        }
     }
 
     // construct output shape after transpose
-    op::ShapeVector transposedOutputShape;
-    if (!is91095) {
-        for (size_t i = 0; i < allDefinedIndices[0]->GetViewShape().GetDimNum(); i++) {
-            transposedOutputShape.emplace_back(allDefinedIndices[0]->GetViewShape().GetDim(i));
-        }
-        for (int64_t i = 0; i < masksNum - indicesNum; i++) {
-            transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
-        }
-        for (size_t i = masksNum; i < self->GetViewShape().GetDimNum(); i++) {
-            transposedOutputShape.emplace_back(self->GetViewShape().GetDim(i));
-        }
+    op::ShapeVector transposedOutputShape = GetTransposedOutputShape(indicesInfo.allDefinedIndices, self, indicesInfo.masksNum, indicesInfo.indicesNum);
+    if (chooseInfo.isNeedTranspose == 1) {
+        ToShape(transposedOutputShape, chooseInfo.outputShape);
+        chooseInfo.permMasksNum = indicesInfo.indicesNum;
     } else {
-        transposedOutputShape = GetTransposedOutputShape(allDefinedIndices, self, masksNum, indicesNum);
+        chooseInfo.outputShape = out->GetViewShape();
+        chooseInfo.permMasksNum = indicesInfo.masksNum;
     }
 
-    if (needTranspose == 1) {
-        ToShape(transposedOutputShape, outputShape);
-        permMasksNum = indicesNum;
-    } else {
-        outputShape = out->GetViewShape();
-        permMasksNum = masksNum;
-    }
-
-    // 固定写法，将输入self转换成连续的tensor
-    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto IndicesTensorList = uniqueExecutor.get()->AllocTensorList(allDefinedIndices.data(), indicesNum);
-    auto MaskArray = uniqueExecutor.get()->AllocIntArray(masks.data(), permMasksNum);
-    auto indexedSizes = uniqueExecutor.get()->ConvertToTensor(MaskArray, op::ToOpDataType(ACL_INT64));
-    auto outPutShapeVector = op::ToShapeVector(outputShape);
-    auto outPutShapeArray = uniqueExecutor.get()->AllocIntArray(outPutShapeVector.data(), outPutShapeVector.size());
-    auto indexedStrides = uniqueExecutor.get()->ConvertToTensor(outPutShapeArray, op::ToOpDataType(ACL_INT64));
-    // 调用Index算子kernel
-    const aclTensor* opOut;
-    if (isAicore) {
-        if (needTranspose == 1) {
-            auto selfDimNum = selfContiguous->GetViewShape().GetDimNum();
-            auto outDimNum = out->GetViewShape().GetDimNum();
-            auto indicesDimNum = allDefinedIndices[0]->GetViewShape().GetDimNum();
-            auto perm = GetPerm(masksNum, indicesNum, selfDimNum, uniqueExecutor.get());
-            selfContiguous = l0op::Transpose(selfContiguous, perm, uniqueExecutor.get());
-            opOut = l0op::IndexAiCore(
-                selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList, uniqueExecutor.get());
-            auto permBack = GetPermBack(masksNum - indicesNum, indicesDimNum, outDimNum, uniqueExecutor.get());
-            opOut = l0op::Transpose(opOut, permBack, uniqueExecutor.get());
-        } else {
-            if (is91095 && indicesNum == 1) {
-                opOut = l0op::GatherV2(selfContiguous, dim, allDefinedIndices[0], uniqueExecutor.get(), 0, true);
-            } else if ((!is91095) && (selfContiguous->GetViewShape().GetDimNum() == 0)) {
-                opOut = selfContiguous;
-            } else {
-                opOut = l0op::IndexAiCore(
-                    selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList, uniqueExecutor.get());
-            }
-        }
-    } else {
-        if (selfContiguous->GetViewShape().GetDimNum() == 0) {
-            opOut = selfContiguous;
-        } else {
-            opOut = l0op::IndexAiCpu(
-                selfContiguous, indexedSizes, indexedStrides, outputShape, IndicesTensorList, uniqueExecutor.get());
-        }
-    }
-
+    const aclTensor* opOut = CallKernel(self, out, indicesInfo, chooseInfo, uniqueExecutor.get());
     CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(opOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
