@@ -25,10 +25,16 @@
 #include "dynamic_quant_moe.h"
 #include "dynamic_quant_moe_large_shape.h"
 
+#ifdef __CCE_KT_TEST__
+#define KERNEL_LINKAGE static
+#else
+#define KERNEL_LINKAGE extern "C"
+#endif
+
 using namespace AscendC;
 using namespace DynamicQuantNDOpt;
 
-extern "C" __global__ __aicore__ void dynamic_quant(
+KERNEL_LINKAGE __global__ __aicore__ void dynamic_quant(
     GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (x == nullptr || y == nullptr || scale == nullptr) {

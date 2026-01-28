@@ -134,15 +134,13 @@ private:
         inQueue_.FreeTensor(inLocal);
     }
 
-    __aicore__ inline void QuantCompute(uint32_t calRow, uint32_t calCol)
+    __aicore__ inline void QuantCompute(AscendC::LocalTensor<float>& scaleLocal, uint32_t calRow, uint32_t calCol)
     {
         // 尾块只需要搬运一次，直接量化生成结果
         // deque input tensors from VECIN queue
         AscendC::LocalTensor<int8_t> outLocal = outQueue_.AllocTensor<int8_t>();
         AscendC::LocalTensor<half> temp = fp16Buf_.Get<half>();
         AscendC::LocalTensor<half> inLocal = inQueue_.DeQue<half>();
-        AscendC::LocalTensor<float> scaleLocal = scaleQueue_.DeQue<float>();
-
         uint32_t idx;
         float scale;
         for (uint32_t i = 0; i < calRow; i++) {
@@ -186,10 +184,8 @@ private:
         outQueue_.FreeTensor(outLocal);
     }
 
-    __aicore__ inline void CopyScalesOut(uint32_t progress, uint32_t calRow)
+    __aicore__ inline void CopyScalesOut(AscendC::LocalTensor<float>& scaleLocal, uint32_t progress, uint32_t calRow)
     {
-        // deque scale tensor from VECOUT queue
-        AscendC::LocalTensor<float> scaleLocal = scaleQueue_.DeQue<float>();
         // copy progress_th tile from local tensor to global tensor
         Muls(scaleLocal, scaleLocal, static_cast<float>(1.0f / DYNAMIC_QUANT_MAX_VALUE), calRow);
         AscendC::SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
@@ -216,36 +212,45 @@ private:
             ComputeGetMaxValue(innerLoopIndex, calRow, calCol);
         }
 
+        uint16_t safeCalRow = calRow;
         // 如果核内切的有尾块
         if (innerLoopTail_ > 0) {
-            innerOffsetBase = offsetBase + this->innerLoopTimes_ * calCol;
+            safeCalRow = ((this->sizeH_ - innerLoopTail_) * sizeof(half) / BLOCK_SIZE > UINT16_MAX) ? 1 : calRow;
             // 直接进行计算，可以最后一次尾块的搬运
             splitCopyinParams = {
-                static_cast<uint16_t>(calRow), static_cast<uint16_t>(innerLoopTail_ * sizeof(half) / BLOCK_SIZE),
+                static_cast<uint16_t>(safeCalRow), static_cast<uint16_t>(innerLoopTail_ * sizeof(half) / BLOCK_SIZE),
                 static_cast<uint16_t>((this->sizeH_ - innerLoopTail_) * sizeof(half) / BLOCK_SIZE), 0};
             splitCopyoutParams = {
-                static_cast<uint16_t>(calRow), static_cast<uint16_t>(innerLoopTail_ * sizeof(int8_t) / BLOCK_SIZE), 0,
+                static_cast<uint16_t>(safeCalRow), static_cast<uint16_t>(innerLoopTail_ * sizeof(int8_t) / BLOCK_SIZE), 0,
                 static_cast<uint16_t>((this->sizeH_ - innerLoopTail_) * sizeof(int8_t) / BLOCK_SIZE)};
-            CopyIn(innerOffsetBase, splitCopyinParams);
-            ComputeInnerTail(calRow, this->innerLoopTail_);
-            CopyOut(innerOffsetBase, splitCopyoutParams);
+
+            for (uint32_t rowIndex = 0; rowIndex < calRow; rowIndex += safeCalRow) {
+                innerOffsetBase = offsetBase + this->innerLoopTimes_ * calCol + rowIndex * this->sizeH_;
+                CopyIn(innerOffsetBase, splitCopyinParams);
+                ComputeInnerTail(safeCalRow, this->innerLoopTail_);
+                CopyOut(innerOffsetBase, splitCopyoutParams);
+            }
         }
 
+        safeCalRow = ((this->sizeH_ - calCol) * sizeof(half) / BLOCK_SIZE) ? 1 : calRow;
+        // 拷贝数据，一次拷贝8行数据数据起始地址innerOffsetBase，间隔sizeH_ - calCol，数据量calCol，
+        splitCopyinParams = {
+            static_cast<uint16_t>(safeCalRow), static_cast<uint16_t>(calCol * sizeof(half) / BLOCK_SIZE),
+            static_cast<uint16_t>((this->sizeH_ - calCol) * sizeof(half) / BLOCK_SIZE), 0};
+        splitCopyoutParams = {
+            static_cast<uint16_t>(safeCalRow), static_cast<uint16_t>(calCol * sizeof(int8_t) / BLOCK_SIZE), 0,
+            static_cast<uint16_t>((this->sizeH_ - calCol) * sizeof(int8_t) / BLOCK_SIZE)};
+        AscendC::LocalTensor<float> scaleLocal = scaleQueue_.DeQue<float>();
         // 量化计算
         for (uint32_t innerLoopIndex = 0; innerLoopIndex < this->innerLoopTimes_; innerLoopIndex++) {
-            innerOffsetBase = offsetBase + innerLoopIndex * calCol;
-            // 拷贝数据，一次拷贝8行数据数据起始地址innerOffsetBase，间隔sizeH_ - calCol，数据量calCol，
-            splitCopyinParams = {
-                static_cast<uint16_t>(calRow), static_cast<uint16_t>(calCol * sizeof(half) / BLOCK_SIZE),
-                static_cast<uint16_t>((this->sizeH_ - calCol) * sizeof(half) / BLOCK_SIZE), 0};
-            splitCopyoutParams = {
-                static_cast<uint16_t>(calRow), static_cast<uint16_t>(calCol * sizeof(int8_t) / BLOCK_SIZE), 0,
-                static_cast<uint16_t>((this->sizeH_ - calCol) * sizeof(int8_t) / BLOCK_SIZE)};
-            CopyIn(innerOffsetBase, splitCopyinParams);
-            QuantCompute(calRow, calCol);
-            CopyOut(innerOffsetBase, splitCopyoutParams);
+            for (uint32_t rowIndex = 0; rowIndex < calRow; rowIndex+=safeCalRow) {
+                innerOffsetBase = offsetBase + innerLoopIndex * calCol + rowIndex * this->sizeH_;
+                CopyIn(innerOffsetBase, splitCopyinParams);
+                QuantCompute(scaleLocal, safeCalRow, calCol);
+                CopyOut(innerOffsetBase, splitCopyoutParams);
+            }
         }
-        CopyScalesOut(loopIndex, calRow);
+        CopyScalesOut(scaleLocal, loopIndex, calRow);
     }
 
     __aicore__ inline void ProcessSymmetrical()
