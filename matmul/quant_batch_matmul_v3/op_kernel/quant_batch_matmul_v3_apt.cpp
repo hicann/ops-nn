@@ -29,8 +29,7 @@
 #endif
 #if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #include "arch35/qbmm_mx_basic_api_cmct.h"
-#endif
-#if (ORIG_DTYPE_SCALE != DT_FLOAT8_E8M0)
+#else
 #include "arch35/qbmm_cube_basic_api_cmct.h"
 #endif
 #include "kernel_basic_intf.h"
@@ -78,12 +77,21 @@ using namespace matmul;
 #endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
-#define USE_BASIC_API                                                                                                \
+#define IS_MXFP8_ND                                                                                                \
     ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&                                       \
      (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0 && \
      FORMAT_X2 == FORMAT_ND)
 #else
-#define USE_BASIC_API false
+#define IS_MXFP8_ND false
+#endif
+
+#if defined(ORIG_DTYPE_SCALE)
+#define CUBE_TEMPLATE_ND                                                                              \
+    (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
+     ORIG_DTYPE_SCALE == DT_BF16) &&                                                                  \
+        FORMAT_X2 == FORMAT_ND
+#else
+#define CUBE_TEMPLATE_ND false
 #endif
 
 #if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_FRACTAL_NZ
@@ -137,8 +145,7 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     } while (0)
 #endif
 
-#if defined(ORIG_DTYPE_SCALE) && \
-    (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
+#if CUBE_TEMPLATE_ND
 #define QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                           \
     do {                                                                                                    \
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
@@ -181,7 +188,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     }
 #endif
     if constexpr (DequantBmm::IsMxType<DTYPE_SCALE>()) {
-#if USE_BASIC_API
+#if IS_MXFP8_ND
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
@@ -245,7 +252,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #endif
     } else {
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0
-#if (FORMAT_X2 == FORMAT_ND && defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE != DT_FLOAT8_E8M0)
+#if CUBE_TEMPLATE_ND
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
                     QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(

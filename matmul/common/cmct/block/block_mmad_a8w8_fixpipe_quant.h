@@ -22,27 +22,11 @@
 #include "../utils/tuple_utils.h"
 
 namespace {
-constexpr int32_t BT_SIZE = 4096;
-
-constexpr uint64_t IDX_M_TILE_IDX = 0UL;
-constexpr uint64_t IDX_N_TILE_IDX = 1UL;
-constexpr uint64_t IDX_M_IDX = 0UL;
-constexpr uint64_t IDX_N_IDX = 1UL;
-constexpr uint64_t IDX_K_IDX = 2UL;
-
 constexpr uint16_t SCALE_BUFFER_NUM = 2;
 constexpr uint16_t AB_L1_TWO_BUFFER = 2;
 
-constexpr uint64_t B8_MIN_STEP = 2UL;
 constexpr uint64_t L0_TRANS_ALIGN = 2UL;
 
-constexpr uint32_t FINAL_ACCUMULATION = 3;
-constexpr uint32_t NON_FINAL_ACCUMULATION = 2;
-
-constexpr uint16_t INPUT_BUFFER_FLAG_0 = 0;
-constexpr uint16_t INPUT_BUFFER_FLAG_1 = 1;
-constexpr uint16_t INPUT_BUFFER_FLAG_2 = 2;
-constexpr uint16_t INPUT_BUFFER_FLAG_3 = 3;
 constexpr uint16_t BIAS_BUFFER_FLAG_0 = 4;
 constexpr uint16_t BIAS_BUFFER_FLAG_1 = 5;
 constexpr uint16_t X2_SCALE_BUFFER_FLAG_0 = 0;
@@ -53,6 +37,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 using namespace AscendC;
+using namespace Cmct::Gemm::QuantBatchMatmul;
 
 template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class LayoutA_, class BType_,
           class LayoutB_, class CType_, class LayoutC_, class BiasType_, class LayoutBias_, class scaleType_,
@@ -203,8 +188,8 @@ public:
                                       T scaleGlobal, AscendC::GlobalTensor<BiasType> biasGlobal,
                                       AscendC::GlobalTensor<CType> cGlobal, BlockShape singleShape)
     {
-        uint64_t curML1 = Get<IDX_M_TILE_IDX>(singleShape);
-        uint64_t curNL1 = Get<IDX_N_TILE_IDX>(singleShape);
+        uint64_t curML1 = Get<IDX_M_TILEIDX>(singleShape);
+        uint64_t curNL1 = Get<IDX_N_TILEIDX>(singleShape);
         AscendC::MmadParams mmadParams;
         mmadParams.m = curML1;
         mmadParams.n = curNL1;

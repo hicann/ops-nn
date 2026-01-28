@@ -17,6 +17,7 @@
 #define MATMUL_BLOCK_MMAD_MX_QUANT_H
 #include "../utils/layout_utils.h"
 #include "../utils/common_utils.h"
+#include "../utils/quant_batch_matmul_constant.h"
 #include "../utils/tuple_utils.h"
 #include "../policy/dispatch_policy.h"
 #include "..//tile/tile_copy.h"
@@ -25,6 +26,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 using namespace AscendC;
+using namespace Cmct::Gemm::QuantBatchMatmul;
 
 struct TileL1L0Param {
     uint64_t curM = 0;
@@ -90,14 +92,8 @@ public:
     constexpr static uint64_t MXFP_GROUP_SIZE = 32UL;
     constexpr static uint64_t MXFP_DIVISOR_SIZE = 64UL;
     constexpr static uint64_t MXFP_MULTI_BASE_SIZE = 2;
-    constexpr static uint64_t IDX_M_TILE_IDX = 0UL;
-    constexpr static uint64_t IDX_N_TILE_IDX = 1UL;
-    constexpr static uint64_t IDX_M_IDX = 0UL;
-    constexpr static uint64_t IDX_N_IDX = 1UL;
-    constexpr static uint64_t IDX_K_IDX = 2UL;
     constexpr static uint64_t SCALE_BUFFER_NUM = 2;
     constexpr static uint64_t EVEN_FACTOR = 2UL;
-    constexpr static uint64_t B8_MIN_STEP = 2UL;
     // Set unitflag state: 3 = final accumulation, 2 = non-final accumulation
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
@@ -308,6 +304,7 @@ public:
     __aicore__ inline void CopyInBias(const AscendC::GlobalTensor<BiasType> &biasGlobal,
                                       const AscendC::LocalTensor<BiasType> &cl1Local, uint64_t curNL1)
     {
+        // No need to add sync flag for bias L1 loading because bias loading operation can be covered by A/B/ScaleA/ScaleB load.
         AscendC::DataCopyPadParams padParams;
         // 单位为Byte
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(curNL1 * sizeof(BiasType)), 0, 0};
@@ -666,8 +663,8 @@ public:
                                       BlockShape singleShape)
     {
         TileL1L0Param tileL1L0Param;
-        tileL1L0Param.curM = Get<IDX_M_TILE_IDX>(singleShape);
-        tileL1L0Param.curN = Get<IDX_N_TILE_IDX>(singleShape);
+        tileL1L0Param.curM = Get<IDX_M_TILEIDX>(singleShape);
+        tileL1L0Param.curN = Get<IDX_N_TILEIDX>(singleShape);
         GetAlignMN(tileL1L0Param);
         AscendC::MmadParams mmadParams;
         mmadParams.m = tileL1L0Param.curM;
@@ -730,13 +727,8 @@ private:
     }
 
 private:
-    constexpr static uint16_t INPUT_BUFFER_FLAG_0 = 0;
-    constexpr static uint16_t INPUT_BUFFER_FLAG_1 = 1;
-    constexpr static uint16_t INPUT_BUFFER_FLAG_2 = 2;
-    constexpr static uint16_t INPUT_BUFFER_FLAG_3 = 3;
     constexpr static uint16_t SCALE_BUFFER_FLAG_0 = 4;
     constexpr static uint16_t SCALE_BUFFER_FLAG_1 = 5;
-    constexpr static int32_t BT_SIZE = 4096;
     uint16_t biasBufId_ = 0;
     uint64_t biasL1OneBuffer_ = 0UL;
     uint64_t aL1OneBuffer_ = 0UL;

@@ -36,10 +36,6 @@ using namespace Cmct::Gemm;
 using namespace AscendC;
 
 namespace {
-constexpr uint64_t IDX_M_BASE_NORM_CNT = 0UL;
-constexpr uint64_t IDX_M_BASE_TAIL_MAIN = 1UL;
-constexpr uint64_t IDX_N_BASE_NORM_CNT = 2UL;
-constexpr uint64_t IDX_N_BASE_TAIL_MAIN = 3UL;
 constexpr uint64_t DEQ_SCALE_MUL = 0xFFFFE000;
 constexpr uint32_t LEFT_SHIFT_16 = 16;
 } // namespace
