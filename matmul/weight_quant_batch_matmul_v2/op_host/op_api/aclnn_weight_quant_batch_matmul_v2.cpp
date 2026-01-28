@@ -1124,10 +1124,18 @@ static aclnnStatus ContiguousCheck(
     const aclTensor* antiquantOffsetOptional, const aclTensor* y)
 {
     bool transposeX = IsTransposeLastTwoDims(x);
-    OP_CHECK(
-        transposeX || IsContiguous(x),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x tensor is contiguous or transpose last two dims."),
-        return ACLNN_ERR_PARAM_INVALID);
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        OP_CHECK(
+            !transposeX && IsContiguous(x),
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "DAV_3510 not support x transpose and only support x tensor is contiguous."),
+            return ACLNN_ERR_PARAM_INVALID);
+    } else {
+        OP_CHECK(
+            transposeX || IsContiguous(x),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x tensor is contiguous or transpose last two dims."),
+            return ACLNN_ERR_PARAM_INVALID);
+    }
 
     bool transposeWeight = IsTransposeLastTwoDims(weight);
     OP_CHECK(
