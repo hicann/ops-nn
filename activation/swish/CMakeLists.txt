@@ -8,6 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+message(STATUS "=== Debug: start ops.activation.leaky_relu.CMakeLists.txt ")
 # 设置算子定义时支持的芯片类型
 set(SUPPORT_COMPUTE_UNIT "ascend910_95")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译

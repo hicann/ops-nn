@@ -16,13 +16,10 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_SWISH_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_SWISH_H_
 
-#include "register/tilingdata_base.h"
-#include "register/op_impl_registry.h"
-#include "atvoss/elewise/elewise_tiling.h"
+#include "tiling_base/tiling_base.h"
 
+using namespace Ops::NN::Optiling;
 namespace optiling {
-using namespace Ops::Base;
-struct SwishCompileInfo {};
 
 class SwishTiling
 {
@@ -44,6 +41,12 @@ private:
     ge::DataType outputDtype;
     ge::DataType inputDtype;
 };
+
+struct SwishCompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
 } // namespace optiling
 
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SWISH_H_
+

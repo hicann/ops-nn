@@ -13,13 +13,17 @@
  */
 
 #include "kernel_operator.h"
-#include "../dynamic_quant/v35/dynamic_quant_struct.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_full_load.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_moe_full_load.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_large_shape_db.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_moe_large_shape.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_full_load_pertensor.h"
-#include "../dynamic_quant/v35/dynamic_quant_regbase_large_shape_db_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_struct.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_full_load.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_full_load.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_large_shape_db.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_large_shape.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_full_load_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_large_shape_db_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_full_load.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_recompute.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_split_m.h"
+#define FLOAT_OVERFLOW_MODE_CTRL 60
 
 namespace
 {
@@ -28,6 +32,7 @@ using namespace DynamicQuantNDOpt;
 using namespace DynamicQuantNDOpt2;
 using namespace DynamicQuantNDPerTensorOpt;
 using namespace DynamicQuantNDPerTensorOpt2;
+using namespace DynamicQuantPerChannel;
 
 template<uint64_t V>
 using UIntAsBool = std::integral_constant<bool, V != 0>;
@@ -36,6 +41,9 @@ template <uint64_t useDb, uint64_t quantMode, uint64_t hasSmooth, uint64_t isSym
 __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y,
                                             GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace, GM_ADDR tiling)
 {
+    #if (__NPU_ARCH__ == 3101)
+        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    #endif 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
@@ -84,6 +92,21 @@ __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM
         op.Process();
     } else if constexpr (quantMode == TPL_EMPTY_TENSOR) {
         return ;
+    } else if constexpr (quantMode == TPL_PER_CHANNEL_FULL_LOAD) {
+        DynamicQuantRegbasePerChannnelFullLoad<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth), UIntAsBool<isSymmetrical>::value> op(&pipe);
+        op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, &tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_PER_CHANNEL_RECOMPUTE) {
+        DynamicQuantRegbasePerChannnelRecompute<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth), UIntAsBool<isSymmetrical>::value> op(&pipe);
+        op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, &tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_PER_CHANNEL_SPLIT_M) {
+        DynamicQuantRegbasePerChannnelSplitM<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth), UIntAsBool<isSymmetrical>::value> op(&pipe);
+        op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, &tilingData);
+        op.Process();
     }
+    #if (__NPU_ARCH__ == 3101)
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+    #endif 
 }
 }

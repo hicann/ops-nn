@@ -23,7 +23,7 @@
 
 namespace QuantizeOp {
 using namespace AscendC;
-
+#define FLOAT_OVERFLOW_MODE_CTRL 60
 /**
  * \brief Type mapping helper
  */
@@ -85,6 +85,16 @@ template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, ui
 class QuantizeBase {
 public:
     __aicore__ inline QuantizeBase(){};
+    __aicore__ inline void SetFloatOverflowModeForRegbase()
+    {
+        #if (__NPU_ARCH__ == 3101)
+            if constexpr (
+                IsSameType<U, hifloat8_t>::value || IsSameType<U, fp8_e5m2_t>::value ||
+                IsSameType<U, fp8_e4m3fn_t>::value) {
+                AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+            }
+        #endif
+    }
 
 protected:
     __aicore__ inline void ParseTilingData(const QuantizeTilingData* tilingData, QuantizeTilingData& runTilingData);
@@ -208,24 +218,24 @@ protected:
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_HIFP8 = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_HYBRID) {
             return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
                 AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         } else {
             return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
                 AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         }
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E5M2 = []() {
         return AscendC::MicroAPI::CastTrait{
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E4M3 = []() {
         return AscendC::MicroAPI::CastTrait{
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 

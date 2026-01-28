@@ -21,6 +21,7 @@ namespace ops {
 static const size_t ATTR_INDEX_OF_DST_TYPE = 0;
 static const size_t ATTR_INDEX_OF_QUANT_MODE = 2;
 static constexpr uint32_t OUTPUT_NUM_DYNAMIC_QUANT_V2 = 3;
+static const uint32_t PER_CHANNEL_EXCLUDE_AXES_NUM = 2;
 static const std::initializer_list<ge::DataType> DYNAMIC_QUANT_V2_OUT_TYPE_LIST = {
     DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
 
@@ -60,12 +61,14 @@ static ge::graphStatus DynamicQuantV2InferShape(gert::InferShapeContext* context
     gert::Shape* offsetShape = context->GetOutputShape(2);
     *yShape = *xShape;
     bool isPerTensor = false;
+    bool isPerChannel = false;
 
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const char* quantModeStr = attrs->GetAttrPointer<char>(ATTR_INDEX_OF_QUANT_MODE);
         if (quantModeStr != nullptr) {
             isPerTensor = (strcmp(quantModeStr, "pertensor") == 0);
+            isPerChannel = (strcmp(quantModeStr, "perchannel") == 0);
         }
     }
 
@@ -74,6 +77,16 @@ static ge::graphStatus DynamicQuantV2InferShape(gert::InferShapeContext* context
         offsetShape->SetDimNum(1);
         scaleShape->SetDim(0, 1);
         offsetShape->SetDim(0, 1);
+    } else if (isPerChannel) {
+        int64_t xLastDim = xShape->GetDim(xShape->GetDimNum() - 1);
+        scaleShape->SetDimNum(xShape->GetDimNum() - 1);
+        offsetShape->SetDimNum(xShape->GetDimNum() - 1);
+        for (uint32_t i = 0; i < xShape->GetDimNum() - PER_CHANNEL_EXCLUDE_AXES_NUM; ++i) {
+            scaleShape->SetDim(i, xShape->GetDim(i));
+            offsetShape->SetDim(i, xShape->GetDim(i));
+        }
+        scaleShape->SetDim(xShape->GetDimNum() - PER_CHANNEL_EXCLUDE_AXES_NUM, xLastDim);
+        offsetShape->SetDim(xShape->GetDimNum() - PER_CHANNEL_EXCLUDE_AXES_NUM, xLastDim);
     } else {
         scaleShape->SetDimNum(xShape->GetDimNum() - 1);
         offsetShape->SetDimNum(xShape->GetDimNum() - 1);

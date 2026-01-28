@@ -19,7 +19,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
-#include "quant/dynamic_quant/op_kernel/v35/dynamic_quant_struct.h"
+#include "quant/dynamic_quant/op_kernel/arch35/dynamic_quant_struct.h"
 
 using namespace ge;
 using namespace AscendC;
@@ -46,7 +46,9 @@ constexpr uint32_t MOE_SMOOTH_NUM = 2;
 constexpr int64_t TILING_KEY_EMPTY_TENSOR = 999;
 constexpr int64_t EVEN_FACTOR = 2;
 constexpr uint32_t FLOAT_NUM_ONE_RPT = 128;
-constexpr uint32_t SYMMETRICAL = 2;
+constexpr uint32_t ASYMMETRICAL = 2;
+constexpr uint32_t USE_BUFFER_NUM = 2;
+constexpr uint32_t SUM_INPUT_OUTPUT_NUM = 2;
 // optional B16 smooth is 2 bytes
 constexpr uint64_t SMOOTH_BYTES_SIZE = 2;
 // B16 x is 2 bytes, B8/B4 y is 1 bytes, B32 scale is 4 bytes
@@ -60,6 +62,12 @@ constexpr uint64_t DB_SMOOTH_BYTES_SIZE = 4;
 // double buffer B16 x, B8/B4 y, B32 scale are 14 bytes
 constexpr uint64_t DB_REQUIRED_BYTES_SIZE = 14;
 static map<const ge::DataType, const uint32_t> g_dTypeLen = {{ge::DT_INT32, 4}, {ge::DT_INT64, 8}};
+
+// perchannel constants
+// each element is 2 byte, so n base size is 128 elements for one register.
+constexpr uint32_t SPLIT_M_SCHEDULE_MODE = 1;
+constexpr uint32_t PER_CHANNEL_EXCLUDE_DIM = 2;
+constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
 
 template <uint32_t base, typename T = uint32_t>
 auto AlignUp(T a) -> T
@@ -105,6 +113,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext
         return ge::GRAPH_FAILED;
     }
     int64_t xDimLast = xShape->GetStorageShape().GetDim(xDimNum - 1);
+    int64_t xDimSecendToLast = xShape->GetStorageShape().GetDim(xDimNum - PER_CHANNEL_EXCLUDE_DIM);
 
     if (yDtype == ge::DT_INT4) {
         OP_CHECK_IF(
@@ -120,12 +129,16 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext
         if (groupShape != nullptr) {
             groupNum = groupShape->GetStorageShape().GetDim(groupShape->GetStorageShape().GetDimNum() - 1);
             OP_CHECK_IF(
-                (groupNum > MAX_EXPERT_NUM),
-                OP_LOGE(context, "moe expert nums exceed maximum, the maximum is 1024."),
+                (groupNum <= 0 || groupNum > MAX_EXPERT_NUM),
+                OP_LOGE(context, "moe expert nums must in [1, 1024]."),
                 return ge::GRAPH_FAILED);
             OP_CHECK_IF(
                 (groupNum > 0 && quantMode_ == TPL_PER_TENSOR_FULL_LOAD),
                 OP_LOGE(context, "quant_mode pertensor not support group_index."),
+                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(
+                (groupNum > 0 && isPerChannel_),
+                OP_LOGE(context, "quant_mode perchannel not support group_index."),
                 return ge::GRAPH_FAILED);
         }
 
@@ -150,9 +163,15 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext
             }
         }
         int64_t smoothDimLast = smoothShape->GetStorageShape().GetDim(smoothDimNum - 1);
-        if (xDimLast != smoothDimLast) {
+        if (!isPerChannel_ && xDimLast != smoothDimLast) {
             OP_LOGE(context, "x and smooth_scales last dim are not equal! x is :%ld, smooth_scales is:%ld.",
                 xDimLast, smoothDimLast);
+            return ge::GRAPH_FAILED;
+        }
+        if (isPerChannel_ && xDimSecendToLast != smoothDimLast) {
+            OP_LOGE(context, "x second to last dim (-2 dim) and smooth_scales last dim should be equal when quant_mode is perchannel, "
+                             "but now x is :%ld, smooth_scales is:%ld.",
+                    xDimSecendToLast, smoothDimLast);
             return ge::GRAPH_FAILED;
         }
         hasSmooth = true;
@@ -184,6 +203,18 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpOutputShape(gert::TilingContex
             scaleDimNum != 1 || scaleShape->GetStorageShape().GetDim(0) != 1,
             OP_LOGE(context, "scale shape is wrong, must be [1]."),
             return ge::GRAPH_FAILED);
+    } else if (isPerChannel_){
+        // check batch dims
+        OP_CHECK_IF(
+            (CheckOpDim(xShape, scaleShape, xDimNum - PER_CHANNEL_EXCLUDE_DIM, scaleDimNum - 1) != ge::GRAPH_SUCCESS),
+            OP_LOGE(context, "scale shape is wrong, the shape of scale excluding the last dim must be same as "
+                             "the shape of x excluding the last two dims"),
+            return ge::GRAPH_FAILED);
+        // check last dim
+        OP_CHECK_IF(
+            (xShape->GetStorageShape().GetDim(xDimNum - 1) != scaleShape->GetStorageShape().GetDim(scaleDimNum - 1)),
+            OP_LOGE(context, "scale shape is wrong, the last dim of scale must be the same as the last dim of x"),
+            return ge::GRAPH_FAILED);        
     } else {
         OP_CHECK_IF(
             (CheckOpDim(xShape, scaleShape, xDimNum - 1, scaleDimNum) != ge::GRAPH_SUCCESS),
@@ -313,6 +344,9 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
             quantMode_ = TPL_COMMON_FULL_LOAD;
         } else if (quantModeStr == "pertensor") {
             quantMode_ = TPL_PER_TENSOR_FULL_LOAD;
+        } else if (quantModeStr == "perchannel") {
+            // quantMode_ will be computed later
+            isPerChannel_ = true;
         } else {
             OP_LOGE(context, "Invalid attr quant_mode: %s, only support pertoken or pertensor.",
                 quantModeStr.c_str());
@@ -396,7 +430,7 @@ void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context)
 }
 
 // 处理空Tensor的tiling
-void DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context)
 {
     int64_t tilingKey = GET_TPL_TILING_KEY(0U, TPL_EMPTY_TENSOR, 0U, 0U);
     OP_LOGD(context, "DoEmptyTensorTiling, the last dim must be 0, tilingKey is %ld", tilingKey);
@@ -404,9 +438,16 @@ void DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
     workSpaces[0] = SYS_WORKSPACE_SIZE;
-    tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
-    context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
+    auto rawTilingData = context->GetRawTilingData();
+    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
+        OP_LOGD(context->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
+        return ge::GRAPH_FAILED;
+    }    
+    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
+    rawTilingData->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(1);
+    return ge::GRAPH_SUCCESS;
 }
 
 // 设置rowLen为x的最后一维
@@ -490,6 +531,182 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
     }
 }
 
+void DynamicQuantRegbaseTiling::IsCapableForFullLoad(gert::TilingContext* context)
+{
+    bool iscapable = false;
+    int64_t tempNBlockSize = 1;
+    int64_t tempMBlockSize = 1;
+    int64_t tempBatchBlockSize = 1;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    for (int32_t i = 1; i <= nMaxLoopNum; i++) {
+        // maximum m blocksize in ub, buffers in ub are: x, y, scale, offset, smoothscale
+        // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) + mLen * sizeof(half)) < maxUbSize
+        tempNBlockSize = i * PER_CHANNEL_N_BASE_SIZE;
+        tempMBlockSize = (static_cast<int64_t>(maxUseUbSize) - SUM_INPUT_OUTPUT_NUM * USE_BUFFER_NUM * sizeof(float) * tempNBlockSize - USE_BUFFER_NUM * sizeof(int16_t) * mLen) / 
+                         (USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) * tempNBlockSize);
+        if (tempMBlockSize < mLen) {
+            break;
+        }
+        iscapable = true;
+        nBaseLoopNum = i;
+        // try to load multiple batch each time
+        tempBatchBlockSize = (static_cast<int64_t>(maxUseUbSize) - USE_BUFFER_NUM * sizeof(int16_t) * mLen) / 
+                             (tempNBlockSize * (mLen * USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) + SUM_INPUT_OUTPUT_NUM * USE_BUFFER_NUM * sizeof(float)));
+        batchBlockSize = tempBatchBlockSize > 0 ? tempBatchBlockSize : 1;
+        batchBlockNum = Ops::Base::CeilDiv(static_cast<int64_t>(totalBatchLen), batchBlockSize);
+        batchTailBlockSize = totalBatchLen - (batchBlockNum - 1) * batchBlockSize;
+        if (tempNBlockSize >= nLen) {
+            break;
+        }
+    }
+    if (iscapable) {
+        quantMode_ = TPL_PER_CHANNEL_FULL_LOAD;
+        OP_LOGD(context->GetNodeName(), "Entering perchannel full load template");
+    }
+    nBlockSize = PER_CHANNEL_N_BASE_SIZE * nBaseLoopNum;
+    nBlockNum = Ops::Base::CeilDiv(nLen, nBlockSize);
+    totalBlockNum = batchBlockNum * nBlockNum;
+}
+
+void DynamicQuantRegbaseTiling::IsCapableForRecompute(gert::TilingContext* context)
+{
+    bool iscapable = false;
+    int64_t newSize;
+    int64_t tempBlockNumForN;
+    int64_t tempTailBlockNum;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    // recompute
+    if (quantMode_ != TPL_PER_CHANNEL_FULL_LOAD && nBlockNum * totalBatchLen >= vectorCoreNum) {
+        iscapable = true;
+        tempBlockNumForN = Ops::Base::CeilDiv(nLen, nBlockSize);
+        tempTailBlockNum = nLen - (tempBlockNumForN - 1) * nBlockSize;
+        float ratio = tempTailBlockNum * 1.0 / nBlockSize;
+        for (int i = 2; i <= nMaxLoopNum; i++) {
+            newSize = PER_CHANNEL_N_BASE_SIZE * i;
+            tempBlockNumForN = Ops::Base::CeilDiv(nLen, newSize);
+            if (tempBlockNumForN * totalBatchLen < vectorCoreNum) {
+                break;
+            }
+            tempTailBlockNum = nLen - (tempBlockNumForN - 1) * newSize;
+            float newRatio = tempTailBlockNum * 1.0 / newSize;
+            if (newRatio >= ratio) {
+                nBlockSize = newSize; // 当尾块填充比更优时，更新N轴切块大小
+                nBlockNum = tempBlockNumForN;
+                nBaseLoopNum = i;
+                ratio = newRatio;
+            }
+        }
+        // maximum m blocksize in ub, buffers in ub are: x, smoothscale, y, col_max, col_min, scale, offset
+        // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) + mMaxBlockSize * sizeof(half)) < maxUbSize
+        mBlockSize = (static_cast<int64_t>(maxUseUbSize) - 4 * USE_BUFFER_NUM * sizeof(float) * nBlockSize) / (nBlockSize * USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) + USE_BUFFER_NUM * sizeof(int16_t));
+        OPS_ERR_IF(
+            mBlockSize <= 0, OP_LOGE(context, "mBlockSize should be greater than 0, got %ld", mBlockSize),
+            return);
+        mBlockNum = Ops::Base::CeilDiv(mLen, mBlockSize);
+        totalBlockNum = totalBatchLen * nBlockNum;
+    }
+    if (iscapable) {
+        quantMode_ = TPL_PER_CHANNEL_RECOMPUTE;
+        OP_LOGD(context->GetNodeName(), "Entering perchannel recompute template");
+    }
+}
+
+void DynamicQuantRegbaseTiling::IsCapableForSplitM(gert::TilingContext* context)
+{
+    int64_t mMaxBlockSize;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    if (quantMode_ == TPL_PER_CHANNEL_SPLIT_M) {
+        context->SetScheduleMode(SPLIT_M_SCHEDULE_MODE);
+        // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) + mMaxBlockSize * sizeof(half)) < maxUbSize
+        mMaxBlockSize = (static_cast<int64_t>(maxUseUbSize) - 4 * USE_BUFFER_NUM * sizeof(float) * nBlockSize) / (nBlockSize * USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) + USE_BUFFER_NUM * sizeof(int16_t));
+        mBlockSize = mMaxBlockSize;
+        mBlockNum = Ops::Base::CeilDiv(mLen, mMaxBlockSize);
+        batchBlockSize = 1;
+        batchBlockNum = totalBatchLen;
+        batchTailBlockSize = 1;
+        totalBlockNum = batchBlockNum * mBlockNum * nBlockNum;
+        OP_LOGD(context->GetNodeName(), "Entering perchannel split m template");
+    }
+}
+
+ge::graphStatus DynamicQuantRegbaseTiling::CalculateTilingDataForPerChannel(gert::TilingContext* context)
+{
+    const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
+    nLen = xShape->GetStorageShape().GetDim(xShape->GetStorageShape().GetDimNum() - 1);
+    OPS_ERR_IF(
+            nLen <= 0, OP_LOGE(context, "nLen should be greater than 0, got %ld", nLen),
+            return ge::GRAPH_FAILED);
+    mLen = xShape->GetStorageShape().GetDim(xShape->GetStorageShape().GetDimNum() - PER_CHANNEL_EXCLUDE_DIM);
+    OPS_ERR_IF(
+            mLen <= 0, OP_LOGE(context, "mLen should be greater than 0, got %ld", mLen),
+            return ge::GRAPH_FAILED);
+    // 获取输入x的维度x-2
+    size_t dimNum = xShape->GetStorageShape().GetDimNum() - PER_CHANNEL_EXCLUDE_DIM;
+    uint64_t tempBatchLen = 1;
+    for (size_t i = 0; i < dimNum; i++) {
+        tempBatchLen *= xShape->GetStorageShape().GetDim(i);
+    }
+    // 设置totalBatchLen为x除了最后两维以外所有维度的乘积
+    totalBatchLen = tempBatchLen;
+    batchBlockSize = tempBatchLen;
+    // default template for perchannel is splitm
+    quantMode_ = TPL_PER_CHANNEL_SPLIT_M;
+    // check full load template
+    IsCapableForFullLoad(context);
+    // check recompute template
+    IsCapableForRecompute(context);
+    // check split m template
+    IsCapableForSplitM(context);
+    headCoreNum = totalBlockNum % vectorCoreNum;
+    headCoreNum = headCoreNum > 0 ? headCoreNum : vectorCoreNum;
+    blockPerHead = Ops::Base::CeilDiv(totalBlockNum, static_cast<int64_t>(vectorCoreNum));
+    blockPerTail = blockPerHead - 1;    
+    coreNum = std::max(vectorCoreNum, ONE);
+    // 默认开db
+    useDb = true;
+    SetTilingDataForPerChannel();
+    PrintTilingDataForPerChannel(context);
+    return ge::GRAPH_SUCCESS;
+}
+
+void DynamicQuantRegbaseTiling::SetTilingDataForPerChannel() {
+    tilingData.set_totalBatchLen(totalBatchLen);
+    tilingData.set_mLen(mLen);
+    tilingData.set_mBlockSize(mBlockSize);
+    tilingData.set_mTailBlockSize(mLen - mBlockSize * (mBlockNum - 1));
+    tilingData.set_mBlockNum(mBlockNum);
+    tilingData.set_nLen(nLen);
+    tilingData.set_nBlockSize(nBlockSize);
+    tilingData.set_nTailBlockSize(nLen - nBlockSize * (nBlockNum - 1));
+    tilingData.set_nBlockNum(nBlockNum);
+    tilingData.set_nBaseSize(PER_CHANNEL_N_BASE_SIZE);
+    tilingData.set_nBaseLoopNum(nBaseLoopNum);
+    tilingData.set_blockPerHead(blockPerHead);
+    tilingData.set_blockPerTail(blockPerTail);
+    tilingData.set_totalBlockNum(totalBlockNum);
+    tilingData.set_batchBlockSize(batchBlockSize);
+    tilingData.set_batchTailBlockSize(batchTailBlockSize);
+    tilingData.set_batchBlockNum(batchBlockNum);
+}
+
+// 打印perchannel模板相关tiling参数
+void DynamicQuantRegbaseTiling::PrintTilingDataForPerChannel(gert::TilingContext* context)
+{
+    OP_LOGD(
+        context,
+        "tilingData is totalBatchLen:%u, mLen:%u, mBlockSize:%u, mTailBlockSize:%u, mBlockNum:%u, "
+        "nLen:%u, nBlockSize:%u, nTailBlockSize:%u, nBlockNum:%u, "
+        "nBaseSize:%u, nBaseLoopNum:%u, blockPerHead:%u, blockPerTail:%u, totalBlockNum:%u"
+        "batchBlockSize:%u, batchTailBlockSize:%u, batchBlockNum:%u",
+        tilingData.get_totalBatchLen(),
+        tilingData.get_mLen(), tilingData.get_mBlockSize(), tilingData.get_mTailBlockSize(), tilingData.get_mBlockNum(),
+        tilingData.get_nLen(), tilingData.get_nBlockSize(), tilingData.get_nTailBlockSize(), tilingData.get_nBlockNum(),
+        tilingData.get_nBaseSize(), tilingData.get_nBaseLoopNum(), 
+        tilingData.get_blockPerHead(), tilingData.get_blockPerTail(), tilingData.get_totalBlockNum(),
+        tilingData.get_batchBlockSize(), tilingData.get_batchTailBlockSize(), tilingData.get_batchBlockNum()
+        );
+}
+
 // 获取核数vectorCoreNum和UB大小ubSize
 ge::graphStatus DynamicQuantRegbaseTiling::GetCompileInfo(gert::TilingContext* context)
 {
@@ -502,7 +719,6 @@ ge::graphStatus DynamicQuantRegbaseTiling::GetCompileInfo(gert::TilingContext* c
         OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.",
             vectorCoreNum, ubSize),
         return ge::GRAPH_FAILED);
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -521,23 +737,40 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
         return ge::GRAPH_FAILED);
 
     if (isEmptyTensor) {
-        DoEmptyTensorTiling(context);
-        return ge::GRAPH_SUCCESS;
+        return DoEmptyTensorTiling(context);
     }
-
-    CalculateCoreNum(context);
-    CalculateTilingData();
+    if (!isPerChannel_) {
+        CalculateCoreNum(context);
+        CalculateTilingData();
+    } else {
+        CalculateTilingDataForPerChannel(context);
+    }
     SetTilingData(context);
     PrintTilingData(context);
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
-    if (isSymmetrical_ == false) {
-        workSpaces[0] = SYS_WORKSPACE_SIZE + coreNum * sizeof(float) * SYMMETRICAL;
+    size_t normalWorkSpace = coreNum * sizeof(float);
+    size_t perChannelWorkSpace = totalBatchLen * nLen * sizeof(float);
+    workSpaces[0] = SYS_WORKSPACE_SIZE;
+    if (quantMode_ == TPL_PER_CHANNEL_SPLIT_M) {
+        workSpaces[0] += isSymmetrical_ ? perChannelWorkSpace : perChannelWorkSpace * ASYMMETRICAL;
     } else {
-        workSpaces[0] = SYS_WORKSPACE_SIZE + coreNum * sizeof(float);
+        workSpaces[0] += isSymmetrical_ ? normalWorkSpace : normalWorkSpace * ASYMMETRICAL;
     }
-    tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
-    context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+
+    if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE){
+        context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
+    }
+
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
+    auto rawTilingData = context->GetRawTilingData();
+    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
+        OP_LOGD(context->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
+        return ge::GRAPH_FAILED;
+    }
+
+    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
+    rawTilingData->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(coreNum);
     return ge::GRAPH_SUCCESS;
 }

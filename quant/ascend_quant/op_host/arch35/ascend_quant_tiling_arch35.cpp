@@ -74,7 +74,7 @@ ge::graphStatus AscendQuantRegbase::DoAscendQuantTiling()
 
 ge::graphStatus AscendQuantRegbase::GetPlatform()
 {
-    OP_LOGD("AscendQuantTiling", "Enter 910_95 AscendQuantTiling");
+    OP_LOGD("AscendQuantTiling", "Enter arch3510 AscendQuantTiling");
     fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);

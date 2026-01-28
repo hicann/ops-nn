@@ -75,6 +75,8 @@ TEST_F(dynamic_block_quant_test, test_case_half_001) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -130,6 +132,8 @@ TEST_F(dynamic_block_quant_test, test_case_half_002) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -185,6 +189,8 @@ TEST_F(dynamic_block_quant_test, test_case_half_003) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -240,6 +246,8 @@ TEST_F(dynamic_block_quant_test, test_case_half_004) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -295,6 +303,8 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_001) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -350,6 +360,8 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_002) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -405,6 +417,8 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_003) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -460,6 +474,8 @@ TEST_F(dynamic_block_quant_test, test_case_bfloat_004) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 128;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -515,6 +531,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_001) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -570,6 +588,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_002) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -625,6 +645,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_003) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -680,6 +702,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_half_004) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -735,6 +759,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_001) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -790,6 +816,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_002) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -845,6 +873,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_003) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -900,6 +930,8 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_004) {
     tilingDatafromBin->colNum = 128;
     tilingDatafromBin->rowBlockLoopNum = 1;
     tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
     tilingDatafromBin->rowUbFactor = 1;
     tilingDatafromBin->colUbFactor = 128;
     tilingDatafromBin->usedCoreNum = 1;
@@ -915,6 +947,177 @@ TEST_F(dynamic_block_quant_test, test_case_one_row_bfloat_004) {
     tilingDatafromBin->colTailCoreNum = 0;
 
     ICPU_SET_TILING_KEY(7221);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(dynamic_block_quant, blockDim, x, y, scale, workspace, tiling);
+
+    AscendC::GmFree((void *)x);
+    AscendC::GmFree((void *)y);
+    AscendC::GmFree((void *)scale);
+    AscendC::GmFree((void *)workspace);
+    AscendC::GmFree((void *)tiling);
+}
+
+TEST_F(dynamic_block_quant_test, test_case_large_shape_half_001) {
+    size_t xByteSize = 1 * 128 * sizeof(half);
+    size_t yByteSize = 1 * 128 * sizeof(uint8_t);
+    size_t scaleByteSize = 1 * 1 * sizeof(float);
+    size_t tiling_data_size = sizeof(DynamicBlockQuantTilingData);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    std::string path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicBlockQuantTilingData*>(tiling);
+
+    tilingDatafromBin->tilingKey = 1102;
+    tilingDatafromBin->totalCoreNum = 64;
+    tilingDatafromBin->ubSize = 253952;
+    tilingDatafromBin->vfLen = 256;
+    tilingDatafromBin->minScale = 0.0;
+    tilingDatafromBin->roundMode = 1;
+    tilingDatafromBin->dstType = 35;
+    tilingDatafromBin->blockSizeRow = 1;
+    tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->rowNum = 1;
+    tilingDatafromBin->colNum = 128;
+    tilingDatafromBin->rowBlockLoopNum = 1;
+    tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
+    tilingDatafromBin->rowUbFactor = 1;
+    tilingDatafromBin->colUbFactor = 128;
+    tilingDatafromBin->usedCoreNum = 1;
+    tilingDatafromBin->rowTileNum = 1;
+    tilingDatafromBin->colTileNum = 1;
+    tilingDatafromBin->normalCoreRowTileNum = 1;
+    tilingDatafromBin->normalCoreColTileNum = 1;
+    tilingDatafromBin->tailCoreRowTileNum = 1;
+    tilingDatafromBin->tailCoreColTileNum = 1;
+    tilingDatafromBin->rowNormalCoreNum = 1;
+    tilingDatafromBin->colNormalCoreNum = 1;
+    tilingDatafromBin->rowTailCoreNum = 0;
+    tilingDatafromBin->colTailCoreNum = 0;
+
+    ICPU_SET_TILING_KEY(1100);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(dynamic_block_quant, blockDim, x, y, scale, workspace, tiling);
+
+    AscendC::GmFree((void *)x);
+    AscendC::GmFree((void *)y);
+    AscendC::GmFree((void *)scale);
+    AscendC::GmFree((void *)workspace);
+    AscendC::GmFree((void *)tiling);
+}
+
+TEST_F(dynamic_block_quant_test, test_case_large_shape_half_002) {
+    size_t xByteSize = 1 * 128 * sizeof(half);
+    size_t yByteSize = 1 * 128 * sizeof(uint8_t);
+    size_t scaleByteSize = 1 * 1 * sizeof(float);
+    size_t tiling_data_size = sizeof(DynamicBlockQuantTilingData);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    std::string path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicBlockQuantTilingData*>(tiling);
+
+    tilingDatafromBin->tilingKey = 1112;
+    tilingDatafromBin->totalCoreNum = 64;
+    tilingDatafromBin->ubSize = 253952;
+    tilingDatafromBin->vfLen = 256;
+    tilingDatafromBin->minScale = 0.0;
+    tilingDatafromBin->roundMode = 1;
+    tilingDatafromBin->dstType = 35;
+    tilingDatafromBin->blockSizeRow = 1;
+    tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->rowNum = 1;
+    tilingDatafromBin->colNum = 128;
+    tilingDatafromBin->rowBlockLoopNum = 1;
+    tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
+    tilingDatafromBin->rowUbFactor = 1;
+    tilingDatafromBin->colUbFactor = 128;
+    tilingDatafromBin->usedCoreNum = 1;
+    tilingDatafromBin->rowTileNum = 1;
+    tilingDatafromBin->colTileNum = 1;
+    tilingDatafromBin->normalCoreRowTileNum = 1;
+    tilingDatafromBin->normalCoreColTileNum = 1;
+    tilingDatafromBin->tailCoreRowTileNum = 1;
+    tilingDatafromBin->tailCoreColTileNum = 1;
+    tilingDatafromBin->rowNormalCoreNum = 1;
+    tilingDatafromBin->colNormalCoreNum = 1;
+    tilingDatafromBin->rowTailCoreNum = 0;
+    tilingDatafromBin->colTailCoreNum = 0;
+
+    ICPU_SET_TILING_KEY(1100);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(dynamic_block_quant, blockDim, x, y, scale, workspace, tiling);
+
+    AscendC::GmFree((void *)x);
+    AscendC::GmFree((void *)y);
+    AscendC::GmFree((void *)scale);
+    AscendC::GmFree((void *)workspace);
+    AscendC::GmFree((void *)tiling);
+}
+
+TEST_F(dynamic_block_quant_test, test_case_large_shape_half_003) {
+    size_t xByteSize = 1 * 128 * sizeof(half);
+    size_t yByteSize = 1 * 128 * sizeof(uint8_t);
+    size_t scaleByteSize = 1 * 1 * sizeof(float);
+    size_t tiling_data_size = sizeof(DynamicBlockQuantTilingData);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1;
+
+    std::string path_ = get_current_dir_name();
+    string path(path_);
+
+    DynamicBlockQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicBlockQuantTilingData*>(tiling);
+
+    tilingDatafromBin->tilingKey = 4122;
+    tilingDatafromBin->totalCoreNum = 64;
+    tilingDatafromBin->ubSize = 253952;
+    tilingDatafromBin->vfLen = 256;
+    tilingDatafromBin->minScale = 0.0;
+    tilingDatafromBin->roundMode = 4;
+    tilingDatafromBin->dstType = 34;
+    tilingDatafromBin->blockSizeRow = 1;
+    tilingDatafromBin->blockSizeCol = 128;
+    tilingDatafromBin->rowNum = 1;
+    tilingDatafromBin->colNum = 128;
+    tilingDatafromBin->rowBlockLoopNum = 1;
+    tilingDatafromBin->colBlockLoopNum = 1;
+    tilingDatafromBin->rowUbBlockLoopNum  = 1;
+    tilingDatafromBin->colUbBlockLoopNum = 1;
+    tilingDatafromBin->rowUbFactor = 1;
+    tilingDatafromBin->colUbFactor = 128;
+    tilingDatafromBin->usedCoreNum = 1;
+    tilingDatafromBin->rowTileNum = 1;
+    tilingDatafromBin->colTileNum = 1;
+    tilingDatafromBin->normalCoreRowTileNum = 1;
+    tilingDatafromBin->normalCoreColTileNum = 1;
+    tilingDatafromBin->tailCoreRowTileNum = 1;
+    tilingDatafromBin->tailCoreColTileNum = 1;
+    tilingDatafromBin->rowNormalCoreNum = 1;
+    tilingDatafromBin->colNormalCoreNum = 1;
+    tilingDatafromBin->rowTailCoreNum = 0;
+    tilingDatafromBin->colTailCoreNum = 0;
+
+    ICPU_SET_TILING_KEY(1100);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(dynamic_block_quant, blockDim, x, y, scale, workspace, tiling);
 

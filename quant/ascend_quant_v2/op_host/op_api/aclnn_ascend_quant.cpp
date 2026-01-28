@@ -34,8 +34,14 @@ static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_WITH_BF16 = {
 static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT = {
     op::DataType::DT_INT8, op::DataType::DT_INT32, op::DataType::DT_INT4};
+
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT = {
+    op::DataType::DT_INT8,          op::DataType::DT_INT32,       op::DataType::DT_INT4,
+    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8};
+
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT8 = {op::DataType::DT_INT8};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
@@ -47,9 +53,12 @@ static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return X_DTYPE_SUPPORT_LIST_WITH_BF16;
+    }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case NpuArch::DAV_2201:{
             return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -63,14 +72,24 @@ static const std::initializer_list<DataType>& GetInDtypeSupportList()
 
 static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 {
-    return OUT_DTYPE_SUPPORT_LIST;
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_2002) {
+        return OUT_DTYPE_SUPPORT_LIST_INT8;
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return OUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT;
+    } else {
+        return OUT_DTYPE_SUPPORT_LIST_INT;
+    }
 }
 
 static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
 {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
+    }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case NpuArch::DAV_2201:{
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -124,7 +143,9 @@ static bool CheckDtypeValid(
     }
 
     if (static_cast<int32_t>(out->GetDataType()) != dstType) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y dtype must be the same as dstType.");
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "dstType:%d(%s) must be able to represent the y dtype[%s].", dstType,
+            op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
 
@@ -266,16 +287,36 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     return true;
 }
 
-static bool CheckRoundMode(const char* roundMode)
+static bool CheckRoundMode(const char* roundMode, int32_t dstType)
 {
     if (roundMode == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode cannot be empty.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode cannot be empty");
         return false;
     }
     const std::string mode = std::string(roundMode);
-    if (mode != "round" && mode != "floor" && mode != "ceil" && mode != "trunc") {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check roundMode failed,roundMode not is 'round','floor','ceil','trunc'.");
-        return false;
+    if (dstType == op::DataType::DT_HIFLOAT8) {
+        if (mode != "round" && mode != "hybrid") {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
+            return false;
+        }
+    } else if (dstType == op::DataType::DT_FLOAT8_E4M3FN || dstType == op::DataType::DT_FLOAT8_E5M2) {
+        if (mode != "round") {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "check roundMode failed, roundMode[%s] not in ['round'] for float8_e5m2/float8_e4m3fn.",
+                mode.c_str());
+            return false;
+        }
+    } else {
+        if (mode != "round" && mode != "floor" && mode != "ceil" && mode != "trunc") {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "check roundMode failed, roundMode[%s] not in ['round','floor','ceil','trunc'] for int8/int4/int32.",
+                mode.c_str());
+            return false;
+        }
     }
     return true;
 }
@@ -311,7 +352,7 @@ static aclnnStatus CheckParams(
 
     CHECK_RET(CheckShape(self, out, scale, offset), ACLNN_ERR_PARAM_INVALID);
 
-    CHECK_RET(CheckRoundMode(roundMode), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckRoundMode(roundMode, dstType), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

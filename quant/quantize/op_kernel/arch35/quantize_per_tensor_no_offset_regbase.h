@@ -59,6 +59,7 @@ template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, ui
 __aicore__ inline void QuantizePerTensorNoOffsetRegbase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::Init(
     GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData)
 {
+    this->SetFloatOverflowModeForRegbase();
     blockIdx_ = GetBlockIdx();
     xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
     scaleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T1*>(scale));

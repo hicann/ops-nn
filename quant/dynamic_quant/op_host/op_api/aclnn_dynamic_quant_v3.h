@@ -24,18 +24,22 @@ extern "C" {
  * device侧的aclTensor，算子输入的Tensor，shape维度要大于1，Device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] smoothScalesOptional: npu
- * 算子输入的smoothScales，当没有groupIndexOptional时，shape维度是x的最后一维；当有groupIndexOptional时，shape是两维
- * 第一维大小是专家数，不超过1024，第二维大小是x的最后一维。Device侧的aclTensor
+ * 算子输入的smoothScales，
+ * 当没有groupIndexOptional时，shape维度为1维；
+ *  - 如果quantMode为"perchannel"，shape的第一维大小是x的倒数第二维。
+ *  - 如果quantMode为"pertoken"或者"pertensor"，shape的第一维大小是x的最后一维。
+ * 当有groupIndexOptional时，shape是两维
+ *  - 第一维大小是专家数，不超过1024，第二维大小是x的最后一维。Device侧的aclTensor
  * 数据类型支持FLOAT16、BFLOAT16，并且数据类型要和x保持一致，支持非连续的Tensor，数据格式支持ND。
  * @param [in] groupIndexOptional: npu
  * 算子输入的groupIndex，Device侧的aclTensor，数据类型支持INT32，支持非连续的Tensor，数据格式支持ND。
  * shape只支持一维，且维度大小等于smoothScalesOptional的第一维。groupIndexOptional非nullptr时，smoothScalesOptional必须非nullptr。
  * @param [in]
- * dstType：输出yOut的数据类型对应的枚举值，Host侧的int。支持DT_INT8，DT_INT32，DT_INT4，DT_FLOAT8_E5M2，DT_FLOAT8_E4M4FN，DT_HIFLOAT8。
+ * dstType：输出yOut的数据类型对应的枚举值，Host侧的int。支持DT_INT8，DT_INT32，DT_INT4，DT_FLOAT8_E5M2，DT_FLOAT8_E4M3FN，DT_HIFLOAT8。
  * @param [in]
  * isSymmetrical：指定是否对称量化，Host侧的bool。
  * @param [in]
- * quantMode：用于指定量化的模式，Host侧的char*。当前支持"pertoken"和"pertensor"。当quantMode取"pertensor"时，groupIndexOptional必须是nullptr。
+ * quantMode：用于指定量化的模式，Host侧的char*。当前支持"pertoken"，"pertensor"和"perchannel"。当quantMode取"pertensor"、"perchannel"时，groupIndexOptional必须是nullptr。
  * @param [in] yOut: npu
  * 量化后的输出Tensor，shape和x保持一致，类型由dstType指定。支持非连续的Tensor，数据格式支持ND。
  * @param [in] scaleOut: npu

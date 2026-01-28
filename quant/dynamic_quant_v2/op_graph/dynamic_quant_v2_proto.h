@@ -40,13 +40,14 @@ namespace ge {
  * @li is_symmetrical: An optional attribute of type bool. Select whether to be symmetrical.
  * Defaults to false.
  * @li quant_mode: An optional attribute of type string. Specifies the mode of quantization.
- * Support "pertoken", "pertensor". Defaults to "pertoken". \n
+ * Support "pertoken", "pertensor", "perchannel". Defaults to "pertoken". \n
  * @par Outputs:
  * @li y: A tensor. Quantized output tensor, Shape is same as input x. If y dtype is int4, x last dim must be divisible
  * by 2. The format support ND. Type specified by dst_type, support INT4, INT8, FLOAT8_E5M2, FLOAT8_E4M3FN, HIFLOAT8.
  * @li scale: A tensor. Scale used for quantization.
  * When quant_mode is "pertoken", shape is the same as the shape of x after removing the last dimension.
  * When quant_mode is "pertensor", shape is (1,).
+ * When quant_mode is "perchannel", shape is the same as the shape of x after removing the second last dimension.
  * Type is DT_FLOAT32. The format support ND.
  * @li offset: A tensor. Offset used for quantization. Shape is the same as the shape of scale.
  * Type is DT_FLOAT32. The format support ND. Shape is same as scale. \n

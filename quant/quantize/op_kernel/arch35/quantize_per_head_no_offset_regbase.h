@@ -27,6 +27,7 @@ public:
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData)
     {
+        this->SetFloatOverflowModeForRegbase();
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
         scaleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T1*>(scale));

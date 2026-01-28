@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #include "arch35/dynamic_mx_quant_post.h"
 #include "arch35/dynamic_mx_quant_not_tail_axis_optimize_high_perf_large_tail.h"
 #include "arch35/dynamic_mx_quant_not_tail_axis_optimize_high_perf_small_tail.h"
+#include "arch35/dynamic_mx_quant_tail_axis_optimize_fp16.h"
 
 #define TILING_KEY_FP16_FP4E2M1_QUANT_TAIL_AXIS 1000
 #define TILING_KEY_BF16_FP4E2M1_QUANT_TAIL_AXIS 2000
@@ -95,6 +96,11 @@
 
 #define TILING_KEY_OPT_FOR_NOT_LAST_QUANT_AXIS_SMALL 10000
 #define TILING_KEY_OPT_FOR_NOT_LAST_QUANT_AXIS_LARGE 20000
+
+#define TILING_KEY_FP16_FP4E2M1_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF 1050
+#define TILING_KEY_FP16_FP4E1M2_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF 1150
+#define TILING_KEY_FP16_FP4E2M1_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF_ODD_SCALE 1051
+#define TILING_KEY_FP16_FP4E1M2_QUANT_TAIL_OPTIMIZE_F16_AXIS_PERF_ODD_SCALE 1151
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
@@ -554,6 +560,32 @@ extern "C" __global__ __aicore__ void dynamic_mx_quant(
         DynamicMxQuant::DynamicMxQuantHP2000<DTYPE_X, DTYPE_Y> op(&tilingData, &pipe);
         op.Init(x, y, mxScale);
         op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_FP16_FP4E2M1_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF)) {
+ 	         GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantTilingData, tilingData, tiling);
+ 	         DynamicMxQuant::DynamicMxQuantTailAxisOptimizeFp16<DTYPE_X, DTYPE_Y> op;
+ 	         op.Init(x, y, mxScale, mxScale, &tilingData);
+ 	         op.Process();
+ 	     } else if (TILING_KEY_IS(TILING_KEY_FP16_FP4E1M2_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF)) {
+ 	         GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantTilingData, tilingData, tiling);
+ 	         DynamicMxQuant::DynamicMxQuantTailAxisOptimizeFp16<DTYPE_X, DTYPE_Y> op;
+ 	         op.Init(x, y, mxScale, mxScale, &tilingData);
+ 	         op.Process();
+ 	     } else if (TILING_KEY_IS(TILING_KEY_FP16_FP4E2M1_QUANT_TAIL_AXIS_OPTIMIZE_F16_PERF_ODD_SCALE)) {
+ 	         GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantTilingData, tilingData, tiling);
+ 	         DynamicMxQuant::DynamicMxQuantTailAxisOptimizeFp16<DTYPE_X, DTYPE_Y> op;
+ 	         op.Init(x, y, mxScale, userWS, &tilingData);
+ 	         op.Process();
+ 	         DynamicMxQuantPost postOp;
+ 	         postOp.Init(mxScale, userWS, &tilingData);
+ 	         postOp.Process();
+ 	     } else if (TILING_KEY_IS(TILING_KEY_FP16_FP4E1M2_QUANT_TAIL_OPTIMIZE_F16_AXIS_PERF_ODD_SCALE)) {
+ 	         GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantTilingData, tilingData, tiling);
+ 	         DynamicMxQuant::DynamicMxQuantTailAxisOptimizeFp16<DTYPE_X, DTYPE_Y> op;
+ 	         op.Init(x, y, mxScale, userWS, &tilingData);
+ 	         op.Process();
+ 	         DynamicMxQuantPost postOp;
+ 	         postOp.Init(mxScale, userWS, &tilingData);
+ 	         postOp.Process();
     }
 
 #if (__NPU_ARCH__ == 3101)

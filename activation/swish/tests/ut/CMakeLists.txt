@@ -8,6 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+# 每个目录下需要生成的可执行文件，具体参考：ops/built-in/test/CMakeLists.txt： 50~124
+message(STATUS "=== Debug: start ops.activation.swish.tests.ut.CMakeLists.txt ")
 file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
 message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
 foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})

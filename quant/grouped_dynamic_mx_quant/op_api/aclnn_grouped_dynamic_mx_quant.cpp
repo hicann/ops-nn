@@ -27,6 +27,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -95,7 +96,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, 
                               int64_t blocksize, const aclTensor* y, const aclTensor* mxscale) {
   // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-  bool IsRegbaseSocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+  bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
   if (IsRegbaseSocVersion) {
     OP_CHECK_DTYPE_NOT_SUPPORT(x, X_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(groupIndex, GROUP_INDEX_DTYPE_SUPPORT_LIST, return false);
@@ -113,8 +114,9 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
                 dstType, op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(y->GetDataType()).GetString()),
                 return false);
   } else {
-    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-      op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for npuArch %u is not implemented",
+      static_cast<uint32_t>(curArch));
     return false;
   }
   return true;

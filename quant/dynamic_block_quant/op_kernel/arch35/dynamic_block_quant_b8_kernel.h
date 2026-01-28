@@ -20,6 +20,7 @@
 
 #include "dynamic_block_quant_common.h"
 namespace DynamicBlockQuant {
+#define FLOAT_OVERFLOW_MODE_CTRL 60
 using namespace AscendC;
 
 template <typename T, typename U, int64_t RMode>
@@ -47,23 +48,23 @@ private:
     __aicore__ inline void ComputeScaleVF(
         __local_mem__ T* scaleLocalTmp, __local_mem__ float* scaleLocal, int32_t blockRow, int32_t blockCol);
     __aicore__ inline void ComputeOutVF(
-        __local_mem__ T* xLocal, __local_mem__ float* scaleLocal, __local_mem__ U* outLocal, int32_t blockRow,
-        int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int32_t blockColNumAlign);
+        __local_mem__ T* xLocal, __local_mem__ float* scaleLocal, __local_mem__ U* outLocal, int32_t ubOffset,
+        int32_t yOffset, int32_t scaleOffset, int32_t blockRowNum, int32_t blockColNum);
 
 private:
     TPipe* Ppipe = nullptr;
-    TQue<QuePosition::VECIN, 1> inQueue_;
+    TQue<QuePosition::VECIN, DB_BUFFER> inQueue_;
     GlobalTensor<T> xGm_;
-    TQue<QuePosition::VECOUT, 1> outQueue_;
+    TQue<QuePosition::VECOUT, DB_BUFFER> outQueue_;
     GlobalTensor<U> yGm_;
-    TQue<QuePosition::VECOUT, 1> scaleQueue_;
+    TQue<QuePosition::VECOUT, DB_BUFFER> scaleQueue_;
     GlobalTensor<float> scaleGm_;
 
     TBuf<QuePosition::VECCALC> xLocalBuffer_;
     TBuf<QuePosition::VECCALC> scaleBuffer_;
 
     int64_t blockIdx_ = 0;
-    float fpMaxValue_ = 0.0f;
+    uint32_t invDtypeValue_ = 0;
 
     int64_t totalCoreNum_ = 0;
     int64_t ubSize_ = 0;
@@ -93,30 +94,30 @@ private:
     int64_t rowTailCoreNum_ = 0;
     int64_t colTailCoreNum_ = 0;
 
-    int64_t rowCoreIdx_ = 0;
-    int64_t colCoreIdx_ = 0;
+    int32_t rowCoreIdx_ = 0;
+    int32_t colCoreIdx_ = 0;
 
     bool isRowTailCore_ = false;
     bool isColTailCore_ = false;
 
-    int64_t rowCoreTileNum_ = 0;
-    int64_t colCoreTileNum_ = 0;
-    int64_t rowUbLoop_ = 0;
-    int64_t colUbLoop_ = 0;
-    int64_t coreRowNum_ = 0;
-    int64_t coreColNum_ = 0;
-
-    int64_t blockSizeColAlign_ = 0;
+    int32_t rowCoreTileNum_ = 0;
+    int32_t colCoreTileNum_ = 0;
+    int32_t rowUbLoop_ = 0;
+    int32_t colUbLoop_ = 0;
+    int32_t coreRowNum_ = 0;
+    int32_t coreColNum_ = 0;
 
     static constexpr AscendC::MicroAPI::CastTrait castTrait32toh8 = []() {
         if constexpr (RMode == 1 || RMode == 4) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::MicroAPI::CastTrait {
+                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND
+            };
         } else if constexpr (RMode == 7) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::MicroAPI::CastTrait {
+                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID
+            };
         }
     }();
 };
@@ -125,25 +126,28 @@ template <typename T, typename U, int64_t RMode>
 __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Init(
     GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData)
 {
+    #if (__NPU_ARCH__ == 3101)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+    #endif
     ParseTilingData(tilingData);
 
     blockIdx_ = GetBlockIdx();
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
+    int32_t inputTypeAlign = BLOCK_BYTE_32 / sizeof(T);
 
-    Ppipe->InitBuffer(inQueue_, 1, rowUbFactor_ * colUbFactor_ * sizeof(T));
-    Ppipe->InitBuffer(outQueue_, 1, rowUbFactor_ * colUbFactor_ * sizeof(U));
-    Ppipe->InitBuffer(scaleQueue_, 1, (colUbBlockLoopNum_ + 64 - 1) / 64 * 64 * rowUbBlockLoopNum_ * sizeof(float));
+    Ppipe->InitBuffer(inQueue_, DB_BUFFER, rowUbFactor_ * colUbFactor_ * sizeof(T));
+    Ppipe->InitBuffer(outQueue_, DB_BUFFER, rowUbFactor_ * colUbFactor_ * sizeof(U));
+    Ppipe->InitBuffer(scaleQueue_, DB_BUFFER, colUbBlockLoopNum_ * rowUbBlockLoopNum_ * inputTypeAlign * sizeof(float));
 
     Ppipe->InitBuffer(xLocalBuffer_, rowUbFactor_ * colUbFactor_ * sizeof(T));
-    Ppipe->InitBuffer(scaleBuffer_, (rowUbBlockLoopNum_ * colUbBlockLoopNum_) * 8 * sizeof(T));
+    Ppipe->InitBuffer(scaleBuffer_, (rowUbBlockLoopNum_ * colUbBlockLoopNum_) * inputTypeAlign * sizeof(T));
 
     rowCoreIdx_ = blockIdx_ / colTileNum_;
     colCoreIdx_ = blockIdx_ % colTileNum_;
     isRowTailCore_ = (rowCoreIdx_ >= rowNormalCoreNum_);
     isColTailCore_ = (colCoreIdx_ >= colNormalCoreNum_);
-    blockSizeColAlign_ = (blockSizeCol_ + 128 - 1) / 128 * 128;
 
     int64_t xRowGmOffset = 0;
     int64_t xColGmOffset = 0;
@@ -153,17 +157,17 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Init(
     int64_t scaleGmOffset = 0;
 
     if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
-        fpMaxValue_ = FP8_E5M2_MAX_VALUE;
+        invDtypeValue_ = INV_FP8_E5M2_MAX_VALUE;
     } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
-        fpMaxValue_ = FP8_E4M3_MAX_VALUE;
+        invDtypeValue_ = INV_FP8_E4M3_MAX_VALUE;
     } else if constexpr (IsSameType<U, hifloat8_t>::value) {
-        fpMaxValue_ = HIFP8_MAX_VALUE;
+        invDtypeValue_ = INV_HIFP8_MAX_VALUE;
     }
 
     if (isRowTailCore_) {
         rowCoreTileNum_ = tailCoreRowTileNum_;
         rowUbBlockLoopNum_ = rowUbBlockLoopNum_ > rowCoreTileNum_ ? rowCoreTileNum_ : rowUbBlockLoopNum_;
-        rowUbLoop_ = tailCoreRowTileNum_ / rowUbBlockLoopNum_;
+        rowUbLoop_ = Ceil(tailCoreRowTileNum_, rowUbBlockLoopNum_);
         xRowGmOffset = rowNormalCoreNum_ * normalCoreRowTileNum_ * colNum_ +
                        (rowCoreIdx_ - rowNormalCoreNum_) * tailCoreRowTileNum_ * colNum_;
         scaleGmRowOffset =
@@ -175,7 +179,7 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Init(
                           tailCoreRowTileNum_ * blockSizeRow_;
     } else {
         rowCoreTileNum_ = normalCoreRowTileNum_;
-        rowUbLoop_ = rowCoreTileNum_ / rowUbBlockLoopNum_;
+        rowUbLoop_ = Ceil(rowCoreTileNum_, rowUbBlockLoopNum_);
         xRowGmOffset = rowCoreIdx_ * normalCoreRowTileNum_ * colNum_;
         scaleGmRowOffset = rowCoreIdx_ * normalCoreRowTileNum_;
         coreRowNum_ = rowCoreIdx_ + 1 == rowTileNum_ ? rowNum_ - rowCoreIdx_ * normalCoreRowTileNum_ * blockSizeRow_ :
@@ -184,7 +188,7 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Init(
     if (isColTailCore_) {
         colCoreTileNum_ = tailCoreColTileNum_;
         colUbBlockLoopNum_ = colUbBlockLoopNum_ > colCoreTileNum_ ? colCoreTileNum_ : colUbBlockLoopNum_;
-        colUbLoop_ = colCoreTileNum_ / colUbBlockLoopNum_;
+        colUbLoop_ = Ceil(colCoreTileNum_, colUbBlockLoopNum_);
         xColGmOffset = colNormalCoreNum_ * normalCoreColTileNum_ * blockSizeCol_ +
                        (colCoreIdx_ - colNormalCoreNum_) * tailCoreColTileNum_ * blockSizeCol_;
         scaleGmColOffset =
@@ -196,13 +200,13 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Init(
                           tailCoreColTileNum_ * blockSizeCol_;
     } else {
         colCoreTileNum_ = normalCoreColTileNum_;
-        colUbLoop_ = colCoreTileNum_ / colUbBlockLoopNum_;
+        colUbLoop_ = Ceil(colCoreTileNum_, colUbBlockLoopNum_);
         xColGmOffset = colCoreIdx_ * normalCoreColTileNum_ * blockSizeCol_;
         scaleGmColOffset = colCoreIdx_ * normalCoreColTileNum_;
         coreColNum_ = colCoreIdx_ + 1 == colTileNum_ ? colNum_ - colCoreIdx_ * normalCoreColTileNum_ * blockSizeCol_ :
                                                        normalCoreColTileNum_ * blockSizeCol_;
     }
-    xGmOffset = xRowGmOffset * blockSizeCol_ + xColGmOffset;
+    xGmOffset = xRowGmOffset * blockSizeRow_ + xColGmOffset;
     scaleGmOffset = scaleGmRowOffset * colBlockLoopNum_ + scaleGmColOffset;
 
     xGm_.SetGlobalBuffer((__gm__ T*)x + xGmOffset);
@@ -248,24 +252,22 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Process()
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
-
-    for (int64_t rowUbLoopIdx = 0; rowUbLoopIdx < rowUbLoop_; rowUbLoopIdx++) {
-        for (int64_t colUbLoopIdx = 0; colUbLoopIdx < colUbLoop_; colUbLoopIdx++) {
+    for (int32_t rowUbLoopIdx = 0; rowUbLoopIdx < rowUbLoop_; rowUbLoopIdx++) {
+        for (int32_t colUbLoopIdx = 0; colUbLoopIdx < colUbLoop_; colUbLoopIdx++) {
             int32_t blockRow = rowUbLoopIdx == rowUbLoop_ - 1 ? rowCoreTileNum_ - rowUbLoopIdx * rowUbBlockLoopNum_ :
                                                                 rowUbBlockLoopNum_;
             int32_t blockCol = colUbLoopIdx == colUbLoop_ - 1 ? colCoreTileNum_ - colUbLoopIdx * colUbBlockLoopNum_ :
                                                                 colUbBlockLoopNum_;
             int32_t blockRowNum = rowUbLoopIdx == rowUbLoop_ - 1 ?
                                       coreRowNum_ - rowUbLoopIdx * rowUbBlockLoopNum_ * blockSizeRow_ :
-                                      blockSizeRow_;
+                                      rowUbBlockLoopNum_ * blockSizeRow_;
             int32_t blockColNum = colUbLoopIdx == colUbLoop_ - 1 ?
                                       coreColNum_ - colUbLoopIdx * colUbBlockLoopNum_ * blockSizeCol_ :
-                                      blockSizeCol_;
+                                      colUbBlockLoopNum_ * blockSizeCol_;
             int64_t baseXGmOffset = rowUbLoopIdx * rowUbBlockLoopNum_ * blockSizeRow_ * colNum_ +
                                     colUbLoopIdx * colUbBlockLoopNum_ * blockSizeCol_;
             int64_t baseScaleOffset =
                 rowUbLoopIdx * rowUbBlockLoopNum_ * colBlockLoopNum_ + colUbLoopIdx * colUbBlockLoopNum_;
-
             CopyIn(blockRow, blockCol, blockRowNum, blockColNum, baseXGmOffset);
             Compute(blockRow, blockCol, blockRowNum, blockColNum);
             CopyOut(blockRow, blockCol, blockRowNum, blockColNum, baseXGmOffset, baseScaleOffset);
@@ -284,14 +286,14 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::CopyIn(
 
     for (int32_t rowIdx = 0; rowIdx < blockRow; rowIdx++) {
         for (int32_t colIdx = 0; colIdx < blockCol; colIdx++) {
-            ubOffset = (rowIdx * blockCol + colIdx) * blockSizeColAlign_ * blockSizeRow_;
-            gmOffset =
-                baseXGmOffset + (rowIdx * rowBlockLoopNum_ + colIdx * colBlockLoopNum_) * blockSizeCol_ * blockSizeRow_;
+            gmOffset = baseXGmOffset + rowIdx * blockSizeRow_ * colNum_ + colIdx * blockSizeCol_;
 
             int32_t rowBlockSize = rowIdx == blockRow - 1 ? blockRowNum - rowIdx * blockSizeRow_ : blockSizeRow_;
             int32_t cowBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockSizeCol_ : blockSizeCol_;
             int32_t cowBlockSizeAlign = (cowBlockSize + 16 - 1) / 16 * 16;
 
+            ubOffset =
+                rowIdx * blockSizeRow_ * ((blockColNum + 16 - 1) / 16 * 16) + colIdx * blockSizeCol_ * rowBlockSize;
             DataCopyExtParams copyParams = {
                 static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(cowBlockSize * sizeof(T)),
                 static_cast<uint32_t>((colNum_ - cowBlockSize) * sizeof(T)), 0, 0};
@@ -306,7 +308,10 @@ template <typename T, typename U, int64_t RMode>
 __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Compute(
     int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum)
 {
-    int32_t blockColNumAlign = (blockColNum + 16 - 1) / 16 * 16;
+    int32_t inputColAlign = BLOCK_BYTE_32 / sizeof(T);
+    int32_t outputColAlign = BLOCK_BYTE_32 / sizeof(U);
+    int32_t inputBlockColNumAlign = (blockColNum + inputColAlign - 1) / inputColAlign * inputColAlign;
+    int32_t outputBlockColNumAlign = (blockColNum + outputColAlign - 1) / outputColAlign * outputColAlign;
     LocalTensor<T> inLocal = inQueue_.DeQue<T>();
     LocalTensor<T> xLocalTmp = xLocalBuffer_.Get<T>();
     LocalTensor<T> scaleLocalTmp = scaleBuffer_.Get<T>();
@@ -314,15 +319,17 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Compute(
     __local_mem__ T* xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
     __local_mem__ T* xLocalTmpAddr = (__local_mem__ T*)xLocalTmp.GetPhyAddr();
 
-    ComputeXTmpVF(xLocalAddr, xLocalTmpAddr, blockRowNum, blockColNum, blockColNumAlign);
+    ComputeXTmpVF(xLocalAddr, xLocalTmpAddr, blockRowNum, blockColNum, inputBlockColNumAlign);
 
     for (int32_t rowIdx = 0; rowIdx < blockRow; rowIdx++) {
         for (int32_t colIdx = 0; colIdx < blockCol; colIdx++) {
-            int32_t ubOffset = (rowIdx * blockCol + colIdx) * blockSizeColAlign_ * blockSizeRow_;
             int32_t scaleUbOffset = (rowIdx * blockCol + colIdx) * 16;
             int32_t rowBlockSize = rowIdx == blockRow - 1 ? blockRowNum - rowIdx * blockSizeRow_ : blockSizeRow_;
             int32_t cowBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockSizeCol_ : blockSizeCol_;
             int32_t cowBlockSizeAlign = (cowBlockSize + 16 - 1) / 16 * 16;
+
+            int32_t ubOffset =
+                rowIdx * blockSizeRow_ * inputBlockColNumAlign + colIdx * blockSizeCol_ * rowBlockSize;
             AscendC::ReduceMax<half>(
                 scaleLocalTmp[scaleUbOffset], xLocalTmp[ubOffset], xLocalTmp[ubOffset],
                 rowBlockSize * cowBlockSizeAlign);
@@ -336,8 +343,20 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::Compute(
     LocalTensor<U> outLocal = outQueue_.AllocTensor<U>();
     __local_mem__ U* outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
 
-    ComputeOutVF(
-        xLocalAddr, scaleLocalAddr, outLocalAddr, blockRow, blockCol, blockRowNum, blockColNum, blockColNumAlign);
+    for (int32_t rowIdx = 0; rowIdx < blockRow; rowIdx++) {
+        for (int32_t colIdx = 0; colIdx < blockCol; colIdx++) {
+            int32_t rowBlockSize = rowIdx == blockRow - 1 ? blockRowNum - rowIdx * blockSizeRow_ : blockSizeRow_;
+            int32_t cowBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockSizeCol_ : blockSizeCol_;
+            int32_t scaleOffset = (rowIdx * blockCol + colIdx) * 16;
+            int32_t ubOffset =
+                rowIdx * blockSizeRow_ * inputBlockColNumAlign + colIdx * blockSizeCol_ * rowBlockSize;
+            int32_t yOffset =
+                rowIdx * blockSizeRow_ * outputBlockColNumAlign + colIdx * blockSizeCol_ * rowBlockSize;
+            ComputeOutVF(
+                xLocalAddr, scaleLocalAddr, outLocalAddr, ubOffset, yOffset, scaleOffset, rowBlockSize, cowBlockSize);
+        }
+    }
+
     inQueue_.FreeTensor(inLocal);
     outQueue_.EnQue(outLocal);
     scaleQueue_.EnQue(scaleLocal);
@@ -357,19 +376,19 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::CopyOut(
 
     for (int32_t rowIdx = 0; rowIdx < blockRow; rowIdx++) {
         for (int32_t colIdx = 0; colIdx < blockCol; colIdx++) {
-            outUbOffset = (rowIdx * blockSizeColAlign_ + colIdx) * blockSizeColAlign_ * blockSizeRow_;
-            outGmOffset =
-                baseXGmOffset + (rowIdx * rowBlockLoopNum_ + colIdx * colBlockLoopNum_) * blockSizeCol_ * blockSizeRow_;
-            scaleUbOffset = (rowIdx * blockCol + colIdx) * 8;
-            scaleGmOffset = baseScaleOffset + (rowIdx * rowBlockLoopNum_ + colIdx);
+            outGmOffset = baseXGmOffset + rowIdx * blockSizeRow_ * colNum_ + colIdx * blockSizeCol_;
+            scaleUbOffset = (rowIdx * blockCol + colIdx) * 16;
+            scaleGmOffset = baseScaleOffset + (rowIdx * colBlockLoopNum_ + colIdx);
 
             int32_t rowBlockSize = rowIdx == blockRow - 1 ? blockRowNum - rowIdx * blockSizeRow_ : blockSizeRow_;
             int32_t cowBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockSizeCol_ : blockSizeCol_;
-            int32_t cowBlockSizeAlign = (cowBlockSize + 32 - 1) / 32 * 32;
+            int32_t blockColNumAlign = (blockColNum + 32 - 1) / 32 * 32;
+
+            outUbOffset =
+                rowIdx * blockSizeRow_ * blockColNumAlign + colIdx * blockSizeCol_ * rowBlockSize;
 
             DataCopyExtParams outCopyParams = {
-                static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(cowBlockSize * sizeof(U)),
-                static_cast<uint32_t>((128 - cowBlockSizeAlign) / 32),
+                static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(cowBlockSize * sizeof(U)), 0,
                 static_cast<uint32_t>((colNum_ - cowBlockSize) * sizeof(U)), 0};
             DataCopyExtParams scaleCopyParams = {1, static_cast<uint32_t>(1 * sizeof(float)), 0, 0, 0};
             DataCopyPad(yGm_[outGmOffset], outLocal[outUbOffset], outCopyParams);
@@ -428,25 +447,28 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::ComputeScaleVF(
     {
         AscendC::MicroAPI::RegTensor<T> vreg1;
         AscendC::MicroAPI::RegTensor<float> vreg2;
-        AscendC::MicroAPI::RegTensor<float> vreg3;
+        AscendC::MicroAPI::RegTensor<uint32_t> vreg3;
         AscendC::MicroAPI::RegTensor<float> vreg4;
         AscendC::MicroAPI::RegTensor<float> vreg5;
         AscendC::MicroAPI::RegTensor<float> vreg6;
-
+        AscendC::MicroAPI::RegTensor<float> reciprocalScale;
+        AscendC::MicroAPI::RegTensor<float> minScaleReg;
         AscendC::MicroAPI::MaskReg preg0;
         AscendC::MicroAPI::MaskReg preg1;
 
         preg0 = AscendC::MicroAPI::CreateMask<float>();
 
-        AscendC::MicroAPI::Duplicate(vreg3, fpMaxValue_);
-
+        AscendC::MicroAPI::Duplicate(vreg3, invDtypeValue_);
+        AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
+        AscendC::MicroAPI::Duplicate(minScaleReg, minScale_);
+        AscendC::MicroAPI::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, preg0);
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
             AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, scaleLocalTmp + i * VL);
             AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg2, vreg1, preg0);
             AscendC::MicroAPI::CompareScalar<float, CMPMODE::NE>(preg1, vreg2, (float)0.0, preg0);
-            AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg3, vreg2, preg1);
-            AscendC::MicroAPI::Maxs(vreg6, vreg5, minScale_, preg0);
+            AscendC::MicroAPI::Mul(vreg5, vreg2, (AscendC::MicroAPI::RegTensor<float>&)vreg3, preg1);
+            AscendC::MicroAPI::Min(vreg6, vreg5, reciprocalScale, preg0);
             AscendC::MicroAPI::DataCopy(scaleLocal + i * VL, vreg6, preg0);
         }
     }
@@ -454,16 +476,18 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::ComputeScaleVF(
 
 template <typename T, typename U, int64_t RMode>
 __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::ComputeOutVF(
-    __local_mem__ T* xLocal, __local_mem__ float* scaleLocal, __local_mem__ U* outLocal, int32_t blockRow,
-    int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int32_t blockColNumAlign)
+    __local_mem__ T* xLocal, __local_mem__ float* scaleLocal, __local_mem__ U* outLocal, int32_t ubOffset,
+    int32_t yOffset, int32_t scaleOffset, int32_t blockRowNum, int32_t blockColNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
-    uint16_t blockNum = blockRow * blockCol;
-    uint16_t rowVfLoopNum = blockRowNum;
-    uint16_t colVfLoopNum = (blockColNumAlign + VL - 1) / VL;
-    uint32_t fp8BlockColNumAlign = (blockColNum + 128 - 1) / 128 * 128;
+    uint32_t inputColAlign = BLOCK_BYTE_32 / sizeof(T);
+    uint32_t outputColAlign = BLOCK_BYTE_32 / sizeof(U);
+    uint32_t fp8BlockColNumAlign = (blockColNum + outputColAlign - 1) / outputColAlign * outputColAlign;
+    uint32_t blockColNumAlign = (blockColNum + inputColAlign - 1) / inputColAlign * inputColAlign;
+    uint16_t loopNum = (blockColNumAlign + VL - 1) / VL;
 
+    static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<T> vreg1;
@@ -477,30 +501,28 @@ __aicore__ inline void DynamicBlockQuantB8<T, U, RMode>::ComputeOutVF(
         AscendC::MicroAPI::MaskReg preg0;
         AscendC::MicroAPI::MaskReg preg1;
 
-        preg0 = AscendC::MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg2, scaleLocal + scaleOffset);
+        for (uint16_t i = 0; i < static_cast<uint16_t>(blockRowNum); i++) {
+            uint32_t curSize = blockColNum;
+            for (uint16_t j = 0; j < loopNum; j++) {
+                preg0 = AscendC::MicroAPI::UpdateMask<float>(curSize);
 
-        for (uint16_t scaleIdx = 0; scaleIdx < blockNum; scaleIdx++) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-                vreg2, scaleLocal + scaleIdx * 8);
-            for (uint16_t i = 0; i < rowVfLoopNum; i++) {
-                for (uint16_t j = 0; j < colVfLoopNum; j++) {
-                    AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vreg1, xLocal + i * blockColNumAlign + j * VL);
-                    AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg4, vreg1, preg0);
-                    AscendC::MicroAPI::Mul(vreg5, vreg4, vreg2, preg0);
+                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg1, xLocal + ubOffset + i * blockColNumAlign + j * VL);
+                AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg4, vreg1, preg0);
+                AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg4, vreg2, preg0);
 
-                    AscendC::MicroAPI::Muls(vreg3, vreg4, 0.0f, preg0);
-                    AscendC::MicroAPI::Compare<float, CMPMODE::NE>(preg1, vreg3, vreg3, preg0);
-                    AscendC::MicroAPI::Select(vreg7, vreg4, vreg5, preg1);
+                AscendC::MicroAPI::Muls(vreg3, vreg4, 0.0f, preg0);
+                AscendC::MicroAPI::Compare<float, CMPMODE::NE>(preg1, vreg3, vreg3, preg0);
+                AscendC::MicroAPI::Select(vreg7, vreg4, vreg5, preg1);
 
-                    if constexpr (IsSameType<U, hifloat8_t>::value) {
-                        AscendC::MicroAPI::Cast<U, float, castTrait32toh8>(vreg6, vreg7, preg0);
-                    } else {
-                        AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(vreg6, vreg7, preg0);
-                    }
-                    MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                        outLocal + i * fp8BlockColNumAlign + j * VL, vreg6, preg0);
+                if constexpr (IsSameType<U, hifloat8_t>::value) {
+                    AscendC::MicroAPI::Cast<U, float, castTrait32toh8>(vreg6, vreg7, preg0);
+                } else {
+                    AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(vreg6, vreg7, preg0);
                 }
+                MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    outLocal + yOffset + i * fp8BlockColNumAlign + j * VL, vreg6, preg0);
             }
         }
     }

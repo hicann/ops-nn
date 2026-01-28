@@ -52,7 +52,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_
         OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
 TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_02)
@@ -73,7 +73,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_02)
         OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
 TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_03)
@@ -92,5 +92,99 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_03)
         OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+}
+
+TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_04)
+{
+    // isSymmetrical is true and offset is not nullptr
+    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc smooth_desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc offset_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int32_t>(ACL_INT8);
+    const char* quantMode = "perchannel";
+    bool isSymmetrical = true;
+
+    auto ut = OP_API_UT(
+        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+        OUTPUT(y_desc, scale_desc, offset_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+}
+
+TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_05)
+{
+    // isSymmetrical is true and offset is nullptr
+    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc smooth_desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int32_t>(ACL_INT8);
+    const char* quantMode = "perchannel";
+    bool isSymmetrical = true;
+
+    auto ut = OP_API_UT(
+        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+        OUTPUT(y_desc, scale_desc, nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+}
+
+TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_shape_fail_06)
+{
+    // y shape is not equal to x shape
+    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc smooth_desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({32, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int32_t>(ACL_INT8);
+    const char* quantMode = "perchannel";
+    bool isSymmetrical = true;
+
+    auto ut = OP_API_UT(
+        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+        OUTPUT(y_desc, scale_desc, nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+}
+
+TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_type_fail_07)
+{
+    // y type is not supported
+    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc smooth_desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int32_t>(ACL_BF16);
+    const char* quantMode = "perchannel";
+    bool isSymmetrical = true;
+
+    auto ut = OP_API_UT(
+        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+        OUTPUT(y_desc, scale_desc, nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
+}
+
+TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_without_smooth_08)
+{
+    TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dstType = static_cast<int32_t>(ACL_INT8);
+    const char* quantMode = "perchannel";
+    bool isSymmetrical = true;
+
+    auto ut = OP_API_UT(
+        aclnnDynamicQuantV3, INPUT(x_desc, nullptr, nullptr, dstType, isSymmetrical, quantMode),
+        OUTPUT(y_desc, scale_desc, nullptr));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }

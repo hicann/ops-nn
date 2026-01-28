@@ -172,7 +172,7 @@ static aclnnStatus CheckInt32OutputShape(
                 ACLNN_ERR_PARAM_INVALID,
                 "The (%ld)-th dim of input must be the same as (%ld)-th dim of output, "
                 "where input is (%ld) and output is (%ld).",
-                i, i, dimInput, dimOutput);
+                i, i, shape1.GetDim(i), shape2.GetDim(i));
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -201,7 +201,7 @@ static aclnnStatus CheckAttr(const DynamicQuantParams& dynamicQuantParams)
     }
 
     if (mode == "perchannel" && dynamicQuantParams.groupIndex != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is pertensor, groupIndexOptional must be nullptr.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is perchannel, groupIndexOptional must be nullptr.");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;

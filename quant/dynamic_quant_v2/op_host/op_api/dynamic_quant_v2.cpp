@@ -14,6 +14,7 @@
 #include "opdev/make_op_executor.h"
 
 using namespace op;
+constexpr size_t NUM_TWO = 2;
 
 namespace l0op {
 OP_TYPE_REGISTER(DynamicQuantV2);
@@ -28,6 +29,18 @@ static op::Shape GetOutPutShape(const aclTensor* x)
     return outputShape;
 }
 
+static op::Shape GetOutPutShapePerchannel(const aclTensor* x)
+{
+    op::Shape outputShape;
+    size_t dimNum = x->GetViewShape().GetDimNum();
+    for (size_t i = 0; i < dimNum - NUM_TWO; i++) {
+        outputShape.AppendDim(x->GetViewShape().GetDim(i));
+    }
+    outputShape.AppendDim(x->GetViewShape().GetDim(dimNum - 1));
+    return outputShape;
+}
+
+
 std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(
     const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexsOptional, int32_t dstType,
     bool isSymmetrical, const char* quantMode, aclOpExecutor* executor)
@@ -41,6 +54,8 @@ std::tuple<aclTensor*, aclTensor*, aclTensor*> DynamicQuantV2(
     // get scale & offset shape
     if (mode == "pertoken") {
         scaleShape = GetOutPutShape(x);
+    } else if (mode == "perchannel") {
+        scaleShape = GetOutPutShapePerchannel(x);
     } else {
         scaleShape.SetDimNum(1);
         scaleShape.SetDim(0, 1);

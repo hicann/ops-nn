@@ -22,6 +22,7 @@
 #include "../quantize/arch35/quantize_per_head_regbase.h"
 #include "../quantize/arch35/quantize_per_head_no_offset_regbase.h"
 #include "../quantize/arch35/quantize_tilingdata.h"
+#define FLOAT_OVERFLOW_MODE_CTRL 60
 
 namespace {
 using namespace AscendC;
@@ -101,6 +102,9 @@ template <uint64_t perMode, uint64_t zeroPointsType, uint64_t RoundMode, uint64_
 __global__ __aicore__ void ascend_quant_v2(
     GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    #if (__NPU_ARCH__ == 3101)
+        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    #endif
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (perMode == TPL_PER_TENSOR) {
         if constexpr (zeroPointsType == TPL_NO_OFFSET) {
@@ -121,4 +125,7 @@ __global__ __aicore__ void ascend_quant_v2(
             AscendQuantV2PerHead<RoundMode, SqrtMode>(x, scale, offset, y, workspace, tiling);
         }
     }
+    #if (__NPU_ARCH__ == 3101)
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+    #endif
 }

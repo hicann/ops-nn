@@ -41,10 +41,17 @@ private:
     void ResetLargeTilingParams();
     void SetTilingData(gert::TilingContext* context);
     void PrintTilingData(gert::TilingContext* context);
+
+    void IsCapableForFullLoad(gert::TilingContext* context);
+    void IsCapableForRecompute(gert::TilingContext* context);
+    void IsCapableForSplitM(gert::TilingContext* context);
+    void SetTilingDataForPerChannel();
+    void PrintTilingDataForPerChannel(gert::TilingContext* context);
     void CalculateTilingData();
+    ge::graphStatus CalculateTilingDataForPerChannel(gert::TilingContext* context);
     void CalculateCoreNum(const gert::TilingContext* context);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
-    void DoEmptyTensorTiling(gert::TilingContext* context);
+    ge::graphStatus DoEmptyTensorTiling(gert::TilingContext* context);
 
 private:
     uint32_t vectorCoreNum{0};
@@ -80,6 +87,24 @@ private:
     bool isSymmetrical_ = false; // 0: False, 1: True
 
     int32_t yDtype;
+    // members for perchannel
+    bool isPerChannel_ = false;
+    int64_t mLen = 0;
+    int64_t nLen = 0;
+    int64_t totalBatchLen = 0;
+    int64_t nBlockSize = 1;
+    int64_t nBlockNum = 1;
+    int64_t mBlockSize = 0;
+    int64_t mBlockNum = 1;
+    int64_t totalBlockNum = 0;
+    int64_t blockPerHead = 0;
+    int64_t blockPerTail = 0;
+    int64_t nMaxLoopNum = 16;
+    int64_t nBaseLoopNum = 1;
+
+    int64_t batchBlockSize = 1;
+    int64_t batchTailBlockSize = 1;
+    int64_t batchBlockNum = 1;
 };
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_DYNAMIC_QUANT_REGBASE_TILING_H

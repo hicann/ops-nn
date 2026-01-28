@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -333,7 +333,15 @@ inline static void SetTilingKeyForTail(DataType inputType, DataType outputType, 
     } else if (outputType == DT_FLOAT8_E5M2) {
         tenDigit = 3;
     }
-    int64_t digit = TAIL_TILING_KEY_DIGIT;
+    int64_t digit = 0;
+    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 && 
+        Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
+        (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
+         tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
+        digit = 5;
+    } else {
+        digit = TAIL_TILING_KEY_DIGIT;
+    }
     int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
     int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
     tilingParam.tilingKey =
@@ -356,12 +364,23 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
         tenDigit = 3;
     }
     // 个位数为0、1、2，分别表示reduce尾轴、非尾轴且尾轴大于VL/2、非尾轴且尾轴小于等于VL/2
+    int64_t digit = 0;  
     int64_t dtypeSize = inputType == DT_FLOAT16 ? DIGIT_FOUR : DIGIT_TWO; // float16需要转化为float32计算
     int64_t vRegSize = static_cast<int64_t>(tilingParam.vfLen) / dtypeSize / DIGIT_TWO;
-    int64_t digit =
-        tilingParam.isTailAxis ?
-            0 :
-            ((tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ? 1 : DIGIT_TWO);
+
+    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 &&
+ 	         Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
+ 	         (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
+ 	          tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
+ 	         digit = 5;
+    } else {
+        digit =
+            tilingParam.isTailAxis ?
+                0 :
+                ((tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ? 1 :
+                                                                                                            DIGIT_TWO);
+    }
+ 	
     int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
     int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
     tilingParam.tilingKey =
@@ -644,11 +663,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
 
     CalScaleSize(xShape, tilingParam);
 
-    bool precisionErr =
-        ((inDtype == DT_FLOAT16) && (Y_SUPPORT_DTYPE_FP4_SET.count(outDtype) != 0) &&
-         (tilingParam.roundMode !=
-          static_cast<int64_t>(RoundModeList::MODE_FLOOR))); // 该场景存在精度问题，需要走精度优化场景
-    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && !precisionErr) {
+    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE) {
         tilingParam.tailAxisOptimize = true;
         return DoTilingForTailAxis(xShape, inDtype, outDtype, tilingParam);
     }

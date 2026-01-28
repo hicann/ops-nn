@@ -46,6 +46,25 @@ TILING_DATA_FIELD_DEF(uint32_t, numHeadTimes);
 TILING_DATA_FIELD_DEF(uint32_t, numTailTimes);
 TILING_DATA_FIELD_DEF(uint32_t, numLastTailRow);
 TILING_DATA_FIELD_DEF(uint32_t, alignType);
+
+// add for perchannel template
+TILING_DATA_FIELD_DEF(int64_t, totalBatchLen);     // batch轴合轴后的总大小
+TILING_DATA_FIELD_DEF(int64_t, mLen);              // m轴大小
+TILING_DATA_FIELD_DEF(int64_t, mBlockSize);        // 单次切分，UB内可放的M轴大小
+TILING_DATA_FIELD_DEF(int64_t, mTailBlockSize);    // 按mBlockSize切分M轴时，尾块的M轴大小
+TILING_DATA_FIELD_DEF(int64_t, mBlockNum);         // 对每个batch，M轴切分的循环次数
+TILING_DATA_FIELD_DEF(int64_t, nLen);              // n轴大小
+TILING_DATA_FIELD_DEF(int64_t, nBlockSize);        // 单次切分，UB内可放的N轴大小，为nBaseSize的整数倍
+TILING_DATA_FIELD_DEF(int64_t, nTailBlockSize);    // 按nBlockSize切分N轴是，尾块的N轴大小
+TILING_DATA_FIELD_DEF(int64_t, nBlockNum);         // 对每个batch，N轴切分的循环次数
+TILING_DATA_FIELD_DEF(int64_t, nBaseSize);         // 对N轴切分，最小并行的元素个数
+TILING_DATA_FIELD_DEF(int64_t, nBaseLoopNum);      // vf内N轴的循环次数，nBaseLoopNum = nBlockSize / nBaseSize
+TILING_DATA_FIELD_DEF(int64_t, blockPerHead);      // 大核处理的块数
+TILING_DATA_FIELD_DEF(int64_t, blockPerTail);      // 小核处理的块数
+TILING_DATA_FIELD_DEF(int64_t, totalBlockNum);     // 总共需要处理几个块
+TILING_DATA_FIELD_DEF(int64_t, batchBlockSize);
+TILING_DATA_FIELD_DEF(int64_t, batchTailBlockSize);
+TILING_DATA_FIELD_DEF(int64_t, batchBlockNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(DynamicQuant, DynamicQuantTilingData)

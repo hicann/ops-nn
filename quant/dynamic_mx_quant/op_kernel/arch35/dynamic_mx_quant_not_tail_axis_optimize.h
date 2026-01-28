@@ -156,7 +156,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::Compute(
     }
     uint16_t dataLenTailLoop = rowsTailLoop * static_cast<uint16_t>(dataLen); // 尾循环处理的长度
     uint16_t loopSize =
-        static_cast<uint16_t>(DIGIT_SIXTY_THREE - AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
+        static_cast<uint16_t>(DIGIT_SIXTY_THREE - clz(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
     uint16_t rows = 1 << loopSize; // 最接近rowsSingleLoop的2次方数
     uint16_t expOffset = rows * static_cast<uint16_t>(dataLen);
 

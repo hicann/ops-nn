@@ -28,7 +28,7 @@ constexpr size_t ATTR_ROUND_MODE_INDEX = 1;
 constexpr size_t ATTR_DST_TYPE_INDEX = 2;
 constexpr size_t ATTR_AXIS_INDEX = 3;
 constexpr size_t SYNC_WORKSPACE_SIZE = 16777216;
-constexpr int64_t CACHE_SIZE_910D = 128;
+constexpr int64_t CACHE_SIZE_950 = 128;
 constexpr int64_t g_BaseLen = 128;
 constexpr int64_t g_BlockSize = 32;
 constexpr int64_t g_HalfBase = 2;
@@ -78,7 +78,7 @@ ge::graphStatus AscendQuantV2Regbase::GetCompileInfo()
             context_->GetNodeName(), "AscendQuantV2 GetCompileInfo Failed, coreNum:%ld, ubSize:%lu.", coreNum_,
             ubSize_),
         return ge::GRAPH_FAILED);
-    cacheLine_ = CACHE_SIZE_910D;
+    cacheLine_ = CACHE_SIZE_950;
     return ge::GRAPH_SUCCESS;
 }
 

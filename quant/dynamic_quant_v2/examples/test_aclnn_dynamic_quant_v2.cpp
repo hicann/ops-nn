@@ -111,8 +111,8 @@ int main() {
     aclTensor* scale = nullptr;
     aclTensor* offset = nullptr;
 
-    std::vector<aclFloat16> xHostData;
-    std::vector<aclFloat16> smoothHostData;
+    std::vector<float> xHostData;
+    std::vector<float> smoothHostData;
     std::vector<int32_t> groupHostData = {2, rowNum};
     std::vector<int8_t> yHostData;
     std::vector<float> scaleHostData;

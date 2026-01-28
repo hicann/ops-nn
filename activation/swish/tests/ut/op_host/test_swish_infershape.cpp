@@ -9,9 +9,9 @@
 */
 
 /*!
-* \file test_swish_infershape.cpp
-* \brief
-*/
+ * \file test_swish_infershape.cpp
+ * \brief
+ */
 #include <gtest/gtest.h>
 #include <iostream>
 #include "log/log.h"
@@ -23,40 +23,40 @@
 
 class Swish : public testing::Test {
 protected:
-   static void SetUpTestCase()
-   {
-       std::cout << "Swish Proto Test SetUp" << std::endl;
-   }
+    static void SetUpTestCase()
+    {
+        std::cout << "Swish Proto Test SetUp" << std::endl;
+    }
 
-   static void TearDownTestCase() {
-       std::cout << "Swish Proto Test TearDown" << std::endl;
-   }
+    static void TearDownTestCase() {
+        std::cout << "Swish Proto Test TearDown" << std::endl;
+    }
 };
 
 TEST_F(Swish, swish_infershape_test0)
 {
-   fe::PlatformInfo platformInfo;
-   fe::OptionalInfo optiCompilationInfo;
-   platformInfo.soc_info.ai_core_cnt = 64;
-   platformInfo.str_info.short_soc_version = "Ascend910_95";
-   optiCompilationInfo.soc_version = "Ascend910_95";
-   fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
-   fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910_95";
+    optiCompilationInfo.soc_version = "Ascend910_95";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-   auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Swish")->infer_shape;
-   gert::Shape xShape = {3, 4, 5};
-   gert::Shape output_shape = {};
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Swish")->infer_shape;
+    gert::Shape xShape = {3, 4, 5};
+    gert::Shape output_shape = {};
 
-   auto holder = gert::InferShapeContextFaker()
-                     .NodeIoNum(1, 1)
-                     .IrInstanceNum({1})
-                     .InputShapes({&xShape})
-                     .OutputShapes({&output_shape})
-                     .NodeAttrs(
-                         {{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
-                     .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                     .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                     .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs(
+                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

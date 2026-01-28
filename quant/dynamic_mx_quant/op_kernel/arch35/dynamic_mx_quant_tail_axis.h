@@ -156,7 +156,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U>::Init(
         (ubFactorDim0_ * ubFactorDim1_ * blockSize_ * sizeof(T) + UBBlockSize_ - 1) / UBBlockSize_ * UBBlockSize_);
     pipe_.InitBuffer(
         outQueue_, DB_BUFFER,
-        (ubFactorDim0_ * ubFactorDim1_ * blockSize_ / DIGIT_TWO + UBBlockSize_ - 1) / UBBlockSize_ * UBBlockSize_);
+        (ubFactorDim0_ * ubFactorDim1_ * blockSize_ / DIGIT_TWO + vlForHalfNumber_ - 1) / vlForHalfNumber_ * vlForHalfNumber_);
     pipe_.InitBuffer(
         mxScaleQueue_, DB_BUFFER, (ubFactorDim0_ * ubFactorDim1_ + UBBlockSize_ - 1) / UBBlockSize_ * UBBlockSize_);
 
@@ -167,7 +167,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U>::Init(
         (ubFactorDim0_ * ubFactorDim1_ * sizeof(T) + UBBlockSize_ - 1) / UBBlockSize_ * UBBlockSize_);
     pipe_.InitBuffer(
         outBuffer_,
-        (ubFactorDim0_ * ubFactorDim1_ * blockSize_ / DIGIT_TWO + UBBlockSize_ - 1) / UBBlockSize_ * UBBlockSize_);
+        (ubFactorDim0_ * ubFactorDim1_ * blockSize_ / DIGIT_TWO + vlForHalfNumber_ - 1) / vlForHalfNumber_ * vlForHalfNumber_);
 
     blockIdx_ = GetBlockIdx();
 

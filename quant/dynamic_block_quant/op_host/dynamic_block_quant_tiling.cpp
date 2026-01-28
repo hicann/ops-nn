@@ -35,6 +35,7 @@ constexpr int64_t INDEX_ATTR_BLOCK_SIZE_ROW = 3;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE_COL = 4;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t BYTES_OF_FLOAT_TYPE = 4;
+constexpr int64_t BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_THOUSAND = 1000;
 constexpr int64_t DIGIT_HUNDRED = 100;
@@ -53,7 +54,17 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t TAIL_TILING_KEY_DIGIT = 4;
 constexpr int64_t SINGLE_LOOP_MIN_COLS = 128;
 constexpr int64_t BLOCK_SIZE_1 = 1;
+constexpr int64_t BLOCK_SIZE_64 = 64;
 constexpr int64_t BLOCK_SIZE_128 = 128;
+constexpr int64_t BLOCK_SIZE_192 = 192;
+constexpr int64_t BLOCK_SIZE_256 = 256;
+constexpr int64_t BLOCK_SIZE_512 = 512;
+constexpr int64_t KERNEL_TYPE_NORMAL = 0;
+constexpr int64_t KERNEL_TYPE_SINGLE = 1;
+constexpr int64_t KERNEL_TYPE_LARGE = 2;
+const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_128, BLOCK_SIZE_256, BLOCK_SIZE_512};
+const std::set<int64_t> COL_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_64, BLOCK_SIZE_128, BLOCK_SIZE_192, BLOCK_SIZE_256};
+constexpr int64_t RESERVED_UB_SIZE = 1024; // 预留空间
 
 inline static ge::graphStatus DynamicBlockQuantSetTilingData(
     gert::TilingContext* context, DynamicBlockQuantTilingData& tilingData)
@@ -147,15 +158,15 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQ
     auto* attrBlockSizeRow = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_ROW);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeRow);
     tilingParam.blockSizeRow = static_cast<int64_t>(*attrBlockSizeRow);
-    OP_CHECK_IF(tilingParam.blockSizeRow != BLOCK_SIZE_1 && tilingParam.blockSizeRow != BLOCK_SIZE_128,
-        OP_LOGE(context, "The row_block_size is %ld but should be 1 or 128, please check.", tilingParam.blockSizeRow),
+    OP_CHECK_IF(ROW_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeRow) == 0,
+        OP_LOGE(context, "The row_block_size is %ld but should be 1 or 128 or 256 or 512, please check.", tilingParam.blockSizeRow),
         return ge::GRAPH_FAILED);
 
     auto* attrBlockSizeCol = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_COL);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSizeCol);
     tilingParam.blockSizeCol = static_cast<int64_t>(*attrBlockSizeCol);
-    OP_CHECK_IF(tilingParam.blockSizeCol != BLOCK_SIZE_128,
-        OP_LOGE(context, "The col_block_size is %ld but should be 128, please check.", tilingParam.blockSizeCol),
+    OP_CHECK_IF(COL_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeCol) == 0,
+        OP_LOGE(context, "The col_block_size is %ld but should be 64 or 128 or 192 or 256, please check.", tilingParam.blockSizeCol),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -228,7 +239,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     return ge::GRAPH_SUCCESS;
 }
 
-inline static void CalcTilingKey(DataType inputType, DataType outputType, DynamicBlockQuantTilingParam& tilingParam)
+inline static void CalcTilingKey(DataType inputType, DataType outputType, DynamicBlockQuantTilingParam& tilingParam, int64_t maxUbAvailable)
 {
     // 千分位表示 RoundMode
     int64_t thousandDigit = tilingParam.roundMode;
@@ -242,9 +253,12 @@ inline static void CalcTilingKey(DataType inputType, DataType outputType, Dynami
     } else if (outputType == ge::DT_HIFLOAT8) {
         tenDigit = DIGIT_TWO;
     }
-    int64_t digit = 0;
-    if (tilingParam.blockSizeCol <= SINGLE_LOOP_MIN_COLS && tilingParam.blockSizeRow == 1) {
-        digit = 1;
+    int64_t digit = KERNEL_TYPE_NORMAL;
+    if (tilingParam.blockSizeRow == 1) {
+        digit = KERNEL_TYPE_SINGLE;
+    }
+    else if (maxUbAvailable == 0) {
+        digit = KERNEL_TYPE_LARGE;
     }
     tilingParam.tilingKey =
         thousandDigit * DIGIT_THOUSAND + hundredDigit * DIGIT_HUNDRED + tenDigit * DIGIT_TEN + digit;
@@ -261,11 +275,38 @@ static void CalcAxisSize(DynamicBlockQuantTilingParam& tilingParam, const gert::
     tilingParam.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam.colNum, tilingParam.blockSizeCol);
 }
 
+inline static int64_t CalcPerBlockUbSize(DataType inputType, DynamicBlockQuantTilingParam& tilingParam) {
+    // 每个block需要的临时ub大小
+    int64_t perBlockTmpUbSize = 0;
+
+    // 每个block需要的ub大小
+    int64_t perBlockUbSize = 0;
+    if (tilingParam.blockSizeRow == 1) {
+        // input and output size
+        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE);
+        // scale size
+        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE;
+    }
+    else if (inputType == DT_FLOAT16) {
+        // input and output size
+        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE * DIGIT_TWO + BYTES_OF_OUTPUT_TYPE);
+        // scale size
+        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE / BYTES_OF_INPUT_TYPE * BYTES_OF_FLOAT_TYPE + BLOCK_SIZE;
+    }
+    else {
+        // input and output size
+        perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE + BYTES_OF_FLOAT_TYPE);
+        // scale size
+        perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE * DIGIT_TWO;
+    }
+
+    return perBlockUbSize;
+}
+
 static void SpliteUB(DynamicBlockQuantTilingParam& tilingParam, int64_t maxUbAvailable)
 {
     tilingParam.colUbBlockLoopNum = maxUbAvailable < tilingParam.normalCoreColTileNum ?
-                                        maxUbAvailable :
-                                        maxUbAvailable / tilingParam.normalCoreColTileNum;
+                                        maxUbAvailable : tilingParam.normalCoreColTileNum;
     maxUbAvailable = maxUbAvailable / tilingParam.colUbBlockLoopNum;
     tilingParam.rowUbBlockLoopNum =
         maxUbAvailable > tilingParam.normalCoreRowTileNum ? tilingParam.normalCoreRowTileNum : maxUbAvailable;
@@ -359,7 +400,6 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicBlock
     auto outputYPtr = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
     auto outDtype = outputYPtr->GetDataType();
-    CalcTilingKey(inDtype, outDtype, tilingParam);
 
     // 先切多核
     AutoTiling(tilingParam);
@@ -385,18 +425,24 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicBlock
     tilingParam.rowTailCoreNum = tilingParam.rowTileNum - tilingParam.rowNormalCoreNum;
     tilingParam.colTailCoreNum = tilingParam.colTileNum - tilingParam.colNormalCoreNum;
 
-    int64_t blockSizeColAlign = Ops::Base::CeilAlign(tilingParam.blockSizeCol, SINGLE_LOOP_MIN_COLS);
-
-    // 每个block需要的临时ub大小
-    int64_t perBlockTmpUbSize = tilingParam.blockSizeRow * blockSizeColAlign * BYTES_OF_FLOAT_TYPE;
-
     // 每个block需要的ub大小
-    int64_t perBlockUbSize =
-        tilingParam.blockSizeRow * blockSizeColAlign * BYTES_OF_INPUT_TYPE * EXIST_NODE_NUM + perBlockTmpUbSize;
+    int64_t perBlockUbSize = CalcPerBlockUbSize(inDtype, tilingParam);
+    perBlockUbSize = perBlockUbSize != 0 ? perBlockUbSize : 1;
+    
     // 计算ub可以放下的block块数量
-    int64_t maxUbAvailable = tilingParam.ubSize / perBlockUbSize;
-    // 计算ubFactor
-    SpliteUB(tilingParam, maxUbAvailable);
+    int64_t maxUbAvailable = (tilingParam.ubSize - RESERVED_UB_SIZE)/ N_BUFFER / perBlockUbSize;
+
+    CalcTilingKey(inDtype, outDtype, tilingParam, maxUbAvailable);
+    if (maxUbAvailable == 0) {
+        tilingParam.colUbBlockLoopNum = 1;
+        tilingParam.rowUbBlockLoopNum = 1;
+        tilingParam.rowUbFactor = tilingParam.rowUbBlockLoopNum * tilingParam.blockSizeRow;
+        tilingParam.colUbFactor = tilingParam.colUbBlockLoopNum * tilingParam.blockSizeCol;
+    }
+    else {
+        // 计算ubFactor
+        SpliteUB(tilingParam, maxUbAvailable);
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -487,6 +533,7 @@ ge::graphStatus Tiling4DynamicBlockQuant(gert::TilingContext* context)
 
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
+
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = WORKSPACE_SIZE;

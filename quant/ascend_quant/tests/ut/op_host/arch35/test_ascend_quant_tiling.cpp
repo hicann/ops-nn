@@ -22,8 +22,8 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_common.h"
 #include "ut_op_util.h"
-#include "quant/ascend_quant/op_host/arch35/ascend_quant_tiling.h"
-#include "quant/ascend_quant/op_host/arch35/ascend_quant_tiling_arch35.h"
+#include "../../../../op_host/arch35/ascend_quant_tiling.h"
+#include "../../../../op_host/arch35/ascend_quant_tiling_arch35.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -51,9 +51,9 @@ static void ExecuteTestCase(
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                           "Intrinsic_fix_pipe_l0c2out": false,
-                           "Intrinsic_data_move_l12ub": true,
-                           "Intrinsic_data_move_l0c2ub": true,
+                           "Intrinsic_fix_pipe_l0c2out": false, 
+                           "Intrinsic_data_move_l12ub": true, 
+                           "Intrinsic_data_move_l0c2ub": true, 
                            "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,

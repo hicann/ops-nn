@@ -198,11 +198,11 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth)
 
 TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
 {
-    size_t inputByteSize = 1 * 128 * 15360 * sizeof(uint16_t);
-    size_t outputByteSize = 1 * 128 * 15360 * sizeof(int8_t);
-    size_t scaleByteSize = 1 * 128 * sizeof(uint32_t);
+    size_t inputByteSize = 1 * 72 * 128 * sizeof(uint16_t);
+    size_t outputByteSize = 1 * 72 * 128 * sizeof(int8_t);
+    size_t scaleByteSize = 1 * 72 * sizeof(uint32_t);
     size_t tiling_data_size = sizeof(DynamicQuantTilingData);
-    uint32_t blockDim = 64;
+    uint32_t blockDim = 24;
 
     uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* smooth_scales = nullptr;
@@ -218,11 +218,11 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
 
     DynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantTilingData*>(tiling);
 
-    tilingDatafromBin->coreNum = 64;
-    tilingDatafromBin->rowLen = 15360;
-    tilingDatafromBin->headCoreNum = 0;
-    tilingDatafromBin->rowPerHeadCore = 2;
-    tilingDatafromBin->rowPerTailCore = 2;
+    tilingDatafromBin->coreNum = blockDim;
+    tilingDatafromBin->rowLen = 128;
+    tilingDatafromBin->headCoreNum = 3;
+    tilingDatafromBin->rowPerHeadCore = 3;
+    tilingDatafromBin->rowPerTailCore = 3;
     tilingDatafromBin->multiRowNumHeadCore = 1;
     tilingDatafromBin->multiRowNumTailCore = 1;
     tilingDatafromBin->innerLoopEle = 0;
@@ -230,19 +230,8 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
     tilingDatafromBin->innerLoopTail = 0;
     tilingDatafromBin->groupNum = 0;
     tilingDatafromBin->alignGroupNum = 0;
-    tilingDatafromBin->hasSmooth = 1;
+    tilingDatafromBin->hasSmooth = 0;
 
-    tilingDatafromBin->sizeH = 0;
-    tilingDatafromBin->sizeX = 0;
-    tilingDatafromBin->sizeZOut = 0;
-    tilingDatafromBin->sizeCopyRow = 0;
-    tilingDatafromBin->numCopyRow = 0;
-    tilingDatafromBin->numHeadCore = 0;
-    tilingDatafromBin->numTailCore = 0;
-    tilingDatafromBin->numHeadTimes = 0;
-    tilingDatafromBin->numTailTimes = 0;
-    tilingDatafromBin->numLastTailRow = 0;
-    tilingDatafromBin->alignType = 0;
     tilingDatafromBin->sizeH = 0;
     tilingDatafromBin->sizeX = 0;
     tilingDatafromBin->sizeZOut = 0;
@@ -259,7 +248,8 @@ TEST_F(dynamic_quant_test, test_case_fp16_bf16_no_smooth_use_db)
     // bf16
     ICPU_SET_TILING_KEY(100);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    // ICPU_RUN_KF(dynamic_quant, 1, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(
+        dynamic_quant, blockDim, input, smooth_scales, group_index, output, scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);

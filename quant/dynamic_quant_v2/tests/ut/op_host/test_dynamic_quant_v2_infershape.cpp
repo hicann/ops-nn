@@ -154,3 +154,41 @@ TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_pertensor)
         ASSERT_EQ(Shape2String(*shape3), "[1]");
     }
 }
+
+TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_perchannel)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicQuantV2"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicQuantV2")->infer_shape;
+    if (infer_shape_func != nullptr) {
+        gert::StorageShape x_shape = {{1, 128, 1024}, {1, 128, 1024}};
+        gert::StorageShape smooth_shape = {{128}, {128}};
+        gert::StorageShape y_shape = {{1, 128, 1024}, {1, 128, 1024}};
+        gert::StorageShape scale_shape = {{1, 1024}, {1, 1024}};
+
+        auto context_holder = gert::InferShapeContextFaker()
+                                  .NodeIoNum(2, 3)
+                                  .IrInstanceNum({1, 1})
+                                  .InputShapes({&x_shape, &smooth_shape})
+                                  .OutputShapes({&y_shape, &scale_shape, &scale_shape})
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs(
+                                      {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                       {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("perchannel")}})
+                                  .Build();
+
+        auto context = context_holder.GetContext<gert::InferShapeContext>();
+        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+        auto shape1 = context->GetOutputShape(0);
+        auto shape2 = context->GetOutputShape(1);
+        auto shape3 = context->GetOutputShape(2);
+        ASSERT_EQ(Shape2String(*shape1), "[1, 128, 1024]");
+        ASSERT_EQ(Shape2String(*shape2), "[1, 1024]");
+        ASSERT_EQ(Shape2String(*shape3), "[1, 1024]");
+    }
+}

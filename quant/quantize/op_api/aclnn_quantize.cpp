@@ -26,6 +26,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/small_vector.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "quantize.h"
 #include "aclnn_quantize.h"
 
@@ -40,7 +41,7 @@ constexpr int64_t INDEX_FOR_ZERO_POINTS = 2;
 constexpr int64_t INDEX_FOR_OUT = 3;
 constexpr int64_t DIM_MAX_NUM = 8;
 
-const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSupportDtypeMap(SocVersion socVersion)
+const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSupportDtypeMap(NpuArch curArch)
 {
     static const std::map<int64_t, std::initializer_list<op::DataType>> emptyDtypesMap = {
         {INDEX_FOR_X, {}}, {INDEX_FOR_SCALES, {}}, {INDEX_FOR_ZERO_POINTS, {}}, {INDEX_FOR_OUT, {}}};
@@ -64,27 +65,24 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
         op::DataType::DT_INT8,     op::DataType::DT_UINT8,         op::DataType::DT_INT32,
         op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2};
 
-    static const std::map<SocVersion, std::map<int64_t, std::initializer_list<op::DataType>>>
+    static const std::map<NpuArch, std::map<int64_t, std::initializer_list<op::DataType>>>
         socSupportMap = {
-            {SocVersion::ASCEND310P,
+            {NpuArch::DAV_2002,
              {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
               {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {SocVersion::ASCEND910,
+            {NpuArch::DAV_1001,
              {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
               {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {SocVersion::ASCEND910B,
+            {NpuArch::DAV_2201,
              {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
               {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {SocVersion::ASCEND910_93,
-             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
-              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {SocVersion::ASCEND910_95,
+            {NpuArch::DAV_3510,
              {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
               {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST}, 
               {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
         };
 
-    auto found = socSupportMap.find(socVersion);
+    auto found = socSupportMap.find(curArch);
     if (found == socSupportMap.end()) {
         return emptyDtypesMap;
     }
@@ -119,8 +117,8 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* scales, aclTensor*
 static bool CheckDtypeValid(
     const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, aclDataType dtype, const aclTensor* out)
 {
-    SocVersion currentVersion = GetCurrentPlatformInfo().GetSocVersion();
-    auto socSupportMap = GetSocSupportDtypeMap(currentVersion);
+    NpuArch curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    auto socSupportMap = GetSocSupportDtypeMap(curArch);
     auto xSupportList = socSupportMap[INDEX_FOR_X];
     auto scalesSupportList = socSupportMap[INDEX_FOR_SCALES];
     auto zeroPointSupportList = socSupportMap[INDEX_FOR_ZERO_POINTS];

@@ -172,9 +172,12 @@ ge::graphStatus SiluGradTiling::DoOpTiling()
     for (uint64_t i = 0; i < context_->GetComputeNodeInputNum(); i++) {
         auto shape = context_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, shape);
-        broadcastTilingParams.inShape.push_back(shape->GetStorageShape());
+        broadcastTilingParams.inShape.push_back(Ops::Base::EnsureNotScalar(shape->GetStorageShape()));
     }
-    broadcastTilingParams.outShape = context_->GetOutputShape(0)->GetStorageShape();
+
+    auto outShape = context_->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outShape);
+    broadcastTilingParams.outShape = Ops::Base::EnsureNotScalar(outShape->GetStorageShape());
     broadcastTilingParams.computeMap = GetComputeMap(opKey);
     broadcastTilingParams.coreNum = coreNum;
     broadcastTilingParams.ubSize = ubSize;

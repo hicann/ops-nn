@@ -26,16 +26,23 @@ __aicore__ inline T Min(T a, T b)
 }
 
 constexpr int64_t DB_BUFFER = 2;
+constexpr uint16_t BLOCK_BYTE_32 = 32;
 constexpr float FP8_E5M2_MAX_VALUE = 57344.0f;
 constexpr float FP8_E4M3_MAX_VALUE = 448.0f;
 constexpr float HIFP8_MAX_VALUE = 32768.0f;
+constexpr uint16_t FP16_INF_VALUE = 0x7c00;
+constexpr uint16_t BF16_INF_VALUE = 0x7f80;
+// 1 / max_dtype
+constexpr uint32_t INV_FP8_E5M2_MAX_VALUE = 0x37924925;
+constexpr uint32_t INV_FP8_E4M3_MAX_VALUE = 0x3b124925;
+constexpr uint32_t INV_HIFP8_MAX_VALUE = 0x38000000;
 
 constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
     AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
 
 constexpr static AscendC::MicroAPI::CastTrait castTrait32tofp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
 } // namespace DynamicBlockQuant
 #endif // DYNAMIC_BLOCK_QUANT_COMMON_H

@@ -1,0 +1,503 @@
+{
+    "op_type": "GroupedDynamicBlockQuant",
+    "op_list": [
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_bf16toe5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_fp16toe5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_bf16toe4m3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_fp16toe4m3",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e4m3fn",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_bf16tohifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "GroupedDynamicBlockQuant_fp16tohifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "group_list",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode":"FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "min_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "row_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "col_block_size",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "group_list_type",
+            "dtype": "int",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

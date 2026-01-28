@@ -23,17 +23,20 @@ namespace ge {
  * @li x: A Tensor. Type is:DT_FLOAT16 or DT_BF16. For Atlas A2 Training Series Product/Atlas 800I A2 Inference
  * Product/A200I A2 Box Heterogeneous Component and Atlas A3 Training Series Product/Atlas A3 Inference Series Product.
  * Whose shape must be greater than 1. The data format support ND.
- * @li smooth_scales: An optional Tensor. Shape is the last dimension of x.
- * The data type can be FLOAT16 or BFLOAT16.
+ * @li smooth_scales: An optional Tensor.
+ * When group_index is null and smooth_scales is not null, shape is 1 Dims. Dim[0] is the last dimension of x.
+ * When group_index is not null, smooth_scales can not be null, shape is 2 Dims. Dim[0] is the expert num(E). E must be not greater than 1024. Dim[1] is the last dimension of x.
+ * The data type can be FLOAT16 or BFLOAT16. The data type must be the same as that of x.
+ * The data format support ND.
  * @li group_index: An optional Tensor. Specifying the index of group. 1-D with shape
- * [E, ], the first dim of scale shape is same as the first dim of scale shape.
+ * [E, ], the first dim of scale shape is same as the first dim of smooth_scales shape.
  * Must be one of the following types: int32. The format support ND. \n
  * @par Attributes:
  * dst_type: An optional int32. Output y data type enum value.
  * Support DT_INT4, DT_INT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8.
  * Defaults to DT_INT8. \n
  * @par Outputs:
- * @li y: A Tensor. Quantized output tensor, Shape is same as input x.
+ * @li y: A Tensor. Quantized output tensor, Shape is same as input x. If y dtype is int4, x last dim must be divisible by 2.
  * The format support ND. Type specified by dst_type, support INT4, INT8,
  * FLOAT8_E5M2, FLOAT8_E4M3FN, HIFLOAT8.
  * @li scale: A Tensor. Scale used for quantization.

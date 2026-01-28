@@ -24,6 +24,7 @@
 #include "arch35/quantize_per_head_no_offset_regbase.h"
 #include "arch35/quantize_struct.h"
 #include "arch35/quantize_tilingdata.h"
+#define FLOAT_OVERFLOW_MODE_CTRL 60
 
 namespace {
 using namespace AscendC;
@@ -126,6 +127,9 @@ template <uint64_t perMode, uint64_t zeroPointsType, uint64_t DivMode, uint64_t 
 __global__ __aicore__ void quantize(
     GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    #if (__NPU_ARCH__ == 3101)
+        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    #endif
     using ZeroType = typename TypeFromEnum<zeroPointsType>::type;
     if constexpr (perMode == TPL_PER_TENSOR) {
         if constexpr (zeroPointsType == TPL_NONE) {
@@ -157,4 +161,7 @@ __global__ __aicore__ void quantize(
                 x, scales, zero_points, y, workspace, tiling);
         }
     }
+    #if (__NPU_ARCH__ == 3101)
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+    #endif
 }

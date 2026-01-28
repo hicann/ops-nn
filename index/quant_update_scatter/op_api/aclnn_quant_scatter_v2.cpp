@@ -22,6 +22,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -29,7 +30,7 @@ extern "C" {
 #endif
 namespace {
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_SELFREF = {DataType::DT_INT8};
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_SELFREF_91095 = {
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_SELFREF_REGBASE = {
     DataType::DT_INT8, DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_INDICES = {DataType::DT_INT32, DataType::DT_INT64};
@@ -53,10 +54,10 @@ static inline bool CheckNotNull(
 
 static inline bool CheckPlatform()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    OP_CHECK(socVersion == SocVersion::ASCEND910_95,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %s is not implemented.",
-                op::ToString(socVersion).GetString()),
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(curArch),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for nprArch %u is not implemented.",
+                static_cast<uint32_t>(curArch)),
             return false);
     return true;
 }
@@ -126,8 +127,8 @@ static inline bool CheckDtypeValid(
     const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales,
     const aclTensor* quantZeroPoints)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF_91095, return false);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF_REGBASE, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF, return false);
     }

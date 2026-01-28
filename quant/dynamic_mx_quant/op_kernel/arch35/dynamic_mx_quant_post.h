@@ -27,8 +27,6 @@ constexpr int64_t NON_TAIL_AXIS_ZERO_LARGE = 1;
 constexpr int64_t NON_TAIL_AXIS_ZERO_MEDIUM = 2;
 constexpr int64_t NON_TAIL_AXIS_ZERO_SMALL = 3;
 constexpr int64_t OPT_MAX_COL = 16;
-constexpr int64_t NUM_TWO = 2;
-constexpr int64_t NUM_THREE = 3;
 
 class DynamicMxQuantPost {
 public:
@@ -376,33 +374,33 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisCompute()
 __aicore__ inline void DynamicMxQuantPost::CopyIn(
     int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t blockLen, int64_t blockCount)
 {
-    MultiCopyLoopInfo<NUM_TWO> loopInfo = {
+    MultiCopyLoopInfo<2> loopInfo = {
         {1, static_cast<uint32_t>(2 * blockLen)},
         {1, static_cast<uint32_t>(blockLen)},
         {static_cast<uint32_t>(blockLen), static_cast<uint32_t>(blockCount)},
         {0, 0},
         {0, 0}};
-    MultiCopyParams<uint8_t, NUM_TWO> params = {loopInfo, 0};
+    MultiCopyParams<uint8_t, 2> params = {loopInfo, 0};
     static constexpr MultiCopyConfig config = {false};
     auto localBuf1 = inQueue1_.AllocTensor<uint8_t>();
-    DataCopy<uint8_t, NUM_TWO, config>(localBuf1, workspaceGm_[wsGmOffset1], params);
+    DataCopy<uint8_t, 2, config>(localBuf1, workspaceGm_[wsGmOffset1], params);
     inQueue1_.EnQue(localBuf1);
     auto localBuf2 = inQueue2_.AllocTensor<uint8_t>();
-    DataCopy<uint8_t, NUM_TWO, config>(localBuf2, workspaceGm_[wsGmOffset2], params);
+    DataCopy<uint8_t, 2, config>(localBuf2, workspaceGm_[wsGmOffset2], params);
     inQueue2_.EnQue(localBuf2);
 }
 
 __aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(
     int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t axisSize1, int64_t axisSize2, int64_t axisSize3)
 {
-    MultiCopyLoopInfo<NUM_THREE> loopInfo1 = {
+    MultiCopyLoopInfo<3> loopInfo1 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
          static_cast<uint32_t>((DIGIT_TWO * axisSize2 - 1) * axisSize1)},
         {1, static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize1 * axisSize2)},
         {static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize2), static_cast<uint32_t>(axisSize3)},
         {0, 0, 0},
         {0, 0, 0}};
-    MultiCopyLoopInfo<NUM_THREE> loopInfo2 = {
+    MultiCopyLoopInfo<3> loopInfo2 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
          static_cast<uint32_t>((DIGIT_TWO * axisSize2 - 1) * axisSize1)},
         {1, static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize1 * axisSize2)},
@@ -410,14 +408,14 @@ __aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(
         {0, 0, 0},
         {0, 1, 0}};
     static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<uint8_t, NUM_THREE> params1 = {loopInfo1, 0};
+    MultiCopyParams<uint8_t, 3> params1 = {loopInfo1, 0};
     auto localBuf1 = inQueue1_.AllocTensor<uint8_t>();
-    DataCopy<uint8_t, NUM_THREE, config>(localBuf1, workspaceGm_[wsGmOffset1], params1);
+    DataCopy<uint8_t, 3, config>(localBuf1, workspaceGm_[wsGmOffset1], params1);
     inQueue1_.EnQue(localBuf1);
-    MultiCopyParams<uint8_t, NUM_THREE> params2 = {loopInfo2, 0};
+    MultiCopyParams<uint8_t, 3> params2 = {loopInfo2, 0};
     auto localBuf2 = inQueue2_.AllocTensor<uint8_t>();
     if (axisSize2 > 1) {
-        DataCopy<uint8_t, NUM_THREE, config>(localBuf2, workspaceGm_[wsGmOffset2], params2);
+        DataCopy<uint8_t, 3, config>(localBuf2, workspaceGm_[wsGmOffset2], params2);
     } else {
         Duplicate<uint8_t>(localBuf2, 0, static_cast<int32_t>(axisSize1 * axisSize3));
     }

@@ -1069,7 +1069,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_01)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 97);
+    ASSERT_EQ(tiling_key, 97);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -1160,7 +1160,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_02)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 97);
+    ASSERT_EQ(tiling_key, 97);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -1251,7 +1251,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_regbase_03)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 96);
+    ASSERT_EQ(tiling_key, 96);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -1751,7 +1751,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_largeShape_db_01)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 99);
+    ASSERT_EQ(tiling_key, 99);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -2428,8 +2428,7 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_special_02)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
         "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2461,8 +2460,8 @@ TEST_F(DynamicQuantTiling, dynamic_quant_tiling_special_02)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
-
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result

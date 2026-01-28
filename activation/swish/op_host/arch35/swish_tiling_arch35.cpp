@@ -15,15 +15,17 @@
 
 #include "swish_tiling_arch35.h"
 #include "log/log.h"
-#include "error_util.h"
-#include "platform/platform_ascendc.h"
-#include "register/op_def_registry.h"
+#include "platform/platform_info.h"
 #include "activation/swish/op_kernel/arch35/swish_dag.h"
 #include "activation/swish/op_kernel/arch35/swish_struct.h"
+#include "register/op_impl_registry.h"
+#include "atvoss/elewise/elewise_tiling.h"
+#include "atvoss/broadcast/broadcast_tiling.h"
 
 using namespace AscendC;
 using namespace ge;
 using namespace SwishOp;
+using namespace Ops::Base;
 
 namespace optiling {
 static constexpr uint64_t OP_KEY_INVALID = 0;
@@ -35,25 +37,17 @@ static constexpr uint64_t WORKSPACE_SIZE = 32;
 const int64_t ASCEND_WORKSPACE = 16777216; // 16 * 1024 * 1024
 static constexpr float NEG_ONE = -1.0f;
 static constexpr float ZERO = 0.0;
-const gert::Shape g_vec_1_shape = {1};
 
-inline static const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
-{
-    if (in_shape.IsScalar()) {
-        return g_vec_1_shape;
-    }
-    return in_shape;
-}
 
 ge::graphStatus SwishTiling::CalcInputDtype()
 {
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CalcInputDtype enter.");
     auto inputDesc = tilingContext->GetInputDesc(0);
-    OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
-    OP_TILING_CHECK(
+    OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "input x dtype not support %d", this->inputDtype),
+        OP_LOGE(tilingContext->GetNodeName(), "input x dtype not support %d", this->inputDtype),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -62,14 +56,14 @@ ge::graphStatus SwishTiling::CalcOutputDtype()
 {
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CalcOutputDtype enter.");
     auto outputDesc = tilingContext->GetOutputDesc(0);
-    OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_TILING_CHECK(
+    OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "output dtype not support"),
+        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support"),
         return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(this->outputDtype != this->inputDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "output y dtype not same as input x"),
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+        OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as input x"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -78,15 +72,15 @@ ge::graphStatus SwishTiling::CheckShape()
 {
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
     const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
 
     auto outputStorageShape = tilingContext->GetOutputShape(0);
-    OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_TILING_CHECK(inputYShape != outputZShape,
-               VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "input x and output y shape not same"),
+    OP_CHECK_IF(inputYShape != outputZShape,
+               OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -95,7 +89,7 @@ ge::graphStatus SwishTiling::SetAttr()
 {
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling GetAttrs enter.");
     auto attrs = tilingContext->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const float* scaleValueAttr = attrs->GetAttrPointer<float>(SwishDag::PLACEHOLDER_INDEX_0);
     float scale = scaleValueAttr == nullptr ? 1.0f : *scaleValueAttr;
 
@@ -117,14 +111,10 @@ ge::graphStatus SwishTiling::RunTiling()
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
 
-    OP_TILING_CHECK(CalcInputDtype() == ge::GRAPH_FAILED,
-               OPS_REPORT_VECTOR_INNER_ERR(tilingContext, "get input dtype failed"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(CalcOutputDtype() == ge::GRAPH_FAILED,
-               OPS_REPORT_VECTOR_INNER_ERR(tilingContext, "get output dtype failed"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(CheckShape() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(tilingContext, "check shape failed"),
-               return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(SetAttr() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(tilingContext, "set Attr failed"),
-               return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetAttr() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "set Attr failed"), return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
@@ -152,11 +142,11 @@ ge::graphStatus SwishTiling::RunTiling()
             baseTilingResult = elewiseBaseTiling.DoTiling32B<SwishDag::SwishOther<float>::OpDag>();
         }
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(baseTilingResult == ge::GRAPH_FAILED,
-               OPS_REPORT_VECTOR_INNER_ERR(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+               OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
     elewiseBaseTiling.SetScalar<float>(attrScale);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = ASCEND_WORKSPACE;
@@ -171,14 +161,25 @@ ge::graphStatus SwishTiling::RunTiling()
 ge::graphStatus TilingForSwish(gert::TilingContext *tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "TilingForSwish rt2.0 is running");
+    auto compileInfo = reinterpret_cast<const SwishCompileInfo *>(tilingContextGen->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
     SwishTiling baseOpTiling(tilingContextGen);
     return baseOpTiling.RunTiling();
 }
 
-ge::graphStatus TilingPrepare4Swish([[maybe_unused]] gert::TilingParseContext* context)
+ge::graphStatus TilingPrepareForSwish(gert::TilingParseContext* context)
 {
+    auto compileInfoPtr = context -> GetCompiledInfo<SwishCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Swish).Tiling(TilingForSwish).TilingParse<SwishCompileInfo>(TilingPrepare4Swish);
+IMPL_OP_OPTILING(Swish).Tiling(TilingForSwish).TilingParse<SwishCompileInfo>(TilingPrepareForSwish);
+
 } // namespace optiling
+

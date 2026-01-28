@@ -107,7 +107,11 @@ public:
         LocalTensor<UpdatesType> updateLocal = inQueueUpdates_.DeQue<UpdatesType>();
         LocalTensor<ScalesType> scaleLocal = inQueueScales_.DeQue<ScalesType>();
         for (int64_t bsIdx = 0; bsIdx < coreBsNum_; bsIdx++) {
-            QuantUpdate(bsIdx, updateLocal, scaleLocal, offsetLocal);
+            if constexpr (!IsSameType<OffsetsType, bool>::value) {
+                QuantUpdate(bsIdx, updateLocal, scaleLocal, offsetLocal);
+            } else {
+                QuantUpdateWithoutOffset(bsIdx, updateLocal, scaleLocal);
+            }
             CalcDstOffset(bsIdx, iLocal);
             CopyOutVar();
         }
@@ -198,7 +202,7 @@ public:
 
             AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float>();
             for (uint16_t j = 0; j < row; ++j) {
-                uint32_t count = static_cast<uint32_t>(tilingData_.updateDim3);
+                uint32_t count = static_cast<uint32_t>(tilingData_.updateOriLastDim);
                 for (uint16_t i = 0; i < vfLoopNum; i++) {
                     mask = AscendC::MicroAPI::UpdateMask<float>(count);
                     // ld and cast for update
@@ -289,6 +293,111 @@ public:
         outQueueVar_.EnQue(outLocal);
     }
 
+    __aicore__ inline void QuantUpdateWithoutOffset(
+        int64_t bsIdx, LocalTensor<UpdatesType> updateLocal, LocalTensor<ScalesType> scaleLocal)
+    {
+        LocalTensor<VarType> outLocal = outQueueVar_.AllocTensor<VarType>();
+
+        __local_mem__ UpdatesType* updateLocalAddr = (__local_mem__ UpdatesType*)updateLocal.GetPhyAddr() +
+                                                     bsIdx * copyBlockCount_ * tilingData_.updateOriLastDimAlign;
+        __local_mem__ ScalesType* scaleLocalAddr = (__local_mem__ ScalesType*)scaleLocal.GetPhyAddr();
+        __local_mem__ VarType* outLocalAddr = (__local_mem__ VarType*)outLocal.GetPhyAddr();
+
+        uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
+        uint32_t xLocalOffset = static_cast<uint32_t>(tilingData_.updateOriLastDimAlign);
+        uint16_t row = static_cast<uint16_t>(copyBlockCount_);
+        uint16_t vfLoopNum = (tilingData_.updateOriLastDim + VL - 1) / VL;
+
+        // without offset
+        __VEC_SCOPE__
+        {
+            // update: fp16, bf16
+            AscendC::MicroAPI::RegTensor<UpdatesType> vregX;
+            AscendC::MicroAPI::RegTensor<float> vregFloatX;
+            // scales: fp32, bp16
+            AscendC::MicroAPI::RegTensor<ScalesType> vregS;
+            AscendC::MicroAPI::RegTensor<float> vregFloatS;
+            // y: int8
+            AscendC::MicroAPI::RegTensor<float> vregFloatY;
+            AscendC::MicroAPI::RegTensor<int16_t> vregInt16Y;
+            AscendC::MicroAPI::RegTensor<half> vregHalfY;
+            AscendC::MicroAPI::RegTensor<VarType> vregY;
+
+            AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float>();
+            for (uint16_t j = 0; j < row; ++j) {
+                uint32_t count = static_cast<uint32_t>(tilingData_.updateOriLastDim);
+                for (uint16_t i = 0; i < vfLoopNum; i++) {
+                    mask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    // ld and cast for update
+                    if constexpr (IsSameType<UpdatesType, half>::value) {
+                        // fp16
+                        AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                            vregX, updateLocalAddr + i * VL + j * xLocalOffset);
+                        AscendC::MicroAPI::Cast<float, half, Base::CAST_TRAIT_HALF_TO_FP32>(vregFloatX, vregX, mask);
+                    } else if constexpr (IsSameType<UpdatesType, bfloat16_t>::value) {
+                        // bf16
+                        AscendC::MicroAPI::DataCopy<UpdatesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                            vregX, updateLocalAddr + i * VL + j * xLocalOffset);
+                        AscendC::MicroAPI::Cast<float, UpdatesType, Base::CAST_TRAIT_BF16_TO_FP32>(
+                            vregFloatX, vregX, mask);
+                    }
+
+                    // ld and cast for scale
+                    if constexpr (IsSameType<ScalesType, float>::value) {
+                        // fp32
+                        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                            vregFloatS, scaleLocalAddr + i * VL);
+                    } else if constexpr (IsSameType<ScalesType, bfloat16_t>::value) {
+                        // bf16
+                        AscendC::MicroAPI::DataCopy<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                            vregS, scaleLocalAddr + i * VL);
+                        AscendC::MicroAPI::Cast<float, ScalesType, Base::CAST_TRAIT_BF16_TO_FP32>(
+                            vregFloatS, vregS, mask);
+                    }
+
+                    if constexpr (DivMode == TPL_DIV_MODE_DIV) {
+                        static constexpr AscendC::MicroAPI::DivSpecificMode divMode = {
+                            AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
+                        AscendC::MicroAPI::Div<float, &divMode>(vregFloatY, vregFloatX, vregFloatS, mask);
+                    } else {
+                        AscendC::MicroAPI::Mul(vregFloatY, vregFloatX, vregFloatS, mask);
+                    }
+                    // cast and sd for y
+                    if constexpr (IsSameType<VarType, hifloat8_t>::value) {
+                        // hifp8
+                        AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_HIFP8>(
+                            vregY, vregFloatY, mask);
+                        AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                            outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
+                    } else if constexpr (IsSameType<VarType, fp8_e5m2_t>::value) {
+                        // fp8_e5m2
+                        AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E5M2>(
+                            vregY, vregFloatY, mask);
+                        AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                            outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
+                    } else if constexpr (IsSameType<VarType, fp8_e4m3fn_t>::value) {
+                        // fp8_e4m3
+                        AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E4M3>(
+                            vregY, vregFloatY, mask);
+                        AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                            outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
+                    } else if constexpr (IsSameType<VarType, int8_t>::value) {
+                        // int8
+                        AscendC::MicroAPI::Cast<int16_t, float, Base::CAST_TRAIT_FP32_TO_INT16>(
+                            vregInt16Y, vregFloatY, mask);
+                        AscendC::MicroAPI::Cast<half, int16_t, Base::CAST_TRAIT_INT16_TO_HALF>(
+                            vregHalfY, vregInt16Y, mask);
+                        AscendC::MicroAPI::Cast<int8_t, half, Base::CAST_TRAIT_HALF_TO_INT8>(vregY, vregHalfY, mask);
+                        AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                            outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
+                    }
+                }
+            }
+        }
+
+        outQueueVar_.EnQue(outLocal);
+    }
+
     __aicore__ inline void CopyInIndices()
     {
         DataCopyExtParams copyParams;
@@ -316,7 +425,8 @@ public:
             gmVarOffset_ = actualBsIdx * tilingData_.dstBsStride + axisOffset * tilingData_.varDim3;
         } else {
             int64_t axisOffset = iLocal.GetValue(updateDim0Idx);
-            gmVarOffset_ = (blockIdx_ * tilingData_.eachCoreBsNum + bsIdx) * tilingData_.dstBsStride + axisOffset * tilingData_.varDim3;
+            gmVarOffset_ = (blockIdx_ * tilingData_.eachCoreBsNum + bsIdx) * tilingData_.dstBsStride +
+                           axisOffset * tilingData_.varDim3;
         }
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);

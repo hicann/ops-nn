@@ -14,22 +14,24 @@
  */
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "atvoss/elewise/elewise_sch_with_scalar.h"
 #include "arch35/swish_dag.h"
 #include "arch35/swish_struct.h"
+#include "atvoss/util/dfx.h"
+#include "atvoss/elewise/elewise_sch_with_scalar.h"
 
 using namespace AscendC;
 using namespace SwishOp;
+using namespace SwishDag;
 
 template <uint64_t schMode, uint64_t attrWork, typename DtypeX>
 __global__ __aicore__ void SwishKernel(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
     REGISTER_TILING_DEFAULT(EleBaseTilingData32B);
-    GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData32B, tilingData, tiling);
+    GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData32B, tilingData, tiling);          
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (attrWork == static_cast<uint64_t>(TPL_SCALE_NEG_ONE)) {
         ElementwiseSchWithScalar<EleBaseTilingData32B,schMode, typename SwishDag::SwishNegOne<DtypeX>::OpDag> sch(tilingData);
         sch.Init(x, y);
-        sch.Process();
+        sch.Process();    
     } else if constexpr (attrWork == static_cast<uint64_t>(TPL_SCALE_ZERO)) {
         ElementwiseSchWithScalar<EleBaseTilingData32B,schMode, typename SwishDag::SwishZero<DtypeX>::OpDag> sch(tilingData);
         sch.Init(x, y);
@@ -46,3 +48,4 @@ template <uint64_t schMode, uint64_t attrWork>
 __global__ __aicore__ void swish(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
     return SwishKernel<schMode, attrWork, DTYPE_X>(x, y, workspace, tiling);
 }
+

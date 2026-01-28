@@ -84,7 +84,7 @@ aclnnStatus aclnnSiluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uin
   auto shapeOriDetial = GetTensorShapeActivation(selfContiguous, uniqueExecutor.get());
   auto reshapeSelf = selfContiguous;
 
-  if (dimSize > (int64_t)MAX_SUPPORT_DIMS_NUMS) {
+  if (dimSize > static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
     int64_t AllDimValue = 1;
     for (int i = 0; i < dimSize; i++) {
       AllDimValue *= shapeOri[i];
@@ -99,7 +99,7 @@ aclnnStatus aclnnSiluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uin
   CHECK_RET(siluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   auto reshapeSiluOut = siluOut;
-  if (dimSize > (int64_t)MAX_SUPPORT_DIMS_NUMS) {
+  if (dimSize > static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
     reshapeSiluOut = ReshapeLongTensorActivation(siluOut, uniqueExecutor.get(), dimSize, shapeOriDetial);
   }
 
