@@ -16,6 +16,7 @@
 #include "atvoss/reduce/reduce_sch.h"
 #include "arch35/lp_norm_v2_dag.h"
 #include "arch35/lp_norm_v2_tiling_key.h"
+#include "arch35/lp_norm_v2_tiling_struct.h"
 
 using namespace ReduceOpTmpl;
 using namespace AscendC;
@@ -44,7 +45,8 @@ struct GetPromoteType<float> {
 template <REDUCE_TPL_PARAM, uint32_t TemplateNum>
 __global__ __aicore__ void lp_norm_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    GET_TILING_DATA(tilingData, tiling);
+    REGISTER_TILING_DEFAULT(optiling::LpNormV2TilingData);
+    GET_TILING_DATA_WITH_STRUCT(optiling::LpNormV2TilingData, tilingData, tiling);
     TPipe pipe;
     float val = (TemplateNum == TEMPLATE_P_NINF) ? INFINITY : tilingData.epsilon;
     if constexpr (TemplateNum == TEMPLATE_P0) {  // p=0

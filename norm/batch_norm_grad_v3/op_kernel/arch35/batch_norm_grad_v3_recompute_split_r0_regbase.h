@@ -624,15 +624,15 @@ public:
                 MicroAPI::Sub(binaryAddXQ2, binaryAddXQ2, meanValue, pregQ);
                 MicroAPI::Sub(binaryAddXR2, binaryAddXR2, meanValue, pregR);
 
-                MicroAPI::Mul(binaryAddXQ1, binaryAddXQ1, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddXR1, binaryAddXR1, rstdValue, pregLoop);
-                MicroAPI::Mul(binaryAddXQ2, binaryAddXQ2, rstdValue, pregQ);
-                MicroAPI::Mul(binaryAddXR2, binaryAddXR2, rstdValue, pregR);
+                MicroAPI::Mul(binaryAddXQ1, binaryAddXQ1, binaryAddDyQ1, pregMain);
+                MicroAPI::Mul(binaryAddXR1, binaryAddXR1, binaryAddDyR1, pregLoop);
+                MicroAPI::Mul(binaryAddXQ2, binaryAddXQ2, binaryAddDyQ2, pregQ);
+                MicroAPI::Mul(binaryAddXR2, binaryAddXR2, binaryAddDyR2, pregR);
 
-                MicroAPI::Mul(binaryAddDyQ1, binaryAddDyQ1, binaryAddXQ1, pregMain);
-                MicroAPI::Mul(binaryAddDyR1, binaryAddDyR1, binaryAddXR1, pregLoop);
-                MicroAPI::Mul(binaryAddDyQ2, binaryAddDyQ2, binaryAddXQ2, pregQ);
-                MicroAPI::Mul(binaryAddDyR2, binaryAddDyR2, binaryAddXR2, pregR);
+                MicroAPI::Mul(binaryAddDyQ1, rstdValue, binaryAddXQ1, pregMain);
+                MicroAPI::Mul(binaryAddDyR1, rstdValue, binaryAddXR1, pregLoop);
+                MicroAPI::Mul(binaryAddDyQ2, rstdValue, binaryAddXQ2, pregQ);
+                MicroAPI::Mul(binaryAddDyR2, rstdValue, binaryAddXR2, pregR);
 
                 MicroAPI::Add(tmp, binaryAddDyQ1, binaryAddDyQ2, pregQ);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregQ);
@@ -657,11 +657,11 @@ public:
                 MicroAPI::Sub(binaryAddXQ1, binaryAddXQ1, meanValue, pregMain);
                 MicroAPI::Sub(binaryAddXQ2, binaryAddXQ2, meanValue, pregQ);
 
-                MicroAPI::Mul(binaryAddXQ1, binaryAddXQ1, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddXQ2, binaryAddXQ2, rstdValue, pregQ);
+                MicroAPI::Mul(binaryAddXQ1, binaryAddXQ1, binaryAddDyQ1, pregMain);
+                MicroAPI::Mul(binaryAddXQ2, binaryAddXQ2, binaryAddDyQ2, pregQ);
 
-                MicroAPI::Mul(binaryAddDyQ1, binaryAddDyQ1, binaryAddXQ1, pregMain);
-                MicroAPI::Mul(binaryAddDyQ2, binaryAddDyQ2, binaryAddXQ2, pregQ);
+                MicroAPI::Mul(binaryAddDyQ1, rstdValue, binaryAddXQ1, pregMain);
+                MicroAPI::Mul(binaryAddDyQ2, rstdValue, binaryAddXQ2, pregQ);
 
                 MicroAPI::Add(tmp, binaryAddDyQ1, binaryAddDyQ2, pregQ);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregQ);
@@ -730,10 +730,10 @@ public:
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddR2, pregLoop, i * VL_FP32 + binaryAddQuotient);
                 MicroAPI::Sub(binaryAddQ1, binaryAddQ1, meanValue, pregMain);
                 MicroAPI::Sub(binaryAddR1, binaryAddR1, meanValue, pregLoop);
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddR1, binaryAddR1, rstdValue, pregLoop);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
-                MicroAPI::Mul(binaryAddR2, binaryAddR2, binaryAddR1, pregLoop);
+                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
+                MicroAPI::Mul(binaryAddQ2, rstdValue, binaryAddQ1, pregMain);
+                MicroAPI::Mul(binaryAddR2, rstdValue, binaryAddR1, pregLoop);
                 MicroAPI::Add(tmp, binaryAddQ2, binaryAddR2, pregLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ2, tmp, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ2, pregMain);
@@ -745,8 +745,8 @@ public:
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ1, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ2, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 MicroAPI::Sub(binaryAddQ1, binaryAddQ1, meanValue, pregMain);
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
+                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddQ2, rstdValue, binaryAddQ1, pregMain);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ2, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__local_mem__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);

@@ -270,10 +270,6 @@ public:
         dyLocal = dyInQue_.template DeQue<DY_TYPE>();
 
         CalcDbeta(dyLocal, dBetaCacheLocal_, binaryAddTensor_, basicBlockIdx, r1Factor * r0Dim_, binaryAddParam_);
-        if (ni > 0 && basicBlockIdx < BUFFER_NUM) {
-            uint32_t bufferIdx = basicBlockIdx % BUFFER_NUM;
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         xInQue_.EnQue(xLocal);
@@ -301,10 +297,6 @@ public:
         CalcDbetaFold(
             dyLocal, dBetaCacheLocal_, binaryAddTensor_, basicBlockIdx, r1Factor * r0Dim_, r1TailFactor * r0Dim_,
             tailBinaryAddParam_);
-        if (ni > 0 && basicBlockIdx == 0) {
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + 0);
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + 1);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         PrepareInX(xLocal, halfXBufOffset_, tailOffset, r1TailFactor);
@@ -354,9 +346,6 @@ public:
         LocalTensor<DY_TYPE> dyLocal = dyInQue_.template AllocTensor<DY_TYPE>();
         PrepareInDy(dyLocal, 0, offset, r1Factor);
         dyInQue_.EnQue(dyLocal);
-        if (basicBlockIdx >= BUFFER_NUM) {
-            WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         xInQue_.EnQue(xLocal);
@@ -371,9 +360,8 @@ public:
         SetFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
         WaitFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
         CopyOutDx(xLocal, offset, r1Factor);
-        if (ni < aDimLoopNum_ - 1 || basicBlockIdx < ubRDimLoopNum_ + ubRDimTailLoopNum_ - BUFFER_NUM) {
-            SetFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
-        }
+        SetFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
+        WaitFlag<HardEvent::MTE3_MTE2>(MTE3_MTE2_EVENT + bufferIdx);
         dyInQue_.FreeTensor(dyLocal);
         xInQue_.FreeTensor(xLocal);
     }
@@ -712,13 +700,13 @@ public:
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddR2, pregLoop, i * VL_FP32 + binaryAddQuotientOffset);
 
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, rstdValue, pregMain);
+                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
 
                 MicroAPI::Sub(binaryAddR2, binaryAddR2, meanValue, pregLoop);
-                MicroAPI::Mul(binaryAddR2, binaryAddR2, rstdValue, pregLoop);
+                MicroAPI::Mul(binaryAddR2, binaryAddR2, binaryAddR1, pregLoop);
 
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                MicroAPI::Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
+                MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddR1, rstdValue, binaryAddR2, pregLoop);
                 MicroAPI::Add(tmp, binaryAddQ1, binaryAddR1, pregLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
@@ -730,8 +718,8 @@ public:
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ1, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ2, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
+                MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__local_mem__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
@@ -818,22 +806,22 @@ public:
                     i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
 
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, rstdValue, pregMain);
+                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
 
                 MicroAPI::Sub(binaryAddR2, binaryAddR2, meanValue, pregLoop);
-                MicroAPI::Mul(binaryAddR2, binaryAddR2, rstdValue, pregLoop);
+                MicroAPI::Mul(binaryAddR2, binaryAddR2, binaryAddR1, pregLoop);
 
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                MicroAPI::Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
+                MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddR1, rstdValue, binaryAddR2, pregLoop);
 
                 MicroAPI::Sub(binaryAddQ2Tail, binaryAddQ2Tail, meanValue, pregTailLoop);
-                MicroAPI::Mul(binaryAddQ2Tail, binaryAddQ2Tail, rstdValue, pregTailLoop);
+                MicroAPI::Mul(binaryAddQ2Tail, binaryAddQ2Tail, binaryAddQ1Tail, pregTailLoop);
 
                 MicroAPI::Sub(binaryAddR2Tail, binaryAddR2Tail, meanValue, pregTailReminderLoop);
-                MicroAPI::Mul(binaryAddR2Tail, binaryAddR2Tail, rstdValue, pregTailReminderLoop);
+                MicroAPI::Mul(binaryAddR2Tail, binaryAddR2Tail, binaryAddR1Tail, pregTailReminderLoop);
 
-                MicroAPI::Mul(binaryAddQ1Tail, binaryAddQ1Tail, binaryAddQ2Tail, pregTailLoop);
-                MicroAPI::Mul(binaryAddR1Tail, binaryAddR1Tail, binaryAddR2Tail, pregTailReminderLoop);
+                MicroAPI::Mul(binaryAddQ1Tail, rstdValue, binaryAddQ2Tail, pregTailLoop);
+                MicroAPI::Mul(binaryAddR1Tail, rstdValue, binaryAddR2Tail, pregTailReminderLoop);
 
                 MicroAPI::Add(tmp1, binaryAddQ1, binaryAddQ1Tail, pregTailLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp1, pregTailLoop);
@@ -855,12 +843,12 @@ public:
                 LoadOneTensor<DY_TYPE>(
                     xAddr, binaryAddQ2Tail, pregTailLoop, (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
-                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, rstdValue, pregMain);
-                MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
+                MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
+                MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
 
                 MicroAPI::Sub(binaryAddQ2Tail, binaryAddQ2Tail, meanValue, pregTailLoop);
-                MicroAPI::Mul(binaryAddQ2Tail, binaryAddQ2Tail, rstdValue, pregTailLoop);
-                MicroAPI::Mul(binaryAddQ1Tail, binaryAddQ1Tail, binaryAddQ2Tail, pregTailLoop);
+                MicroAPI::Mul(binaryAddQ2Tail, binaryAddQ2Tail, binaryAddQ1Tail, pregTailLoop);
+                MicroAPI::Mul(binaryAddQ1Tail, rstdValue, binaryAddQ2Tail, pregTailLoop);
                 MicroAPI::Add(tmp1, binaryAddQ1, binaryAddQ1Tail, pregTailLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp1, pregTailLoop);
 
@@ -911,8 +899,8 @@ public:
             LoadOneTensor<DY_TYPE>(dyAddr, y, pregLoop, 0);
             LoadOneTensor<DY_TYPE>(xAddr, x, pregLoop, 0);
             MicroAPI::Sub(x, x, meanValue, pregLoop);
-            MicroAPI::Mul(x, x, rstdValue, pregLoop);
-            MicroAPI::Mul(x, y, x, pregLoop);
+            MicroAPI::Mul(x, x, y, pregLoop);
+            MicroAPI::Mul(x, rstdValue, x, pregLoop);
             MicroAPI::ReduceSum(sum, x, pregLoop);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ((__local_mem__ float*)dgammaAddr) + idxInLevel0Cache, sum, pregMerge);
@@ -949,12 +937,12 @@ public:
             LoadOneTensor<DY_TYPE>(xAddr, xTail, pregTailLoop, halfXBufOffset_);
 
             MicroAPI::Sub(x, x, meanValue, pregLoop);
-            MicroAPI::Mul(x, x, rstdValue, pregLoop);
-            MicroAPI::Mul(x, y, x, pregLoop);
+            MicroAPI::Mul(x, x, y, pregLoop);
+            MicroAPI::Mul(x, rstdValue, x, pregLoop);
 
             MicroAPI::Sub(xTail, xTail, meanValue, pregTailLoop);
-            MicroAPI::Mul(xTail, xTail, rstdValue, pregTailLoop);
-            MicroAPI::Mul(xTail, yTail, xTail, pregTailLoop);
+            MicroAPI::Mul(xTail, xTail, yTail, pregTailLoop);
+            MicroAPI::Mul(xTail, rstdValue, xTail, pregTailLoop);
             MicroAPI::Add(tmp, x, xTail, pregTailLoop);
             MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(x, tmp, pregTailLoop);
             MicroAPI::ReduceSum(sum, x, pregLoop);

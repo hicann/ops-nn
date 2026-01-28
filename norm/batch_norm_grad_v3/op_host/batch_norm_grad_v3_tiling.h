@@ -69,11 +69,7 @@ TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);   // 尾核进行UB循环的�
 TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);   // 尾核最后一轮UB循环，处理的A轴个数
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000001, BatchNormGradV3RARFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000002, BatchNormGradV3RARFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000003, BatchNormGradV3RARFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000004, BatchNormGradV3RARFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000005, BatchNormGradV3RARFullLoadTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000000, BatchNormGradV3RARFullLoadTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3RARRecomputeTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BaseTilingData, baseTilingData);
@@ -92,16 +88,8 @@ TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTailFactorAlign); // R轴尾块的尾�
 TILING_DATA_FIELD_DEF(int64_t, ubRDimTailTailLoopNum);     // R轴尾块的尾块的循环次数
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000001, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000002, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000003, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000004, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000005, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000001, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000002, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000003, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000004, BatchNormGradV3RARRecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000005, BatchNormGradV3RARRecomputeTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_31000000, BatchNormGradV3RARRecomputeTilingData)
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_32000000, BatchNormGradV3RARRecomputeTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3RAFullLoadTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BaseTilingData, baseTilingData);
@@ -125,11 +113,7 @@ TILING_DATA_FIELD_DEF(int64_t, reduceRecursionLoop);
 TILING_DATA_FIELD_DEF(int64_t, reduceLoopTimes);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000001, BatchNormGradV3RAFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000002, BatchNormGradV3RAFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000003, BatchNormGradV3RAFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000004, BatchNormGradV3RAFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000005, BatchNormGradV3RAFullLoadTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_20000000, BatchNormGradV3RAFullLoadTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3RARecomputeTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BaseTilingData, baseTilingData);
@@ -151,11 +135,7 @@ TILING_DATA_FIELD_DEF(int64_t, cacheBufferCount);
 TILING_DATA_FIELD_DEF(float, reciprocal);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000001, BatchNormGradV3RARecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000002, BatchNormGradV3RARecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000003, BatchNormGradV3RARecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000004, BatchNormGradV3RARecomputeTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000005, BatchNormGradV3RARecomputeTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_40000000, BatchNormGradV3RARecomputeTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3RASplitRTilingData)
 TILING_DATA_FIELD_DEF(int64_t, rDim);
@@ -201,15 +181,7 @@ TILING_DATA_FIELD_DEF(int64_t, tileBlockBTail);
 TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900001, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900002, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900003, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900004, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900005, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900006, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900007, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900008, BatchNormGradV3InferChannelLastTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900009, BatchNormGradV3InferChannelLastTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900000, BatchNormGradV3InferChannelLastTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferTilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalTiles);
@@ -231,15 +203,7 @@ TILING_DATA_FIELD_DEF(int64_t, tileBlockAPaddingNum);
 TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910001, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910002, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910003, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910004, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910005, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910006, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910007, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910008, BatchNormGradV3InferTilingData);
-REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910009, BatchNormGradV3InferTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormGradV3_910000, BatchNormGradV3InferTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormGradV3FullLoadTilingData)
 TILING_DATA_FIELD_DEF(int64_t, b1Dim);

@@ -188,8 +188,8 @@ private:
                     LoadOneTensor<DY_TYPE>(xAddr, xMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyMainReg, pMask, offset);
                     MicroAPI::Sub<float, MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg, meanReg, pMask);
-                    MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg, rstdReg, pMask);
                     MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg, dyMainReg, pMask);
+                    MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg, rstdReg, pMask);
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                     StoreOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
                 }
@@ -228,8 +228,8 @@ private:
                     LoadOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(xFoldAddr, xFoldReg, pMask, offset);
                     MicroAPI::Sub<float, MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, meanReg, pMask);
-                    MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, rstdReg, pMask);
                     MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, dyFoldReg, pMask);
+                    MicroAPI::Mul<float, MicroAPI::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, rstdReg, pMask);
                     MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(xMainReg, xMainReg, xFoldReg, pMask);
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                 }

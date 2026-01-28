@@ -19,44 +19,12 @@
 #include "register/tilingdata_base.h"
 #include "atvoss/reduce/reduce_tiling.h"
 #include "atvoss/reduce/reduce_tiling_data.h"
+#include "../../op_kernel/arch35/lp_norm_v2_tiling_struct.h"
 
 using namespace Ops::Base;
 
 namespace optiling
 {
-BEGIN_TILING_DATA_DEF(ReduceOpTilingDataV2)
-TILING_DATA_FIELD_DEF(uint64_t, factorACntPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, factorATotalCnt);
-TILING_DATA_FIELD_DEF(uint64_t, ubFactorA);
-TILING_DATA_FIELD_DEF(uint64_t, factorRCntPerCore);
-TILING_DATA_FIELD_DEF(uint64_t, factorRTotalCnt);
-TILING_DATA_FIELD_DEF(uint64_t, ubFactorR);
-TILING_DATA_FIELD_DEF(uint64_t, groupR);
-TILING_DATA_FIELD_DEF(uint64_t, outSize);
-TILING_DATA_FIELD_DEF(uint64_t, basicBlock);
-TILING_DATA_FIELD_DEF(uint64_t, resultBlock);
-TILING_DATA_FIELD_DEF(int32_t, coreNum);
-TILING_DATA_FIELD_DEF(int32_t, useNddma);
-TILING_DATA_FIELD_DEF(float, meanVar);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM, shape);
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_DIM, stride);
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_DIM, dstStride);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM, sliceNum);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM, sliceShape);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM, sliceStride);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(ReduceOpTilingDataV2Op, ReduceOpTilingDataV2)
-
-BEGIN_TILING_DATA_DEF(LpNormV2TilingData)
-TILING_DATA_FIELD_DEF_STRUCT(ReduceOpTilingDataV2, reduceTiling);
-TILING_DATA_FIELD_DEF(float, epsilon);
-TILING_DATA_FIELD_DEF(float, p);
-TILING_DATA_FIELD_DEF(float, recp);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(LpNormV2, LpNormV2TilingData)
-
 struct LpNormV2TilingKey {
     ReduceTilingKey reduceTiling;
     uint32_t templateNum;
@@ -91,7 +59,7 @@ private:
     ge::DataType xDtype_;
     gert::TilingContext* tilingContext_;
     LpNormV2TilingKey key_;
-    LpNormV2TilingData tilingData_;
+    LpNormV2TilingData* tilingData_;
     float p_ = 0.0f;
     float recp_ = 0.0f;
     float epsilon_ = 0.0f;

@@ -25,8 +25,8 @@ namespace optiling {
 using namespace ge;
 
 // 按照 dy、weight、var 数据类型区分模板
-constexpr int64_t TILINGKEY_INFER_CHANNEL_LAST_BASE = 900001;
-constexpr int64_t TILINGKEY_INFER_BASE = 910001;
+constexpr int64_t TILINGKEY_INFER_CHANNEL_LAST_BASE = 900000;
+constexpr int64_t TILINGKEY_INFER_BASE = 910000;
 constexpr int64_t DTYPE_CHECK_NUM = 3;
 constexpr int64_t DTYPE_DX_OFFSET = 0;
 constexpr int64_t DTYPE_WEIGHT_OFFSET = 1;
@@ -145,8 +145,6 @@ protected:
 
     int64_t weightDimLen_;
     int64_t runningVarDimLen_;
-
-    int64_t tilingKeyOffset_;
 
     float epsilon_;
 

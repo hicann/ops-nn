@@ -113,7 +113,7 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
 
 uint64_t BatchNormGradV3InferTiling::GetTilingKey() const
 {
-    return (TILINGKEY_INFER_BASE + tilingKeyOffset_);
+    return (TILINGKEY_INFER_BASE);
 }
 
 ge::graphStatus BatchNormGradV3InferTiling::PostTiling()

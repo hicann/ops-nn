@@ -103,7 +103,7 @@ ge::graphStatus BatchNormGradV3InferChannelLastTiling::DoOpTiling()
 
 uint64_t BatchNormGradV3InferChannelLastTiling::GetTilingKey() const
 {
-    return (TILINGKEY_INFER_CHANNEL_LAST_BASE + tilingKeyOffset_);
+    return (TILINGKEY_INFER_CHANNEL_LAST_BASE);
 }
 
 ge::graphStatus BatchNormGradV3InferChannelLastTiling::PostTiling()

@@ -44,4 +44,4 @@ REG_OP(SoftmaxGrad)
     .ATTR(axes, ListInt, {-1})
     .OP_END_FACTORY_REG(SoftmaxGrad)
 }
-#endif // OPS_BUILT_IN_OP_PROTO_INC_SOFTMAX_GRAD_OPS_H_
+#endif

@@ -16,11 +16,14 @@
 #include "batch_norm_grad_v3_tiling.h"
 #include "op_util.h"
 #include "tiling_base/tiling_templates_registry.h"
+#include "tiling_base/tiling_util.h"
 #include "batch_norm_grad_v3_base_tiling.h"
 
 using namespace ge;
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 class BatchNormGradV3SplitLoadTiling : public BatchNormGradV3Base {
     static constexpr int64_t MAX_CHANNEL_SIZE = 1024;
     static constexpr int64_t BLOCK_SIZE = 8;
@@ -34,7 +37,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+        if (IsRegbaseSocVersion(context_)) {
             return false;
         }
 

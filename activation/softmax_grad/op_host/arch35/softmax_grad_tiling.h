@@ -251,7 +251,7 @@ protected:
     int64_t yDtypeSize_{0};
 
     int64_t xShapeSize_{0};
-    std::vector<int64_t> xShape_;
+    vector<int64_t> xShape_;
 
     int64_t a1_{DIM_NUM_ONE};
     int64_t r_{DIM_NUM_ONE};

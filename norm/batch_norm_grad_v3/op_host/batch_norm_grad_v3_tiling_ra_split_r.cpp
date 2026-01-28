@@ -33,6 +33,7 @@ constexpr uint64_t FLOAT_BYTE_SIZE = sizeof(float);
 constexpr uint64_t BNG_V3_RA_SPLIT_R_TK_BASE = 11000000;
 constexpr uint64_t BNG_V3_RA_SPLIT_R_TILING_KEY = 50000000;
 constexpr size_t BNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
+constexpr int64_t CONST_ONE = 1;
 
 bool BatchNormGradV3TilingRASplitR::IsCapable()
 {
@@ -184,6 +185,7 @@ ge::graphStatus BatchNormGradV3TilingRASplitR::PostTiling()
     uint64_t tilingKey = GetTilingKey();
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(usedCoreNum_);
+    context_->SetScheduleMode(CONST_ONE);
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     PrintTilingData();

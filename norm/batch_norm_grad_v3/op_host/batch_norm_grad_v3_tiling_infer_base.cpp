@@ -45,7 +45,6 @@ void BatchNormGradV3InferBase::Reset()
     weightDimLen_ = 0;
     runningVarDimLen_ = 0;
 
-    tilingKeyOffset_ = 0;
     epsilon_ = DEFAULT_EPSILON;
 }
 
@@ -237,7 +236,6 @@ ge::graphStatus BatchNormGradV3InferBase::CheckInputValid()
             weightDtype_ == validInputDtypes[i][DTYPE_WEIGHT_OFFSET] &&
             runningVarDtype_ == validInputDtypes[i][DTYPE_RUNNINGVAR_OFFSET]) {
             dtypeValid = true;
-            tilingKeyOffset_ = i;
             break;
         }
     }

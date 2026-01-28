@@ -26,7 +26,6 @@ namespace optiling
 {
 constexpr int64_t AR_RECOMPUTE_MAX_BUFFER_BTYES = 32;
 constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_BINARY_TMP_BTYES = 512;
 constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;   // sizeof(float) * 8 * 64
 constexpr int64_t TRIPLE_BUFFER = 3;
 constexpr int64_t BIT_COUNT_64 = 64;
@@ -95,9 +94,9 @@ int64_t SoftmaxV2TilingARRecompute::Lcm(const int64_t a, const int64_t b)
 ge::graphStatus SoftmaxV2TilingARRecompute::DoOpTiling()
 {
     // 检查ub空间是否足够
-    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_MAX_BUFFER_BTYES - AR_RECOMPUTE_SUM_BUFFER_BTYES -
-                  AR_RECOMPUTE_BINARY_TMP_BTYES - AR_RECOMPUTE_BINARY_CACHE_BTYES;
-    baseFactor_ = xDtypeSize_ * TRIPLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER + sizeof(float) * DOUBLE_BUFFER;
+    ubFlexible_ = aicoreParams_.ubSize - AR_RECOMPUTE_MAX_BUFFER_BTYES - AR_RECOMPUTE_SUM_BUFFER_BTYES
+                    - AR_RECOMPUTE_BINARY_CACHE_BTYES;
+    baseFactor_ = xDtypeSize_ * TRIPLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER + sizeof(float);
 
     OP_CHECK_IF((baseFactor_ > ubFlexible_),
                     OP_LOGI(context_->GetNodeName(),

@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file lp_norm_v2_proto.h
+ * \file math_ops.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_LP_NORM_V2_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_LP_NORM_V2_OPS_H_
+#ifndef OPS_BUILT_IN_OP_PROTO_INC_MATH_OPS_H_
+#define OPS_BUILT_IN_OP_PROTO_INC_MATH_OPS_H_
 
 #include "graph/operator_reg.h"
 #include "graph/operator.h"
@@ -56,4 +56,4 @@ REG_OP(LpNormV2)
     .OP_END_FACTORY_REG(LpNormV2)
 }  // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_LP_NORM_V2_OPS_H_
+#endif  // OPS_BUILT_IN_OP_PROTO_INC_MATH_OPS_H_

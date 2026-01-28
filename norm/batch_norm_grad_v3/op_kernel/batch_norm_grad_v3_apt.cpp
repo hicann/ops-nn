@@ -27,237 +27,65 @@
 using namespace BatchNormGradV3;
 using namespace BNGV3RARRecomputeSplitR0;
 
-#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_FLOAT 10000001UL
-#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_FLOAT16 10000002UL
-#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_BFLOAT16 10000003UL
-#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_MIXED_FP16_FP32 10000004UL
-#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_MIXED_BF16_FP32 10000005UL
-#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_FLOAT 31000001UL
-#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_FLOAT16 31000002UL
-#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_BFLOAT16 31000003UL
-#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_MIXED_FP16_FP32 31000004UL
-#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_MIXED_BF16_FP32 31000005UL
-#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_FLOAT 32000001UL
-#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_FLOAT16 32000002UL
-#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_BFLOAT16 32000003UL
-#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_MIXED_FP16_FP32 32000004UL
-#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_MIXED_BF16_FP32 32000005UL
-#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD_FLOAT 20000001UL
-#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD_FLOAT16 20000002UL
-#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD_BFLOAT16 20000003UL
-#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD_MIXED_FP16_FP32 20000004UL
-#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD_MIXED_BF16_FP32 20000005UL
-#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE_FLOAT 40000001UL
-#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE_FLOAT16 40000002UL
-#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE_BFLOAT16 40000003UL
-#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE_MIXED_FP16_FP32 40000004UL
-#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE_MIXED_BF16_FP32 40000005UL
+#define BATCH_NORM_GRAD_V3_RAR_FULL_LOAD 10000000UL
+#define BATCH_NORM_GRAD_V3_RAR_SPLIT_R1 31000000UL
+#define BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0 32000000UL
+#define BATCH_NORM_GRAD_V3_RA_FULL_LOAD 20000000UL
+#define BATCH_NORM_GRAD_V3_RA_RECOMPUTE 40000000UL
 #define BATCH_NORM_GRAD_V3_RA_SPLIT_R_TILING_KEY 50000000UL
 #define BATCH_NORM_GRAD_V3_RAR_SPLIT_CORE_R1 1000UL
 static constexpr int DOUBLE_BUFFER = 2;
 
 // inference
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP32_FP32_F32 900001UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP16_FP16 900002UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_BF16_BF16 900003UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP32_FP16 900004UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP32_FP32 900005UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_FP32_BF16 900006UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_FP32_FP32 900007UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP16_FP32 900008UL
-#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_BF16_FP32 900009UL
-
-#define BATCH_NORM_GRAD_V3_INFER_FP32_FP32_F32 910001UL
-#define BATCH_NORM_GRAD_V3_INFER_FP16_FP16_FP16 910002UL
-#define BATCH_NORM_GRAD_V3_INFER_BF16_BF16_BF16 910003UL
-#define BATCH_NORM_GRAD_V3_INFER_FP16_FP32_FP16 910004UL
-#define BATCH_NORM_GRAD_V3_INFER_FP16_FP32_FP32 910005UL
-#define BATCH_NORM_GRAD_V3_INFER_BF16_FP32_BF16 910006UL
-#define BATCH_NORM_GRAD_V3_INFER_BF16_FP32_FP32 910007UL
-#define BATCH_NORM_GRAD_V3_INFER_FP16_FP16_FP32 910008UL
-#define BATCH_NORM_GRAD_V3_INFER_BF16_BF16_FP32 910009UL
+#define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST 900000UL
+#define BATCH_NORM_GRAD_V3_INFER 910000UL
 
 extern "C" __global__ __aicore__ void batch_norm_grad_v3(
     GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean, GM_ADDR running_var, GM_ADDR save_mean,
     GM_ADDR save_rstd, GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace, GM_ADDR tiling)
 {
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     TPipe pipe;
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
-    if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_FLOAT)) {
+    if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARFullLoadTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RARFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARFullLoad<float, float, DOUBLE_BUFFER> op(&pipe);
+        BatchNormGradV3RARFullLoad<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_FLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARFullLoad<half, half, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_BFLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARFullLoad<bfloat16_t, bfloat16_t, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_MIXED_FP16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARFullLoad<half, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_FULL_LOAD_MIXED_BF16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARFullLoad<bfloat16_t, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_FLOAT)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<float, float, DOUBLE_BUFFER> op;
+        BatchNormGradV3RARRecomputeSplitR0<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op;
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_FLOAT16)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<half, half, DOUBLE_BUFFER> op;
+        BatchNormGradV3RARSplitR1<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_BFLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<bfloat16_t, bfloat16_t, DOUBLE_BUFFER> op;
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_MIXED_FP16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<half, float, DOUBLE_BUFFER> op;
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_RECOMPUTE_SPLIT_R0_MIXED_BF16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARRecomputeSplitR0<bfloat16_t, float, DOUBLE_BUFFER> op;
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_FLOAT)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARSplitR1<float, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_FLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARSplitR1<half, half, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_BFLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARSplitR1<bfloat16_t, bfloat16_t, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_MIXED_FP16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARSplitR1<half, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RAR_SPLIT_R1_MIXED_BF16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARRecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARRecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARSplitR1<bfloat16_t, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD_FLOAT)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RAFullLoadTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RAFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RAFullLoad<float, float, DOUBLE_BUFFER> op(&pipe);
+        BatchNormGradV3RAFullLoad<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD_FLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RAFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RAFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RAFullLoad<half, half, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD_BFLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RAFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RAFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RAFullLoad<bfloat16_t, bfloat16_t, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD_MIXED_FP16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RAFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RAFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RAFullLoad<half, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_FULL_LOAD_MIXED_BF16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RAFullLoadTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RAFullLoadTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RAFullLoad<bfloat16_t, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE_FLOAT)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARecomputeTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RARecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARecompute<float, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE_FLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARecompute<half, half, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE_BFLOAT16)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARecompute<bfloat16_t, bfloat16_t, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE_MIXED_FP16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARecompute<half, float, DOUBLE_BUFFER> op(&pipe);
-        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_RECOMPUTE_MIXED_BF16_FP32)) {
-        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RARecomputeTilingData, tilingDataIn, tiling);
-        const BatchNormGradV3RARecomputeTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RARecompute<bfloat16_t, float, DOUBLE_BUFFER> op(&pipe);
+        BatchNormGradV3RARecompute<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
     } else if (
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP32_FP32_F32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP16_FP16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_BF16_BF16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP32_FP16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP32_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_FP32_BF16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_FP32_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_FP16_FP16_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST_BF16_BF16_FP32)) {
+        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3InferChannelLastTilingData, tiling_data_in, tiling);
         const BatchNormGradV3InferChannelLastTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormGradV3InferChannelLast<DTYPE_DY, DTYPE_WEIGHT, DTYPE_RUNNING_VAR> op(tilingData);
         op.Init(dy, weight, running_var, dx, &pipe);
         op.Process();
     } else if (
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_FP32_FP32_F32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_FP16_FP16_FP16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_BF16_BF16_BF16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_FP16_FP32_FP16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_FP16_FP32_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_BF16_FP32_BF16) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_BF16_FP32_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_FP16_FP16_FP32) ||
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_BF16_BF16_FP32)) {
+        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3InferTilingData, tiling_data_in, tiling);
         const BatchNormGradV3InferTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormGradV3Infer<DTYPE_DY, DTYPE_WEIGHT, DTYPE_RUNNING_VAR> op(tilingData);

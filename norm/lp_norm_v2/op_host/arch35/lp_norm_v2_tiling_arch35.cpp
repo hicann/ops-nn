@@ -67,20 +67,12 @@ ge::graphStatus LpNormV2Tiling::SetTilingData()
 {
     OP_LOGD(tilingContext_->GetNodeName(), "Enter SetTilingData");
 
-    tilingData_.set_epsilon(epsilon_);
-    tilingData_.set_p(p_);
-    tilingData_.set_recp(recp_);
+    tilingData_->epsilon = epsilon_;
+    tilingData_->p = p_;
+    tilingData_->recp = recp_;
 
     auto rawTilingData = tilingContext_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, rawTilingData);
-    OP_CHECK_IF(
-        tilingData_.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(tilingContext_->GetNodeName(),
-                                        "actual tilingData_ data size %zu > context tilingData_ data size %zu",
-                                        tilingData_.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
-    tilingData_.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    rawTilingData->SetDataSize(tilingData_.GetDataSize());
 
     const uint64_t tilingKey = GET_TPL_TILING_KEY(key_.reduceTiling.patternID, key_.reduceTiling.loopARCount,
                                                   key_.reduceTiling.loopInnerARCount, key_.templateNum);
@@ -250,43 +242,6 @@ ge::graphStatus LpNormV2Tiling::HandlePOther(const ReduceOpCompileInfo* compileI
     return ge::GRAPH_SUCCESS;
 }
 
-void ConvertReduceOpTilingData(ReduceOpTilingDataV2* dst, const ReduceOpTilingData* src)
-{
-    dst->set_factorACntPerCore(src->factorACntPerCore);
-    dst->set_factorATotalCnt(src->factorATotalCnt);
-    dst->set_ubFactorA(src->ubFactorA);
-    dst->set_factorRCntPerCore(src->factorRCntPerCore);
-    dst->set_factorRTotalCnt(src->factorRTotalCnt);
-    dst->set_ubFactorR(src->ubFactorR);
-    dst->set_groupR(src->groupR);
-    dst->set_outSize(src->outSize);
-    dst->set_basicBlock(src->basicBlock);
-    dst->set_resultBlock(src->resultBlock);
-    dst->set_coreNum(src->coreNum);
-    dst->set_useNddma(src->useNddma);
-    dst->set_meanVar(src->meanVar);
-    uint64_t shape[MAX_DIM] = {0};
-    int64_t stride[MAX_DIM] = {0};
-    int64_t dstStride[MAX_DIM] = {0};
-    uint64_t sliceNum[MAX_DIM] = {0};
-    uint64_t sliceShape[MAX_DIM] = {0};
-    uint64_t sliceStride[MAX_DIM] = {0};
-    for (int32_t i = 0; i < MAX_DIM; i++) {
-        shape[i] = src->shape[i];
-        stride[i] = src->stride[i];
-        dstStride[i] = src->dstStride[i];
-        sliceNum[i] = src->sliceNum[i];
-        sliceShape[i] = src->sliceShape[i];
-        sliceStride[i] = src->sliceStride[i];
-    }
-    dst->set_shape(shape);
-    dst->set_stride(stride);
-    dst->set_dstStride(dstStride);
-    dst->set_sliceNum(sliceNum);
-    dst->set_sliceShape(sliceShape);
-    dst->set_sliceStride(sliceStride);
-}
-
 ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileInfo)
 {
     ReduceOpInputParam opInput;
@@ -297,21 +252,19 @@ ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileI
     opInput.axes = reduceAxis_;
 
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
-    ReduceOpTilingData reduceTiling;
     if (Isclose(p_, P0)) {
-        ret = HandleP0(compileInfo, opInput, reduceTiling);
+        ret = HandleP0(compileInfo, opInput, tilingData_->reduceTiling);
     } else if (Isclose(p_, P1)) {
-        ret = HandleP1(compileInfo, opInput, reduceTiling);
+        ret = HandleP1(compileInfo, opInput, tilingData_->reduceTiling);
     } else if (Isclose(p_, P2)) {
-        ret = HandleP2(compileInfo, opInput, reduceTiling);
+        ret = HandleP2(compileInfo, opInput, tilingData_->reduceTiling);
     } else if (Isclose(p_, P3)) {
-        ret = HandleP3(compileInfo, opInput, reduceTiling);
+        ret = HandleP3(compileInfo, opInput, tilingData_->reduceTiling);
     } else if (std::isinf(p_)) {
-        ret = HandlePInf(compileInfo, opInput, reduceTiling);
+        ret = HandlePInf(compileInfo, opInput, tilingData_->reduceTiling);
     } else {
-        ret = HandlePOther(compileInfo, opInput, reduceTiling);
+        ret = HandlePOther(compileInfo, opInput, tilingData_->reduceTiling);
     }
-    ConvertReduceOpTilingData(&tilingData_.reduceTiling, &reduceTiling);
     OP_CHECK_IF(
         (ret == ge::GRAPH_FAILED),
         OP_LOGE(tilingContext_->GetNodeName(), "LpNormV2 Tiling for p: %f failed", p_),
@@ -414,6 +367,7 @@ ge::graphStatus LpNormV2Tiling::RunTiling(const ReduceOpCompileInfo* compileInfo
         OP_LOGE("LpNormV2Tiling", "tilingContext_ is nullptr.");
         return ge::GRAPH_FAILED;
     }
+    tilingData_ = tilingContext_->GetTilingData<LpNormV2TilingData>();
 
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, OP_LOGE("LpNormV2Tiling", "get and check dtypes failed."),
                     return ge::GRAPH_FAILED);

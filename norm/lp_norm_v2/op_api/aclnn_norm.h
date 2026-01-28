@@ -22,12 +22,11 @@ extern "C" {
  * @brief 根据具体的计算流程，计算workspace大小
  * @domain aclnn_ops_infer
  * @param [in] self: npu device侧的aclTensor, 数据类型支持浮点数据类型
- * @param [in] pScalar: host侧aclScalar, 数据类型支持浮点数据类型
+ * @param [in] p: host侧aclScalar, 数据类型支持浮点数据类型
  * @param [in] dim: npu device侧的aclIntArray, 代表对应的降维轴Axis的信息
  * @param [in] keepdim: host侧的bool, 代表是否保留对应dim维度的信息
- * @param [out] out: npu device侧的aclTensor，用于存储计算结果
- * @param [out] workspaceSize: 返回用户需要的npu device侧申请的workspace大小
- * @param [out] executor: 返回op执行器，包含算子计算流程
+ * @param [in] workspaceSize: 返回用户需要的npu device侧申请的workspace大小
+ * @param [in] executor: 返回op执行器，包含算子计算流程
  * @return aclnnStatus: 返回状态码
  * */
 ACLNN_API aclnnStatus aclnnNormGetWorkspaceSize(
@@ -38,7 +37,7 @@ ACLNN_API aclnnStatus aclnnNormGetWorkspaceSize(
  * aclnnNorm的第二段接口，用于执行计算
  * @param [in] workspace: 在npu device侧申请的workspace内存地址
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnNormGetWorkspaceSize获取
- * @param [in] executor: op执行器，由aclnnNormGetWorkspaceSize返回，包含算子计算流程
+ * @param [in] executor: 返回op执行器，包含算子计算流程
  * @param [in] stream: acl stream流
  * @return aclnnStatus: 返回状态码
  */

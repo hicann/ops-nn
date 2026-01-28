@@ -366,7 +366,7 @@ ge::graphStatus BatchNormGradV3TilingBase::GetShapesAndCheckValid()
 
 ge::graphStatus BatchNormGradV3TilingBase::GetShapeAttrsInfo()
 {
-    OP_LOGE(context_->GetNodeName(), "TilingContext: %s", optiling::BNGDebugTilingContext(context_).c_str());
+    OP_LOGD(context_->GetNodeName(), "TilingContext: %s", optiling::BNGDebugTilingContext(context_).c_str());
 
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -531,19 +531,11 @@ ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::DoOpTiling()
 
 uint64_t BatchNormGradV3RARFullLoadTilingBase::GetTilingKey() const
 {
-    uint64_t tilingKeyValue = BNG_V3_RAR_ALL_LOAD_TK_BASE;
-    if (dyDtype == ge::DataType::DT_FLOAT) {
-        tilingKeyValue += BNG_V3_TK_FLOAT_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_FLOAT16) {
-        tilingKeyValue +=
-            weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_FLOAT16_FLOAT32_SUBTYPE : BNG_V3_TK_FLOAT16_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_BF16) {
-        tilingKeyValue += weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_BFLOAT16_FLOAT32_SUBTYPE :
-                                                                  BNG_V3_TK_BFLOAT16_SUBTYPE;
-    } else {
+    if (dyDtype != ge::DataType::DT_FLOAT && dyDtype != ge::DataType::DT_FLOAT16 && dyDtype != ge::DataType::DT_BF16) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "DoLibApiTiling Not supported datatype.");
         return BNG_V3_TK_DEFAULT;
     }
+    uint64_t tilingKeyValue = BNG_V3_RAR_ALL_LOAD_TK_BASE;
     OP_LOGD(context_->GetNodeName(), "BatchNormGradV3 get tiling key: %lx", tilingKeyValue);
     return tilingKeyValue;
 }
@@ -706,20 +698,12 @@ ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::DoOpTiling()
 
 uint64_t BatchNormGradV3RARRecomputeTilingBase::GetTilingKey() const
 {
-    uint64_t tilingKeyValue = BNG_V3_RAR_RECOMPUTE_TK_BASE;
-    tilingKeyValue += subTilingKey;
-    if (dyDtype == ge::DataType::DT_FLOAT) {
-        tilingKeyValue += BNG_V3_TK_FLOAT_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_FLOAT16) {
-        tilingKeyValue +=
-            weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_FLOAT16_FLOAT32_SUBTYPE : BNG_V3_TK_FLOAT16_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_BF16) {
-        tilingKeyValue += weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_BFLOAT16_FLOAT32_SUBTYPE :
-                                                                  BNG_V3_TK_BFLOAT16_SUBTYPE;
-    } else {
+    if (dyDtype != ge::DataType::DT_FLOAT && dyDtype != ge::DataType::DT_FLOAT16 && dyDtype != ge::DataType::DT_BF16) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "DoLibApiTiling Not supported datatype.");
         return BNG_V3_TK_DEFAULT;
     }
+    uint64_t tilingKeyValue = BNG_V3_RAR_RECOMPUTE_TK_BASE;
+    tilingKeyValue += subTilingKey;
     OP_LOGD(context_->GetNodeName(), "BatchNormGradV3 get tiling key: %lx", tilingKeyValue);
     return tilingKeyValue;
 }
@@ -860,19 +844,11 @@ void BatchNormGradV3RAFullLoadTilingBase::SetReduceLoopTimes(int64_t power2k, in
 
 uint64_t BatchNormGradV3RAFullLoadTilingBase::GetTilingKey() const
 {
-    uint64_t tilingKeyValue = BNG_V3_RA_ALL_LOAD_TK_BASE;
-    if (dyDtype == ge::DataType::DT_FLOAT) {
-        tilingKeyValue += BNG_V3_TK_FLOAT_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_FLOAT16) {
-        tilingKeyValue +=
-            weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_FLOAT16_FLOAT32_SUBTYPE : BNG_V3_TK_FLOAT16_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_BF16) {
-        tilingKeyValue += weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_BFLOAT16_FLOAT32_SUBTYPE :
-                                                                  BNG_V3_TK_BFLOAT16_SUBTYPE;
-    } else {
+    if (dyDtype != ge::DataType::DT_FLOAT && dyDtype != ge::DataType::DT_FLOAT16 && dyDtype != ge::DataType::DT_BF16) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "DoLibApiTiling Not supported datatype.");
         return BNG_V3_TK_DEFAULT;
     }
+    uint64_t tilingKeyValue = BNG_V3_RA_ALL_LOAD_TK_BASE;
     OP_LOGD(context_->GetNodeName(), "BatchNormGradV3 get tiling key: %lx", tilingKeyValue);
     return tilingKeyValue;
 }
@@ -966,19 +942,11 @@ void BatchNormGradV3RARecomputeTilingBase::SetBlockFactors(int64_t aDim_, int64_
 
 uint64_t BatchNormGradV3RARecomputeTilingBase::GetTilingKey() const
 {
-    uint64_t tilingKeyValue = BNG_V3_RA_RECOMPUTE_TK_BASE;
-    if (dyDtype == ge::DataType::DT_FLOAT) {
-        tilingKeyValue += BNG_V3_TK_FLOAT_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_FLOAT16) {
-        tilingKeyValue +=
-            weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_FLOAT16_FLOAT32_SUBTYPE : BNG_V3_TK_FLOAT16_SUBTYPE;
-    } else if (dyDtype == ge::DataType::DT_BF16) {
-        tilingKeyValue += weightDtype == ge::DataType::DT_FLOAT ? BNG_V3_TK_MIXED_BFLOAT16_FLOAT32_SUBTYPE :
-                                                                  BNG_V3_TK_BFLOAT16_SUBTYPE;
-    } else {
+    if (dyDtype != ge::DataType::DT_FLOAT && dyDtype != ge::DataType::DT_FLOAT16 && dyDtype != ge::DataType::DT_BF16) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "DoLibApiTiling Not supported datatype.");
         return BNG_V3_TK_DEFAULT;
-    }
+    } 
+    uint64_t tilingKeyValue = BNG_V3_RA_RECOMPUTE_TK_BASE;
     OP_LOGD(context_->GetNodeName(), "BatchNormGradV3 get tiling key: %lx", tilingKeyValue);
     return tilingKeyValue;
 }

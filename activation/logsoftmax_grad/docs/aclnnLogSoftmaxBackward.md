@@ -1,17 +1,22 @@
 ## aclnnLogSoftmaxBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/logsoftmax_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
-- 接口功能：完成[aclnnLogSoftmax](../../logsoftmax_v2/docs/aclnnLogSoftmax.md)的反向传播。
+- 接口功能：完成[aclnnLogSoftmax](../../log_softmax_v2/docs/aclnnLogSoftmax.md)的反向传播。
 - 计算公式：
-
 $$
 out = gradOutput - sum(gradOutput) \cdot exp(output)
 $$
@@ -125,6 +130,9 @@ aclnnStatus aclnnLogSoftmaxBackward(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32不需要额外申请空间，其他数据类型通过自动cast能力支持，但会额外申请空间。
+
 
 - **返回值：**
 
@@ -202,6 +210,7 @@ aclnnStatus aclnnLogSoftmaxBackward(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 

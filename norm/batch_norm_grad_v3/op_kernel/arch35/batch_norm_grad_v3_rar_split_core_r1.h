@@ -375,8 +375,8 @@ public:
                         LoadOneTensor<DY_DTYPE>(xLocal, regX, pregMask, offset);
 
                         Sub(regX, regX, regMean, pregMask);
-                        Mul(regX, regX, regRstd, pregMask);
                         Mul(regX, regX, regDy, pregMask);
+                        Mul(regX, regX, regRstd, pregMask);
                         DataCopy((__local_mem__ float*)dgammaReduceTmpLocal + offset, regX, pregMask);
 
                         if constexpr (!IsSameType<DY_DTYPE, float>::value) {
@@ -408,7 +408,7 @@ public:
 
     __aicore__ inline int64_t GetCacheID(const int64_t idx)
     {
-        return return ScalarGetCountOfValue<1>(idx ^ (idx + CONST_ONE)) - CONST_ONE;
+        return ScalarGetCountOfValue<1>(idx ^ (idx + CONST_ONE)) - CONST_ONE;
     }
 
     __aicore__ inline void UpdateCache(

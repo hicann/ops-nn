@@ -13,39 +13,40 @@
 | <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
+
 ## 功能说明
 
 - 接口功能：返回给定张量的矩阵范数或者向量范数。
 
 - 计算公式：支持1/2范数、无穷范数以及其他`p`为float类型的范数计算。
-  - 1-范数：
-
+  - 1-范数：  
+  
     $$
     \Vert x \Vert = \sum_{i=1}^{N}{\vert x_i \vert}
     $$
 
-  - 2-范数（默认值）：
+  - 2-范数（默认值）：  
 
     $$
     \Vert x \Vert_2 = (\sum_{i=1}^{N}{\vert x_i \vert^2})^{\frac{1}{2}}
     $$
 
   - 无穷范数：
-
+  
     $$
     \Vert x \Vert_\infty = \max\limits_{i}{\vert x_i \vert}
     $$
-
+  
     $$
     \Vert x \Vert_{-\infty} = \min\limits_{i}{\vert x_i \vert}
     $$
 
   - p范数：
-
+  
     $$
     \Vert x \Vert_p = (\sum_{i=1}^{N}{\vert x_i \vert^p})^{\frac{1}{p}}
     $$
-
+  
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnNormGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNorm”接口执行计算。
@@ -77,6 +78,7 @@
 
   - executor（aclOpExecutor**，出参）：返回op执行器，包含了算子计算流程。
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -103,6 +105,9 @@
   - executor（aclOpExecutor*，出参）：op执行器，包含了算子计算流程。
 
   - stream（aclrtStream，入参）：指定执行任务的Stream。
+
+
+
 
 - **返回值：**
 
@@ -213,6 +218,7 @@ int main() {
   // 创建dim aclIntArray
   dim = aclCreateIntArray(dimData.data(), 1);
   CHECK_RET(dim != nullptr, return ret);
+
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;

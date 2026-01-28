@@ -27,7 +27,7 @@ namespace ge {
 
 *@par Attributes:
 * axes: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}" .
-* In Ascend 910_95 AI Processor, only single-axis reduction is supported. \n
+* In npuArch 3510 AI Processor, only single-axis reduction is supported. \n
 
 *@par Outputs:
 * logsoftmax: A ND tensor. Has the same data type as "logits" . \n
