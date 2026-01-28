@@ -52,6 +52,7 @@ static const uint64_t BLOCK_CUBE = 16UL;
 static const uint64_t KB_SIZE = 1024UL;
 static const uint64_t UB_SIZE = 248UL * 1024UL;
 static const uint64_t MIN_BATCH_NUM = 128UL;
+static const uint64_t MIN_BATCH_L0 = 4;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -414,8 +415,7 @@ const aclTensor* GetBatchMatmulOp(
     return bmmOpOut;
 }
 
-bool CheckTransNonContiguousShapeSupport(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, bool adjX1)
+bool CheckTransNonContiguousShapeSupport(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias)
 {
     uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
  	if (bias || aicoreNum == 0) {
@@ -429,10 +429,8 @@ bool CheckTransNonContiguousShapeSupport(
     constexpr uint64_t l0bSize = 64 * KB_SIZE;
     constexpr uint64_t l0cSize = 256 * KB_SIZE;
     constexpr uint64_t l1Size = 512 * KB_SIZE;
-    uint64_t mDim = adjX1 ? self->GetViewShape()[self->GetViewShape().GetDimNum() - 1] :
-                            self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
-    uint64_t kDim = adjX1 ? self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO] :
-                            self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
+    uint64_t mDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
+    uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
     uint64_t nDim = mat2->GetViewShape()[mat2->GetViewShape().GetDimNum() - 1]; // 非连续场景viewshape一定是bkn格式
     uint64_t batchNum = GetBatchDimAll(self);
     bool batchEqual = IsBatchEqual(GetBatchDim(self), GetBatchDim(mat2));
@@ -469,8 +467,58 @@ bool CheckTransNonContiguousShapeSupport(
     return true;
 }
 
+bool CheckMergeBatchNonContiguousShapeSupport(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, bool adjX1, bool adjX2, int8_t cubeMathType)
+{
+    uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
+    bool isHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
+    if (bias || aicoreNum == 0 || (self->GetDataType() == op::DataType::DT_FLOAT && !isHf32)) {
+        return false;
+    }
+    bool batchEqual = IsBatchEqual(GetBatchDim(self), GetBatchDim(mat2));
+    if (!batchEqual) {
+        return false;
+    }
+    uint64_t batchNum = GetBatchDimAll(self);
+    if (batchNum < MIN_BATCH_L0 * aicoreNum) {
+        return false;
+    }
+    uint64_t adtypeSize = static_cast<uint64_t>(op::TypeSize(self->GetDataType()));
+    uint64_t bdtypeSize = static_cast<uint64_t>(op::TypeSize(mat2->GetDataType()));
+    uint64_t c0 = static_cast<uint64_t>(BLOCK_BYTE_SIZE) / adtypeSize;
+    uint64_t mDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
+    uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
+    uint64_t nDim = mat2->GetViewShape()[mat2->GetViewShape().GetDimNum() - 1]; // 非连续场景viewshape一定是bkn格式
+    uint64_t alignKaValue = CeilAlign(kDim, c0);
+    uint64_t alignNValue = CeilAlign(nDim, BLOCK_CUBE);
+    if (alignKaValue < 64UL || mDim > nDim) {
+        return false;
+    }
+    uint64_t tempAlignM = CeilAlign(mDim * MIN_BATCH_L0, BLOCK_CUBE);
+    if (adjX1 && mDim > 1) {
+        tempAlignM = MIN_BATCH_L0 * CeilAlign(mDim, BLOCK_CUBE);
+    }
+    uint64_t tempAlignN = MIN_BATCH_L0 * alignNValue;
+    uint64_t minBaseK = c0;
+    if (adjX1 || !adjX2) {
+        minBaseK = CeilAlign(minBaseK, BLOCK_CUBE);
+    }
+    constexpr uint64_t floatSize = 4UL;
+    constexpr uint64_t pingPong = 2UL;
+    // 91095芯片参数
+    constexpr uint64_t l0aSize = 64 * KB_SIZE;
+    constexpr uint64_t l0bSize = 64 * KB_SIZE;
+    constexpr uint64_t l0cSize = 256 * KB_SIZE;
+    uint64_t al0Size = tempAlignM * minBaseK * adtypeSize * pingPong;
+    uint64_t bl0Size = tempAlignN * minBaseK * bdtypeSize * pingPong;
+    if (al0Size > l0aSize || bl0Size > l0bSize || tempAlignM * tempAlignN * floatSize * pingPong > l0cSize) {
+        return false;
+    }
+    return true;
+}
+
 bool CheckNonContiguousTranspose(
-    const aclTensor* self, const aclTensor* mat2, bool& isNeedSwapInnerTwoDim, const aclTensor* bias, bool adjX1)
+    const aclTensor* self, const aclTensor* mat2, bool& isNeedSwapInnerTwoDim, const aclTensor* bias, bool adjX1 , bool adjX2, int8_t cubeMathType)
 {
     if (!Ops::NN::IsTransposeNonContiguous(mat2, isNeedSwapInnerTwoDim)) {
         return false;
@@ -481,9 +529,13 @@ bool CheckNonContiguousTranspose(
         OP_LOGI("Format NZ is not supported for transpose.");
         return false;
     }
-    // 对shape校验，只支持多batch载入模板
-    if (!CheckTransNonContiguousShapeSupport(self, mat2, bias, adjX1)) {
-        OP_LOGI("Shape is not supported for transpose.");
+    if (CheckMergeBatchNonContiguousShapeSupport(self, mat2, bias, adjX1, adjX2, cubeMathType)) {
+        OP_LOGI("Shape is not supported for transpose. It match the mergebatch");
+        return false;
+    }
+    // 对shape多batch模板校验，只支持多batch载入模板
+    if (!CheckTransNonContiguousShapeSupport(self, mat2, bias)) {
+        OP_LOGI("Shape is not supported for transpose. It does not match the iterbatch");
         return false;
     }
     // transpose场景下，增加dtype判断，仅支持左右矩阵dtype相同
@@ -491,6 +543,7 @@ bool CheckNonContiguousTranspose(
         OP_LOGI("The data type of the self does not match the type of mat2 for transpose.");
         return false;
     }
+    OP_LOGI("Hit transpose scenario.");
     return true;
 }
 
@@ -796,7 +849,7 @@ const aclTensor* ExecBmmOpWithBias(
             OP_LOGI("format NZ is not supported for transpose.");
             isTransposeMat2Contiguous = false;
         }
-        if (!CheckTransNonContiguousShapeSupport(self, mat2, bias, transposeSelf)) {
+        if (!CheckTransNonContiguousShapeSupport(self, mat2, bias)) {
             OP_LOGI("shape is not supported for transpose");
             isTransposeMat2Contiguous = false;
         }
@@ -891,12 +944,12 @@ const aclTensor* ExecBmmOpWithBiasV2(
     reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
     CHECK_RET(reformatSelf != nullptr, nullptr);
     auto transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
-    auto transposeMat2 = false;
+    auto transposeMat2 = Ops::NN::IsTransposeLastTwoDims(mat2);
 
     bool isNeedSwapInnerTwoDim = false; // 非连续场景下右矩阵转置属性
     bool isTransposeMat2Contiguous =
-        CheckNonContiguousTranspose(self, mat2, isNeedSwapInnerTwoDim, bias, transposeSelf);
-
+        CheckNonContiguousTranspose(self, mat2, isNeedSwapInnerTwoDim, bias, transposeSelf, transposeMat2, cubeMathType);
+    transposeMat2 = false;
     const aclTensor* reformatMat2 = nullptr;
     if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ && !isTransposeMat2Contiguous) {
         OP_LOGI("Mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
