@@ -4,19 +4,23 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 算子功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
 - 计算公式：
-
+  
   $$
   DeepNorm(x_i^{\prime}) = (\frac{x_i^{\prime} - \bar{x^{\prime}}}{rstd}) * gamma + beta,
   $$
-
-
+  
   $$
   \text { where } rstd = \sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps} , \quad \operatorname{x^{\prime}_i} = alpha * x_i   + gx_i
   $$
@@ -104,6 +108,8 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+  - <term>Atlas 推理系列产品</term>：所有输入参数和输出参数y的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

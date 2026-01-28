@@ -1,12 +1,17 @@
 # aclnnDynamicQuantV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dynamic_quant_v2)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
 
 ## 功能说明
 
@@ -71,13 +76,13 @@
         yOut=round(input/scaleOut+offset)
       $$
 
-  其中row\_max代表每行求最大值，row_min代表每行求最小值。当输出yOut类型为INT8时，scale_opt为255.0，offset_opt为127.0；yOut类型为INT4时，scale_opt为15.0，offset_opt为7.0。
+  其中row\_max代表每行求最大值，row_min代表每行求最小值。当输出yOut类型为INT8时，scale_opt为255.0，offset_opt为127.0；yOut类型为INT4或INT32时，scale_opt为15.0，offset_opt为7.0。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicQuantV2”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnDynamicQuantV2GetWorkspaceSize(
   const aclTensor *x,
   const aclTensor *smoothScalesOptional,
@@ -90,7 +95,7 @@ aclnnStatus aclnnDynamicQuantV2GetWorkspaceSize(
   aclOpExecutor  **executor)
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnDynamicQuantV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -158,7 +163,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>dstType</td>
       <td>输入</td>
       <td>输出y的类型对应的枚举值。</td>
-      <td><ul><li>如果输出y类型为INT8，则为2；y类型为INT4时，则为29。</li></ul></td>
+      <td><ul><li>如果输出y类型为INT8，则为2；y类型为INT4时，则为29；y类型为INT32时，则为3。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -168,8 +173,8 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>yOut</td>
       <td>输出</td>
       <td>量化后的输出Tensor。对应公式中的`yOut`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape维度和x保持一致。</li></ul></td>
-      <td>INT4、INT8</td>
+      <td><ul><li>支持空Tensor。</li><li>类型为INT32时，shape的最后一维是x最后一维的1/8，其余维度和x一致。其他类型时，shape与x一致。</li></ul></td>
+      <td>INT4、INT8、INT32</td>
       <td>ND</td>
       <td>大于1维</td>
       <td>-</td>
@@ -217,6 +222,12 @@ aclnnStatus aclnnDynamicQuantV2(
   </tbody>
   </table>
 
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
+    - 入参`x`仅支持FLOAT16。
+    - 入参`smoothScalesOptional`、`groupIndexOptional`为预留参数，当前版本不参与计算。
+    - 入参`dstType`只支持配置为2。
+    - 出参`yOut`只支持INT8。
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -306,6 +317,7 @@ aclnnStatus aclnnDynamicQuantV2(
 
 - `yOut`的数据类型为INT4时，需满足`x`和`yOut`的最后一维能被2整除。
 - `yOut`的数据类型为INT32时，需满足`x`的最后一维能被8整除。
+- <term>Atlas 推理系列产品</term>：尾轴只支持32位对齐的数据，暂时只支持对称量化，不支持BFLOAT16数据类型。
 - 确定性计算：
   - aclnnDynamicQuantV2默认确定性实现。
 

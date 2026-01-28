@@ -33,7 +33,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnForeachMulScalarV2GetWorkspaceSize`接口获取入参并根据计算流程计算所需workspace大小，再调用`aclnnForeachMulScalarV2`接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMulScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
@@ -42,7 +42,7 @@ aclnnStatus aclnnForeachMulScalarV2GetWorkspaceSize(
   aclOpExecutor      **executor)
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMulScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,

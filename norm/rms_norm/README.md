@@ -7,6 +7,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+|  <term>Kirin X90 处理器系列产品</term>       |     √    |
 
 ## 功能说明
 
@@ -70,6 +74,8 @@
       <td>FLOAT32</td>
       <td>ND</td>
   </tbody></table>
+
+  - <term>Atlas 推理系列产品</term>、<term>Kirin X90 处理器系列产品</term>：所有输入参数和输出参数的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

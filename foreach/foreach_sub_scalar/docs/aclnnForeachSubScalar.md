@@ -1,11 +1,18 @@
 # aclnnForeachSubScalar
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_sub_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -25,6 +32,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubScalarGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubScalar”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnForeachSubScalarGetWorkspaceSize(
   const aclTensorList      *x,
@@ -33,6 +41,7 @@ aclnnStatus aclnnForeachSubScalarGetWorkspaceSize(
   uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnForeachSubScalar(
   void                 *workspace,

@@ -13,6 +13,7 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
+
 ## 功能说明
 
 - 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。
@@ -339,7 +340,7 @@ int main() {
   std::vector<int64_t> anotherShape1 = {2, 3};
   std::vector<int64_t> anotherShape2 = {1, 3};
   std::vector<int64_t> outShape1 = {2, 3};
-  std::vector<int64_t> outShape2 = {1, 3};  
+  std::vector<int64_t> outShape2 = {1, 3};
   std::vector<int64_t> alphaShape = {1};
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
@@ -389,7 +390,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclTensor
   ret = CreateAclTensor(alphaValueHostData, alphaShape, &alphaDeviceAddr, aclDataType::ACL_FLOAT, &alpha);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建out1 aclTensor
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

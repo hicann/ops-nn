@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能描述
 
@@ -170,7 +175,12 @@
     </tr>
   </tbody></table>
 
+  - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`x`、`resOut`的数据类型不支持BFLOAT16。
+
+
 ## 约束说明
+
+- <term>Atlas 推理系列产品</term>：`x1`、`x2`需要Norm的维度数据个数不能小于32。`gamma`、`bias`、`scales1`、`scales2`、`zeroPoints1`、`zeroPoints2`的数据个数不能小于32。
 
 - 可选输出`x`和`resOut`，必须且只能选择其一进行输出。
 - 当需要输出`y2`时，此时要求`gamma`与`scale`的shape保持一致，且需要与`x1`需要Norm的维度保持一致，可选输出只能输出`x`。
@@ -179,12 +189,13 @@
 
 - **边界值场景说明**
 
+  - <term>Atlas 推理系列产品</term>：输入不支持包含inf和NaN。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
 
 - **维度的边界说明**
 
   参数`x1`、`x2`、`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`y1`、`y2`、`x`、`resOut`的shape中每一维大小都不大于INT32的最大值2147483647。
-
+  
 - **数据格式说明**
 
     所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
@@ -196,6 +207,12 @@
      | - | - | - | - | - | - | - | - | - | - | - | - |
      | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
      | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
+
+  - <term>Atlas 推理系列产品</term>：
+
+    | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2数据类型 | zero_points1数据类型 | zero_points2数据类型 | bias数据类型 | y1数据类型 | y2数据类型 | x数据类型 | resOut数据类型 |
+    | - | - | - | - | - | - | - | - | - | - | - | - |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
 
 ## 调用说明
 

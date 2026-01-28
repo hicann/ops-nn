@@ -1,11 +1,17 @@
 # aclnnTransQuantParamV3
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/trans_quant_param_v2)
+
 ## 产品支持情况
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品</term>                             |    √    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
@@ -67,6 +73,7 @@ aclnnStatus aclnnTransQuantParamV3(
 
 - **参数说明：**
 
+
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -113,7 +120,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>roundMode</td>
       <td>输入</td>
       <td>量化计算中FP32填充到FP19的round模式。对应公式描述中的`roundMode`。</td>
-      <td>支持以下取值：0（兼容V2），1（提升计算精度）。</td>
+      <td>仅支持以下取值：0（兼容V2），1（提升计算精度）。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -182,7 +189,7 @@ aclnnStatus aclnnTransQuantParamV3(
       <td>scale、offset或out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>offset、scale的shape不是(t,)或者(1, n)。t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。</td>
+      <td>scale、offset的shape不在支持的范围内。</td>
     </tr>
     <tr>
       <td>roundMode的值不在支持的范围内。</tr>
@@ -233,8 +240,8 @@ aclnnStatus aclnnTransQuantParamV3(
 
 ## 约束说明
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
+- <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：该接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
+- <term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
 - 关于scale、offset、out的shape说明如下：
   - 当无offset时，out shape与scale shape一致。
     - 若out作为matmul类算子输入（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)），shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。

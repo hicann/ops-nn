@@ -1,17 +1,24 @@
 # aclnnFastBatchNormBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/batch_norm_grad_v3)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×   |
+
 
 ## 功能说明
 
 - 接口功能：[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播（高性能版本）。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-
+  
   - 当training为true时：
 
     $$
@@ -75,7 +82,7 @@ aclnnStatus aclnnFastBatchNormBackward(
 ## aclnnFastBatchNormBackwardGetWorkspaceSize
 
 - **参数说明：**
-
+  
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -260,16 +267,16 @@ aclnnStatus aclnnFastBatchNormBackward(
     </tr>
   </tbody>
   </table>
-
+  
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     - 参数`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`、`gradWeight`、`gradBias`的数据类型与`gradOut`的保持一致。
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
-
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -334,7 +341,7 @@ aclnnStatus aclnnFastBatchNormBackward(
 ## aclnnFastBatchNormBackward
 
 - **参数说明：**
-
+  
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
   <col style="width: 112px">
@@ -370,7 +377,7 @@ aclnnStatus aclnnFastBatchNormBackward(
   </tbody>
   </table>
 - **返回值：**
-
+  
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

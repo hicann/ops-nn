@@ -19,6 +19,7 @@
 - 接口功能：对输入张量列表的每个张量进行范数运算。
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
@@ -28,18 +29,25 @@
     $$
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
+
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
+
     - scalar = +Inf:
+
       $$
       y = \max|x_i|
       $$
+
     - int(scalar) = 1:
+
       $$
       y = \sum_{i=0}^{n-1}|x_i|
       $$
+
     - other:
+
       $$
       y = \left(\sum_{i=0}^{n-1}|x_i|^{2}\right)^{\frac{1}{{2}}}
       $$
@@ -320,7 +328,7 @@ int main() {
   void* input1DeviceAddr = nullptr;
   void* input2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr; 
+  void* out2DeviceAddr = nullptr;
   aclTensor* input1 = nullptr;
   aclTensor* input2 = nullptr;
   aclScalar* alpha = nullptr;

@@ -19,6 +19,7 @@
 - 接口功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
+  
   $$
   foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
     foundInf, &其他.
@@ -85,7 +86,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
-    </tr>    
+    </tr>
     <tr>
       <td>foundInf</td>
       <td>输入/输出</td>

@@ -1,11 +1,18 @@
 # aclnnForeachMinimumScalarV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_minimum_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -25,7 +32,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnForeachMinimumScalarV2GetWorkspaceSize`接口获取入参并根据计算流程计算所需workspace大小，再调用`aclnnForeachMinimumScalarV2`接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
@@ -34,7 +41,7 @@ aclnnStatus aclnnForeachMinimumScalarV2GetWorkspaceSize(
   aclOpExecutor      **executor)
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMinimumScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -126,7 +133,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-
+  
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -163,6 +170,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
       <td>x或out中的Tensor维度超过8维。</td>
     </tr>
   </tbody></table>
+
 
 ## aclnnForeachMinimumScalarV2
 
@@ -202,6 +210,7 @@ aclnnStatus aclnnForeachMinimumScalarV2(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值**：
 

@@ -1,5 +1,7 @@
 # aclnnAddRmsNormQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,11 +9,14 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
-- 接口功能：
-  RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。
+- 接口功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。
 - 计算公式：
   
   $$
@@ -31,6 +36,7 @@
     $$
     y2Out=round((y/scales2)+zero\_points2)
     $$
+
   - divMode为False时：
 
     $$
@@ -45,7 +51,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddRmsNormQuantGetWorkspaceSize”接口获取入参并根据计算流程所需workspace大小，再调用“aclnnAddRmsNormQuant”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
   const aclTensor *x1,
   const aclTensor *x2,
@@ -62,16 +68,14 @@ aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
   aclTensor       *xOut,
   uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
-
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnAddRmsNormQuant(
   void          *workspace,
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
   aclrtStream    stream)
-
 ```
 
 ## aclnnAddRmsNormQuantGetWorkspaceSize
@@ -252,6 +256,14 @@ aclnnStatus aclnnAddRmsNormQuant(
   </tbody>
   </table>
   
+  - <term>Atlas 推理系列产品</term>：
+    - 数据类型：
+      - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16。
+      - 入参`scales1`、`scales2Optional`仅支持FLOAT32。
+      - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32。
+      - 出参`y1Out`、`y2Out`仅支持INT8。
+    - 入参`divMode`仅支持True。
+  
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16、BFLOAT16。
@@ -347,6 +359,8 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## 约束说明
 
+- <term>Atlas 推理系列产品</term>：x1、x2、y1Out、y2Out、xOut的norm轴长度，以及gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional的长度必须大于等于32Bytes。
+
 - 支持类型说明：
 
   是否支持空Tensor：支持空进空出。
@@ -362,6 +376,10 @@ aclnnStatus aclnnAddRmsNormQuant(
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
+  - <term>Atlas 推理系列产品</term>：
+    | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
+    | - | - | - | - | - | - | - | - | - | - |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
   - <term>Ascend 950PR/Ascend 950DT</term>：
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |

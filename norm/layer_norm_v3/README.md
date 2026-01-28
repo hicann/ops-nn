@@ -85,7 +85,7 @@
     <tr>
       <td>begin_params_axis</td>
       <td>可选属性</td>
-      <td><ul><li>表示参数的起始维度。在Ascend 950PR/Ascend 950DT AI处理器，begin_params_axis和begin_norm_axis的值是相同的。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>表示参数的起始维度。</li><li>默认值为0。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -118,6 +118,8 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：参数begin_params_axis和begin_norm_axis的值保持一致。
 
 ## 约束说明
 

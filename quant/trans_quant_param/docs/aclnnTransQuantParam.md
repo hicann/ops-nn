@@ -1,11 +1,17 @@
 # aclnnTransQuantParam
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/trans_quant_param)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -138,7 +144,7 @@ aclnnStatus aclnnTransQuantParam(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -198,30 +204,31 @@ aclnnStatus aclnnTransQuantParam(
 #include "aclnnop/aclnn_trans_quant_param.h"
 
 #define CHECK_RET(cond, return_expr) \
-  do {                               \
-    if (!(cond)) {                   \
-      return_expr;                   \
-    }                                \
-  } while (0)
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
 
-int main() {
-  float scaleArray[3] = {1.0, 1.0, 1.0};
-  uint64_t scaleSize = 3;
-  float offsetArray[3] = {1.0, 1.0, 1.0};
-  uint64_t offsetSize = 3;
-  uint64_t *result = nullptr;
-  uint64_t resultSize = 0;
-  auto ret = aclnnTransQuantParam(scaleArray, scaleSize, offsetArray, offsetSize, &result, &resultSize);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParam failed. ERROR: %d\n", ret); return ret);
-  for (auto i = 0; i < resultSize; i++) {
-    LOG_PRINT("result[%ld] is: %ld\n", i, result[i]);
-  }
-  free(result);
-  return 0;
+int main()
+{
+    float scaleArray[3] = {1.0, 1.0, 1.0};
+    uint64_t scaleSize = 3;
+    float offsetArray[3] = {1.0, 1.0, 1.0};
+    uint64_t offsetSize = 3;
+    uint64_t* result = nullptr;
+    uint64_t resultSize = 0;
+    auto ret = aclnnTransQuantParam(scaleArray, scaleSize, offsetArray, offsetSize, &result, &resultSize);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParam failed. ERROR: %d\n", ret); return ret);
+    for (auto i = 0; i < resultSize; i++) {
+        LOG_PRINT("result[%d] is: %ld\n", i, result[i]);
+    }
+    free(result);
+    return 0;
 }
 ```

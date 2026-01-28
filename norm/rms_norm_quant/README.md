@@ -4,8 +4,13 @@
 
 | 产品 | 是否支持 |
 | :---------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                                                |    ×    |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                        |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                                         |    √    |
+| <term>Atlas 推理系列产品</term>                                                |    √    |
+| <term>Atlas 训练系列产品</term>                                                 |    ×    |
+
 
 ## 功能说明
 
@@ -15,7 +20,7 @@
   $$
   quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} g_i + b_i, \quad \text { where }   \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
-
+  
   $$
   y=round((quant\_in*scale)+offset)
   $$
@@ -103,7 +108,11 @@
     </tr>
   </tbody></table>
 
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：输入参数`x`、`gamma`、`beta`、`scale`的数据类型不支持BFLOAT16。
+
 ## 约束说明
+
+- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
 
 ## 调用说明
 

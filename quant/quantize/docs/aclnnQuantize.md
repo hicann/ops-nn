@@ -1,24 +1,27 @@
 # aclnnQuantize
 
-
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/quantize)
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 接口功能：对输入张量x进行量化处理。
 - 计算公式：
-
+  
   $$
   out=round((x/scales)+zeroPoints)
   $$
-
+  
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantizeGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantize”接口执行计算。
@@ -151,19 +154,24 @@ aclnnStatus aclnnQuantize(
     </tr>
   </tbody>
   </table>
-
-
+  
+  - <term>Atlas 推理系列产品</term>：
+    - 数据类型：
+      - 入参`x`、`scales`不支持BFLOAT16、FLOAT32。
+      - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
+      - 出参`out`仅支持支持INT8、UINT8、INT32。
+    - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
       - 出参`out`仅支持INT8、UINT8、INT32。
     - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
-
+  
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

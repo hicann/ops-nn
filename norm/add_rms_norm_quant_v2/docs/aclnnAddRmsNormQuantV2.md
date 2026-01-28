@@ -1,11 +1,18 @@
 # aclnnAddRmsNormQuantV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_quant_v2)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能描述
 
@@ -34,7 +41,6 @@
     $$
     y2Out=round((y/scales2)+zeroPoints2Optional)
     $$
-
   - divMode为False时：
 
     $$
@@ -276,11 +282,13 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     </tr>
   </tbody>
   </table>
+  
+  - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`xOut`、`rmsNormOut`的数据类型不支持BFLOAT16。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -358,24 +366,33 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 ## 约束说明
 
+- <term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`betaOptional`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的数据个数不能小于32。
+
 - 输入gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional、betaOptional、divMode、y1Out、y2Out、xOut、rmsNormOut支持的场景和组合如下所示：
 
- 	- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
- 	  | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
- 	  | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
- 	  | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 必传且shape与gamma保持一致 |True | 必传 | 输出无效 |  必传 | 空指针 |
- 	  | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 空指针 |True | 必传 | 输出无效 | 空指针 | 必传 |
- 	  | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选  shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
+    | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
+    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
+    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 必传且shape与gamma保持一致 |True | 必传 | 输出无效 | 必传 | 空指针 |
+    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 空指针 |True | 必传 | 输出无效 | 空指针 | 必传 |
+    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
+
+  - <term>Atlas 推理系列产品</term>：
+
+    | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
+    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
+    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
 
 - 边界值场景说明：
 
+  - <term>Atlas 推理系列产品</term>：输入不支持包含inf和NaN。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
 
 - 维度的边界说明：
 
   参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
-
+  
 - 数据格式说明：
 
     所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
@@ -388,12 +405,18 @@ aclnnStatus aclnnAddRmsNormQuantV2(
      | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
      | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
 
+  - <term>Atlas 推理系列产品</term>：
+
+    | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
+    | - | - | - | - | - | - | - | - | - | - | - | - |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+
 - 确定性计算：
   - aclnnAddRmsNormQuantV2默认确定性实现。
 
 ## 调用示例
 
-示例编译和执行请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

@@ -7,6 +7,9 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -100,9 +103,16 @@
     </tr>
   </tbody></table>
 
+- <term>Atlas 推理系列产品</term>：
+  - 数据类型：
+    - 输入Tensor数据类型不支持BFLOAT16。
+    - 输出Tensor数据类型仅支持INT8。
+  - round_mode，支持取值round，ceil，trunc，floor。
+  - dst_type：支持取值2，表示INT8。
+  - axis：只支持指定x的最后一个维度（假设输入x维度是xDimNum，axis取值是-1或xDimNum-1）。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  - 输出Tensor数据类型仅支持INT8、INT4。<!--INT32 -->
-  - dst_type：支持取值2，29，分别表示INT8、INT4。<!--INT32(3)aclnn中有这个类型-->
+  - 输出Tensor数据类型仅支持INT8、INT4。
+  - dst_type：支持取值2，29，分别表示INT8、INT4。
   - axis：支持指定x的最后两个维度（假设输入x维度是xDimNum，axis取值范围是[-2，-1]或[xDimNum-2，xDimNum-1]）。
 - <term>Ascend 950PR/Ascend 950DT</term>：
    - round_mode：dst_type表示FLOAT8_E5M2或FLOAT8_E4M3FN时，只支持round。dst_type表示HIFLOAT8时，支持round和hybrid。dst_type表示其他类型时，支持round，ceil，trunc和floor。

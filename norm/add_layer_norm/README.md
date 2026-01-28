@@ -7,6 +7,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -35,7 +39,6 @@
 
     D为x中参加均值计算的数量。
   - $Var(x)$：
-
     $$
     Var(x) = E(x-{\bar{x}})^2
     $$
@@ -117,14 +120,14 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的x的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td><!--[broadcast关系](../../docs/zh/context/broadcast关系.md)-->
+      <td>输出LayerNorm算过程中`rstd`的结果，对应公式中的`rstd`。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -136,6 +139,11 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> ：
+  - 所有的输入参数和输出参数`y`、`x`的数据类型不支持BFLOAT16。
+  - 在当前产品下的使用场景下，输出参数`mean`、`rstd`为无效参数，输出的值不生效。
+  - x1、x2、beta、gamma、bias五个输入的尾轴长度必须大于等于32Bytes。
 
 ## 约束说明
 

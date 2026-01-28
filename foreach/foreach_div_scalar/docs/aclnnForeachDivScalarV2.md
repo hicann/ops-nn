@@ -1,17 +1,24 @@
 # aclnnForeachDivScalarV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_div_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：计算张量列表x除以标量scalar。本接口相较于[aclnnForeachDivScalar](aclnnForeachDivScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口
 - 计算公式：
-
+  
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -25,17 +32,16 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachDivScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachDivScalarV2”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachDivScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
   aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
-
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachDivScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -123,10 +129,11 @@ aclnnStatus aclnnForeachDivScalarV2(
   </tbody>
   </table>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -152,16 +159,16 @@ aclnnStatus aclnnForeachDivScalarV2(
       <td rowspan="8">161002</td>
     </tr>
     <tr>
-      <td>x、scalar和out的数据类型不在支持的范围之内。
-      <tr>
-      <td>x和out的数据类型不一致。</li>
-      <tr>
-      <td>x与out的shape不满足约束。</li>
-      <tr>
-      <td>x或out中的Tensor的数据类型不一致。</li>
-      <tr>
-      <td>x或out中的Tensor维度超过8维。</li>
-      </td>
+      <td>x、scalar和out的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>x和out的数据类型不一致。</td></tr>
+    <tr>
+      <td>x与out的shape不满足约束。</td></tr>
+    <tr>
+      <td>x或out中的Tensor的数据类型不一致。</td></tr>
+    <tr>
+      <td>x或out中的Tensor维度超过8维。</td>
     </tr>
   </tbody></table>
 

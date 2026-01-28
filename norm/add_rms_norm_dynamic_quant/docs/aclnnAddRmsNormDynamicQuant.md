@@ -1,5 +1,7 @@
 # aclnnAddRmsNormDynamicQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_dynamic_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,6 +9,11 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
+
 
 ## 功能说明
 
@@ -32,7 +39,6 @@
   $$
 
   - 若仅输入smoothScale1Optional，则y2Out和scale2Out输出无实际意义。计算过程如下所示：
-
   $$
     input = y\cdot smoothScale1Optional
   $$
@@ -46,7 +52,6 @@
   $$
 
   - 若smoothScale1Optional和smoothScale2Optional均输入，则算子的五个输出均为有效输出。计算过程如下所示：
-
   $$
     input1 = y\cdot smoothScale1Optional
   $$
@@ -66,7 +71,7 @@
   $$
    y1Out=round(input1/scale1Out)
   $$
-
+  
   $$
    y2Out=round(input2/scale2Out)
   $$

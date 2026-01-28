@@ -1,20 +1,26 @@
 # aclnnFlatQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/flat_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
-- 接口功能：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
+- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应int4和float4_e2m1量化输出类型。
 
-- 计算公式：
+- 矩阵乘计算公式：
 
   1.输入x右乘kroneckerP2：
-
+  
     $$
     x' = x @ kroneckerP2
     $$
@@ -25,23 +31,59 @@
     x'' = kroneckerP1@x'
     $$
 
-  3.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
+- 量化计算方式：
+
+  pertoken量化方式：
+
+  1.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
 
     $$
     quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
     $$
-
-  4.计算输出的out：
-
+  
+  2.计算输出的out：
+  
     $$
     out = x'' / quantScale
     $$
 
+  pergroup量化方式
+
+  1.矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
+
+  2.在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
+
+  $$
+  emax = max(e0,e1....e31)
+  $$
+
+  3.计算出reduceMaxValue和sharedExp
+
+  $$
+  reduceMaxValue = log2(reduceMax(x2),groupSize=32)
+  $$
+
+  $$
+  sharedExp[K,M*N/32] = reduceMaxValue -emax
+  $$
+
+  4.计算quantScale
+
+  $$
+  quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
+  $$
+
+  5.每groupsize共享一个quantScale，计算out
+
+  $$
+  out = x2 / quantScale
+  $$
+  
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnFlatQuantGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnFlatQuant`接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnFlatQuantGetWorkspaceSize(
   const aclTensor *x,
   const aclTensor *kroneckerP1,
@@ -53,7 +95,7 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(
   aclOpExecutor  **executor)
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnFlatQuant(
     void          *workspace,
     uint64_t       workspaceSize,
@@ -90,7 +132,7 @@ aclnnStatus aclnnFlatQuant(
       <td>x</td>
       <td>输入</td>
       <td>输入的原始数据，对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过262144，M和N不超过256。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[K, M, N]，其中，K不超过262144，M和N不超过256。</li><li>如果out的数据类型为INT32，N必须是8的整数倍。</li><li>如果out的数据类型为INT4，N必须是偶数。</li><li>如果out的数据类型为FLOAT4_E2M1，N必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>3</td>
@@ -130,20 +172,20 @@ aclnnStatus aclnnFlatQuant(
       <td>out</td>
       <td>输出</td>
       <td>输出张量，对应公式中的out。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是入参x最后一维的1/8，其余维度和x一致。</li><li>数据类型为INT4时，shape与入参x一致。</li></ul></td>
-      <td>INT4，INT32</td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型为INT32时，shape的最后一维是入参x最后一维的1/8，其余维度和x一致。</li><li>数据类型为INT4时，shape与入参x一致。</li><li>数据类型为FLOAT4_E2M1时，shape为[K,M*N]。</li></ul></td>
+      <td>INT4、INT32、FLOAT4_E2M1</td>
       <td>ND</td>
-      <td>3</td>
+      <td>3或2</td>
       <td>√</td>
     </tr>
     <tr>
       <td>quantScale</td>
       <td>输出</td>
       <td>输出的量化因子，对应公式中的quantScale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[K]，K与x中K维一致。</li></ul></td>
-      <td>FLOAT32</td>
+      <td><ul><li>不支持空Tensor。</li><li>输出类型为INT4或INT32时，shape为[K]，K与x中K维一致。</li><li>输出类型为FLOAT8_E8M0时，shape为[K,ceilDiv(M*N,64),2]</li></ul></td>
+      <td>FLOAT32、 FLOAT_E8M0</td>
       <td>ND</td>
-      <td>1</td>
+      <td>1或3</td>
       <td>√</td>
     </tr>
     <tr>
@@ -194,8 +236,8 @@ aclnnStatus aclnnFlatQuant(
       <td>传入参数中的必选输入（x、kroneckerP1、kroneckerP2）、必选输出（out、quantScale）是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="10">161002</td>
+      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="12">161002</td>
       <td>x、kroneckerP1、kroneckerP2、out、quantScale的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -214,7 +256,10 @@ aclnnStatus aclnnFlatQuant(
       <td>kroneckerP2的维度不为2，或者第一维度和第二维度与x的第三维度不一致。</td>
     </tr>
     <tr>
-      <td>quantScale的维度不为1，或者第一维度与x的第一维度不一致。</td>
+      <td>int4或int32场景下quantScale的维度不为1，或者第一维度与x的第一维度不一致。</td>
+    </tr>
+    <tr>
+      <td>float4_e2m1场景下quantScale的维度不为3，或者第一维度与x的第一维度不一致。</td>
     </tr>
     <tr>
       <td>clipRatio的数值超出范围(0, 1]。</td>
@@ -225,7 +270,9 @@ aclnnStatus aclnnFlatQuant(
     <tr>
       <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
     </tr>
-  </tbody></table>
+  </tbody>
+
+</table>
 
 ## aclnnFlatQuant
 

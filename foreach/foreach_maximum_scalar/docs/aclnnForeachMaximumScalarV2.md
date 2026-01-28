@@ -1,17 +1,24 @@
 # aclnnForeachMaximumScalarV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_maximum_scalar)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：对张量列表和标量值scalar执行逐元素比较，计算每个元素对应的最大值。本接口相较于[aclnnForeachMaximumScalar](aclnnForeachMaximumScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
-
+  
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -25,17 +32,16 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachMaximumScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachMaximumScalarV2”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
   aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
-
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachMaximumScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -125,10 +131,11 @@ aclnnStatus aclnnForeachMaximumScalarV2(
   </tbody>
   </table>
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

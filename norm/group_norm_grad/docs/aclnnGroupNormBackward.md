@@ -1,12 +1,18 @@
 # aclnnGroupNormBackward
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/group_norm_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+
 
 ## 功能说明
 
@@ -237,9 +243,25 @@ aclnnStatus aclnnGroupNormBackward(
   </tbody>
   </table>
 
+  - <term>Atlas 训练系列产品</term>：
+  
+    - 参数`gradOut`、`input`、`mean`、`rstd`、`gamma`、`gradInput`、`gradGammaOut`、`gradBetaOut`的数据类型不支持BFLOAT16。
+    - 参数`mean`和`gradOut`的数据类型相同。
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     参数`mean`和`gradOut`的数据类型相同。
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+
+    参数`mean`与`gradOut`支持的数据类型对应关系如下：
+    |输入参数 | gradOut | mean |
+    |--|--|--|
+    |数据类型 | FLOAT32 | FLOAT32 |
+    |数据类型 | FLOAT16 | FLOAT16 |
+    |数据类型 | FLOAT16 | FLOAT32 |
+    |数据类型 | BFLOAT16 | BFLOAT16 |
+    |数据类型 | BFLOAT16 | FLOAT32 |
 
 - **返回值：**
 

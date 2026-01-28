@@ -1,24 +1,31 @@
 # aclnnForeachSubList
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_sub_list)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。
 
 - 计算公式：
-
+ 
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}]\\
   x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
   $$
-
+  
   $$
   y_i = x1_i-{x2_i}*alpha (i=0,1,...n-1)
   $$
@@ -27,7 +34,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubListGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubList”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachSubListGetWorkspaceSize(
   const aclTensorList     *x1,
   const aclTensorList     *x2,
@@ -36,7 +43,8 @@ aclnnStatus aclnnForeachSubListGetWorkspaceSize(
   uint64_t                *workspaceSize,
   aclOpExecutor          **executor)
 ```
-```cpp
+
+```Cpp
 aclnnStatus aclnnForeachSubList(
   void               *workspace,
   uint64_t           workspaceSize,
@@ -132,6 +140,7 @@ aclnnStatus aclnnForeachSubList(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值**：
 

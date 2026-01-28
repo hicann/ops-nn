@@ -1,5 +1,7 @@
 # aclnnLayerNorm&aclnnLayerNormWithImplMode
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/layer_norm_v4)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,6 +9,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+
 
 ## 功能说明
 
@@ -16,6 +22,14 @@
 
   $$
   out = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + eps}} * weightOptional + biasOptional
+  $$
+
+  $$
+  meanOutOptional = \mathrm{E}[x]
+  $$
+
+  $$
+  rstdOutOptional = \frac{1}{ \sqrt{\mathrm{Var}[x] + eps}}
   $$
 
   其中，E[x]表示输入的均值，Var[x]表示输入的方差。
@@ -96,7 +110,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape为[A1,...,Ai,R1,...,Rj]，其中A1至Ai表示无需norm的维度，R1至Rj表示需norm的维度。</li></ul></td>
@@ -106,7 +120,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>normalizedShape</td>
+      <td>normalizedShape（aclIntArray*）</td>
       <td>输入</td>
       <td>表示需要进行norm计算的维度。</td>
       <td>值为[R1,...,Rj]，长度小于等于输入input的shape长度，不支持为空。</td>
@@ -116,7 +130,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>-</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的权重。对应公式中的`weightOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
@@ -126,27 +140,27 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的偏移量。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果。对应公式中的`out`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
@@ -156,9 +170,9 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>meanOutOptional</td>
+      <td>meanOutOptional（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示进行归一化后的均值。对应公式中的`E(x)`。</td>
+      <td>可选输出，表示进行归一化后的均值。对应公式中的`meanOutOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`rstdOutOptional`存在时与`rstdOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -166,9 +180,9 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOutOptional</td>
+      <td>rstdOutOptional（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`Var(x)`。</td>
+      <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`rstdOutOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>当`meanOutOptional`存在时与`meanOutOptional`的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -176,7 +190,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -186,7 +200,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -198,6 +212,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
 
 - **返回值：**
 
@@ -293,6 +308,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </table>
 
 
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -324,7 +340,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
     </tr></thead>
   <tbody>
     <tr>
-      <td>input</td>
+      <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的输入，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape为[A1,...,Ai,R1,...,Rj]，其中A1至Ai表示无需norm的维度，R1至Rj表示需norm的维度。</li></ul></td>
@@ -334,7 +350,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>normalizedShape</td>
+      <td>normalizedShape（aclIntArray*）</td>
       <td>输入</td>
       <td>表示需要进行norm计算的维度。</td>
       <td>值为[R1,...,Rj]，长度小于等于输入input的shape长度，不支持为空。</td>
@@ -344,37 +360,37 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>-</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的权重。对应公式中的`weightOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`biasOptional`存在时`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的偏移量。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`weightOptional`存在时`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT32类型，且当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>eps</td>
+      <td>eps（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`eps`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果。对应公式中的`out`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
@@ -384,9 +400,9 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>meanOutOptional</td>
+      <td>meanOutOptional（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示进行归一化后的均值。对应公式中的`E(x)`。</td>
+      <td>可选输出，表示进行归一化后的均值。对应公式中的`meanOutOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -394,9 +410,9 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>rstdOutOptional</td>
+      <td>rstdOutOptional（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`Var(x)`。</td>
+      <td>可选输出，表示进行归一化后的标准差倒数。对应公式中的`rstdOutOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -404,7 +420,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>√</td>
     </tr>
     <tr>
-      <td>implMode</td>
+      <td>implMode（int32_t）</td>
       <td>输入</td>
       <td>表示用于指定kernel选择对应的计算模式。</td>
       <td>支持配置为0，1，2，默认配置为0。0代表高精度模式，1代表高性能模式，2代表保持FLOAT16计算模式。高性能模式谨慎使用，有精度损失；保持FLOAT16计算模式仅支持所有输入同时为FLOAT16的场景，且计算精度最低。</li></ul></td>
@@ -414,7 +430,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -424,7 +440,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -435,6 +451,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
     </tr>
   </tbody>
   </table>
+
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
 
 
 - **返回值：**

@@ -4,17 +4,21 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
-- 算子功能：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行per-token量化处理。
+- 算子功能：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应int4和float4_e2m1量化输出类型。
 
-- 计算公式：
+- 矩阵乘计算公式：
 
   1.输入x右乘kroneckerP2：
-
+  
     $$
     x' = x @ kroneckerP2
     $$
@@ -25,18 +29,54 @@
     x'' = kroneckerP1@x'
     $$
 
-  3.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
+- 量化计算方式：
+
+  pertoken量化方式：
+
+  1.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
 
     $$
     quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
     $$
-
-  4.计算输出的out：
-
+  
+  2.计算输出的out：
+  
     $$
     out = x'' / quantScale
     $$
 
+  pergroup量化方式
+
+  1.矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
+
+  2.在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
+
+  $$
+  emax = max(e0,e1....e31)
+  $$
+
+  3.计算出reduceMaxValue和sharedExp
+
+  $$
+  reduceMaxValue = log2(reduceMax(x2),groupSize=32)
+  $$
+
+  $$
+  sharedExp[K,M*N/32] = reduceMaxValue -emax
+  $$
+
+  4.计算quantScale
+
+  $$
+  quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
+  $$
+
+  5.每groupsize共享一个quantScale，计算out
+
+  $$
+  out = x2 / quantScale
+  $$
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -84,17 +124,24 @@
       <td>-</td>
     </tr>
     <tr>
+      <td>dst_dtype</td>
+      <td>可选属性</td>
+      <td><ul><li>用于控制量化方式，当值为DT_FLOAT4_E2M1时表示为pergroup量化方式，当值为DT_INT32时表示pertoken量化方式。</li><li>默认值为DT_INT32。</li></ul></td>
+      <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>out</td>
       <td>输出</td>
-      <td>输出张量，对应公式中的`out`。数据类型为INT4时，shape与入参`x`一致。</td>
-      <td>INT4</td>
+      <td>输出张量，对应公式中的`out`。数据类型为INT4时，shape与入参`x`一致。数据类型为INT32时，shape为[K,M,N/8]。数据类型为FLOAT_E2M1时，shape为[K,M*N]。</td>
+      <td>INT4,INT32,FLOAT4_E2M1</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>quant_scale</td>
       <td>输出</td>
-      <td>输出的量化因子，对应公式中的`quantScale`。shape为[K]，K与`x`中K维一致。</td>
-      <td>FLOAT32</td>
+      <td>输出的量化因子，对应公式中的`quantScale`。当输出类型为FLOAT时，shape为[K]，K与`x`中K维一致。当输出类型为FLOAT8_E8M0时，shape为[K,ceilDiv(M*N,64),2]。</td>
+      <td>FLOAT32,FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
   </tbody></table>

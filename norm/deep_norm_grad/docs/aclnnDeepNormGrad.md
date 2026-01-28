@@ -1,52 +1,59 @@
 # aclnnDeepNormGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/deep_norm_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：[aclnnDeepNorm](../../deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。
 
 - 计算公式：
-
+  
   $$
   dgx_i = tmpone_i * rstd + dvar * tmptwo_i + dmean
   $$
-
+  
   $$
   dx_i = alpha * {dgx}_i
   $$
-
+  
   $$
   dbeta = \sum_{i=1}^{N} dy_i
   $$
-
+  
   $$
   dgamma =  \sum_{i=1}^{N} dy_i * rstd * {tmptwo}_i
   $$
-
+  
   其中：
-
+  
   $$
   oneDiv=-1/SizeOf(gamma)
   $$
-
+  
   $$
   tmpone_i = dy_i * gamma
   $$
-
+  
   $$
   tmptwo_i = alpha * x_i + {gx}_i - mean
   $$
-
+  
   $$
   dvar = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * {tmptwo}_i * {rstd}^3
   $$
-
+  
   $$
   dmean = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * rstd
   $$
@@ -239,10 +246,12 @@ aclnnStatus aclnnDeepNormGrad(
   </tbody>
   </table>
 
+  - <term>Atlas 推理系列产品</term>：参数`dy`、`x`、`gx`、`gamma`、`dxOut`、`dgxOut`的数据类型不支持BFLOAT16。
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

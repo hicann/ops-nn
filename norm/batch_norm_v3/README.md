@@ -7,6 +7,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+
 
 ## 功能说明
 
@@ -139,7 +143,17 @@
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 输入x和输出y的数据格式不支持NHWC、NDHWC。
     - 输出参数`save_rstd`保存的是x方差。
-   
+  
+  - <term>Atlas 训练系列产品</term>：
+    - 数据类型：所有的输入和输出不支持BFLOAT16。
+    - 数据格式：输入x和输出y不支持NHWC、NDHWC。
+    - 输出参数`save_rstd`保存的是x方差。
+  
+  - <term>Atlas 推理系列产品</term>：
+    - 数据类型：所有的输入和输出不支持BFLOAT16。
+    - 数据格式：输入x和输出y不支持NHWC、NDHWC。
+    - 输出参数`save_rstd`保存的是x方差。
+  
   - <term>Ascend 950PR/Ascend 950DT</term>：
   
     输出参数`save_rstd`保存的是x标准差的倒数。
@@ -153,7 +167,7 @@
 
 
 - <term>Ascend 950PR/Ascend 950DT</term>：输出参数`save_rstd`保存的是x标准差倒数。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
+- <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：输出参数`save_rstd`保存的是x方差。
 -->
 
 ## 约束说明

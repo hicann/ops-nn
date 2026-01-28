@@ -122,6 +122,7 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
+| aclnn接口  | [test_aclnn_fast_layer_norm](examples/test_aclnn_fast_layer_norm.cpp) | 通过[aclnnFastLayerNorm](docs/aclnnFastLayerNorm.md)接口方式调用LayerNormV4算子。 |
 | aclnn接口  | [test_aclnn_layer_norm_v4](examples/test_aclnn_layer_norm_v4.cpp) | 通过[aclnnLayerNorm](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | aclnn接口  | [test_aclnn_layer_norm_with_impl_mode](examples/test_aclnn_layer_norm_with_impl_mode.cpp) | 通过[aclnnLayerNormWithImplMode](docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)接口方式调用LayerNormV4算子。 |
 | 图模式 | - | 通过[算子IR](op_graph/layer_norm_v4_proto.h)构图方式调用LayerNormV4算子。         |

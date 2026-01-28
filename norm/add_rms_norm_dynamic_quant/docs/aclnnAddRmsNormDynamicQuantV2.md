@@ -1,5 +1,7 @@
 # aclnnAddRmsNormDynamicQuantV2
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/add_rms_norm_dynamic_quant)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,10 +9,15 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+
+
 
 ## 功能说明
 
-- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果 。
+- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果。
 
 - 计算公式：
 
@@ -49,6 +56,7 @@
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
+
 
   $$
   scale2Out=\begin{cases}
@@ -124,7 +132,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x1</td>
+      <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td>不支持空Tensor。</td>
@@ -134,7 +142,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>x2</td>
+      <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
@@ -144,7 +152,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>gamma</td>
+      <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`最后一维一致。</li></ul></td>
@@ -154,7 +162,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale1Optional</td>
+      <td>smoothScale1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y1Out`使用的smoothScale张量。对应公式中的`smoothScale1Optional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -164,7 +172,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScale2Optional</td>
+      <td>smoothScale2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到`y2Out`使用的smoothScale张量。对应公式中的`smoothScale2Optional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -174,7 +182,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>betaOptional</td>
+      <td>betaOptional（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
       <td><ul><li>不支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
@@ -184,47 +192,47 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示用于防止除0错误，对应公式中的`epsilon`。</td>
       <td>建议传入较小正数，如1e-6。</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>outputMaskOptional</td>
+      <td>outputMaskOptional（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出的掩码，对应公式中的`outputMask`。</td>
       <td>支持传空指针或长度为2的数组。</td>
-      <td>BOOL</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>y1Out</td>
+      <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`保持一致。</li></ul></td>
-      <td>INT8</td>
+      <td>INT8、INT4</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>y2Out</td>
+      <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>不支持空Tensor。</li><!--<li>当smoothScale2Optional不存在时，此输出无意义。</li>--><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
-      <td>INT8</td>
+      <td><ul><li>不支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
+      <td>INT8、INT4</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>xOut</td>
+      <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
@@ -234,7 +242,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale1Out</td>
+      <td>scale1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路量化的输出，对应公式中的`scale1Out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与输入`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致。</li></ul></td>
@@ -244,7 +252,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale2Out</td>
+      <td>scale2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路量化的输出，对应公式中的`scale2Out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`scale1Out`一致。</li></ul></td>
@@ -254,7 +262,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -264,7 +272,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -372,6 +380,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
     | ---------- | ---------- | ------------- | ---------------------------- | ---------------------------- | -------------------- | ------------- | ------------- | ----------------- | ----------------- |
     | FLOAT16    | FLOAT16    | FLOAT16       | FLOAT16                      | FLOAT16                      | FLOAT16              | INT8          | INT8          | FLOAT32           | FLOAT32           |
     | BFLOAT16   | BFLOAT16   | BFLOAT16      | BFLOAT16                     | BFLOAT16                     | BFLOAT16             | INT8          | INT8          | FLOAT32           | FLOAT32           |
+    | FLOAT16    | FLOAT16    | FLOAT16       | FLOAT16                      | FLOAT16                      | FLOAT16              | INT4          | INT4          | FLOAT32           | FLOAT32           |
+    | BFLOAT16   | BFLOAT16   | BFLOAT16      | BFLOAT16                     | BFLOAT16                     | BFLOAT16             | INT4          | INT4          | FLOAT32           | FLOAT32           |
 
 - 确定性计算：
   - aclnnAddRmsNormDynamicQuantV2默认确定性实现。

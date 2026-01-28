@@ -754,16 +754,16 @@
     <td>AI Core</td>
     <td>实现卷积功能，支持 1D 卷积、2D 卷积、3D 卷积，同时支持转置卷积、空洞卷积、分组卷积。</td>
   </tr>
-   <tr>	 
-     <td>conv</td>
-     <td><a href="../../conv/deformable_conv2d/README.md">deformable_conv2d</a></td>
-     <td>✓</td>	 
-     <td>✓</td>	 
-     <td>✓</td>	 
-     <td>✗</td>	 
-     <td>AI Core</td>	 
-     <td>实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。</td>
-   </tr>
+  <tr>
+    <td>conv</td>
+    <td><a href="../../conv/deformable_conv2d/README.md">deformable_conv2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。</td>
+  </tr>
   <tr>
     <td>foreach</td>
     <td><a href="../../foreach/foreach_abs/README.md">foreach_abs</a></td>
@@ -2237,10 +2237,10 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/batch_norm_grad_v3/README.md">batch_norm_grad_v3</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2386,6 +2386,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/instance_norm_v3/README.md">instance_norm_v3</a></td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/kv_rms_norm_rope_cache/README.md">kv_rms_norm_rope_cache</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2406,6 +2416,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/layer_norm_v3/README.md">layer_norm_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对指定层进行均值为0、标准差为1的归一化计算。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/layer_norm_v4/README.md">layer_norm_v4</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2422,7 +2442,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>返回给定张量的矩阵范数或者向量范数。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2450,7 +2470,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。</td>
   </tr>
@@ -2462,7 +2482,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>返回给定张量的矩阵范数或者向量范数。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2523,16 +2543,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
-    <td><a href="../../norm/layer_norm_v3/README.md">layer_norm_v3</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>对指定层进行均值为0、标准差为1的归一化计算。</td>
   </tr>
   <tr>
     <td>norm</td>

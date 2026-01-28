@@ -1,17 +1,24 @@
 # aclnnDeepNorm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/deep_norm)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。
 - 计算公式：
-
+  
   $$
   DeepNorm(x_i^{\prime}) = ({x_i^{\prime} - \bar{x^{\prime}}})*{rstd} * gamma + beta,
   $$
@@ -186,10 +193,12 @@ aclnnStatus aclnnDeepNorm(
   </tbody>
   </table>
 
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：参数`x`、`gx`、`beta`、`gamma`、`yOut`的数据类型不支持BFLOAT16。
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -262,6 +271,7 @@ aclnnStatus aclnnDeepNorm(
   </tbody>
   </table>
 
+
 - **返回值：**
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -270,6 +280,7 @@ aclnnStatus aclnnDeepNorm(
 
 - 功能维度：
   - 数据类型支持：
+    - <term>Atlas 推理系列产品</term>：x、gx、beta、gamma、yOut支持FLOAT32、FLOAT16。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x、gx、beta、gamma、yOut支持FLOAT32、FLOAT16、BFLOAT16。
     - rstdOut、meanOut支持：FLOAT32。
   - 数据格式支持：ND

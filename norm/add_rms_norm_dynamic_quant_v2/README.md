@@ -4,8 +4,13 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -35,12 +40,11 @@
   $$
 
   - 若仅输入smoothScale1Optional，则y2Out和scale2Out输出无实际意义。计算过程如下所示：
-
+  
   $$
     input = y\cdot smoothScale1Optional
   $$
-
-
+  
   $$
    scale1Out=row\_max(abs(input))/127
   $$
@@ -50,37 +54,33 @@
   $$
 
   - 若smoothScale1Optional和smoothScale2Optional均输入，则算子的五个输出均为有效输出。计算过程如下所示：
-
+  
   $$
     input1 = y\cdot smoothScale1Optional
   $$
-
 
   $$
     input2 = y\cdot smoothScale2Optional
   $$
 
-
   $$
    scale1Out=row\_max(abs(input1))/127
   $$
-
 
   $$
    scale2Out=row\_max(abs(input2))/127
   $$
 
-
   $$
    y1Out=round(input1/scale1Out)
   $$
-
 
   $$
    y2Out=round(input2/scale2Out)
   $$
 
   其中row\_max代表每行求最大值。
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

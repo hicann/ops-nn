@@ -1,5 +1,7 @@
 # aclnnRmsNormGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/rms_norm_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,6 +9,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
@@ -161,6 +167,8 @@ aclnnStatus aclnnRmsNormGrad(
     </tr>
   </tbody>
   </table>
+
+  - <term>Atlas 推理系列产品</term>：参数`dy`、`x`、`gamma`、`dxOut`的数据类型不支持BFLOAT16。
   
 - **返回值：**
 
@@ -243,6 +251,8 @@ aclnnStatus aclnnRmsNormGrad(
 
 ## 约束说明
 
+- <term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32Bytes。
+
 - 各产品支持数据类型说明：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
@@ -252,6 +262,11 @@ aclnnStatus aclnnRmsNormGrad(
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |
     | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
     | BFLOAT16 | BFLOAT16 | FLOAT32  | BFLOAT16 | BFLOAT16 | FLOAT32  |
+  - <term>Atlas 推理系列产品</term>：
+    | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
+    | -------- | -------- | -------- | -------- | -------- | -------- |
+    | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |
+    | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  | FLOAT32  |
 - 确定性计算：
   - aclnnRmsNormGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 

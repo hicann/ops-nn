@@ -13,6 +13,7 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
+
 ## 功能说明
 
 - 接口功能：将指定的标量值加到张量列表中的每个张量中。本接口相较于[aclnnForeachAddScalar](aclnnForeachAddScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
@@ -31,17 +32,16 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachAddScalarV2”接口执行计算。
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachAddScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
   aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
-
 ```
 
-```cpp
+```Cpp
 aclnnStatus aclnnForeachAddScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,

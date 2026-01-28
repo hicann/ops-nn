@@ -1,44 +1,51 @@
 # aclnnAdaLayerNormQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/ada_layer_norm_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：AdaLayerNormQuant算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。
 
 - 计算公式：
-
+  
   1.先对输入x进行LayerNorm归一化处理：
-
+  
     $$
     LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weightOptional + biasOptional
     $$
 
   2.再通过自适应参数scale和shift来调整归一化结果：
-
+  
     $$
     y = LayerNorm(x) * (1 + scale) + shift
     $$
 
   3.若smoothScalesOptional不为空，则：
-
+  
     $$
     y = y \cdot smoothScalesOptional
     $$
 
-  4.然后对y计算最大绝对值并除以127以计算需量化为INT8格式的量化因子：
-
+  4.然后对y计算最大绝对值并除以$(FP8\_MAX / HIF8\_MAX / INT8\_MAX)$以计算需量化为FLOAT8/HIF8/INT8格式的量化因子：
+  
     $$
-    quantScale = row\_max(abs(y)) / 127
+    quantScale = row\_max(abs(y)) / (FP8\_MAX / HIF8\_MAX / INT8\_MAX)
     $$
 
   5.最后y除以量化因子再四舍五入得到量化输出：
-
+  
     $$
     out = round(y / quantScale)
     $$
@@ -101,7 +108,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
+      <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入待处理的数据。对应公式中的`x`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[B, S, H]，其中B支持0到6维。</li></ul></td>
@@ -111,7 +118,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>scale</td>
+      <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应缩放参数。对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
@@ -121,7 +128,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>shift</td>
+      <td>shift（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应偏移参数。对应公式中的`shift`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
@@ -131,7 +138,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>weightOptional</td>
+      <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化缩放参数。对应公式中的`weightOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
@@ -141,7 +148,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>biasOptional</td>
+      <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示归一化偏移参数。对应公式中的`biasOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
@@ -151,7 +158,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScalesOptional</td>
+      <td>smoothScalesOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示量化的平滑权重。对应公式中的`smoothScalesOptional`。</td>
       <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[H]，H与`x`中H维一致。</li></ul></td>
@@ -161,37 +168,37 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>epsilon</td>
+      <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
       <td>-</td>
-      <td>DOUBLE</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>quantMode</td>
+      <td>quantMode（char*）</td>
       <td>输入</td>
       <td>表示量化模式。</td>
       <td>当前版本仅支持“dynamic”。</td>
-      <td>CHAR</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出张量。对应公式中的`out`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与入参`x`的shape保持一致。</li></ul></td>
-      <td>INT8</td>
+      <td>INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>quantScale</td>
+      <td>quantScale（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化系数。对应公式中的`quantScale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为[B, S]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，S与`x`中S维一致。</li></ul></td>
@@ -201,7 +208,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>quantOffsetOptional</td>
+      <td>quantOffsetOptional（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示非对称量化使用的offset。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape和`quantScale`的shape保持一致。</li><li>当前版本暂不支持，传nullptr。</li></ul></td>
@@ -211,7 +218,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -221,7 +228,7 @@ aclnnStatus aclnnAdaLayerNormQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -233,10 +240,12 @@ aclnnStatus aclnnAdaLayerNormQuant(
   </tbody>
   </table>
 
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：输出`out`的数据类型仅支持INT8。
+
  **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
+  
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

@@ -1,17 +1,24 @@
 # aclnnForeachTan
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/foreach/foreach_tan)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
+
 
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量进行正切函数运算。
 - 计算公式：
-
+  
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -27,11 +34,12 @@
 
 ```Cpp
 aclnnStatus aclnnForeachTanGetWorkspaceSize(
-  const aclTensorList      *x,
-  const aclTensorList      *out,
-  uint64_t                 *workspaceSize,
+  const aclTensorList      *x, 
+  const aclTensorList      *out, 
+  uint64_t                 *workspaceSize, 
   aclOpExecutor           **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnForeachTan(
   void           *workspace,
@@ -109,6 +117,7 @@ aclnnStatus aclnnForeachTan(
   </tbody>
   </table>
 
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -148,11 +157,10 @@ aclnnStatus aclnnForeachTan(
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
     <tr>
-      <td>x或out中的Tensor维度超过8维。</td></tr>
+      <td>x或out中的Tensor维度超过8维。</td>
     </tr>
-
   </tbody></table>
-
+  
 ## aclnnForeachTan
 
 - **参数说明**：
@@ -370,4 +378,3 @@ int main() {
   return 0;
 }
 ```
-

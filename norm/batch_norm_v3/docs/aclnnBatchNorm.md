@@ -1,5 +1,7 @@
 # aclnnBatchNorm
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/batch_norm_v3)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
@@ -7,6 +9,10 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+
 
 ## 功能说明
 
@@ -159,7 +165,7 @@ aclnnStatus aclnnBatchNorm(
       <td>output</td>
       <td>输出</td>
       <td>表示BatchNorm的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型、数据格式、shape与入参`input`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、数据格式和shape与入参`input`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NC、NCL、NCHW、NHWC、NCDHW、NDHWC、ND</td>
       <td>2-8</td>
@@ -208,6 +214,10 @@ aclnnStatus aclnnBatchNorm(
   </tbody>
   </table>
 
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
+    - 参数`input`、`weight`、`bias`、`runningMean`、`runningVar`、`output`、`saveMean`、`saveInvstd`的数据类型不支持BFLOAT16。
+    - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
+    - 参数`saveInvstd`表示input的方差。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
     - 参数`saveInvstd`表示input的方差。

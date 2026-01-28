@@ -4,41 +4,46 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    ×     |
+
 
 ## 功能说明
 
 - 算子功能：AdaLayerNormQuant算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。
 
 - 计算公式：
-
+  
   1.先对输入x进行LayerNorm归一化处理：
-
+  
     $$
     LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weight + bias
     $$
 
   2.再通过自适应参数scale和shift来调整归一化结果：
-
+  
     $$
     y = LayerNorm(x) * (1 + scale) + shift
     $$
 
   3.若smooth_scales不为空，则：
-
+  
     $$
     y = y \cdot smooth_scales
     $$
 
-  4.然后对y计算最大绝对值并除以127以计算需量化为INT8格式的量化因子：
-
+  4.然后对y计算最大绝对值并除以$(FP8\_MAX / HIF8\_MAX / INT8\_MAX)$以计算需量化为FLOAT8/HIF8/INT8格式的量化因子：
+  
     $$
-    quant_scale = row\_max(abs(y)) / 127
+    quant_scale = row\_max(abs(y)) / (FP8\_MAX / HIF8\_MAX / INT8\_MAX)
     $$
 
   5.最后y除以量化因子再四舍五入得到量化输出：
-
+  
     $$
     out = round(y / quant_scale)
     $$
@@ -116,7 +121,7 @@
       <td>out</td>
       <td>输出</td>
       <td>表示量化输出张量。对应公式中的`out`。shape与入参`x`的shape保持一致。</td>
-      <td>INT8</td>
+      <td>INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -127,6 +132,8 @@
       <td>ND</td>
     </tr>
   </tbody></table>
+
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：输出`out`的数据类型仅支持INT8。
 
 ## 约束说明
 
@@ -143,4 +150,3 @@
 -->
 
 <!--[test_geir_ada_layer_norm_quant](examples/test_geir_ada_layer_norm_quant.cpp)-->
-<!--[test_aclnn_ada_layer_norm_quant](examples/test_aclnn_ada_layer_norm_quant.cpp)-->
