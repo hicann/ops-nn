@@ -37,7 +37,7 @@ namespace Kernel {
 using namespace Cmct::Gemm::QuantBatchMatmul;
 
 namespace {
-constexpr uint32_t PER_BLOCK_SIZE = 128U;
+constexpr uint32_t PER_BLOCK_SIZE = 128;
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
@@ -211,19 +211,19 @@ QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::UpdateOffset(
     uint64_t batchA4Offset, uint64_t batchB4Offset, uint64_t batchC4Offset)
 {
-    Get<IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) * Get<MNK_K>(problemShape_);
-    Get<IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) * Get<MNK_K>(problemShape_);
-    Get<IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) * Get<MNK_N>(problemShape_);
+    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) * Get<MNK_K>(problemShape_);
+    Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) * Get<MNK_K>(problemShape_);
+    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) * Get<MNK_N>(problemShape_);
 
     if (isPertile_) {
-        Get<IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * static_cast<uint64_t>(Get<MNK_M>(problemShape_)) *
+        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * static_cast<uint64_t>(Get<MNK_M>(problemShape_)) *
                                                CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
     } else {
-        Get<IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * CeilDiv(Get<MNK_M>(problemShape_), PER_BLOCK_SIZE) *
+        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset * CeilDiv(Get<MNK_M>(problemShape_), PER_BLOCK_SIZE) *
                                                CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE);
     }
 
-    Get<IDX_X2SCALE_OFFSET>(baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE) *
+    Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), PER_BLOCK_SIZE) *
                                            CeilDiv(Get<MNK_N>(problemShape_), PER_BLOCK_SIZE);
 }
 
@@ -326,18 +326,18 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
             if constexpr (!transA) {
                 AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();
                 blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE, true>(
-                    Get<IDX_M_TILEIDX>(tileIdx), Get<IDX_N_TILEIDX>(tileIdx),
-                    Get<IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<IDX_N_TAIL_SPLIT_TILEIDX>(singleShape),
+                    Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
+                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape),
                     loadBalanceInfo);
             } else {
                 blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERGROUP_MODE>(
-                    Get<IDX_M_TILEIDX>(tileIdx), Get<IDX_N_TILEIDX>(tileIdx),
-                    Get<IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
+                    Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx),
+                    Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape), Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
             }
         } else {
             blockOffset_ = coord.template GetQuantOffset<QuantBatchMatmul::QuantMode::PERBLOCK_MODE>(
-                Get<IDX_M_TILEIDX>(tileIdx), Get<IDX_N_TILEIDX>(tileIdx), Get<IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
-                Get<IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
+                Get<QuantBatchMatmul::IDX_M_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_N_TILEIDX>(tileIdx), Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
+                Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
         }
         Iterate(Get<MNK_M>(singleShape), Get<MNK_N>(singleShape));
     }
@@ -351,13 +351,13 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     AscendC::Std::tuple<int64_t, int64_t, int64_t> blockShape{
         singleCoreM, singleCoreN, static_cast<int64_t>(Get<MNK_K>(problemShape_))};
     if ASCEND_IS_AIC {
-        mmadOp_(blockShape, aGlobal_[Get<IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<IDX_B_OFFSET>(blockOffset_)]);
+        mmadOp_(blockShape, aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)], bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)]);
     }
     if ASCEND_IS_AIV {
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t> blockCoord{
-            static_cast<int64_t>(Get<IDX_C_OFFSET>(blockOffset_)),
-            static_cast<int64_t>(Get<IDX_X2SCALE_OFFSET>(blockOffset_)),
-            static_cast<int64_t>(Get<IDX_X1SCALE_OFFSET>(blockOffset_)), 0L};
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)), 0L};
         epilogueOp_(blockShape, blockCoord);
     }
 }
@@ -366,15 +366,15 @@ QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::UpdateMMGlobalAddr()
 {
     if ASCEND_IS_AIC {
-        aGlobal_.SetGlobalBuffer((__gm__ AType*)xTensorPtr_ + Get<IDX_A_OFFSET>(baseOffset_));
-        bGlobal_.SetGlobalBuffer((__gm__ BType*)wTensorPtr_ + Get<IDX_B_OFFSET>(baseOffset_));
+        aGlobal_.SetGlobalBuffer((__gm__ AType*)xTensorPtr_ + Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_));
+        bGlobal_.SetGlobalBuffer((__gm__ BType*)wTensorPtr_ + Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_));
     }
 
     if ASCEND_IS_AIV {
         AscendC::Std::tuple<int64_t, int64_t, int64_t, int64_t> baseOffset{
-            static_cast<int64_t>(Get<IDX_C_OFFSET>(baseOffset_)),
-            static_cast<int64_t>(Get<IDX_X2SCALE_OFFSET>(baseOffset_)),
-            static_cast<int64_t>(Get<IDX_X1SCALE_OFFSET>(baseOffset_)), 0L};
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(baseOffset_)),
+            static_cast<int64_t>(Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_)), 0L};
         epilogueOp_.UpdateGlobalAddr(baseOffset);
     }
 }
