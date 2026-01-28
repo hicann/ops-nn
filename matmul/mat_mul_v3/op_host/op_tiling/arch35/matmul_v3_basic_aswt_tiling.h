@@ -41,7 +41,7 @@ protected:
 
 private:
     void FullLoadPre();
-    uint64_t GetAFullLoadBasicNL1();
+    uint64_t GetAFullLoadBasicNL1() const;
     void CalcTailBasicBlockBL1Full();
     void CalcTailBasicBlockAL1Full();
     bool CheckBL1FullLoad();

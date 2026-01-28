@@ -53,7 +53,7 @@ void MatMulV3BasicAswtTiling::FullLoadPre()
     return;
 }
 
-uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() {
+uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const {
     return std::min(ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16), runInfo_.baseN * DB_SIZE);
 }
 

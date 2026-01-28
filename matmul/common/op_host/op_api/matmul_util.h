@@ -110,6 +110,10 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType);
 
 aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo);
 
+aclnnStatus CreateMatmulOpInfo(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    MmOpInfo& mmOpInfo, bool isSelfSlice);
+
 aclnnStatus GetMmInfo(MmOpInfo mmOpInfo);
 MmOpInfo GetMatmulOpInfo(const aclTensor *self, const aclTensor *mat2, int8_t cubeMathType, bool isSelfSlice = false);
 bool ContiguousAndCast(const aclTensor *&contiguousInput, const aclTensor *&castOut, bool &transposeFlag,
@@ -294,7 +298,8 @@ protected:
     }
 
     // 获取两个input的组合形式
-    inline int GetInputCase(const op::DataType& typeA, const op::DataType& typeB) {
+    inline int GetInputCase(const op::DataType& typeA, const op::DataType& typeB) const
+    {
         int indexA = GetIndexByDataType(typeA);
         int indexB = GetIndexByDataType(typeB);
 

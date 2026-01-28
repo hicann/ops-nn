@@ -99,7 +99,7 @@ aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList *tensors, const aclTensor *
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    for (uint64_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
+    for (size_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
         if (tensor0Shape.GetDim(i) == DIM_ZERO) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor0 shape dim%ld [0] should not be zero", i);
             return ACLNN_ERR_PARAM_INVALID;
@@ -243,10 +243,10 @@ static void EquationUnification(std::string &equation) {
   size_t indice = 0;
   for (auto &dim_shape : equation) {
     if (isalpha(dim_shape)) {
-      if (normalize_map.find(dim_shape) == normalize_map.end()) {
-        normalize_map[dim_shape] = 'a' + indice;
-        indice++;
-      }
+        if (normalize_map.find(dim_shape) == normalize_map.end()) {
+            normalize_map[dim_shape] = static_cast<char>(static_cast<unsigned char>('a') + indice);
+            indice++;
+        }
       dim_shape = normalize_map[dim_shape];
     }
   }

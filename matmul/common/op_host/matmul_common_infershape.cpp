@@ -304,7 +304,8 @@ bool CheckIsUnknownDimNum(const gert::Shape& shape)
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
 }
 
-bool CalculateTransX2Float(const gert::InferShapeContext* context, const Shape& shape_x2, bool trans_x1, bool trans_x2)
+static bool CalculateTransX2Float(
+    const gert::InferShapeContext* context, const Shape& shape_x2, bool trans_x1, bool trans_x2)
 {
     auto shape_x1 = context->GetInputShape(0);
     auto x1_dim_num = shape_x1->GetDimNum();
@@ -317,7 +318,7 @@ bool CalculateTransX2Float(const gert::InferShapeContext* context, const Shape& 
     return false;
 }
 
-ge::graphStatus UpdateX2NewShape(
+static ge::graphStatus UpdateX2NewShape(
     const gert::InferShapeContext* context, Shape& new_shape, bool& reshape_flag, bool trans_x1, bool trans_x2,
     const bool is_packed)
 {
@@ -423,7 +424,7 @@ ge::graphStatus InferShapeForBatchMatMul(
 constexpr int64_t INFINITE_RANGE = -1;
 constexpr int64_t NORMALIZE_INFINITE_RANGE = std::numeric_limits<int64_t>::max();
 static const std::pair<int64_t, int64_t> NORMALIZE_FULL_RANGE = {0, NORMALIZE_INFINITE_RANGE};
-bool InitializeRange(
+static bool InitializeRange(
     size_t num, const std::vector<std::pair<int64_t, int64_t>>& range,
     std::vector<std::pair<int64_t, int64_t>>& new_range)
 {
@@ -451,7 +452,7 @@ bool InitializeRange(
     return true;
 }
 
-bool GetBatchIntersection(
+static bool GetBatchIntersection(
     const char* op_name, std::pair<int64_t, int64_t>& a, std::pair<int64_t, int64_t>& b,
     std::pair<int64_t, int64_t>& out)
 {
@@ -484,7 +485,7 @@ bool GetBatchIntersection(
     return true;
 }
 
-bool GetKNIntersection(
+static bool GetKNIntersection(
     const char* op_name, const std::pair<int64_t, int64_t>& a, const std::pair<int64_t, int64_t>& b,
     std::pair<int64_t, int64_t>& out)
 {
@@ -501,7 +502,7 @@ bool GetKNIntersection(
     return true;
 }
 
-void ExpendOneDimRange(
+static void ExpendOneDimRange(
     size_t num_dim_x1, size_t num_dim_x2, std::vector<std::pair<int64_t, int64_t>>& shape_range_x1,
     std::vector<std::pair<int64_t, int64_t>>& shape_range_x2)
 {
@@ -517,7 +518,7 @@ void ExpendOneDimRange(
     }
 }
 
-void ReduceOneDimRange(
+static void ReduceOneDimRange(
     size_t num_dim_x1, size_t num_dim_x2, size_t& num_dim_out,
     std::vector<std::pair<int64_t, int64_t>>& shape_range_out)
 {
@@ -533,7 +534,7 @@ void ReduceOneDimRange(
     }
 }
 
-bool InferRangeBias(
+static bool InferRangeBias(
     const char* op_name, std::vector<std::pair<int64_t, int64_t>>& new_shape_range_out, size_t idx_n,
     const gert::Range<gert::Shape>* bias_shape_range,
     const std::vector<std::pair<int64_t, int64_t>>& new_shape_range_x2)
