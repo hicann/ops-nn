@@ -190,7 +190,7 @@ public:
         int64_t singleCoreN = baseN_;
         CalSingleCoreShapeByCoord(singleCoreM, singleCoreN, blockCoord);
 
-        if (totalTailTile_ == 1 || roundIdx_ < round_ - 1) {
+        if (totalTailTile_ == 1 || roundIdx_ < round_) {
             return {singleCoreM, singleCoreN, 0, 0};
         }
 
