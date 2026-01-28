@@ -11,14 +11,14 @@
 #include "aclnn_layer_norm_backward.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn/aclnn_base.h"
+#include "aclnn_kernels/common/op_error_check.h"
 #include "level0/fill.h"
 #include "layer_norm_beta_gamma_backprop_v2.h"
 #include "layer_norm_x_backprop_v3.h"
 #include "layer_norm_grad_v3.h"
 #include "level0/squeeze.h"
 #include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
-#include "aclnn/aclnn_base.h"
-#include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -27,6 +27,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -348,9 +349,8 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行LayerNorm反向计算，根据平台决定使用合一算子或拆分算子
-    bool gradV3Compute = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool gradV3Compute = (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch));
     if (gradV3Compute) {
         OP_LOGD("Entering into layer_norm_grad Func.");
         // LayerNormGradV3只支持fp32 rstd mean输入，如果不是fp32先转fp32
@@ -358,9 +358,9 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         CHECK_RET(rstdContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto meanContiguousFp32 = l0op::Cast(meanContiguous, DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(meanContiguousFp32 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // ASCEND910_95 支持更多的输出数据类型，只在不满足信息库条件时cast
+        // npuArch 3510 支持更多的输出数据类型，只在不满足信息库条件时cast
         DataType gradWeightType = DataType::DT_FLOAT;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 &&
+        if (Ops::NN::AclnnUtil::IsRegbase(curArch) &&
             (!(*outputMask)[GRAD_BIAS_INDEX] || (gradBiasOut->GetDataType() == weightContiguous->GetDataType())) && 
             (!(*outputMask)[GRAD_WEIGHT_INDEX] || (gradWeightOut->GetDataType() == weightContiguous->GetDataType()))) {
             gradWeightType = weightContiguous->GetDataType();

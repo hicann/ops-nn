@@ -70,6 +70,7 @@ protected:
             aTileBase = vlFp32;
             bytesPerElement = FLOAT32_BYTES;
         }
+        bytesPerWeightElement = weightDataType == ge::DT_FLOAT ? FLOAT32_BYTES : FLOAT16_BYTES;
 
         return true;
     }
@@ -99,6 +100,7 @@ private:
     uint64_t vlFp32;
     uint64_t vlFp16;
     int64_t bytesPerElement;
+    int64_t bytesPerWeightElement;
 
     int64_t fusedALen;
     int64_t fusedBLen;
@@ -106,6 +108,7 @@ private:
     float epsilon;
 
     ge::DataType dataType;
+    ge::DataType weightDataType;
     BatchNormV3InferLastChannelTilingData tilingData;
 };
 
@@ -116,6 +119,7 @@ void BatchNormV3InferLastChannelTiling::Reset()
     vlFp32 = 0;
     vlFp16 = 0;
     bytesPerElement = 0;
+    bytesPerWeightElement = 0;
 
     fusedALen = 0;
     fusedBLen = 0;
@@ -158,8 +162,11 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = xShape->GetStorageShape();
     auto xDesc = context_->GetInputDesc(0);
+    auto weightDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
     dataType = xDesc->GetDataType();
+    weightDataType = weightDesc->GetDataType();
     auto format = xDesc->GetFormat().GetStorageFormat();
     // 获取attr
     auto attrs = context_->GetAttrs();
@@ -220,7 +227,7 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
     // 切分A、B基本块， （B,A） -- >(Bouter, Aouter, Binner*Ainner*ATileBase)
     int64_t aInner = 1;
     int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
-                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerElement) * aInner * aTileBase) /
+                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement) * aInner * aTileBase) /
                            bytesPerElement / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A
@@ -232,7 +239,7 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
 
     int64_t aFactorMax =
         aicoreParams_.ubSize / DOUBLE_BUFFER / aTileBase /
-        ((bInner * INPUT_OUTPUT_NUM + WEIGHT_BIAS_NUM) * bytesPerElement + MEAN_VAR_NUM * FLOAT32_BYTES);
+        (bInner * INPUT_OUTPUT_NUM * bytesPerElement + WEIGHT_BIAS_NUM * bytesPerWeightElement + MEAN_VAR_NUM * FLOAT32_BYTES);
     int64_t aInnerMax = fusedALen / aTileBase;
     aInner = aInnerMax <= aFactorMax ? aInnerMax : aFactorMax;
 

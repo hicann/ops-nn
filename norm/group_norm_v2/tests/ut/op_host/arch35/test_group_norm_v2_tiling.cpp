@@ -30,24 +30,20 @@ using namespace ut_util;
 using namespace std;
 
 class GroupNormV2Tiling : public testing::Test {
-protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupNormV2Tiling SetUp" << std::endl;
-    }
+ protected:
+  static void SetUpTestCase() {
+    std::cout << "GroupNormV2Tiling SetUp" << std::endl;
+  }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupNormV2Tiling TearDown" << std::endl;
-    }
+  static void TearDownTestCase() {
+    std::cout << "GroupNormV2Tiling TearDown" << std::endl;
+  }
 };
 
-static string TilingData2Str(const gert::TilingData* tiling_data)
-{
+static string TilingData2Str(const gert::TilingData* tiling_data) {
     auto data = tiling_data->GetData();
     string result;
-    for (size_t i = tiling_data->GetDataSize() - sizeof(int64_t); i < tiling_data->GetDataSize();
-         i += sizeof(int64_t)) {
+    for (size_t i = tiling_data->GetDataSize() - sizeof(int64_t); i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
         result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
         result += " ";
     }
@@ -55,10 +51,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
-{
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion) {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -105,7 +100,7 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_0)
     gert::StorageShape y = {{36, 48, 24, 1}, {36, 48, 24, 1}};
     gert::StorageShape mean = {{36, 6}, {36, 6}};
     gert::StorageShape rstd = {{36, 6}, {36, 6}};
-
+    
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 1, 1})
@@ -171,7 +166,7 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_1)
     gert::StorageShape gamma = {{128}, {128}};
     gert::StorageShape beta = {{128}, {128}};
     gert::StorageShape y = {{1, 128, 64, 64}, {1, 128, 64, 64}};
-
+    
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -235,7 +230,7 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_2)
     gert::StorageShape gamma = {{5120}, {5120}};
     gert::StorageShape beta = {{5120}, {5120}};
     gert::StorageShape y = {{1, 5120, 32, 32}, {1, 5120, 32, 32}};
-
+    
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1, 1})
@@ -301,7 +296,7 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_3)
     gert::StorageShape y = {{36, 48, 24, 1}, {36, 48, 24, 1}};
     gert::StorageShape mean = {{36, 6}, {36, 6}};
     gert::StorageShape rstd = {{36, 6}, {36, 6}};
-
+    
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 1, 1})

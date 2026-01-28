@@ -149,6 +149,5 @@ uint64_t LayerNormV4WelfordTiling::GetTilingKey() const
     return templateKey * LN_TEMPLATE_KEY_WEIGHT + static_cast<uint64_t>(commonParams.dtypeKey);
 }
 
-REGISTER_OPS_TILING_TEMPLATE(LayerNormV3, LayerNormV4WelfordTiling, 4000);
 REGISTER_OPS_TILING_TEMPLATE(LayerNormV4, LayerNormV4WelfordTiling, 4000);
 } // namespace optiling

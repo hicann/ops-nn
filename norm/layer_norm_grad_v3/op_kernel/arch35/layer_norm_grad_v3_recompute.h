@@ -98,7 +98,7 @@ private:
         const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
     __aicore__ inline void ProcessX(const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor);
     __aicore__ inline void ComputeDx(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+        const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
         const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
         const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
         const int64_t colSize, const int64_t stride);

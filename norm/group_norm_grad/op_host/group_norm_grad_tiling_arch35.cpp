@@ -327,10 +327,10 @@ ge::graphStatus GroupNormGradRegBaseTiling::UbTiling()
     auto canUseUbSize = (ubSize_ - reserveSpace_) / DOUBLE_BUFFER;
     // mode0 x, dy 全部load成float32数据类型，放在UB中计算完dx 和 dgamma, dbeta
     int64_t tAlignFactor = this->blockSize_ / this->tTypeBytes_;
-    uint32_t mode0xDyDxSize = Ops::Base::CeilAlign(CPerG_ * HxW_, tAlignFactor) * this->tTypeBytes_ * UB_COPIES_3;
+    int64_t mode0xDyDxSize = static_cast<int64_t>(Ops::Base::CeilAlign(CPerG_ * HxW_, tAlignFactor)) * this->tTypeBytes_ * UB_COPIES_3;
     // mode0 mean, rstd需要额外的空间
     mode0UbCapGNum_ = canUseUbSize / (mode0xDyDxSize + this->blockSize_ * UB_COPIES_2);
-    mode1UbCapCNum_ = canUseUbSize / (Ops::Base::CeilAlign(HxW_, tAlignFactor) * this->tTypeBytes_ * UB_COPIES_3);
+    mode1UbCapCNum_ = canUseUbSize / (static_cast<int64_t>(Ops::Base::CeilAlign(HxW_, tAlignFactor)) * this->tTypeBytes_ * UB_COPIES_3);
     // the conditions for branch small_ng
     if (mode0UbCapGNum_ > 0) {
         modeKey_ = MODE_0;
@@ -542,6 +542,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::PostTiling()
     } else {
         context_->SetBlockDim(std::max(std::max(this->stage1CoreUsed_, this->clrBlockNum_), this->stage2CoreUsed_));
     }
+    context_->SetScheduleMode(1);
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;

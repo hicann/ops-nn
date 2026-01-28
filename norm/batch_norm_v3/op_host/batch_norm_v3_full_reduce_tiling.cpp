@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "tiling_base/tiling_util.h"
 #include "batch_norm_v3_tiling.h"
 
 static constexpr uint64_t BNV3_FULL_REDUCE_NOMAL_TILING_KEY = 2000;
@@ -94,7 +95,7 @@ int64_t BatchNormV3FullReduceTiling::DoUbTiling(const int64_t blockFactor, int64
 
 bool BatchNormV3FullReduceTiling::IsCapable()
 {
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_) ||
         socVersion == platform_ascendc::SocVersion::MC62CM12A) {
         return false;
     }

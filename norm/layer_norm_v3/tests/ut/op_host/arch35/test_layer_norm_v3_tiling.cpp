@@ -67,7 +67,7 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_two_pass)
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> soc_version;
+    map<string, string> soc_version = {{"NpuArch", "3510"}, {"Short_SoC_version", "ASCEND910_95"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
 
     // platform info

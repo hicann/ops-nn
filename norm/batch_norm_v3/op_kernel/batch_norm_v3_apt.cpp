@@ -47,45 +47,45 @@ extern "C" __global__ __aicore__ void batch_norm_v3(
     if (TILING_KEY_IS(TILINGKEY_FULL_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3FullReduceRegbaseTilingData, tiling_data_in, tiling);
         const BatchNormV3FullReduceRegbaseTilingData* __restrict tilingData = &tiling_data_in;
-        BatchNormV3FullReduce<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3FullReduce<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_WELFORD_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3WelfordRegbaseTilingData, tiling_data_in, tiling);
         const BatchNormV3WelfordRegbaseTilingData* __restrict tilingData = &tiling_data_in;
-        BatchNormV3Welford<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3Welford<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_RA_FULL_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3RAFullReduceTilingData, tiling_data_in, tiling);
         const BatchNormV3RAFullReduceTilingData* __restrict tilingData = &tiling_data_in;
-        BatchNormV3RAFullReduce<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3RAFullReduce<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_RA_WELFORD)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3RAWelfordTilingData, tiling_data_in, tiling);
         const BatchNormV3RAWelfordTilingData* __restrict tilingData = &tiling_data_in;
-        BatchNormV3RAWelford<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3RAWelford<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_INFER_LAST_CHANNEL)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3InferLastChannelTilingData, tiling_data_in, tiling);
         const BatchNormV3InferLastChannelTilingData* __restrict tilingData = &tiling_data_in;
         TPipe pipe;
-        BatchNormV3InferLastChannel<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3InferLastChannel<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_INFER)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3InferTilingData, tiling_data_in, tiling);
         const BatchNormV3InferTilingData* __restrict tilingData = &tiling_data_in;
         TPipe pipe;
-        BatchNormV3Infer<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3Infer<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_RA_BLOCK_SPLIT_R)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormV3BlockSplitRTilingData, tiling_data_in, tiling);
         const BatchNormV3BlockSplitRTilingData* __restrict tilingData = &tiling_data_in;
-        BatchNormV3BlockSplitR<DTYPE_X, DTYPE_RUNNING_MEAN> op(tilingData);
+        BatchNormV3BlockSplitR<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd, workspace);
         op.Process();
     }

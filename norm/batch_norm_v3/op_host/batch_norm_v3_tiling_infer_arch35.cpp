@@ -68,6 +68,7 @@ protected:
             aTileBase_ = vlFp32_;
             bytesPerElement_ = FLOAT32_BYTES;
         }
+        bytesPerWeightElement_ = weightDataType_ == ge::DT_FLOAT ? FLOAT32_BYTES : FLOAT16_BYTES;
 
         return true;
     }
@@ -96,6 +97,7 @@ private:
     uint64_t vlFp32_;
     uint64_t vlFp16_;
     int64_t bytesPerElement_;
+    int64_t bytesPerWeightElement_;
     int64_t fusedB0Len_;
     int64_t fusedALen_;
     int64_t fusedB1Len_;
@@ -103,6 +105,7 @@ private:
     float epsilon_;
 
     ge::DataType dataType_;
+    ge::DataType weightDataType_;
     BatchNormV3InferTilingData tilingData_;
 };
 
@@ -113,6 +116,7 @@ void BatchNormV3InferTiling::Reset()
     vlFp32_ = 0;
     vlFp16_ = 0;
     bytesPerElement_ = 0;
+    bytesPerWeightElement_ = 0;
     fusedB0Len_ = 0;
     fusedALen_ = 0;
     fusedB1Len_ = 0;
@@ -164,8 +168,11 @@ ge::graphStatus BatchNormV3InferTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = xShape->GetStorageShape();
     auto xDesc = context_->GetInputDesc(0);
+    auto weightDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
     dataType_ = xDesc->GetDataType();
+    weightDataType_ = weightDesc->GetDataType();
     auto format = xDesc->GetFormat().GetStorageFormat();
     // 获取attr
     auto attrs = context_->GetAttrs();
@@ -206,7 +213,7 @@ ge::graphStatus BatchNormV3InferTiling::DoOpTiling()
     // 切分A、B基本块， （B0,A,B1） -- >(b0Outer*aOuter*b1Outer, B0inner*Ainner*B1innerA(TileBase))
     int64_t aInner = 1;
     int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
-                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerElement_) * aInner * aTileBase_) /
+                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement_) * aInner * aTileBase_) /
                            bytesPerElement_ / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A

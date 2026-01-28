@@ -392,6 +392,7 @@ protected:
     float epsilon;
     float momentum;
     ge::DataType dataType;
+    ge::DataType weightDataType;
     ge::Format format;
 };
 } // namespace optiling

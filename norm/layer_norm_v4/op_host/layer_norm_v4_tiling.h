@@ -34,7 +34,6 @@ TILING_DATA_FIELD_DEF(uint32_t, rowSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV4, LayerNormV4TilingData)
-REGISTER_TILING_DATA_CLASS(LayerNormV3, LayerNormV4TilingData)
 
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataSingleRead)
 TILING_DATA_FIELD_DEF(uint32_t, blockDim);
@@ -108,12 +107,6 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_311, LayerNormV4TilingDataRegBaseTwoPass)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_320, LayerNormV4TilingDataRegBaseTwoPass)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_322, LayerNormV4TilingDataRegBaseTwoPass)
 
-REGISTER_TILING_DATA_CLASS(LayerNormV3_300, LayerNormV4TilingDataRegBaseTwoPass)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_310, LayerNormV4TilingDataRegBaseTwoPass)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_311, LayerNormV4TilingDataRegBaseTwoPass)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_320, LayerNormV4TilingDataRegBaseTwoPass)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_322, LayerNormV4TilingDataRegBaseTwoPass)
-
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataWelford)
 TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
 TILING_DATA_FIELD_DEF(int64_t, N);                  // 输入tensor的列，即reduce的轴
@@ -137,12 +130,6 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_410, LayerNormV4TilingDataWelford)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_411, LayerNormV4TilingDataWelford)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_420, LayerNormV4TilingDataWelford)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_422, LayerNormV4TilingDataWelford)
-
-REGISTER_TILING_DATA_CLASS(LayerNormV3_400, LayerNormV4TilingDataWelford)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_410, LayerNormV4TilingDataWelford)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_411, LayerNormV4TilingDataWelford)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_420, LayerNormV4TilingDataWelford)
-REGISTER_TILING_DATA_CLASS(LayerNormV3_422, LayerNormV4TilingDataWelford)
 
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataRegBaseTwoPassPerf)
 TILING_DATA_FIELD_DEF(int64_t, a);

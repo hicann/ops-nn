@@ -28,53 +28,52 @@ namespace {
 #define TILINGKEY_TWOPASS_PERF_MIX_TYPE 1111
 #define TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE 1121
 #define TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE 1131
-} // namespace
+}  // namespace
 
-extern "C" __global__ __aicore__ void group_norm_v2(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
-{
-    if (workspace == nullptr) {
-        return;
-    }
+extern "C" __global__ __aicore__ void group_norm_v2(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                    GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+  if (workspace == nullptr) {
+    return;
+  }
 
-    GM_ADDR userWS = GetUserWorkspace(workspace);
-    if (userWS == nullptr) {
-        return;
-    }
+  GM_ADDR userWS = GetUserWorkspace(workspace);
+  if (userWS == nullptr) {
+    return;
+  }
 
-    GET_TILING_DATA(tilingData, tiling);
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-    if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF)) {
-        GroupNormV2::GroupNormV2Welford<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF_MIX_TYPE)) {
-        GroupNormV2::GroupNormV2Welford<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF)) {
-        GroupNormV2::GroupNormV2TwoPass<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF_MIX_TYPE)) {
-        GroupNormV2::GroupNormV2TwoPass<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED)) {
-        GroupNormV2::GroupNormV2WelfordGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE)) {
-        GroupNormV2::GroupNormV2WelfordGeneralized<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED)) {
-        GroupNormV2::GroupNormV2TwoPassGeneralized<DTYPE_X, DTYPE_X> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE)) {
-        GroupNormV2::GroupNormV2TwoPassGeneralized<DTYPE_X, float> op;
-        op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
-        op.Process();
-    }
+  GET_TILING_DATA(tilingData, tiling);
+  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+  if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF)) {
+    GroupNormV2::GroupNormV2Welford<DTYPE_X, DTYPE_X> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_WELFORD_PERF_MIX_TYPE)) {
+    GroupNormV2::GroupNormV2Welford<DTYPE_X, float> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF)) {
+    GroupNormV2::GroupNormV2TwoPass<DTYPE_X, DTYPE_X> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_PERF_MIX_TYPE)) {
+    GroupNormV2::GroupNormV2TwoPass<DTYPE_X, float> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED)) {
+    GroupNormV2::GroupNormV2WelfordGeneralized<DTYPE_X, DTYPE_X> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE)) {
+    GroupNormV2::GroupNormV2WelfordGeneralized<DTYPE_X, float> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED)) {
+    GroupNormV2::GroupNormV2TwoPassGeneralized<DTYPE_X, DTYPE_X> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  } else if (TILING_KEY_IS(TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE)) {
+    GroupNormV2::GroupNormV2TwoPassGeneralized<DTYPE_X, float> op;
+    op.Init(x, gamma, beta, y, mean, rstd, userWS, &tilingData);
+    op.Process();
+  }
 }

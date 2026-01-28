@@ -130,6 +130,7 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
 {
     SetInputInfo();
     int64_t elemSize = FP32_BYTE;
+    int64_t weightElemSize = weightDataType == ge::DT_FLOAT ? FP32_BYTE : FP16_BYTE;
     int64_t gammaBetaNodeNum = GAMMA_BETA_NODE_NUM;
     int64_t runningMeanVarNodeNum = RUNNING_MEAN_VAR_NODE_NUM;
     int64_t inOutNodeNum = X_IN_OUT_NODE_NUM * DOUBLE_BUFFER_NUM;
@@ -138,9 +139,9 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
     auto runningMeanDataType = runningMeanDesc->GetDataType();
     if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
         elemSize = FP16_BYTE;
-        gammaBetaNodeNum = gammaBetaNodeNum / (FP32_BYTE / FP16_BYTE);
         inOutNodeNum = inOutNodeNum / (FP32_BYTE / FP16_BYTE);
     }
+    gammaBetaNodeNum = gammaBetaNodeNum / (FP32_BYTE / weightElemSize);
     if (runningMeanDataType == ge::DT_FLOAT16 || runningMeanDataType == ge::DT_BF16) {
         runningMeanVarNodeNum = runningMeanVarNodeNum / (FP32_BYTE / FP16_BYTE);
     }

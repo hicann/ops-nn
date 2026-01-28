@@ -300,30 +300,22 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessX(
         CastToFp32From<U>(gamma_, castTempTensor, nfactor);
     }
 
-    LocalTensor<float> dx_ = outQueueDx.template AllocTensor<float>();
+    LocalTensor<T> dx_ = outQueueDx.template AllocTensor<T>();
     ComputeDx(dx_, dy_, x_, gamma_, sum1Tensor, sum2Tensor, rstd_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     inQueueDy.FreeTensor(dy_);
     inQueueX.FreeTensor(x_);
     inQueueGamma.FreeTensor(gamma_);
 
-    if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = dx_.ReinterpretCast<T>();
-        CastFromFp32To<T>(castTempTensor, dx_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
-    }
     outQueueDx.EnQue(dx_);
-    dx_ = outQueueDx.template DeQue<float>();
-    if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        CopyOut(pdXOutTensorGM[offset], dx_.ReinterpretCast<T>(), mfactor, nfactor, td_->col, 2 * td_->backwardNfactorBlockAligned);
-    } else if constexpr (IsSameType<T, float>::value) {
-        CopyOut(pdXOutTensorGM[offset], dx_.ReinterpretCast<T>(), mfactor, nfactor, td_->col, td_->backwardNfactorBlockAligned);
-    }
+    dx_ = outQueueDx.template DeQue<T>();
+    CopyOut(pdXOutTensorGM[offset], dx_, mfactor, nfactor, td_->col, td_->backwardNfactorBlockAligned);
     outQueueDx.FreeTensor(dx_);
 }
 
 // 二分累加
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ComputeDx(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+    const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
     const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
     const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride)
 {
@@ -340,7 +332,7 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ComputeDx(
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
         {
-            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
             __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
             __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
             __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
@@ -370,13 +362,13 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ComputeDx(
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
                 Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                DataCopy((__local_mem__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, dxReg, pMask);
+                StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
             }
         }
     } else {
         __VEC_SCOPE__
         {
-            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
             __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
             __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
             __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
@@ -407,7 +399,7 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ComputeDx(
                     Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
                     Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                    DataCopy((__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride, dxReg, pMask);
+                    StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
                 }
             }
         }

@@ -406,58 +406,60 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Init(
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Process()
 {
-    if (GetBlockIdx() >= td_->backwardBlockDim) {
-        return;
-    }
+    if (GetBlockIdx() < td_->backwardBlockDim) {
+        tempTensor = tempBuffer.Get<float>();
+        cacheTensor0 = cacheBuffer0.Get<float>();
+        cacheTensor1 = cacheBuffer1.Get<float>();
+        reduceSumTempTensor = reduceSumTempBuffer.Get<float>();
+        sum1Tensor = cacheTensor0[ResultCacheID * td_->backwardMfactorBlockAligned];
+        sum2Tensor = cacheTensor1[ResultCacheID * td_->backwardMfactorBlockAligned];
 
-    tempTensor = tempBuffer.Get<float>();
-    cacheTensor0 = cacheBuffer0.Get<float>();
-    cacheTensor1 = cacheBuffer1.Get<float>();
-    reduceSumTempTensor = reduceSumTempBuffer.Get<float>();
-    sum1Tensor = cacheTensor0[ResultCacheID * td_->backwardMfactorBlockAligned];
-    sum2Tensor = cacheTensor1[ResultCacheID * td_->backwardMfactorBlockAligned];
+        int64_t mainNfactor =
+            BasicBlockLoop ? td_->backwardNfactorBlockAligned
+                           : (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned : Ntail);
+        int64_t loopCount = BasicBlockLoop ? BasicBlockLoop : 1;
 
-    int64_t mainNfactor =
-        BasicBlockLoop ? td_->backwardNfactorBlockAligned
-                       : (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned : Ntail);
-    int64_t loopCount = BasicBlockLoop ? BasicBlockLoop : 1;
+        for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
+            int64_t mFactor = (mi == td_->backwardMTotalLoop - 1) ? td_->backwardMtail : td_->backwardMfactor;
 
-    for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
-        int64_t mFactor = (mi == td_->backwardMTotalLoop - 1) ? td_->backwardMtail : td_->backwardMfactor;
+            Prologue(mi, mFactor);
 
-        Prologue(mi, mFactor);
-
-        for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCount; ++basicBlockIdx) {
-            ProcessMainBlock(mi, basicBlockIdx, mFactor, mainNfactor);
-            PRELOAD(2);  // 2*2K
-            if (BasicBlockLoop && (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
-                int64_t foldNFactor = basicBlockIdx < MainFoldCount ? td_->backwardNfactorBlockAligned : Ntail;
-                ProcessFoldBlock(mi, basicBlockIdx, mFactor, foldNFactor);
+            for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCount; ++basicBlockIdx) {
+                ProcessMainBlock(mi, basicBlockIdx, mFactor, mainNfactor);
+                PRELOAD(2);  // 2*2K
+                if (BasicBlockLoop && (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
+                    int64_t foldNFactor = basicBlockIdx < MainFoldCount ? td_->backwardNfactorBlockAligned : Ntail;
+                    ProcessFoldBlock(mi, basicBlockIdx, mFactor, foldNFactor);
+                }
+                PRELOAD(2);  // 2*2K
+                ProcessSummation(mi, basicBlockIdx, mFactor, mainNfactor);
             }
-            PRELOAD(2);  // 2*2K
-            ProcessSummation(mi, basicBlockIdx, mFactor, mainNfactor);
+
+            Epilogue();
+
+            int64_t offset = GetBlockIdx() * td_->row + mi * td_->backwardMfactor;
+
+            LocalTensor<float> outTensor0 = outTmpQueue0.template AllocTensor<float>();
+            CopyUB2UB(outTensor0, sum1Tensor, mFactor);
+            outTmpQueue0.EnQue(outTensor0);
+            outTensor0 = outTmpQueue0.template DeQue<float>();
+            CopyOut(partialSum1GM[offset], outTensor0, mFactor);
+            outTmpQueue0.FreeTensor(outTensor0);
+
+            LocalTensor<float> outTensor1 = outTmpQueue1.template AllocTensor<float>();
+            CopyUB2UB(outTensor1, sum2Tensor, mFactor);
+            outTmpQueue1.EnQue(outTensor1);
+            outTensor1 = outTmpQueue1.template DeQue<float>();
+            CopyOut(partialSum2GM[offset], outTensor1, mFactor);
+            outTmpQueue1.FreeTensor(outTensor1);
         }
-
-        Epilogue();
-
-        int64_t offset = GetBlockIdx() * td_->row + mi * td_->backwardMfactor;
-
-        LocalTensor<float> outTensor0 = outTmpQueue0.template AllocTensor<float>();
-        CopyUB2UB(outTensor0, sum1Tensor, mFactor);
-        outTmpQueue0.EnQue(outTensor0);
-        outTensor0 = outTmpQueue0.template DeQue<float>();
-        CopyOut(partialSum1GM[offset], outTensor0, mFactor);
-        outTmpQueue0.FreeTensor(outTensor0);
-
-        LocalTensor<float> outTensor1 = outTmpQueue1.template AllocTensor<float>();
-        CopyUB2UB(outTensor1, sum2Tensor, mFactor);
-        outTmpQueue1.EnQue(outTensor1);
-        outTensor1 = outTmpQueue1.template DeQue<float>();
-        CopyOut(partialSum2GM[offset], outTensor1, mFactor);
-        outTmpQueue1.FreeTensor(outTensor1);
     }
 
     SyncAll();
+
+    if (GetBlockIdx() >= td_->backwardBlockDim) {
+        return;
+    }
 
     PRELOAD(4);  // 4*2K
     for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
@@ -676,31 +678,21 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ProcessX(
         CastToFp32From<U>(gamma_, castTempTensor, nfactor);
     }
 
-    LocalTensor<float> dx_ = outQueueDx.template AllocTensor<float>();
+    LocalTensor<T> dx_ = outQueueDx.template AllocTensor<T>();
     ComputeDx(dx_, dy_, x_, gamma_, sum1Tensor, sum2Tensor, rstd_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     inQueueDy.FreeTensor(dy_);
     inQueueX.FreeTensor(x_);
     inQueueGamma.FreeTensor(gamma_);
 
-    if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = dx_.ReinterpretCast<T>();
-        CastFromFp32To<T>(castTempTensor, dx_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
-    }
     outQueueDx.EnQue(dx_);
-    dx_ = outQueueDx.template DeQue<float>();
-    if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        CopyOut(pdXOutTensorGM[offset], dx_.ReinterpretCast<T>(), mfactor, nfactor, td_->col,
-                2 * td_->backwardNfactorBlockAligned);
-    } else if constexpr (IsSameType<T, float>::value) {
-        CopyOut(pdXOutTensorGM[offset], dx_.ReinterpretCast<T>(), mfactor, nfactor, td_->col,
-                td_->backwardNfactorBlockAligned);
-    }
+    dx_ = outQueueDx.template DeQue<T>();
+    CopyOut(pdXOutTensorGM[offset], dx_, mfactor, nfactor, td_->col, td_->backwardNfactorBlockAligned);
     outQueueDx.FreeTensor(dx_);
 }
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ComputeDx(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+    const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
     const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
     const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride)
 {
@@ -717,7 +709,7 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ComputeDx
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
         {
-            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
             __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
             __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
             __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
@@ -747,13 +739,13 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ComputeDx
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
                 Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                DataCopy((__local_mem__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, dxReg, pMask);
+                StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
             }
         }
     } else {
         __VEC_SCOPE__
         {
-            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
             __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
             __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
             __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
@@ -784,7 +776,7 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::ComputeDx
                     Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
                     Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                    DataCopy((__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride, dxReg, pMask);
+                    StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
                 }
             }
         }

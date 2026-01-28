@@ -12,8 +12,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -23,8 +22,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -34,8 +32,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -47,8 +44,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -58,8 +54,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -69,8 +64,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -107,8 +101,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -118,8 +111,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -129,8 +121,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -142,8 +133,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -153,8 +143,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -164,8 +153,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -202,8 +190,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -213,8 +200,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -224,8 +210,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -237,8 +222,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -248,8 +232,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -259,8 +242,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -297,8 +279,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -308,8 +289,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -319,8 +299,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -332,8 +311,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -343,8 +321,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -354,8 +331,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -392,8 +368,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -403,8 +378,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -414,8 +388,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -427,8 +400,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -438,8 +410,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -449,8 +420,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -487,8 +457,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -498,8 +467,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -509,8 +477,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -522,8 +489,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -533,8 +499,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -544,8 +509,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -582,8 +546,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -593,8 +556,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -604,8 +566,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -617,8 +578,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -628,8 +588,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -639,8 +598,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -677,8 +635,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -688,8 +645,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -699,8 +655,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -712,8 +667,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -723,8 +677,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -734,8 +687,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -772,8 +724,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -783,8 +734,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -794,8 +744,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -807,8 +756,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -818,8 +766,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -829,8 +776,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -867,8 +813,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -878,8 +823,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -889,8 +833,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -902,8 +845,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -913,8 +855,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -924,8 +865,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -962,8 +902,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -973,8 +912,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -984,8 +922,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -997,8 +934,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1008,8 +944,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1019,8 +954,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1057,8 +991,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1068,8 +1001,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1079,8 +1011,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1092,8 +1023,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1103,8 +1033,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1114,8 +1043,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1152,8 +1080,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1163,8 +1090,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1174,8 +1100,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1187,8 +1112,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1198,8 +1122,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1209,8 +1132,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1247,8 +1169,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1258,8 +1179,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1269,8 +1189,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1282,8 +1201,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1293,8 +1211,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1304,8 +1221,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1342,8 +1258,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1353,8 +1268,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1364,8 +1278,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1377,8 +1290,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1388,8 +1300,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1399,8 +1310,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1437,8 +1347,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1448,8 +1357,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1459,8 +1367,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1472,8 +1379,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1483,8 +1389,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1494,8 +1399,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1532,8 +1436,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1543,8 +1446,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1554,8 +1456,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1567,8 +1468,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1578,8 +1478,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1589,8 +1488,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1627,8 +1525,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1638,8 +1535,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1649,8 +1545,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1662,8 +1557,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1673,8 +1567,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1684,8 +1577,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1722,8 +1614,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1733,8 +1624,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1744,8 +1634,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1757,8 +1646,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1768,8 +1656,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1779,8 +1666,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [
@@ -1817,8 +1703,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "gamma",
@@ -1828,8 +1713,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "beta",
@@ -1839,8 +1723,7 @@
           "paramType": "optional",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "outputs": [
@@ -1852,8 +1735,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "mean",
@@ -1863,8 +1745,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         },
         {
           "name": "rstd",
@@ -1874,8 +1755,7 @@
           "paramType": "required",
           "shape": [
             -2
-          ],
-          "format_match_mode": "FormatAgnostic"
+          ]
         }
       ],
       "attrs": [

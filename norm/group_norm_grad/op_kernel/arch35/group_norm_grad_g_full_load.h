@@ -92,23 +92,19 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Stage1Process()
         if ((loopIdx == ubLoopCnt - 1) && (this->curCoreTaskNum_ % this->mode0UbCapGNum_ != 0)) {
             currGNum = this->curCoreTaskNum_ % this->mode0UbCapGNum_;
         }
-        uint32_t curEleNum = CeilAlign(static_cast<uint32_t>(this->eleNumPerG_ * currGNum), this->elemTPerBlock_);
+
         xTensor = this->inQueX_.template AllocTensor<T>();
         dyTensor = this->inQueDy_.template AllocTensor<T>();
-        DataCopy(xTensor, this->xGm_[offset], curEleNum);
-        DataCopy(dyTensor, this->dyGm_[offset], curEleNum);
+        this->CopyInDyAndX(dyTensor, xTensor, offset, this->eleNumPerG_ * currGNum);
         this->inQueX_.EnQue(xTensor);
         this->inQueDy_.EnQue(dyTensor);
+
         dyTensor = this->inQueDy_.template DeQue<T>();
         xTensor = this->inQueX_.template DeQue<T>();
         LocalTensor<T> dxTensor = this->outQueDx_.template AllocTensor<T>();
         uint32_t baseTaskId = this->startTaskId_ + loopIdx * this->mode0UbCapGNum_;
-        this->LoadDataToUb(
-            this->inQueMean_, this->tempMeanBuf_, this->meanGm_, baseTaskId,
-            CeilAlign(currGNum, this->elemUPerBlock_));
-        this->LoadDataToUb(
-            this->inQueRstd_, this->tempRstdBuf_, this->rstdGm_, baseTaskId,
-            CeilAlign(currGNum, this->elemUPerBlock_));
+        this->LoadDataToUb(this->inQueMean_, this->tempMeanBuf_, this->meanGm_, baseTaskId, currGNum);
+        this->LoadDataToUb(this->inQueRstd_, this->tempRstdBuf_, this->rstdGm_, baseTaskId, currGNum);
         LocalTensor<float> meanTensor = this->inQueMean_.template DeQue<float>();
         LocalTensor<float> rstdTensor = this->inQueRstd_.template DeQue<float>();
         for (int32_t gIdx = 0; gIdx < currGNum; gIdx++) {
@@ -469,9 +465,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::ComputeMode0Dx(
     LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor, const float mean, const float rstd)
 {
     uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
-    this->LoadDataToUb(
-        this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx,
-        CeilAlign(this->C_G_, this->elemUPerBlock_));
+    this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     float sum1 = 0;
     float sum2 = 0;

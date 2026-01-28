@@ -108,8 +108,11 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
     auto xDesc = context_->GetInputDesc(0);
+    auto weightDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
     dataType = xDesc->GetDataType();
+    weightDataType = weightDesc->GetDataType();
     format = xDesc->GetFormat().GetStorageFormat();
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
@@ -185,7 +188,8 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
         ge::DataType subDataType = xDesc->GetDataType();
         OP_CHECK_IF(
-            subDataType != otherInputDtype[i - 1],
+            // 支持weight和x的混合数据类型
+            (subDataType != otherInputDtype[i - 1]) && (subDataType != ge::DT_FLOAT),
             OP_LOGE(
                 context_->GetNodeName(), "Dtype of input %ld expect %d, but actual %d.", i,
                 static_cast<int32_t>(otherInputDtype[i - 1]), static_cast<int32_t>(subDataType)),
@@ -256,8 +260,12 @@ protected:
             return false;
         }
         int64_t elemSize = FP32_BYTE;
+        int64_t weightElemSize = FP32_BYTE;
         if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
             elemSize = FP16_BYTE;
+        }
+        if (weightDataType == ge::DT_FLOAT16 || weightDataType == ge::DT_BF16) {
+            weightElemSize = FP16_BYTE;
         }
         int64_t r1r0 = r0 * r1;
         binaryAddQuotient = vl;
@@ -280,7 +288,7 @@ protected:
         int64_t r1r0Align = (((r1r0 * elemSize + blockSize - 1) / blockSize) * blockSize) / elemSize;
         // two AR tensor, two A tensor, six fp32 A tensor
         int64_t ubSizePerA =
-            LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * elemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
+            LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * weightElemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
         int64_t aFactor = ubCanUseSize / ubSizePerA;
         if (aFactor >= 1) {
             batchNormV3TilingData.set_aFactor(aFactor);
@@ -391,10 +399,14 @@ protected:
         if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
             elemSize = FP16_BYTE;
         }
+        int64_t weightElemSize = FP32_BYTE;
+        if (weightDataType == ge::DT_FLOAT16 || weightDataType == ge::DT_BF16) {
+            weightElemSize = FP16_BYTE;
+        }
 
         int64_t ubCanUseSize = (((aicoreParams_.ubSize / DOUBLE_BUFFER) / blockSize) * blockSize);
         int64_t ubSizePerA =
-            (LARGE_BUFFER_NUM * r1 + 1) * elemSize + SMALL_BUFFER_NUM_T * elemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
+            (LARGE_BUFFER_NUM * r1 + 1) * elemSize + SMALL_BUFFER_NUM_T * weightElemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
         if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
             ubSizePerA = LARGE_BUFFER_NUM * r1 * elemSize + (r1 + 1) * FP32_BYTE + SMALL_BUFFER_NUM_T * elemSize +
                          SMALL_BUFFER_NUM_FP32 * FP32_BYTE;

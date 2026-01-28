@@ -145,5 +145,5 @@ extern "C" __global__ __aicore__ void group_norm_grad(
         EmptyDgamma<2> opDG(&pipe, tiling_data);
         opDG.Init(dgamma, dbeta);
         opDG.Process();
-    } 
+    }
 }

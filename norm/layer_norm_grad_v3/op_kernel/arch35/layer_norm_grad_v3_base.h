@@ -77,13 +77,6 @@ public:
         const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize,
         const int64_t colSize, const int64_t stride);
     template <typename T>
-    __aicore__ inline static void CastFromFp32To(
-        const LocalTensor<T>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count);
-    template <typename T>
-    __aicore__ inline static void CastFromFp32To(
-        const LocalTensor<T>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t rowSize,
-        const int64_t colSize, const int64_t stride);
-    template <typename T>
     __aicore__ inline static void CopyIn(
         const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
         const int64_t dstStride, const int64_t srcStride);
@@ -129,6 +122,9 @@ public:
     __aicore__ inline static void Normalize(
         const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const LocalTensor<float>& meanTensor,
         const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize);
+    template <typename T>
+    __aicore__ inline static void StoreTensorForDtypeT(
+        __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
 
 protected:
     TPipe* pipe_;
@@ -212,69 +208,6 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(
                         Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
                         DataCopy(
                             (__local_mem__ float*)dst + i * outerLoopDstStride + j * innerLoopStride, fp32Reg, pMask);
-                    }
-                }
-            }
-        }
-    }
-}
-
-template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CastFromFp32To(
-    const LocalTensor<T>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count)
-{
-    // CastFromFp32To T
-    CastFromFp32To<T>(dstTensor, srcTensor, CONST_ONE, count, CONST_ZERO);
-}
-
-template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CastFromFp32To(
-    const LocalTensor<T>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t stride)
-{
-    // CastFromFp32To T
-    uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
-    uint16_t innerLoopTimes = static_cast<uint16_t>(
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize())));
-    uint32_t outerLoopSrcStride = static_cast<uint32_t>(stride);
-    uint32_t outerLoopDstStride = static_cast<uint32_t>(stride * CONST_TWO);
-    uint32_t innerLoopStride = VL_FP32;
-    if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
-        if (innerLoopTimes == 1) {
-            __VEC_SCOPE__
-            {
-                __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-                __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
-                uint32_t count;
-                AscendC::MicroAPI::RegTensor<float> fp32Reg;
-                AscendC::MicroAPI::RegTensor<T> b16Reg;
-                AscendC::MicroAPI::MaskReg pMask;
-                count = static_cast<uint32_t>(colSize);
-                pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                    DataCopy(fp32Reg, (__local_mem__ float*)src + i * outerLoopSrcStride + 0 * innerLoopStride);
-                    Cast<T, float, castTraitB322B16>(b16Reg, fp32Reg, pMask);
-                    DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                        (__local_mem__ T*)dst + i * outerLoopDstStride + 0 * innerLoopStride, b16Reg, pMask);
-                }
-            }
-        } else {
-            __VEC_SCOPE__
-            {
-                __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-                __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
-                uint32_t count;
-                AscendC::MicroAPI::RegTensor<float> fp32Reg;
-                AscendC::MicroAPI::RegTensor<T> b16Reg;
-                AscendC::MicroAPI::MaskReg pMask;
-                for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                    count = static_cast<uint32_t>(colSize);
-                    for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                        pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                        DataCopy(fp32Reg, (__local_mem__ float*)src + i * outerLoopSrcStride + j * innerLoopStride);
-                        Cast<T, float, castTraitB322B16>(b16Reg, fp32Reg, pMask);
-                        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                            (__local_mem__ T*)dst + i * outerLoopDstStride + j * innerLoopStride, b16Reg, pMask);
                     }
                 }
             }
@@ -933,6 +866,19 @@ __aicore__ inline void LayerNormGradV3Base::Normalize(
                 }
             }
         }
+    }
+}
+
+template <typename T>
+__aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
+                                               AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+{
+    if constexpr (IsSameType<T, float>::value) {
+        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+    } else {
+        AscendC::MicroAPI::RegTensor<T> xFp16;
+        Cast<T, float, castTraitB322B16>(xFp16, src, preg);
+        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 } // namespace LayerNormGradV3

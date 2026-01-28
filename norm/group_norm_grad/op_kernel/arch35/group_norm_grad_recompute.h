@@ -161,11 +161,13 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
     uint32_t unFoldAddNum = 0;
     uint32_t sregvl = this->VecLen_;
 
+    constexpr uint16_t ulongBitLenOfClzInstr = 64;
+
     if (loopIdx < this->mode2FoldLoopCnt_ - 1) {
         foldAddNum = mainReduceNum;
         overLapLoopTimes = mainReduceNum / this->VecLen_;
         binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
-        binaryAddKLoop = binaryAddLoop == 0 ? 0 : this->VecLen_ - ScalarCountLeadingZero(binaryAddLoop - 1);
+        binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
         binaryUbLastNum = overLapLoopTimes <= this->VecLen_ ? overLapLoopTimes : this->VecLen_;
     } else if (loopIdx == this->mode2FoldLoopCnt_ - 1) {
         foldAddNum = foldReduceNum;
@@ -175,13 +177,13 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
         unFoldLoopTimes = unFoldAddNum / this->VecLen_;
         uint32_t foldLoopTimes = overLapLoopTimes + remainerLoopTimes + unFoldLoopTimes;
         binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
-        binaryAddKLoop = binaryAddLoop == 0 ? 0 : this->VecLen_ - ScalarCountLeadingZero(binaryAddLoop - 1);
+        binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
         binaryUbLastNum = foldLoopTimes <= this->VecLen_ ? foldLoopTimes : this->VecLen_;
     } else {
         unFoldAddNum = Aligned(mainReduceNum, this->VecLen_);
         unFoldLoopTimes = mainReduceNum / this->VecLen_;
         binaryAddLoop = ((mainReduceNum / this->VecLen_) / this->VecLen_);
-        binaryAddKLoop = binaryAddLoop == 0 ? 0 : this->VecLen_ - ScalarCountLeadingZero(binaryAddLoop - 1);
+        binaryAddKLoop = binaryAddLoop == 0 ? 0 : ulongBitLenOfClzInstr - ScalarCountLeadingZero(binaryAddLoop - 1);
         binaryUbLastNum = unFoldLoopTimes <= this->VecLen_ ? unFoldLoopTimes : this->VecLen_;
     }
 
@@ -317,7 +319,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
         dataCopyPadExtParamsX.paddingValue = 0;
         DataCopyExtParams copyInParamsX;
         copyInParamsX.blockCount = 1;
-        copyInParamsX.blockLen = mainReduceNum * sizeof(T);
+        copyInParamsX.blockLen =  mainReduceNum * sizeof(T);
         copyInParamsX.srcStride = 0;
         copyInParamsX.dstStride = 0;
         DataCopyPad(xMainTensor, this->xGm_[mainOffset], copyInParamsX, dataCopyPadExtParamsX);
@@ -325,14 +327,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
         xFoldTensor = xMainTensor[this->mode2OneLoopSize_];
         dyFoldTensor = dyMainTensor[this->mode2OneLoopSize_];
         if (loopIdx < this->mode2FoldLoopCnt_ - 1) {
-            DataCopy(
-                xFoldTensor, this->xGm_[foldOffset], CeilAlign(this->mode2OneLoopSize_, this->elemTPerBlock_));
-            DataCopy(
-                dyFoldTensor, this->dyGm_[foldOffset], CeilAlign(this->mode2OneLoopSize_, this->elemTPerBlock_));
+            this->CopyInDyAndX(dyFoldTensor, xFoldTensor, foldOffset, this->mode2OneLoopSize_);
         } else if (loopIdx == this->mode2FoldLoopCnt_ - 1) {
             foldReduceNum = this->mode2FoldTail_;
-            DataCopy(xFoldTensor, this->xGm_[foldOffset], CeilAlign(this->mode2FoldTail_, this->elemTPerBlock_));
-            DataCopy(dyFoldTensor, this->dyGm_[foldOffset], CeilAlign(this->mode2FoldTail_, this->elemTPerBlock_));
+            this->CopyInDyAndX(dyFoldTensor, xFoldTensor, foldOffset, this->mode2FoldTail_);
         } else {
             foldReduceNum = 0;
         }
@@ -367,9 +365,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
     float sum1 = 0;
     float sum2 = 0;
     uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
-    this->LoadDataToUb(
-        this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx,
-        CeilAlign(this->C_G_, this->elemUPerBlock_));
+    this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
     float s = 1.0f / this->eleNumPerG_;
@@ -389,10 +385,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
         if (iter_C_G_idx % this->mode2UbIterNum_ != this->mode2UbIterNum_ - 1) {
             xTensor = this->inQueX_.template AllocTensor<T>();
             dyTensor = this->inQueDy_.template AllocTensor<T>();
-            DataCopy(xTensor, this->xGm_[offset], CeilAlign(this->mode2UbCapEle_, this->elemTPerBlock_));
-            DataCopy(dyTensor, this->dyGm_[offset], CeilAlign(this->mode2UbCapEle_, this->elemTPerBlock_));
+            this->CopyInDyAndX(dyTensor, xTensor, offset, this->mode2UbCapEle_);
             this->inQueX_.EnQue(xTensor);
             this->inQueDy_.EnQue(dyTensor);
+
             xTensor = this->inQueX_.template DeQue<T>();
             dyTensor = this->inQueDy_.template DeQue<T>();
             WaitFlag<HardEvent::S_V>(eventIDSToV);
@@ -413,7 +409,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
             dataCopyPadExtParamsX.paddingValue = 0;
             DataCopyExtParams copyInParamsX;
             copyInParamsX.blockCount = 1;
-            copyInParamsX.blockLen = this->mode2UbTailNum_ * sizeof(T);
+            copyInParamsX.blockLen =  this->mode2UbTailNum_ * sizeof(T);
             copyInParamsX.srcStride = 0;
             copyInParamsX.dstStride = 0;
             DataCopyPad(xTensor, this->xGm_[offset], copyInParamsX, dataCopyPadExtParamsX);

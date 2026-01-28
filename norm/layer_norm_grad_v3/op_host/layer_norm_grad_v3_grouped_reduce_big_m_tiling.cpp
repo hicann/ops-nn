@@ -50,6 +50,7 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GammaBetaKernelTiling()
     int64_t blockNum = static_cast<int64_t>(commonParams.coreNum);
     // 受二分累加存活空间计算限制
     blockNum = std::min(MAX_CORE_NUM, blockNum);
+    int64_t maxBlocks = commonParams.coreNum;  // Hardware max blocks
     int64_t blocksNeeded = ops::CeilDiv(row, gammaBetaMfactor);
     int64_t usableBlocks = std::min(blocksNeeded, blockNum);
 
@@ -179,15 +180,9 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::DoOpTiling()
 
 ge::graphStatus LayerNormGradV3GroupedReduceBigMTiling::GetWorkspaceSize()
 {
-    auto platformInfo = context_->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    int64_t ascendcWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-
-    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 32 * 1024 * 1024;
+    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
     constexpr int64_t NUM_TWO = 2;
-    int64_t wsSize = commonParams.coreNum * commonParams.colSize * NUM_TWO + DEFAULT_WORKSPACE_SIZE;
-    wsSize += ascendcWorkspaceSize;
+    int64_t wsSize = commonParams.coreNum * commonParams.colSize * NUM_TWO * sizeof(float) + DEFAULT_WORKSPACE_SIZE;
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;

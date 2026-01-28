@@ -37,6 +37,7 @@ constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t FLOAT_SIZE = 4;
 constexpr uint64_t HALF_SIZE = 2;
 const uint64_t ULONG_BIT_LEN = 64;
+constexpr uint8_t SCHEDULE_MODE = 1;
 
 BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingData)
 TILING_DATA_FIELD_DEF(uint32_t, colSize);

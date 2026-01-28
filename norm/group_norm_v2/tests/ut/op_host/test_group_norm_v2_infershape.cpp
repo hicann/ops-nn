@@ -21,73 +21,68 @@
 #include "../../../op_graph/group_norm_v2_proto.h"
 
 class GroupNormV2 : public testing::Test {
-protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupNormV2 Proto Test SetUp" << std::endl;
-    }
+ protected:
+  static void SetUpTestCase() {
+    std::cout << "GroupNormV2 Proto Test SetUp" << std::endl;
+  }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupNormV2 Proto Test TearDown" << std::endl;
-    }
+  static void TearDownTestCase() {
+    std::cout << "GroupNormV2 Proto Test TearDown" << std::endl;
+  }
 };
 
-TEST_F(GroupNormV2, group_norm_v2_infershape_test_1)
-{
-    ge::op::GroupNormV2 op;
-    op.UpdateInputDesc("x", create_desc({8, 16, 15, 15}, ge::DT_FLOAT16));
-    op.SetAttr("num_groups", 8);
-    std::vector<int64_t> expected_output_shape = {8, 16, 15, 15};
-    std::vector<int64_t> expected_mean_shape = {64};
-    std::vector<int64_t> expected_rstd_shape = {64};
+TEST_F(GroupNormV2, group_norm_v2_infershape_test_1){
+  ge::op::GroupNormV2 op;
+  op.UpdateInputDesc("x", create_desc({8, 16, 15, 15}, ge::DT_FLOAT16));
+  op.SetAttr("num_groups", 8);
+  std::vector<int64_t> expected_output_shape = {8, 16, 15, 15};
+  std::vector<int64_t> expected_mean_shape = {64};
+  std::vector<int64_t> expected_rstd_shape = {64};
 
-    // run rt 2.0
-    Runtime2TestParam param{{"num_groups"}};
-    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
-    auto output0_desc = op.GetOutputDesc(0);
-    EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
-    auto output1_desc = op.GetOutputDesc(1);
-    EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_mean_shape);
-    auto output2_desc = op.GetOutputDesc(2);
-    EXPECT_EQ(output2_desc.GetShape().GetDims(), expected_rstd_shape);
+  // run rt 2.0
+  Runtime2TestParam param{{"num_groups"}};
+  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+  auto output0_desc = op.GetOutputDesc(0);
+  EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
+  auto output1_desc = op.GetOutputDesc(1);
+  EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_mean_shape);
+  auto output2_desc = op.GetOutputDesc(2);
+  EXPECT_EQ(output2_desc.GetShape().GetDims(), expected_rstd_shape);
 }
 
-TEST_F(GroupNormV2, group_norm_v2_infershape_test_2)
-{
-    ge::op::GroupNormV2 op;
-    op.UpdateInputDesc("x", create_desc({-1, -1, -1, -1}, ge::DT_FLOAT16));
-    op.SetAttr("num_groups", 8);
-    std::vector<int64_t> expected_output_shape = {-1, -1, -1, -1};
-    std::vector<int64_t> expected_mean_shape = {-1};
-    std::vector<int64_t> expected_rstd_shape = {-1};
+TEST_F(GroupNormV2, group_norm_v2_infershape_test_2){
+  ge::op::GroupNormV2 op;
+  op.UpdateInputDesc("x", create_desc({-1, -1, -1, -1}, ge::DT_FLOAT16));
+  op.SetAttr("num_groups", 8);
+  std::vector<int64_t> expected_output_shape = {-1, -1, -1, -1};
+  std::vector<int64_t> expected_mean_shape = {-1};
+  std::vector<int64_t> expected_rstd_shape = {-1};
 
-    // run rt 2.0
-    Runtime2TestParam param{{"num_groups"}};
-    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
-    auto output0_desc = op.GetOutputDesc(0);
-    EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
-    auto output1_desc = op.GetOutputDesc(1);
-    EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_mean_shape);
-    auto output2_desc = op.GetOutputDesc(2);
-    EXPECT_EQ(output2_desc.GetShape().GetDims(), expected_rstd_shape);
+  // run rt 2.0
+  Runtime2TestParam param{{"num_groups"}};
+  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+  auto output0_desc = op.GetOutputDesc(0);
+  EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
+  auto output1_desc = op.GetOutputDesc(1);
+  EXPECT_EQ(output1_desc.GetShape().GetDims(), expected_mean_shape);
+  auto output2_desc = op.GetOutputDesc(2);
+  EXPECT_EQ(output2_desc.GetShape().GetDims(), expected_rstd_shape);
 }
 
-TEST_F(GroupNormV2, group_norm_v2_inferdtype_david_test1)
-{
-    ge::op::GroupNormV2 op;
-    op.UpdateInputDesc("x", create_desc({1, 1152, 64, 64}, ge::DT_FLOAT16));
-    op.UpdateInputDesc("gamma", create_desc({1152}, ge::DT_FLOAT));
-    op.UpdateInputDesc("beta", create_desc({1152}, ge::DT_FLOAT));
+TEST_F(GroupNormV2, group_norm_v2_inferdtype_david_test1) {
+  ge::op::GroupNormV2 op;
+  op.UpdateInputDesc("x", create_desc({1, 1152, 64, 64}, ge::DT_FLOAT16));
+  op.UpdateInputDesc("gamma", create_desc({1152}, ge::DT_FLOAT));
+  op.UpdateInputDesc("beta", create_desc({1152}, ge::DT_FLOAT));
 
-    auto ret = InferDataTypeTest(op);
-    EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+  auto ret = InferDataTypeTest(op);
+  EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 
-    auto output_dtype = op.GetOutputDesc("y").GetDataType();
-    auto mean_dtype = op.GetOutputDesc("mean").GetDataType();
-    auto rstd_dtype = op.GetOutputDesc("rstd").GetDataType();
+  auto output_dtype = op.GetOutputDesc("y").GetDataType();
+  auto mean_dtype = op.GetOutputDesc("mean").GetDataType();
+  auto rstd_dtype = op.GetOutputDesc("rstd").GetDataType();
 
-    EXPECT_EQ(output_dtype, ge::DT_FLOAT16);
-    EXPECT_EQ(mean_dtype, ge::DT_FLOAT16);
-    EXPECT_EQ(rstd_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(output_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(mean_dtype, ge::DT_FLOAT16);
+  EXPECT_EQ(rstd_dtype, ge::DT_FLOAT16);
 }

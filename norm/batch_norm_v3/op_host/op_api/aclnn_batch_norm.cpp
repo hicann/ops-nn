@@ -509,29 +509,26 @@ aclnnStatus BatchNormProcDavid(
     aclTensor* runningVar, float momentum, float eps, bool training, aclTensor** output, aclTensor* saveMean,
     aclTensor* saveInvstd, aclOpExecutor* executor)
 {
-    op::DataType promoteDType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
-    promoteDType = op::PromoteType(input->GetDataType(), promoteDType);
-    CHECK_RET(promoteDType != op::DataType::DT_UNDEFINED, ACLNN_ERR_PARAM_INVALID);
+    op::DataType weigthBiasPromoteDType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
+    CHECK_RET(weigthBiasPromoteDType != op::DataType::DT_UNDEFINED, ACLNN_ERR_PARAM_INVALID);
+    op::DataType weightBiasDstType =
+    (weigthBiasPromoteDType == input->GetDataType()) ? input->GetDataType() : DataType::DT_FLOAT;
 
     auto weightContiguous = l0op::Contiguous(weight, executor);
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto weightCast = l0op::Cast(weightContiguous, promoteDType, executor);
+    auto weightCast = l0op::Cast(weightContiguous, weigthBiasPromoteDType, executor);
     CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto biasContiguous = l0op::Contiguous(bias, executor);
     CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto biasCast = l0op::Cast(biasContiguous, promoteDType, executor);
+    auto biasCast = l0op::Cast(biasContiguous, weigthBiasPromoteDType, executor);
     CHECK_RET(biasCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto inputContiguous = l0op::Contiguous(input, executor);
     CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputCast = l0op::Cast(inputContiguous, promoteDType, executor);
-    CHECK_RET(inputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     op::DataType runningDtype = op::PromoteType(runningMean->GetDataType(), runningVar->GetDataType());
-    if ((promoteDType == runningDtype) && (runningDtype == DataType::DT_FLOAT16 || runningDtype == DataType::DT_BF16)) {
-        runningDtype = promoteDType;
-    } else {
+    if ((runningDtype != weigthBiasPromoteDType) || (runningDtype != input->GetDataType())) {
         runningDtype = DataType::DT_FLOAT;
     }
     auto runningMeanContiguous = l0op::Contiguous(runningMean, executor);
@@ -547,7 +544,7 @@ aclnnStatus BatchNormProcDavid(
     auto runningMeanOut = const_cast<aclTensor*>(runningMeanCast);
     auto runningVarOut = const_cast<aclTensor*>(runningVarCast);
     std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor = l0op::BatchNormV3(
-        inputCast, weightCast, biasCast, runningMeanOut, runningVarOut, momentum, eps, training, executor);
+        inputContiguous, weightCast, biasCast, runningMeanOut, runningVarOut, momentum, eps, training, executor);
 
     CHECK_RET(outTensor[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(outTensor[MEAN_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);

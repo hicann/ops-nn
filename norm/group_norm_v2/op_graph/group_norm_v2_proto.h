@@ -26,34 +26,31 @@ namespace ge {
 * Three inputs
 * @li x: A ND tensor of type bfloat16, float16, float32. The input feature map will be processed by group normalization.
 * "x" supports 2-8 dimensions (N, C, *), the calculation logic only cares about the first two dimensions (N and C),
-* and the rest can all be combined into one dimension.
-* The data type and shape of x must meet the following conditions:
-* - When the data type of x is float32, C/num_groups must be a multiple of 8.
+* and the rest can all be combined into one dimension. 
+* The data type and shape of x must meet the following conditions:  
+* - When the data type of x is float32, C/num_groups must be a multiple of 8.  
 * - When the data type of x is float16 or bfloat16, C/num_groups must be a multiple of 16.
 * @li gamma: A ND tensor of type bfloat16, float16, float32. Must be 1D. Specifies the scaling factor.
-* The value of "gamma" needs to be consistent with the C-axis value of "x". Has the same dtype as "x".
+* The value of "gamma" needs to be consistent with the C-axis value of "x". Has the same dype as "x".
 * @li beta: A ND tensor of type bfloat16, float16, float32. Must be 1D. Specifies the offset.
-* The value of "beta" needs to be consistent with the C-axis value of "x". Has the same dtype as "x". \n
+* The value of "beta" needs to be consistent with the C-axis value of "x". Has the same dype as "x". \n
 
 * @par Attributes:
-* @li num_groups: A required int32, specifying the number of groups.
-* @li eps: An optional float32, specifying the small value added to variance to avoid dividing by zero. Defaults to
-0.00001f.
-* @li data_format: An optional string, specifying the format of "x". Defaults to "NHWC". This parameter is reserved and
-does not take effect.
-* @li is_training: An optional bool, specifying if the operation is used for training or inference. Defaults to true.
+* @li num_groups: An required int32, specifying the number of group.
+* @li eps: An optional float32, specifying the small value added to variance to avoid dividing by zero. Defaults to "0.00001".
+* @li data_format: An optional string, specifying the format of "x". Defaults to "NHWC". This parameter is reserved and does not take effect.
+* @li is_training: An optional bool, specifying if the operation is used for training or inference. Defaults to "True".
 
 * - When set to true, it indicates training mode and uses the mean and variance of the current batch.
 * - When set to false, it indicates inference mode and uses the mean and variance saved during training. \n
 
 * @par Outputs:
 * Three outputs
-* @li y: A ND tensor of type bfloat16, float16, float32 for the normalized "x". Has the same type, format and shape as
-"x".
+* @li y: A ND tensor of type bfloat16, float16, float32 for the normalized "x". Has the same type, format and shape as "x".  
 * @li mean: A ND tensor of type bfloat16, float16, float32. Must be 2D (N, num_groups). Specifies the mean of "x".
-* Has the same dtype as "x".
+* Has the same dype as "x".
 * @li rstd: A ND tensor of type bfloat16, float16, float32. Must be 2D (N, num_groups). Specifies the rstd of "x".
-* Has the same dtype as "x". \n
+* Has the same dype as "x". \n
 
 * @par Third-party framework compatibility
 * @li Compatible with the PyTorch operator GroupNorm.

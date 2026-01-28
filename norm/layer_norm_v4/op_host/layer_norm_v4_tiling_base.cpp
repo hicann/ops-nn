@@ -18,9 +18,6 @@
 
 namespace optiling {
 namespace {
-constexpr size_t V3_INPUT_IDX_X = 0;
-constexpr size_t V3_INPUT_IDX_GAMMA = 1;
-constexpr size_t V3_INPUT_IDX_BETA = 2;
 constexpr float DEFAULT_EPSILON = 1e-5;
 
 const gert::Shape g_vec_1_shape = {1};
@@ -33,10 +30,6 @@ const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-struct LayerNormV3OpInfo {
-    LayerNormV4CompileInfo regbaseCompileInfo;
-};
-
 bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis)
 {
     int64_t dimNum = static_cast<int64_t>(xShape.GetDimNum());
@@ -48,17 +41,6 @@ bool isFloatDtype(ge::DataType dtype)
     static const std::unordered_set<ge::DataType> floatDtypes = {
         ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT, ge::DataType::DT_BF16};
     return floatDtypes.find(dtype) != floatDtypes.end();
-}
-
-ge::graphStatus GetV3PlatformInfo(gert::TilingContext* context, ParamsLayerNomrV4& commonParams)
-{
-    auto v3CompileInfo = context->GetCompileInfo<LayerNormV3OpInfo>();
-    OP_CHECK_IF(
-        v3CompileInfo == nullptr, OP_LOGE(context->GetNodeName(), "layer_norm_v3 compile info is null"),
-        return ge::GRAPH_FAILED);
-    const LayerNormV4CompileInfo* compileInfo =
-        static_cast<const LayerNormV4CompileInfo*>(&v3CompileInfo->regbaseCompileInfo);
-    return GetCommonPlatformInfo(context, compileInfo, commonParams);
 }
 
 ge::graphStatus InputShapeAndAxisCheck(
@@ -133,59 +115,6 @@ ge::graphStatus InputDtypeCheck(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GetV3ShapeAttrsInfo(gert::TilingContext* context, ParamsLayerNomrV4& commonParams)
-{
-    auto xDesc = context->GetInputDesc(V3_INPUT_IDX_X);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
-    auto gammaDesc = context->GetInputDesc(V3_INPUT_IDX_GAMMA);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaDesc);
-    auto betaDesc = context->GetInputDesc(V3_INPUT_IDX_BETA);
-    OP_CHECK_NULL_WITH_CONTEXT(context, betaDesc);
-
-    ge::DataType xDtype = xDesc->GetDataType();
-    ge::DataType gammaDtype = gammaDesc->GetDataType();
-    ge::DataType betaDtype = betaDesc->GetDataType();
-
-    OP_CHECK_IF(
-        InputDtypeCheck(context, xDtype, gammaDtype, betaDtype) == ge::GRAPH_FAILED,
-        OP_LOGE(context->GetNodeName(), "input dtype check failed."), return ge::GRAPH_FAILED);
-
-    commonParams.tensorDtype = xDtype;
-    commonParams.paramDtype = gammaDtype;
-    commonParams.gammaNullPtr = 0;
-    commonParams.betaNullPtr = 0;
-    commonParams.dtypeKey = GetDTypeKey(commonParams.tensorDtype, commonParams.paramDtype);
-
-    auto attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t* beginNormAxisPtr = attrs->GetInt(V3_INPUT_IDX_X);
-    int64_t beginNormAxis = (beginNormAxisPtr == nullptr) ? 0 : *beginNormAxisPtr;
-    const int64_t* beginParamsAxisPtr = attrs->GetInt(V3_INPUT_IDX_GAMMA);
-    int64_t beginParamsAxis = (beginParamsAxisPtr == nullptr) ? 0 : *beginParamsAxisPtr;
-    const float* epsilonPtr = attrs->GetFloat(V3_INPUT_IDX_BETA);
-    commonParams.eps = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
-
-    const gert::Shape& xShape = EnsureNotScalar(context->GetInputShape(V3_INPUT_IDX_X)->GetStorageShape());
-    const gert::Shape& gammaShape = EnsureNotScalar(context->GetInputShape(V3_INPUT_IDX_GAMMA)->GetStorageShape());
-    const gert::Shape& betaShape = EnsureNotScalar(context->GetInputShape(V3_INPUT_IDX_BETA)->GetStorageShape());
-
-    OP_CHECK_IF(
-        InputShapeAndAxisCheck(context, xShape, gammaShape, betaShape, beginNormAxis, beginParamsAxis) ==
-            ge::GRAPH_FAILED,
-        OP_LOGE(context->GetNodeName(), "input shape or normlize axis check failed."), return ge::GRAPH_FAILED);
-
-    // fuse axis
-    uint64_t colSize = 1;
-    uint64_t rowSize = 1;
-    for (size_t i = 0; i < xShape.GetDimNum(); i++) {
-        if (static_cast<int64_t>(i) < beginNormAxis) {
-            colSize *= xShape.GetDim(i);
-        } else {
-            rowSize *= xShape.GetDim(i);
-        }
-    }
-    return GetCommonShapeAttrsInfo(context, colSize, rowSize, commonParams);
-}
 } // namespace
 
 constexpr size_t K_INPUT_IDX_X = 0;
@@ -258,9 +187,6 @@ ge::graphStatus GetCommonPlatformInfo(
 
 ge::graphStatus LayerNormV4TilingBase::GetPlatformInfo()
 {
-    if (commonParams.isV3) {
-        return GetV3PlatformInfo(context_, commonParams);
-    }
     const LayerNormV4CompileInfo* compileInfo = context_->GetCompileInfo<LayerNormV4CompileInfo>();
     return GetCommonPlatformInfo(context_, compileInfo, commonParams);
 }
@@ -295,10 +221,6 @@ ge::graphStatus GetCommonShapeAttrsInfo(
 ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
 {
     std::string opType(context_->GetNodeType());
-    commonParams.isV3 = opType == "LayerNormV3";
-    if (commonParams.isV3) {
-        return GetV3ShapeAttrsInfo(context_, commonParams);
-    }
     commonParams.tensorDtype = context_->GetInputDesc(K_INPUT_IDX_X)->GetDataType();
     commonParams.paramDtype = ge::DT_FLOAT;
     auto gammaDesc = context_->GetOptionalInputDesc(K_INPUT_IDX_GAMMA);

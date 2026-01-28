@@ -14,9 +14,12 @@
  */
 #include<iostream>
 #include<string>
+#include "tiling_base/tiling_util.h"
 #include "layer_norm_grad_v3_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 static ge::graphStatus Tiling4LayerNormGradV3(gert::TilingContext *context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
@@ -48,7 +51,7 @@ static ge::graphStatus TilingPrepare4LayerNormGradV3(gert::TilingParseContext *c
         OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
         static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
         return ge::GRAPH_FAILED);
-    compileInfo->isRegBase = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
+    compileInfo->isRegBase = IsRegbaseSocVersion(context) ? true : false;
 
     OP_LOGD(context->GetNodeName(),
             "TilingPrepare4LayerNormGradV3 exit, coreNum: %u, blockSize: %ld, ubSize: %ld, vlFp32: %ld.",

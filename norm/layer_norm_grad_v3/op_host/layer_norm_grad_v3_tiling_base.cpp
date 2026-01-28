@@ -229,6 +229,7 @@ ge::graphStatus LayerNormGradV3TilingBase::GetShapeAttrsInfo()
     commonParams.colAlign =
         (commonParams.colSize + B16_BLOCK_ALIGN_NUM - 1) / B16_BLOCK_ALIGN_NUM * B16_BLOCK_ALIGN_NUM;
     commonParams.isDeterministicKey = 1;
+    context_->SetScheduleMode(SCHEDULE_MODE);
     if (commonParams.dyDtype == ge::DataType::DT_FLOAT) {
         commonParams.colAlign =
             (commonParams.colSize + B32_BLOCK_ALIGN_NUM - 1) / B32_BLOCK_ALIGN_NUM * B32_BLOCK_ALIGN_NUM;

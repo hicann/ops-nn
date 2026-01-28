@@ -32,58 +32,56 @@ static inline bool IsUnknownRank(const gert::Shape* check_shape)
     return check_shape->GetDimNum() == 1 && check_shape->GetDim(0) == UNKNOWN_RANK_DIM_VALUE_;
 }
 
-static ge::graphStatus GroupNormV2InferShape(gert::InferShapeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do GroupNormV2InferShape");
+static ge::graphStatus GroupNormV2InferShape(gert::InferShapeContext* context) {
+  OP_LOGD(context->GetNodeName(), "Begin to do GroupNormV2InferShape");
 
-    // get input shapes
-    const gert::Shape* x_shape = context->GetInputShape(GROUPNORM_IDX_IN_X);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
+  // get input shapes
+  const gert::Shape* x_shape = context->GetInputShape(GROUPNORM_IDX_IN_X);
+  OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
 
-    // get output shapes
-    gert::Shape* y_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_Y);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
-    gert::Shape* mean_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_MEAN);
-    OP_CHECK_NULL_WITH_CONTEXT(context, mean_shape);
-    gert::Shape* var_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
+  // get output shapes
+  gert::Shape* y_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_Y);
+  OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
+  gert::Shape* mean_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_MEAN);
+  OP_CHECK_NULL_WITH_CONTEXT(context, mean_shape);
+  gert::Shape* var_shape = context->GetOutputShape(GROUPNORM_IDX_OUT_VAR);
+  OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
 
-    *y_shape = *x_shape;
-    mean_shape->SetDimNum(0);
+  *y_shape = *x_shape;
+  mean_shape->SetDimNum(0);
 
-    // process attr
-    auto attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t* num_groups = attrs->GetAttrPointer<int64_t>(NUMGROUPS_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, num_groups);
+  // process attr
+  auto attrs = context->GetAttrs();
+  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+  const int64_t* num_groups = attrs->GetAttrPointer<int64_t>(NUMGROUPS_IDX);
+  OP_CHECK_NULL_WITH_CONTEXT(context, num_groups);
 
-    // update mean and var shape
-    const int64_t n_dim = x_shape->GetDim(N_IDX);
-    if (x_shape->GetDim(0) == UNKNOWN_DIM_VALUE_) {
-        OP_LOGD(context->GetNodeName(), "Input shape is -1, set mean shape to (-1)");
-        mean_shape->AppendDim(UNKNOWN_DIM_VALUE_);
-    } else if (IsUnknownRank(x_shape)) {
-        OP_LOGD(context->GetNodeName(), "Input shape is -2, set mean shape to (-2)");
-        mean_shape->AppendDim(UNKNOWN_RANK_DIM_VALUE_);
-    } else {
-        mean_shape->AppendDim(*num_groups * n_dim);
-    }
-    *var_shape = *mean_shape;
+  // update mean and var shape
+  const int64_t n_dim = x_shape->GetDim(N_IDX);
+  if (x_shape->GetDim(0) == UNKNOWN_DIM_VALUE_) {
+    OP_LOGD(context->GetNodeName(), "Input shape is -1, set mean shape to (-1)");
+    mean_shape->AppendDim(UNKNOWN_DIM_VALUE_);
+  } else if (IsUnknownRank(x_shape)) {
+    OP_LOGD(context->GetNodeName(), "Input shape is -2, set mean shape to (-2)");
+    mean_shape->AppendDim(UNKNOWN_RANK_DIM_VALUE_);
+  } else {
+    mean_shape->AppendDim(*num_groups * n_dim);
+  }
+  *var_shape = *mean_shape;
 
-    OP_LOGD(context->GetNodeName(), "End to do GroupNormV2InferShape");
-    return ge::GRAPH_SUCCESS;
+  OP_LOGD(context->GetNodeName(), "End to do GroupNormV2InferShape");
+  return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GroupNormV2InferDataType(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do GroupNormV2InferDataType");
-    auto input_value_dtype = context->GetInputDataType(GROUPNORM_IDX_IN_X);
-    context->SetOutputDataType(GROUPNORM_IDX_OUT_Y, input_value_dtype);
-    context->SetOutputDataType(GROUPNORM_IDX_OUT_MEAN, input_value_dtype);
-    context->SetOutputDataType(GROUPNORM_IDX_OUT_VAR, input_value_dtype);
-    OP_LOGD(context->GetNodeName(), "End to do GroupNormV2InferDataType");
-    return ge::GRAPH_SUCCESS;
+static ge::graphStatus GroupNormV2InferDataType(gert::InferDataTypeContext* context) {
+  OP_LOGD(context->GetNodeName(), "Begin to do GroupNormV2InferDataType");
+  auto input_value_dtype = context->GetInputDataType(GROUPNORM_IDX_IN_X);
+  context->SetOutputDataType(GROUPNORM_IDX_OUT_Y, input_value_dtype);
+  context->SetOutputDataType(GROUPNORM_IDX_OUT_MEAN, input_value_dtype);
+  context->SetOutputDataType(GROUPNORM_IDX_OUT_VAR, input_value_dtype);
+  OP_LOGD(context->GetNodeName(), "End to do GroupNormV2InferDataType");
+  return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(GroupNormV2).InferShape(GroupNormV2InferShape).InferDataType(GroupNormV2InferDataType);
-} // namespace ops
+}  // namespace ops

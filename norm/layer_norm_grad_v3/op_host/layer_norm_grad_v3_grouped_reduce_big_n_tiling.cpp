@@ -206,15 +206,9 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::DoOpTiling()
 
 ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::GetWorkspaceSize()
 {
-    auto platformInfo = context_->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    int64_t ascendcWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-
-    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 32 * 1024 * 1024;
+    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
     constexpr int64_t NUM_THREE = 3;
-    int64_t wsSize = commonParams.coreNum * commonParams.rowSize * NUM_THREE + DEFAULT_WORKSPACE_SIZE;
-    wsSize += ascendcWorkspaceSize;
+    int64_t wsSize = commonParams.coreNum * commonParams.rowSize * NUM_THREE * sizeof(float) + DEFAULT_WORKSPACE_SIZE;
     size_t* workspaces = context_->GetWorkspaceSizes(CONST_ONE);
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;

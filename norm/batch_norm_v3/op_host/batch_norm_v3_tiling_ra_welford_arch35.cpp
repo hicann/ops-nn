@@ -64,7 +64,7 @@ protected:
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override;
     void SetInputInfo();
-    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t theLeastAPerCore);
+    ge::graphStatus BinaryAddTiling(int64_t elemSize, int64_t weightElemSize, int64_t theLeastAPerCore);
 
 private:
     int64_t blockNum;
@@ -83,18 +83,21 @@ void BatchNormV3RAWelfordTilingBase::SetInputInfo()
 }
 
 // aFactor must be aligned
-ge::graphStatus BatchNormV3RAWelfordTilingBase::BinaryAddTiling(int64_t elemSize, int64_t aFactor)
+ge::graphStatus BatchNormV3RAWelfordTilingBase::BinaryAddTiling(int64_t elemSize, int64_t weightElemSize, int64_t aFactor)
 {
     // rFactor
     int64_t runningMeanVarSize = aFactor * static_cast<int64_t>(sizeof(float)) * RUNNING_MEAN_VAR_BUFFER_NUM;
     int64_t saveMeanRstdSize = aFactor * static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
-    int64_t betaGammaSize = aFactor * elemSize * BETA_GAMMA_BUFFER_NUM;
+    int64_t betaGammaSize = aFactor * weightElemSize * BETA_GAMMA_BUFFER_NUM;
     int64_t xSizePerR = aFactor * elemSize * DOUBLE_BUFFER_NUM;
     int64_t ySizePerR = aFactor * elemSize * DOUBLE_BUFFER_NUM;
     int64_t tmpMeanM2PerR = aFactor * static_cast<int64_t>(sizeof(float)) * MEAN_VAR_BUFFER_NUM;
     int64_t tmpCountPerR = sizeof(float);
 
     int64_t ubSizeCanUse = aicoreParams_.ubSize - runningMeanVarSize - saveMeanRstdSize - betaGammaSize;
+    OP_CHECK_IF(
+        ubSizeCanUse <= 0, OP_LOGE(context_->GetNodeName(), "ubSizeCanUse is not a positive number."),
+        return ge::GRAPH_PARAM_INVALID);
     int64_t rFactor = ubSizeCanUse / (xSizePerR + ySizePerR + tmpMeanM2PerR + tmpCountPerR);
     rFactor = Ops::Base::FloorAlign(rFactor, RA_BINARY_ADD_THRESHOLD);
     OP_CHECK_IF(rFactor == 0, OP_LOGE(context_->GetNodeName(), "rfactor is 0."), return ge::GRAPH_FAILED);
@@ -141,8 +144,12 @@ ge::graphStatus BatchNormV3RAWelfordTilingBase::DoOpTiling()
     SetInputInfo();
     // core num
     int64_t elemSize = FP32_BYTE;
+    int64_t weightElemSize = FP32_BYTE;
     if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
         elemSize = FP16_BYTE;
+    }
+    if (weightDataType == ge::DT_FLOAT16 || weightDataType == ge::DT_BF16) {
+        weightElemSize = FP16_BYTE;
     }
     int64_t theLeastAPerCore = blockSize / elemSize;
     int64_t blockFactor = Ops::Base::CeilDiv(a, static_cast<int64_t>(aicoreParams_.blockDim));
@@ -165,7 +172,7 @@ ge::graphStatus BatchNormV3RAWelfordTilingBase::DoOpTiling()
     }
     batchNormV3TilingData.set_powerOfTwoForR(powerOfTwoForR);
 
-    return BinaryAddTiling(elemSize, aFactor);
+    return BinaryAddTiling(elemSize, weightElemSize, aFactor);
 }
 
 uint64_t BatchNormV3RAWelfordTilingBase::GetTilingKey() const

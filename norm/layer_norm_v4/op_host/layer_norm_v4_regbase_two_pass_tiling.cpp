@@ -192,6 +192,5 @@ ge::graphStatus LayerNormV4RegBaseTwoPassTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(LayerNormV3, LayerNormV4RegBaseTwoPassTiling, 200);
 REGISTER_OPS_TILING_TEMPLATE(LayerNormV4, LayerNormV4RegBaseTwoPassTiling, 200);
 } // namespace optiling

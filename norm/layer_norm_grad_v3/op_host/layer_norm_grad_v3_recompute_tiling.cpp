@@ -107,7 +107,7 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::BackwardKernelTiling()
 {
     int64_t backwardMfactor = DEFAULT_BACKWARD_M_FACTOR;
     int64_t backwardNfactor = DEFAULT_BACKWARD_N_FACTOR;
-    if (commonParams.colSize < static_cast<uint64_t>(backwardNfactor)) {
+    if (commonParams.colSize < backwardNfactor) {
         backwardNfactor = ops::CeilAlign(static_cast<int64_t>(commonParams.colSize),
             static_cast<int64_t>(commonParams.vlFp32));
     }
@@ -220,7 +220,7 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::DoOpTiling()
 
 ge::graphStatus LayerNormGradV3RecomputeTiling::GetWorkspaceSize()
 {
-    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 32 * 1024 * 1024;
+    constexpr int64_t DEFAULT_WORKSPACE_SIZE = 16 * 1024 * 1024;
     size_t *workspaces = context_->GetWorkspaceSizes(1);
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;

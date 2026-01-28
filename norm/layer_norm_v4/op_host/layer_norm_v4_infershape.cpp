@@ -21,8 +21,6 @@ using namespace ge;
 namespace ops {
 constexpr size_t INPUT_IDX_X = 0;
 constexpr size_t INPUT_IDX_NORM_SHAPE = 1;
-constexpr size_t INPUT_IDX_GAMMA = 2;
-constexpr size_t INPUT_IDX_BETA = 3;
 constexpr size_t OUTPUT_IDX_Y = 0;
 constexpr size_t OUTPUT_IDX_MEAN = 1;
 constexpr size_t OUTPUT_IDX_RSTD = 2;
@@ -59,8 +57,6 @@ static graphStatus InferShape4LayerNormV4(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, mean_shape);
     gert::Shape* rstd_shape = context->GetOutputShape(OUTPUT_IDX_RSTD);
     OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape);
-    const gert::Shape* gamma_shape = context->GetInputShape(INPUT_IDX_GAMMA);
-    const gert::Shape* beta_shape = context->GetInputShape(INPUT_IDX_BETA);
 
     *y_shape = *x_shape;
     *mean_shape = *x_shape;
@@ -87,10 +83,6 @@ static graphStatus InferShape4LayerNormV4(gert::InferShapeContext* context)
     OP_CHECK_IF(
         static_cast<int64_t>(x_shape->GetDimNum()) < norm_shape_len,
         OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
-
-    OP_CHECK_IF(
-        gamma_shape != nullptr && beta_shape == nullptr,
-        OP_LOGE(context, "gamma and beta cannot be passed individually!"), return GRAPH_FAILED);
 
     int64_t begin_norm_axis_val = x_shape->GetDimNum() - norm_shape_len;
     for (size_t i = 0; i < x_shape->GetDimNum(); ++i) {

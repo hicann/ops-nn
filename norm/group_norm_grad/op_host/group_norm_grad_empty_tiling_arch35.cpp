@@ -252,7 +252,7 @@ uint64_t GroupNormGradEmptyTiling::NearestLowerPowerOfTwo(int32_t tmp)
 
 ge::graphStatus GroupNormGradEmptyTiling::CalcuTilingData()
 {
-    if (static_cast<int64_t>(ubSize_) >= BUFFER_NUM * (colsPerCoreDG_ * BYTES_OF_FLOAT)) {
+    if (ubSize_ >= BUFFER_NUM * (colsPerCoreDG_ * BYTES_OF_FLOAT)) {
         // full-load
         coreUbBlockCount_ = 0;
         tailUbCols_ = colsPerCoreDG_;
@@ -260,7 +260,7 @@ ge::graphStatus GroupNormGradEmptyTiling::CalcuTilingData()
         lastCoreTailUbCols_ = colsLastCoreDG_;
     } else {
         // UB最多存放多少列
-        int maxRowsNumDG_ = ubSize_ / (BUFFER_NUM * BYTES_OF_FLOAT);
+        int64_t maxRowsNumDG_ = ubSize_ / (BUFFER_NUM * BYTES_OF_FLOAT);
         colsPerUBDG_ = std::pow(CONST_TWO, NearestLowerPowerOfTwo(maxRowsNumDG_));
         OP_CHECK_IF(
             maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %ld.", maxRowsNumDG_),
@@ -296,11 +296,13 @@ void GroupNormGradEmptyTiling::CalcUsedCoreNumGamma()
         lastCoreTailUbCols_ = colsLastCoreDG_;
     } else {
         // 多核计算
-        ge::graphStatus result = ge::GRAPH_SUCCESS;
         usedCoreNumDG_ = aivCoreNum_;
         colsPerCoreDG_ = Ops::Base::CeilDiv(cols_, usedCoreNumDG_);
         colsLastCoreDG_ = cols_ - colsPerCoreDG_ * (usedCoreNumDG_ - 1);
-        result = CalcuTilingData();
+        ge::graphStatus result = CalcuTilingData();
+        if (result == ge::GRAPH_FAILED) {
+            OP_LOGE(context_->GetNodeName(), "CalcuTilingData failed.");
+        }
     }
 }
 

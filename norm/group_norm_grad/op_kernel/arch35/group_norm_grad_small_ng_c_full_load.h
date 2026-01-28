@@ -165,13 +165,13 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage0()
         if ((loopIdx == ubLoopCnt - 1) && (this->curCoreTaskNum_ % this->mode1UbCapCNum_ != 0)) {
             curCNum = this->curCoreTaskNum_ % this->mode1UbCapCNum_;
         }
-        uint32_t curEleNum = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * curCNum), this->elemTPerBlock_);
+
         xTensor = this->inQueX_.template AllocTensor<T>();
         dyTensor = this->inQueDy_.template AllocTensor<T>();
-        DataCopy(xTensor, this->xGm_[offset], curEleNum);
-        DataCopy(dyTensor, this->dyGm_[offset], curEleNum);
+        this->CopyInDyAndX(dyTensor, xTensor, offset, this->eleNumPerC_ * curCNum);        
         this->inQueX_.EnQue(xTensor);
         this->inQueDy_.EnQue(dyTensor);
+
         dyTensor = this->inQueDy_.template DeQue<T>();
         xTensor = this->inQueX_.template DeQue<T>();
         if (isLessEqualVL) {
@@ -225,9 +225,7 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
         uint32_t channelIdx = (taskIdx % this->G_) * this->C_G_;
         uint32_t baseOffset = taskIdx * this->eleNumPerG_;
         uint32_t ubCapEleNum = CeilAlign(static_cast<uint32_t>(this->eleNumPerC_), this->elemTPerBlock_);
-        this->LoadDataToUb(
-            this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx,
-            CeilAlign(this->C_G_, this->elemUPerBlock_));
+        this->LoadDataToUb(this->inQueGamma_, this->tBufGamma_, this->gammaGm_, channelIdx, this->C_G_);
         LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
         this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
         float s = 1.0f / this->eleNumPerG_;
@@ -257,16 +255,13 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
             if ((loopIdx == ubLoopCnt - 1) && (this->C_G_ % this->mode1UbCapCNum_ != 0)) {
                 curCNum = this->C_G_ % this->mode1UbCapCNum_;
             }
+
             xTensor = this->inQueX_.template AllocTensor<T>();
             dyTensor = this->inQueDy_.template AllocTensor<T>();
-            DataCopy(
-                xTensor, this->xGm_[offset],
-                CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * curCNum), this->elemTPerBlock_));
-            DataCopy(
-                dyTensor, this->dyGm_[offset],
-                CeilAlign(static_cast<uint32_t>(this->eleNumPerC_ * curCNum), this->elemTPerBlock_));
+            this->CopyInDyAndX(dyTensor, xTensor, offset, this->eleNumPerC_ * curCNum);
             this->inQueX_.EnQue(xTensor);
             this->inQueDy_.EnQue(dyTensor);
+
             xTensor = this->inQueX_.template DeQue<T>();
             dyTensor = this->inQueDy_.template DeQue<T>();
             LocalTensor<T> dxTensor = this->outQueDx_.template AllocTensor<T>();

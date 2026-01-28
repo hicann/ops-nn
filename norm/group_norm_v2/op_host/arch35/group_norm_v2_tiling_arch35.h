@@ -24,8 +24,8 @@
 
 namespace optiling {
 struct GroupNormV2CompileInfo {
-    int32_t coreNum;
-    uint64_t ubSize;
+  int32_t coreNum;
+  uint64_t ubSize;
 };
 
 BEGIN_TILING_DATA_DEF(GroupNormV2TilingData)
@@ -53,18 +53,17 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GroupNormV2, GroupNormV2TilingData);
 
-enum class GroupNormV2TilingKey : int64_t
-{
-    TILINGKEY_WELFORD_PERF = 1100, // 910D use welford for mean/rstd, R is partial Load
-    TILINGKEY_WELFORD_PERF_MIX_TYPE = 1101,
-    TILINGKEY_TWOPASS_PERF = 1110, // 910D use twopass for mean/rstd, R is full Load
-    TILINGKEY_TWOPASS_PERF_MIX_TYPE = 1111,
-    TILINGKEY_WELFORD_GENERALIZED = 1120, // 910D basic template and use welford for mean/rstd, R is partial Load
-    TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE = 1121,
-    TILINGKEY_TWOPASS_GENERALIZED = 1130, // 910D basic template and use twopass for mean/rstd, R is full Load
-    TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE = 1131
+enum class GroupNormV2TilingKey : int64_t {
+  TILINGKEY_WELFORD_PERF = 1100,  // 910D use welford for mean/rstd, R is partial Load
+  TILINGKEY_WELFORD_PERF_MIX_TYPE = 1101,
+  TILINGKEY_TWOPASS_PERF = 1110,  // 910D use twopass for mean/rstd, R is full Load
+  TILINGKEY_TWOPASS_PERF_MIX_TYPE = 1111,
+  TILINGKEY_WELFORD_GENERALIZED = 1120,  // 910D basic template and use welford for mean/rstd, R is partial Load
+  TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE = 1121,
+  TILINGKEY_TWOPASS_GENERALIZED = 1130,  // 910D basic template and use twopass for mean/rstd, R is full Load
+  TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE = 1131
 };
 
 ge::graphStatus SetTilingData(gert::TilingContext* context);
-} // namespace optiling
+}  // namespace optiling
 #endif

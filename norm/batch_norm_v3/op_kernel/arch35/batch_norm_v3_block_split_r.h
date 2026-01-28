@@ -30,7 +30,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
-template <typename T, typename T_RUNNING_MEAN>
+template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3BlockSplitR {
     static constexpr int32_t INDEXTWO = 2;
     static constexpr int32_t INDEXFOUR = 4;
@@ -80,8 +80,8 @@ public:
         this->lastNCorrectionFactor = static_cast<float>(rPowOfTow) / static_cast<float>(tilingData->patternR);
 
         xGm.SetGlobalBuffer((__gm__ T*)x + rBlockOffset * tilingData->patternA);
-        betaGm.SetGlobalBuffer((__gm__ T*)beta);
-        gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
+        betaGm.SetGlobalBuffer((__gm__ T_GAMMA*)beta);
+        gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma);
         runningMeanGm.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)mean);
         runningVarGm.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)var);
         yGm.SetGlobalBuffer((__gm__ T*)y + rBlockOffset * tilingData->patternA);
@@ -94,8 +94,8 @@ public:
         workspaceGm.SetGlobalBuffer((__gm__ float*)workspace);
         pipe.InitBuffer(xQueue, DOUBLE_BUFFER, tilingData->rUbFactor * tilingData->aUbFactor * sizeof(T));
         pipe.InitBuffer(yQueue, DOUBLE_BUFFER, tilingData->rUbFactor * tilingData->aUbFactor * sizeof(T));
-        pipe.InitBuffer(gammaQueue, 1, tilingData->aUbFactor * sizeof(T));
-        pipe.InitBuffer(betaQueue, 1, tilingData->aUbFactor * sizeof(T));
+        pipe.InitBuffer(gammaQueue, 1, tilingData->aUbFactor * sizeof(T_GAMMA));
+        pipe.InitBuffer(betaQueue, 1, tilingData->aUbFactor * sizeof(T_GAMMA));
         pipe.InitBuffer(batchMeanQueue, 1, tilingData->aUbFactor * sizeof(float));
         pipe.InitBuffer(batchRstdQueue, 1, tilingData->aUbFactor * sizeof(float));
         pipe.InitBuffer(runningMeanInQueue, 1, tilingData->aUbFactor * sizeof(T_RUNNING_MEAN));
@@ -182,8 +182,8 @@ public:
             if (aUbLoopIdx < tilingData->aUbLoop - 1) {
                 SetFlag<HardEvent::V_MTE2>(eIdVecToMte2);
             }
-            LocalTensor<T> gammaTensor = gammaQueue.AllocTensor<T>();
-            LocalTensor<T> betaTensor = betaQueue.AllocTensor<T>();
+            LocalTensor<T_GAMMA> gammaTensor = gammaQueue.AllocTensor<T_GAMMA>();
+            LocalTensor<T_GAMMA> betaTensor = betaQueue.AllocTensor<T_GAMMA>();
             CopyInGammaBeta(gammaTensor, betaTensor, aLoopOffset);
             gammaQueue.EnQue(gammaTensor);
             betaQueue.EnQue(betaTensor);
@@ -210,8 +210,8 @@ public:
                 runningMeanOutQueue.FreeTensor(runningMeanOutTensor);
                 runningVarOutQueue.FreeTensor(runningVarOutTensor);
             }
-            gammaTensor = gammaQueue.DeQue<T>();
-            betaTensor = betaQueue.DeQue<T>();
+            gammaTensor = gammaQueue.DeQue<T_GAMMA>();
+            betaTensor = betaQueue.DeQue<T_GAMMA>();
             // 需要等runningMeanVar计算完成后，才能计算成Rstd
             CalculateBatchRstd(batchRstdTensor);
             int64_t yGmOffset = 0;
@@ -379,14 +379,15 @@ private:
             meanVarPadParams);
     }
 
+    template <typename T_SRC>
     __aicore__ inline void LoadTensorForDtypeT(
-        RegTensor<float>& dst, __local_mem__ T* input, MaskReg& preg, uint32_t offset)
+        RegTensor<float>& dst, __local_mem__ T_SRC* input, MaskReg& preg, uint32_t offset)
     {
-        if constexpr (IsSameType<T, half>::value) {
+        if constexpr (IsSameType<T_SRC, half>::value) {
             RegTensor<half> xFp16;
             DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
             Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
-        } else if constexpr (IsSameType<T, bfloat16_t>::value) {
+        } else if constexpr (IsSameType<T_SRC, bfloat16_t>::value) {
             RegTensor<bfloat16_t> xBf16;
             DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
             Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
@@ -955,16 +956,16 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInGammaBeta(LocalTensor<T>& gammaInUb, LocalTensor<T>& betaInUb, int64_t gmOffset)
+    __aicore__ inline void CopyInGammaBeta(LocalTensor<T_GAMMA>& gammaInUb, LocalTensor<T_GAMMA>& betaInUb, int64_t gmOffset)
     {
-        DataCopyPadExtParams<T> dataCopyPadExtParamsT;
+        DataCopyPadExtParams<T_GAMMA> dataCopyPadExtParamsT;
         dataCopyPadExtParamsT.isPad = false;
         dataCopyPadExtParamsT.leftPadding = 0;
         dataCopyPadExtParamsT.rightPadding = 0;
         dataCopyPadExtParamsT.paddingValue = 0;
         DataCopyExtParams copyInParamsT;
         copyInParamsT.blockCount = 1;
-        copyInParamsT.blockLen = currentA * sizeof(T);
+        copyInParamsT.blockLen = currentA * sizeof(T_GAMMA);
         copyInParamsT.srcStride = 0;
         copyInParamsT.dstStride = 0;
         DataCopyPad(betaInUb, betaGm[gmOffset], copyInParamsT, dataCopyPadExtParamsT);
@@ -1150,8 +1151,8 @@ private:
     }
 
     __aicore__ inline void NormalizeX(
-        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T>& gammaTensor,
-        LocalTensor<T>& betaTensor, int64_t yGmOffset)
+        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T_GAMMA>& gammaTensor,
+        LocalTensor<T_GAMMA>& betaTensor, int64_t yGmOffset)
     {
         LocalTensor<T> xTensor = xQueue.AllocTensor<T>();
         CopyInX(xTensor, yGmOffset);
@@ -1167,15 +1168,15 @@ private:
     }
 
     __aicore__ inline void CalcY(
-        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T>& gammaTensor,
-        LocalTensor<T>& betaTensor, LocalTensor<T>& xTensor, LocalTensor<T>& yTensor)
+        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T_GAMMA>& gammaTensor,
+        LocalTensor<T_GAMMA>& betaTensor, LocalTensor<T>& xTensor, LocalTensor<T>& yTensor)
     {
         __local_mem__ float* batchMeanTensorAddr = (__local_mem__ float*)batchMeanTensor.GetPhyAddr();
         __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)batchRstdTensor.GetPhyAddr();
         __local_mem__ T* xTensorAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
         __local_mem__ T* yTensorAddr = (__local_mem__ T*)yTensor.GetPhyAddr();
-        __local_mem__ T* gammaTensorAddr = (__local_mem__ T*)gammaTensor.GetPhyAddr();
-        __local_mem__ T* betaTensorAddr = (__local_mem__ T*)betaTensor.GetPhyAddr();
+        __local_mem__ T_GAMMA* gammaTensorAddr = (__local_mem__ T_GAMMA*)gammaTensor.GetPhyAddr();
+        __local_mem__ T_GAMMA* betaTensorAddr = (__local_mem__ T_GAMMA*)betaTensor.GetPhyAddr();
         uint16_t numLoop = CEIL_DIV(currentA, VL_F32);
         uint16_t lineLoop = currentR;
         __VEC_SCOPE__
@@ -1230,8 +1231,8 @@ private:
 
     /* global memory address */
     GlobalTensor<T> xGm;
-    GlobalTensor<T> betaGm;
-    GlobalTensor<T> gammaGm;
+    GlobalTensor<T_GAMMA> betaGm;
+    GlobalTensor<T_GAMMA> gammaGm;
     GlobalTensor<T_RUNNING_MEAN> runningMeanGm;
     GlobalTensor<T_RUNNING_MEAN> runningVarGm;
 

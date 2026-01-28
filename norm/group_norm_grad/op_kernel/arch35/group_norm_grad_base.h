@@ -72,9 +72,8 @@ protected:
     __aicore__ inline void LoadDataToUb(
         TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
         const uint32_t offset, const uint32_t count);
-    __aicore__ inline void LoadDbDataToUb(
-        TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
-        const uint32_t offset, const uint32_t count);
+    __aicore__ inline void CopyInDyAndX(
+        const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor, const int64_t offset, const uint32_t burstLen);
     __aicore__ inline void StoreDxToGm(
         TQue<TPosition::VECOUT, 1>& outQue, const uint32_t gmOffset, const uint32_t count);
     __aicore__ inline void Fp32StoreDgamma(
@@ -483,13 +482,20 @@ __aicore__ inline void GroupNormGradBase<T, U>::LoadDataToUb(
     TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
     const uint32_t gmOffset, const uint32_t count)
 {
+    DataCopyExtParams params;
+    params.blockCount = 1;
+    params.blockLen = count * sizeof(U);
+
+    DataCopyPadExtParams<U> padParams;
+    padParams.isPad = false;
+
     LocalTensor<float> localIn = inQue.AllocTensor<float>();
     if constexpr (IsSameType<U, float>::value) {
-        DataCopy(localIn, gm[gmOffset], count);
+        DataCopyPad<U, PaddingMode::Normal>(localIn, gm[gmOffset], params, padParams);
         inQue.EnQue(localIn);
     } else {
         LocalTensor<U> temp = tbuf.Get<U>();
-        DataCopy(temp, gm[gmOffset], count);
+        DataCopyPad<U, PaddingMode::Normal>(temp, gm[gmOffset], params, padParams);
         TEventID eventIDMTE2ToV0 = GetTPipePtr()->FetchEventID(HardEvent::MTE2_V);
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
@@ -499,23 +505,18 @@ __aicore__ inline void GroupNormGradBase<T, U>::LoadDataToUb(
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::LoadDbDataToUb(
-    TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
-    const uint32_t gmOffset, const uint32_t count)
+__aicore__ inline void GroupNormGradBase<T, U>::CopyInDyAndX(
+    const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor, const int64_t offset, const uint32_t burstLen)
 {
-    LocalTensor<float> localIn = inQue.AllocTensor<float>();
-    if constexpr (IsSameType<U, float>::value) {
-        DataCopy(localIn, gm[gmOffset], count);
-        inQue.EnQue(localIn);
-    } else {
-        LocalTensor<U> temp = tbuf.Get<U>();
-        DataCopy(temp, gm[gmOffset], count);
-        TEventID eventIDMTE2ToV0 = GetTPipePtr()->FetchEventID(HardEvent::MTE2_V);
-        SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
-        WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV0);
-        VFCastT2Float<U>((__ubuf__ float*)localIn.GetPhyAddr(), (__ubuf__ U*)temp.GetPhyAddr(), count, this->VecLen_);
-        inQue.EnQue(localIn);
-    }
+    DataCopyExtParams params;
+    params.blockCount = 1;
+    params.blockLen = burstLen * sizeof(T);
+
+    DataCopyPadExtParams<T> padParams;
+    padParams.isPad = false;
+
+    DataCopyPad<T, PaddingMode::Normal>(xTensor, this->xGm_[offset], params, padParams);
+    DataCopyPad<T, PaddingMode::Normal>(dyTensor, this->dyGm_[offset], params, padParams);
 }
 
 template <typename T, typename U>

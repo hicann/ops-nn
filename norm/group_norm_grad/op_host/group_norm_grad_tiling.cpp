@@ -15,6 +15,7 @@
 #include "group_norm_grad_tiling_arch35.h"
 #include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace {
 constexpr int64_t FP32_MODE = 0;
@@ -58,6 +59,7 @@ constexpr uint8_t SCHEDULE_MODE = 1;
 } // namespace
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 class GroupNormGradTiling {
 public:
@@ -617,8 +619,7 @@ ge::graphStatus TilingPrepareForGroupNormGrad(gert::TilingParseContext* context)
         (compileInfo->sysWorkspaceSize < 0),
         OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
         return ge::GRAPH_FAILED);
-    compileInfo->isRegBase =
-        ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
+    compileInfo->isRegBase = IsRegbaseSocVersion(context);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);

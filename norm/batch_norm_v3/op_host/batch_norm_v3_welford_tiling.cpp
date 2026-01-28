@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "tiling_base/tiling_util.h"
 #include "batch_norm_v3_tiling.h"
 
 static constexpr uint64_t BNV3_WELFORD_R0_SPLIT_NOT_ALIGN_TILING_KEY = 1000;
@@ -50,7 +51,7 @@ uint32_t BatchNormV3WelfordTiling::FindDichotomizeAddDiffSize(uint32_t parallelN
 
 bool BatchNormV3WelfordTiling::IsCapable()
 {
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_) ||
         socVersion == platform_ascendc::SocVersion::MC62CM12A) {
         return false;
     }
