@@ -255,7 +255,7 @@ public:
             return;
         }
         // s32场景要对齐到2 因此是align(alignedNL0 / 8, 2)
-        uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
+        constexpr uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
         uint16_t bustLenth = Cmct::Gemm::Align(alignedNL0 / BIAS_C0, btAlign);
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(bustLenth), 0, 0};
         // 当dstlocal位于C2时，C2中至少为fp32*16

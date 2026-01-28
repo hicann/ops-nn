@@ -56,9 +56,9 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
     auto outputShape = context.GetOutputShape(0)->GetOriginShape();
     size_t biasDims = biasShape.GetDimNum();
     size_t cDims = outputShape.GetDimNum();
-    if(biasDims > NUM_TWO){
-         OP_LOGE(args.opName, "Bias dim of BatchMatmul must lower than 3.");
-         return ge::GRAPH_FAILED;
+    if (biasDims > NUM_TWO) {
+        OP_LOGE(args.opName, "Bias dim of BatchMatmul must lower than 3.");
+        return ge::GRAPH_FAILED;
     }
     // 先校验bias的尾值是否与output尾值相等
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
