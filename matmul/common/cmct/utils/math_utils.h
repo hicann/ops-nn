@@ -66,7 +66,7 @@ __aicore__ inline Int ElemToByte(Int count)
     static_assert(
         AscendC::SupportType<
             Dtype, uint8_t, int8_t, half, bfloat16_t, AscendC::int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t,
-            fp4x2_e2m1_t>(),
+            fp8_e8m0_t, fp4x2_e2m1_t>(),
         "not support this dtype");
     if (AscendC::Std::is_same_v<Dtype, AscendC::int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t> ||
         AscendC::Std::is_same_v<Dtype, fp4x2_e2m1_t>) {
@@ -82,7 +82,7 @@ __aicore__ inline Int ElemToByte(AscendC::Std::integral_constant<Int, Count>)
     static_assert(
         AscendC::SupportType<
             Dtype, uint8_t, int8_t, half, bfloat16_t, AscendC::int4b_t, int4x2_t, fp8_e5m2_t, fp8_e4m3fn_t, hifloat8_t,
-            fp4x2_e2m1_t>(),
+            fp8_e8m0_t, fp4x2_e2m1_t>(),
         "not support this dtype");
     if (AscendC::Std::is_same_v<Dtype, AscendC::int4b_t> || AscendC::Std::is_same_v<Dtype, int4x2_t> ||
         AscendC::Std::is_same_v<Dtype, fp4x2_e2m1_t>) {
