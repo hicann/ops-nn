@@ -48,6 +48,8 @@ protected:
     void IsAFullLoad() override;
     void SetTilingData() override;
     void CalculateNBufferNum4Perblock();
+    void CalculateNBufferNum4Cube();
+    void CalculateNBufferNum4MX();
     
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData &tilingData_;

@@ -34,6 +34,17 @@ constexpr uint32_t K0_B8 = 32;
 constexpr uint32_t QBMM_k0_FLOAT16 = 16;
 constexpr uint16_t QBMM_DATA_BLOCK = 32;
 
+constexpr uint64_t IDX_A_OFFSET = 0UL;
+constexpr uint64_t IDX_B_OFFSET = 1UL;
+constexpr uint64_t IDX_X1SCALE_OFFSET = 2UL;
+constexpr uint64_t IDX_X2SCALE_OFFSET = 3UL;
+constexpr uint64_t IDX_BIAS_OFFSET = 4UL;
+constexpr uint64_t IDX_C_OFFSET = 5UL;
+constexpr uint64_t IDX_M_TILEIDX = 0UL;
+constexpr uint64_t IDX_N_TILEIDX = 1UL;
+constexpr uint64_t IDX_M_TAIL_SPLIT_TILEIDX = 2UL;
+constexpr uint64_t IDX_N_TAIL_SPLIT_TILEIDX = 3UL;
+
 enum class QuantMode : uint32_t {
     DEFAULT = 0x0U,
     PERTENSOR_MODE = 0x1U,

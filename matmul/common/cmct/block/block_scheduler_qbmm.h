@@ -190,7 +190,7 @@ public:
         int64_t singleCoreN = baseN_;
         CalSingleCoreShapeByCoord(singleCoreM, singleCoreN, blockCoord);
 
-        if (totalTailTile_ == 1 || roundIdx_ != round_ - 1) {
+        if (totalTailTile_ == 1 || roundIdx_ < round_ - 1) {
             return {singleCoreM, singleCoreN, 0, 0};
         }
 
@@ -227,11 +227,6 @@ public:
     {
         return {static_cast<uint32_t>(mBaseNormCnt_), static_cast<uint32_t>(mBaseTailMain_),
                 static_cast<uint32_t>(nBaseNormCnt_), static_cast<uint32_t>(nBaseTailMain_)};
-    }
-
-    __aicore__ inline void IncrementRoundIdx()
-    {
-        roundIdx_++;
     }
 
     __aicore__ inline void UpdateNextBatchBlockRoundParams()
@@ -276,7 +271,7 @@ public:
         if (rowIdx & 1) {
             Get<MNK_N>(blockCoord) = nCnt_ - 1 - Get<MNK_N>(blockCoord);
         }
-
+        roundIdx_++;
         return true;
     }
 };

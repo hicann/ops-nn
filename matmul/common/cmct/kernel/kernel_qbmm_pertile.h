@@ -37,16 +37,6 @@ namespace Kernel {
 using namespace Cmct::Gemm::QuantBatchMatmul;
 
 namespace {
-constexpr uint64_t IDX_A_OFFSET = 0UL;
-constexpr uint64_t IDX_B_OFFSET = 1UL;
-constexpr uint64_t IDX_X1SCALE_OFFSET = 2UL;
-constexpr uint64_t IDX_X2SCALE_OFFSET = 3UL;
-constexpr uint64_t IDX_BIAS_OFFSET = 4UL;
-constexpr uint64_t IDX_C_OFFSET = 5UL;
-constexpr uint64_t IDX_M_TILEIDX = 0UL;
-constexpr uint64_t IDX_N_TILEIDX = 1UL;
-constexpr uint64_t IDX_M_TAIL_SPLIT_TILEIDX = 2UL;
-constexpr uint64_t IDX_N_TAIL_SPLIT_TILEIDX = 3UL;
 constexpr uint32_t PER_BLOCK_SIZE = 128U;
 }
 
@@ -350,7 +340,6 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
                 Get<IDX_N_TAIL_SPLIT_TILEIDX>(singleShape));
         }
         Iterate(Get<MNK_M>(singleShape), Get<MNK_N>(singleShape));
-        bs.IncrementRoundIdx();
     }
     bs.UpdateNextBatchBlockRoundParams();
 }
