@@ -1058,7 +1058,7 @@ set_ci_mode() {
     }
     for line in $result; do
       if [[ $line == op_* ]]; then
-        TRIGER_UTS+=($line)
+        TRIGGER_UTS+=($line)
       fi
     done
   else
@@ -1084,15 +1084,19 @@ build_ut() {
   local enable_cov=FALSE
   if [[ "$CI_MODE" == "TRUE" ]]; then
     # ci 模式
-    for triger_option in "${TRIGER_UTS[@]}"; do
-      ut_args=(${triger_option//:/ })
+    for trigger_option in "${TRIGGER_UTS[@]}"; do
+ 	    ut_args=(${trigger_option//:/ })
       if [[ "${UT_TARGES[@]}" =~ "${ut_args[0]}" ]]; then
         enable_cov=TRUE
-        echo "Triger Ut: ${ut_args[0]} for ops: ${ut_args[1]}"
-        cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} ..
+        echo "Trigger Ut: ${ut_args[0]} for ops: ${ut_args[1]}"
+ 	        if [[ ${ut_args[3]} == "default" ]]; then
+ 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} ..
+ 	        else
+ 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} -DASCEND_COMPUTE_UNIT=${ut_args[3]} ..
+ 	        fi
         cmake --build . --target ${REPOSITORY_NAME}_${ut_args[0]} -- ${VERBOSE} -j $THREAD_NUM
       else
-        echo "Not need triger Ut: ${ut_args[0]}"
+        echo "Not need trigger Ut: ${ut_args[0]}"
       fi
     done
   else
