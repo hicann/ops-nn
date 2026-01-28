@@ -222,7 +222,7 @@
     {"name":"ForeachMaximumScalarList", "compute_units": ["ascend910b", "ascend910_95", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMinimumScalar", "compute_units": ["ascend910b", "ascend910_95", "kirinx90"], "auto_sync" : false},
     {"name":"ForeachMinimumScalarList", "compute_units": ["ascend910b", "ascend910_95", "kirinx90"], "auto_sync" : false},
-    {"name":"Logit", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
+    {"name":"Logit", "compute_units": ["ascend910b", "ascend910_93", "ascend910_95"], "auto_sync" : false},
     {"name":"LogitGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"SquaredRelu", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : false},
     {"name": "HardSwishGradV2", "compute_units": ["ascend910b", "ascend910_93", "ascend910"], "auto_sync": false},

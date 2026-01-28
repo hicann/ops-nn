@@ -24,7 +24,7 @@ extern "C" __global__ __aicore__ void logit(GM_ADDR input, GM_ADDR output, GM_AD
 
     GM_ADDR userWs = nullptr;
 
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
     if (TILING_KEY_IS(1)) {
         LogitND<half> op;
         op.Init(input, output, userWs, &tilingData);
