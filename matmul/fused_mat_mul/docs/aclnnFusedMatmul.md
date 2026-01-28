@@ -166,20 +166,22 @@ aclnnStatus aclnnFusedMatmul(
         <td>2</td>
         <td>√</td>
       </tr>
-      <tr>
-        <td>cubeMathType</td>
-        <td>输入</td>
-        <td>表示Cube单元的计算逻辑，Host侧的整型。</td>
-        <td><ul><li>如果输入的数据类型存在互推导关系，该参数默认对互推导后的数据类型进行处理。</li>
-        <li>当前版本支持输入0和3。</li>
+    <tr>
+      <td>cubeMathType</td>
+      <td>输入</td>
+      <td>用于指定Cube单元的计算逻辑。</td>
+      <td>如果输入的数据类型存在互推导关系，该参数默认对互推导后的数据类型进行处理。支持的枚举值如下：<ul>
         <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
-        <li>3：USE_HF32，使能HF32。</li>
-        <li>当fusedOpType为gelu_erf、gelu_tanh时，当前版本不生效，传入0即可。</li></td>
-        <td>INT8</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
+        <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
+        <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
+        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+        <li>4：FORCE_GRP_ACC_FOR_FP32，支持使用分组累加方式进行计算。</li></ul>
+      </td>
+      <td>INT8</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
       <tr>
         <td>fusedOpType</td>
         <td>输入</td>
@@ -212,7 +214,13 @@ aclnnStatus aclnnFusedMatmul(
       </tr>
   </tbody></table>
 
-- **返回值：**
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+    - cubeMathType=4时不做处理。
+
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
@@ -255,10 +263,10 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType为add、mul时，x3的shape不跟输出shape保持一致。</td>
       </tr>
       <tr>
-        <td>传入的fusedOpType不属于"gelu_tanh","gelu_erf"中的一种。</td>
+        <td>传入的fusedOpType不属于""、"add"、"mul"、"gelu_tanh"、"gelu_erf"以及"relu"中的一种。</td>
       </tr>
       <tr>
-        <td>传入的cubeMathType只能是0,其他的值不支持。</td>
+        <td>x1和x2无法做数据类型推导。</td>
       </tr>
   </tbody></table>
 

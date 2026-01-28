@@ -21,7 +21,7 @@
   * 对于aclnnAddmm接口，self的shape是[1, n], mat1的shape是[m, k], mat2的shape是[k, n], mat1和mat2的矩阵乘的结果shape是[m, n], self的shape能broadcast到[m, n]。
   * 对于aclnnAddmm接口，self的shape是[m, 1], mat1的shape是[m, k], mat2的shape是[k, n], mat1和mat2的矩阵乘的结果shape是[m, n], self的shape能broadcast到[m, n]。
   * 对于aclnnAddmm接口，self的shape是[m, n], mat1的shape是[m, k], mat2的shape是[k, n], mat1和mat2的矩阵乘的结果shape是[m, n]。
-  * 对于aclnnInplaceAddmm接口，直接在输入张量selfRef的内存中存储计算结果，self的shape是[m, n], mat1的shape是[m, k], mat2的shape是[k, n]。
+  * 对于aclnnInplaceAddmm接口，直接在输入张量selfRef的内存中存储计算结果，selfRef的shape是[m, n], mat1的shape是[m, k], mat2的shape是[k, n]。
 
 ## 函数原型
 
@@ -308,7 +308,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>输入</td>
       <td>即公式中的输入self与out。</td>
       <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li></ul></td>
+      <li>需要self和mat1@mat2的shape一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
