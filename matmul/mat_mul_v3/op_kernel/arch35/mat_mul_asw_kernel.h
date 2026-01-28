@@ -100,7 +100,7 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
     uint64_t kIndex)
 {
     if (block_.matmulTilingData_->tCubeTiling.isBias) {
-        if (kIndex == block_.params_.splitKRound - 1) {
+        if (kIndex == 0) {
             mm_.SetBias(biasGlobal_[block_.offset_.offsetBias]);
         } else {
             mm_.ClearBias();
