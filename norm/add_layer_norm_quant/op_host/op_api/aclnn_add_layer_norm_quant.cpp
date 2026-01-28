@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -35,18 +36,18 @@ static constexpr int IDX_2 = 2;
 static constexpr int IDX_3 = 3;
 static constexpr int IDX_4 = 4;
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_STC = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_STC = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_DYN = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_DYN = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static inline bool CheckPlatform()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_CHECK(
-        socVersion == SocVersion::ASCEND910_95,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %s is not implemented.", op::ToString(socVersion).GetString()),
+        Ops::NN::AclnnUtil::IsRegbase(curArch),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for npuArch %u is not implemented.", static_cast<uint32_t>(curArch)),
         return false);
     return true;
 }
@@ -104,9 +105,9 @@ static bool CheckDtypeValid(
 {
     // 检查 x 的数据类型是否在 AddLayerNormQuant 算子的支持列表内
     if (isDynQuant) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910_95_DTYPE_SUPPORT_LIST_DYN, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_DYN, return false);
     } else {
-        OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910_95_DTYPE_SUPPORT_LIST_STC, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_STC, return false);
     }
     OP_CHECK_DTYPE_NOT_MATCH(x2, x1->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(gamma, x1->GetDataType(), return false);
@@ -121,10 +122,10 @@ static bool CheckDtypeValid(
 
     if (nullptr != scales1Optional) {
         if (isDynQuant) {
-            OP_CHECK_DTYPE_NOT_SUPPORT(scales1Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_DYN, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(scales1Optional, REGBASE_DTYPE_SUPPORT_LIST_DYN, return false);
             CHECK_RET(CheckOptInputDtype(scales1Optional, x1->GetDataType()), false);
         } else {
-            OP_CHECK_DTYPE_NOT_SUPPORT(scales1Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_STC, return false);
+            OP_CHECK_DTYPE_NOT_SUPPORT(scales1Optional, REGBASE_DTYPE_SUPPORT_LIST_STC, return false);
         }
         CHECK_RET(CheckOptInputDtype(scales2Optional, scales1Optional->GetDataType()), false);
         CHECK_RET(CheckOptInputDtype(zeroPoints1Optional, scales1Optional->GetDataType()), false);
@@ -244,7 +245,7 @@ static aclnnStatus CheckParams(
     const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, aclTensor* y1Out, aclTensor* y2Out,
     aclTensor* xOut, aclTensor* outScales1Out, aclTensor* outScales2Out, const char* quantMode)
 {
-    // 当前仅支持910_95
+    // 当前仅支持arch3510
     CHECK_RET(CheckPlatform(), ACLNN_ERR_PARAM_INVALID);
 
     // 1. 检查参数是否为空指针
@@ -414,9 +415,8 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
     // 支持空tensor
     bool hasEmptyTensor =
         x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty() || outScales1Out->IsEmpty() || outScales2Out->IsEmpty();
-    
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if ((hasEmptyTensor && socVersion != SocVersion::ASCEND910_95) || (outScales1Out->IsEmpty() && socVersion == SocVersion::ASCEND910_95)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if ((hasEmptyTensor && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) || (outScales1Out->IsEmpty() && Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         OP_LOGW("Got empty tensor in aclnnAddLayerNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);

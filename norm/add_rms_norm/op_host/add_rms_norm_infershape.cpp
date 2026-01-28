@@ -31,9 +31,7 @@ static ge::graphStatus InferShape4AddRmsNorm(gert::InferShapeContext* context)
 
     // get input shapes
     const gert::Shape* x1Shape = context->GetInputShape(IDX_0);
-    const gert::Shape* x2Shape = context->GetInputShape(IDX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x2Shape);
     const gert::Shape* gammaShape = context->GetInputShape(IDX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
     // get output shapes

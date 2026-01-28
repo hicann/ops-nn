@@ -161,13 +161,71 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
             OP_LOGE(context_->GetNodeName(), "Input %d only supports ND format.", i);
             return ge::GRAPH_FAILED;
         }
-        // check dtype
-        auto dtype = inputDesc->GetDataType();
-        if (dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context_->GetNodeName(), "Input %d only supports float16, bfloat16, float32.", i);
-            return ge::GRAPH_FAILED;
-        }
     }
+
+    auto dyDesc = context_->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
+    dyDtype_ = dyDesc->GetDataType();
+    OP_CHECK_IF(
+        (dyDtype_ != ge::DataType::DT_FLOAT16 && dyDtype_ != ge::DataType::DT_BF16 &&
+         dyDtype_ != ge::DataType::DT_FLOAT),
+        OP_LOGE(
+            context_->GetNodeName(), "Input dyDtype [%s] not support, only supports float16, bfloat16, float32.",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto xDesc = context_->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    auto xDtype = xDesc->GetDataType();
+    OP_CHECK_IF(
+        (dyDtype_ != xDtype),
+        OP_LOGE(
+            context_->GetNodeName(), "Input xDtype [%s] does not match dyDtype [%s].",
+            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto rstdDesc = context_->GetInputDesc(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
+    auto rstdDtype = rstdDesc->GetDataType();
+    OP_CHECK_IF(
+        (rstdDtype != ge::DataType::DT_FLOAT),
+        OP_LOGE(
+            context_->GetNodeName(), "Input rstdDtype [%s] not support, only supports float32.",
+            ge::TypeUtils::DataTypeToSerialString(rstdDtype).c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto gammaDesc = context_->GetInputDesc(3);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
+    auto gammaDtype = gammaDesc->GetDataType();
+    OP_CHECK_IF(
+        (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_),
+        OP_LOGE(
+            context_->GetNodeName(), "Input gammaDtype [%s] does not match dyDtype [%s] or match float32.",
+            ge::TypeUtils::DataTypeToSerialString(gammaDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto dxDesc = context_->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
+    auto dxDtype = dxDesc->GetDataType();
+    OP_CHECK_IF(
+        (dyDtype_ != dxDtype),
+        OP_LOGE(
+            context_->GetNodeName(), "Input dxDtype [%s] does not match dyDtype [%s].",
+            ge::TypeUtils::DataTypeToSerialString(dxDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto dgammaDesc = context_->GetOutputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dgammaDesc);
+    auto dgammaDtype = dgammaDesc->GetDataType();
+    OP_CHECK_IF(
+        (dgammaDtype != ge::DataType::DT_FLOAT),
+        OP_LOGE(
+            context_->GetNodeName(), "Input dgammaDtype [%s] not support, only supports float32.",
+            ge::TypeUtils::DataTypeToSerialString(dgammaDtype).c_str()),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -257,6 +315,9 @@ void RmsNormGradRegbaseTiling::CalcUsedCoreNumGamma()
         isMultiColset_ = true;
         usedCoreNumDG_ = aivCoreNum_;
         colsPerCoreDG_ = (cols_sets_ / usedCoreNumDG_) * vlFp32_;
+        if (colsPerCoreDG_ * usedCoreNumDG_ > cols_) {
+            colsPerCoreDG_ = colsPerCoreDG_ - vlFp32_;
+        }
         colsPerTailCoreDG_ = colsPerCoreDG_ + vlFp32_;
         tailCoreNumDG_ = cols_sets_ - (colsPerCoreDG_ / vlFp32_ * usedCoreNumDG_);
         colsLastCoreDG_ = cols_ - (cols_sets_ - 1) * vlFp32_;
@@ -335,17 +396,24 @@ ge::graphStatus RmsNormGradRegbaseTiling::DoOpTiling()
 
     // choose template and calc ub buffer size
     result = CalcTilingDataDgamma();
+    OP_CHECK_IF(
+        result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dgamma failed."), return result);
+
     result = CalcTilingDataDx();
+    OP_CHECK_IF(
+        result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dx failed."), return result);
+
+    tilingData_.dxTilingData.set_cols(cols_);
+    tilingData_.dxTilingData.set_rows(rows_);
+    tilingData_.dxTilingData.set_blockFactorDx(blockFactorDx_);
+    tilingData_.dxTilingData.set_bodyPart(bodyPart_);
+    tilingData_.dxTilingData.set_usedCoreNumDx(usedCoreNumDx_);
+
     tilingData_.set_blockSize(blockSize_);
-    tilingData_.set_usedCoreNumDx(usedCoreNumDx_);
     tilingData_.set_usedCoreNumDG(usedCoreNumDG_);
     tilingData_.set_colsPerCoreDG(colsPerCoreDG_);
     tilingData_.set_rowsPerUBDG(rowsPerUBDG_);
     tilingData_.set_vlFp32(vlFp32_);
-    tilingData_.set_cols(cols_);
-    tilingData_.set_rows(rows_);
-    tilingData_.set_blockFactorDx(blockFactorDx_);
-    tilingData_.set_bodyPart(bodyPart_);
     tilingData_.set_colsPerTailCoreDG(colsPerTailCoreDG_);
     tilingData_.set_isFullLoad(isFullLoadDG_);
     tilingData_.set_isMultiColset(isMultiColset_);
@@ -364,4 +432,6 @@ ge::graphStatus RmsNormGradRegbaseTiling::DoOpTiling()
     LogTilingResult();
     return result;
 }
+
+REGISTER_TILING_TEMPLATE("RmsNormGrad", RmsNormGradRegbaseTiling, 200);
 } // namespace optiling

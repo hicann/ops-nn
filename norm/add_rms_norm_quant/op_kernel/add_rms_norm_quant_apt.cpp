@@ -48,103 +48,127 @@ extern "C" __global__ __aicore__ void add_rms_norm_quant(
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     GET_TILING_DATA_WITH_STRUCT(AddRmsNormQuantRegbaseTilingData, tilingDataIn, tiling);
     const AddRmsNormQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
-    if (TILING_KEY_IS(1000)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 0> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1010)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 10> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1020)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 20> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1030)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 30> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1040)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 40> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1050)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 50> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1060)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 60> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1070)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 70> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1100)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 100> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1110)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 110> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1120)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 120> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1130)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 130> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1140)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 140> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1150)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 150> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1160)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 160> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1170)) {
-        KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 170> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1001)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 1> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1011)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 11> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1021)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 21> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1031)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 31> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1041)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 41> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1051)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 51> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1061)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 61> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1071)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 71> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1101)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 101> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1111)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 111> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1121)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 121> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1131)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 131> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1141)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 141> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1151)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 151> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1161)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 161> op(&pipe);
-        INIT_AND_PROCESS;
-    } else if (TILING_KEY_IS(1171)) {
-        KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 171> op(&pipe);
-        INIT_AND_PROCESS;
-    }
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    #if !defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && !defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1000)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 0> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1100)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 100> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1001)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 1> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1101)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 101> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if !defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1010)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 10> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1110)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 110> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1011)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 11> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1111)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 111> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if !defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && !defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1040)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 40> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1140)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 140> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1041)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 41> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1141)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 141> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if !defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1050)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 50> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1150)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 150> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1051)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 51> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1151)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 151> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && !defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1020)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 20> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1120)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 120> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1021)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 21> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1121)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 121> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if defined(ORIG_DTYPE_SCALES2) && !defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1030)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 30> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1130)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 130> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1031)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 31> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1131)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 131> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && !defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1060)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 60> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1160)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 160> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1061)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 61> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1161)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 161> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
+    #if defined(ORIG_DTYPE_SCALES2) && defined(ORIG_DTYPE_ZERO_POINTS1) && defined(ORIG_DTYPE_ZERO_POINTS2)
+        if (TILING_KEY_IS(1070)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 70> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1170)) {
+            KernelAddRmsNormQuantRegbase<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 170> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1071)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 71> op(&pipe);
+            INIT_AND_PROCESS;
+        } else if (TILING_KEY_IS(1171)) {
+            KernelAddRmsNormQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, DTYPE_SCALES1, DTYPE_ZERO_POINTS1, 171> op(&pipe);
+            INIT_AND_PROCESS;
+        }
+    #endif
 #else
     GET_TILING_DATA_WITH_STRUCT(AddRMSNormQuantTilingData, tilingDataIn, tiling);
     const AddRMSNormQuantTilingData* __restrict tilingData = &tilingDataIn;

@@ -16,6 +16,15 @@
 namespace RmsNorm {
 using namespace AscendC;
 
+
+/**
+ * Get the block size of unified buffer in bytes
+ */
+__aicore__ inline constexpr uint32_t GetUbBlockSize()
+{
+    return 32U;
+}
+
 /**
  * Get the size of vector registers in bytes
  */
@@ -62,6 +71,9 @@ constexpr int32_t MOV_2 = 2;
 constexpr int32_t MOV_4 = 4;
 constexpr int32_t MOV_8 = 8;
 constexpr int32_t MOV_16 = 16;
+constexpr int32_t ADD_RMS_NORM_MODE = 1;
+constexpr int32_t PRE_RMS_NORM_MODE = 2;
+constexpr int32_t POST_RMS_NORM_MODE = 3;
 
 template <typename T>
 __aicore__ inline T CeilDiv(T x, T y)

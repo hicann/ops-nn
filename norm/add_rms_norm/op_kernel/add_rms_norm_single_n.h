@@ -19,7 +19,7 @@
 using namespace AscendC;
 using namespace RmsNorm;
 
-template <typename T>
+template <typename T, int32_t MODE>
 class KernelAddRmsNormSingleN {
     static constexpr int32_t MAXBUFFER = 195584;
 public:
@@ -28,7 +28,7 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
 
@@ -45,9 +45,15 @@ public:
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * numCol, numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * numCol, numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_, 1);
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * numCol, numCol);
 
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_, 1);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * numCol, numCol);
+        } 
+        if constexpr (MODE == PRE_RMS_NORM_MODE) {
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * numCol, numCol);
+        }
+        
         Ppipe->InitBuffer(unitBuf, MAXBUFFER); // (192 - 1) * 1024 byte
     }
 
@@ -78,8 +84,8 @@ private:
         SetFlag<HardEvent::MTE2_V>(eventMTE2V1);
         DataCopyCustom<T>(x2Local, x2Gm, numCol);
         event_t eventMTE2V2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMTE2V2);
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V1);
+        SetFlag<HardEvent::MTE2_V>(eventMTE2V2);
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V2);
         Add(x1Local, x1Local, x2Local, numCol);
         PipeBarrier<PIPE_V>();
@@ -96,7 +102,9 @@ private:
         event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
-        DataCopyCustom<T>(xGm, x1Local, numCol);
+        if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
+            DataCopyCustom<T>(xGm, x1Local, numCol);
+        }
         event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventMTE3V);
 
@@ -120,7 +128,9 @@ private:
 #if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
-        DataCopyCustom<float>(rstdGm, sqxLocal, 1);
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            DataCopyCustom<float>(rstdGm, sqxLocal, 1);
+        }
 #endif
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventVS);
@@ -254,7 +264,9 @@ private:
         event_t eventVMTE3_BF16_0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_0);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_0);
-        DataCopyCustom<T>(xGm, x1Local, numCol);
+        if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
+            DataCopyCustom<T>(xGm, x1Local, numCol);
+        }
         event_t eventMTE3V_BF16_0 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         SetFlag<HardEvent::MTE3_V>(eventMTE3V_BF16_0);
 
@@ -285,7 +297,9 @@ private:
         event_t eventVMTE3_BF16_1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_1);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3_BF16_1);
-        DataCopyCustom<float>(rstdGm, sqxLocal, 1);
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            DataCopyCustom<float>(rstdGm, sqxLocal, 1);
+        }
         event_t eventMTE3V2_BF16_0 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         SetFlag<HardEvent::MTE3_V>(eventMTE3V2_BF16_0);
 #endif

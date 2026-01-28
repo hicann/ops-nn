@@ -57,27 +57,33 @@ TILING_DATA_FIELD_DEF(uint32_t, multiNNum);
 TILING_DATA_FIELD_DEF(uint32_t, isNddma);
 END_TILING_DATA_DEF;
 
+BEGIN_TILING_DATA_DEF(AddRMSNormRegbaseRFullLoadTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, numRow);
+TILING_DATA_FIELD_DEF(uint64_t, numCol);
+TILING_DATA_FIELD_DEF(uint64_t, numColAlign);
+TILING_DATA_FIELD_DEF(uint64_t, blockFactor);
+TILING_DATA_FIELD_DEF(uint64_t, rowFactor);
+TILING_DATA_FIELD_DEF(uint64_t, binAddQuotient);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(float, avgFactor);
+END_TILING_DATA_DEF;
+
 struct AddRmsNormCompileInfo {
     uint32_t totalCoreNum = 0;
     uint64_t totalUbSize = 0;
-    platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910_95;
+    platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
 };
+
+namespace addRmsNormRegbase {
+    ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context);
+}
 
 REGISTER_TILING_DATA_CLASS(AddRmsNorm, AddRMSNormTilingData)
 REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm, AddRMSNormTilingData)
-
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_1, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_2, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_3, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_1001, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_1002, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNorm_1003, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_1, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_2, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_3, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_1001, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_1002, AddRMSNormRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_1003, AddRMSNormRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNorm_1000, AddRMSNormRegbaseRFullLoadTilingData)
+REGISTER_TILING_DATA_CLASS(AddRmsNorm_2000, AddRMSNormRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_1000, AddRMSNormRegbaseRFullLoadTilingData)
+REGISTER_TILING_DATA_CLASS(InplaceAddRmsNorm_2000, AddRMSNormRegbaseTilingData)
 } // namespace optiling
 
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_H_

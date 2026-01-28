@@ -27,7 +27,7 @@ constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint64_t UB_RESERVED_BYTE = 256;
 constexpr int32_t MAX_ROW_STEP = 255;
 
-constexpr uint32_t TILING_910_95_PREFIX = 8000;
+constexpr uint32_t TILING_REGBASE_PREFIX = 8000;
 // full-load: 000, welford: 100
 constexpr uint32_t TILING_WELFORD = 100;
 // no bias: 0, bias elewise: 1, bias brc: 2
@@ -111,7 +111,7 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
     tiling->set_eps(this->eps_);
     tiling->set_outputX(this->needOutputX_);
 
-    uint32_t tilingKey = TILING_910_95_PREFIX;
+    uint32_t tilingKey = TILING_REGBASE_PREFIX;
     if (this->ubTilingPolicy_ == UB_TILING_POLICY::WELFORD) {
         tilingKey += TILING_WELFORD;
     }

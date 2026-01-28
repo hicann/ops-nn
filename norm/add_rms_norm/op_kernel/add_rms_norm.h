@@ -18,8 +18,8 @@
 
 using namespace AscendC;
 using namespace RmsNorm;
-
-template <typename T>
+  
+template <typename T, int32_t MODE>
 class KernelAddRmsNorm {
 public:
     __aicore__ inline KernelAddRmsNorm(TPipe* pipe)
@@ -27,7 +27,7 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tiling->num_row;
@@ -49,8 +49,14 @@ public:
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        }
+        if constexpr (MODE == PRE_RMS_NORM_MODE) {
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        }
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(T));
@@ -89,8 +95,12 @@ public:
             Compute(i_i, gammaLocal, rstdLocal);
             CopyOutY(gm_bias);
         }
-        outQueueRstd.EnQue<float>(rstdLocal);
-        CopyOutRstd(i_o, calc_row_num);
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            outQueueRstd.EnQue<float>(rstdLocal);
+            CopyOutRstd(i_o, calc_row_num);
+        } else {
+            outQueueRstd.FreeTensor(rstdLocal);
+        }
     }
 
 private:
@@ -135,7 +145,9 @@ private:
         // CopyOut x1 + x2
         outQueueY.EnQue(xLocal);
         auto x_out = outQueueY.DeQue<T>();
-        DataCopyCustom<T>(xGm[gm_bias], x_out, numCol);
+        if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
+            DataCopyCustom<T>(xGm[gm_bias], x_out, numCol);
+        }
         outQueueY.FreeTensor(x_out);
     }
 

@@ -25,7 +25,7 @@ using namespace AscendC;
 template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DGAMMA>
 class RegbaseDxFullLoad {
 public:
-    __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradRegbaseTilingData* tilingData)
+     __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
@@ -40,16 +40,17 @@ public:
         }
         rows_ = tiling_->rows;
         cols_ = tiling_->cols;
+        blockFactor_ = tiling_->blockFactorDx;
+
         colsAlignBlock_ =
             IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) : AlignUp(cols_, HALF_NUM_BLOCK);
         colsAlign2VL_ = AlignUp(cols_, FLOAT_NUM_2VL);
-        blockFactor_ = tiling_->blockFactorDx; // ceilDiv(rows_, usedCoreNum)
+
         ubFactor_ = UB_FACTOR_DX_FULL_LOAD;
         ubFactorD_ = colsAlign2VL_;
         ubFactorN_ = ubFactor_ / ubFactorD_;
         avgFactor1_ = 1.0f / cols_;
 
-        power_ = findPowerTwo(colsAlign2VL_);
         dyGm_.SetGlobalBuffer((__gm__ T_DY*)dy + coreIdx * blockFactor_ * cols_);
         xGm_.SetGlobalBuffer((__gm__ T_X*)x + coreIdx * blockFactor_ * cols_);
         rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + coreIdx * blockFactor_);
@@ -63,7 +64,6 @@ public:
         Ppipe_->InitBuffer(gammaBuf_, ubFactor_ * sizeof(float));
         Ppipe_->InitBuffer(reduceBuf_, ubFactorN_ * colsAlign2VL_ * sizeof(float));
         Ppipe_->InitBuffer(tmpSumBuf_, AlignUp(ubFactorN_, V_LENGTH) * sizeof(float));
-        Ppipe_->InitBuffer(workBuf_, ONCE_VECTOR_SIZE * sizeof(float));
     }
     __aicore__ inline void Process()
     {
@@ -111,7 +111,7 @@ public:
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, mulReg0, mulReg2, mulReg3;
             for (uint16_t r = 0; r < loopRow; r++) {
                 MaskReg maskReg = CreateMask<float, MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + r);
+                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
                     LoadAndCast(dyReg, dyAddr, maskReg, r * cols + i * oneRepeat);
@@ -119,7 +119,7 @@ public:
                     LoadAndCast(xReg, xAddr, maskReg, r * cols + i * oneRepeat);
                     Mul(mulReg0, xReg, rstdReg, maskReg);
                     Mul(mulReg3, mulReg2, mulReg0, maskReg);
-                    DataCopy(reduceAddr + r * colsAlign2VL_ + i * oneRepeat, mulReg3, maskReg);
+                    DataCopy(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
                 }
             }
         }
@@ -136,8 +136,8 @@ public:
                 uint32_t sreg = cols_;
                 int64_t cols = colsAlignBlock_;
                 MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + r);
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + r);
+                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
@@ -152,11 +152,11 @@ public:
                     Sub(subReg, mulReg2, mulReg4, maskReg);
                     Mul(dxReg, subReg, rstdReg, maskReg);
                     if constexpr (IsSameType<T_X, float>::value) {
-                        DataCopy(dxAddr + r * cols + i * oneRepeat, dxReg, maskReg);
+                        DataCopy(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxReg, maskReg);
                     } else {
                         RegTensor<T_X> dxRegB16;
                         Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                        DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + r * cols + i * oneRepeat, dxRegB16, maskReg);
+                        DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxRegB16, maskReg);
                     }
                 }
             }
@@ -243,13 +243,13 @@ public:
                     uint32_t sreg = colsTail;
                     for (uint16_t i = 0; i < repeatCount; i++) {
                         maskReg = UpdateMask<float>(sreg);
-                        DataCopy(srcAddr + r * colsAlign2VL_ + cols + i * oneRepeat, srcReg, maskReg);
+                        DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + cols + i * oneRepeat), srcReg, maskReg);
                     }
                 }
             }
         }
-        LocalTensor<float> workLocal = workBuf_.Get<float>();
-        MultiReduceSumImpl(dstLocal, srcLocal, workLocal, rows, colsAlign2VL_, power_);
+        uint32_t srcShape[2] = {uint32_t(rows), uint32_t(colsAlign2VL_)};
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dstLocal, srcLocal, srcShape, false);
     }
 
     __aicore__ inline void CopyOutDx(int64_t rowIdx, int64_t calcRow)
@@ -268,7 +268,7 @@ public:
 
 private:
     TPipe* Ppipe_;
-    const RmsNormGradRegbaseTilingData* tiling_;
+    const RmsNormGradRegbaseDxTilingData* tiling_;
     GlobalTensor<T_DY> dyGm_;
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_GAMMA> gammaGm_;
@@ -281,7 +281,7 @@ private:
     TBuf<TPosition::VECCALC> gammaBuf_;
     TBuf<TPosition::VECCALC> reduceBuf_;
     TBuf<TPosition::VECCALC> tmpSumBuf_;
-    TBuf<TPosition::VECCALC> workBuf_;
+
     uint32_t usedCoreNum_;
     int64_t rows_;
     int64_t cols_;
@@ -292,7 +292,6 @@ private:
     int64_t ubFactorN_;
     int64_t ubFactorD_;
     float avgFactor1_;
-    int32_t power_;
 };
 } // namespace RmsNormGrad
 #endif // RMS_NORM_GRAD_REGBASE_DX_FULL_LOAD_H

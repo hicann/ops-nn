@@ -23,7 +23,6 @@
 #include "tiling_base/tiling_templates_registry.h"
 #include "error_util.h"
 
-
 namespace optiling {
 BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, useCore);
@@ -92,7 +91,7 @@ constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
 
 struct AddRmsNormDynamicQuantCompileInfo {
-    platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910_95;
+    platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
     uint64_t totalCoreNum = 0;
     uint64_t maxUbSize = 0;
 };

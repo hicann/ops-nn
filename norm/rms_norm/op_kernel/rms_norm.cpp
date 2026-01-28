@@ -74,7 +74,7 @@ extern "C" __global__ __aicore__ void rms_norm(
 #endif
 #if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 310) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(2000)) {
+    if (TILING_KEY_IS(5000)) {
         GENERAL_OP_IMPL(RmsNorm::KernelRmsNormRegBase, DTYPE_X, DTYPE_GAMMA);
     } else if (TILING_KEY_IS(2001)) {
         GENERAL_OP_IMPL(RmsNorm::KernelRmsNormRegBaseSplitD, DTYPE_X, DTYPE_GAMMA);

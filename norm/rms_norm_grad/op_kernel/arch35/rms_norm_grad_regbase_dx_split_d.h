@@ -25,7 +25,7 @@ using namespace AscendC;
 template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DGAMMA>
 class RegbaseDxSplitD {
 public:
-    __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradRegbaseTilingData* tilingData)
+        __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
@@ -229,9 +229,9 @@ public:
                 Mul(mulReg0, xReg, rstdReg, maskReg);
                 Mul(mulReg3, mulReg2, mulReg0, maskReg);
                 if constexpr (IsBody) {
-                    DataCopy(reduceAddr + i * oneRepeat, mulReg3, maskReg);
+                    DataCopy(reduceAddr + static_cast<uint32_t>(i * oneRepeat), mulReg3, maskReg);
                 } else {
-                    DataCopy(reduceAddr + ubFactorD_ + i * oneRepeat, mulReg3, maskReg); // 注意补零
+                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3, maskReg); // 注意补零
                 }
             }
         }
@@ -304,11 +304,11 @@ public:
                 Sub(subReg, mulReg2, mulReg4, maskReg);
                 Mul(dxReg, subReg, rstdReg, maskReg);
                 if constexpr (IsSameType<T_X, float>::value) {
-                    DataCopy(dxAddr + i * oneRepeat, dxReg, maskReg);
+                    DataCopy(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxReg, maskReg);
                 } else {
                     RegTensor<T_X> dxRegB16;
                     Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + i * oneRepeat, dxRegB16, maskReg);
+                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegB16, maskReg);
                 }
             }
         }
@@ -336,7 +336,7 @@ public:
 
 private:
     TPipe* Ppipe_;
-    const RmsNormGradRegbaseTilingData* tiling_;
+    const RmsNormGradRegbaseDxTilingData* tiling_;
     GlobalTensor<T_DY> dyGm_;
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_GAMMA> gammaGm_;

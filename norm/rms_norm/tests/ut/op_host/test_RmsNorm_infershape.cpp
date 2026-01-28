@@ -1,10 +1,10 @@
 /**
+ * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <gtest/gtest.h>
@@ -41,6 +41,24 @@ TEST_F(RmsNorm, RmsNorm_infershape_case_0)
     auto output_rstd_desc = op.GetOutputDesc(1);
     std::vector<int64_t> expected_y_shape = {4, 1, 8};
     std::vector<int64_t> expected_rstd_shape = {4, 1, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_1)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_FLOAT16));
+    //   op.SetAttr("epsilon", 0.1);
+    //   Runtime2TestParam param{{"epsilon"},{},{}};
+    //   EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {-2};
+    std::vector<int64_t> expected_rstd_shape = {-2};
     EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
     EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
 }

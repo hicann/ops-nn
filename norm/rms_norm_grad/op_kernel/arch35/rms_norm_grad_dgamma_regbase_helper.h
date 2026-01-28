@@ -17,6 +17,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "rms_norm_grad_regbase_common.h"
 namespace RmsNormGrad {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
@@ -237,7 +238,7 @@ __aicore__ inline void UpdateCache(
         pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
         DataCopy(aReg, (__local_mem__ float*)srcAddr);
         for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-            DataCopy(bReg, (__local_mem__ float*)dst + j * innerLoopStride);
+            DataCopy(bReg, (__local_mem__ float*)dst + static_cast<uint32_t>(j * innerLoopStride));
             Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         }
         DataCopy((__local_mem__ float*)cah, aReg, pMask);

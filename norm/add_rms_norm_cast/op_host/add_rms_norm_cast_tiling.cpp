@@ -13,9 +13,12 @@
  * \brief
  */
 #include <iostream>
+#include "tiling_base/tiling_util.h"
 #include "add_rms_norm_cast_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr uint32_t DTYPE_KEY_FP16 = 1;
 constexpr uint32_t DTYPE_KEY_FP32 = 2;
 constexpr uint32_t DTYPE_KEY_BF16 = 3;
@@ -165,7 +168,7 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
         socVersion = ptrCompileInfo->socVersion;
     }
 
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         AddRmsNormCastRegbaseTiling regbaseTiling(context);
         return regbaseTiling.DoTiling();
     }

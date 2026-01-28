@@ -13,9 +13,12 @@
  * \brief
  */
 #include <iostream>
+#include "tiling_base/tiling_util.h"
 #include "add_rms_norm_quant_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr uint32_t DTYPE_KEY_FP16 = 1;
 constexpr uint32_t DTYPE_KEY_FP32 = 2;
 constexpr uint32_t DTYPE_KEY_BF16 = 3;
@@ -279,8 +282,7 @@ ge::graphStatus Tiling4AddRmsNormQuant(gert::TilingContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     platform_ascendc::SocVersion curSocVersion =
         (ptrCompileInfo) == nullptr ? ascendcPlatform.GetSocVersion() : ptrCompileInfo->curSocVersion;
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
-        curSocVersion == platform_ascendc::SocVersion::ASCEND910_55) {
+    if (IsRegbaseSocVersion(context)) {
         AddRmsNormQuantRegbaseTiling regbaseTiling(context);
         return regbaseTiling.DoTiling();
     }

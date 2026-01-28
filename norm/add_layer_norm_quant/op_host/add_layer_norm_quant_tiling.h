@@ -160,10 +160,10 @@ class AddLayerNormQuantEmptyTiling {
 public:
     explicit AddLayerNormQuantEmptyTiling(gert::TilingContext* context) : context_(context)
     {}
-    // TilingÖ´ÐÐ¿ò¼Ü
-    //     1¡¢GRAPH_SUCCESS: ³É¹¦£¬²¢ÇÒ²»ÐèÒª¼ÌÐøÖ´ÐÐºóÐøTilingÀàµÄÊµÏÖ
-    //     2¡¢GRAPH_FAILED: Ê§°Ü£¬ÖÐÖ¹Õû¸öTilingÁ÷³Ì
-    //     3¡¢GRAPH_PARAM_INVALID: ±¾Àà²»Ö§³Ö£¬ÐèÒª¼ÌÐøÍùÏÂÖ´ÐÐÆäËûTilingÀàµÄÊµÏÖ
+    // TilingÖ´ï¿½Ð¿ï¿½ï¿½
+    //     1ï¿½ï¿½GRAPH_SUCCESS: ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ðºï¿½ï¿½ï¿½Tilingï¿½ï¿½ï¿½Êµï¿½ï¿½
+    //     2ï¿½ï¿½GRAPH_FAILED: Ê§ï¿½Ü£ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Tilingï¿½ï¿½ï¿½ï¿½
+    //     3ï¿½ï¿½GRAPH_PARAM_INVALID: ï¿½ï¿½ï¿½à²»Ö§ï¿½Ö£ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Tilingï¿½ï¿½ï¿½Êµï¿½ï¿½
     ge::graphStatus DoTiling();
 
 protected:

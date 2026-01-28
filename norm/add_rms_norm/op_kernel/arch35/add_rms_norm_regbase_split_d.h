@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file add_rms_norm_regbase_split.h
+ * \file add_rms_norm_regbase_split_d.h
  * \brief
  */
 #ifndef ADD_RMS_NORM_REGBASE_SPLIT_D_H

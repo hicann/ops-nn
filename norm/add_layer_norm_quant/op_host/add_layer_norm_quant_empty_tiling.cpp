@@ -113,7 +113,6 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
 
     const gert::StorageShape* x2Shape = this->context_->GetInputShape(X2_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, x2Shape);
-    auto x2StorageShape = x2Shape->GetStorageShape();
 
     const gert::StorageShape* gammaShape = this->context_->GetInputShape(GAMMA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, gammaShape);
@@ -121,11 +120,9 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
    
     const gert::StorageShape* betaShape = this->context_->GetInputShape(BETA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, betaShape);
-    auto betaStorageShape = betaShape->GetStorageShape();
  
     const gert::StorageShape* y1Shape = this->context_->GetOutputShape(Y1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, y1Shape);
-    auto y1StorageShape = y1Shape->GetStorageShape();
 
     const gert::StorageShape* xShape = this->context_->GetOutputShape(X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, xShape);

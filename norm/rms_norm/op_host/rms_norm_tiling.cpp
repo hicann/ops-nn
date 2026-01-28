@@ -13,6 +13,7 @@
  * \brief RmsNorm tiling file
  */
 #include <iostream>
+#include "tiling_base/tiling_util.h"
 #include "rms_norm_tiling.h"
 
 namespace optiling {
@@ -26,11 +27,9 @@ constexpr uint32_t GEMMA_UB_FACTOR_B32 = 8192;
 constexpr uint32_t UB_FACTOR_B32 = 10240;
 constexpr uint32_t BLOCK_ALIGN_NUM = 16;
 constexpr uint32_t FLOAT_BLOCK_ALIGN_NUM = 8;
-constexpr uint32_t FLOAT_PER_REAPEAT = 64;
 constexpr uint32_t BYTE_SIZE_2_BLOCK_ALIGN_NUM = 16;
 constexpr uint32_t X_INDEX = 0;
 constexpr uint32_t GAMMA_INDEX = 1;
-constexpr uint32_t FLOAT_BYTE_SIZE = 4;
 constexpr uint32_t B16_BYTE_SIZE = 2;
 constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t UB_USED = 1024;
@@ -45,22 +44,12 @@ constexpr uint32_t ALIGN_WEIGHT = 100;
 constexpr uint32_t DTYPE_WEIGHT = 10;
 constexpr uint32_t DIV_TO_HALF = 2;
 constexpr uint32_t SMALL_REDUCE_NUM = 2000;
-constexpr uint32_t MODE_NORMAL = 0;
-constexpr uint32_t MODE_SPLIT_D = 1;
 constexpr uint32_t MODE_MERGE_N = 2;
 constexpr uint32_t MODE_SINGLE_ROW = 3;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t MIN_DIM_X = 1;
 constexpr size_t MIN_DIM_GAMMA = 1;
 constexpr size_t SYS_WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
-constexpr uint32_t ALING_FACTOR_512 = 512;
-constexpr uint32_t RETAINED_SIZE = 256U * 5U * 4U;
-constexpr int32_t RETAINED_SIZE_MULTI_N = 256 * 3 * 4;
-constexpr uint32_t LOG_2 = 2;
-constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
-constexpr uint32_t MULTI_FACTOR_2 = 2;
-constexpr uint32_t SOC_FACTOR_910_95 = 2;
-constexpr uint32_t NDDMA_BETTER_STAGE = 512;
 constexpr int32_t MOV_2 = 2;
 constexpr int32_t MOV_4 = 4;
 constexpr int32_t MOV_8 = 8;
@@ -74,18 +63,6 @@ constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
 constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
 
 RMSNormTilingData tilingData;
-
-const std::map<ge::DataType, uint32_t> dTypeByteMap = {
-    {ge::DT_FLOAT16, 2},
-    {ge::DT_FLOAT, 4},
-    {ge::DT_BF16, 2},
-};
-
-template <typename T>
-static auto CeilDiv(T x, T y) -> T
-{
-    return y == 0 ? x : (x + y - 1) / y;
-}
 
 void SetByDtype(ge::DataType dataType, uint32_t& dtypeKey, uint32_t& dataPerBlock)
 {
@@ -128,29 +105,6 @@ void OnceReduceMaxColsAlign64(uint64_t& onceReduceMaxCols, uint32_t& mask, uint3
     mask = nowCols;
 }
 
-uint32_t ComputeTotalBufSize(ComputeTotalBufSizeParam computeTotalBufSizeParam)
-{
-    uint32_t bufferNum = computeTotalBufSizeParam.bufferNum;
-    ge::DataType dtype = computeTotalBufSizeParam.dtype;
-    uint32_t dtypeSizeX = computeTotalBufSizeParam.dtypeSizeX;
-    uint32_t dtypeSizeGamma = computeTotalBufSizeParam.dtypeSizeGamma;
-    uint32_t length = computeTotalBufSizeParam.length;
-    bool split = computeTotalBufSizeParam.split;
-
-    // queBuferSize: 计算搬运需要空间大小
-    uint32_t queBufSize = bufferNum * length * dtypeSizeX * MULTI_FACTOR_2 + bufferNum * length * dtypeSizeGamma +
-                          FLOAT_PER_REAPEAT * bufferNum * FLOAT_BYTE_SIZE;
-    uint32_t tmpBufSzie = 0; // tmpBufSzie: UB内需要临时空间大小
-    if (split) {
-        // 切分场景下：只需要一块
-        tmpBufSzie = length * FLOAT_BYTE_SIZE;
-        return queBufSize + tmpBufSzie + RETAINED_SIZE;
-    } else {
-        // 普通场景下：如果是float16及bfloat16数据类型，需要一块：转FP32
-        tmpBufSzie = (dtype == ge::DT_FLOAT) ? 0 : length * FLOAT_BYTE_SIZE;
-        return queBufSize + tmpBufSzie + static_cast<uint32_t>(RETAINED_SIZE_MULTI_N);
-    }
-}
 } // namespace
 
 static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
@@ -369,72 +323,10 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     }
 
     numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * dataPerBlock;
-
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
-        curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
-        SocVersion = SOC_FACTOR_910_95;
-        rowFactor = FLOAT_PER_REAPEAT;
-
-        blockFactor = 1ULL;
-        uint64_t tileNum = CeilDiv(numRow, static_cast<uint64_t>(numCore));
-        blockFactor *= tileNum;
-        uint32_t useCoreNum = CeilDiv(numRow, blockFactor);
-        context->SetBlockDim(useCoreNum);
-
-        auto dtypeByteIterator_x = dTypeByteMap.find(xDataType);
-        OP_TILING_CHECK(
-            dtypeByteIterator_x == dTypeByteMap.end(),
-            OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."),
-            return ge::GRAPH_FAILED);
-        uint32_t curElementByteX = dtypeByteIterator_x->second;
-        auto dtypeByteIterator_gamma = dTypeByteMap.find(gammaDataType);
-        OP_TILING_CHECK(
-            dtypeByteIterator_gamma == dTypeByteMap.end(),
-            OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."),
-            return ge::GRAPH_FAILED);
-        uint32_t curElementByteGamma = dtypeByteIterator_gamma->second;
-
-        auto curElementByte = std::max(curElementByteX, curElementByteGamma);
-        OP_TILING_CHECK(
-            curElementByte == 0, OPS_REPORT_VECTOR_INNER_ERR(context, "curElementByte is zero."),
-            return ge::GRAPH_FAILED);
-        numColAlign = CeilDiv(numCol * curElementByte, static_cast<uint64_t>(ALING_FACTOR_512))
-                    * ALING_FACTOR_512 / curElementByte;
-
-        ComputeTotalBufSizeParam computeTotalBufSizeParam{
-            .bufferNum = DOUBLE_BUFFER_NUM,
-            .dtype = xDataType,
-            .dtypeSizeX = curElementByteX,
-            .dtypeSizeGamma = curElementByteGamma,
-            .length = static_cast<uint32_t>(numColAlign),
-            .split = false};
-        uint32_t total = ComputeTotalBufSize(computeTotalBufSizeParam);
-
-        modeKey = total < ubSize ? MODE_NORMAL : MODE_SPLIT_D;
-        multiNNum = static_cast<uint32_t>(ubSize) / static_cast<uint32_t>(total);
-        uint32_t powerFactor = std::floor(std::log(numColAlign) / std::log(2));
-        powerFactor = std::pow(LOG_2, powerFactor);
-
-        if (modeKey == MODE_NORMAL) {
-            ubFactor = powerFactor;
-            colBufferLength = numColAlign;
-        } else {
-            ubFactor = 1UL;
-            computeTotalBufSizeParam.length = static_cast<uint32_t>(ubFactor) * MULTI_FACTOR_2;
-            computeTotalBufSizeParam.split = true;
-            while (ComputeTotalBufSize(computeTotalBufSizeParam) < ubSize) {
-                ubFactor *= MULTI_FACTOR_2;
-                computeTotalBufSizeParam.length = static_cast<uint32_t>(ubFactor) * MULTI_FACTOR_2;
-            }
-            ubLoop = 1UL;
-            while (ubLoop * MULTI_FACTOR_2 * ubFactor <= numCol) {
-                ubLoop *= MULTI_FACTOR_2;
-            }
-            colBufferLength = ubFactor;
-        }
-        if (numCol >= NDDMA_BETTER_STAGE) {
-            isNddma = 0U;
-        }
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context) || curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
+        RMSNormArch35TilingData arch35TilingData;
+        return TilingArch354RmsNorm(
+            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon, tiling, arch35TilingData);
     } else if (curSocVersion == platform_ascendc::SocVersion::ASCEND910) {
         SocVersion = 1U;
         colAlign = numColAlign == numCol ? 1ULL : 0ULL;
@@ -569,7 +461,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     if ((curSocVersion == platform_ascendc::SocVersion::ASCEND910) && (modeKey == 0)) {
         tilingKey = tilingKey + xDtypeKey * DTYPE_WEIGHT;
     }
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ||
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context) ||
         curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
         tilingKey = SocVersion * SOC_WEIGHT + modeKey;
     }
@@ -603,7 +495,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     tiling.set_col_buffer_length(colBufferLength);
     tiling.set_multi_n_num(multiNNum);
     tiling.set_is_nddma(isNddma);
-    OP_LOGI(
+    OP_LOGD(
         context,
         "TilingData numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, col_buffer_length: %u, "
         "blockFactor: %lu, rowFactor: %u, ubFactor: %u, epsilon: %f, avgFactor: %f, "

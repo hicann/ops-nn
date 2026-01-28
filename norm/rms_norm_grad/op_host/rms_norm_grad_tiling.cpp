@@ -14,9 +14,12 @@
  */
 #include "rms_norm_grad_tiling.h"
 #include "register/op_def_registry.h"
+#include "tiling_base/tiling_util.h"
 #include "tiling/tiling_api.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 static const uint32_t ALIGN_32 = 8;
 static const uint32_t ALIGN_16 = 16;
 static const uint64_t DTYPE_FP32 = 1;
@@ -220,7 +223,7 @@ static bool CheckRstdShape(
         for (uint32_t i = rstdDimNum; i < xDimNum - gammaDimNum; i++) {
             OP_CHECK_IF(
                 xShape->GetStorageShape().GetDim(i) != 1,
-                OP_LOGE(context, "Input x shape invaild, dim value should be 1."), return false);
+                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
         }
     } else {
         for (uint32_t i = 0; i < xDimNum - gammaDimNum; i++) {
@@ -349,16 +352,15 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
     OP_CHECK_IF(
         curSocVersion == platform_ascendc::SocVersion::ASCEND910 && col_val % COL_VAL_MULTIPLE_910 != 0,
         OP_LOGE(context, "The input shape is not supported on the 910 chip."), return ge::GRAPH_FAILED);
-    bool isAscend910_95_ = curSocVersion == platform_ascendc::SocVersion::ASCEND910_95 ? true : false;
-    if (isAscend910_95_) {
+    bool isRegbase_ = IsRegbaseSocVersion(context) ? true : false;
+    if (isRegbase_) {
         if (isEmptyTensor) {
             OP_LOGD(context, "RmsNormGrad Empty tiling start");
             RmsNormGradEmptyTiling rmsNormGradTiling(context);
             return rmsNormGradTiling.DoTiling();
         }
         OP_LOGD(context, "RmsNormGrad Regbase tiling start");
-        RmsNormGradRegbaseTiling rmsNormGradTiling(context);
-        return rmsNormGradTiling.DoTiling();
+        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
     OP_CHECK_IF(
         isEmptyTensor, OP_LOGE(context, "Input dy shape can not be 0."), return ge::GRAPH_FAILED);

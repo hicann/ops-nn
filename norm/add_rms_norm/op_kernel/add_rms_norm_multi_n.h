@@ -19,7 +19,7 @@
 using namespace AscendC;
 using namespace RmsNorm;
 
-template <typename T>
+template <typename T, int32_t MODE>
 class KernelAddRmsNormMultiN {
 public:
     __aicore__ inline KernelAddRmsNormMultiN(TPipe* pipe)
@@ -27,7 +27,7 @@ public:
         Ppipe = pipe;
     }
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, const AddRMSNormTilingData* tiling)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tiling->num_row;
@@ -54,8 +54,13 @@ public:
         x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * blockFactor * numCol, rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        }
+        if constexpr (MODE == PRE_RMS_NORM_MODE) {
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        }
 
         // pipe alloc memory to queue, the unit is Bytes
         Ppipe->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * sizeof(T));
@@ -90,15 +95,23 @@ public:
 
     __aicore__ inline void SubProcessHalf(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        int64_t gm_bias = static_cast<int64_t>(i_o) * static_cast<int64_t>(rowFactor) * static_cast<int64_t>(numCol);
+        uint32_t gm_bias = i_o * rowFactor * numCol;
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(calc_row_num);
-        CopyOutX(gm_bias, calc_row_num);
+        if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
+            CopyOutX(gm_bias, calc_row_num);
+        } else {
+            outQueueY.FreeTensor(xLocal);
+        }
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num);
-        outQueueRstd.EnQue<float>(rstdLocal);
-        CopyOutRstd(static_cast<int64_t>(i_o) * static_cast<int64_t>(rowFactor), calc_row_num);
+        if constexpr (MODE == ADD_RMS_NORM_MODE) {
+            outQueueRstd.EnQue<float>(rstdLocal);
+            CopyOutRstd(i_o * rowFactor, calc_row_num);
+        } else {
+            outQueueRstd.FreeTensor(rstdLocal);
+        }
 #else
         LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
         ComputeRstd(xLocal, rstdLocal, calc_row_num);
@@ -108,7 +121,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(int64_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyInX(uint32_t gm_bias, uint32_t calc_row_num)
     {
         LocalTensor<T> x1Local = inQueueX.AllocTensor<T>();
         DataCopyCustom<T>(x1Local, x1Gm[gm_bias], calc_row_num * numCol);
@@ -138,12 +151,14 @@ private:
         }
         inQueueX.FreeTensor(x1Local);
         inQueueX.FreeTensor(x2Local);
-        outQueueY.EnQue(xLocal);
+        if constexpr (MODE == PRE_RMS_NORM_MODE || MODE == ADD_RMS_NORM_MODE) {
+            outQueueY.EnQue(xLocal);
+        }
         PipeBarrier<PIPE_V>();
         return xLocal;
     }
 
-    __aicore__ inline void CopyOutX(int64_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutX(uint32_t gm_bias, uint32_t calc_row_num)
     {
         // CopyOut x1 + x2
         auto x_out = outQueueY.DeQue<T>();
@@ -244,7 +259,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(int64_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, calc_row_num * numCol);
@@ -252,7 +267,7 @@ private:
     }
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
-    __aicore__ inline void CopyOutRstd(int64_t outer_progress, uint32_t num)
+    __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
         DataCopyParams copyParams;

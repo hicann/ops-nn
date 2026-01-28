@@ -24,10 +24,14 @@ static ge::graphStatus InferShape4RmsNormGrad(gert::InferShapeContext* context)
     OP_LOGD(context, "Begin to do InferShape4RmsNormGrad.");
     const gert::Shape* x_shape = context->GetInputShape(1);
     const gert::Shape* gamma_shape = context->GetInputShape(3);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gamma_shape);
 
     // get output shapes
     gert::Shape* dx_shape = context->GetOutputShape(0);
     gert::Shape* dgamma_shape = context->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, dx_shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, dgamma_shape);
     *dx_shape = *x_shape;
     *dgamma_shape = *gamma_shape;
 

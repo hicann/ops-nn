@@ -1,10 +1,10 @@
 /**
+ * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
+ * This file is a part of the CANN Open Software.
+ * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #ifndef ADD_RMS_NORM_TILING_H_
@@ -41,14 +41,39 @@ struct AddRMSNormTilingData {
     uint32_t is_performance;
 };
 
+struct AddRMSNormRegbaseTilingData {
+    uint32_t numRow;
+    uint32_t numCol;
+    uint32_t numColAlign;
+    uint32_t blockFactor;
+    uint32_t rowFactor;
+    uint32_t ubFactor;
+    float epsilon;
+    float avgFactor;
+    uint32_t ubLoop;
+    uint32_t colBuferLength;
+    uint32_t multiNNum;
+    uint32_t isNddma;
+};
+
+struct AddRMSNormRegbaseRFullLoadTilingData {
+    uint64_t numRow;
+    uint64_t numCol;
+    uint64_t numColAlign;
+    uint64_t blockFactor;
+    uint64_t rowFactor;
+    uint64_t binaryBuffLen;
+    float epsilon;
+    float avgFactor;
+};
 #pragma pack()
 
 #define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+     __ubuf__ tilingStruct* tilingDataPointer =                              \
+         reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
+     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                            \
     AddRMSNormTilingData tilingData;                                          \
@@ -73,4 +98,15 @@ struct AddRMSNormTilingData {
     (tilingData).mul_tail_fp16 = tilingDataPointer->mul_tail_fp16;            \
     (tilingData).dst_rep_stride_fp16 = tilingDataPointer->dst_rep_stride_fp16;            \
     (tilingData).is_performance = tilingDataPointer->is_performance;
+
+template <typename T>
+inline void InitTilingData(uint8_t* tiling, T* const_data)
+{
+    memcpy(const_data, tiling, sizeof(T));
+};
+
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
+    tiling_struct tiling_data;                                              \
+    InitTilingData<tiling_struct>(tiling_arg, &tiling_data)
+
 #endif

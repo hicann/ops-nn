@@ -13,8 +13,10 @@
  * \brief
  */
 #include "add_rms_norm_dynamic_quant_tiling.h"
+#include "tiling_base/tiling_util.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 constexpr int X1_IDX = 0;
 constexpr int X2_IDX = 1;
@@ -35,6 +37,7 @@ constexpr int NUM_WITHOUT_BETA = 3;
 constexpr int EPS_IDX = 0;
 constexpr int OUT_QUANT_1_IDX = 1;
 constexpr int OUT_QUANT_2_IDX = 2;
+constexpr int DST_TYPE_IDX = 2;
 
 constexpr uint64_t USR_WORKSPACE_SIZE_910B = 1;
 
@@ -149,21 +152,14 @@ void AddRmsNormDynamicQuantTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(A
 bool AddRmsNormDynamicQuantTilingHelper::DoTiling()
 {
     OP_TILING_CHECK(
-        (nullptr == context_),
-        OP_LOGE("AddRmsNormDynamicQuantTiling", "Helper context_ get nullptr, return failed."),
+        (nullptr == context_), OP_LOGE("AddRmsNormDynamicQuantTiling", "Helper context_ get nullptr, return failed."),
         return false);
+    OP_TILING_CHECK(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
     OP_TILING_CHECK(
-        !GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"),
-        return false);
+        !GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"), return false);
     OP_TILING_CHECK(
-        !GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"),
-        return false);
-    OP_TILING_CHECK(
-        !DoBlockTiling(),
-        OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
-    OP_TILING_CHECK(
-        !DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"),
-        return false);
+        !DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
+    OP_TILING_CHECK(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"), return false);
     return true;
 }
 
@@ -451,7 +447,7 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     platform_ascendc::SocVersion curSocVersion =
         (ptrCompileInfo) == nullptr ? ascendcPlatform.GetSocVersion() : ptrCompileInfo->curSocVersion;
-    if (curSocVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (IsRegbaseSocVersion(context)) {
         if (isEmptyTensor) {
             AddRmsNormDynamicQuantEmptyTiling emptyTiling(context);
             return emptyTiling.DoTiling();

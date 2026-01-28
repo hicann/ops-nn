@@ -18,6 +18,7 @@
 #include "arch35/rms_norm_grad_regbase_dx_split_d.h"
 #include "arch35/rms_norm_grad_regbase_dgamma.h"
 #include "arch35/rms_norm_grad_empty_dgamma.h"
+#include "arch35/rms_norm_grad_regbase_dgamma_big_m.h"
 
 extern "C" __global__ __aicore__ void rms_norm_grad(
     GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
@@ -30,44 +31,71 @@ extern "C" __global__ __aicore__ void rms_norm_grad(
         RmsNormGrad::EmptyDgamma<2> opDG(&pipe, tilingData);
         opDG.Init(dgamma);
         opDG.Process();
+    } else if (TILING_KEY_IS(9000)) {
+        GET_TILING_DATA_WITH_STRUCT(RmsNormGradBigMTilingData, tilingDataIn, tiling);
+        AscendC::TPipe pipe;
+        const RmsNormGradRegbaseDxTilingData* __restrict tilingDataDx = &tilingDataIn.dxTilingData;
+        RmsNormGrad::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
+        opDX.Init(dy, x, rstd, gamma, dx, dgamma);
+        opDX.Process();
+        AscendC::PipeBarrier<PIPE_ALL>();
+        pipe.Reset();
+        const RmsNormGradBigMTilingData* __restrict tilingDataDgamma = &tilingDataIn;
+        RmsNormGrad::RmsNormGradDgammaBigM<DTYPE_DY> opDgamma;
+        opDgamma.Init(dy, x, rstd, dgamma, workspace, tilingDataDgamma, &pipe);
+        opDgamma.Process();
+    } else if (TILING_KEY_IS(9010)) {
+        GET_TILING_DATA_WITH_STRUCT(RmsNormGradBigMTilingData, tilingDataIn, tiling);
+        AscendC::TPipe pipe;
+        const RmsNormGradRegbaseDxTilingData* __restrict tilingDataDx = &tilingDataIn.dxTilingData;
+        RmsNormGrad::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
+        opDX.Init(dy, x, rstd, gamma, dx, dgamma);
+        opDX.Process();
+        AscendC::PipeBarrier<PIPE_ALL>();
+        pipe.Reset();
+        const RmsNormGradBigMTilingData* __restrict tilingDataDgamma = &tilingDataIn;
+        RmsNormGrad::RmsNormGradDgammaBigM<DTYPE_DY> opDgamma;
+        opDgamma.Init(dy, x, rstd, dgamma, workspace, tilingDataDgamma, &pipe);
+        opDgamma.Process();
     } else {
         GET_TILING_DATA_WITH_STRUCT(RmsNormGradRegbaseTilingData, tilingDataIn, tiling);
         AscendC::TPipe pipe;
-        const RmsNormGradRegbaseTilingData* __restrict tilingData = &tilingDataIn;
+        const RmsNormGradRegbaseTilingData* __restrict tilingDataDgamma = &tilingDataIn;
+        const RmsNormGradRegbaseDxTilingData* __restrict tilingDataDx = &tilingDataIn.dxTilingData;
         if (TILING_KEY_IS(7000)) {
-            RmsNormGrad::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingData);
+            RmsNormGrad::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, dx, dgamma);
             opDX.Process();
             AscendC::PipeBarrier<PIPE_ALL>();
             pipe.Reset();
-            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7000, 2> opDG(&pipe, tilingData);
+            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7000, 2> opDG(&pipe, tilingDataDgamma);
             opDG.Init(dy, x, rstd, gamma, dx, dgamma);
             opDG.Process();
         } else if (TILING_KEY_IS(7001)) {
-            RmsNormGrad::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingData);
+            RmsNormGrad::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, dx, dgamma);
             opDX.Process();
             AscendC::PipeBarrier<PIPE_ALL>();
             pipe.Reset();
-            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7001, 2> opDG(&pipe, tilingData);
+            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7001, 2> opDG(&pipe, tilingDataDgamma);
             opDG.Init(dy, x, rstd, gamma, dx, dgamma);
             opDG.ProcessWithLargeRows();
         } else if (TILING_KEY_IS(7010)) {
-            RmsNormGrad::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingData);
+            RmsNormGrad::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, dx, dgamma);
             opDX.Process();
             AscendC::PipeBarrier<PIPE_ALL>();
             pipe.Reset();
-            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7000, 2> opDG(&pipe, tilingData);
+            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7000, 2> opDG(&pipe, tilingDataDgamma);
             opDG.Init(dy, x, rstd, gamma, dx, dgamma);
             opDG.Process();
         } else if (TILING_KEY_IS(7011)) {
-            RmsNormGrad::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingData);
+            RmsNormGrad::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DGAMMA> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, dx, dgamma);
             opDX.Process();
             AscendC::PipeBarrier<PIPE_ALL>();
             pipe.Reset();
-            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7001, 2> opDG(&pipe, tilingData);
+            RmsNormGrad::RegbaseDgamma<DTYPE_DY, DTYPE_X, DTYPE_RSTD, 7001, 2> opDG(&pipe, tilingDataDgamma);
             opDG.Init(dy, x, rstd, gamma, dx, dgamma);
             opDG.ProcessWithLargeRows();
         }

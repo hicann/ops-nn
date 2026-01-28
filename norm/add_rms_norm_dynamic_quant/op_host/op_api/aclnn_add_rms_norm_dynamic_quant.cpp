@@ -17,6 +17,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -47,7 +48,7 @@ constexpr int IDX_4 = 4;
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_Y = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_Y = {
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8, op::DataType::DT_INT8};
 static bool CheckNotNull(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* y1Out, aclTensor* y2Out,
@@ -80,8 +81,8 @@ static bool CheckDtypeValid(
         OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale2Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     }
 
-    OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
+    OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
     OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
 
@@ -174,7 +175,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
     bool hasEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
     bool hasReduceEmptyTensor = gamma->IsEmpty();
     // 非reduce轴为0处理
-    if (hasEmptyTensor && (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 || !hasReduceEmptyTensor)) {
+    if (hasEmptyTensor && (!Ops::NN::AclnnUtil::IsRegbase() || !hasReduceEmptyTensor)) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNormQuant!");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -193,7 +194,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
     auto s1Cont = ContiguousX(smoothScale1Optional, uniqueExecutor.get());
     auto s2Cont = ContiguousX(smoothScale2Optional, uniqueExecutor.get());
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && hasReduceEmptyTensor) {
+    if (Ops::NN::AclnnUtil::IsRegbase() && hasReduceEmptyTensor) {
         int dstType = dstTypeMap[y1Out->GetDataType()];
         auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
             x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,  

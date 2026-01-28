@@ -42,7 +42,6 @@
   $$
     input = y\cdot smoothScale1Optional
   $$
-
   $$
    scale1Out=row\_max(abs(input))/127
   $$
@@ -55,19 +54,15 @@
   $$
     input1 = y\cdot smoothScale1Optional
   $$
-
   $$
     input2 = y\cdot smoothScale2Optional
   $$
-
   $$
    scale1Out=row\_max(abs(input1))/127
   $$
-
   $$
    scale2Out=row\_max(abs(input2))/127
   $$
-
   $$
    y1Out=round(input1/scale1Out)
   $$

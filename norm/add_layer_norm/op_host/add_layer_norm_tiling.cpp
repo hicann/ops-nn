@@ -15,9 +15,11 @@
 
 #include <iostream>
 #include <vector>
+#include "tiling_base/tiling_util.h"
 #include "add_layer_norm_tiling.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
 
 static constexpr int UB_RESERVED_BYTE = 256;
 static constexpr int BLOCK_SIZE = 32;
@@ -487,7 +489,8 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     auto enableAdditionalOutput = *context->GetAttrs()->GetBool(1);
     tiling.set_eps(eps);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    bool is310P = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P ? true : false;
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    bool is310P = npuArch == NpuArch::DAV_2002 ? true : false;
     uint64_t maxUbSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, maxUbSize);
     auto maxCoreNum = ascendcPlatform.GetCoreNumAiv();
@@ -653,7 +656,7 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     rawTilingData->SetDataSize(tiling.GetDataSize());
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     size_t sysWorkspaceSize = RESERVED_WORKSPACE_SIZE_910B;
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND310P) {
+    if (npuArch == NpuArch::DAV_2002) {
         sysWorkspaceSize = static_cast<size_t>(RESERVED_WORKSPACE_SIZE_310P);
     }
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -665,9 +668,10 @@ static ge::graphStatus TilingAddLayerNorm(gert::TilingContext* context)
 {
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    bool isAscend910D = (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-                         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
-    if (isAscend910D) {
+    auto curArch = ascendcPlatform.GetCurNpuArch();
+    bool isAscendRegbase = (IsRegbaseSocVersion(context) ||
+                         curArch == NpuArch::DAV_5102) ? true : false;
+    if (isAscendRegbase) {
         OP_LOGD(context, "AddLayerNorm Regbase tiling start");
         AddLayerNormRegbaseTiling addLayerNormTiling(context);
         return addLayerNormTiling.DoTiling();
@@ -685,9 +689,10 @@ static ge::graphStatus TilingPrepare4AddLayerNorm(gert::TilingParseContext* cont
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
     compileInfo->isAscend910D_ =
-        (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95 ||
-         ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::MC62CM12A) ? true : false;
+        (IsRegbaseSocVersion(context) ||
+         npuArch == NpuArch::DAV_5102) ? true : false;
     uint64_t ubSizePlatform;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSize_ = ubSizePlatform;

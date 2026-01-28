@@ -44,13 +44,13 @@ constexpr int IDX_1 = 1;
 constexpr int IDX_2 = 2;
 const size_t MIN_SUPPORT_DIMS_NUMS = 1;
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_X_SCALE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_ZEROPOINT = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_ZEROPOINT = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_Y = {
+static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_Y = {
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8, op::DataType::DT_INT8};
 
 static bool CheckNotNull(
@@ -72,24 +72,24 @@ static bool CheckDtypeValid(
     const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
     aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(gamma, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(scales1, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x2, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(gamma, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(scales1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     if (nullptr != scales2Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(scales2Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(scales2Optional, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     }
     if (nullptr != zeroPoints1Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints1Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints1Optional, REGBASE_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
     }
     if (nullptr != zeroPoints2Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints2Optional, ASCEND910_95_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoints2Optional, REGBASE_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
     }
 
-    OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND910_95_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
+    OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, REGBASE_DTYPE_SUPPORT_LIST_Y, return false); // Mandatory output
     OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910_95_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(xOut, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     return true;
 }
 

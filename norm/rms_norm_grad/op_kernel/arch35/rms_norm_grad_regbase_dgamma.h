@@ -40,8 +40,8 @@ public:
         blockSize_ = tiling_->blockSize;
         vlFp32_ = VECTOR_REG_WIDTH / sizeof(float);
         colsPerUB_ = vlFp32_;
-        cols_ = tiling_->cols;
-        rows_ = tiling_->rows;
+        cols_ = tiling_->dxTilingData.cols;
+        rows_ = tiling_->dxTilingData.rows;
         binaryAddK_ = tiling_->binaryAddKDG;
         colsPerCore_ = tiling_->colsPerCoreDG;
         rowsPerUB_ = tiling_->rowsPerUBDG;
@@ -53,7 +53,8 @@ public:
         dgammaGm_.SetGlobalBuffer((__gm__ float*)dgamma);
 
         colsPerLoopAlign_ = BLOCK_ALIGN(colsPerUB_ * sizeof(float), blockSize_) / sizeof(float);
-        Ppipe_->InitBuffer(rstdQueue_, BUFFER_NUM, (rowsPerUB_ * sizeof(float)));
+        int64_t rowsPerUbAligned = BLOCK_ALIGN(rowsPerUB_ * sizeof(float), blockSize_) / sizeof(float);
+        Ppipe_->InitBuffer(rstdQueue_, BUFFER_NUM, (rowsPerUbAligned * sizeof(float)));
         Ppipe_->InitBuffer(dyQueue_, BUFFER_NUM, (rowsPerUB_ * colsPerLoopAlign_ * sizeof(float)));
         Ppipe_->InitBuffer(xQueue_, BUFFER_NUM, (rowsPerUB_ * colsPerLoopAlign_ * sizeof(float)));
         Ppipe_->InitBuffer(dgammaQueue_, BUFFER_NUM, ((rowsPerUB_ + 1) * colsPerLoopAlign_ * sizeof(float)));
@@ -70,22 +71,17 @@ public:
         LocalTensor<DY_TYPE> dyLocal, LocalTensor<X_TYPE> xLocal, LocalTensor<RSTD_TYPE> rstdLocal, int64_t inputOffset,
         int32_t copyLen, int32_t curRowsNum, int32_t rstdOffset)
     {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X_TYPE), blockSize_) / sizeof(X_TYPE);
         // Datacopy Params for input_x & input_dy
         DataCopyPadExtParams<X_TYPE> padParams_x;
-        padParams_x.isPad = true;
-        padParams_x.paddingValue = static_cast<X_TYPE>(0.0);
-        padParams_x.rightPadding = copyLenAlign - copyLen;
+        padParams_x.isPad = false;
         DataCopyExtParams dataCopyParams_x;
         dataCopyParams_x.blockCount = curRowsNum;
         dataCopyParams_x.blockLen = copyLen * sizeof(X_TYPE);
-        dataCopyParams_x.srcStride = (cols_ - colsPerUB_) * sizeof(X_TYPE);
-        dataCopyParams_x.dstStride = 0;
+        dataCopyParams_x.srcStride = (cols_ - copyLen) * sizeof(X_TYPE);
+        dataCopyParams_x.dstStride = (colsPerUB_ - copyLen) * sizeof(X_TYPE) / blockSize_;
         // Datacopy Params for input_rstd
         DataCopyPadExtParams<RSTD_TYPE> padParams_rstd;
-        padParams_rstd.isPad = true;
-        padParams_rstd.paddingValue = static_cast<RSTD_TYPE>(0.0);
-        padParams_rstd.rightPadding = copyLenAlign - copyLen;
+        padParams_rstd.isPad = false;
         DataCopyExtParams dataCopyParams_rstd;
         dataCopyParams_rstd.blockCount = 1;
         dataCopyParams_rstd.blockLen = curRowsNum * sizeof(RSTD_TYPE);
@@ -138,7 +134,7 @@ public:
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             // 填充数据
             AscendC::MicroAPI::Duplicate(tempReg, 0);
-            AscendC::MicroAPI::DataCopy(srcAddr + rowsBoundLine, tempReg, pregLoop);
+            AscendC::MicroAPI::DataCopy(srcAddr + static_cast<uint32_t>(rowsBoundLine), tempReg, pregLoop);
         }
     }
 
@@ -240,7 +236,7 @@ public:
         LocalTensor<X_TYPE> xLocal = xQueue_.template AllocTensor<X_TYPE>();
         LocalTensor<float> dgammaOutLocal = dgammaQueue_.template AllocTensor<float>();
 
-        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, colsPerUB_, rowsPerUB_, 0);
+        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, 0);
         xQueue_.EnQue(xLocal);
         rstdQueue_.EnQue(rstdLocal);
         dyQueue_.EnQue(dyLocal);
@@ -254,7 +250,7 @@ public:
         __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
         __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
 
-        VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, colsPerUB_, rowsPerUB_);
+        VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal);
         xQueue_.FreeTensor(xLocal);
         rstdQueue_.FreeTensor(rstdLocal);
@@ -263,9 +259,9 @@ public:
             VFDuplicateRows(dgammaOutAddr, vlFp32_, rows_ * vlFp32_);
             tailDataOffset_ = mainRows * vlFp32_;
             VFHandleTailRows(dgammaOutAddr, tiling_->rowsTailDG, tailDataOffset_);
-            VFBinaryReduceSumWithoutTail(dgammaOutAddr, colsPerUB_, mainRows);
+            VFBinaryReduceSumWithoutTail(dgammaOutAddr, currentCols, mainRows);
         } else {
-            VFBinaryReduceSumWithoutTail(dgammaOutAddr, colsPerUB_, rows_);
+            VFBinaryReduceSumWithoutTail(dgammaOutAddr, currentCols, rows_);
         }
 
         dgammaQueue_.EnQue(dgammaOutLocal);
@@ -285,7 +281,7 @@ public:
         int64_t cacheID = GetCacheID(i);
         uint32_t rstdOffset = i * rowsPerUB_;
 
-        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, colsPerUB_, rowsPerUB_, rstdOffset);
+        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, rstdOffset);
         xQueue_.EnQue(xLocal);
         rstdQueue_.EnQue(rstdLocal);
         dyQueue_.EnQue(dyLocal);
@@ -320,7 +316,7 @@ public:
         int64_t cacheID = GetCacheID(i);
         uint32_t rstdOffset = i * rowsPerUB_;
 
-        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, colsPerUB_, rowsPerUB_, rstdOffset);
+        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, rstdOffset);
         xQueue_.EnQue(xLocal);
         rstdQueue_.EnQue(rstdLocal);
         dyQueue_.EnQue(dyLocal);
@@ -345,7 +341,7 @@ public:
         LocalTensor<X_TYPE> xLocal1 = xQueue_.template AllocTensor<X_TYPE>();
         LocalTensor<float> dgammaOutLocal1 = dgammaQueue1_.template AllocTensor<float>();
         int32_t tailRowsNum = i == tiling_->tailBlockCountWithoutPadDG ? rows_ % rowsPerUB_ : rowsPerUB_;
-        CopyInputsToUB(dyLocal1, xLocal1, rstdLocal1, tailDyXOffset, colsPerUB_, tailRowsNum, tailRstdOffset);
+        CopyInputsToUB(dyLocal1, xLocal1, rstdLocal1, tailDyXOffset, currentCols, tailRowsNum, tailRstdOffset);
         xQueue_.EnQue(xLocal1);
         rstdQueue_.EnQue(rstdLocal1);
         dyQueue_.EnQue(dyLocal1);
@@ -399,7 +395,7 @@ public:
             uint32_t inputOffset = startOffset + loopOffset;
             uint32_t tailDyXOffset = inputOffset + tiling_->powerOfTwoBlockCountDG * rowsPerUB_ * cols_;
             uint32_t tailRstdOffset = i * rowsPerUB_ + tiling_->powerOfTwoBlockCountDG * rowsPerUB_;
-            CalcLargeRowsDgammaWithPad(inputOffset, tailDyXOffset, tailRstdOffset, curCols_, i, binaryAddCacheLocal);
+            CalcLargeRowsDgammaWithPad(inputOffset, tailDyXOffset, tailRstdOffset, currentCols, i, binaryAddCacheLocal);
         }
         // 处理row不对齐尾块
         for (uint32_t i = tiling_->tailBlockCountWithoutPadDG;
@@ -408,14 +404,14 @@ public:
             uint32_t inputOffset = startOffset + loopOffset;
             uint32_t tailDyXOffset = startOffset + tiling_->mainBlockCountDG * rowsPerUB_ * cols_;
             uint32_t tailRstdOffset = tiling_->mainBlockCountDG * rowsPerUB_;
-            CalcLargeRowsDgammaWithPad(inputOffset, tailDyXOffset, tailRstdOffset, curCols_, i, binaryAddCacheLocal);
+            CalcLargeRowsDgammaWithPad(inputOffset, tailDyXOffset, tailRstdOffset, currentCols, i, binaryAddCacheLocal);
         }
         // 处理正常主块
         for (uint32_t i = tiling_->tailBlockCountWithoutPadDG + tiling_->tailBlockCountwithPadDG;
              i < tiling_->powerOfTwoBlockCountDG; i++) {
             uint32_t loopOffset = i * cols_ * rowsPerUB_;
             uint32_t inputOffset = startOffset + loopOffset;
-            CalcLargeRowsDgamma(inputOffset, curCols_, i, binaryAddCacheLocal);
+            CalcLargeRowsDgamma(inputOffset, currentCols, i, binaryAddCacheLocal);
         }
         binaryAddCacheQueue_.EnQue(binaryAddCacheLocal);
         binaryAddCacheLocal = binaryAddCacheQueue_.template DeQue<float>();

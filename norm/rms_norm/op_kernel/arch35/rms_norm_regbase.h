@@ -24,7 +24,7 @@ class KernelRmsNormRegBase {
 public:
     __aicore__ inline KernelRmsNormRegBase()
     {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormArch35TilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         numRow = tiling->num_row;

@@ -126,7 +126,7 @@ public:
         uint32_t iO, uint32_t calcRowNum, LocalTensor<TX>& gammaLocal, LocalTensor<TX>& betaLocal = nullptr)
     {
         for (uint32_t iI = 0; iI < calcRowNum; iI++) {
-            uint64_t gmBias = (static_cast<uint64_t>(iO) * static_cast<uint64_t>(rowFactor) + static_cast<uint64_t>(iI)) * static_cast<uint64_t>(numCol);
+            uint32_t gmBias = (iO * rowFactor + iI) * numCol;
             CopyIn(gmBias);
             Compute(iI, gammaLocal, gmBias, betaLocal);
             CopyOutY(gmBias);
@@ -134,7 +134,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint64_t gmBias)
+    __aicore__ inline void CopyIn(uint32_t gmBias)
     {
         LocalTensor<TX> x1LocalIn = inQueueX.AllocTensor<TX>();
         LocalTensor<TX> x2Local = sqxBuf.Get<TX>();
@@ -212,7 +212,7 @@ private:
     }
 
     __aicore__ inline void Compute(
-        uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint64_t gmBias, LocalTensor<TX> betaLocal=nullptr)
+        uint32_t inner_progress, LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<TX> betaLocal=nullptr)
     {
         LocalTensor<float> xFp32Local = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
@@ -250,7 +250,7 @@ private:
     }
 
     __aicore__ inline void ComputePart2(
-        LocalTensor<TX> gammaLocal, uint64_t gmBias, LocalTensor<float> xFp32Local, LocalTensor<float> sqx,
+        LocalTensor<TX> gammaLocal, uint32_t gmBias, LocalTensor<float> xFp32Local, LocalTensor<float> sqx,
         LocalTensor<TX> betaLocal=nullptr) {
         if constexpr (is_same<TX, half>::value && !PT) {
             LocalTensor<half> xFp16Cast = sqxBuf.Get<half>();
@@ -332,7 +332,7 @@ private:
         outQueueY1.EnQue<int8_t>(y1Local);
     }
 
-    __aicore__ inline void CopyOutY(uint64_t progress)
+    __aicore__ inline void CopyOutY(uint32_t progress)
     {
         LocalTensor<int8_t> y1Local = outQueueY1.DeQue<int8_t>();
         DataCopyCustom<int8_t>(y1Gm[progress], y1Local, numCol);

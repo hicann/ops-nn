@@ -12,87 +12,26 @@
  * \file inplace_add_rms_norm_apt.cpp
  * \brief
  */
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #include "../add_rms_norm/arch35/add_rms_norm_regbase.h"
 #include "../add_rms_norm/arch35/add_rms_norm_regbase_split_d.h"
-#else
-#include "../add_rms_norm/arch35/add_rms_norm.h"
-#include "../add_rms_norm/arch35/add_rms_norm_split_d.h"
-#include "../add_rms_norm/arch35/add_rms_norm_merge_n.h"
-#include "../add_rms_norm/arch35/add_rms_norm_multi_n.h"
-#include "../add_rms_norm/arch35/add_rms_norm_single_n.h"
-#endif
 
 using namespace AscendC;
 using namespace AddRmsNorm;
 
-#define GENERAL_OP_IMPL(templateClass, ...)              \
-    do {                                                 \
-        templateClass<__VA_ARGS__> op(&pipe);            \
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingData); \
-        op.Process();                                    \
-    } while (0)
-
 extern "C" __global__ __aicore__ void inplace_add_rms_norm(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
 {
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
-    TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTilingData, tilingDataIn, tiling);
-    if (TILING_KEY_IS(1)) {
-        KernelAddRmsNormRegBase<half> op(&pipe);
+    TPipe pipe;
+    if (TILING_KEY_IS(1000)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseRFullLoadTilingData, tilingDataIn, tiling);
+        KernelAddRmsNormRegBase<DTYPE_X1> op(&pipe);
         op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
         op.Process();
-    } else if (TILING_KEY_IS(2)) {
-        KernelAddRmsNormRegBase<float> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
-        op.Process();
-    } else if (TILING_KEY_IS(3)) {
-        KernelAddRmsNormRegBase<bfloat16_t> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
-        op.Process();
-    } else if (TILING_KEY_IS(1001)) {
-        KernelAddRmsNormRegBaseSplitD<half> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
-        op.Process();
-    } else if (TILING_KEY_IS(1002)) {
-        KernelAddRmsNormRegBaseSplitD<float> op(&pipe);
-        op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
-        op.Process();
-    } else if (TILING_KEY_IS(1003)) {
-        KernelAddRmsNormRegBaseSplitD<bfloat16_t> op(&pipe);
+    } else if (TILING_KEY_IS(2000)) {
+        GET_TILING_DATA_WITH_STRUCT(AddRMSNormRegbaseTilingData, tilingDataIn, tiling);
+        KernelAddRmsNormRegBaseSplitD<DTYPE_X1> op(&pipe);
         op.Init(x1, x2, gamma, y, rstd, x, &tilingDataIn);
         op.Process();
     }
-#else
-    GET_TILING_DATA(tilingData, tiling);
-    if (TILING_KEY_IS(10)) {
-        GENERAL_OP_IMPL(KernelAddRmsNorm, half);
-    } else if (TILING_KEY_IS(20)) {
-        GENERAL_OP_IMPL(KernelAddRmsNorm, float);
-    } else if (TILING_KEY_IS(30)) {
-        GENERAL_OP_IMPL(KernelAddRmsNorm, bfloat16_t);
-    } else if (TILING_KEY_IS(11)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, half);
-    } else if (TILING_KEY_IS(21)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, float);
-    } else if (TILING_KEY_IS(31)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSplitD, bfloat16_t);
-    } else if (TILING_KEY_IS(12)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, half);
-    } else if (TILING_KEY_IS(22)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, float);
-    } else if (TILING_KEY_IS(32)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMergeN, bfloat16_t);
-    } else if (TILING_KEY_IS(13)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, half);
-    } else if (TILING_KEY_IS(23)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, float);
-    } else if (TILING_KEY_IS(33)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormSingleN, bfloat16_t);
-    } else if (TILING_KEY_IS(14)) {
-        GENERAL_OP_IMPL(KernelAddRmsNormMultiN, half);
-    }
-#endif
 }
