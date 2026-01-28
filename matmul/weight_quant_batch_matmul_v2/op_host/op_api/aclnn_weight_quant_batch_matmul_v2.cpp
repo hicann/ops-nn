@@ -74,7 +74,7 @@ static const std::initializer_list<DataType> ASCEND310P_X_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<DataType> ASCEND910B_WEIGHT_DTYPE_SUPPORT_LIST = {
     DataType::DT_INT8, DataType::DT_INT4};
 static const std::initializer_list<DataType> ASCEND910_95_WEIGHT_DTYPE_SUPPORT_LIST = {
-    DataType::DT_INT8,          DataType::DT_INT4,     DataType::DT_FLOAT8_E5M2,
+    DataType::DT_INT8,          DataType::DT_INT4,
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_HIFLOAT8, DataType::DT_FLOAT4_E2M1};
 static const std::initializer_list<DataType> ASCEND910_95_ANTIQUANT_SCALE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_FLOAT8_E8M0};
@@ -880,8 +880,8 @@ static bool CheckXDtypeValidForNormal(
 
 static bool CheckBiasWithXBf16(const aclTensor* weight, const aclTensor* biasOptional) {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        if (weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E5M2 ||
-            weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN || weight->GetDataType() == DataType::DT_HIFLOAT8) {
+        if (weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN ||
+            weight->GetDataType() == DataType::DT_HIFLOAT8) {
             if (biasOptional->GetDataType() != DataType::DT_BF16) {
                 OP_LOGE(
                     ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_BF16], actual is [%s].",

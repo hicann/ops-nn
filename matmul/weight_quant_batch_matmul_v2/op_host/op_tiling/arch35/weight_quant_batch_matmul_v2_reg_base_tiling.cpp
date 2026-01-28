@@ -57,7 +57,7 @@ bool WeightQuantBatchMatmulV2RegBase::IsCapable()
     }
 
     if (matmulInfoPtr_->bDtype != ge::DT_INT4 && matmulInfoPtr_->bDtype != ge::DT_FLOAT4_E2M1 &&
-        matmulInfoPtr_->bDtype != ge::DT_FLOAT4_E1M2 && matmulInfoPtr_->bDtype != ge::DT_INT8) {
+        matmulInfoPtr_->bDtype != ge::DT_INT8) {
         OP_LOGI(
             opName_, "the reg base template only support weight dtype int4, fp4 or int8, but is [%s]",
             ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->bDtype).GetString());
@@ -181,8 +181,7 @@ void WeightQuantBatchMatmulV2RegBase::SetBubTiling()
     if (matmulInfoPtr_->bDtype == ge::DT_INT8 && matmulInfoPtr_->groupSize > 0) {
         GetBubTilingA16W8NDPerGroup(nBubSize, kBubSize);
     } else if (
-        (matmulInfoPtr_->bDtype == ge::DT_INT4 || matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 ||
-         matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E1M2) &&
+        (matmulInfoPtr_->bDtype == ge::DT_INT4 || matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1) &&
         matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) {
         GetBubTilingA16W4NZ(nBubSize, kBubSize);
     } else if (matmulInfoPtr_->bDtype == ge::DT_INT4) {

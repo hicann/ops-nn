@@ -69,7 +69,6 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
         {"INT4", ge::DT_INT4},
         {"UINT64", ge::DT_UINT64},
         {"FLOAT4E2M1", ge::DT_FLOAT4_E2M1},
-        {"FLOAT4E1M2", ge::DT_FLOAT4_E1M2},
     };
 
     size_t idx = 0;

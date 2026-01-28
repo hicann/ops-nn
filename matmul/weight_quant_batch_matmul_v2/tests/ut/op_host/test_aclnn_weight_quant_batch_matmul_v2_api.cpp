@@ -2475,7 +2475,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      0,
      {96, 1664},
      ACL_FLOAT16,
-     ACL_FLOAT8_E5M2,
+     ACL_FLOAT8_E4M3FN,
      ACL_FLOAT16,
      ACL_FLOAT16,
      ACL_UINT64,

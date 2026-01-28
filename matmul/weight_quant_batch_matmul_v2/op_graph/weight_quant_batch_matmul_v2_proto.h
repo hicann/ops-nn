@@ -27,12 +27,12 @@ namespace ge {
 * transpose_x is true or [1, 2147483647] when transpose_x is false. The k value
 * must be at least 1.
 * @li weight: A matrix tensor of quantized weight. Shape supports (n,k)/(k,n),
-* Format supports ND/NZ. The type support int8, int4, int32, float8_e5m2, float8_e4m3fn, hifloat8, float4_e2m1, float4_e1m2. \n
-* Format must be ND when the type is float8_e5m2, float8_e4m3fn or hifloat8.
+* Format supports ND/NZ. The type support int8, int4, int32, float8_e4m3fn, hifloat8, float4_e2m1. \n
+* Format must be ND when the type is float8_e4m3fn or hifloat8.
 * For Ascend 910_95 AI Processor, transpose_weight must be false when format is NZ. \n
 * The k, n value must be at least 1.
-* The k value must be even when type is int4/float4_e2m1/float4_e1m2 and transpose_weight
-* is true, and the n value must be even when type is int4/float4_e2m1/float4_e1m2 and transpose_weight
+* The k value must be even when type is int4/float4_e2m1 and transpose_weight
+* is true, and the n value must be even when type is int4/float4_e2m1 and transpose_weight
 * is false. When type is int32, the input is int4-packed data,
 * and shape supports (n, k/8)/(k, n/8).
 * @li antiquant_scale: A tensor for antiquant scale.
@@ -48,11 +48,11 @@ namespace ge {
 * 3. transpose_x should be false and transpose_weight should be true. \n
 * 4. the m value must be in [1, 96] and the k, n value must be 64 aligned. \n
 * 5. weight's type should be int8 and format should be ND. \n
-* Additionally, the type supports float8_e8m0 when the weight dtype is float4_e2m1 or float4_e1m2.
+* Additionally, the type supports float8_e8m0 when the weight dtype is float4_e2m1.
 * @li antiquant_offset: An Optional tensor for antiquant offset. Shape, format
 * and type should be the same with antiquant_scale if antiquant_scale's type is
 * not uint64/int64. If antiquant_scale's type is uint64/int64, antiquant_offset should be int32.
-* When weight dtype is float8_e5m2, float8_e4m3fn, hifloat8, float4_e2m1 or float4_e1m2, antiquant_offset is ​excluded from selection.
+* When weight dtype is float8_e4m3fn, hifloat8, float4_e2m1, antiquant_offset is ​excluded from selection.
 * @li quant_scale: An Optional tensor for quantization parameters.
 * Shape supports (1)/(1,n), format supports ND.
 * The type support float32, uint64.
@@ -104,8 +104,7 @@ REG_OP(WeightQuantBatchMatmulV2)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .INPUT(
         weight, TensorType(
-                    {DT_INT8, DT_INT4, DT_INT32, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8, DT_FLOAT4_E2M1,
-                     DT_FLOAT4_E1M2}))
+                    {DT_INT8, DT_INT4, DT_INT32, DT_FLOAT8_E4M3FN, DT_HIFLOAT8, DT_FLOAT4_E2M1}))
     .INPUT(antiquant_scale, TensorType({DT_FLOAT16, DT_BF16, DT_UINT64, DT_INT64, DT_FLOAT8_E8M0}))
     .OPTIONAL_INPUT(antiquant_offset, TensorType({DT_FLOAT16, DT_BF16, DT_INT32}))
     .OPTIONAL_INPUT(quant_scale, TensorType({DT_FLOAT, DT_UINT64}))

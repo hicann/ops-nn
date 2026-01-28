@@ -41,10 +41,10 @@ constexpr int32_t IDX_N_LOW = 4;
 constexpr int32_t IDX_N_HIGH = 5;
 constexpr int32_t IDX_B_LOW = 6;
 static const std::initializer_list<ge::DataType> WEIGHT_DTYPE_LIST = {
-    ge::DT_INT32, ge::DT_INT8,        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
-    ge::DT_INT4,  ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT};
+    ge::DT_INT32, ge::DT_INT8,        ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8,
+    ge::DT_INT4,  ge::DT_FLOAT4_E2M1, ge::DT_FLOAT};
 static const std::initializer_list<ge::DataType> BIT8_WEIGHT_DTYPE_LIST = {
-    ge::DT_INT8, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8};
+    ge::DT_INT8, ge::DT_FLOAT8_E4M3FN, ge::DT_HIFLOAT8};
 static const std::initializer_list<uint64_t> GROUP_SIZE_LIST = {32, 64, 128, 256};
 
 void GetDtype(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
@@ -383,7 +383,7 @@ bool CheckInputShape(
             kBSize),
         return false);
     if (inputParams->bDtype == ge::DT_INT4 || inputParams->bDtype == ge::DT_INT32 ||
-        inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT4_E1M2 ||
+        inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
         inputParams->bDtype == ge::DT_FLOAT) {
         uint64_t innerAxisDim = static_cast<uint64_t>(weightLastDim);
         OP_TILING_CHECK(
@@ -455,12 +455,12 @@ bool CheckAntiQuantOffsetShape(
     }
     if (inputParams->hasAntiQuantOffset) {
         OP_TILING_CHECK(
-            inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT4_E1M2 ||
-                inputParams->bDtype == ge::DT_FLOAT8_E5M2 || inputParams->bDtype == ge::DT_FLOAT8_E4M3FN ||
+            inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
+                inputParams->bDtype == ge::DT_FLOAT8_E4M3FN ||
                 inputParams->bDtype == ge::DT_HIFLOAT8 || inputParams->bDtype == ge::DT_FLOAT,
             VECTOR_INNER_ERR_REPORT_TILIING(
                 inputParams->opName,
-                "AntiQuantOffset is not supported with FP32/FP4_E2M1/FP4_E1M2/FP8_E5M2/FP8_E4M3/HIFLOAT8 weights."),
+                "AntiQuantOffset is not supported with FP32/FP4_E2M1/FP8_E4M3/HIFLOAT8 weights."),
             return false);
     }
     if (inputParams->hasAntiQuantOffset) {
@@ -723,8 +723,8 @@ bool CheckInputDtype(
         std::find(WEIGHT_DTYPE_LIST.begin(), WEIGHT_DTYPE_LIST.end(), inputParams->bDtype) == WEIGHT_DTYPE_LIST.end(),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName,
-            "Input weight dtype must be int8, float8_e5m2, float8_e4m3fn, hifloat8, int4, "
-            "float4_e2m1, float4_e1m2, but is [%s]",
+            "Input weight dtype must be int8, float8_e4m3fn, hifloat8, int4, "
+            "float4_e2m1, but is [%s]",
             ge::TypeUtils::DataTypeToAscendString(inputParams->bDtype).GetString()),
         return false);
 
@@ -898,7 +898,7 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "A16F8 only support perchannel"), return false);
     }
     // A16F4 support Mx and pergroup
-    if (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT4_E1M2 ||
+    if (inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
         inputParams->bDtype == ge::DT_FLOAT) {
         OP_TILING_CHECK(
             inputParams->antiQuantType == QuantType::PER_TENSOR || inputParams->antiQuantType == QuantType::PER_CHANNEL,
@@ -906,7 +906,7 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
     }
 
     if (inputParams->antiQuantType == QuantType::PER_GROUP &&
-        (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT4_E1M2 ||
+        (inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
          inputParams->bDtype == ge::DT_FLOAT)) {
         OP_TILING_CHECK(
             std::find(GROUP_SIZE_LIST.begin(), GROUP_SIZE_LIST.end(), inputParams->groupSize) == GROUP_SIZE_LIST.end(),
@@ -932,11 +932,11 @@ bool CheckNzSupportedScenarios(WeightQuantBatchMatmulInfo* inputParams, platform
                  inputParams->antiQuantType == QuantType::PER_CHANNEL) &&
                 (inputParams->bDtype == ge::DT_INT4 || inputParams->bDtype == ge::DT_INT32)) ||
                ((inputParams->antiQuantType == QuantType::MX || inputParams->antiQuantType == QuantType::PER_GROUP) &&
-                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT4_E1M2 ||
+                (inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
                  inputParams->bDtype == ge::DT_FLOAT)))),
             VECTOR_INNER_ERR_REPORT_TILIING(
                 inputParams->opName,
-                "WeightNZ supports S4/FP4_E2M1/FP4_E1M2 weights only, with non-transposed A/B, no C8, "
+                "WeightNZ supports S4/FP4_E2M1 weights only, with non-transposed A/B, no C8, "
                 "and excludes per-tensor quantization."),
             return ge::GRAPH_FAILED);
     } else {
@@ -983,13 +983,13 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "WeightNZ cannot be supported in this scenario"),
             return ge::GRAPH_FAILED);
     }
-    if (inputParams.bDtype == ge::DT_FLOAT8_E5M2 || inputParams.bDtype == ge::DT_FLOAT8_E4M3FN ||
+    if (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN ||
         inputParams.bDtype == ge::DT_HIFLOAT8) {
         OP_TILING_CHECK(
             inputParams.transA || (inputParams.cDtype == ge::DT_INT8) || (inputParams.bFormat == ge::FORMAT_FRACTAL_NZ),
             VECTOR_INNER_ERR_REPORT_TILIING(
                 inputParams.opName,
-                "Weight FP8_E5M2/FP8_E4M3/HIFLOAT8 input cannot support transA, int8 output or weightNz"),
+                "Weight FP8_E4M3/HIFLOAT8 input cannot support transA, int8 output or weightNz"),
             return ge::GRAPH_FAILED);
     }
     if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {

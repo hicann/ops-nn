@@ -320,8 +320,7 @@ void WeightQuantBatchMatmulV2TilingAS::ComputeHighPerfSceneCubeSplit()
             // k轴的大小对mte2的搬运量无影响，此处无需计算
             uint64_t mte2Cost = GetSizeByDataType(matmulInfoPtr_->aDtype) * matmulInfoPtr_->mSize * nBlkNum +
                                 GetSizeByDataType(matmulInfoPtr_->bDtype) * matmulInfoPtr_->nSize * mBlkNum;
-            if (matmulInfoPtr_->bDtype == ge::DT_INT4 || matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 ||
-                matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E1M2) {
+            if (matmulInfoPtr_->bDtype == ge::DT_INT4 || matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1) {
                 mte2Cost = GetSizeByDataType(matmulInfoPtr_->aDtype) * matmulInfoPtr_->mSize * nBlkNum +
                            matmulInfoPtr_->nSize * mBlkNum / BIT4_CORRECTION_FACTOR;
             }
@@ -536,7 +535,7 @@ bool WeightQuantBatchMatmulV2TilingAS::CheckHighPerfScene() const
 bool WeightQuantBatchMatmulV2TilingAS::CheckWeightMicroscalingFp4Scene() const
 {
     if (matmulInfoPtr_->antiQuantScaleDtype == ge::DT_FLOAT8_E8M0 &&
-        (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 || matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E1M2)) {
+        (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1)) {
         OP_LOGD(opName_, "current shape match microscaling fromats scene, bDtype is FP4.");
         return true;
     }

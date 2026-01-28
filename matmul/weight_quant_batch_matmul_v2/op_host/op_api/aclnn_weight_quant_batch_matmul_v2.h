@@ -22,7 +22,7 @@ extern "C" {
  * @domain aclnn_ops_infer
  * 算子功能：实现伪量化场景的矩阵乘。
  * @param [in] x: matmul左矩阵，数据类型支持：float16, bfloat16。
- * @param [in] weight: matmul右矩阵，数据类型支持：int8, int4, float8_e5m2, float8_e4m3fn, hifloat8, int32, float, float4_e2m1。
+ * @param [in] weight: matmul右矩阵，数据类型支持：int8, int4, float8_e4m3fn, hifloat8, int32, float, float4_e2m1。
  * @param [in] antiquantScale: 反量化scale参数，数据类型支持：float16, bfloat16, float8_e8m0。
  * @param [in] antiquantOffsetOptional: 反量化offset参数，数据类型支持：要求和x数据类型保持一致。
  * @param [in] quantScaleOptional: 预留参数，固定传入空指针。

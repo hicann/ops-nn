@@ -70,7 +70,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16},     {"FLOAT", ge::DT_FLOAT},
                                           {"BF16", ge::DT_BF16},           {"INT8", ge::DT_INT8},
                                           {"INT4", ge::DT_INT4},           {"UINT64", ge::DT_UINT64},
-                                          {"FP8E5M2", ge::DT_FLOAT8_E5M2}, {"FP8E4M3", ge::DT_FLOAT8_E4M3FN},
+                                          {"FP8E4M3", ge::DT_FLOAT8_E4M3FN},
                                           {"HIF8", ge::DT_HIFLOAT8}};
 
     size_t idx = 0;

@@ -499,7 +499,7 @@ __aicore__ inline void InvokeKernel(
     static constexpr Cmct::Gemm::QuantType ANTIQUANT_TYPE = static_cast<Cmct::Gemm::QuantType>(AntiquantType);
 
     static constexpr bool B8 =
-        IsSameType<DTYPE_WEIGHT, int8_t>::value || IsSameType<DTYPE_WEIGHT, float8_e5m2_t>::value ||
+        IsSameType<DTYPE_WEIGHT, int8_t>::value ||
         IsSameType<DTYPE_WEIGHT, float8_e4m3_t>::value || IsSameType<DTYPE_WEIGHT, hifloat8_t>::value;
     static constexpr uint32_t UB_MTE2_INNER_SIZE = TemplateCustom == 0 || TemplateCustom == 1 || TemplateCustom == 4 ?
                                                        512 :

@@ -23,7 +23,7 @@ constexpr int64_t B4_BITS = 4;
 
 uint64_t GetBlockAlignSizeByDataType(ge::DataType dtype)
 {
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1) {
         return ONE_BLK_SIZE + ONE_BLK_SIZE;
     } else {
         return ONE_BLK_SIZE / static_cast<uint32_t>(ge::GetSizeByDataType(dtype));
@@ -49,7 +49,7 @@ int64_t GetDtypeBits(ge::DataType dtype)
     if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
         return B4_BITS;
     } else if (
-        dtype == ge::DT_INT8 || dtype == ge::DT_HIFLOAT8 || dtype == ge::DT_FLOAT8_E5M2 ||
+        dtype == ge::DT_INT8 || dtype == ge::DT_HIFLOAT8 ||
         dtype == ge::DT_FLOAT8_E4M3FN) {
         return B8_BITS;
     } else if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16) {
@@ -68,10 +68,8 @@ const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
     {ge::DT_INT4, matmul_tiling::DataType::DT_INT4},
     {ge::DT_FLOAT8_E8M0, matmul_tiling::DataType::DT_FLOAT8_E8M0},
-    {ge::DT_FLOAT8_E5M2, matmul_tiling::DataType::DT_FLOAT8_E5M2},
     {ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN},
     {ge::DT_FLOAT4_E2M1, matmul_tiling::DataType::DT_FLOAT4_E2M1},
-    {ge::DT_FLOAT4_E1M2, matmul_tiling::DataType::DT_FLOAT4_E1M2},
 };
 
 matmul_tiling::DataType GetMatmulTilingDtype(ge::DataType dtype)

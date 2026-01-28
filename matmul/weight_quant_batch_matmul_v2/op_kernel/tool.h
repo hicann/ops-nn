@@ -95,7 +95,7 @@ std::string DoPrintData(
 
 template<typename Tensor>
 inline std::string DoPrintData(
-    const Tensor& tensor, size_t count, size_t stride, size_t elementsPerRow, 
+    const Tensor& tensor, size_t count, size_t stride, size_t elementsPerRow,
     const std::string& block_id, const std::string& core_type) {
     return DoPrintDataImpl(tensor, count, stride, elementsPerRow, block_id, core_type);
 }
@@ -221,8 +221,8 @@ __aicore__ inline T CeilAlign(T a, T b)
 
 __aicore__ inline uint32_t CeilAlign(uint32_t a, uint32_t b)
 {
-    ASCENDC_ASSERT(	
-        a <= (std::numeric_limits<uint32_t>::max() - b), { KERNEL_LOG(KERNEL_ERROR, "CeilAlign uint32 over limit."); });	
+    ASCENDC_ASSERT(
+        a <= (std::numeric_limits<uint32_t>::max() - b), { KERNEL_LOG(KERNEL_ERROR, "CeilAlign uint32 over limit."); });
     ASCENDC_ASSERT(b != 0, { KERNEL_LOG(KERNEL_ERROR, "Division by zero error!"); });
     return (a + b - 1) / b * b;
 }
@@ -271,8 +271,8 @@ __aicore__ inline void DataCopyPad2D(
     uint32_t dstInnerLength, uint32_t srcInnerLength)
 {
 #if defined(__CCE_KT_TEST__)
-    ASCENDC_ASSERT(dstInnerLength >= blockLen, {	
-        KERNEL_LOG(KERNEL_ERROR, "dstInnerLength[%d] should be larger than blockLen[%d].", dstInnerLength, blockLen);	
+    ASCENDC_ASSERT(dstInnerLength >= blockLen, {
+        KERNEL_LOG(KERNEL_ERROR, "dstInnerLength[%d] should be larger than blockLen[%d].", dstInnerLength, blockLen);
     });
 #endif
     DataCopyExtParams params;
@@ -287,8 +287,7 @@ __aicore__ inline void DataCopyPad2D(
         padParams.paddingValue = 0;
     }
 #if defined(__DAV_C310__)
-    if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value || IsSameType<T, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value) {
         // 4bit场景下， 跳转的步长、数据长度等需要除2
         params.blockLen = params.blockLen >> 1;
         params.srcStride = params.srcStride >> 1;
@@ -317,8 +316,7 @@ __aicore__ inline void DataCopyPad2D(
     params.srcStride = 0;
     params.dstStride = (dstFullDim0 - dim0) * sizeof(T);
 #if defined(__DAV_C310__)
-    if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value || IsSameType<T, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value) {
         // int4场景下， 跳转的步长、数据长度等需要除2
         params.blockLen = params.blockLen >> 1;
         params.srcStride = params.srcStride >> 1;

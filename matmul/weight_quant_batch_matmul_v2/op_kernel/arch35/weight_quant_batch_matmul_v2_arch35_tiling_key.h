@@ -36,7 +36,6 @@
 #endif
 #if !defined(MICROSCALING) && defined(ORIG_DTYPE_WEIGHT) &&              \
     ((defined(DT_FLOAT4_E2M1) && ORIG_DTYPE_WEIGHT == DT_FLOAT4_E2M1) || \
-     (defined(DT_FLOAT4_E1M2) && ORIG_DTYPE_WEIGHT == DT_FLOAT4_E1M2) || \
      (defined(DT_FLOAT) && ORIG_DTYPE_WEIGHT == DT_FLOAT))
 #define F4
 #if (defined(DT_FLOAT) && ORIG_DTYPE_WEIGHT == DT_FLOAT)
@@ -61,11 +60,11 @@
 
 #if defined(ORIG_DTYPE_WEIGHT)
 #if (                                                                                                               \
-    ORIG_DTYPE_WEIGHT == DT_INT8 || ORIG_DTYPE_WEIGHT == DT_FLOAT8_E5M2 || ORIG_DTYPE_WEIGHT == DT_FLOAT8_E4M3FN || \
+    ORIG_DTYPE_WEIGHT == DT_INT8 || ORIG_DTYPE_WEIGHT == DT_FLOAT8_E4M3FN || \
     ORIG_DTYPE_WEIGHT == DT_HIFLOAT8)
 #define WEIGHT_B8_BRANCH
 #endif
-#if (ORIG_DTYPE_WEIGHT == DT_FLOAT8_E5M2 || ORIG_DTYPE_WEIGHT == DT_FLOAT8_E4M3FN || ORIG_DTYPE_WEIGHT == DT_HIFLOAT8)
+#if (ORIG_DTYPE_WEIGHT == DT_FLOAT8_E4M3FN || ORIG_DTYPE_WEIGHT == DT_HIFLOAT8)
 #define WEIGHT_F8_INPUT
 #endif
 #endif

@@ -787,9 +787,7 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
             CeilDiv(kWeightLowBitUbOffset, MX_GROUPSIZE) * vecConfig.ubMte2InnerSize + nWeightLowBitUbOffset;
     }
 
-    if constexpr (
-        IsSameType<wType, int4b_t>::value || IsSameType<wType, fp4x2_e2m1_t>::value ||
-        IsSameType<wType, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<wType, int4b_t>::value || IsSameType<wType, fp4x2_e2m1_t>::value) {
         weightLowBitOffset = weightLowBitOffset >> 1;
     }
 
@@ -883,7 +881,7 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
                 addressParam.weightLowBitPhyAddr0, addressParam.weightF16PhyAddr0, scaleValue_, offsetValue_,
                 vfExternalRealLen);
         }
-    } else if constexpr (IsSameType<wType, fp8_e5m2_t>::value || IsSameType<wType, fp8_e4m3fn_t>::value) {
+    } else if constexpr (IsSameType<wType, fp8_e4m3fn_t>::value) {
         CalculateParam<xType> calculateParam;
         calculateParam.offsetValue = offsetValue_;
         calculateParam.scaleValue = scaleValue_;

@@ -98,7 +98,7 @@ __aicore__ inline void DataCopyPad2D(
     }
 
     if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value || IsSameType<T, fp4x2_e1m2_t>::value) {
+        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value) {
         // 4bit场景下， 跳转的步长、数据长度等需要除2
         params.blockLen = params.blockLen >> 1;
         params.srcStride = params.srcStride >> 1;

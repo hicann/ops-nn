@@ -91,7 +91,7 @@ void WeightQuantBatchMatmulV2TilingASW::CalcBasicBlock()
     // 原则1：L1上x1、x2都是NZ排布，转置可选          须满足内轴32B对齐，外轴16对齐
     // 原则2：L0上x1是Zz排布，x2是Zn排布，非转置      须满足baseM、baseN关于16对齐，baseK关于32B对齐
     // 理论上需要同时满足原则1和原则2,但伪量化的x1Dtype可取{DT_FLOAT16, DT_BF16},
-    // x2Dtype可取{DT_INT8, DT_INT4, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}
+    // x2Dtype可取{DT_INT8, DT_INT4, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}
     // sizeof(x1Dtype) <= 2, sizeof(x2Dtype) <= 1
     // baseM满足原则1时，可能是关于32B对齐或关于16对齐，间接满足原则2
     // baseN满足原则1时，可能是关于32B对齐或关于16对齐，间接满足原则2
@@ -120,7 +120,7 @@ void WeightQuantBatchMatmulV2TilingASW::CalcBasicBlock()
 
 uint64_t WeightQuantBatchMatmulV2TilingASW::GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype) const
 {
-    bool is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4);
+    bool is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4);
     if (is4BitInput) {
         return shapeSize + shapeSize;
     } else {
@@ -131,7 +131,7 @@ uint64_t WeightQuantBatchMatmulV2TilingASW::GetShapeWithDataType(uint64_t shapeS
 uint64_t WeightQuantBatchMatmulV2TilingASW::GetSizeWithDataType(uint64_t shapeSize, ge::DataType dtype) const
 {
     // shapeSize应该是偶数
-    bool is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4);
+    bool is4BitInput = (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_INT4);
     if (is4BitInput) {
         // 2: 判断是否是偶数
         OP_TILING_CHECK(

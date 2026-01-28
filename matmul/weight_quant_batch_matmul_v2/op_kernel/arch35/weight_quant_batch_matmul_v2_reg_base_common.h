@@ -60,9 +60,7 @@ namespace WeightQuantBatchMatmulV2::Arch35 {
 template <typename DtypeWeight>
 constexpr bool Is4BitWeight()
 {
-    return (
-        IsSameType<DtypeWeight, int4b_t>::value || IsSameType<DtypeWeight, fp4x2_e2m1_t>::value ||
-        IsSameType<DtypeWeight, fp4x2_e1m2_t>::value);
+    return (IsSameType<DtypeWeight, int4b_t>::value || IsSameType<DtypeWeight, fp4x2_e2m1_t>::value);
 }
 
 template <typename DtypeWeight, bool weightNz>
@@ -1043,7 +1041,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
                                                                                  groupIdx * mainGroupNumSrcExtend +
                                                                                  innerIdx * innerSrcExtend));
                         if constexpr (
-                            IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+                            IsSameType<wType, fp4x2_e2m1_t>::value) {
                             if constexpr (!IsSameType<xType, half>::value) {
                                 MicroAPI::Cast<xType, wType, CAST_FP4_TO_BF16_TRAIT>(wNzF16Part0, wNz4BitPart0, preg);
                             } else {
@@ -1081,7 +1079,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
                         wNz4BitPart0, (__local_mem__ typename RegTensorActualT<wType>::T*)(tailWeightInUbBaseAddr +
                                                                                            n1Idx * n1SrcExtend +
                                                                                            innerIdx * innerSrcExtend));
-                    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+                    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
                         if constexpr (!IsSameType<xType, half>::value) {
                             MicroAPI::Cast<xType, wType, CAST_FP4_TO_BF16_TRAIT>(wNzF16Part0, wNz4BitPart0, preg);
                         } else {
@@ -1138,8 +1136,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
                         MicroAPI::DataCopy<typename RegTensorActualT<wType>::T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
                             wNz4Bit, (__local_mem__ typename RegTensorActualT<wType>::T*)(weightInUbBaseAddr),
                             aregWeightIn);
-                        if constexpr (
-                            IsSameType<wType, fp4x2_e2m1_t>::value || IsSameType<wType, fp4x2_e1m2_t>::value) {
+                        if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
                             if constexpr (!IsSameType<xType, half>::value) {
                                 MicroAPI::Cast<xType, wType, CAST_FP4_TO_BF16_TRAIT>(wNzF16, wNz4Bit, preg);
                             } else {
