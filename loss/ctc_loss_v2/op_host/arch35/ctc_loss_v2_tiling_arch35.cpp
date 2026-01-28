@@ -26,7 +26,6 @@ using namespace AscendC;
 
 namespace optiling {
 const std::string OP_NAME = "CTCLossV2";
-const std::string OP_GRAD_NAME = "CTCLossV2Grad";
 static const size_t LOG_PROBS_IDX = 0;
 static const size_t TARGETS_IDX = 1;
 static const size_t INPUT_LENGTHS_IDX = 2;

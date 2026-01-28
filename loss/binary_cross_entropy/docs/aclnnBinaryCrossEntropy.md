@@ -1,11 +1,18 @@
 # aclnnBinaryCrossEntropy
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/binary_cross_entropy)
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>昇腾950 AI处理器</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
 ## 功能说明
 
@@ -48,6 +55,7 @@ aclnnStatus aclnnBinaryCrossEntropy(void *workspace,
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
+
 ## aclnnBinaryCrossEntropyGetWorkspaceSize
 
 - **参数说明：**
@@ -56,14 +64,16 @@ aclnnStatus aclnnBinaryCrossEntropy(void *workspace,
     | ------------------| ------------------ | --------------|-------------------- | ----------------- | --------------------- | ---------------|---------------------------|
     | self | 输入 | 表示预测的概率值，公式中的输入`self`。 | 取值在0~1之间|  FLOAT16、FLOAT、BFLOAT16|ND|-|×|
     | target | 输入 | 表示目标张量，公式中的输入`target`。 | 取值在0~1之间|  与`self`一致|ND|与`self`一致|×|
-    | weight | 输入 | 表示权重张量，公式中的输入`weight`。 |<weight可以是nullptr，等价于所有权重值都是1 |  与`self`一致|ND|与`self`一致|×|
+    | weight | 输入 | 表示权重张量，公式中的输入`weight`。 |weight可以是nullptr，等价于所有权重值都是1 |  与`self`一致|ND|与`self`一致|×|
     | reduction | 输入 | 表示规约方式，公式中的输入`reduction`，输出规约的枚举值。 | 支持三种枚举值：<ul><li>当取值为0，即为Reduction::None</li><li>当取值为1，即为Reduction::Mean</li><li>当取值为2，即为Reduction::Sum</li></ul>| - |-|-|-|
     | out | 输出 | 表示计算输出，公式中的$\ell(self,target)$。 | 如果reduction = None，shape与`self`一致，其他情况shape为[1]|  与`self`一致|ND|-|-|
     | workspaceSize | 输出 | 返回需要在Device侧申请的workspace大小。 | -|  -|-|-|-|
     | executor | 输出 | 返回op执行器，包含了算子计算流程。 | -|  -|-|-|-|
 
-- **返回值：**
+    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16。
 
+- **返回值：**
+ 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
@@ -140,11 +150,13 @@ aclnnStatus aclnnBinaryCrossEntropy(void *workspace,
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnBinaryCrossEntropy默认确定性实现。
+- 确定性计算： 
+  - aclnnBinaryCrossEntropy默认确定性实现。  
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
