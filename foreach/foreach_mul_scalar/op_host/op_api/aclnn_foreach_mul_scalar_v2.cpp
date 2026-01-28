@@ -112,6 +112,13 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     return true;
 }
 
+static inline void SetOutStorageShape(const aclTensorList* out)
+{
+    for (uint64_t i = 0; i < out->Size(); i++) {
+        (*out)[i]->SetStorageShape((*out)[i]->GetViewShape());
+    }
+}
+
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out) {
     // tensorlist size检查
     OP_CHECK_TENSORLIST_SIZE_EQUAL(self, out, return false);
@@ -135,7 +142,9 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查Format是否满足约束
+    // 4. 重设输出storageShape，让输出storageShape与viewShape保持一致
+    SetOutStorageShape(out);
+    // 5. 检查Format是否满足约束
     CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
