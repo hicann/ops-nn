@@ -132,9 +132,5 @@
 | aclnn接口  | [test_aclnn_dynamic_block_quant](examples/test_aclnn_dynamic_block_quant.cpp) | 通过[aclnnDynamicBlockQuant](docs/aclnnDynamicBlockQuant.md)接口方式调用DynamicBlockQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_block_quant_proto.h)构图方式调用DynamicBlockQuant算子。         |
 
-<<<<<<< HEAD
 <!--图模式仅支持Ascend 950PR/Ascend 950DT-->
-=======
-<!--图模式仅支持910_95-->
->>>>>>> e2e609c4 (update)
 <!-- [test_geir_dynamic_block_quant](examples/test_geir_dynamic_block_quant.cpp)-->

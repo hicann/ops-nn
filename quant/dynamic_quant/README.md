@@ -25,7 +25,6 @@
   $$
    yOut=round(x/scaleOut)
   $$
-<<<<<<< HEAD
   
   - 若输入smoothScalesOptional，则
   
@@ -33,12 +32,6 @@
   input = x\cdot smoothScalesOptional
   $$
 
-=======
-  - 若输入smoothScalesOptional，则
-  $$
-  input = x\cdot smoothScalesOptional
-  $$
->>>>>>> e2e609c4 (update)
   $$
    scaleOut=row\_max(abs(input))/dtypeMax
   $$
@@ -46,10 +39,7 @@
   $$
    yOut=round(input/scaleOut)
   $$
-<<<<<<< HEAD
   
-=======
->>>>>>> e2e609c4 (update)
   其中row\_max代表每行求最大值，dtypeMax为输出数据类型的最大值。
 
 ## 参数说明
