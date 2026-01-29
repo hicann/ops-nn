@@ -76,7 +76,7 @@ aclnnStatus aclnnShrink(
       <td>支持空Tensor。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
      <tr>
@@ -106,7 +106,7 @@ aclnnStatus aclnnShrink(
       <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
        <tr>
