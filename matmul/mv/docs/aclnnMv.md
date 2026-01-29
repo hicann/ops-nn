@@ -78,7 +78,7 @@ aclnnStatus aclnnMv(
       <td>输入</td>
       <td>公式中的输入input。</td>
       <td>其余格式如果没有特别强调则按照ND格式读取，但是继续运行可能会有非预期行为。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>BFLOAT16、FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnMv(
       <td>输入</td>
       <td>公式中的vec,数据类型与self保持一致。</td>
       <td>其余格式如果没有特别强调则按照ND格式读取，但是继续运行可能会有非预期行为。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>BFLOAT16、FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnMv(
       <td>输出</td>
       <td>公式中的输出out。</td>
       <td>其余格式如果没有特别强调则按照ND格式读取，但是继续运行可能会有非预期行为。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>BFLOAT16、FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>
@@ -140,7 +140,6 @@ aclnnStatus aclnnMv(
     </tr>
   </tbody></table>
 
-    - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。

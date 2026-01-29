@@ -37,9 +37,9 @@ using namespace op;
 #define MATRIX_DIM 2
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> addmvDtypeSupportList = {
-    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64,  DataType::DT_FLOAT16, DataType::DT_INT16,
+    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64,  DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16,
     DataType::DT_INT8,  DataType::DT_UINT8, DataType::DT_DOUBLE, DataType::DT_BOOL};
-static const std::initializer_list<DataType> matmulDtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> matmulDtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 static bool CheckNotNull(
     const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,

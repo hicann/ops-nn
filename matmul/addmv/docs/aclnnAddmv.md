@@ -75,7 +75,7 @@ aclnnStatus aclnnAddmv(
       <td><ul><li>数据类型需要与 mat@vec 构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
       <li>shape在alpha不为0时需要与 mat@vec 满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系。</a></li>
       <li>alpha为0时需要与 mat@vec 相同。</li></ul></td>
-      <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
@@ -86,7 +86,7 @@ aclnnStatus aclnnAddmv(
       <td>和vec进行乘法运算的2维矩阵。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
       <li>shape需要与 vec 满足乘法关系。</ul></td>
-      <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnAddmv(
       <td>和mat进行乘法运算的1维向量。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
       <li>shape需要与 mat 满足乘法关系。</ul></td>
-      <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnAddmv(
       <td>指定的1维输出向量。</td>
       <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/互推导关系.md">推导后的数据类型。</a></li>
       <li>shape与mat和vec的乘积相同。</ul></td>
-      <td>FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
+      <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>-</td>
       <td>√</td>
