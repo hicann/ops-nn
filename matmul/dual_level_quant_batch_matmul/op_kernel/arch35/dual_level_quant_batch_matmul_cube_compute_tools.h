@@ -16,7 +16,7 @@
 #ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_TOOLS_H
 #define DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_TOOLS_H
 
-#include "basic_api/kernel_cube_intf.h"
+#include "kernel_cube_intf.h"
 #include "op_kernel/math_util.h"
 
 using AscendC::BLOCK_CUBE;

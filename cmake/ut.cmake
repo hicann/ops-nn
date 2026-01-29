@@ -618,6 +618,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 ${kernel_dependency_files}
                 ${CMAKE_BINARY_DIR}/tbe/ascendc/
                 ${CMAKE_BINARY_DIR}/tbe/ascendc/common
+                ${OPBASE_INC_DIRS}
             )
             set_property(GLOBAL APPEND PROPERTY OPKERNEL_OBJECT_LIBS opkernel_${opName})
         else()
@@ -641,6 +642,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                     ${kernel_dependency_files}
                     ${CMAKE_BINARY_DIR}/tbe/ascendc/
                     ${CMAKE_BINARY_DIR}/tbe/ascendc/common
+                    ${OPBASE_INC_DIRS}
                 )
                 set_property(GLOBAL APPEND PROPERTY OPKERNEL_OBJECT_LIBS opkernel_${src_name})
             endforeach()
