@@ -18,7 +18,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
+#include "opdev/op_executor.h" 
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 

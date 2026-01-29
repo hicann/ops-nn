@@ -921,7 +921,7 @@ aclnnStatus aclnnAvgPool2dGetWorkspaceSize(
     static const std::string paddingMode = "CALCULATED";
     static const std::string dataFormat = FORMAT_NCHW_STR;
     const bool globalPooling = false;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         auto avgPoolingOut = l0op::AvgPoolV2(self4d, kernel4, stride4, paddingMode, paddings4, dataFormat,
                     globalPooling, ceilMode, !countIncludePad, divisorOverride, uniqueExecutor.get());
         CHECK_RET(ACLNN_SUCCESS == HandleOut(out, avgPoolingOut, uniqueExecutor), ACLNN_ERR_INNER);

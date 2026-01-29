@@ -338,6 +338,6 @@ static QuantBatchMatmulInplaceAddTilingTestParam casesParams[] = {
 
  };
 
-INSTANTIATE_TEST_CASE_P(QuantBatchMatmulInplaceAdd910_95, QuantBatchMatmulInplaceAddTiling, testing::ValuesIn(casesParams));
+INSTANTIATE_TEST_CASE_P(QuantBatchMatmulInplaceAdd950, QuantBatchMatmulInplaceAddTiling, testing::ValuesIn(casesParams));
 
 } // using namespace

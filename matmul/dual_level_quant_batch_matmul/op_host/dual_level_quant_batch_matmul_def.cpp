@@ -75,7 +75,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
             .ExtendCfgInfo("opFile.value","dual_level_quant_batch_matmul_apt");
-        this->AICore().AddConfig("ascend910_95", config910D);
+        this->AICore().AddConfig("ascend950", config910D);
     }
 };
 

@@ -72,7 +72,7 @@ static bool CheckDtypeValid(const aclTensor* grad, const aclTensor* indices, con
     bool is910BSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
     const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST =
         is910BSocVersion ? GRAD_DTYPE_SUPPORT_LIST_910B : GRAD_DTYPE_SUPPORT_LIST_910;
     const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST =
@@ -194,7 +194,7 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, cons
     bool is910BSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool is91095SocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+    bool is91095SocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
     if (!is910BSocVersion && !is91095SocVersion) {
         return false;
     }
@@ -264,7 +264,7 @@ static std::pair<const aclTensor*, const aclTensor*> PorcessIndices(
         return {nullptr, nullptr};
     }
 
-    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     // 修改读取的数据类型
     if (!is910D && gradRow < static_cast<int64_t>(INT32_INF)) {
         ViewDataType(indiceViewFloat, op::DataType::DT_FLOAT);
@@ -332,7 +332,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
     CHECK_RET(gradContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradCasted = gradContiguous;
-    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool is910D = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     bool needCast = IsNeedCast(grad, out, scaleGradByFreq);
     bool is910BSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
@@ -385,7 +385,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(
         }
     } else {
         if (castDtype != op::DataType::DT_INT32 && castDtype != op::DataType::DT_INT64) {
-            // 非910_95, indices如果非int32,int64类型，需要强转
+            // 非950, indices如果非int32,int64类型，需要强转
             indicesContiguous = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
             CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
