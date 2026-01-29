@@ -170,6 +170,61 @@ function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
     endforeach()
 endfunction()
 
+function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
+    # set variables
+    set(UT_COMMON_INC ${PROJECT_SOURCE_DIR}/tests/ut/common)
+
+    if(TARGET ${GRAPH_PLUGIN_NAME}_obj)
+        add_dependencies(${GRAPH_PLUGIN_NAME}_obj build_es_math build_es_nn)
+        target_link_libraries(${GRAPH_PLUGIN_NAME}_obj PRIVATE es_math es_nn)
+    endif()
+
+    # add op graph ut test cases obj
+    add_library(${OP_GRAPH_MODULE_NAME}_cases_obj OBJECT)
+    
+    target_include_directories(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
+        ${UT_COMMON_INC}
+        ${JSON_INCLUDE}
+        ${GTEST_INCLUDE}
+        ${OPBASE_INC_DIRS}
+        ${PROJECT_SOURCE_DIR}/common/inc
+        ${ASCEND_DIR}/include
+        ${ASCEND_DIR}/include/external
+        ${ASCEND_DIR}/include/exe_graph
+        ${ASCEND_DIR}/include/base/context_builder
+        ${ASCEND_DIR}/include/ge/
+        ${CMAKE_BINARY_DIR}/es_packages/include/es_math/
+        ${CMAKE_BINARY_DIR}/es_packages/include/es_nn/
+    )
+    target_link_libraries(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
+        $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        $<BUILD_INTERFACE:dlog_headers>
+        -Wl,--no-as-needed
+        metadef
+        graph
+        gtest
+        register
+        ge_compiler
+        ascendalog
+ 	    unified_dlog
+    )
+
+    target_compile_options(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
+            -fno-access-control
+    )
+
+    # add infershape ut static lib
+    add_library(${OP_GRAPH_MODULE_NAME}_static_lib STATIC)
+    target_link_libraries(${OP_GRAPH_MODULE_NAME}_static_lib PRIVATE
+            ${OP_GRAPH_MODULE_NAME}_cases_obj
+            ${GRAPH_PLUGIN_NAME}_obj
+            es_math
+            es_nn
+    )
+    add_dependencies(${OP_GRAPH_MODULE_NAME}_static_lib build_es_math build_es_nn)
+    target_link_libraries(${OP_GRAPH_MODULE_NAME}_static_lib PRIVATE es_math es_nn)
+endfunction()
+
 if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
   set(AICPU_OP_KERNEL_MODULE_NAME ${PKG_NAME}_aicpu_op_kernel_ut CACHE STRING "aicpu_op_kernel ut module name" FORCE)
   message("******************* AICPU_OP_KERNEL_MODULE_NAME is ${AICPU_OP_KERNEL_MODULE_NAME}" )
@@ -287,6 +342,16 @@ function(add_modules_ut_sources)
         endif()
         target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_OPAPI_SRCS})
         message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_OPAPI_SRCS}")
+    endif()
+    
+    string(FIND "${MODULE_HOSTNAME}_cases_obj" "op_graph" OPGRAPH_FOUND_INDEX)
+    if(${OPGRAPH_FOUND_INDEX} GREATER_EQUAL 0)
+        file(GLOB OPHOST_OPGRAPH_SRCS ${MODULE_DIR}/test_*_pass.cpp)
+        if (NOT TARGET ${MODULE_HOSTNAME}_cases_obj)
+            add_op_graph_ut_modules(${OP_GRAPH_MODULE_NAME})
+        endif()
+        target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_OPGRAPH_SRCS})
+        message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_OPGRAPH_SRCS}")
     endif()
 endfunction()
 

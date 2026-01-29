@@ -20,6 +20,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # run package's files info
+SOURCEDIR="$PWD/ops_nn"
 _CURR_PATH=$(dirname $(readlink -f $0))
 _VERSION_INFO_FILE="${_CURR_PATH}""/../version.info"
 _FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
@@ -259,6 +260,38 @@ getinstallpath() {
     return
 }
 
+install_whl_package() {
+    local _package_path="$1"
+    local _package_name="$2"
+    local _pythonlocalpath="$3"
+    logandprint "[INFO]: start install python module package ${_package_name}."
+    if [ -f "$_package_path" ]; then
+        pip3 install --disable-pip-version-check --upgrade --no-deps --force-reinstall "${_package_path}" -t "${_pythonlocalpath}" 1> /dev/null
+        local ret=$?
+        if [ $ret -ne 0 ]; then
+            logandprint "[WARNING]: install ${_package_name} failed, error code: $ret."
+            exit 1
+        else
+            logandprint "[INFO]: ${_package_name} installed successfully!"
+        fi
+        chmod -R "${_BUILTIN_PERM}" "${_pythonlocalpath}"/es_nn 2> /dev/null
+        chmod -R "${_BUILTIN_PERM}" "${_pythonlocalpath}"/es_nn-*.dist-info 2> /dev/null
+    else
+        logandprint "[ERROR]: ERR_NO:0x0080;ERR_DES:install ${_package_name} failed, can not find the matched package for this platform."
+        exit 1
+    fi
+}
+
+install_es_whl()
+{
+    local es_whl_path="${SOURCEDIR}/es_packages/whl/es_nn-1.0.0-py3-none-any.whl"
+    local python_es_whl_name="es_nn"
+    local whl_install_dir_path="${TARGET_VERSION_DIR}/python/site-packages"
+    chmod u+w "${whl_install_dir_path}" 2> /dev/null
+    install_whl_package "${es_whl_path}" "${python_es_whl_name}" "${whl_install_dir_path}"
+    chmod u-w "${whl_install_dir_path}" 2> /dev/null
+}
+
 # init installation parameters
 _TARGET_INSTALL_PATH="$1"
 _TARGET_USERNAME="$2"
@@ -307,6 +340,15 @@ else
 fi
 getinstallpath
 relative_path_val=${relative_path}
+
+# Get target version
+TARGET_VERSION_DIR="" # _TARGET_INSTALL_PATH + PKG_VERSION_DIR
+get_version_dir "PKG_VERSION_DIR" "$_VERSION_INFO_FILE"
+if [ "${PKG_VERSION_DIR}" = "" ]; then
+    TARGET_VERSION_DIR=${_TARGET_INSTALL_PATH}
+else
+    TARGET_VERSION_DIR=${_TARGET_INSTALL_PATH}/${PKG_VERSION_DIR}
+fi
 
 #Last Installed Version
 install_lower_dir=$(ls "${_TARGET_INSTALL_PATH}" 2> /dev/null)
@@ -424,6 +466,8 @@ logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Update
 sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --install --username="${_TARGET_USERNAME}" --usergroup="${_TARGET_USERGROUP}" --set-cann-uninstall \
     --use-share-info --version=$pkg_version --version-dir=$pkg_version_dir $install_option ${in_install_for_all} ${in_feature_1} ${chip_type_1}  "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
 logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Install ops_nn module files failed."
+
+install_es_whl
 
 #chmod to support copy
 if [ -d "${version_install_dir}/${ops_nn_platform_dir}/vendors" ] && [ "$(id -u)" != "0" ]; then

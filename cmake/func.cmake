@@ -191,7 +191,15 @@ function(add_graph_plugin_modules)
     else()
       add_library(${GRAPH_PLUGIN_NAME}_obj OBJECT)
     endif()
-    target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${OP_PROTO_INCLUDE})
+    target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE 
+      ${OP_PROTO_INCLUDE}
+      ${PROJECT_SOURCE_DIR}/common/inc
+      ${ASCEND_DIR}/include
+      ${ASCEND_DIR}/include/external
+      ${ASCEND_DIR}/include/exe_graph
+      ${ASCEND_DIR}/include/base/context_builder
+      ${ASCEND_DIR}/include/ge
+    )
     target_compile_definitions(${GRAPH_PLUGIN_NAME}_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="GRAPH_PLUGIN" LOG_CPP)
     if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
       target_compile_options(
@@ -203,13 +211,27 @@ function(add_graph_plugin_modules)
                                         -fvisibility=hidden
       )
     endif()
-    target_link_libraries(
+    if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+      target_link_libraries(
+      ${GRAPH_PLUGIN_NAME}_obj
+      PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
+              $<BUILD_INTERFACE:dlog_headers>
+              $<$<TARGET_EXISTS:ops_base_util_objs>:$<TARGET_OBJECTS:ops_base_util_objs>>
+              $<$<TARGET_EXISTS:ops_base_infer_objs>:$<TARGET_OBJECTS:ops_base_infer_objs>>
+              metadef
+              graph
+              register
+              ge_compiler
+      )
+ 	  else()
+ 	    target_link_libraries(
       ${GRAPH_PLUGIN_NAME}_obj
       PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
               $<BUILD_INTERFACE:dlog_headers>
               $<$<TARGET_EXISTS:ops_base_util_objs>:$<TARGET_OBJECTS:ops_base_util_objs>>
               $<$<TARGET_EXISTS:ops_base_infer_objs>:$<TARGET_OBJECTS:ops_base_infer_objs>>
       )
+    endif()
   endif()
 endfunction()
 
@@ -496,17 +518,12 @@ macro(add_graph_plugin_sources)
   # 获取算子层级目录名称，判断是否编译该算子
   get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
   get_filename_component(OP_NAME ${PARENT_DIR} NAME)
-  if(DEFINED ASCEND_OP_NAME
-     AND NOT "${ASCEND_OP_NAME}" STREQUAL ""
-     AND NOT "${ASCEND_OP_NAME}" STREQUAL "all"
-     AND NOT "${ASCEND_OP_NAME}" STREQUAL "ALL"
-    )
-    if(NOT ${OP_NAME} IN_LIST ASCEND_OP_NAME)
-      return()
-    endif()
-  endif()
-
-  file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp)
+  
+  if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/fusion_pass/*_pass.cpp)
+  else()
+ 	  file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp)
+ 	endif()
   if(GRAPH_PLUGIN_SRCS)
     add_graph_plugin_modules()
     target_sources(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${GRAPH_PLUGIN_SRCS})

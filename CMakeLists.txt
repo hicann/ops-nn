@@ -127,12 +127,6 @@ if(ENABLE_TEST)
     set(OP_API_MODULE_NAME ${PKG_NAME}_op_api_ut)
   endif()
 
-  # op graph ut
-  if(UT_TEST_ALL OR OP_GRAPH_UT)
-    include(cmake/opbuild.cmake)
-    set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
-  endif()
-
   # op kernel ut
   if(UT_TEST_ALL OR OP_KERNEL_UT)
     set(UT_DONE OFF)
@@ -149,6 +143,12 @@ endif()
 add_category_subdirectory()
 
 if(ENABLE_TEST)
+  if(UT_TEST_ALL OR OP_GRAPH_UT)
+    include(cmake/opbuild.cmake)
+    include(cmake/gen_ops_info.cmake)
+ 	  include(cmake/symbol.cmake)
+    set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
+  endif()
   add_subdirectory(tests/ut)
 endif()
 

@@ -69,6 +69,8 @@
         <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux" install_mod="550"/>
         <path value="opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/$(ARCH)" install_mod="550"/>
+        <path value="$(TARGET_ENV)/include/es" install_mod="550"/>
+        <path value="$(TARGET_ENV)/include/es/es_nn" install_mod="550"/>
     </dir_info>
     <dir_info value="OpsNNAiCpuKernel" install_mod="755" install_type="all">
         <path value="opp/built-in/op_impl/aicpu" install_mod="550"/>

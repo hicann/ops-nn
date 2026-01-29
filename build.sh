@@ -9,7 +9,7 @@
 # ============================================================================
 
 set -e
-RELEASE_TARGETS=("ophost" "opapi" "onnxplugin")
+RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph")
 
 SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910" "kirinx90")
 TRIGER_UTS=()
@@ -21,7 +21,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
-  "ophost" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin"
+  "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin"
 )
 
 in_array() {
@@ -194,6 +194,7 @@ usage() {
         echo "    --noexec               Only compile ut, do not execute"
         echo "    --asan                 Enable ASAN (Address Sanitizer) on the host side"
         echo "    --ophost -u            Same as ophost test"
+        echo "    --opgraph -u           Same as opgraph test"
         echo "    --opapi -u             Same as opapi test"
         echo "    --opkernel -u          Same as opkernel test"
         echo $dotted_line
@@ -234,6 +235,19 @@ usage() {
         echo "Examples:"
         echo "    bash build.sh --onnxplugin -j16 -O3"
         echo "    bash build.sh --onnxplugin --debug"
+        return
+        ;;
+      opgraph)
+        echo "Opgraph Build Options:"
+        echo $dotted_line
+        echo "    --opgraph              Build opgraph library"
+        echo "    -j[n]                  Compile thread nums, default is 8"
+        echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3]"
+        echo "    --debug                Build with debug mode"
+        echo $dotted_line
+        echo "Examples:"
+        echo "    bash build.sh --opgraph -j16 -O3"
+        echo "    bash build.sh --opgraph --debug"
         return
         ;;
       opapi)
@@ -296,7 +310,7 @@ usage() {
   echo "    -j[n] Compile thread nums, default is 8"
   echo "    -v Cmake compile verbose"
   echo "    -O[n] Compile optimization options, support [O0 O1 O2 O3]"
-  echo "    -u Compile all ut, default run ophost opapi test"
+  echo "    -u Compile all ut, default run ophost opgraph opapi test"
   echo $dotted_line
   echo "    example, Build ophost test with O0 level compilation optimization and do not execute."
   echo "    ./build.sh -u --ophost --noexec -O0 -j8"
@@ -314,6 +328,7 @@ usage() {
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
   echo "    --onnxplugin build op_nn_onnx_plugin.so"
   echo "    --opapi build opapi_nn.so"
+  echo "    --opgraph build opgraph_nn.so"
   echo "    --ophost build ophost_nn.so"
   echo "    --opkernel build binary kernel"
   echo "    --opkernel_aicpu build aicpu kernel"
@@ -341,7 +356,7 @@ check_help_combinations() {
   for arg in "${args[@]}"; do
     case "$arg" in
       -u) has_u=true ;;
-      --ophost | --opapi | --onnxplugin)
+      --ophost | --opapi | --onnxplugin | --opgraph)
         has_test_command=true
         has_build_command=true
         ;;
@@ -354,17 +369,17 @@ check_help_combinations() {
 
   # 检查help中的无效命令组合
   if [[ "$has_pkg" == "true" && ("$has_test_command" == "true" || "$has_u" == "true") ]]; then
-    print_error "--pkg cannot be used with test(-u, etc.), --ophost, --opapi"
+    print_error "--pkg cannot be used with test(-u, etc.), --ophost, --opapi, --opgraph"
     return 1
   fi
 
   if [[ "$has_opkernel" == "true" && ("$has_test_command" == "true" || "$has_u" == "true") ]]; then
-    print_error "--opkernel cannot be used with test(-u, etc.), --ophost, --opapi"
+    print_error "--opkernel cannot be used with test(-u, etc.), --ophost, --opapi, --opgraph"
     return 1
   fi
 
   if [[ "$has_opkernel_aicpu" == "true" && ("$has_test_command" == "true" || "$has_u" == "true") ]]; then
-    echo "[ERROR] --opkernel_aicpu cannot be used with test(-u, --ophost_test, etc.), --ophost, --opapi, or --opgraph"
+    echo "[ERROR] --opkernel_aicpu cannot be used with test(-u, --ophost, etc.), --ophost, --opapi, or --opgraph"
     return 1
   fi
 
@@ -372,21 +387,21 @@ check_help_combinations() {
 }
 
 check_param() {
-  # --ops不能与--ophost，--opapi同时存在，如果带U则可以
-  if [[ -n "$COMPILED_OPS" && "$ENABLE_TEST" == "FALSE" ]] && [[ "$OP_HOST" == "TRUE" || "$OP_API" == "TRUE" ]]; then
+  # --ops不能与--ophost，--opapi, --opgraph同时存在，如果带U则可以
+  if [[ -n "$COMPILED_OPS" && "$ENABLE_TEST" == "FALSE" ]] && [[ "$OP_HOST" == "TRUE" || "$OP_GRAPH" == "TRUE" || "$OP_API" == "TRUE" ]]; then
     print_error "--ops cannot be used with --ophost, --opapi"
     exit 1
   fi
 
-  # --pkg不能与-u（UT模式，包含_test的参数）或者--ophost，--opapi同时存在
+  # --pkg不能与-u（UT模式，包含_test的参数）或者--ophost，--opapi, --opgraph同时存在
   if [[ "$ENABLE_PACKAGE" == "TRUE" ]]; then
     if [[ "$ENABLE_TEST" == "TRUE" ]]; then
-      print_error "--pkg cannot be used with test(-u, --ophost_test, etc.)"
+      print_error "--pkg cannot be used with test(-u, --ophost, etc.)"
       exit 1
     fi
 
-    if [[ "$OP_HOST" == "TRUE" || "$OP_API" == "TRUE" ]]; then
-      print_error "--pkg cannot be used with --ophost, --opapi"
+    if [[ "$OP_HOST" == "TRUE" || "$OP_GRAPH" == "TRUE" || "$OP_API" == "TRUE" ]]; then
+      print_error "--pkg cannot be used with --ophost, --opapi, --opgraph"
       exit 1
     fi
   fi
@@ -447,7 +462,7 @@ set_create_libs() {
     return
   fi
   if [[ "$ENABLE_PACKAGE" == "TRUE" && "$ENABLE_CUSTOM" != "TRUE" ]]; then
-    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin")
+    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin" "opgraph_${REPOSITORY_NAME}")
     ENABLE_CREATE_LIB=TRUE
   else
     if [[ "$OP_HOST" == "TRUE" ]]; then
@@ -462,6 +477,10 @@ set_create_libs() {
       BUILD_LIBS+=("op_${REPOSITORY_NAME}_onnx_plugin")
       ENABLE_CREATE_LIB=TRUE
     fi
+    if [[ "$OP_GRAPH" == "TRUE" ]]; then
+ 	       BUILD_LIBS+=("opgraph_${REPOSITORY_NAME}")
+ 	       ENABLE_CREATE_LIB=TRUE
+ 	  fi
   fi
 }
 
@@ -475,6 +494,10 @@ set_ut_mode() {
     OP_HOST_UT=TRUE
     UT_TEST_ALL=FALSE
   fi
+  if [[ "$OP_GRAPH" == "TRUE" ]]; then
+ 	     OP_GRAPH_UT=TRUE
+ 	     UT_TEST_ALL=FALSE
+ 	fi
   if [[ "$OP_API" == "TRUE" ]]; then
     OP_API_UT=TRUE
     UT_TEST_ALL=FALSE
@@ -493,7 +516,7 @@ set_ut_mode() {
   fi
 
   # 检查测试项，至少有一个
-  if [[ "$UT_TEST_ALL" == "FALSE" && "$OP_HOST_UT" == "FALSE" && "$OP_API_UT" == "FALSE" && "$OP_KERNEL_UT" == "FALSE" && "$OP_KERNEL_AICPU_UT" == "FALSE" ]]; then
+  if [[ "$UT_TEST_ALL" == "FALSE" && "$OP_HOST_UT" == "FALSE" && "$OP_GRAPH_UT" == "FALSE" && "$OP_API_UT" == "FALSE" && "$OP_KERNEL_UT" == "FALSE" && "$OP_KERNEL_AICPU_UT" == "FALSE" ]]; then
     print_error "At least one test target must be specified (ophost test, opapi test, opgraph test, opkernel test, opkernel_aicpu_test)"
     usage
     exit 1
@@ -502,6 +525,9 @@ set_ut_mode() {
   if [[ "$UT_TEST_ALL" == "TRUE" ]] || [[ "$OP_HOST_UT" == "TRUE" ]]; then
     UT_TARGES+=("${REPOSITORY_NAME}_op_host_ut")
   fi
+  if [[ "$UT_TEST_ALL" == "TRUE" ]] || [[ "$OP_GRAPH_UT" == "TRUE" ]]; then
+ 	     UT_TARGES+=("${REPOSITORY_NAME}_op_graph_ut")
+ 	fi
   if [[ "$UT_TEST_ALL" == "TRUE" ]] || [[ "$OP_API_UT" == "TRUE" ]]; then
     UT_TARGES+=("${REPOSITORY_NAME}_op_api_ut")
   fi
@@ -575,6 +601,7 @@ checkopts() {
   OP_KERNEL_AICPU_UT=FALSE
   OP_API=FALSE
   OP_HOST=FALSE
+  OP_GRAPH=FALSE
   OP_KERNEL=FALSE
   OP_KERNEL_AICPU=FALSE
   ENABLE_CREATE_LIB=FALSE
@@ -623,6 +650,7 @@ checkopts() {
           -u) SHOW_HELP="test" ;;
           --make_clean_all | --make_clean) SHOW_HELP="clean" ;;
           --ophost) SHOW_HELP="ophost" ;;
+          --opgraph) SHOW_HELP="opgraph" ;;
           --opapi) SHOW_HELP="opapi" ;;
           --onnxplugin) SHOW_HELP="onnxplugin" ;;
           --run_example) SHOW_HELP="run_example" ;;
@@ -762,6 +790,8 @@ checkopts() {
 
           if [[ "$OPTARG" == "ophost" ]]; then
             OP_HOST=TRUE
+          elif [[ "$OPTARG" == "opgraph" ]]; then
+ 	          OP_GRAPH=TRUE
           elif [[ "$OPTARG" == "opapi" ]]; then
             OP_API=TRUE
           elif [[ "$OPTARG" == "opkernel" ]]; then
@@ -784,8 +814,9 @@ checkopts() {
     esac
   done
 
-  if [[ "$OP_KERNEL_AICPU_UT" != "TRUE" && "$ENABLE_TEST" == "TRUE" && "$OP_HOST" == "FALSE" && "$OP_API" == "FALSE" && "$OP_KERNEL" == "FALSE" ]]; then
+  if [[ "$OP_KERNEL_AICPU_UT" != "TRUE" && "$ENABLE_TEST" == "TRUE" && "$OP_HOST" == "FALSE" && "$OP_GRAPH" == "FALSE" && "$OP_API" == "FALSE" && "$OP_KERNEL" == "FALSE" ]]; then
     OP_HOST=TRUE
+    OP_GRAPH=TRUE
     OP_API=TRUE
     OP_KERNEL=TRUE
   fi
@@ -860,6 +891,7 @@ assemble_cmake_args() {
   CMAKE_ARGS="$CMAKE_ARGS -DNO_FORCE=${NO_FORCE}"
   CMAKE_ARGS="$CMAKE_ARGS -DBUILD_MODE=${BUILD_MODE}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_HOST_UT=${OP_HOST_UT}"
+  CMAKE_ARGS="$CMAKE_ARGS -DOP_GRAPH_UT=${OP_GRAPH_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_API_UT=${OP_API_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_KERNEL_UT=${OP_KERNEL_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_KERNEL_AICPU_UT=${OP_KERNEL_AICPU_UT}"
@@ -1025,14 +1057,19 @@ build_binary() {
 
 build_pkg() {
   echo "--------------- build pkg start ---------------"
+  local all_targets=$(cmake --build . --target help)
   if [[ "$ENABLE_BINARY" == "FALSE" ]]; then # for jit need dynamic py
-    local all_targets=$(cmake --build . --target help)
     if grep -wq "ascendc_impl_gen" <<< "${all_targets}"; then
       cmake --build . --target ascendc_impl_gen -- ${VERBOSE} -j $THREAD_NUM
       if [ $? -ne 0 ]; then exit 1; fi
     fi
   fi
   cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} ..
+
+  if echo "${all_targets}" | grep -wq "build_es_nn"; then
+ 	     cmake --build . --target build_es_nn -- ${VERBOSE} -j $THREAD_NUM
+ 	     [ $? -ne 0 ] && echo "[ERROR] target:build_es_nn compile failed!" && exit 1
+ 	fi
   cmake --build . --target package -- ${VERBOSE} -j $THREAD_NUM
 
   print_success "Build package success!"

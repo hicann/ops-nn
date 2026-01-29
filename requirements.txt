@@ -5,3 +5,6 @@ scipy
 attrs
 psutil
 protobuf
+pyyaml
+setuptools
+wheel

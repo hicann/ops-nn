@@ -47,6 +47,8 @@ add_library(${OPHOST_NAME}_aclnn_exclude_headers INTERFACE)
 # interface, 用于收集ops proto头文件
 add_library(${GRAPH_PLUGIN_NAME}_proto_headers INTERFACE)
 
+set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
+
 # global variables
 set(COMPILED_OPS CACHE STRING "Compiled Ops" FORCE)
 set(COMPILED_OP_DIRS CACHE STRING "Compiled Ops Dirs" FORCE)
@@ -84,6 +86,8 @@ if(ENABLE_CUSTOM)
   set(AICPU_KERNEL_IMPL               packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/aicpu_kernel/impl)
   set(AICPU_JSON_CONFIG               packages/vendors/${VENDOR_PACKAGE_NAME}/op_impl/cpu/config)
   set(CUST_AICPU_OP_PROTO             packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto)
+  set(ES_INC_INSTALL_DIR              packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/es/include)
+ 	set(ES_LIB_INSTALL_DIR              packages/vendors/${VENDOR_PACKAGE_NAME}/op_proto/es/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(VERSION_INFO_INSTALL_DIR        packages/vendors/${VENDOR_PACKAGE_NAME}/)
   set(PACK_CUSTOM_NAME                "cann-ops-nn-${VENDOR_NAME}-linux.${ARCH}")
 else()

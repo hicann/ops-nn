@@ -109,6 +109,46 @@ unsetenv() {
     fi
 }
 
+whl_uninstall_package() {
+    local _module="$1"
+    local _module_apth="$2"
+    if [ ! -d "${_module_apth}/${_module}" ]; then
+        pip3 show "${_module}" > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            logandprint "[WARNING]: ${_module} is not exist."
+        else
+            pip3 uninstall -y "${_module}" 1> /dev/null
+            local ret=$?
+            if [ $ret -ne 0 ]; then
+                logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
+                exit 1
+            else
+                logandprint "[INFO]: ${_module} uninstalled successfully!"
+            fi
+        fi
+    else
+        export PYTHONPATH="${_module_apth}"
+        pip3 uninstall -y "${_module}" > /dev/null 2>&1
+        local ret=$?
+        if [ $ret -ne 0 ]; then
+            logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
+            exit 1
+        else
+            logandprint "[INFO]: ${_module} uninstalled successfully!"
+        fi
+    fi
+}
+
+uninstall_es_whl() {
+    local python_es_whl_name="es_nn"
+    local whl_install_dir_path="${_TARGET_INSTALL_PATH}/python/site-packages"
+    chmod u+w "${whl_install_dir_path}" 2> /dev/null
+    chmod u+w -R "${whl_install_dir_path}"/es_nn 2> /dev/null
+    chmod u+w -R "${whl_install_dir_path}"/es_nn-*.dist-info 2> /dev/null
+    whl_uninstall_package "${python_es_whl_name}" "${whl_install_dir_path}"
+    chmod u-w "${whl_install_dir_path}" 2> /dev/null
+}
+
 installed_path="$1"
 uninstall_mode="$2"
 is_quiet="$3"
@@ -242,6 +282,8 @@ get_version "pkg_version" "$_VERSION_INFO_FILE"
 
 # delete ops_nn source files
 unsetenv
+
+uninstall_es_whl
 
 is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE "
 

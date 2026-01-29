@@ -24,6 +24,17 @@
         <file value="script" entity="true"/>
         <file value="version.info"/>
     </file_info>
+    <file_info value="ops_es_packages_lib" copy_type="delivery" src_path=""
+        dst_path="ops_nn/es_packages/lib64"
+        install_path="$(TARGET_ENV)/lib64" install_mod="555">
+        <file value="libes_nn.so"
+            file_type="shared"/>
+    </file_info>
+    <file_info copy_type="source" src_path=""
+        dst_path="ops_nn/es_packages/include"
+        install_path="$(TARGET_ENV)/include/es" install_type="all">
+        <file value="es_nn" install_mod="555" entity="true"/>
+    </file_info>
     <!--block_info-->
     <block_info dependtree="false" dst_path="ops_nn" block_conf_path="ascend">
         <block name="EngineeringCommon"/>
@@ -38,5 +49,7 @@
         <path value="share/info" install_mod="750"/>
         <path value="share/info/ops_nn" install_mod="550"/>
         <path value="share/info/ops_nn/script" install_mod="550"/>
+        <path value="python" install_mode="750"/>
+ 	    <path value="python/site-packages" install_mode="750"/>
     </dir_info>
 </config>

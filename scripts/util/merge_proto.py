@@ -20,21 +20,23 @@ def match_op_proto(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
-    start_line = None
-    end_line = None
-
+    start_idx = None
+    end_idx = None
     for i, line in enumerate(lines):
-        if "{" in line:
-            start_line = i+1
+        if "{" in line and start_idx is None:
+            start_idx = i + 1
             break
-    if start_line is not None:
-        for i, line in enumerate(lines[start_line:], start=start_line):
-            if "}" in line:
-                end_line = i
 
-    if start_line is not None and end_line is not None:
-        return ''.join(lines[start_line:end_line])
-
+    if start_idx is not None:
+        for i, line in enumerate(lines[start_idx:], start=start_idx):
+            if re.search(r"OP_END_FACTORY_REG\(.*?\)", line):
+                end_idx = i + 1
+                break
+    
+    if start_idx is not None and end_idx is not None:
+        extracted = ''.join(lines[start_idx:end_idx])
+        return extracted.strip() + os.linesep
+    
     return ""
 
 def merge_op_proto(protos_path, output_file):
@@ -56,7 +58,7 @@ def merge_op_proto(protos_path, output_file):
 
 namespace ge{{
 
-{os.linesep.join([f'{op_def}{os.linesep}' for op_def in op_defs])}
+{os.linesep.join(op_defs)}
 }}  // namespace ge
 
 #endif // OP_NN_PROTO_H_
@@ -78,6 +80,6 @@ def parse_args(argv):
 if __name__ == "__main__":
     args = parse_args(sys.argv)
 
-    protos_path = args.protos[1:]
+    protos_path = args.protos
     output_file = args.output_file[0]
     merge_op_proto(protos_path, output_file)
