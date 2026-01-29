@@ -109,6 +109,12 @@ static inline bool CheckSocVersionIsSupportBf16(void)
            GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B;
 }
 
+static inline bool CheckA2SocVersionAndAlignScenario(const aclTensor* mat2)
+{
+    uint64_t nAxis = static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
+    return CheckKEqual1Support() && (nAxis % HALF_ALIGN_UNIT == 0);
+}
+
 static bool CheckDtypeValid(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
 {
@@ -442,13 +448,29 @@ static const aclTensor* GetMatMulOp(
           mmOpInfo.support_info.self_dtype == DataType::DT_BF16)) &&
         bias == nullptr) {
         // This is Split K Mode; Check if MatMul using Nd in Nd Out
-        const aclTensor* mmOut =
-            (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-             mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
-                l0op::MatMulNdFp162Fp32(
-                    x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor) :
-                l0op::MatMulNzFp162Fp32(
+        const aclTensor* mmOut = nullptr;
+        if (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+            mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
+            mmOut = l0op::MatMulNdFp162Fp32(
+                x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+        } else {
+            // 对于混精度MMV2NZNZNZ场景，在切换至MMV3NZNZND
+            if (CheckA2SocVersionAndAlignScenario(x2) && 
+                mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
+                mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+                mmOpInfo.support_info.output_format == ge::FORMAT_FRACTAL_NZ) {
+                OP_LOGD("check SocVersion, call MatMulV3NzNzNdFp162Fp32.");
+                mmOpInfo.support_info.output_format = ge::FORMAT_ND;
+                x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
+                x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
+                
+                mmOut = l0op::MatMulV3NzNzNdFp162Fp32(
+                    x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            } else {
+                mmOut = l0op::MatMulNzFp162Fp32(
                     x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            }
+        }
         return mmOut;
     } else {
         if (mmOpInfo.support_info.self_format == ge::FORMAT_ND) {
@@ -466,6 +488,18 @@ static const aclTensor* GetMatMulOp(
                     x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
                 return mmOut;
             }
+
+            if (CheckA2SocVersionAndAlignScenario(x2)) {
+                // 检查平台，MMV2 NZNZNZ 场景切 MMV3 NZNZND
+                mmOpInfo.support_info.output_format = ge::FORMAT_ND;
+                x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
+                x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
+
+                const aclTensor* mmOut =
+                    l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+                return mmOut;
+            }
+
             const aclTensor* mmOut =
                 l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
             return mmOut;

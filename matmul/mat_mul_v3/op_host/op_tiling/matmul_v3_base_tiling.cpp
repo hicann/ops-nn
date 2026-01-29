@@ -354,6 +354,39 @@ static ge::graphStatus OpSpecificCheck(const gert::TilingContext &context, const
     return isValidDtype(dtype);
 }
 
+static ge::graphStatus SetMatmulDimensions(
+    const gert::TilingContext& context, MatmulV3Args& args, int64_t m, int64_t k, int64_t n)
+{
+    auto isValidDimValue = [](int64_t dim) -> bool { return (dim > 0) && (dim <= INT32_MAX); };
+    if (!isValidDimValue(m) || !isValidDimValue(k) || !isValidDimValue(n)) {
+        OP_LOGE(args.opName, "illegal value: m[%ld], k[%ld], n[%ld]", m, k, n);
+        return ge::GRAPH_FAILED;
+    }
+    args.mValue = static_cast<uint64_t>(m);
+    args.kValue = static_cast<uint64_t>(k);
+    args.nValue = static_cast<uint64_t>(n);
+
+    // get origin (m, n)
+    const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
+    const size_t cDimNum = cShape.GetDimNum();
+    if (cDimNum < TWO_BATCH_DIM) {
+        OP_LOGE(args.opName, "illegal value: output dim num (%zu)", cDimNum);
+        return ge::GRAPH_FAILED;
+    }
+    args.nOriValue = cShape[cDimNum - LAST_DIM];
+    args.mOriValue = cShape[cDimNum - LAST_SECOND_DIM];
+
+    if (args.aFormat == ge::FORMAT_FRACTAL_NZ) {
+        args.mValue = args.mOriValue;
+    }
+
+    if (args.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        args.nValue = args.nOriValue;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetShape(const gert::TilingContext &context, MatmulV3Args &args)
 {
     // get transpose
@@ -371,6 +404,11 @@ static ge::graphStatus GetShape(const gert::TilingContext &context, MatmulV3Args
     int64_t kDimsIndex = args.isATrans ? 0 : 1;
     int64_t k = mkDims[kDimsIndex];
     int64_t kRight = 0;
+    if (args.aFormat == ge::FORMAT_FRACTAL_NZ) {
+        auto aOriginShape = context.GetInputShape(0)->GetOriginShape();
+        int64_t aDimNum = aOriginShape.GetDimNum();
+        k = aOriginShape.GetDim(args.isATrans ? aDimNum - TWO_BATCH_DIM : aDimNum - ONE_BATCH_DIM);
+    }
     if (args.bFormat == ge::FORMAT_FRACTAL_NZ) {
         auto bOriginShape = context.GetInputShape(1)->GetOriginShape();
         int64_t bDimNum = bOriginShape.GetDimNum();
@@ -387,32 +425,8 @@ static ge::graphStatus GetShape(const gert::TilingContext &context, MatmulV3Args
     int64_t m = mkDims[mDimsIndex];
     int64_t nDimsIndex = args.isBTrans ? 0 : 1;
     int64_t n = knDims[nDimsIndex];
-    auto isValidDimValue = [](int64_t dim) -> bool {
-        return (dim > 0) && (dim <= INT32_MAX);
-    };
-    if (!isValidDimValue(m) || !isValidDimValue(k) || !isValidDimValue(n)) {
-        OP_LOGE(args.opName, "illegal value: m[%ld], k[%ld], n[%ld]", m, k, n);
-        return ge::GRAPH_FAILED;
-    }
-    args.mValue = static_cast<uint64_t>(m);
-    args.kValue = static_cast<uint64_t>(k);
-    args.nValue = static_cast<uint64_t>(n);
 
-    // get origin (m, n)
-    const gert::Shape &cShape = context.GetOutputShape(0)->GetOriginShape();
-    const size_t cDimNum = cShape.GetDimNum();
-    if (cDimNum < TWO_BATCH_DIM) {
-        OP_LOGE(args.opName, "illegal value: output dim num (%zu)", cDimNum);
-        return ge::GRAPH_FAILED;
-    }
-    args.nOriValue = cShape[cDimNum - LAST_DIM];
-    args.mOriValue = cShape[cDimNum - LAST_SECOND_DIM];
-
-    if (args.bFormat == ge::FORMAT_FRACTAL_NZ) {
-        args.nValue = args.nOriValue;
-    }
-
-    return ge::GRAPH_SUCCESS;
+    return SetMatmulDimensions(context, args, m, k, n);
 }
 
 ge::graphStatus MatmulV3BaseTiling::GetArgs()

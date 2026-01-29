@@ -152,6 +152,28 @@ const aclTensor* MatMulV3NdFp162Fp32(
         opImplMode, executor);
 };
 
+// 输入self=NZ，输入mat2=NZ, 输出ND
+const aclTensor* MatMulV3NzNzNd(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1, const bool transposeX2,
+    const bool offsetX, const int64_t opImplMode, aclOpExecutor* executor)
+{
+    L0_DFX(MatMulV3NzNzNd);
+    return MatMulV3Common(
+        x1, x2, bias, x1->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND, transposeX1, transposeX2, offsetX,
+        opImplMode, executor);
+};
+
+// 输入self=NZ fp16，输入mat2=NZ fp16, 输出ND fp32
+const aclTensor* MatMulV3NzNzNdFp162Fp32(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1, const bool transposeX2,
+    const bool offsetX, const int64_t opImplMode, aclOpExecutor* executor)
+{
+    L0_DFX(MatMulV3NzNzNdFp162Fp32);
+    return MatMulV3Common(
+        x1, x2, bias, DataType::DT_FLOAT, Format::FORMAT_ND, Format::FORMAT_ND, transposeX1, transposeX2, offsetX,
+        opImplMode, executor);
+};
+
 const aclTensor* GemmV3Nd(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* c, bool transposeX1, bool transposeX2, bool enableHf32,
     aclOpExecutor* executor)
