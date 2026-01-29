@@ -27,14 +27,14 @@ OP_TYPE_REGISTER(ScatterAdd);
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910_95 = {
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
     op::DataType::DT_UINT8};
 
 inline static bool IsAiCoreSupport(const aclTensor* varRef)
 {
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95) {
-        return CheckType(varRef->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910_95);
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND950) {
+        return CheckType(varRef->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
     } else {
         return CheckType(varRef->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
     }

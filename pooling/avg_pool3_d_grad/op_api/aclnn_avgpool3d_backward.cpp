@@ -128,7 +128,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool is910SocVersion =
         (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND910_95);
+         socVersion == SocVersion::ASCEND950);
 
     const std::initializer_list<DataType> gradDtypeSupportList =
         is910SocVersion ? GRAD_DTYPE_SUPPORT_LIST_ASCEND910BC : GRAD_DTYPE_SUPPORT_LIST;

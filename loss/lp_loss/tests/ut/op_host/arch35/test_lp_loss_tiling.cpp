@@ -73,7 +73,7 @@ static void DoLpLossTilingCase(std::initializer_list<int64_t>& predictShape, std
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend910_95" } };
+    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
 
     Ops::Base::ReduceOpCompileInfo compileInfo;
@@ -219,7 +219,7 @@ TEST_F(LpLossDavidTiling, lp_loss_david_tiling4)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                            intrinsics);
-    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend910_95" } };
+    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
     //kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);

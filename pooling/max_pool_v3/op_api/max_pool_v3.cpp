@@ -32,7 +32,7 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_LIST = {op::D
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910B_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_95_LIST = {
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_950_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_UINT8, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT16};
 
@@ -46,8 +46,8 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
         case SocVersion::ASCEND910: {
             return DTYPE_SUPPORT_910_LIST;
         }
-        case SocVersion::ASCEND910_95: {
-            return DTYPE_SUPPORT_910_95_LIST;
+        case SocVersion::ASCEND950: {
+            return DTYPE_SUPPORT_950_LIST;
         }
         default: {
             return DTYPE_SUPPORT_910_LIST;

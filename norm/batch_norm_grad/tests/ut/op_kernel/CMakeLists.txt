@@ -9,5 +9,5 @@
 # -----------------------------------------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(batch_norm_grad "ascend910_9599" "-DDTYPE_Y_BACKPROP=float -DDTYPE_SCALE=float")
+    AddOpTestCase(batch_norm_grad "ascend950pr_9599" "-DDTYPE_Y_BACKPROP=float -DDTYPE_SCALE=float")
 endif()

@@ -213,7 +213,7 @@ TEST_F(l2_nonzero_v2_test, case_020_uncontiguous) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_nonzero_v2_test, Ascend910_95_case_001_FLOAT) {
+TEST_F(l2_nonzero_v2_test, Ascend950_case_001_FLOAT) {
   auto self_tensor_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
   auto out_tensor_desc = TensorDesc({2, 3}, ACL_INT64, ACL_FORMAT_ND);
 

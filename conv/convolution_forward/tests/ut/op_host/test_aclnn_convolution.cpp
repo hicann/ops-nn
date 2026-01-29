@@ -3387,7 +3387,7 @@ TEST_F(convolution_test, ascend910B2_test_conv3dv2_fp16_use_hf32) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv2D_empty_tensor_input_zero_output_nonzero) {
+TEST_F(convolution_test, ascend950PR_9589_test_conv2D_empty_tensor_input_zero_output_nonzero) {
   const int64_t groups = 1;
   bool transposed = false;
   vector<int64_t> inp_dims = {2, 1, 32, 0};
@@ -3420,8 +3420,8 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_empty_tensor_input_zero_outp
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv2D_input_HIF8_weight_HIF8_output_HIF8) {
-  // UtMock::GetInstance().SetSocVersion("ASCEND910_95");
+TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_HIF8_output_HIF8) {
+  // UtMock::GetInstance().SetSocVersion("ASCEND950");
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_HIFLOAT8};
   int length = ValidList.size();
 
@@ -3457,7 +3457,7 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_input_HIF8_weight_HIF8_outpu
   }
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv2D_input_HIF8_weight_FP16_output_HIF8) {
+TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_FP16_output_HIF8) {
   vector<aclDataType> ValidList = {ACL_FLOAT};
   int length = ValidList.size();
 
@@ -3487,7 +3487,7 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_input_HIF8_weight_FP16_outpu
                         OUTPUT(output_desc), cubeMathType);
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR); // a!=b check
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID); // support list check
@@ -3495,7 +3495,7 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_input_HIF8_weight_FP16_outpu
   }
 }
 
-TEST_F(convolution_test, ascend910_9589_test_conv2D_input_bf16_weight_bf16_output_bf16_usefp16) {
+TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_bf16_weight_bf16_output_bf16_usefp16) {
   const int64_t groups = 1;
   bool transposed = false;
   vector<int64_t> inp_dims = {2, 16, 32, 16};
@@ -3521,12 +3521,12 @@ TEST_F(convolution_test, ascend910_9589_test_conv2D_input_bf16_weight_bf16_outpu
                       OUTPUT(output_desc), 2);
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
       EXPECT_EQ(aclRet, ACL_SUCCESS); // a!=b check
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_Batch) {
+TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Batch) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3558,7 +3558,7 @@ TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_Batch)
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_Channel) {
+TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Channel) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3590,7 +3590,7 @@ TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_Channe
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_H) {
+TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_H) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3622,7 +3622,7 @@ TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_H) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_W) {
+TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_W) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3654,7 +3654,7 @@ TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv2dTranspose_W) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv3DTransPose_outputpadding) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv3DTransPose_outputpadding) {
   // test conv3d
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3692,7 +3692,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv3DTransPose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_outputpadding) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_outputpadding) {
   // test conv3d
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3730,7 +3730,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv3DTranspose_8bit_with_bias_err) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv3DTranspose_8bit_with_bias_err) {
   // test conv3dTranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3767,7 +3767,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv3DTranspose_8bit_with_bias_err)
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_8bit_with_bias_err) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_bias_err) {
   // test conv2dtranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3804,7 +3804,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_8bit_with_bias_err)
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_8bit_with_nhwc_err) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_nhwc_err) {
   // test conv2dtranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3841,7 +3841,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_8bit_with_nhwc_err)
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_dataType_error) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_dataType_error) {
   vector<aclDataType> ValidList = {ACL_DOUBLE};
   int length = ValidList.size();
 
@@ -3877,7 +3877,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv2DTransPose_dataType_error) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv1DTranspose_outputpadding) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_outputpadding) {
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
 
@@ -3912,7 +3912,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv1DTranspose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv1dTranspose_L) {
+TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv1dTranspose_L) {
   // test conv1dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3944,7 +3944,7 @@ TEST_F(convolution_test, ascend910_9591_test_empty_tensor_conv1dTranspose_L) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv1DTranspose_hifloat8_Or_f8e4m3fn_with_bias_error) {
+TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_hifloat8_Or_f8e4m3fn_with_bias_error) {
   // test conv1dTranspose hifloat8 or float8_e4m3fn with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3981,7 +3981,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv1DTranspose_hifloat8_Or_f8e4m3f
   }
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv1d_transpose_with_bias)
+TEST_F(convolution_test, ascend950PR_9591_test_conv1d_transpose_with_bias)
 {
   bool transposed = true;
   const int64_t groups = 384;
@@ -4013,7 +4013,7 @@ TEST_F(convolution_test, ascend910_9591_test_conv1d_transpose_with_bias)
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_test, ascend910_9591_test_conv1d_transpose_matmul)
+TEST_F(convolution_test, ascend950PR_9591_test_conv1d_transpose_matmul)
 {
   bool transposed = true;
   const int64_t groups = 1;

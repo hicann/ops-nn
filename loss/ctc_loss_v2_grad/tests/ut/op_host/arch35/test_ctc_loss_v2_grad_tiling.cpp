@@ -41,7 +41,7 @@ protected:
 
 TEST_F(CTCLossV2GradTiling, test_rt2_success)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,

@@ -100,7 +100,7 @@ TEST_F(l2_threshold_backward_test, l2_test_empty_tensor) {
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_int32_success) {
+TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_int32_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_INT32, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_INT32, ACL_FORMAT_ND);
   auto scalarSesc = ScalarDesc(0.0f);
@@ -114,7 +114,7 @@ TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_int32_succes
   ut.TestPrecision();
 }
 
-TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_int8_success) {
+TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_int8_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_INT8, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_INT8, ACL_FORMAT_ND);
   auto scalarSesc = ScalarDesc(0.0f);
@@ -128,7 +128,7 @@ TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_int8_success
   ut.TestPrecision();
 }
 
-TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_fp16_success) {
+TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_fp16_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_FLOAT16, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_FLOAT16, ACL_FORMAT_ND);
   auto scalarSesc = ScalarDesc(0.0f);
@@ -142,7 +142,7 @@ TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_fp16_success
   ut.TestPrecision();
 }
 
-TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_fp32_success) {
+TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_fp32_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
   auto scalarSesc = ScalarDesc(0.0f);
@@ -156,7 +156,7 @@ TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_fp32_success
   ut.TestPrecision();
 }
 
-TEST_F(l2_threshold_backward_test, ascend910_9589_l2_test_relu_grad_int64_success) {
+TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_int64_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
   auto scalarSesc = ScalarDesc(0.0f);

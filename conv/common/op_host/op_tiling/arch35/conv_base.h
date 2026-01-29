@@ -27,27 +27,27 @@ namespace optiling {
 namespace conv_ops_tiling {
 
 static std::map<platform_ascendc::SocVersion, std::string> socNameTab = {
-    {platform_ascendc::SocVersion::ASCEND910_95, "Ascend910_95"},
+    {platform_ascendc::SocVersion::ASCEND950, "Ascend950"},
     {platform_ascendc::SocVersion::ASCEND910_55, "Ascend910_55"},
     {platform_ascendc::SocVersion::MC62CM12A, "MC62CM12A"},
     {platform_ascendc::SocVersion::RESERVED_VERSION, "RESERVED_VERSION"}
 };
 
 static map<string, platform_ascendc::SocVersion> socConvertMap = {
-    {"Ascend910_9589", platform_ascendc::SocVersion::ASCEND910_95},
+    {"Ascend950PR_9589", platform_ascendc::SocVersion::ASCEND950},
     {"Ascend910_5591", platform_ascendc::SocVersion::ASCEND910_55},
     {"MC62CM12AA", platform_ascendc::SocVersion::MC62CM12A},
 };
 
 static map<platform_ascendc::SocVersion, uint64_t> socBTsizeMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, BT_SIZE_910_95},
+    {platform_ascendc::SocVersion::ASCEND950, BT_SIZE_950},
     {platform_ascendc::SocVersion::ASCEND910_55, BT_SIZE_910_55},
     {platform_ascendc::SocVersion::MC62CM12A, BT_SIZE_MC62CM12A},
     {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
 };
 
 static map<platform_ascendc::SocVersion, uint64_t> socFBsizeMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, FB_SIZE_910_95},
+    {platform_ascendc::SocVersion::ASCEND950, FB_SIZE_950},
     {platform_ascendc::SocVersion::ASCEND910_55, FB_SIZE_910_55},
     {platform_ascendc::SocVersion::MC62CM12A, FB_SIZE_MC62CM12A},
     {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
@@ -87,7 +87,7 @@ static std::map<ge::Format, ConvFormat> formatMap = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_910_95 = {
+const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_950 = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
@@ -105,7 +105,7 @@ const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_MC62CM12A = {
 
 const std::map<platform_ascendc::SocVersion, std::vector<std::vector<ConvDtype>>> SOC_CONV_SUPPORTED_TYPES =
 {
-    {platform_ascendc::SocVersion::ASCEND910_95, CONV_SUPPORTED_TYPES_910_95},
+    {platform_ascendc::SocVersion::ASCEND950, CONV_SUPPORTED_TYPES_950},
     {platform_ascendc::SocVersion::MC62CM12A, CONV_SUPPORTED_TYPES_MC62CM12A}
 };
 
@@ -185,13 +185,13 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
 const std::map<platform_ascendc::SocVersion,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
     {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
-    {platform_ascendc::SocVersion::ASCEND910_95, EXTENDCONV_SUPPORTED_TYPES_NCHW}
+    {platform_ascendc::SocVersion::ASCEND950, EXTENDCONV_SUPPORTED_TYPES_NCHW}
 };
 
 const std::map<platform_ascendc::SocVersion,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
     {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
-    {platform_ascendc::SocVersion::ASCEND910_95, EXTENDCONV_SUPPORTED_TYPES_NHWC}
+    {platform_ascendc::SocVersion::ASCEND950, EXTENDCONV_SUPPORTED_TYPES_NHWC}
 };
 
 struct ShapeBound {

@@ -44,7 +44,7 @@ namespace ge {
 * Ceil: round to positive infinity(c language ceil). \n
 * Trunc: round to zero(c language trunc). \n
 * Hybrid: only valid when output dtype is hifloat8. \n
-* The following constraints apply to products other than Ascend 910_95 AI Processor: \n
+* The following constraints apply to products other than Ascend 950 AI Processor: \n
 * @li When format is FRACTAL_NZ, shape supports 4D ~ 8D.
 * @li When "x" is dynamic shape, shape [-2] is not supported.
 * @li When "x" is dynamic shape, the data type of output "y" does not support int4.

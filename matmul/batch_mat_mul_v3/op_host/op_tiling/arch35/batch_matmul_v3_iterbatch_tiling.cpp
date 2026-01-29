@@ -21,7 +21,7 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchTiling, ASCEND910_95, ITER_BATCH);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchTiling, ASCEND950, ITER_BATCH);
 //supportMmadS8S4平台
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchTiling, RESERVED_VERSION, ITER_BATCH);
 

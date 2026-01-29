@@ -336,13 +336,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     map<string, string> soc_infos;
 //     map<string, string> aicore_spec;
 //     map<string, string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //     // platform info
 //     fe::PlatFormInfos platform_info;
 //     platform_info.Init();
-//     InitPlatForm(platform_info, "Ascend910_95");
+//     InitPlatForm(platform_info, "Ascend950");
 //     // compile info
 //     struct EmbeddingDenseGradV2CompileInfo {
 //       int32_t totalCoreNum = 0;
@@ -432,13 +432,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   map<string, string> soc_infos;
 //   map<string, string> aicore_spec;
 //   map<string, string> intrinsics;
-//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //   // platform info
 //   fe::PlatFormInfos platform_info;
 //   platform_info.Init();
-//   InitPlatForm(platform_info, "Ascend910_95");
+//   InitPlatForm(platform_info, "Ascend950");
 //   // compile info
 //   struct EmbeddingDenseGradV2CompileInfo {
 //     int32_t totalCoreNum = 0;
@@ -528,13 +528,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   map<string, string> soc_infos;
 //   map<string, string> aicore_spec;
 //   map<string, string> intrinsics;
-//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //   // platform info
 //   fe::PlatFormInfos platform_info;
 //   platform_info.Init();
-//   InitPlatForm(platform_info, "Ascend910_95");
+//   InitPlatForm(platform_info, "Ascend950");
 //   // compile info
 //   struct EmbeddingDenseGradV2CompileInfo {
 //     int32_t totalCoreNum = 0;
@@ -624,13 +624,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     map<string, string> soc_infos;
 //     map<string, string> aicore_spec;
 //     map<string, string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //     // platform info
 //     fe::PlatFormInfos platform_info;
 //     platform_info.Init();
-//     InitPlatForm(platform_info, "Ascend910_95");
+//     InitPlatForm(platform_info, "Ascend950");
 //     // compile info
 //     struct EmbeddingDenseGradV2CompileInfo {
 //       int32_t totalCoreNum = 0;
@@ -712,13 +712,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     map<string, string> soc_infos;
 //     map<string, string> aicore_spec;
 //     map<string, string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //     // platform info
 //     fe::PlatFormInfos platform_info;
 //     platform_info.Init();
-//     InitPlatForm(platform_info, "Ascend910_95");
+//     InitPlatForm(platform_info, "Ascend950");
 //     // compile info
 //     struct EmbeddingDenseGradV2CompileInfo {
 //       int32_t totalCoreNum = 0;
@@ -800,13 +800,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   map<string, string> soc_infos;
 //   map<string, string> aicore_spec;
 //   map<string, string> intrinsics;
-//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //   // platform info
 //   fe::PlatFormInfos platform_info;
 //   platform_info.Init();
-//   InitPlatForm(platform_info, "Ascend910_95");
+//   InitPlatForm(platform_info, "Ascend950");
 //   // compile info
 //   struct EmbeddingDenseGradV2CompileInfo {
 //     int32_t totalCoreNum = 0;
@@ -888,13 +888,13 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   map<string, string> soc_infos;
 //   map<string, string> aicore_spec;
 //   map<string, string> intrinsics;
-//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//   std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
 //   // platform info
 //   fe::PlatFormInfos platform_info;
 //   platform_info.Init();
-//   InitPlatForm(platform_info, "Ascend910_95");
+//   InitPlatForm(platform_info, "Ascend950");
 //   // compile info
 //   struct EmbeddingDenseGradV2CompileInfo {
 //     int32_t totalCoreNum = 0;

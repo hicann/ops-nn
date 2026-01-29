@@ -11,7 +11,7 @@
 set -e
 RELEASE_TARGETS=("ophost" "opapi" "onnxplugin" "opgraph")
 
-SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend910_95" "ascend910b" "ascend910" "kirinx90")
+SUPPORT_COMPUTE_UNIT_SHORT=("ascend031" "ascend035" "ascend310b" "ascend310p" "ascend910_93" "ascend950" "ascend910b" "ascend910" "kirinx90")
 TRIGER_UTS=()
 
 # 所有支持的短选项
@@ -729,7 +729,7 @@ checkopts() {
           ;;
         soc=*)
           COMPUTE_UNIT=${OPTARG#*=}
-          COMPUTE_UNIT=$(echo "$COMPUTE_UNIT" | sed 's/ascend950/ascend910_95/g')
+          COMPUTE_UNIT=$(echo "$COMPUTE_UNIT" | sed 's/ascend950/ascend950/g')
           ;;
         vendor_name=*)
           VENDOR_NAME=${OPTARG#*=}
@@ -1208,7 +1208,7 @@ build_example() {
   OLDIFS=$IFS
   IFS=$'\n'
   files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
-  if [[ "$COMPUTE_UNIT" == "ascend910_95" ]]; then
+  if [[ "$COMPUTE_UNIT" == "ascend950" ]]; then
     files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental"))
   fi
   IFS=$OLDIFS

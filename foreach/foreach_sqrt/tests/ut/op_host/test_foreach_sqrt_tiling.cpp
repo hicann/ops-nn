@@ -234,7 +234,7 @@ TEST_F(ForeachCommonTiling, foreach_sqrt_test_tiling_float16_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     string compile_info_string = R"({
                                         "hardware_info": {
@@ -328,7 +328,7 @@ TEST_F(ForeachCommonTiling, foreach_sqrt_test_tiling_float32_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     string compile_info_string = R"({
                                         "hardware_info": {
@@ -422,7 +422,7 @@ TEST_F(ForeachCommonTiling, foreach_sqrt_test_tiling_bfloat16_regbase)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     std::map<std::string, std::string> npu_arch_infos = { { "NpuArch", "3510" } };
     string compile_info_string = R"({
                                         "hardware_info": {

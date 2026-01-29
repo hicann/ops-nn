@@ -72,7 +72,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "linear_index_v2_apt");
-        this->AICore().AddConfig("ascend910_95", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 

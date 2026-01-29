@@ -51,7 +51,7 @@ public:
             .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend910b", config);
         this->AICore().AddConfig("ascend910_93", config);
-        this->AICore().AddConfig("ascend910_95", config);
+        this->AICore().AddConfig("ascend950", config);
     }
 };
 

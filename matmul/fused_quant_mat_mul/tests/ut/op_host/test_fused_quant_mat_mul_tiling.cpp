@@ -140,7 +140,7 @@ static void InitPlatformInfo(const std::string &socVersion, string &compileInfoS
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24,
                           "cube_core_cnt": 24, "vector_core_cnt": 48, "core_type_list": "CubeCore,VectorCore"}
                           })";
-    if (socVersion.compare("Ascend910_95") == 0) {
+    if (socVersion.compare("Ascend950") == 0) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,

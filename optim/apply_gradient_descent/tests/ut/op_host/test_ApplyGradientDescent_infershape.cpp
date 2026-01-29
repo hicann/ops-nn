@@ -34,9 +34,9 @@ TEST_F(ApplyGradientDescentProtoTest, apply_gradient_descent_infershape_verify_t
   fe::PlatformInfo platformInfo;
   fe::OptionalInfo optiCompilationInfo;
   platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend910_95";
-  optiCompilationInfo.soc_version = "Ascend910_95";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+  platformInfo.str_info.short_soc_version = "Ascend950";
+  optiCompilationInfo.soc_version = "Ascend950";
+  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
   fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
   
   auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyGradientDescent")->infer_shape;

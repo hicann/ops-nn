@@ -280,7 +280,7 @@ public:
     #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     // 实践中发现此处如果不传入s_funcMapApt会导致符号合并等编译器行为问题
     // 必须传入s_funcMapApt以实现多数据流
-    static void TestOneParamCase910_95(const QuantBatchMatmulV3TestParam &param,
+    static void TestOneParamCase950(const QuantBatchMatmulV3TestParam &param,
                                         decltype(s_funcMapApt)& funcMapApt) {
         std::function<void(PARAM_LIST_DEF)> func = [&param, &funcMapApt](PARAM_LIST_DEF){
             auto key = param.tilingKey;

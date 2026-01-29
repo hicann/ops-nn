@@ -33,7 +33,7 @@ class l2_fusedmatmul_test : public testing::Test {
   }
 };
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16)
+TEST_F(l2_fusedmatmul_test, ascend950_test_middle_shape_fp16)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -47,7 +47,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_hf32_bias)
+TEST_F(l2_fusedmatmul_test, ascend950_test_hf32_bias)
 {
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -61,7 +61,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_hf32_bias)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_hf32_relu)
+TEST_F(l2_fusedmatmul_test, ascend950_test_hf32_relu)
 {
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -75,7 +75,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_hf32_relu)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_f32_relu)
+TEST_F(l2_fusedmatmul_test, ascend950_test_f32_relu)
 {
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -89,7 +89,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_f32_relu)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_bias_f16_f32)
+TEST_F(l2_fusedmatmul_test, ascend950_test_bias_f16_f32)
 {
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -103,7 +103,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_bias_f16_f32)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_1)
+TEST_F(l2_fusedmatmul_test, ascend950_test_middle_shape_fp16_failed_1)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -117,7 +117,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_not_support_bias_failed)
+TEST_F(l2_fusedmatmul_test, ascend950_test_not_support_bias_failed)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -132,7 +132,7 @@ TEST_F(l2_fusedmatmul_test, ascend910_95_test_not_support_bias_failed)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_fusedmatmul_test, ascend910_95_test_middle_shape_fp16_failed_3)
+TEST_F(l2_fusedmatmul_test, ascend950_test_middle_shape_fp16_failed_3)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);

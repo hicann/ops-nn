@@ -34,7 +34,7 @@ static const std::initializer_list<DataType> AICORE_910B_DTYPE_SUPPORT_LIST = {D
 static const std::initializer_list<DataType> AICORE_310P_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                 DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType> AICORE_910_95_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> AICORE_950_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                  DataType::DT_FLOAT16,
                                                                                  DataType::DT_BF16};
 
@@ -50,8 +50,8 @@ static inline bool IsAiCoreSupport(DataType inputDtype)
         return CheckType(inputDtype, AICORE_310P_DTYPE_SUPPORT_LIST);
     }
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        return CheckType(inputDtype, AICORE_910_95_DTYPE_SUPPORT_LIST);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        return CheckType(inputDtype, AICORE_950_DTYPE_SUPPORT_LIST);
     }
 
     return false;

@@ -22,8 +22,8 @@ namespace ge {
 * @brief Performs average pooling on the input.
 
 * @par Inputs:
-* x: A 5D tensor. Supported type:float16. Additional support for float32, bfloat16 in Ascend 910_95 AI Processor.
-* Support format: NDHWC. Additional support for NCDHW in Ascend 910_95 AI Processor. \n
+* x: A 5D tensor. Supported type:float16. Additional support for float32, bfloat16 in Ascend 950 AI Processor.
+* Support format: NDHWC. Additional support for NCDHW in Ascend 950 AI Processor. \n
 
 * @par Attributes:
 * @li ksize: List of ints that has length 1, 3 or 5. The size of the window
@@ -39,7 +39,7 @@ namespace ge {
 * @li divisor_override: if specified, it will be used as divisor, otherwise
 * size of the pooling region will be used. Default value is 0.
 * @li data_format: An optional string, format of input data. It supports "NDHWC"(default).
-* Additional support for "NCDHW" in Ascend 910_95 AI Processor. \n
+* Additional support for "NCDHW" in Ascend 950 AI Processor. \n
 
 * @par Outputs:
 * y: The average pooled output tensor. \n
@@ -52,7 +52,7 @@ namespace ge {
 * @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
 * Atlas A3 Training Series Product: The stride of the D, H and W dimensions should be greater than 0 and
 * smaller than 64.  \n
-* For Ascend 910_95 AI Processor: The stride of the D, H and W dimensions should be greater than 0.
+* For Ascend 950 AI Processor: The stride of the D, H and W dimensions should be greater than 0.
 * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the D, H and W dimensions is calculated by below formula: \n
 * @code{.c}

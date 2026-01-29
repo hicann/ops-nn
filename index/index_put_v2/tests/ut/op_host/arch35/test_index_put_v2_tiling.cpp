@@ -119,7 +119,7 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0) {
     gert::StorageShape indexedStrides = {{1}, {1}};
     gert::StorageShape indices = {{4096}, {4096}};
     gert::StorageShape y = {{4096}, {4096}};
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
 
     int64_t mask[2] = {1,1};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;

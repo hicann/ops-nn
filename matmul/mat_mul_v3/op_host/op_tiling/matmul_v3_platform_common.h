@@ -21,7 +21,7 @@
 #include "error_util.h"
 namespace optiling {
 const std::initializer_list<platform_ascendc::SocVersion> AdvancedSocVersion = {
-    platform_ascendc::SocVersion::ASCEND910_95,
+    platform_ascendc::SocVersion::ASCEND950,
     platform_ascendc::SocVersion::RESERVED_VERSION};  // supportMmadS8S4平台
 
 template <typename T>

@@ -55,10 +55,10 @@ DATA_TYPE_DICT = {
     'uint2': 32
 }
 BFLOAT16_SUPPORT_MAP = {
-    "All": ["ascend910_95", "ascend910b", "ascend910_93", "ascend310b"],
-    "Conv2DBackpropFilter": ["ascend910b", "ascend910_93", "ascend910_95"],
-    "Conv3DBackpropFilter": ["ascend910b", "ascend910_93", "ascend910_95"],
-    "MatMul": ["ascend910b", "ascend910_93", "ascend910_95"]
+    "All": ["ascend950", "ascend910b", "ascend910_93", "ascend310b"],
+    "Conv2DBackpropFilter": ["ascend910b", "ascend910_93", "ascend950"],
+    "Conv3DBackpropFilter": ["ascend910b", "ascend910_93", "ascend950"],
+    "MatMul": ["ascend910b", "ascend910_93", "ascend950"]
 }
 OPS_REUSE_BINARY = ["Conv2DBackpropFilter", "Conv3DBackpropFilter"]
 ReuseBinary = [
@@ -66,7 +66,7 @@ ReuseBinary = [
     {"opp": "SplitV", "new_dtype": "int64", "reuse_dtype": "int32",
      "input_args": [2],  # the input argument which need replace
      "output_args": [],  # the output argument which need replace
-     "support_map": ["ascend910_95", "ascend910_93", "ascend910b", "ascend910", "ascend310p"]}
+     "support_map": ["ascend950", "ascend910_93", "ascend910b", "ascend910", "ascend310p"]}
 ]
 
 

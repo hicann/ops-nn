@@ -72,7 +72,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -487,13 +487,13 @@ static aclnnStatus ExecScatterBase(
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool aicoreSupport = true;
     bool flag910b = false;
-    bool flag910_95 = false;
+    bool flag950 = false;
     auto selfType = selfContiguous->GetDataType();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND910_95) {
+        socVersion == SocVersion::ASCEND950) {
         aicoreSupport = CheckType(selfType, AICORE_910B_DTYPE_SUPPORT_LIST);
-        flag910b = socVersion != SocVersion::ASCEND910_95;
-        flag910_95 = socVersion == SocVersion::ASCEND910_95;
+        flag910b = socVersion != SocVersion::ASCEND950;
+        flag950 = socVersion == SocVersion::ASCEND950;
     } else {
         // 转换BF16数据类型为FP32，因算子暂不支持BF16
         if (selfType == op::DataType::DT_BF16 || srcContiguous->GetDataType() == op::DataType::DT_BF16) {
@@ -540,7 +540,7 @@ static aclnnStatus ExecScatterBase(
     bool idxNeedBoardCast = false;
     size_t boardCastIdx = strides.size() - 1;
     idxNeedBoardCast = IsRouteToUpdate(index, selfContiguous->GetViewShape(), srcContiguous->GetViewShape(), boardCastIdx);
-    if (idxNeedBoardCast && aicoreSupport && socVersion == SocVersion::ASCEND910_95 && dim == 0 && reduction == REDUCTION_NONE) {
+    if (idxNeedBoardCast && aicoreSupport && socVersion == SocVersion::ASCEND950 && dim == 0 && reduction == REDUCTION_NONE) {
         op::Shape newViewShape;
         newViewShape.SetDimNum(boardCastIdx + 1);
         newViewShape[0] = indexShape[0];
@@ -577,7 +577,7 @@ static aclnnStatus ExecScatterBase(
 
     int64_t dimInput = dimFinal;
     // 310P统一走aicpu,无需Transpose
-    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && socVersion != SocVersion::ASCEND910_95;
+    bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && socVersion != SocVersion::ASCEND950;
     if (needTranspose) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
         CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose self failed!");
@@ -594,7 +594,7 @@ static aclnnStatus ExecScatterBase(
         CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
     }
 
-    bool isCopy = (flag910_95 || aicore910b) && self->GetData() != out->GetData();
+    bool isCopy = (flag950 || aicore910b) && self->GetData() != out->GetData();
     const aclTensor* scatterRes =
         DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy, reduction, executor);
     CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!");

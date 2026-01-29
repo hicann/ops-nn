@@ -66,7 +66,7 @@ static inline bool ForeachAddcdivScalarV2CheckFormat(
 static const std::initializer_list<DataType>& ForeachAddcdivScalarV2GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
     return FOREACH_ADDCDIV_SCALAR_V2_ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",

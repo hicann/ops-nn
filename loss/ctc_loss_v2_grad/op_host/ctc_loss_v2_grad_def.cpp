@@ -62,7 +62,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "ctc_loss_v2_grad_apt");
-        this->AICore().AddConfig("ascend910_95", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 OP_ADD(CTCLossV2Grad);

@@ -892,7 +892,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_tiling_001)
                                             "L0B_SIZE": 65536,
                                             "L0C_SIZE": 131072,
                                             "CORE_NUM": 32,
-                                            "socVersion": "Ascend910_95"
+                                            "socVersion": "Ascend950"
                                         }
                                     })";
     map<string, string> soc_infos;
@@ -983,7 +983,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_tiling_002)
                                             "L0B_SIZE": 65536,
                                             "L0C_SIZE": 131072,
                                             "CORE_NUM": 32,
-                                            "socVersion": "Ascend910_95"
+                                            "socVersion": "Ascend950"
                                         }
                                     })";
     map<string, string> soc_infos;
@@ -1075,7 +1075,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_tiling_003)
                                             "L0B_SIZE": 65536,
                                             "L0C_SIZE": 131072,
                                             "CORE_NUM": 32,
-                                            "socVersion": "Ascend910_95"
+                                            "socVersion": "Ascend950"
                                         }
                                     })";
     map<string, string> soc_infos;
@@ -1167,7 +1167,7 @@ TEST_F(FlatQuantTiling, 910d_flat_quant_tiling_004)
                                             "L0B_SIZE": 65536,
                                             "L0C_SIZE": 131072,
                                             "CORE_NUM": 32,
-                                            "socVersion": "Ascend910_95"
+                                            "socVersion": "Ascend950"
                                         }
                                     })";
     map<string, string> soc_infos;

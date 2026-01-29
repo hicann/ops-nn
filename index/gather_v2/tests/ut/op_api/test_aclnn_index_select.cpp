@@ -613,7 +613,7 @@ TEST_F(l2IndexSelectTest, ascend910B2_l2_index_select_case_001) {
 
 }
 
-TEST_F(l2IndexSelectTest, Ascend910_9589_l2_index_select_case_001) {
+TEST_F(l2IndexSelectTest, Ascend950PR_9589_l2_index_select_case_001) {
   // self张量的shape
   vector<int64_t> inputDims = {2, 3, 4, 1};
   vector<int64_t> outputDims = inputDims;

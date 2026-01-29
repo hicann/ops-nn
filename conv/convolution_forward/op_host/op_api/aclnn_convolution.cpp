@@ -187,7 +187,7 @@ namespace op {
 static bool IsSupportND()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    return socVersion == SocVersion::ASCEND910_95;
+    return socVersion == SocVersion::ASCEND950;
 }
 static const aclTensor* L0FuncWarperByOpType(
     std::map<std::string, L0FUNCTION> l0Functions, std::string functionType, const aclTensor* input,
@@ -1314,7 +1314,7 @@ private:
 
     static aclnnStatus CheckEmptyTensorTransposed(ConvEngine& engine)
     {
-        if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+        if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
             return ACLNN_SUCCESS;
         }
 
@@ -1600,7 +1600,7 @@ private:
                     inputShapeSpace);
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95 && transposed &&
+            if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && transposed &&
                 weight.IsZeroTensor()) {
                 continue;
             }
@@ -1937,7 +1937,7 @@ public:
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:
             case SocVersion::ASCEND310P:
-            case SocVersion::ASCEND910_95:
+            case SocVersion::ASCEND950:
                 break;
             case SocVersion::ASCEND310B: {
                 if (engine.params.transposed || inputDim != CONV_2D_DIM_SIZE) {
@@ -1971,7 +1971,7 @@ public:
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:
             case SocVersion::ASCEND310P:
-            case SocVersion::ASCEND910_95:
+            case SocVersion::ASCEND950:
                 break;
             default: {
                 OP_LOGE(
@@ -2428,7 +2428,7 @@ static void UpdateInputDtype(
     if (bias != nullptr) {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
         if (transposed && (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-                           socVersion == SocVersion::ASCEND910_95)) {
+                           socVersion == SocVersion::ASCEND950)) {
             upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
         }
         opInfo.biasDtype = upperDtype;
@@ -3043,7 +3043,7 @@ static aclnnStatus GenInOutByConvTranspose1DToBmm(
 static bool IsSupportConvTranspose1DToBmm(ConvEngine engine)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910_95) {
+    if (socVersion != SocVersion::ASCEND950) {
         return false;
     }
     if (engine.meta.input.format != op::Format::FORMAT_NCL) {
@@ -3078,7 +3078,7 @@ static bool IsSupportConvToBmm(ConvEngine engine)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
-        socVersion != SocVersion::ASCEND910_95) {
+        socVersion != SocVersion::ASCEND950) {
         return false;
     }
 
@@ -4418,7 +4418,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
     auto ret = CheckParamsNullptrTbc(self, weight, bias, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         ret = CheckParamsEmpty(output, bias);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }

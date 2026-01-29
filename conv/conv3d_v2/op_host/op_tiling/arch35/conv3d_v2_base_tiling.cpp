@@ -25,7 +25,7 @@ using namespace optiling::conv_ops_tiling;
 namespace optiling {
 
 CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2,
-    static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND910_95), 0);
+    static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND950), 0);
 
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()

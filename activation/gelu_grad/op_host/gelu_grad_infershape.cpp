@@ -42,7 +42,7 @@ static ge::graphStatus InferShapeForGeluGrad(gert::InferShapeContext* context)
          ge::GRAPH_SUCCESS),
         OP_LOGE(context->GetNodeName(), "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "soc version is %s", platform_info.str_info.short_soc_version.c_str());
-    if (platform_info.str_info.short_soc_version == "Ascend910_95") {
+    if (platform_info.str_info.short_soc_version == "Ascend950") {
         const size_t inputCount = 3;
         std::vector<const gert::Shape*> to_broadcast_shapes(inputCount);
         for (size_t i = 0; i < inputCount; i++) {

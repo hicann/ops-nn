@@ -358,10 +358,10 @@ TEST_F(l2_addmmWeightNz_test, ascend910B2_case_error_self_mat1_dtype_nz)
     EXPECT_NE(aclRet, ACL_SUCCESS);
 }
 
-// 接口整改异常用例 - 910_95
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - 950
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
@@ -377,9 +377,9 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
@@ -395,9 +395,9 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
@@ -413,9 +413,9 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
@@ -431,9 +431,9 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
@@ -449,9 +449,9 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_addmmWeightNz_test, addmm_NZ_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});

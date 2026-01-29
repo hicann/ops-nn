@@ -367,7 +367,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910B_rountMode_is_null_error)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -390,7 +390,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_1)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_2)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_BF16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -414,7 +414,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_2)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_3)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_3)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -438,7 +438,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_3)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_4)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_4)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -462,7 +462,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_4)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_5)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_normal_5)
 {
     auto tensor_1_desc =
         TensorDesc({3, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Value(vector<float>{1, 2, 3, 4,  5,  6,
@@ -488,7 +488,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_normal_5)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_not_support_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_INT16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -510,7 +510,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_not_support_2)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -532,7 +532,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_3)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_not_support_3)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -554,7 +554,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_support_3)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_compatible_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_not_compatible_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -576,7 +576,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_compatible_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_compatible_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_not_compatible_2)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_BF16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -597,7 +597,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_not_compatible_2)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_output_dtype_not_support_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_output_dtype_not_support_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -619,7 +619,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_output_dtype_not_support_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_diff_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -641,7 +641,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_diff_2)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT16, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -663,7 +663,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_3)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_input_dtype_diff_3)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -685,7 +685,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_input_dtype_diff_3)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_axis_error_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_axis_error_1)
 {
     auto tensor_1_desc =
         TensorDesc({2, 2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Value(vector<float>{1,  2,  3,  4,  5,
@@ -709,7 +709,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_axis_error_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_axis_error_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_axis_error_2)
 {
     auto tensor_1_desc =
         TensorDesc({2, 2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Value(vector<float>{1,  2,  3,  4,  5,
@@ -733,7 +733,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_axis_error_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_shape_diff_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -755,7 +755,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_2)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_shape_diff_2)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -777,7 +777,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_3)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_shape_diff_3)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -799,7 +799,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_3)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_4)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_shape_diff_4)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)
@@ -821,7 +821,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_4)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_5)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_shape_diff_5)
 {
     auto tensor_1_desc =
         TensorDesc({3, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Value(vector<float>{1,  2,  3,  4,  5,  6,
@@ -845,7 +845,7 @@ TEST_F(l2_ascend_quant_v3_test, ascend910_9589_shape_diff_5)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_ascend_quant_v3_test, ascend910_9589_round_mode_not_support_1)
+TEST_F(l2_ascend_quant_v3_test, ascend950PR_9589_round_mode_not_support_1)
 {
     auto tensor_1_desc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND)
                              .ValueRange(-2, 2)

@@ -22,24 +22,24 @@ static const std::initializer_list<DataType> V100_DTYPE_SUPPORT_LIST = {DataType
 static const std::initializer_list<DataType> V200_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
     DataType::DT_FLOAT16, DataType::DT_BF16};
 namespace {
-static const std::initializer_list<DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> ASCEND950_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
             DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8};
-static const std::initializer_list<DataType> ASCEND910_95_CONVBP_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> ASCEND950_CONVBP_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8, DataType::DT_FLOAT8_E4M3FN};
 }
 // 根据dtype进行初步拦截，后续需要再和cubemathtype + 芯片再进行一次拦截
 const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion() {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
-        return ASCEND910_95_DTYPE_SUPPORT_LIST;
+    if (socVersion == SocVersion::ASCEND950) {
+        return ASCEND950_DTYPE_SUPPORT_LIST;
     }
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
 }
 
 const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion4ConvBackward(bool transposed) {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
-		return transposed ? ASCEND910_95_DTYPE_SUPPORT_LIST : ASCEND910_95_CONVBP_DTYPE_SUPPORT_LIST;
+    if (socVersion == SocVersion::ASCEND950) {
+		return transposed ? ASCEND950_DTYPE_SUPPORT_LIST : ASCEND950_CONVBP_DTYPE_SUPPORT_LIST;
     }
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
 }

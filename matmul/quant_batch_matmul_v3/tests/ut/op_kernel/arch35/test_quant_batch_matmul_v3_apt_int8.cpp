@@ -22,7 +22,7 @@
 
 
 using namespace std;
-class QBMMV3_910_95_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam>
+class QBMMV3_950_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam>
 {
 protected:
     static void SetUpTestCase()
@@ -38,11 +38,11 @@ protected:
     }
 };
 
-TEST_P(QBMMV3_910_95_mx, mxTest)
+TEST_P(QBMMV3_950_mx, mxTest)
 {
     QuantBatchMatmulV3TestParam param = GetParam();
-    QuantBatchMatmulV3TestUtils::TestOneParamCase910_95(param, s_funcMapApt);
+    QuantBatchMatmulV3TestUtils::TestOneParamCase950(param, s_funcMapApt);
 }
 
-INSTANTIATE_TEST_CASE_P(QBMM910_95, QBMMV3_910_95_mx,
-                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend910_95", "INT8_FLOW")));
+INSTANTIATE_TEST_CASE_P(QBMM950, QBMMV3_950_mx,
+                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend950", "INT8_FLOW")));

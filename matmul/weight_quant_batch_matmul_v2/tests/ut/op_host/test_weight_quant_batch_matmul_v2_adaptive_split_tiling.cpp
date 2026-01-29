@@ -238,7 +238,7 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
                       .Build();
 
     map<string, string> soc_version_infos;
-    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend910_95"));
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
     if (soc == 1) {
         soc_version_infos.clear();
         soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend910_55"));
@@ -273,7 +273,7 @@ TEST_P(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, generalTest)
 // Note: group value
 //       -1: per channel, 0: per tensor, > 0: per group
 // Note: socversion
-//        0: Ascend910_95,  1: Ascend910_55
+//        0: Ascend950,  1: Ascend910_55
 static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"davidCase_2_1024_4096_0_0_0_0_0_0_0_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_0_0", 16, 285421570UL},
     {"davidCase_2_1024_4096_1_0_0_1_0_0_0_BF16_INT4_BF16_UINT64_BF16_32_64_0_0", 16, 21760258050UL},

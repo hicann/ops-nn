@@ -172,9 +172,9 @@ TEST_F(IndexTest, index_inferdtype_success_01)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Index")->infer_datatype;

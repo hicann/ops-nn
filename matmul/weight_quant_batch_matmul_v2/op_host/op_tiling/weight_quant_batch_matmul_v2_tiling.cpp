@@ -617,7 +617,7 @@ bool CheckBiasShape(WeightQuantBatchMatmulInfo* inputParams, const gert::Storage
 bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
     OP_TILING_CHECK(
-        socVersion != platform_ascendc::SocVersion::ASCEND910_95 &&
+        socVersion != platform_ascendc::SocVersion::ASCEND950 &&
             (inputParams->kSize > MAX_SHAPE_DIM || inputParams->nSize > MAX_SHAPE_DIM),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName, "Dim of k or n should not more than 65535, but they are [%lu] and [%lu]",
@@ -625,7 +625,7 @@ bool CheckShapeDims(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::S
         return false);
     uint64_t batchMax = inputParams->transA ? MAX_SHAPE_DIM : MAX_INT32;
     OP_TILING_CHECK(
-        socVersion != platform_ascendc::SocVersion::ASCEND910_95 && (inputParams->mSize > batchMax),
+        socVersion != platform_ascendc::SocVersion::ASCEND950 && (inputParams->mSize > batchMax),
         VECTOR_INNER_ERR_REPORT_TILIING(
             inputParams->opName, "Dim of m should not more than [%lu], but is [%lu]", batchMax, inputParams->mSize),
         return false);
@@ -725,7 +725,7 @@ bool CheckBiasDtype(
                     ge::TypeUtils::DataTypeToAscendString(biasDtype).GetString()),
                 return false);
         } else {
-            if (socVersion == platform_ascendc::SocVersion::ASCEND910_95 &&
+            if (socVersion == platform_ascendc::SocVersion::ASCEND950 &&
                 (inputParams->bDtype == ge::DT_FLOAT4_E2M1 || inputParams->bDtype == ge::DT_FLOAT ||
                  inputParams->bDtype == ge::DT_FLOAT8_E4M3FN)) {
                 OP_TILING_CHECK(
@@ -956,7 +956,7 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
         OP_TILING_CHECK(
             std::find(GROUP_SIZE_LIST.begin(), GROUP_SIZE_LIST.end(), inputParams->groupSize) == GROUP_SIZE_LIST.end(),
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName,
-                                            "In the A16Fp4 pergroup scenario of the ASCEND910_95 , groupsize only "
+                                            "In the A16Fp4 pergroup scenario of the ASCEND950 , groupsize only "
                                             "supports 32, 64, 128, 256, but is [%lu]",
                                             inputParams->groupSize),
             return false);
@@ -967,7 +967,7 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams)
 
 bool CheckNzSupportedScenarios(WeightQuantBatchMatmulInfo* inputParams, platform_ascendc::SocVersion socVersion)
 {
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
         // WeightNZ only support the following scenarios:
         // (1) Weight in int4 dtye with per-channel or per-group quantization without transA, transB or C8.
         // (2) Weight in fp4 dtye with per-group or MX quantization without transA, transB or C8.
@@ -1037,7 +1037,7 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
                 "Weight FP8_E4M3/HIFLOAT8 input cannot support transA, int8 output or weightNz"),
             return ge::GRAPH_FAILED);
     }
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
         OP_TILING_CHECK(
             !CheckTempLimit(&inputParams),
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Input cannot meet the condition of this version"),

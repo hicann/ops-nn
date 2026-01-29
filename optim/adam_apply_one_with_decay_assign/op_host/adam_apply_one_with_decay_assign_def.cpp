@@ -97,7 +97,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "adam_apply_one_with_decay_assign_apt");
-        this->AICore().AddConfig("ascend910_95", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 

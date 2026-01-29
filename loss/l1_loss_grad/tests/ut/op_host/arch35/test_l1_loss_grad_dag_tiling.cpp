@@ -70,7 +70,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp16_000)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -153,7 +153,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp16_001)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -236,7 +236,7 @@ TEST_F(L1LossGradTiling, test_tiling_bf16_002)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -319,7 +319,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp32_003)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -402,7 +402,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp16_scalar_001)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -485,7 +485,7 @@ TEST_F(L1LossGradTiling, test_tiling_bf16_scalar_002)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -568,7 +568,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp32_scalar_003)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -651,7 +651,7 @@ TEST_F(L1LossGradTiling, test_tiling_fp32_scalar_004)
                         "Intrinsic_data_move_out2l1_nd2nz": false,
                         "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                        "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                        "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;

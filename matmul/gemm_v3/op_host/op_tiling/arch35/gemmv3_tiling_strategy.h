@@ -27,7 +27,7 @@ namespace strategy {
 constexpr int32_t BASE = 999;
 
 const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> Gemmv3PrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, {strategy::BASE}},
+    {platform_ascendc::SocVersion::ASCEND950, {strategy::BASE}},
 };
 
 inline std::vector<int32_t> GetGemmV3Priorities(platform_ascendc::SocVersion socVersion)

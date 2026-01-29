@@ -203,7 +203,7 @@ static bool IsConv2DTransposeV2WhiteListCase(const vector<int64_t> &caseInfo, co
 static bool IsSupportConv2DToConv2DV2()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    return socVersion == SocVersion::ASCEND910_95;
+    return socVersion == SocVersion::ASCEND950;
 }
 
 static bool IsA5EnableHF32(bool useHf32, const aclTensor *input) 
@@ -334,7 +334,7 @@ static bool CheckV2DoutCoreDim(int64_t dout)
 static bool IsConv3DTransposeUseV2(const Conv3DTransPoseV2Prarams &params)
 {
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (socVersion == SocVersion::ASCEND950) {
     return true;
   }
 
@@ -393,13 +393,13 @@ bool IsSupportConv3DToConv3DV2()
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     return socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-           socVersion == SocVersion::ASCEND910_95;
+           socVersion == SocVersion::ASCEND950;
 }
 
 bool IsSupportConv1DTransposeTo3D()
 {
     SocVersion soc = GetCurrentPlatformInfo().GetSocVersion();
-    if (soc == SocVersion::ASCEND910_95) {
+    if (soc == SocVersion::ASCEND950) {
       return true;
     }
 
@@ -412,7 +412,7 @@ bool IsSupportConv2DTransposeTo3D(const aclTensor *input, const aclTensor *weigh
                                   const int64_t groups, aclTensor *output)
 {
     SocVersion soc = GetCurrentPlatformInfo().GetSocVersion();
-    if (soc == SocVersion::ASCEND910_95) {
+    if (soc == SocVersion::ASCEND950) {
       return true;
     }
 
@@ -650,7 +650,7 @@ static aclIntArray* ConstructConv3DNewPad(const aclIntArray *padding, aclOpExecu
 {
   FVector<int64_t> newPad;
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion != SocVersion::ASCEND910_95) {
+  if (socVersion != SocVersion::ASCEND950) {
     if (padding->Size() < DIM_3) {
       newPad = {0};
     } else {
@@ -677,7 +677,7 @@ static aclIntArray* ConstructConv3DNewPad(const aclIntArray *padding, aclOpExecu
 static aclnnStatus ResetStorageShape(const aclTensor *input, aclTensor *&output)
 {
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (socVersion == SocVersion::ASCEND950) {
     return ACLNN_SUCCESS;
   }
   if (input->GetDataType() == output->GetDataType()) {
@@ -712,7 +712,7 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor *input, const aclTensor *wei
     L0_DFX(Conv3dv2WithFlag, input, weight, bias, scale, offset, stride, padding, dilation, groups, useHf32);
 
    if (!IsSupportConv3DToConv3DV2()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3dv2 only support Ascend910B/910_93/910_95");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3dv2 only support Ascend910B/910_93/950");
         output = nullptr;
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -1019,8 +1019,8 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor *input, const aclTens
 static bool CheckPreTransposeEnable(const aclTensor *weight, int groups) {
     OP_LOGD("enter CheckPreTransposeEnable.");
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    // 当前仅支持ASCEND910_95
-    if (socVersion != SocVersion::ASCEND910_95) {
+    // 当前仅支持ASCEND950
+    if (socVersion != SocVersion::ASCEND950) {
         return false;
     }
     if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {

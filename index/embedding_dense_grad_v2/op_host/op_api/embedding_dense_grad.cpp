@@ -45,7 +45,7 @@ const aclTensor* EmbeddingDenseGradV2(
         return nullptr;
     }
 
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_95) {
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND950) {
         auto outZero = l0op::ZerosLike(out, executor);
         if (outZero == nullptr) {
             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "exec zero tensor failed.");

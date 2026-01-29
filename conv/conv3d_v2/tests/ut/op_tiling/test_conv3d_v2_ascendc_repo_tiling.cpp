@@ -229,14 +229,14 @@ TEST_P(Conv3DTilingRepo, general_cases_001) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
     compile_info.tilingType = op_type;
     compile_info.aicoreNum = aicoreNum;
-    compile_info.socVersion = "Ascend910_9589";
-    compile_info.shortSocVersion = "Ascend910_95";
+    compile_info.socVersion = "Ascend950PR_9589";
+    compile_info.shortSocVersion = "Ascend950";
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());

@@ -36,11 +36,11 @@ class l2_ConvertWeightToINT4Pack_test : public testing::TestWithParam<ConvertWei
   static void TearDownTestCase() { cout << "l2_ConvertWeightToINT4Pack_test TearDown" << endl; }
 };
 
-class l2_ConvertWeightToINT4Pack_Ascend910_95_test : public testing::TestWithParam<ConvertWeightToINT4PackTestParam> {
+class l2_ConvertWeightToINT4Pack_Ascend950_test : public testing::TestWithParam<ConvertWeightToINT4PackTestParam> {
  protected:
-  static void SetUpTestCase() { cout << "l2_ConvertWeightToINT4Pack_Ascend910_95_test SetUp" << endl; }
+  static void SetUpTestCase() { cout << "l2_ConvertWeightToINT4Pack_Ascend950_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "l2_ConvertWeightToINT4Pack_Ascend910_95_test TearDown" << endl; }
+  static void TearDownTestCase() { cout << "l2_ConvertWeightToINT4Pack_Ascend950_test TearDown" << endl; }
 };
 
 static void TestOneParamCase(const ConvertWeightToINT4PackTestParam &param)
@@ -62,7 +62,7 @@ TEST_P(l2_ConvertWeightToINT4Pack_test, ascend910B2_generalTest)
     TestOneParamCase(param);
 }
 
-TEST_P(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_generalTest)
+TEST_P(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_generalTest)
 {
     ConvertWeightToINT4PackTestParam param = GetParam();
     TestOneParamCase(param);
@@ -172,8 +172,8 @@ TEST_F(l2_ConvertWeightToINT4Pack_test, ascend910B2_normal_case_4) {
     std::cout << "end case: ascend910B2_normal_case_4" << std::endl;
 }
 
-TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_0) {
-    std::cout << "run case: ascend910_95_normal_case_0" << std::endl;
+TEST_F(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_normal_case_0) {
+    std::cout << "run case: ascend950_normal_case_0" << std::endl;
     TensorDesc weight = TensorDesc({32, 64}, ACL_INT32, ACL_FORMAT_ND);
     TensorDesc weightInt4Pack = TensorDesc({32, 8}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {8, 1}, 0, {4, 2, 16, 2});
     auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight),
@@ -182,11 +182,11 @@ TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_0)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     // cpu实现会导致ut报错，待int4pack npu实现之后放开
     // EXPECT_EQ(aclRet, param.expectRet);
-    std::cout << "end case: ascend910_95_normal_case_0" << std::endl;
+    std::cout << "end case: ascend950_normal_case_0" << std::endl;
 }
 
-TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_1) {
-    std::cout << "run case: ascend910_95_normal_case_1" << std::endl;
+TEST_F(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_normal_case_1) {
+    std::cout << "run case: ascend950_normal_case_1" << std::endl;
     TensorDesc weight = TensorDesc({32, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc weightInt4Pack = TensorDesc({32, 8}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {8, 1}, 0, {4, 2, 16, 2});
     auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight),
@@ -195,11 +195,11 @@ TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_1)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     // cpu实现会导致ut报错，待int4pack npu实现之后放开
     // EXPECT_EQ(aclRet, param.expectRet);
-    std::cout << "end case: ascend910_95_normal_case_1" << std::endl;
+    std::cout << "end case: ascend950_normal_case_1" << std::endl;
 }
 
-TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_2) {
-    std::cout << "run case: ascend910_95_normal_case_2" << std::endl;
+TEST_F(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_normal_case_2) {
+    std::cout << "run case: ascend950_normal_case_2" << std::endl;
     TensorDesc weight = TensorDesc({32, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc weightInt4Pack = TensorDesc({32, 8}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {8, 1}, 0, {4, 2, 16, 2});
     auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight),
@@ -208,5 +208,5 @@ TEST_F(l2_ConvertWeightToINT4Pack_Ascend910_95_test, ascend910_95_normal_case_2)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     // cpu实现会导致ut报错，待int4pack npu实现之后放开
     // EXPECT_EQ(aclRet, param.expectRet);
-    std::cout << "end case: ascend910_95_normal_case_2" << std::endl;
+    std::cout << "end case: ascend950_normal_case_2" << std::endl;
 }

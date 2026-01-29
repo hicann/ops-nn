@@ -150,7 +150,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "batch_norm_grad_v3_apt");
-        this->AICore().AddConfig("ascend910_95", regbaseCfg);
+        this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_a2a3;
 

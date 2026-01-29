@@ -39,7 +39,7 @@ class l2_grouped_dynamic_mx_quant_test : public testing::Test {
   }
 };
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_bf16_E4M3) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_bf16_E4M3) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_BF16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -47,7 +47,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E4M3FN);
   int64_t blocksize = 32;
   const char* roundMode = "rint";
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
 
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
@@ -56,7 +56,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_bf16_E5M2) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_bf16_E5M2) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_BF16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -65,7 +65,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -73,7 +73,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E4M3) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E4M3) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -82,7 +82,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -90,7 +90,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -99,7 +99,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -107,7 +107,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_x_Dim_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_x_Dim_fail) {
   TensorDesc x_desc = TensorDesc({64, 5, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -116,7 +116,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -124,7 +124,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_group_Dim_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_group_Dim_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2, 4}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -133,7 +133,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -141,7 +141,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_y_Dim_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_y_Dim_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -150,7 +150,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -158,7 +158,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_mxscale_Dim_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_mxscale_Dim_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -167,7 +167,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -175,7 +175,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_y_shape_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_y_shape_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 10}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -184,7 +184,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -192,7 +192,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_fp16_E5M2_mxscale_shape_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_fp16_E5M2_mxscale_shape_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -201,7 +201,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -209,7 +209,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_f
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_x_dtype_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_x_dtype_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -218,7 +218,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_x
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -226,7 +226,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_x
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_group_dtype_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_group_dtype_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -235,7 +235,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_g
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -243,7 +243,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_g
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_y_dtype_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_y_dtype_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -252,7 +252,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_y
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -260,7 +260,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_y
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_mxscale_dtype_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_mxscale_dtype_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -269,7 +269,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_m
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -277,7 +277,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_m
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_roundmode_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_roundmode_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -292,7 +292,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_r
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_blocksize_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_blocksize_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -301,7 +301,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   int64_t blocksize = 64;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -309,7 +309,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_b
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_dstType_fail) {
+TEST_F(l2_grouped_dynamic_mx_quant_test, ascend950_grouped_dynamic_mx_quant_dstType_fail) {
   TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
   TensorDesc group_index_desc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
   TensorDesc y_desc = TensorDesc({64, 5}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -318,7 +318,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910_95_grouped_dynamic_mx_quant_d
   int64_t blocksize = 32;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;
@@ -335,7 +335,7 @@ TEST_F(l2_grouped_dynamic_mx_quant_test, ascend910B2_grouped_dynamic_mx_quant_so
   int64_t blocksize = 64;
   const char* roundMode = "rint";
 
-  class SocVersionManager testSocVersion(SocVersion::ASCEND910_95);
+  class SocVersionManager testSocVersion(SocVersion::ASCEND950);
   auto ut = OP_API_UT(aclnnGroupedDynamicMxQuant, INPUT(x_desc, group_index_desc, roundMode, dstType, blocksize),
                       OUTPUT(y_desc, mxscale_desc));
   uint64_t workspace_size = 0;

@@ -66,7 +66,7 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
     return DTYPE_SUPPORT_LIST_WITH_BF16;
   }
   return DTYPE_SUPPORT_LIST;

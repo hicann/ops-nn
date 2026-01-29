@@ -56,7 +56,7 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, pla
     args.isHf32 = *((context.GetAttrs())->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
     args.bDtypeSize = ge::GetSizeByDataType(args.bType);
-    if (args.isHf32 && socVersion != platform_ascendc::SocVersion::ASCEND910_95) {
+    if (args.isHf32 && socVersion != platform_ascendc::SocVersion::ASCEND950) {
         OP_LOGW(args.opName, "Hf32 flag is: %d, which is not support yet", args.isHf32);
     }
 }
@@ -69,7 +69,7 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args, platform_ascendc::SocVers
     }
 
     // check dtype
-    auto supportList = socVersion == platform_ascendc::SocVersion::ASCEND910_95 ? DTYPE_SUPPORT_LIST_91095 :
+    auto supportList = socVersion == platform_ascendc::SocVersion::ASCEND950 ? DTYPE_SUPPORT_LIST_91095 :
                                                                                   DTYPE_SUPPORT_LIST_RESERVED;
     for (auto& supported : supportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {

@@ -71,7 +71,7 @@ protected:
 // self + out: 910A not support bfloat16
 TEST_F(l2_repeat_interleave_test, l2_repeat_interleave_test_09)
 {
-    auto supportBF16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95) || 
+    auto supportBF16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950) || 
                         (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E);
     if (supportBF16) {
         test_run({2, 3, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, {18}, ACL_INT64, ACL_FORMAT_ND, {2, 2},

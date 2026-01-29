@@ -136,7 +136,7 @@ ge::graphStatus ScaledMaskedSoftmaxGradV2Tiling::CheckInputShape()
     OP_CHECK_NULL_WITH_CONTEXT(context, PlatformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(PlatformInfo);
     uint64_t lastDimLimit = LAST_DIM_MAX_SIZE;
-    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950) {
         lastDimLimit = LAST_DIM_MAX_SIZE_D;
     }
 

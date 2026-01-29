@@ -145,7 +145,7 @@ namespace ge {
 | int4     | int4     | float32/bfloat16 | null          | null/int32/bfloat16/float32 | float32      | bfloat16 |
 | int4     | int4     | float32          | null          | null/int32/float16/float32  | float32      | float16  |
 *\n
-* - Ascend 910_95 AI Processor:
+* - Ascend 950 AI Processor:
 *\n
 | x1                        | x2                        | scale                | offset        | bias                        | pertoken    | out                                    |
 | :-----------------------: | :-----------------------: | :------------------: | :-----------: | :-------------------------: | :---------: | :------------------------------------: |
@@ -160,7 +160,7 @@ namespace ge {
 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
 | float4_e2m1/float4_e1m2   | float4_e2m1/float4_e1m2   | float8_e8m0          | null          | null/float32                | float8_e8m0 | float16/bfloat16/float32               |
 *\n
-* - Ascend 910_95 AI Processor, supported data type and quant mode combinations:
+* - Ascend 950 AI Processor, supported data type and quant mode combinations:
 *\n
 pertensor-perchannel && pertensor-pertensor:
 *\n
@@ -195,7 +195,7 @@ mx quant：
   | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0      | float8_e8m0      |
   | float4_e2m1/float4_e1m2   | float4_e2m1/float4_e1m2   | float8_e8m0      | float8_e8m0      |
 *\n
-* - Ascend 910_95 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
+* - Ascend 950 AI Processor with group_sizes scenarios, supported data type and shapes combinations:
 *\n
 | quantization      | x1 type                            | scale type  | x1 shape      | x2 shape      | scale shape                           | pertoken shape                        | group_size      |
 |-------------------|------------------------------------|-------------|---------------|---------------|---------------------------------------|---------------------------------------|-----------------|

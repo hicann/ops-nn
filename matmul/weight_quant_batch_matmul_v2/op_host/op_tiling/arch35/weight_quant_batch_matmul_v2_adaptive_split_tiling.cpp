@@ -76,13 +76,13 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
 {
     OP_TILING_CHECK(
         matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "ascend910_95 does not support antiQuantScaleDtype is uint64."),
+        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "ascend950 does not support antiQuantScaleDtype is uint64."),
         return false);
     OP_TILING_CHECK(
         (matmulInfoPtr_->bDtype == ge::DT_INT4 && matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) &&
             (matmulInfoPtr_->transA || matmulInfoPtr_->transB),
         VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "ascend910_95 does not support A16W4 transA or transB when weight's layout is FRACTAL_NZ."),
+            opName_, "ascend950 does not support A16W4 transA or transB when weight's layout is FRACTAL_NZ."),
         return false);
 
     // PS 从RegBase模板迁移的场景: pergroup int4 Nz groupsize(32, 64, 128, 256)

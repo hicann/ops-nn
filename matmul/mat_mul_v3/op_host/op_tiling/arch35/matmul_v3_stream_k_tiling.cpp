@@ -57,7 +57,7 @@ bool CheckStreamKSKTiling91095(const MatmulV3CompileInfo &compileInfo, const Mat
 using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
 
 const static std::map<platform_ascendc::SocVersion, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, CheckStreamKSKTiling91095},
+    {platform_ascendc::SocVersion::ASCEND950, CheckStreamKSKTiling91095},
 };
 
 // ------------------------------ CheckStreamKDPSKTiling -------------------------------------------//
@@ -87,7 +87,7 @@ bool CheckStreamKDPSKTiling91095(const MatmulV3CompileInfo &compileInfo, const M
 using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo &, const MatMulV3Args &);
 
 const static std::map<platform_ascendc::SocVersion, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, CheckStreamKDPSKTiling91095},
+    {platform_ascendc::SocVersion::ASCEND950, CheckStreamKDPSKTiling91095},
 };
 
 // ------------------------------ GetL0C2OutFlag -------------------------------------------//
@@ -108,7 +108,7 @@ MatMulV3L0C2Out GetL0C2OutFlag91095(const MatMulV3Args &args)
 using GetL0C2OutFlagFunc = MatMulV3L0C2Out (*)(const MatMulV3Args &);
 
 const static std::map<platform_ascendc::SocVersion, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, GetL0C2OutFlag91095},
+    {platform_ascendc::SocVersion::ASCEND950, GetL0C2OutFlag91095},
 };
 }  // namespace
 
@@ -116,7 +116,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 using namespace strategy;
 
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3StreamKTiling, ASCEND910_95, STREAM_K);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3StreamKTiling, ASCEND950, STREAM_K);
 
 constexpr uint64_t STREAM_K_MAX_K_THRESHOLD = 2000000UL;
 

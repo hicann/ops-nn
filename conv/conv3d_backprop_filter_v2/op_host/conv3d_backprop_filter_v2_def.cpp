@@ -62,8 +62,8 @@ public:
         this->AICore().AddConfig("ascend910b", aicore_config);
         this->AICore().AddConfig("ascend910_93", aicore_config);
 
-        OpAICoreConfig config_910_95;
-        config_910_95.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
@@ -73,7 +73,7 @@ public:
             .ExtendCfgInfo("opInterface.value", "conv3d_backprop_filter_v2")
             .ExtendCfgInfo("jitCompile.flag", "false");
 
-        config_910_95.Input("x")
+        config_950.Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
                 ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
@@ -111,7 +111,7 @@ public:
                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC});
-        config_910_95.Input("filter_size")
+        config_950.Input("filter_size")
             .ParamType(REQUIRED)
             .ValueDepend(OPTIONAL)
             .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
@@ -150,7 +150,7 @@ public:
                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        config_910_95.Input("out_backprop")
+        config_950.Input("out_backprop")
             .ParamType(REQUIRED)
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
                 ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
@@ -188,7 +188,7 @@ public:
                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC});
-        config_910_95.Output("y")
+        config_950.Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                 ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -227,7 +227,7 @@ public:
                 ge::FORMAT_DHWCN,ge::FORMAT_DHWCN,ge::FORMAT_DHWCN,
                 ge::FORMAT_DHWCN,ge::FORMAT_DHWCN,ge::FORMAT_DHWCN});
 
-        this->AICore().AddConfig("ascend910_95", config_910_95);
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

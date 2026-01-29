@@ -212,11 +212,11 @@ TEST_F(SwiGluGradTiling, swi_glu_grad_tiling_003) {
                            "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                           "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                           "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "ASCEND910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "ASCEND950"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, socversions);
 
     // platform info

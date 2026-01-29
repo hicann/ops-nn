@@ -20,14 +20,14 @@ using AscendC::VECTOR_REG_WIDTH;
 using Cmct::CeilAlign;
 using Cmct::CeilDiv;
 using Cmct::Gemm::Get;
-using Gemm::Arch::Ascend910_95;
+using Gemm::Arch::Ascend950;
 namespace MicroAPI = AscendC::MicroAPI;
 namespace detail {
 
 // ND NK
 template <class TensorTraitOut, class TensorTraitIn, class Shape>
 struct TileCastImpl<
-    Ascend910_95, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
+    Ascend950, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
     typename AscendC::Std::enable_if_t<
         IsRowMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断NK场景
         && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {
@@ -80,7 +80,7 @@ struct TileCastImpl<
 // ND/NZ KN
 template <class TensorTraitOut, class TensorTraitIn, class Shape>
 struct TileCastImpl<
-    Ascend910_95, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
+    Ascend950, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断KN场景
         && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {

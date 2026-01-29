@@ -47,7 +47,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_sqrt_apt");
-        this->AICore().AddConfig("ascend910_95", regbaseCfg);
+        this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

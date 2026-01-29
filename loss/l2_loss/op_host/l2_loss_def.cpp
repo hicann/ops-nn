@@ -37,7 +37,7 @@ class L2Loss : public OpDef {
                 .DynamicShapeSupportFlag(true)
                 .PrecisionReduceFlag(false)
                 .ExtendCfgInfo("opFile.value", "l2_loss_apt");
-            this->AICore().AddConfig("ascend910_95", aicoreConfig);
+            this->AICore().AddConfig("ascend950", aicoreConfig);
         }
 };
 

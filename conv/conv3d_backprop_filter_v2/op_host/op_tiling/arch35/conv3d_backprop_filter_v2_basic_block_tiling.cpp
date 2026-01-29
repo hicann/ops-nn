@@ -38,7 +38,7 @@ namespace NN {
 namespace Conv {
 bool Conv3DDWV2BasicBlockTilingArch35::IsSocVersion91095()
 {
-    return platformInfo_.socVersion == platform_ascendc::SocVersion::ASCEND910_95;
+    return platformInfo_.socVersion == platform_ascendc::SocVersion::ASCEND950;
 }
 
 void Conv3DDWV2BasicBlockTilingArch35::Reset()

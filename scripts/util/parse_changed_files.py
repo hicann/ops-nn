@@ -19,7 +19,7 @@ from dependency_parser import OpDependenciesParser
 OP_CATEGORY_LIST = []
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 SOC_VERSION_MAP = {'arch22': 'ascend910b',
-                   'arch35': 'ascend910_95',
+                   'arch35': 'ascend950',
                    'default': 'default'}
 
 

@@ -438,7 +438,7 @@ TEST_F(l2_index_test, l2_test_failed_unsupport_format)
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_index_test, ascend910_95_l2_test_success_fp32)
+TEST_F(l2_index_test, ascend950_l2_test_success_fp32)
 {
     vector<int64_t> self_shape = {30, 10};
     vector<int64_t> indices_shape = {5};

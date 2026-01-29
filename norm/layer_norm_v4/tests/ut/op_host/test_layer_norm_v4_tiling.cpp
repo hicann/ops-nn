@@ -451,7 +451,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_0006)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -548,7 +548,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -649,7 +649,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_fp16_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -750,7 +750,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_fp16_fp16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -851,7 +851,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_bf16_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -952,7 +952,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_bf16_bf16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1053,7 +1053,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_small_R)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1154,7 +1154,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_small_R_large_A)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1255,7 +1255,7 @@ TEST_F(LayerNormV4Tiling, layer_norm_v4_tiling_regbase_two_pass_large_R_large_A)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 262144, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;

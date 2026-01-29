@@ -30,7 +30,7 @@ namespace Conv {
 bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95 &&
+        platform_ascendc::SocVersion::ASCEND950 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }

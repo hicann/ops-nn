@@ -58,7 +58,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "dynamic_block_quant_apt");
-        this->AICore().AddConfig("ascend910_95", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
 
         OpAICoreConfig aicoreConfig910b;
         aicoreConfig910b.DynamicCompileStaticFlag(true)

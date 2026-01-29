@@ -185,10 +185,10 @@ REG_OP(GroupNormGrad)
 * @li y: A ND Tensor of type bfloat16/float16/float32 for the normalized "x".
 * @li mean: A Tensor of type bfloat16/float16/float32.
 * Must be 1D. Specifies the mean of "x".
-* Ascend 910_95 AI Processor: The data type must be consistent with that of gamma and beta.
+* Ascend 950 AI Processor: The data type must be consistent with that of gamma and beta.
 * @li rstd: A Tensor of type bfloat16/float16/float32.
 * Must be 1D. Specifies the rstd of "x".
-* Ascend 910_95 AI Processor: The data type must be consistent with that of gamma and beta.
+* Ascend 950 AI Processor: The data type must be consistent with that of gamma and beta.
 
 * @par Third-party framework compatibility
 * @li Compatible with the PyTorch operator GroupNorm and Silu.

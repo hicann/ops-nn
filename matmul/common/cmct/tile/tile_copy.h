@@ -141,8 +141,8 @@ struct TileCopy<Arch::Ascend910B, CopySparseWithLayout> {
  * @param [in] CopyInAndCopyOutSplitMWithParams: copy in and copy out split m policy with params
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyInAndCopyOutSplitMWithParams> {
-    using ArchTag = Arch::Ascend910_95;
+struct TileCopy<Arch::Ascend950, CopyInAndCopyOutSplitMWithParams> {
+    using ArchTag = Arch::Ascend950;
     using CopyPolicy = CopyWithParams;
 
     template <class InputType, const auto& COPY_CFG>
@@ -162,8 +162,8 @@ struct TileCopy<Arch::Ascend910_95, CopyInAndCopyOutSplitMWithParams> {
  * @param [in] CopyInAndCopyOutSplitMWithLayout: copy in and copy out split m policy with layout
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyInAndCopyOutSplitMWithLayout> {
-    using ArchTag = Arch::Ascend910_95;
+struct TileCopy<Arch::Ascend950, CopyInAndCopyOutSplitMWithLayout> {
+    using ArchTag = Arch::Ascend950;
     using CopyPolicy = CopyWithLayout;
 
     template <class InputType, class DstTrait, class SrcTrait>
@@ -189,8 +189,8 @@ struct TileCopy<Arch::Ascend910_95, CopyInAndCopyOutSplitMWithLayout> {
  * @param [in] CopyOutSplitMWithParams: copy out split m  policy with params
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyOutSplitMWithParams> {
-    using ArchTag = Arch::Ascend910_95;
+struct TileCopy<Arch::Ascend950, CopyOutSplitMWithParams> {
+    using ArchTag = Arch::Ascend950;
 
     template <class InputType, class OutputType, typename T = void>
     using CopyCo1ToOut = Copy<ArchTag, CopyOutSplitMWithParams, void, OutputType, InputType>;
@@ -203,8 +203,8 @@ struct TileCopy<Arch::Ascend910_95, CopyOutSplitMWithParams> {
  * @param [in] CopyOutSplitNWithParams: copy out split n policy with params
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyOutSplitNWithParams> {
-    using ArchTag = Arch::Ascend910_95;
+struct TileCopy<Arch::Ascend950, CopyOutSplitNWithParams> {
+    using ArchTag = Arch::Ascend950;
 
     template <class InputType, class OutputType, typename T = void>
     using CopyCo1ToOut = Copy<ArchTag, CopyOutSplitNWithParams, void, OutputType, InputType>;
@@ -217,8 +217,8 @@ struct TileCopy<Arch::Ascend910_95, CopyOutSplitNWithParams> {
  * @param [in] CopyNoGmIn: copy policy without Gm input
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyNoGmIn> {
-    using ArchTag = Arch::Ascend910_95;
+struct TileCopy<Arch::Ascend950, CopyNoGmIn> {
+    using ArchTag = Arch::Ascend950;
     using CopyPolicy = CopyWithParams;
 
     template <class InputType, class OutputType, typename T = void>
@@ -232,9 +232,9 @@ struct TileCopy<Arch::Ascend910_95, CopyNoGmIn> {
  * @param [in] CopyBasedBaseK: copy based basek policy
  */
 template <>
-struct TileCopy<Arch::Ascend910_95, CopyBasedBaseK> {
+struct TileCopy<Arch::Ascend950, CopyBasedBaseK> {
     using CopyPolicy = CopyBasedBaseK;
-    using ArchTag = Arch::Ascend910_95;
+    using ArchTag = Arch::Ascend950;
 
     template <class AType, class DstTrait, class SrcTrait>
     using CopyA1ToA2 = Copy<ArchTag, CopyPolicy, AType, DstTrait, SrcTrait>;

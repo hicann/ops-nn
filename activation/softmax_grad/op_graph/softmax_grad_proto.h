@@ -29,7 +29,7 @@ namespace ge{
 
 *@par Attributes:
 * axes: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}".
-* In Ascend 910_95 AI Processor, only single-axis reduction is supported. \n
+* In Ascend 950 AI Processor, only single-axis reduction is supported. \n
 
 *@par Outputs:
 *grad_x: A ND tensor. Has the same shape and data type as "softmax" . \n

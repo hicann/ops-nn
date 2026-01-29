@@ -59,7 +59,7 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
                            "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                           "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                           "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     GetPlatFormInfos(compile_info_string.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
 
     // platform info
@@ -76,7 +76,7 @@ static void DoApplyFtrlTilingCase(std::initializer_list<int64_t>& inputShape, ge
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    map<string, string> socVersion = {{"Short_SoC_version", "ASCEND910_95"}};
+    map<string, string> socVersion = {{"Short_SoC_version", "ASCEND950"}};
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersion);
 
     std::string opType("ApplyFtrl");

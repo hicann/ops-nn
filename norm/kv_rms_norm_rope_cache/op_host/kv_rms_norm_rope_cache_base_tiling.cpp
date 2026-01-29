@@ -273,7 +273,7 @@ ge::graphStatus KvRmsNormRopeCacheTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         context_ == nullptr, OP_LOGE(context_->GetNodeName(), "context_ can not be nullptr."), return ge::GRAPH_FAILED);
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-    isRegbase_ = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND910_95;
+    isRegbase_ = ascendcPlatform.GetSocVersion() == platform_ascendc::SocVersion::ASCEND950;
     // GetQuantMode
     quantMode_ = GetQuantMode(context_);
     // Basic info

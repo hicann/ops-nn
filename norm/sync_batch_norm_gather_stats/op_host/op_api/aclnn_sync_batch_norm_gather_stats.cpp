@@ -37,13 +37,13 @@ constexpr size_t SYNC_BATCH_NORM_TWO = 2;
 constexpr size_t SYNC_BATCH_NORM_THREE = 3;
 namespace {
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 } // namespace
 
-static const std::initializer_list<op::DataType> ASCEND910_95_SAMPLT_COUNT_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_SAMPLT_COUNT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> ASCEND910_SAMPLT_COUNT_DTYPE_SUPPORT_LIST = {
@@ -69,9 +69,9 @@ static bool CheckDtypeValid(
 {
     auto dtypeSupportList = ASCEND910_DTYPE_SUPPORT_LIST;
     auto dtypeSampleCountSupportList = ASCEND910_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        dtypeSupportList = ASCEND910_95_DTYPE_SUPPORT_LIST;
-        dtypeSampleCountSupportList = ASCEND910_95_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        dtypeSupportList = ASCEND950_DTYPE_SUPPORT_LIST;
+        dtypeSampleCountSupportList = ASCEND950_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
     }
 
     OP_CHECK_DTYPE_NOT_SUPPORT(totalSum, dtypeSupportList, return false);

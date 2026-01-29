@@ -96,7 +96,7 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_continous)
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
         uint64_t workspaceSize = 0;
-        uint64_t isAscend910_95 = false;
+        uint64_t isAscend950 = false;
     } compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =
@@ -179,7 +179,7 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_david)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                                                      "Intrinsic_fix_pipe_l0c2out": false,
                                                      "Intrinsic_data_move_l12ub": true,
@@ -202,7 +202,7 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_david)
         int32_t totalCoreNum = 30;
         uint64_t ubSizePlatForm = 0;
         uint64_t workspaceSize = 0;
-        uint64_t isAscend910_95 = false;
+        uint64_t isAscend950 = false;
     } compile_info;
     // tilingParseFunc simulate
     auto kernel_holder =

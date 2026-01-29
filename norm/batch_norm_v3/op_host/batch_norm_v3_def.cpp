@@ -263,7 +263,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "batch_norm_v3_apt");
-        this->AICore().AddConfig("ascend910_95", config_910d);
+        this->AICore().AddConfig("ascend950", config_910d);
         this->AICore().AddConfig("mc62cm12a", config_910d);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

@@ -408,7 +408,7 @@ void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
     }
 
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND910_95;
+    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND950;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 65536;
     platformInfo.l0BSize = 65536;

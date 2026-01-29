@@ -108,7 +108,7 @@ static void SplitByRepeat(uint64_t len, uint64_t& loopNum, uint64_t& tailNum)
 static bool IsRegbaseSocVersion4CELOSS(platform_ascendc::SocVersion version)
 {
     const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND910_95
+        platform_ascendc::SocVersion::ASCEND950
     };
 
     return regbaseSocVersions.find(version) != regbaseSocVersions.end();

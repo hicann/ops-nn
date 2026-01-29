@@ -1062,10 +1062,10 @@ TEST_F(l2_mm_test, ascend910B2_test_splitk_fp16_fp16_fp16_1)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-// 接口整改异常用例 - 910_95
-TEST_F(l2_mm_test, mm_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - 950
+TEST_F(l2_mm_test, mm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1077,9 +1077,9 @@ TEST_F(l2_mm_test, mm_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_mm_test, mm_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_mm_test, mm_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1091,9 +1091,9 @@ TEST_F(l2_mm_test, mm_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_mm_test, mm_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_mm_test, mm_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1105,9 +1105,9 @@ TEST_F(l2_mm_test, mm_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_mm_test, mm_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_mm_test, mm_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1119,9 +1119,9 @@ TEST_F(l2_mm_test, mm_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_mm_test, mm_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_mm_test, mm_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -1133,9 +1133,9 @@ TEST_F(l2_mm_test, mm_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_mm_test, mm_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_mm_test, mm_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);

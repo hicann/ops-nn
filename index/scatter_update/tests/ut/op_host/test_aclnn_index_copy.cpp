@@ -38,7 +38,7 @@ class l2_index_copy_test : public testing::Test {
 };
 
 // 基础用例
-TEST_F(l2_index_copy_test, Ascend910_9598_aclnnIndexCopy_base_case_1) {
+TEST_F(l2_index_copy_test, Ascend950PR_9598_aclnnIndexCopy_base_case_1) {
   // self input
   const vector<int64_t>& selfShape = {5, 3};
   aclDataType selfDtype = ACL_INT32;
@@ -160,7 +160,7 @@ TEST_F(l2_index_copy_test, aclnnIndexCopy_self_and_out_shape_non_consistent) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_index_copy_test, Ascend910_9598_aclnnIndexCopy_base_case_2) {
+TEST_F(l2_index_copy_test, Ascend950PR_9598_aclnnIndexCopy_base_case_2) {
   // self input
   const vector<int64_t>& selfShape = {3, 5};
   aclDataType selfDtype = ACL_FLOAT;

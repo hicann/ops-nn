@@ -115,7 +115,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 using namespace strategy;
 
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswTiling, ASCEND910_95, BASE);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswTiling, ASCEND950, BASE);
 MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswTiling, RESERVED_VERSION, BASE); // supportMmadS8S4平台
 
 void MatMulV3AswTiling::CalcTailBasicBlock()

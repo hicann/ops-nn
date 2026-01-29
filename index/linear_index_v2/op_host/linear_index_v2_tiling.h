@@ -48,7 +48,7 @@ struct LinearIndexV2CompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
     uint64_t workspaceSize = 0;
-    bool isAscend910_95 = false;
+    bool isAscend950 = false;
 };
 } // namespace optiling
 

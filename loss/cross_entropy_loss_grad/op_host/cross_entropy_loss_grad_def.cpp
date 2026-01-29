@@ -130,7 +130,7 @@ public:
         .DynamicRankSupportFlag(true)
         .DynamicShapeSupportFlag(true)
         .ExtendCfgInfo("opFile.value", "cross_entropy_loss_grad_apt");
-    this->AICore().AddConfig("ascend910_95", aicoreRegbaseConfig);
+    this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
   }
 };
 OP_ADD(CrossEntropyLossGrad);

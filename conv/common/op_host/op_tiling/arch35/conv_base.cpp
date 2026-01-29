@@ -278,7 +278,7 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, const platform
     const std::string& nodeType = context_->GetNodeType();
     bool extendConvFlag = nodeType == "ExtendConv2D";
     ss <<"The support params format list [fmap, weight, output] for scene ";
-    if (socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
         if (extendConvFlag) {
             supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST;
             ss << "(extendConvFlag is enable) is ";

@@ -667,7 +667,7 @@ TEST_F(l2_group_norm_backward_test, case_C_not_div_group_abnormal)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float_normal)
+TEST_F(l2_group_norm_backward_test, Ascend950PR_9599_case_float_normal)
 {
     const int64_t N = 2;
     const int64_t C = 3;
@@ -693,7 +693,7 @@ TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float_normal)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float_normal_2)
+TEST_F(l2_group_norm_backward_test, Ascend950PR_9599_case_float_normal_2)
 {
     const int64_t N = 2;
     const int64_t C = 4;
@@ -719,7 +719,7 @@ TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float_normal_2)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float16_normal_3)
+TEST_F(l2_group_norm_backward_test, Ascend950PR_9599_case_float16_normal_3)
 {
     const int64_t N = 2;
     const int64_t C = 4;
@@ -745,7 +745,7 @@ TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_float16_normal_3)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_group_norm_backward_test, Ascend910_9599_case_bfloat16_normal_4)
+TEST_F(l2_group_norm_backward_test, Ascend950PR_9599_case_bfloat16_normal_4)
 {
     const int64_t N = 2;
     const int64_t C = 4;

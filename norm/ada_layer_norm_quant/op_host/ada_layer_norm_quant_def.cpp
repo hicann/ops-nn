@@ -70,7 +70,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "ada_layer_norm_quant_apt");
-        this->AICore().AddConfig("ascend910_95", config_91095);
+        this->AICore().AddConfig("ascend950", config_91095);
     }
 };
 OP_ADD(AdaLayerNormQuant);

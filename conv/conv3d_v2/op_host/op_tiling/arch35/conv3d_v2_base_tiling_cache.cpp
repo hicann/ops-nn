@@ -18,7 +18,7 @@ namespace optiling {
 namespace conv_ops_tiling {
 bool Conv3dBaseTilingV2::CheckSupportCacheTiling()
 {
-    if (socVersion != platform_ascendc::SocVersion::ASCEND910_95) {
+    if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
         return false;
     }
 

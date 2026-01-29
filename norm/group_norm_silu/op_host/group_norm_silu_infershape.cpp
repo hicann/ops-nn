@@ -79,7 +79,7 @@ static graphStatus GroupNormSiluInferDtype(gert::InferDataTypeContext* context)
          ge::GRAPH_SUCCESS),
         OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
-    if (platform_info.str_info.short_soc_version == "Ascend910_95") {
+    if (platform_info.str_info.short_soc_version == "Ascend950") {
         auto gammaDtype = context->GetOptionalInputDataType(GROUPNORMSILU_IDX_OUT_MEAN);
         auto betaDtype = context->GetOptionalInputDataType(GROUPNORMSILU_IDX_OUT_VAR);
         bool validGammaDtype = ((gammaDtype != ge::DT_UNDEFINED) && (gammaDtype != ge::DT_MAX));

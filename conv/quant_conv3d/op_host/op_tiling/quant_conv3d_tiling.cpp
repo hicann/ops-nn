@@ -23,7 +23,7 @@ using namespace optiling::conv_ops_tiling;
  
 namespace optiling {
     CONV_REGISTER_TILING_TEMPLATE(QuantConv3D, Conv3dBaseTilingV2,
-        static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND910_95), 0);
+        static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND950), 0);
 
     IMPL_OP_OPTILING(QuantConv3D)
     .Tiling(ConvTilingFunc)

@@ -242,7 +242,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 640}, {3, 1, 640}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -347,7 +347,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{4096, 1, 6144}, {4096, 1, 6144}};
     gert::StorageShape reduce_shape = {{4096, 1}, {4096, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -452,7 +452,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 20480}, {3, 1, 20480}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -557,7 +557,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100000, 1, 2}, {1000000, 1, 2}};
     gert::StorageShape reduce_shape = {{1000000, 1}, {1000000, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -662,7 +662,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100, 0, 1}, {100, 0, 1}};
     gert::StorageShape reduce_shape = {{100, 0}, {100, 0}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -767,7 +767,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_empty_til
     gert::StorageShape out_shape = {{100, 1, 0}, {100, 1, 0}};
     gert::StorageShape reduce_shape = {{100, 1}, {100, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -872,7 +872,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 640}, {3, 1, 640}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -977,7 +977,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{4096, 1, 6144}, {4096, 1, 6144}};
     gert::StorageShape reduce_shape = {{4096, 1}, {4096, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1082,7 +1082,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 20480}, {3, 1, 20480}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1187,7 +1187,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100000, 1, 2}, {1000000, 1, 2}};
     gert::StorageShape reduce_shape = {{1000000, 1}, {1000000, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1292,7 +1292,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100, 1, 0}, {100, 1, 0}};
     gert::StorageShape reduce_shape = {{100, 1}, {100, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1397,7 +1397,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 640}, {3, 1, 640}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1502,7 +1502,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{4096, 1, 6144}, {4096, 1, 6144}};
     gert::StorageShape reduce_shape = {{4096, 1}, {4096, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1607,7 +1607,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 20480}, {3, 1, 20480}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1712,7 +1712,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100000, 1, 2}, {1000000, 1, 2}};
     gert::StorageShape reduce_shape = {{1000000, 1}, {1000000, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1817,7 +1817,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100, 1, 0}, {100, 1, 0}};
     gert::StorageShape reduce_shape = {{100, 1}, {100, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -1922,7 +1922,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 640}, {3, 1, 640}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2027,7 +2027,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{4096, 1, 6144}, {4096, 1, 6144}};
     gert::StorageShape reduce_shape = {{4096, 1}, {4096, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2132,7 +2132,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{3, 1, 20480}, {3, 1, 20480}};
     gert::StorageShape reduce_shape = {{3, 1}, {3, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2237,7 +2237,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100000, 1, 2}, {1000000, 1, 2}};
     gert::StorageShape reduce_shape = {{1000000, 1}, {1000000, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -2342,7 +2342,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     gert::StorageShape out_shape = {{100, 1, 0}, {100, 1, 0}};
     gert::StorageShape reduce_shape = {{100, 1}, {100, 1}};
 
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                        "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,

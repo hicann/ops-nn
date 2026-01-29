@@ -142,7 +142,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
         {"Ascend910B2", "2201"},
         {"Ascend910B4", "2201"},
         {"Ascend310P3", "2002"},
-        {"Ascend910_95", "3510"},
+        {"Ascend950", "3510"},
         {"MC62CM12AA", "5102"},
     };
     map<string, string> socInfos;
@@ -174,7 +174,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 20,
                             "cube_core_cnt": 20, "vector_core_cnt": 40, "core_type_list": "CubeCore,VectorCore"}
                             })";
-    } else if (socVersion.compare("Ascend910_95") == 0) {
+    } else if (socVersion.compare("Ascend950") == 0) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -747,7 +747,7 @@ TEST_P(TestQuantBatchMatmulV3Tiling, generalTest)
 INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B2")));
 INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B4")));
 INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend310P3")));
-INSTANTIATE_TEST_CASE_P(QUANTMM910_95, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910_95")));
+INSTANTIATE_TEST_CASE_P(QUANTMM950, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend950")));
 INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("MC62CM12AA")));
 
 static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
@@ -828,8 +828,8 @@ TEST_F(TestQuantBatchMatmulV3Tiling, multiThread310P3)
     TestMultiThread(casesParams310P3.data(), casesParams310P3.size(), 3);
 }
 
-TEST_F(TestQuantBatchMatmulV3Tiling, multiThread910_95)
+TEST_F(TestQuantBatchMatmulV3Tiling, multiThread950)
 {
-    auto casesParams910_95 = GetParams("Ascend910_95");
-    TestMultiThread(casesParams910_95.data(), casesParams910_95.size(), 3);
+    auto casesParams950 = GetParams("Ascend950");
+    TestMultiThread(casesParams950.data(), casesParams950.size(), 3);
 }

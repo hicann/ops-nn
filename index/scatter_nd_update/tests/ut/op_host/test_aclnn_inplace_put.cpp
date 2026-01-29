@@ -184,7 +184,7 @@ TEST_F(l2_inplace_put_test, aclnnInplacePut_scatterNdUpdate_1_2_3_4_float16_ndhw
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_inplace_put_test, Ascend910_9589_aclnnInplacePut_scatterNdUpdate_1_2_3_4_5_6_int8_nd) {
+TEST_F(l2_inplace_put_test, Ascend950PR_9589_aclnnInplacePut_scatterNdUpdate_1_2_3_4_5_6_int8_nd) {
   // self input
   const vector<int64_t>& selfShape = {1, 2, 3, 4, 5, 6};
   aclDataType selfDtype = ACL_INT8;
@@ -211,7 +211,7 @@ TEST_F(l2_inplace_put_test, Ascend910_9589_aclnnInplacePut_scatterNdUpdate_1_2_3
   
 }
 
-TEST_F(l2_inplace_put_test, Ascend910_9589_aclnnInplacePut_scatterNdUpdate_1_2_3_4_5_6_7_int16_nd) {
+TEST_F(l2_inplace_put_test, Ascend950PR_9589_aclnnInplacePut_scatterNdUpdate_1_2_3_4_5_6_7_int16_nd) {
   // self input
   const vector<int64_t>& selfShape = {1, 2, 3, 4, 5, 6, 7};
   aclDataType selfDtype = ACL_INT8;

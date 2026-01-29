@@ -27,7 +27,7 @@ namespace ge {
  * @li x2: A matrix tensor. Must be one of the following types: float16, bfloat16, float32.
  * float32 is supported for the the following fused_op_types: "","relu","add","mul".
  * @li bias: An optional tensor. 1D. Must be one of the following types: float16, bfloat16, float32.
- * bfloat16 is only supported in Ascend 910_95 AI processor
+ * bfloat16 is only supported in Ascend 950 AI processor
  * Must be one of the following: "","relu","add","mul".
  * @li x3: An Optional tensor. Must be one of the following types: float16, bfloat16, float32.
  * Must be one of the following: "add",mul".

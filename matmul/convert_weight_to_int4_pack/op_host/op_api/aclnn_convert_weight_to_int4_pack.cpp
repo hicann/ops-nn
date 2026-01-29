@@ -98,7 +98,7 @@ static int32_t PackToINT8(int32_t a, int32_t b, DataType dtype) {
 static int64_t GetNdToNzC0Size(bool c032Flag)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         if (c032Flag) {
             return static_cast<int64_t>(C0_32) / static_cast<int64_t>(INT4_NUM_IN_BYTE);
         } else {
@@ -221,7 +221,7 @@ static bool CheckStorageShapeVaild(const aclTensor *weightInt4Pack, int64_t weig
     int64_t expDim1 = CeilDiv(weightInt4PackDimFirst, CUBE_BLOCK_SIZE);
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (weightInt4Pack->GetDataType() == DataType::DT_INT4) {
-        int64_t lastDimSize = socVersion == SocVersion::ASCEND910_95 ? storageDim3 : INT4_NUM_IN_32B;
+        int64_t lastDimSize = socVersion == SocVersion::ASCEND950 ? storageDim3 : INT4_NUM_IN_32B;
         int64_t expDim0 = CeilDiv(weightInt4PackDimLast, lastDimSize);
         if ((storageDim0 != expDim0) || (storageDim1 != expDim1) || (storageDim2 != CUBE_BLOCK_SIZE) ||
             (storageDim3 != lastDimSize)) {
@@ -236,7 +236,7 @@ static bool CheckStorageShapeVaild(const aclTensor *weightInt4Pack, int64_t weig
     }
 
     if (weightInt4Pack->GetDataType() == DataType::DT_INT32) {
-        int64_t lastDimSize = socVersion == SocVersion::ASCEND910_95 ? C0_16 / INT4_NUM_IN_INT32 : INT4_NUM_IN_INT32;
+        int64_t lastDimSize = socVersion == SocVersion::ASCEND950 ? C0_16 / INT4_NUM_IN_INT32 : INT4_NUM_IN_INT32;
         int64_t expDim0 = CeilDiv(weightInt4PackDimLast, lastDimSize);
         if ((storageDim0 != expDim0) || (storageDim1 != expDim1) || (storageDim2 != CUBE_BLOCK_SIZE) ||
             (storageDim3 != lastDimSize)) {
@@ -375,9 +375,9 @@ aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor *weight
     CHECK_RET(checkRet == ACLNN_SUCCESS, checkRet);
     int64_t weightInt4PackDimNum = weightInt4Pack->GetStorageShape().GetDimNum();
     int64_t weightInt4PackDimLast = weightInt4Pack->GetStorageShape().GetDim(weightInt4PackDimNum - 1);
-    // 若传入的weightInt4Pack的storageShape的最后一维为32，且为910_95,则为s8s4分支
+    // 若传入的weightInt4Pack的storageShape的最后一维为32，且为950,则为s8s4分支
     bool c032Flag =
-        weightInt4PackDimLast == C0_32 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+        weightInt4PackDimLast == C0_32 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     auto shapeSize = weight->GetViewShape().GetShapeSize();
 
     // 从device拷贝数据到host

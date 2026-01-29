@@ -65,7 +65,7 @@
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend910_95", aicConfig);
+        this->AICore().AddConfig("ascend950", aicConfig);
     }
 };
 

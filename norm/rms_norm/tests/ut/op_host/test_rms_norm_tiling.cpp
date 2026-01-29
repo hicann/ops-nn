@@ -51,7 +51,7 @@ TEST_F(RmsNormTiling, rms_norm_mixtype_tiling_001)
         }};
     gert::StorageShape out_shape = {{24, 1, 25600}, {24, 1, 25600}};
     gert::StorageShape rstd_shape = {{24, 1, 1}, {24, 1, 1}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -699,7 +699,7 @@ TEST_F(RmsNormTiling, rms_norm_perf_tiling_001)
         }};
     gert::StorageShape out_shape = {{512, 24, 128}, {512, 24, 128}};
     gert::StorageShape rstd_shape = {{512, 24, 1}, {512, 24, 1}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -745,7 +745,7 @@ TEST_F(RmsNormTiling, rms_norm_perf_tiling_001)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-    compile_info.curSocVersion = platform_ascendc::SocVersion::ASCEND910_95;
+    compile_info.curSocVersion = platform_ascendc::SocVersion::ASCEND950;
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -796,7 +796,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_split_D_001)
         }};
     gert::StorageShape out_shape = {{1, 24, 20000}, {1, 24, 20000}};
     gert::StorageShape rstd_shape = {{1, 24, 1}, {1, 24, 1}};
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -842,7 +842,7 @@ TEST_F(RmsNormTiling, rms_norm_tiling_split_D_001)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
-    compile_info.curSocVersion = platform_ascendc::SocVersion::ASCEND910_95;
+    compile_info.curSocVersion = platform_ascendc::SocVersion::ASCEND950;
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);

@@ -31,7 +31,7 @@ static const std::initializer_list<op::DataType> ASCEND_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_UINT8, op::DataType::DT_INT8, op::DataType::DT_INT16,   op::DataType::DT_INT32,
     op::DataType::DT_INT64, op::DataType::DT_BOOL, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_SELF = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_SELF = {
     op::DataType::DT_UINT8, op::DataType::DT_INT8,   op::DataType::DT_INT16,   op::DataType::DT_INT32,
     op::DataType::DT_INT64, op::DataType::DT_BOOL,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_BF16,  op::DataType::DT_UINT16, op::DataType::DT_UINT32,  op::DataType::DT_UINT64};
@@ -43,8 +43,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static const std::initializer_list<DataType> GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95) {
-        return ASCEND910_95_DTYPE_SUPPORT_LIST_SELF;
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950) {
+        return ASCEND950_DTYPE_SUPPORT_LIST_SELF;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -242,7 +242,7 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
 static const aclTensor* IntToTensor(int64_t repeats, aclOpExecutor* executor)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910_95) {
+    if (socVersion != SocVersion::ASCEND950) {
         auto repeatsScalar = executor->AllocScalar(repeats);
         auto repeatsTensor = executor->ConvertToTensor(repeatsScalar, op::DataType::DT_INT64);
         auto baseShape = getBaseShape(executor);

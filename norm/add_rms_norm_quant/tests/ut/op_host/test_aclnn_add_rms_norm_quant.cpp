@@ -34,7 +34,7 @@ protected:
     }
 };
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_001)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_dyn_001)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -75,7 +75,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_001)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_001)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_stc_001)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -127,7 +127,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_001)
 }
 
 //**********************************************************************************************************************
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_002)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_dyn_002)
 {
     auto tensor_desc_x1 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -178,7 +178,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_002)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_002)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_stc_002)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -229,7 +229,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_002)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_003)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_dyn_003)
 {
     auto tensor_desc_x1 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -280,7 +280,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_003)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_003)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_stc_003)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -331,7 +331,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_003)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_004)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_dyn_004)
 {
     auto tensor_desc_x1 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -382,7 +382,7 @@ TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_dyn_004)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_add_rms_norm_quant_test, ascend910_9589_case_stc_004)
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_stc_004)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);

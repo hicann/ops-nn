@@ -35,7 +35,7 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListFromSocVersion() {
@@ -45,8 +45,8 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListFrom
     case SocVersion::ASCEND910_93: {
       return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
-    case SocVersion::ASCEND910_95: {
-      return ASCEND910_95_DTYPE_SUPPORT_LIST;
+    case SocVersion::ASCEND950: {
+      return ASCEND950_DTYPE_SUPPORT_LIST;
     }
     case SocVersion::ASCEND910: {
       return ASCEND910_DTYPE_SUPPORT_LIST;

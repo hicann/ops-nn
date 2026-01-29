@@ -106,7 +106,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "apply_adam_d_apt");
-        this->AICore().AddConfig("ascend910_95", aicore_config);
+        this->AICore().AddConfig("ascend950", aicore_config);
     }
 };
 

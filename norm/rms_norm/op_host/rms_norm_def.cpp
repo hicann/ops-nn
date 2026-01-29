@@ -73,7 +73,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "rms_norm_apt");
-        this->AICore().AddConfig("ascend910_95", config_regbase);
+        this->AICore().AddConfig("ascend950", config_regbase);
         this->AICore().AddConfig("mc62cm12a", config_regbase);
  
         OpAICoreConfig config_without_bf16;

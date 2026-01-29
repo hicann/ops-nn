@@ -15,7 +15,7 @@ SOC_MAP=([Ascend310P]="Ascend310P3"
           [Ascend910]="Ascend910A"
           [Ascend910B]="Ascend910B1"
           [Ascend910_93]="Ascend910_9391"
-          [Ascend910_95]="Ascend910_9599"
+          [Ascend950]="Ascend950PR_9599"
           [KirinX90]="KirinX90"
 )
 

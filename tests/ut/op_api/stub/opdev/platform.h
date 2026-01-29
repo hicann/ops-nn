@@ -19,7 +19,7 @@ enum class SocVersion {
     ASCEND910 = 0,
     ASCEND910B,
     ASCEND910_93,
-    ASCEND910_95,
+    ASCEND950,
     ASCEND910E,
     ASCEND310,
     ASCEND310P,

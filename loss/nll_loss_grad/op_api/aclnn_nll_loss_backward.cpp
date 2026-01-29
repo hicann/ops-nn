@@ -66,7 +66,7 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
     switch (socVersion) {
         case SocVersion::ASCEND910B:
         case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910_95: {
+        case SocVersion::ASCEND950: {
             return ASCEND910B_DTYPE_SUPPORT_LIST;
         }
         case SocVersion::ASCEND910: {
@@ -220,7 +220,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     }
 
     op::DataType promoteType = self->GetDataType();
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         promoteType = self->GetDataType() == op::DataType::DT_FLOAT16 ? op::DataType::DT_FLOAT : self->GetDataType();
     }
 
@@ -256,7 +256,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto targetCasted = targetContiguous;
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         // 将输入target的数据类型转换成int
         OP_LOGW("Transfer target type to int32");
         targetCasted = l0op::Cast(targetContiguous, DataType::DT_INT32, uniqueExecutor.get());

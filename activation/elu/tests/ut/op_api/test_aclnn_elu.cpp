@@ -715,7 +715,7 @@ TEST_F(l2_elu_test, l2_elu_normal_uncontiguous)
 }
 
 // david 正常场景_BF16_ND
-TEST_F(l2_elu_test, ascend910_95_l2_elu_normal_BF16_ND)
+TEST_F(l2_elu_test, ascend950_l2_elu_normal_BF16_ND)
 {
     auto selfDesc = TensorDesc({2}, ACL_BF16, ACL_FORMAT_ND);
     float alpha = 1.0;

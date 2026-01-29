@@ -151,7 +151,7 @@ static const aclTensor *PreDilation(ConvolutionBackwardInputTensorForAvgPool2d &
 inline bool IsCubeSupportHf32() {
     if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
         op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_95) {
+        op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
         return false;
     }
     return true;
@@ -191,7 +191,7 @@ static const aclTensor *PerformConv2DBackpropInput(ConvolutionBackwardInputTenso
   const aclTensor *gradInputNC1HWC0 = nullptr;
   bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND910_95) {
+  if (socVersion == SocVersion::ASCEND950) {
       gradInputNC1HWC0 =
         l0op::Conv2DBackpropInput(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
                                   params.padding, params.dilation, params.groups, executor,

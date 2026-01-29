@@ -46,14 +46,14 @@ public:
         this->Attr("sqrt_mode").AttrType(OPTIONAL).Bool(false);
         this->Attr("round_mode").AttrType(OPTIONAL).String("Round");
         this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_INT8);
-        OpAICoreConfig config_910_95;
-        config_910_95.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "ascend_quant_apt");
-        this->AICore().AddConfig("ascend910_95", config_910_95);
-        this->AICore().AddConfig("mc62cm12a", config_910_95);
+        this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("mc62cm12a", config_950);
     }
 };
 

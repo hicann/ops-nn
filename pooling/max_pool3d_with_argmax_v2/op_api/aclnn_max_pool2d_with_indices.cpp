@@ -85,7 +85,7 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
-        case SocVersion::ASCEND910_95:
+        case SocVersion::ASCEND950:
             return MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST;
         case SocVersion::ASCEND910_93:
         case SocVersion::ASCEND910B: {
@@ -352,7 +352,7 @@ static bool CheckShape(
     const aclIntArray& dilationRef = *dilation;
     const int64_t dilationH = dilationRef[0];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationH : dilationRef[1];
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         OP_CHECK(
             ((dilationH > 0) && (dilationW > 0)),
             OP_LOGE(
@@ -887,10 +887,10 @@ aclnnStatus aclnnMaxPool2dWithMaskGetWorkspaceSize(
     CHECK_RET(CheckAttrSize1Or2(kernelSize), ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK(
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95,
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950,
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "On the 910_95 chip, the aclnnMaxPool2dWithMaskGetWorkspaceSize interface has been deprecated, "
+            "On the 950 chip, the aclnnMaxPool2dWithMaskGetWorkspaceSize interface has been deprecated, "
             "please use the aclnnMaxPool2dWithIndices interface."),
         return ACLNN_ERR_PARAM_INVALID);
     const aclIntArray& kernelRef = *kernelSize;
@@ -924,7 +924,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesGetWorkspaceSize(
     L2_DFX_PHASE_1(
         aclnnMaxPool2dWithIndices, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode),
         DFX_OUT(out, indices));
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return ExecMaxPool2dWithIndicesGetWorkspaceSizeV3(
             self, kernelSize, stride, padding, dilation, ceilMode, out, indices, workspaceSize, executor);
     } else {

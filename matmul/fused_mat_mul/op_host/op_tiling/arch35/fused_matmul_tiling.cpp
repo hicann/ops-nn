@@ -37,7 +37,7 @@ constexpr uint64_t WORKSPACE_SIZE = 1024;
 
 // soc_version, built-in, others
 const std::unordered_map<platform_ascendc::SocVersion, std::array<std::vector<std::string>, 2>> SocFusedOpSupport = {
-    {platform_ascendc::SocVersion::ASCEND910_95,
+    {platform_ascendc::SocVersion::ASCEND950,
      std::array<std::vector<std::string>, 2>{
          std::vector<std::string>{"", "relu", "add", "mul",}, std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
     {platform_ascendc::SocVersion::RESERVED_VERSION,

@@ -94,7 +94,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
   // 检查self的数据类型是否在算子的支持列表内
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (socVersion == SocVersion::ASCEND910B ||
-      socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND910_95) {
+      socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND950) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
   } else {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);

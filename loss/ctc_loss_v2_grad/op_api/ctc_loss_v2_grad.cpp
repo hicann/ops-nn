@@ -76,7 +76,7 @@ static int64_t GetDtypeSize(const op::DataType dtype)
 // 判断当前是否支持910d
 static bool IsAscend91055iCoreSupport(const aclTensor* logProbs, const aclTensor* targets)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         return false;
     }
 

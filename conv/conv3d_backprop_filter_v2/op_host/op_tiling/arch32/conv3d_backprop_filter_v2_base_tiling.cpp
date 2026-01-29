@@ -100,7 +100,7 @@ namespace Conv {
 bool Conv3DBackpropFilterV2Tiling::IsSocVersion91095() const
 {
     return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion
-        == platform_ascendc::SocVersion::ASCEND910_95;
+        == platform_ascendc::SocVersion::ASCEND950;
 }
 
 void Conv3DBackpropFilterV2Tiling::Reset()
@@ -122,7 +122,7 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::GetShapeAttrsInfo()
 
 bool Conv3DBackpropFilterV2Tiling::IsCapable()
 {
-    // 当芯片型号为910_95时需要拦截，主要原因是共用tilingFunc和TilingParse
+    // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
     if (IsSocVersion91095()) {
         return false;
     }

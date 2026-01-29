@@ -2993,11 +2993,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_111)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3094,11 +3094,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_011)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3194,11 +3194,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3294,11 +3294,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_110)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3394,11 +3394,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_dtype_fail)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3488,11 +3488,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_0)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3582,11 +3582,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_1)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3676,11 +3676,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_x_shape_fail_2)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3770,11 +3770,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_no_exis
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3863,11 +3863,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -3957,11 +3957,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4050,11 +4050,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_shape_f
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4143,11 +4143,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_w_scale_fail_3)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4238,11 +4238,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_last_dim)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4337,11 +4337,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_1111_nlast_dim)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4431,11 +4431,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_101110_error)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4526,11 +4526,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_activate_scale_
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4621,11 +4621,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_bias_type_fail)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4716,11 +4716,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_quant_scale_typ
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4811,11 +4811,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_dst_type_error)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info
@@ -4906,11 +4906,11 @@ TEST_F(DequantSwigluQuantTiling, dequant_swiglu_quant_tiling_v35_round_mode_erro
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}})";
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend910_95" } };
+    std::map<std::string, std::string> soc_version = { { "Short_SoC_version", "Ascend950" } };
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

@@ -446,7 +446,7 @@ static aclnnStatus OutputParamFillZeroForEmptyTensor(
     aclnnStatus outFillRet = ACLNN_SUCCESS;
 
     // C维不能为空
-    if (dimC != 0 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (dimC != 0 && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         // 空Tensor情况下，输出都为0
         aclTensor* fillZeroTensorTmp = FillScalar(dimC, 0, executor);
         CHECK_RET(fillZeroTensorTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);

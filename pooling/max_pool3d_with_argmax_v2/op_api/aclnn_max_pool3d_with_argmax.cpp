@@ -56,7 +56,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return OUT_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;
@@ -193,7 +193,7 @@ static bool CheckPlatform()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return true;
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnMaxPool3dWithArgmax is not supported on this platform");

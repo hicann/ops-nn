@@ -168,7 +168,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "batch_norm_grad_apt");
-        this->AICore().AddConfig("ascend910_95", regbaseCfg);
+        this->AICore().AddConfig("ascend950", regbaseCfg);
     }
 };
 

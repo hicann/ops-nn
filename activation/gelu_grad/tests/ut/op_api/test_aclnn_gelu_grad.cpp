@@ -49,7 +49,7 @@ TEST_F(l2_gelu_backward_test, gelu_backward_testcase_001_normal_float32)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_gelu_backward_test, Ascend910_95_gelu_backward_testcase_001_normal_float32)
+TEST_F(l2_gelu_backward_test, Ascend950_gelu_backward_testcase_001_normal_float32)
 {
     auto gradOutputDesc = TensorDesc({1, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);

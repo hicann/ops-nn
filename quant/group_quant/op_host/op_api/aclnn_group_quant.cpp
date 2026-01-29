@@ -41,19 +41,19 @@ static const std::initializer_list<DataType> Y_DTYPE_SUPPORT_LIST = {
 static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_X_SUPPORT_DTYPES = {
     {SocVersion::ASCEND910B, &X_DTYPE_SUPPORT_LIST},
     {SocVersion::ASCEND910_93, &X_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_95, &X_DTYPE_SUPPORT_LIST}
+    {SocVersion::ASCEND950, &X_DTYPE_SUPPORT_LIST}
 };
 
 static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_GROUP_INDEX_SUPPORT_DTYPES = {
     {SocVersion::ASCEND910B, &GROUP_INDEX_DTYPE_SUPPORT_LIST},
     {SocVersion::ASCEND910_93, &GROUP_INDEX_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_95, &GROUP_INDEX_DTYPE_SUPPORT_LIST}
+    {SocVersion::ASCEND950, &GROUP_INDEX_DTYPE_SUPPORT_LIST}
 };
 
 static const std::map<op::SocVersion, const std::initializer_list<op::DataType>*> SOC_Y_SUPPORT_DTYPES = {
     {SocVersion::ASCEND910B, &Y_DTYPE_SUPPORT_LIST},
     {SocVersion::ASCEND910_93, &Y_DTYPE_SUPPORT_LIST},
-    {SocVersion::ASCEND910_95, &Y_DTYPE_SUPPORT_LIST}
+    {SocVersion::ASCEND950, &Y_DTYPE_SUPPORT_LIST}
 };
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList(

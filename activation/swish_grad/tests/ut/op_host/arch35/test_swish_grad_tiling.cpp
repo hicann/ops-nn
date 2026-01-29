@@ -77,7 +77,7 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 
 TEST_F(SwishGradTiling, test0_swish_grad_tiling)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,

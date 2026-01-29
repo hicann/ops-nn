@@ -686,7 +686,7 @@ TEST_F(l2BatchNormBackwardTest, ascend910B2_l2_batch_norm_backward_train_5d)
     // // ut.TestPrecision();  // comment bcz of timeout in model tests (282616 ms)
 }
 
-TEST_F(l2BatchNormBackwardTest, ascend910_9589_l2_batch_norm_backward_infer)
+TEST_F(l2BatchNormBackwardTest, ascend950PR_9589_l2_batch_norm_backward_infer)
 {
     auto gradOutDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
     auto selfDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
@@ -747,7 +747,7 @@ TEST_F(l2BatchNormBackwardTest, l2_batch_norm_backward_empty_mask)
     // ut.TestPrecision();
 }
 
-TEST_F(l2BatchNormBackwardTest, ascend910_9589_l2_batch_norm_backward_shape_error)
+TEST_F(l2BatchNormBackwardTest, ascend950PR_9589_l2_batch_norm_backward_shape_error)
 {
     auto gradOutDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
     auto selfDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);

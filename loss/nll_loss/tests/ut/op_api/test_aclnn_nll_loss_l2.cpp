@@ -521,7 +521,7 @@ TEST_F(l2_nll_loss_test, Ascend910B2_case_024)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_nll_loss_test, ascend910_95_case_024)
+TEST_F(l2_nll_loss_test, ascend950_case_024)
 {
     auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
     auto targetDesc = TensorDesc({10}, ACL_UINT8, ACL_FORMAT_ND).ValueRange(0, 6);

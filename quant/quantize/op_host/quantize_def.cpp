@@ -190,13 +190,13 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("dtype").AttrType(REQUIRED).String();
         this->Attr("axis").AttrType(OPTIONAL).Int(1);
-        OpAICoreConfig config_910_95;
-        config_910_95.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "quantize_apt");
-        this->AICore().AddConfig("ascend910_95", config_910_95);
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

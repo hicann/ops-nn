@@ -103,7 +103,7 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32_1)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_dynamic_quant_v2_test, ascend910_9589_dynamic_quant_v2_bf16_int32_01_fail_groupindex)
+TEST_F(l2_dynamic_quant_v2_test, ascend950PR_9589_dynamic_quant_v2_bf16_int32_01_fail_groupindex)
 {
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc smooth_desc = TensorDesc({2, 32}, ACL_BF16, ACL_FORMAT_ND);

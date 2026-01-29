@@ -168,7 +168,7 @@ __aicore__ void inline FusedGeluMatMul(
     using BlockMmad = Block::BlockMmadBuilder<
         DTYPE_X1, LayoutX1, DTYPE_X2, LayoutX2, float, layout::RowMajorAlign, DTYPE_BIAS, layout::RowMajor, L1TileShape,
         L0TileShape, IterateKScheduler, MatmulMultiBlockWithLayout<>,
-        Tile::TileCopy<Arch::Ascend910_95, Tile::CopyOutSplitMWithParams>>;
+        Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitMWithParams>>;
     using MmadArgs = typename BlockMmad::Arguments;
     MmadArgs mmadArgs{x1GM, x2GM, yGM, biasGM};
     using Epilogue = Block::BlockEpilogue<L0TileShape, DTYPE_Y, float, Block::FusionGelu<float, float, mate>>;

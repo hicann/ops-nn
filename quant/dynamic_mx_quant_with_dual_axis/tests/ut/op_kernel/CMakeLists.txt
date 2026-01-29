@@ -8,5 +8,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(dynamic_mx_quant_with_dual_axis "ascend910_9599" "-DDTYPE_X=half -DDTYPE_Y1=fp8_e5m2_t -DDTYPE_Y2=fp8_e5m2_t")
+    AddOpTestCase(dynamic_mx_quant_with_dual_axis "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_Y1=fp8_e5m2_t -DDTYPE_Y2=fp8_e5m2_t")
 endif()

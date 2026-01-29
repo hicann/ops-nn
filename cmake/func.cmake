@@ -593,8 +593,8 @@ endfunction()
 # convert short socVersion to long socVersion
 ###################################################################################################
 function(map_compute_unit compute_unit compute_unit_long)
-    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend910_95")
-    set(compute_unit_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend910_9599")
+    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend950")
+    set(compute_unit_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend950pr_9599")
     list(FIND compute_unit_keys ${compute_unit} index)
     if(NOT index EQUAL -1)
         list(GET compute_unit_values ${index} mapped_value)
@@ -608,7 +608,7 @@ endfunction()
 # get target dir of different socVersions
 ###################################################################################################
 function(get_target_dir compute_unit_long target_dir)
-  set(compute_unit_long_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend910_9599")
+  set(compute_unit_long_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend950pr_9599")
   set(target_dir_values "arch22" "" "" "arch35")
   list(FIND compute_unit_long_values ${compute_unit_long} index)
   if(NOT index EQUAL -1)

@@ -103,7 +103,7 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                           "CORE_NUM": 64}
                           })";
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     map<string, string> soc_infos;
     map<string, string> aicore_spec;

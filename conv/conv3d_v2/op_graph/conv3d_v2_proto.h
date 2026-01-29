@@ -30,33 +30,33 @@ namespace ge {
 * In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type bfloat16, float16, float32, int8 and format "NCDHW" is supported. \n
-* In Ascend 910_95 AI Processor, a tensor of type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
+* In Ascend 950 AI Processor, a tensor of type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
 * "NDHWC" can be supported.
 * @li filter: A required 5D tensor of convolution kernel. \n
 * In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type bfloat16, float16, float32, int8 and format "NCDHW" is supported.
 * Kernel_h and kernel_w should be both less than 512. \n
-* In Ascend 910_95 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
+* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and format "NCDHW" or
 * "DHWCN" can be supported. Kernel_h and kernel_w should be both less than 256.
 * @li bias: An optional 1D tensor of additive biases to the outputs.
 * The data is stored in the order of: [out_channels]. \n
 * In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type float16, float32 and format "ND" is supported. \n
-* In Ascend 910_95 AI Processor, a tensor with data type bfloat16, float16 or float32 and format "ND" can be supported.
+* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16 or float32 and format "ND" can be supported.
 * @li scale: A optional 1D tensor of scaling factors.
 * The data is stored in the order of: [out_channels]. \n
 * In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type float32 and format "ND" is supported. \n
-* In Ascend 910_95 AI Processor, this parameter is not supported.
+* In Ascend 950 AI Processor, this parameter is not supported.
 * @li offset: An optional 1D tensor of bias.
 * The data is stored in the order of: [out_channels].
 * In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type float32 and format "ND" is supported. \n
-* In Ascend 910_95 AI Processor, this parameter is not supported.
+* In Ascend 950 AI Processor, this parameter is not supported.
 * @li offset_w: An optional quantitative offset tensor. A tensor of type int8. Reserved.
 *\n
 * @li The following are the supported data types and data formats for
@@ -71,7 +71,7 @@ namespace ge {
 |           | int8     | int8     | float32  | float32 | float32 | bfloat16 |\n
 | Format    | NCDHW    | NCDHW    | ND       | ND      | ND      | NCDHW    |\n
 \n
-* The following are the supported data types and data formats for Ascend 910_95 AI Processor:
+* The following are the supported data types and data formats for Ascend 950 AI Processor:
 \n
 | Tensor    | x        | filter   | bias     |    y     |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -114,7 +114,7 @@ namespace ge {
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
 * a tensor with data type bfloat16,float32,float16 and format "NCDHW" is supported,
 * which the data is stored in [n, out_channels, out_depth, out_height, out_width]. \n
-* In Ascend 910_95 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and
+* In Ascend 950 AI Processor, a tensor with data type bfloat16, float16, float32 or hifloat8 and
 * format "NCDHW" or "NDHWC" can be supported. which the data is stored in
 * [n, out_channels, out_depth, out_height, out_width] or [n, out_depth, out_height, out_width, out_channels].
 *\n

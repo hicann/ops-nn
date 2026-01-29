@@ -30,9 +30,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;
@@ -64,9 +64,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_2_keepdim_false) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;
@@ -98,9 +98,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_3_5_keepdim_false) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;
@@ -132,9 +132,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_0_keepdim_true) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;
@@ -166,9 +166,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_2_keepdim_true) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;
@@ -200,9 +200,9 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_neg_2_keepdim_false) 
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormV2")->infer_shape;

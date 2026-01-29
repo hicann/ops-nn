@@ -30,12 +30,12 @@ OP_TYPE_REGISTER(UniqueConsecutive);
 constexpr int64_t NoneN = 1000;
 constexpr int64_t OUT_SHAPE_SIZE = 27;
 
-static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND910_95 = {
+static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND950 = {
     op::DataType::DT_INT64,  op::DataType::DT_INT32,   op::DataType::DT_INT16,  op::DataType::DT_INT8,
     op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
     op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST_ASCEND910_95 = {op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST_ASCEND950 = {op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 bool CheckAttr4Aicore(bool returnInverse, int64_t dim)
 {
@@ -50,9 +50,9 @@ bool CheckAttr4Aicore(bool returnInverse, int64_t dim)
 
 bool CheckTensorDtype4Aicore(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut, const aclTensor* countsOut)
 {
-    OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND910_95),
+    OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND950),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
-    OP_CHECK(CheckType(countsOut->GetDataType(), IDX_DTYPE_SUPPORT_LIST_ASCEND910_95),
+    OP_CHECK(CheckType(countsOut->GetDataType(), IDX_DTYPE_SUPPORT_LIST_ASCEND950),
              OP_LOGW("Unsupport count dtype for aicore UniqueConsecutive."), return false);
     OP_CHECK(inverseOut->GetDataType() == countsOut->GetDataType(),
              OP_LOGW("Inverse and Count should have same Dtype."), return false);
@@ -65,7 +65,7 @@ bool CheckSupport4Aicore(const aclTensor* self, bool returnInverse, int64_t dim,
                          aclTensor* inverseOut, aclTensor* countsOut)
 {
     SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
-    OP_CHECK(SocVersion::ASCEND910_95 == version, OP_LOGW("Aicore UniqueConsecutive only support ASCEND910_95."),
+    OP_CHECK(SocVersion::ASCEND950 == version, OP_LOGW("Aicore UniqueConsecutive only support ASCEND950."),
              return false);
 
     OP_CHECK(CheckAttr4Aicore(returnInverse, dim), OP_LOGW("Invalid attrs for aicore, use aicpu."), return false);

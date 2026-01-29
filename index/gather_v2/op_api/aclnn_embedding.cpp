@@ -71,7 +71,7 @@ static bool CheckNotNull(const aclTensor *weight, const aclTensor *indices, cons
 static bool CheckDtypeValid(const aclTensor *weight, const aclTensor *indices, const aclTensor *out) {
   bool is910BSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-                           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+                           GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
   const std::initializer_list<DataType> WEIGHT_DTYPE_SUPPORT_LIST =
     is910BSocVersion ? WEIGHT_DTYPE_SUPPORT_LIST_910B : WEIGHT_DTYPE_SUPPORT_LIST_910;
 
@@ -151,7 +151,7 @@ static bool CheckHighperf(const aclTensor *weight, const aclTensor *indices) {
 }
 
 static bool CheckEmbeddingKernel(const aclTensor *weight, const aclTensor *indices) {
-  bool checkResult = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+  bool checkResult = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
   if (!checkResult) {
     return false;
   }
@@ -179,7 +179,7 @@ static bool CheckEmbeddingKernel(const aclTensor *weight, const aclTensor *indic
 
 static bool IsUseNoContiguous(const aclTensor* weight, const aclTensor* indices, const aclTensor* out)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         return false;
     }
     bool checkResult = CheckType(weight->GetDataType(), EMBEDDING_AICORE_DTYPE_SUPPORT_LIST);

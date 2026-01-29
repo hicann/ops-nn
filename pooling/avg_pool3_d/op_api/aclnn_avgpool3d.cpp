@@ -308,9 +308,9 @@ static bool IsEnableNCDHW(
     auto avgpoolInShape = avgpoolIn->GetViewShape();
     auto avgpoolInShapeNC = avgpoolInShape.GetDim(0) * avgpoolInShape.GetDim(1);
     auto enableNC = (avgpoolInShapeNC > 256) && (avgpoolInShapeNC < 960);
-    bool is910_95 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool is950 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     bool isBigKernelFlag = CheckBigKernel(kernelSize, pad, avgpoolIn, out);
-    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || is910_95;
+    return (isCapable && isSamePoolSize && enableNC) || isBigKernelFlag || is950;
 }
 
 // 构建averagepool3d计算图, 通过Vector实现

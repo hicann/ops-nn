@@ -811,7 +811,7 @@ void ExtendConv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     bool isHasClipValue0 = false, bool isHasClipValue1 = false,
                     bool enableRelu0 = false, bool enableRelu1 = false, bool dualOutput = false,
                     bool enableHf32Mode = false, uint32_t groups = 1,
-                    string padMode = "SPECIFIC",  string socVersion = "Ascend910_9589", string shortSocVersion = "Ascend910_95",
+                    string padMode = "SPECIFIC",  string socVersion = "Ascend950PR_9589", string shortSocVersion = "Ascend950",
                     uint8_t errorCaseStatus = 0, string format = "NCHW", string round_mode = "rint") {
     bool hasBias = isHasBias == 1;
     bool hasScale = isHasScale0 == 1;
@@ -1079,7 +1079,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_001) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1091,7 +1091,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_002) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       true, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       1, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1103,7 +1103,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_003) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "round"); // errorCaseStatus, format, round_mode
 }
 
@@ -1115,7 +1115,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_004) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
 
@@ -1127,7 +1127,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_005) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
 
@@ -1139,7 +1139,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_006) { //extendconv2d cache til
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1151,7 +1151,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_007) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       true, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1163,7 +1163,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_008) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, true, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       1, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1175,7 +1175,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_009) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
 
@@ -1187,7 +1187,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_010) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "round"); // errorCaseStatus, format, round_mode
 }
 
@@ -1199,7 +1199,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_011) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "round"); // errorCaseStatus, format, round_mode
 }
 
@@ -1211,7 +1211,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_012) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "round"); // errorCaseStatus, format, round_mode
 }
 
@@ -1223,7 +1223,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_013) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
 
@@ -1235,7 +1235,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_014) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
 
@@ -1247,7 +1247,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_015) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
 
@@ -1263,7 +1263,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_singleCoreCo_fix_case1) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 4, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW", "rint"); // errorCaseStatus, format, round_mode
 }
 
@@ -1275,7 +1275,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_int8_in_fp16_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
  
@@ -1287,7 +1287,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_int8_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1299,7 +1299,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_fp16_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1311,7 +1311,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_int8_in_int8_fp16_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
  
@@ -1323,7 +1323,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_int8_in_fp16_int8_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
  
@@ -1335,7 +1335,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_int8_fp16_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1347,7 +1347,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_fp16_int8_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1360,7 +1360,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_int8_in_int8_fp16_out_case
                            false, false, //isHasClipValue0, isHasClipValue1
                            false, false, true, // enableRelu0, enableRelu1, dualOutput
                            false, 1, // enableHf32Mode, groups
-                           "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                           "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                            0, "NHWC"); // errorCaseStatus, format
    }
 }
@@ -1373,7 +1373,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_fp8_in_int8_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       1, "NCHW"); // errorCaseStatus, format
 }
  
@@ -1385,7 +1385,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_fp8_in_fp8_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       1, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1397,7 +1397,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_hif8_in_hif8_out_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       1, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1409,7 +1409,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_int8_out_groups2_c
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 2, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
  
@@ -1421,7 +1421,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_int8_in_fp16_fp16_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }
  
@@ -1433,7 +1433,7 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nhwc_int8_in_fp16_fp16_out_case
                       false, false, //isHasClipValue0, isHasClipValue1
                       false, false, true, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NHWC"); // errorCaseStatus, format
 }
 
@@ -1445,6 +1445,6 @@ TEST_F(ExtendConv2dTiling, run_ExtendConv2D_case_nchw_conv_leakyrelu_case) {
                       false, false, //isHasClipValue0, isHasClipValue1
                       true, false, false, // enableRelu0, enableRelu1, dualOutput
                       false, 1, // enableHf32Mode, groups
-                      "SPECIFIC", "Ascend910_9589", "Ascend910_95", // padMode, socVersion, shortSocVersion
+                      "SPECIFIC", "Ascend950PR_9589", "Ascend950", // padMode, socVersion, shortSocVersion
                       0, "NCHW"); // errorCaseStatus, format
 }

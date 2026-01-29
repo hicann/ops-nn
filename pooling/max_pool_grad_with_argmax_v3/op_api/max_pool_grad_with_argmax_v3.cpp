@@ -26,7 +26,7 @@
  
  // 输入为ND场景下，1980不支持任何数据类型
  static const std::initializer_list<op::DataType> DTYPE_SUPPORT_DEFAULT_LIST = {};
- static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_95_LIST = {
+ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_950_LIST = {
      op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
  static const int DTYPE_INT32 = 3;
  static const int DTYPE_INT64 = 9;
@@ -34,8 +34,8 @@
  static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion() {
      auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
      switch (socVersion) {
-         case SocVersion::ASCEND910_95:
-             return DTYPE_SUPPORT_910_95_LIST;
+         case SocVersion::ASCEND950:
+             return DTYPE_SUPPORT_950_LIST;
          default:
              return DTYPE_SUPPORT_DEFAULT_LIST;
      }

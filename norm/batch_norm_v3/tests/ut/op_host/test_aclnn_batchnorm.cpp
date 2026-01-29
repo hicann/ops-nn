@@ -142,7 +142,7 @@ TEST_F(l2BatchNormTest, l2_batch_norm_float16_4d)
     // ut.TestPrecision();
 }
 
-TEST_F(l2BatchNormTest, ascend910_9589_l2_batch_norm_float16_NHWC)
+TEST_F(l2BatchNormTest, ascend950PR_9589_l2_batch_norm_float16_NHWC)
 {
     auto selfDesc = TensorDesc({3, 8, 3, 5}, ACL_FLOAT16, ACL_FORMAT_NHWC);
     auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
@@ -714,7 +714,7 @@ TEST_F(l2BatchNormTest, ascend910B2_l2_batch_norm_bnv3)
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2BatchNormTest, ascend910_9589_l2_batch_norm_mixDTypeInput_4d)
+TEST_F(l2BatchNormTest, ascend950PR_9589_l2_batch_norm_mixDTypeInput_4d)
 {
     auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
@@ -737,7 +737,7 @@ TEST_F(l2BatchNormTest, ascend910_9589_l2_batch_norm_mixDTypeInput_4d)
     // ut.TestPrecision();
 }
 
-TEST_F(l2BatchNormTest, ascend910_9589_l2_batch_norm_nullptr)
+TEST_F(l2BatchNormTest, ascend950PR_9589_l2_batch_norm_nullptr)
 {
     auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT16, ACL_FORMAT_NCHW);

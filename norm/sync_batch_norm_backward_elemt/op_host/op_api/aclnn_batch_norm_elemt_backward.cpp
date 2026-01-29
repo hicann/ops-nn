@@ -217,7 +217,7 @@ static aclnnStatus CheckParams(
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 || socVersion == SocVersion::ASCEND950) {
         CHECK_COND(
             Check910BDtypeValid(gradOut, input, mean, invstd, weight), ACLNN_ERR_PARAM_INVALID,
             "CheckDtypeValid failed!");

@@ -203,8 +203,8 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     conv2DInput->reserverdParam6 = 0;
     size_t inputArgsSize = sizeof(tuningtiling::Conv2DV2InputArgs);
     shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
-    std::string kbFile = "Ascend910_9589_32_AiCore_Conv2DV2_runtime_kb.json";
-    std::string socVersion = "Ascend910_9589";
+    std::string kbFile = "Ascend950PR_9589_32_AiCore_Conv2DV2_runtime_kb.json";
+    std::string socVersion = "Ascend950PR_9589";
     uint32_t aicoreNum = 32;
 
     tuningtiling::TuningTilingDefPtr tiling = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(optype);
@@ -276,17 +276,17 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
     compile_info.aicoreNum = aicoreNum;
-    compile_info.socVersion = "Ascend910_9589";
-    compile_info.shortSocVersion = "Ascend910_95";
+    compile_info.socVersion = "Ascend950PR_9589";
+    compile_info.shortSocVersion = "Ascend950";
 
     optiling::Conv2DTilingParseInfo quant_compile_info;
     quant_compile_info.opType = op_type;
-    quant_compile_info.shortSocVersion = "Ascend910_95";
+    quant_compile_info.shortSocVersion = "Ascend950";
 
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);

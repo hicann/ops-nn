@@ -81,7 +81,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *index, const
 
   auto ver = GetCurrentPlatformInfo().GetSocVersion();
   if (self->GetDataType() == op::DataType::DT_BF16 && ver != SocVersion::ASCEND910B &&
-    ver != SocVersion::ASCEND910_93 && ver != SocVersion::ASCEND910_95) {
+    ver != SocVersion::ASCEND910_93 && ver != SocVersion::ASCEND950) {
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "socVersion %s does not support BF16.",
             op::ToString(ver).GetString());
     return false;
@@ -205,7 +205,7 @@ aclnnStatus aclnnIndexSelectGetWorkspaceSize(const aclTensor *self, int64_t dim,
 
   // 调用l0算子IndexSelect进行计算
   const aclTensor* selectResult = nullptr;
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
     selectResult = l0op::GatherV2(selfContiguous, dim, indexParam, uniqueExecutor.get());
   } else {
     selectResult = l0op::GatherV3(selfContiguous, dim, indexParam, uniqueExecutor.get());

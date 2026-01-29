@@ -32,11 +32,11 @@ def parse_foreach_config(config_str):
     config_mapping = {
         'A2': 'ascend910b',
         '910_93': 'ascend910_93',
-        'A5': 'ascend910_95',
+        'A5': 'ascend950',
         '910B': 'ascend910b',
         '910B_93': 'ascend910_93',
-        '910B_95': 'ascend910_95',
-        '910_95': 'ascend910_95',
+        '910B_95': 'ascend950',
+        '950': 'ascend950',
         '910': 'ascend910',
         '910_55': 'ascend910_55',
     }
@@ -47,12 +47,12 @@ def parse_foreach_config(config_str):
     priority_checks = [
         ('A2', 'ascend910b'),
         ('910_93', 'ascend910_93'),
-        ('A5', 'ascend910_95'),
+        ('A5', 'ascend950'),
         ('910_55', 'ascend910_55'),
         ('910B', 'ascend910b'),
         ('910B_93', 'ascend910_93'),
-        ('910B_95', 'ascend910_95'),
-        ('910_95', 'ascend910_95'),
+        ('910B_95', 'ascend950'),
+        ('950', 'ascend950'),
         ('910', 'ascend910'),
     ]
 
@@ -213,7 +213,7 @@ GROUPING_CONFIGS = {
             "group_norm_swish", "scatter_list", "group_norm_swish_grad"
         ],
     },
-    "ascend910_95": {
+    "ascend950": {
         0: ["add_rms_norm_quant"],
         1: ["scatter_elements_v2"],
         2: ["quant_batch_matmul_v3"],
@@ -227,8 +227,8 @@ GROUPING_CONFIGS = {
 
 
 def grouped(repository_path, soc, group_size):
-    if soc in ("910_95", "ascend910_95"):
-        config = GROUPING_CONFIGS.get("ascend910_95")
+    if soc in ("950", "ascend950"):
+        config = GROUPING_CONFIGS.get("ascend950")
     else:
         config = GROUPING_CONFIGS.get("default")
     result = [[] for _ in range(len(config))]

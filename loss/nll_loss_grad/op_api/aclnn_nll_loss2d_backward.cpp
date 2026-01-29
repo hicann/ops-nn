@@ -50,7 +50,7 @@ static const std::initializer_list<DataType>& GetSelfDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -213,7 +213,7 @@ aclnnStatus aclnnNLLLoss2dBackwardGetWorkspaceSize(
     }
 
     op::DataType promoteType = self->GetDataType();
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         promoteType = self->GetDataType() == op::DataType::DT_FLOAT16 ? op::DataType::DT_FLOAT : self->GetDataType();
     }
 
@@ -245,7 +245,7 @@ aclnnStatus aclnnNLLLoss2dBackwardGetWorkspaceSize(
     auto totalWeightCast = l0op::Cast(totalWeight, promoteType, uniqueExecutor.get());
     CHECK_RET(totalWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95){
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950){
         const int64_t singleShape[] = {-1};
         auto gradOutputIn = [&]() -> const aclTensor* {
             if (reduction == 0) {

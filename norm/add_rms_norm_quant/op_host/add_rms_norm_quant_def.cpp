@@ -259,7 +259,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "add_rms_norm_quant_apt");
 
-        this->AICore().AddConfig("ascend910_95", configRegbase);
+        this->AICore().AddConfig("ascend950", configRegbase);
         this->AICore().AddConfig("ascend910_55", configRegbase);
     }
 };

@@ -971,7 +971,7 @@ public:
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
             .ExtendCfgInfo("opFile.value", "quant_batch_matmul_v4_apt");
 
-        this->AICore().AddConfig("ascend910_95", aicore_config);
+        this->AICore().AddConfig("ascend950", aicore_config);
 
         OpAICoreConfig config_910BC;
         config_910BC.Input("x1")

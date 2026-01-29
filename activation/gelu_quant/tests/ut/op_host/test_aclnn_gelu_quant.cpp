@@ -35,7 +35,7 @@ protected:
     }
 };
 
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_bf16_E4M3_tanh_dynamic_rint_scale)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_bf16_E4M3_tanh_dynamic_rint_scale)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -61,7 +61,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_bf16_E4M3_tanh_dynamic_rint_s
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp16_hi8_none_static_round_scale)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp16_hi8_none_static_round_scale)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -83,7 +83,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp16_hi8_none_static_round_sc
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp32_uint8_tanh_static_round_scale)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp32_uint8_tanh_static_round_scale)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -105,7 +105,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp32_uint8_tanh_static_round_
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp32_E5M2_none_dynamic_rint_scale)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp32_E5M2_none_dynamic_rint_scale)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -133,7 +133,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_fp32_E5M2_none_dynamic_rint_s
 
 // 空tensor
 // 静态输入scale为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -153,7 +153,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_nullptr_fail)
 }
 
 // 动态态输出outscale为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outscale_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outscale_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -173,7 +173,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outscale_nullptr_fail
 }
 
 // self 输入为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_self_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_self_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -198,7 +198,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_self_nullptr_fail)
 }
 
 // y 输入为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_y_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_y_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -222,7 +222,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_y_nullptr_fail)
 }
 
 // approximate 输入为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_approximate_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_approximate_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -246,7 +246,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_approximate_nullptr_fail)
 }
 
 // approximate 非法
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_approximate_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_approximate_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -270,7 +270,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_approximate_fail)
 }
 
 // quantMode 输入为空
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_quantMode_nullptr_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_quantMode_nullptr_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -294,7 +294,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_quantMode_nullptr_fail)
 }
 
 // quantMode 是否合法
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_quantMode_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_quantMode_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -321,7 +321,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_quantMode_fail)
 }
 
 // roundMode 是否合法
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_roundMode_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_roundMode_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -348,7 +348,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_roundMode_fail)
 }
 
 // self 维度为9维
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_self_Dim_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_self_Dim_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 1, 1, 1, 1, 1, 1, 1, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -371,7 +371,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_self_Dim_fail)
 }
 
 // 动态 self 维度为1维
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_self_Dim_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_self_Dim_fail)
 {
     TensorDesc x_desc = TensorDesc(
         {
@@ -406,7 +406,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_self_Dim_fail)
 }
 
 // 动态outscale 为 8维
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outScale_Dim8_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outScale_Dim8_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -429,7 +429,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outScale_Dim8_fail)
 }
 
 // 静态 scale 维度不为1
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_Dim_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_Dim_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -448,7 +448,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_Dim_fail)
 }
 
 // 静态 offset 维度不为1
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_offset_Dim_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_offset_Dim_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -471,7 +471,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_offset_Dim_fail)
 }
 
 // self y shape 不一致
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_y_shape_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_y_shape_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -494,7 +494,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_y_shape_fail)
 }
 
 // 动态 outscale shape
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outScale_shape_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outScale_shape_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -521,7 +521,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outScale_shape_fail)
 }
 
 // 静态 self scale dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_scale_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_scale_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -544,7 +544,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_scale_dtype_fail)
 }
 
 // 静态 self dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_UINT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -567,7 +567,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_self_dtype_fail)
 }
 
 // 静态 scale dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -590,7 +590,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_dtype_fail)
 }
 
 // 静态 offset dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_offset_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_offset_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -617,7 +617,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_offset_dtype_fail)
 }
 
 // 静态 scale offset dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_offset_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_offset_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -644,7 +644,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_scale_offset_dtype_fai
 }
 
 // 静态 y dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_y_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_y_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -667,7 +667,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_y_dtype_fail)
 }
 
 // y dstTpe diff
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_y_dsttype_diff_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_y_dsttype_diff_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc(
@@ -690,7 +690,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_static_y_dsttype_diff_fail)
 }
 
 // 动态 outscale dtype
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outscale_dtype_fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outscale_dtype_fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -714,7 +714,7 @@ TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_outscale_dtype_fail)
 }
 
 // dyn scale nullptr offset
-TEST_F(l2_gelu_quant_test, ascend910_95_gelu_quant_dynamic_scale_offset__fail)
+TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_scale_offset__fail)
 {
     TensorDesc x_desc = TensorDesc({64, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc scale_desc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND);

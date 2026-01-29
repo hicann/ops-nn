@@ -34,7 +34,7 @@ namespace ge {
 * The data is stored in the order of: [out_channels].
 * @li offset: An optional quantitative offset tensor. Reserved.
 *\n
-* The following are the supported data types and data formats (for Ascend 910_95 AI Processor):
+* The following are the supported data types and data formats (for Ascend 950 AI Processor):
 *\n
 | Tensor    | x           | filter      | scale        | bias    | offset  | y                                   |\n
 | :-------: | :---------: | :---------: | :----------: | :------:| :------:| :---------------------------------: |\n

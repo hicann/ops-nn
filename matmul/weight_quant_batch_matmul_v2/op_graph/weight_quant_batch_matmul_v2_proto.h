@@ -29,7 +29,7 @@ namespace ge {
 * @li weight: A matrix tensor of quantized weight. Shape supports (n,k)/(k,n),
 * Format supports ND/NZ. The type support int8, int4, int32, float8_e4m3fn, hifloat8, float4_e2m1. \n
 * Format must be ND when the type is float8_e4m3fn or hifloat8.
-* For Ascend 910_95 AI Processor, transpose_weight must be false when format is NZ. \n
+* For Ascend 950 AI Processor, transpose_weight must be false when format is NZ. \n
 * The k, n value must be at least 1.
 * The k value must be even when type is int4/float4_e2m1 and transpose_weight
 * is true, and the n value must be even when type is int4/float4_e2m1 and transpose_weight

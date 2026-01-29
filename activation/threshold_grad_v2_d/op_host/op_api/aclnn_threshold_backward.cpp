@@ -40,7 +40,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16,
     op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_BF16, op::DataType::DT_INT64};
 
@@ -57,9 +57,9 @@ static bool CheckPtrValid(const aclTensor *gradOutput, const aclTensor *self) {
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (socVersion >= SocVersion::ASCEND910B && socVersion <= SocVersion::ASCEND910E) {
-    if (socVersion == SocVersion::ASCEND910_95 && IsFloatEqual(thresholdVal_, 0.0)) {
+    if (socVersion == SocVersion::ASCEND950 && IsFloatEqual(thresholdVal_, 0.0)) {
       // relugrad 支持int64
-      return ASCEND910_95_DTYPE_DTYPE_SUPPORT_LIST;
+      return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
       return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     }

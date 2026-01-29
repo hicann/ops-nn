@@ -28,7 +28,7 @@ namespace ge {
 * float32, bfloat16. 2D-6D. Has format [ND, NHWC, NCHW].
 * @li bias: A optional Tensor. Must be one of the following types: float16,
 * float32, bfloat16. Has format [ND, NHWC, NCHW],
-* bfloat16 is only supported in Ascend 910_95 AI processor
+* bfloat16 is only supported in Ascend 950 AI processor
 * @li offset_w: A optional Tensor. Must be one of the following types:
 * int8, int4. Has format [ND, NHWC, NCHW].
 

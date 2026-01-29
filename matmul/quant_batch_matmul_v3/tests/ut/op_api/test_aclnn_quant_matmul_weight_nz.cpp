@@ -186,7 +186,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x2_not_align_16_x2_not
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_x2_not_align_16_case_04)
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_x2_not_align_16_case_04)
 {
 
     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
@@ -200,7 +200,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_x2_not_align_16_case_
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_out_int32_fail)
+// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_int32_fail)
 // {
 
 //     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
@@ -214,7 +214,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_x2_not_align_16_case_
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
 
-// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_out_nd_fail)
+// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_nd_fail)
 // {
 
 //     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
@@ -228,7 +228,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_x2_not_align_16_case_
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
 
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_out_dtype_fail)
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_dtype_fail)
 {
 
     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -241,7 +241,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_out_dtype_fail)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_n_equal_1)
+TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_n_equal_1)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 1}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
@@ -256,7 +256,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910_95_test_n_equal_1)
 
 TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_0)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     TensorDesc x1_desc = TensorDesc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
     TensorDesc x1_scale_desc = TensorDesc({1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
@@ -272,7 +272,7 @@ TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_0)
 
 TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_1)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
     TensorDesc x2_scale_desc = TensorDesc({2, 128}, ACL_BF16, ACL_FORMAT_ND);

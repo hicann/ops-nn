@@ -495,7 +495,7 @@ ge::graphStatus TilingEmbeddingDenseGradV2(gert::TilingContext* context)
 static bool IsRegbaseSocVersion(platform_ascendc::SocVersion version)
 {
     const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND910_95};
+        platform_ascendc::SocVersion::ASCEND950};
 
     return regbaseSocVersions.find(version) != regbaseSocVersions.end();
 }

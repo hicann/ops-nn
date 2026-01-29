@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(dynamic_block_quant "ascend910B1" "-DORIG_DTYPE_X=DT_FLOAT16" )
-    AddOpTestCase(dynamic_block_quant "ascend910_9599" "-DORIG_DTYPE_X=DT_FLOAT16" )
+    AddOpTestCase(dynamic_block_quant "ascend950pr_9599" "-DORIG_DTYPE_X=DT_FLOAT16" )
 endif()

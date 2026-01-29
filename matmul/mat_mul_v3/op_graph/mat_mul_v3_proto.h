@@ -28,7 +28,7 @@ namespace ge {
 * float16, float32. Has format [ND, NHWC, NCHW, NZ].
 * @li bias: A 1D Tensor. Must be one of the following types: float32,
 * float16, float32. Has format [ND, NHWC, NCHW]. \n
-* bfloat16 is only supported in Ascend 910_95 AI processor
+* bfloat16 is only supported in Ascend 950 AI processor
 * @li offset_w: An optional matrix Tensor. 2D. Must be one of the following
 * types: int8, int4.
 

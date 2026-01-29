@@ -31,9 +31,9 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test1) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NLLLossGrad")->infer_shape;
@@ -70,9 +70,9 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test2) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NLLLossGrad")->infer_shape;
@@ -109,9 +109,9 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test3) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NLLLossGrad")->infer_shape;
@@ -148,9 +148,9 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test4) {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NLLLossGrad")->infer_shape;

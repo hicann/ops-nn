@@ -133,7 +133,7 @@ void ResetBase91095(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &
 using ResetBaseFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
 
 const static std::map<platform_ascendc::SocVersion, ResetBaseFunc> ResetBaseFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, ResetBase91095},
+    {platform_ascendc::SocVersion::ASCEND950, ResetBase91095},
 };
 
 // ------------------------------ GetL0C2Out -------------------------------------------//
@@ -167,7 +167,7 @@ MatMulV3L0C2Out GetL0C2Out91095(const MatmulV3CompileInfo &compileInfo, const Ma
 using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, const MatMulV3RunInfo &);
 
 const static std::map<platform_ascendc::SocVersion, GetL0C2OutFunc> GetL0C2OutFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, GetL0C2Out91095},
+    {platform_ascendc::SocVersion::ASCEND950, GetL0C2Out91095},
 };
 
 
@@ -208,7 +208,7 @@ using GetStepSmallKFunc = uint64_t (*)(const MatMulV3Args&, const MatMulV3RunInf
 
 // 全载模板修改stepK
 const static std::map<platform_ascendc::SocVersion, GetStepSmallKFunc> GetStepSmallKFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, GetStepSmallK91095},
+    {platform_ascendc::SocVersion::ASCEND950, GetStepSmallK91095},
 };
 }  // namespace
 

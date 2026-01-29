@@ -148,7 +148,7 @@ namespace ge {
 | enable_relu1      | -                    | [true, false] |\n
 | dual_output       | -                    | [true, false] |\n
 *\n
-* @li In Ascend 910_95 AI Processor: If any dimension of
+* @li In Ascend 950 AI Processor: If any dimension of
 * x/filter/bias/offset_w/scale0/relu_weight0/clip_value0/scale1/relu_weight1/clip_value1/y shape exceeds max
 * 1000000, the product of each dimension of x/filter/bias/scale/offset/y
 * shape exceeds max int32(2147483647) or the value of strides/pads/dilations/offset_x

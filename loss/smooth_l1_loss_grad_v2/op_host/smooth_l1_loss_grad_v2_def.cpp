@@ -50,7 +50,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "smooth_l1_loss_grad_v2_apt");
-        this->AICore().AddConfig("ascend910_95", aicoreConfig);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
 

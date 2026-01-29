@@ -17,7 +17,7 @@ using AscendC::MicroAPI::RegTensor;
 using Gemm::BLK_ELEM;
 using Gemm::C0;
 using Gemm::IsZn2D;
-using Gemm::Arch::Ascend910_95;
+using Gemm::Arch::Ascend950;
 namespace MicroAPI = AscendC::MicroAPI;
 namespace detail {
 // kn
@@ -28,7 +28,7 @@ template <
     bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix n to 64
-    Ascend910_95, AntiquantFixTilePrivate<64, K, BufNum, HasAntiQuantOffset>, TensorOut,
+    Ascend950, AntiquantFixTilePrivate<64, K, BufNum, HasAntiQuantOffset>, TensorOut,
     AscendC::LocalTensor<TensorTraitIn>, AscendC::LocalTensor<TensorTraitScale>, AscendC::LocalTensor<TensorTraitScale>,
     Shape,
     typename AscendC::Std::enable_if_t<
@@ -109,7 +109,7 @@ template <
     int32_t N, int32_t K, int32_t BufNum, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale,
     bool HasAntiQuantOffset>
 struct AntiquantImpl<
-    Ascend910_95, AntiquantFixTilePrivate<N, K, BufNum, HasAntiQuantOffset>, TensorOut,
+    Ascend950, AntiquantFixTilePrivate<N, K, BufNum, HasAntiQuantOffset>, TensorOut,
     AscendC::LocalTensor<TensorTraitIn>, AscendC::LocalTensor<TensorTraitScale>, AscendC::LocalTensor<TensorTraitScale>,
     Shape,
     typename AscendC::Std::enable_if_t<
@@ -349,7 +349,7 @@ template <
     int32_t N, int32_t K, int32_t BufNum, class TensorOut, class TensorTraitIn, class TensorTraitScale,
     class TensorOffset, class Shape, bool HasAntiQuantOffset>
 struct AntiquantImpl<
-    Ascend910_95, AntiquantFixTilePrivate<N, K, BufNum, HasAntiQuantOffset>, TensorOut,
+    Ascend950, AntiquantFixTilePrivate<N, K, BufNum, HasAntiQuantOffset>, TensorOut,
     AscendC::LocalTensor<TensorTraitIn>, AscendC::LocalTensor<TensorTraitScale>, TensorOffset, Shape,
     typename AscendC::Std::enable_if_t<
         IsZn2D<decltype(TensorTraitIn{}.GetLayout())>::value &&

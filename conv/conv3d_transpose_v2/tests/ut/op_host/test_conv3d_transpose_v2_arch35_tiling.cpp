@@ -78,7 +78,7 @@ struct Conv3DTransposeV2TilingTestParam {
     std::string tiling_data_in_repo;
 };
 
-const string COMPILE_INFO_STR_910_95 = R"({
+const string COMPILE_INFO_STR_950 = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
                           "intrinsic_fix_pipe_l0c2out_f322bf16": true,
@@ -161,8 +161,8 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     map<string, string> intrinsics;
     string compileInfoPtr = COMPILE_INFO_STR_910B;
 
-    if (param.soc_version.compare("Ascend910_95") == 0) {
-        compileInfoPtr = COMPILE_INFO_STR_910_95;
+    if (param.soc_version.compare("Ascend950") == 0) {
+        compileInfoPtr = COMPILE_INFO_STR_950;
     }
     GetPlatFormInfos(compileInfoPtr.c_str(), soc_infos, aicore_spec, intrinsics);
     aicore_spec["cube_freq"] = "1800";
@@ -257,10 +257,10 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     ASSERT_EQ(tiling_data_result, param.tiling_data);
 }
 
-Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
+Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_1",
-     "Ascend910_95",
-     "Ascend910_95",
+     "Ascend950",
+     "Ascend950",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -289,8 +289,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      50331648,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_2_group",
-     "Ascend910_95",
-     "Ascend910_95",
+     "Ascend950",
+     "Ascend950",
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
@@ -319,8 +319,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      16842754,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 16 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
-     "Ascend910_95",
-     "Ascend910_95",
+     "Ascend950",
+     "Ascend950",
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
@@ -349,8 +349,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      16842754,
      "1 1 1 1 1 1 20 0 2 2 2 2 2 1 16 4 4 4 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
-     "Ascend910_95",
-     "Ascend910_95",
+     "Ascend950",
+     "Ascend950",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -379,8 +379,8 @@ Conv3DTransposeV2TilingTestParam cases_params_910_95_case[] = {
      16777218,
      "1 1 1 1 1 1 5 0 2 2 2 2 2 1 16 4 4 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 1 1 5 0 1 0 30 0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
-     "Ascend910_95",
-     "Ascend910_95",
+     "Ascend950",
+     "Ascend950",
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},
@@ -433,7 +433,7 @@ static void TestMultiThread(const Conv3DTransposeV2TilingTestParam* params, size
 TEST_F(Conv3DTransposeV2TilingRunTime3, general_cases_params_multi_thread)
 {
     TestMultiThread(
-        cases_params_910_95_case, sizeof(cases_params_910_95_case) / sizeof(Conv3DTransposeV2TilingTestParam), 3);
+        cases_params_950_case, sizeof(cases_params_950_case) / sizeof(Conv3DTransposeV2TilingTestParam), 3);
 }
 
 TEST_P(Conv3DTransposeV2TilingRunTime3, general_cases)
@@ -442,6 +442,6 @@ TEST_P(Conv3DTransposeV2TilingRunTime3, general_cases)
 }
 
 INSTANTIATE_TEST_CASE_P(
-    Conv3DTranpose910_95_case, Conv3DTransposeV2TilingRunTime3, testing::ValuesIn(cases_params_910_95_case));
+    Conv3DTranpose950_case, Conv3DTransposeV2TilingRunTime3, testing::ValuesIn(cases_params_950_case));
 
 } // namespace

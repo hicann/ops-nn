@@ -599,7 +599,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetShapeAttrsInfo()
 }
 
 bool DequantSwigluQuantV35DskTiling::IsCapable() {
-  if (socVersion != platform_ascendc::SocVersion::ASCEND910_95) {
+  if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
     return false;
   }
   if (static_cast<size_t>(activateDim_) != xDimNum_ - static_cast<size_t>(1)) {
@@ -788,7 +788,7 @@ ge::graphStatus DequantSwigluQuantV35NlastTiling::GetShapeAttrsInfo()
 
 bool DequantSwigluQuantV35NlastTiling::IsCapable()
 {
-  if (socVersion != platform_ascendc::SocVersion::ASCEND910_95) {
+  if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
     return false;
   }
   if (static_cast<size_t>(actDimIndex_) == xShape_.GetDimNum() - 1) {

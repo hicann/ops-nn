@@ -38,7 +38,7 @@ namespace ge {
 * @par Attributes:
 * @li validate_indices: An optional bool. 
 * If true, indices are checked to make sure they are sorted inlexicographic order and that there are no repeats.
-* This param is currently not effective in 910_95.
+* This param is currently not effective in 950.
 
 * @par Outputs:
 * y: A Tensor. Has the same type and format as input "values" . \n

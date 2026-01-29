@@ -120,7 +120,7 @@ const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DEFAULT = {
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_FLOAT16}
 };
 
-const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_910_95 = {
+const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_950 = {
     // input, weight, output, bias
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_INT32},
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_BF16, DataType::DT_FLOAT},
@@ -148,14 +148,14 @@ namespace {
 
 static bool IsSocSupportND()
 {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
 }
 
 }
 
 static std::vector<std::vector<DataType>> GetSupportedDtypesBySoc()
 {
-    return IsSocSupportND() ? SUPPORTED_DTYPES_GROUPS_910_95 : SUPPORTED_DTYPES_GROUPS_DEFAULT;
+    return IsSocSupportND() ? SUPPORTED_DTYPES_GROUPS_950 : SUPPORTED_DTYPES_GROUPS_DEFAULT;
 }
 
 static FVector<int64_t> ConstructV2Padding(const FVector<int64_t> &oldPad, const FVector<int64_t> &inputShape)
@@ -919,7 +919,7 @@ public:
                 break;
             case SocVersion::ASCEND910_93:
                 break;
-            case SocVersion::ASCEND910_95:
+            case SocVersion::ASCEND950:
                 break;
             default:
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,

@@ -274,7 +274,7 @@ TEST_F(convolution_tbc_backward_test, case_shape_0)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_normal) {
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_normal) {
   auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
   auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
   auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -296,7 +296,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_normal) {
 }
 
 // check NULLPTR
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_nullptr)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_nullptr)
 {
     // input(TBC1) weight(LC1C0) bias(c0), pad
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
@@ -343,7 +343,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_nullptr)
 }
 
 // empty tensor
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_empty_tensor)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_empty_tensor)
 {
     // input(TBC1) weight(LC1C0) bias(c0), pad
     auto input_tensor_desc = TensorDesc({5, 0, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
@@ -365,7 +365,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_empty_tensor)
     // EXPECT_EQ(aclRet, ACLNN_SUCCESS);  // CI芯片切换导致UT异常，临时下线
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_support) {
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_support) {
   auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
   auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
   auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
@@ -386,7 +386,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_support) {
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_not_support) {
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_not_support) {
     vector<aclDataType> ValidList = {
         ACL_DOUBLE,
         ACL_INT32,
@@ -418,7 +418,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_not_support) 
 }
 
 // different dtype input
-// TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_permute)
+// TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_permute)
 // {
 //     // input(TBC1) weight(LC1C0) bias(c0), pad
 //     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
@@ -440,7 +440,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_dtype_not_support) 
 //     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 // }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_failed)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_failed)
 {
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -461,7 +461,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_failed)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_succ_0)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_succ_0)
 {
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -482,7 +482,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_succ_0)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_succ_1)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_succ_1)
 {
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -503,7 +503,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_format_succ_1)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_shape_0)
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_shape_0)
 {
     auto input_tensor_desc = TensorDesc({5, 0, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -524,7 +524,7 @@ TEST_F(convolution_tbc_backward_test, ascend910_95_test_case_shape_0)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend910_95_8bit_test_case)
+TEST_F(convolution_tbc_backward_test, ascend950_8bit_test_case)
 {
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_HIFLOAT8, ACL_FORMAT_NCL);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_HIFLOAT8, ACL_FORMAT_NCL);

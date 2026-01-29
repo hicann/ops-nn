@@ -23,7 +23,7 @@ namespace ge {
  *
  * @par Inputs:
  * x: A tensor. Must be one of the following types: float32, float16, double, int8, int32, int16, int64, uint8, uint16,
- * qint8, bfloat16.\n In Ascend 910_95 AI Processor, support ND format. Others support 4D, format must be one of [NHWC,
+ * qint8, bfloat16.\n In Ascend 950 AI Processor, support ND format. Others support 4D, format must be one of [NHWC,
  * NCHW, HWCN].
  *
  * @par Outputs:

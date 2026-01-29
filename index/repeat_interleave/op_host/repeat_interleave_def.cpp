@@ -75,7 +75,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "repeat_interleave_apt");
-        this->AICore().AddConfig("ascend910_95", config910d);
+        this->AICore().AddConfig("ascend950", config910d);
     }
 };
 OP_ADD(RepeatInterleave);

@@ -60,8 +60,8 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *index, const
   if (self->GetDataType() == DataType::DT_BF16) {
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "take operator doesn't support [%s], except on ASCEND910B or ASCEND910_95 chip",
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "take operator doesn't support [%s], except on ASCEND910B or ASCEND950 chip",
               op::ToString(self->GetDataType()).GetString());
       return false;
     }

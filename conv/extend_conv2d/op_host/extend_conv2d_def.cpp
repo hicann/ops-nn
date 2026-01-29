@@ -51,7 +51,7 @@
 #include "register/op_def_registry.h"
 namespace ops {
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dFmpDataType = {
-    {"ascend910_95", {
+    {"ascend950", {
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
         ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,
         ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
@@ -80,7 +80,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dFmpDat
         ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dWeightDataType = {
-    {"ascend910_95", {
+    {"ascend950", {
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
         ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,
         ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
@@ -109,7 +109,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dWeight
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dBiasDataType = {
-    {"ascend910_95", {
+    {"ascend950", {
         ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
         ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
         ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, 
@@ -138,7 +138,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dBiasDa
         ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOffsetWDataType = {
-    {"ascend910_95", {
+    {"ascend950", {
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
@@ -195,11 +195,11 @@ static const std::vector<ge::DataType> extendConv2dScaleAttrDataTypeMc62cm12a = 
     ge::DT_INT64, ge::DT_UINT64, ge::DT_INT64, ge::DT_UINT64
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale0DataType = {
-    {"ascend910_95", extendConv2dScaleAttrDataType},
+    {"ascend950", extendConv2dScaleAttrDataType},
     {"mc62cm12a", extendConv2dScaleAttrDataTypeMc62cm12a}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale1DataType = {
-    {"ascend910_95", extendConv2dScaleAttrDataType},
+    {"ascend950", extendConv2dScaleAttrDataType},
     {"mc62cm12a", extendConv2dScaleAttrDataTypeMc62cm12a}
 };
 static const std::vector<ge::DataType> extendConv2dReluWeightDataType = {
@@ -229,15 +229,15 @@ static const std::vector<ge::DataType> extendConv2dReluWeightDataTypeMc62cm12a =
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dReluWeight0DataType = {
-    {"ascend910_95", extendConv2dReluWeightDataType},
+    {"ascend950", extendConv2dReluWeightDataType},
     {"mc62cm12a", extendConv2dReluWeightDataTypeMc62cm12a}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dReluWeight1DataType = {
-    {"ascend910_95", extendConv2dReluWeightDataType},
+    {"ascend950", extendConv2dReluWeightDataType},
     {"mc62cm12a", extendConv2dReluWeightDataTypeMc62cm12a}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipValue0DataType = {
-    {"ascend910_95", 
+    {"ascend950", 
         {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_HIFLOAT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN,
@@ -267,7 +267,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipValue1DataType = {
-    {"ascend910_95",
+    {"ascend950",
         {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_HIFLOAT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN,
@@ -298,7 +298,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
 };
 
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput0DataType = {
-    {"ascend910_95",
+    {"ascend950",
         {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_HIFLOAT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN,
@@ -328,7 +328,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput
         ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}
 };
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput1DataType = {
-    {"ascend910_95",
+    {"ascend950",
         {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_HIFLOAT8,
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN,
@@ -403,7 +403,7 @@ static const std::vector<ge::Format> extendConv2dNCHWFormatMc62cm12a = {
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW
 };
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dFmapAndOutputFormat = {
-    {"ascend910_95", extendConv2dFmapFormat},
+    {"ascend950", extendConv2dFmapFormat},
     {"mc62cm12a", extendConv2dNCHWFormatMc62cm12a}
 };
 static const std::vector<ge::Format> extendConv2dWeightFZFormat = {
@@ -423,11 +423,11 @@ static const std::vector<ge::Format> extendConv2dWeightFZFormat = {
     ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z
 };
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dWeightFormat = {
-    {"ascend910_95", extendConv2dWeightFormat95},
+    {"ascend950", extendConv2dWeightFormat95},
     {"mc62cm12a", extendConv2dWeightFZFormat}
 };
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dNDFormat = {
-    {"ascend910_95", {
+    {"ascend950", {
         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -483,7 +483,7 @@ public:
                     .ExtendCfgInfo("opInterface.value", "extend_conv2d")
                     .ExtendCfgInfo("jitCompile.flag", "false");
 
-        SetAscendConfig(aicoreConfig, "ascend910_95");
+        SetAscendConfig(aicoreConfig, "ascend950");
         SetAscendConfig(aicoreConfig, "mc62cm12a");
     }
 

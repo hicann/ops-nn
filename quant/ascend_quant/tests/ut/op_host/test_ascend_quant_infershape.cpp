@@ -37,9 +37,9 @@ TEST_F(AscendQuantProtoTest, AscendQuant_proto_0)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendQuant")->infer_shape;
@@ -77,9 +77,9 @@ TEST_F(AscendQuantProtoTest, infer_axis_type_with_input_has_unknown_rank)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendQuant")->infer_shape;
@@ -108,9 +108,9 @@ TEST_F(AscendQuantProtoTest, infer_axis_type_with_nchw)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendQuant")->infer_shape;
@@ -139,9 +139,9 @@ TEST_F(AscendQuantProtoTest, infer_axis_type_with_nd)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_95";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_95"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendQuant")->infer_shape;

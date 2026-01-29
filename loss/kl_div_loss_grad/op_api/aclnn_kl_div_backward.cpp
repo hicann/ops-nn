@@ -55,7 +55,7 @@ static const inline std::initializer_list<DataType>& GetSupportDtypeList(SocVers
 {
     static const std::initializer_list<DataType> emptyDtypes = {};
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-        socVersion == SocVersion::ASCEND910_95) {
+        socVersion == SocVersion::ASCEND950) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     if (socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND310P) {

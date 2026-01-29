@@ -686,7 +686,7 @@ TEST_F(l2FastBatchNormBackwardTest, ascend910B2_l2_batch_norm_backward_train_5d)
     // // ut.TestPrecision();  // comment bcz of timeout in model tests (282616 ms)
 }
 
-TEST_F(l2FastBatchNormBackwardTest, ascend910_9589_l2_batch_norm_backward_infer)
+TEST_F(l2FastBatchNormBackwardTest, ascend950PR_9589_l2_batch_norm_backward_infer)
 {
     auto gradOutDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
     auto selfDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);

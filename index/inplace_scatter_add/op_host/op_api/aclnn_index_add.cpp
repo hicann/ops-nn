@@ -55,15 +55,15 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
     op::DataType::DT_INT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_AICORE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
     op::DataType::DT_INT16, op::DataType::DT_BF16,    op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_INT64,   op::DataType::DT_BOOL};
 
 static bool IsAICoreSupport(const aclTensor *self) {
   // 根据芯片类型和输入self类型判断是否走aicore
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-    return CheckType(self->GetDataType(), ASCEND910_95_AICORE_DTYPE_SUPPORT_LIST);
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    return CheckType(self->GetDataType(), ASCEND950_AICORE_DTYPE_SUPPORT_LIST);
   } else if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
              GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
     if (CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST)) {
@@ -259,7 +259,7 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t d
   auto sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
   CHECK_RET(sourceContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
   const aclTensor* alphaTensor = nullptr;
-  bool is91095 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+  bool is91095 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
   bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) && dim == 0 &&
     self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM && self->GetDataType() == op::DataType::DT_BF16 &&

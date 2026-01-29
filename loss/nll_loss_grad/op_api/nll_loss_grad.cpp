@@ -30,7 +30,7 @@ static const std::initializer_list<op::DataType> ASCEND910_AICORE_DTYPE_SUPPORT_
 static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_AICORE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
 
 static const int64_t NONE = 0;
@@ -45,8 +45,8 @@ static inline const std::initializer_list<op::DataType>& GetAiCoreDtypeSupportLi
         case SocVersion::ASCEND910_93: {
             return ASCEND910B_AICORE_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910_95: {
-            return ASCEND910_95_AICORE_DTYPE_SUPPORT_LIST;
+        case SocVersion::ASCEND950: {
+            return ASCEND950_AICORE_DTYPE_SUPPORT_LIST;
         }
         case SocVersion::ASCEND910: {
             return ASCEND910_AICORE_DTYPE_SUPPORT_LIST;

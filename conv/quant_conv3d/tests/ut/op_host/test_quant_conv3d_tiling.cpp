@@ -542,7 +542,7 @@ void GetOriPadFromPadMode(const string& padMode, uint32_t& padh, uint32_t& padt,
 void QuantConv3DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, uint32_t isHasBias = 1, uint32_t groups = 1,
                     string padMode = "SPECIFIC", int64_t fixBatcho = 0, int64_t fixDo = 0, int64_t fixHo = 0, int64_t fixWo = 0, bool isErrorCaseFlag = false,
-                    string shortSocVersion = "Ascend910_95", ge::Format format = ge::Format::FORMAT_NCDHW) {
+                    string shortSocVersion = "Ascend950", ge::Format format = ge::Format::FORMAT_NCDHW) {
 	ge::DataType dtype = ge::DT_INT8;
 	uint32_t  mmadDtypesize = 4;//mmadDtype is FLOAT32 in develop4
 
@@ -731,7 +731,7 @@ TEST_F(QuantConv3dTiling, run_solomon_quantconv3d_group_not_equal_one_case1) {
 }
 
 TEST_F(QuantConv3dTiling, run_quantconv3d_NDHWC_case_1) {
-  QuantConv3DTestCase({1,1,1,256,1}, {1,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 1, "VALID",  0, 0, 0, 0, true, "Ascend910_95", ge::FORMAT_NDHWC);
+  QuantConv3DTestCase({1,1,1,256,1}, {1,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 1, "VALID",  0, 0, 0, 0, true, "Ascend950", ge::FORMAT_NDHWC);
 }
 
 TEST_F(QuantConv3dTiling, run_quantconv3d_pad_ge_kernel_case_1) {

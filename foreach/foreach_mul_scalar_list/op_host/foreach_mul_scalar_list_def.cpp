@@ -48,7 +48,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_mul_scalar_list_apt");
-        this->AICore().AddConfig("ascend910_95", regbaseCfg);
+        this->AICore().AddConfig("ascend950", regbaseCfg);
 
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");

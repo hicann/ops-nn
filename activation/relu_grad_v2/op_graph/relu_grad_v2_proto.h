@@ -24,10 +24,10 @@ namespace ge {
  * @par Inputs:
  * Two inputs, including:
  * @li gradients: A tensor of input gradient. Indicates the gradient of backpropagation. Supported type:
- * TensorType::RealNumberType(). \n In Ascend 910_95 AI Processor, support ND format. Others support 5D, format must be
+ * TensorType::RealNumberType(). \n In Ascend 950 AI Processor, support ND format. Others support 5D, format must be
  * NC1HWC0.
  * @li mask: A tensor of input mask. Indicates the positive output. Must be the following types: uint8, uint1. \n
- * In Ascend 910_95 AI Processor, support ND format. Others support 5D, format must be NC1HWC0.
+ * In Ascend 950 AI Processor, support ND format. Others support 5D, format must be NC1HWC0.
  *
  * @par Outputs:
  * backprops: A tensor of output. Indicates the backpropagation result.

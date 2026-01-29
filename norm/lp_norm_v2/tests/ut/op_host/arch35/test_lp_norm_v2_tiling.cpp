@@ -51,7 +51,7 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling1_difftype)
                                             "hardware_info": {
                                                 "UB_SIZE": 253952,
                                                 "CORE_NUM": 64,
-                                                "socVersion": "Ascend910_95"
+                                                "socVersion": "Ascend950"
                                             }
                                         })";
     map<string, string> socInfos;
@@ -121,7 +121,7 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling2_difftype)
                                             "hardware_info": {
                                                 "UB_SIZE": 253952,
                                                 "CORE_NUM": 64,
-                                                "socVersion": "Ascend910_95"
+                                                "socVersion": "Ascend950"
                                             }
                                         })";
     map<string, string> socInfos;
@@ -191,7 +191,7 @@ TEST_F(LpNormV2DavidTiling, lp_norm_v2_david_tiling3_difftype)
                                             "hardware_info": {
                                                 "UB_SIZE": 253952,
                                                 "CORE_NUM": 64,
-                                                "socVersion": "Ascend910_95"
+                                                "socVersion": "Ascend950"
                                             }
                                         })";
     map<string, string> socInfos;

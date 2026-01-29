@@ -94,7 +94,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.ExtendCfgInfo("opFile.value", "transpose_batch_mat_mul_apt");
-        this->AICore().AddConfig("ascend910_95", aicConfig);
+        this->AICore().AddConfig("ascend950", aicConfig);
         this->AICore().AddConfig("ascend910_55", aicConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

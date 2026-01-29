@@ -425,9 +425,9 @@ TEST_F(l2Gather, case_ascend910B2_last_dim)
     EXPECT_NE(exe, nullptr);
 }
 
-TEST_F(l2Gather, ascend910_95_case_norm_int32)
+TEST_F(l2Gather, ascend950_case_norm_int32)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_desc = TensorDesc({4, 4}, ACL_INT32, ACL_FORMAT_NCHW).ValueRange(-1, 1);
     int64_t dim = 1;
     auto out_tensor_desc = TensorDesc({4, 4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 1);

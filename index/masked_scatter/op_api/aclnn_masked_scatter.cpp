@@ -493,7 +493,7 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
     CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* opOut = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
         auto retStatus = ProcessBroadcast(selfRef, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());

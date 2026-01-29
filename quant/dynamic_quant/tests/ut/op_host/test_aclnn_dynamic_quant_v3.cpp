@@ -34,7 +34,7 @@ protected:
     }
 };
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_01)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_fail_01)
 {
     // isSymmetrical + offset not nullptr
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -55,7 +55,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_02)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_02)
 {
     // group_index shape invalid
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -76,7 +76,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_02)
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_03)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_03)
 {
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc smooth_desc = TensorDesc({32}, ACL_BF16, ACL_FORMAT_ND);
@@ -95,7 +95,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_03)
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_04)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_fail_04)
 {
     // isSymmetrical is true and offset is not nullptr
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -115,7 +115,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_fail_
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_05)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_05)
 {
     // isSymmetrical is true and offset is nullptr
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -134,7 +134,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_05)
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_shape_fail_06)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_shape_fail_06)
 {
     // y shape is not equal to x shape
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -153,7 +153,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_shape
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_type_fail_07)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_type_fail_07)
 {
     // y type is not supported
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
@@ -172,7 +172,7 @@ TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_type_
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
 }
 
-TEST_F(l2_dynamic_quant_v3_test, ascend910_9589_dynamic_quant_v3_bf16_int8_without_smooth_08)
+TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_without_smooth_08)
 {
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);

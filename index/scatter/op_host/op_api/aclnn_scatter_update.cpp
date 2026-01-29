@@ -35,7 +35,7 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_DATA = {
     op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16,
     op::DataType::DT_INT32};
 
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST_DATA = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_DATA = {
     op::DataType::DT_INT8, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
     op::DataType::DT_BF16, op::DataType::DT_UINT8,   op::DataType::DT_INT32};
 
@@ -50,8 +50,8 @@ static const int64_t BATCH_DIM = 0;
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
-        return ASCEND910_95_DTYPE_SUPPORT_LIST_DATA;
+    if (socVersion == SocVersion::ASCEND950) {
+        return ASCEND950_DTYPE_SUPPORT_LIST_DATA;
     } else {
         return DTYPE_SUPPORT_LIST_DATA;
     }

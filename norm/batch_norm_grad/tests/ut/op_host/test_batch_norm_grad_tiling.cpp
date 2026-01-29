@@ -86,7 +86,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -204,7 +204,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -322,7 +322,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -440,7 +440,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -558,7 +558,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -675,7 +675,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -793,7 +793,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -912,7 +912,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_bf16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1031,7 +1031,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1150,7 +1150,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1269,7 +1269,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_bf16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1388,7 +1388,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp32)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1508,7 +1508,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1628,7 +1628,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_bf16)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1747,7 +1747,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1866,7 +1866,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -1985,7 +1985,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_0)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2104,7 +2104,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2223,7 +2223,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2343,7 +2343,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0_1)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2463,7 +2463,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ChannelMissMatch)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2573,7 +2573,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_train_ChannelMissMatch)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -2683,7 +2683,7 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_DtypeMixMatch)
                           "Intrinsic_data_move_out2l1_nd2nz": false,
                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;

@@ -20,8 +20,8 @@ namespace ge {
 
 * @par Inputs:
 * One input:
-* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 910_95 AI Processor. 
-* The double type is reserved but currently unsupported. Support format: NHDWC, NCDHW. Additional support for ND in Ascend 910_95 AI Processor.
+* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 950 AI Processor. 
+* The double type is reserved but currently unsupported. Support format: NHDWC, NCDHW. Additional support for ND in Ascend 950 AI Processor.
 
 * @par Attributes:
 * @li ksize: A required list of int8, int16, int32, or int64 values,

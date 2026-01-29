@@ -40,14 +40,14 @@ namespace ge {
 * The swi activate_left algorithm to use:
 *     'false'(activate right) or 'true'(activate left), defalut is 'false'(activate right).
 * @li quant_mode: Type is string. The quant mode to use: 'static' or 'dynamic', defalut is 'static'.
-* @li dst_type: Type is Int32. Declare the output y dtype. Support 2:int8, 35:fp8_e5m2, 36:fp8_e4m3fn, 40:fp4x2_e2m1, 41:fp4x2_e1m2, Defaults to 2, only used for Ascend 910_95 AI Processors.
-* @li round_mode: Type is String. The round mode to use: 'rint', 'round, 'floor', 'ceil', 'trunc', defalut is 'rint', only used for Ascend 910_95 AI Processors.
-* @li activate_dim: Type is Int32. Describing the split dimension in Glu algorithm: value in [-xDim, xDim-1], defalut is -1, only used for Ascend 910_95 AI Processors.
+* @li dst_type: Type is Int32. Declare the output y dtype. Support 2:int8, 35:fp8_e5m2, 36:fp8_e4m3fn, 40:fp4x2_e2m1, 41:fp4x2_e1m2, Defaults to 2, only used for Ascend 950 AI Processors.
+* @li round_mode: Type is String. The round mode to use: 'rint', 'round, 'floor', 'ceil', 'trunc', defalut is 'rint', only used for Ascend 950 AI Processors.
+* @li activate_dim: Type is Int32. Describing the split dimension in Glu algorithm: value in [-xDim, xDim-1], defalut is -1, only used for Ascend 950 AI Processors.
 * @li swiglu_mode: Type is int. Optional parameter, default is 0. The SWIGLU computation mode to use:
-*     '0' (default) for standard SWIGLU, '1' for a variant using odd-even blocking, which requires support for clamp_limit, activation coefficient, and bias. This attribute is not supported in Ascend 910_95 AI Processors.
-* @li clamp_limit: Type is float. Optional parameter, default is 7.0. The threshold limit for SWIGLU input. This attribute is not supported in Ascend 910_95 AI Processors.
-* @li glu_alpha: Type is float. Optional parameter, default is 1.702. The activation coefficient for the GLU activation function. This attribute is not supported in Ascend 910_95 AI Processors.
-* @li glu_bias: Type is float. Optional parameter, default is 1.0. The bias applied during SWIGLU linear computation. This attribute is not supported in Ascend 910_95 AI Processors.
+*     '0' (default) for standard SWIGLU, '1' for a variant using odd-even blocking, which requires support for clamp_limit, activation coefficient, and bias. This attribute is not supported in Ascend 950 AI Processors.
+* @li clamp_limit: Type is float. Optional parameter, default is 7.0. The threshold limit for SWIGLU input. This attribute is not supported in Ascend 950 AI Processors.
+* @li glu_alpha: Type is float. Optional parameter, default is 1.702. The activation coefficient for the GLU activation function. This attribute is not supported in Ascend 950 AI Processors.
+* @li glu_bias: Type is float. Optional parameter, default is 1.0. The bias applied during SWIGLU linear computation. This attribute is not supported in Ascend 950 AI Processors.
 
 * @attention Constraints:
 * @li When the type of x is int32, weight_scale must be input.
@@ -56,16 +56,16 @@ namespace ge {
 * @li When dst_type is fp4x2_e2m1 or fp4x2_e1m2, round_mode supports 'rint', 'round, 'floor', 'ceil' and 'trunc'.
 * @li The shape of activate_dim corresponding to x must be divisible by 2.
 * @li When activate_dim is not the last dimension of x, group_index must be None.
-* @li The input quant_offset is not supported in Ascend 910_95 AI Processors only.
-* @li The type of output y is fp8_e5m2, fp8_e4m3fn, fp4x2_e2m1 and fp4x2_e1m2 only supported in Ascend 910_95 AI Processors.
-* @li The attribute quant_mode is only supported 'dynamic' in Ascend 910_95 AI Processors.
-* @li The attribute dst_type is only supported in Ascend 910_95 AI Processors.
-* @li The attribute round_mode is only supported in Ascend 910_95 AI Processors.
-* @li The attribute activate_dim is only supported in Ascend 910_95 AI Processors.
-* @li The attribute swiglu_mode is not supported in Ascend 910_95 AI Processors.
-* @li The attribute clamp_limit is not supported in Ascend 910_95 AI Processors.
-* @li The attribute glu_alpha is not supported in Ascend 910_95 AI Processors.
-* @li The attribute glu_bias is not supported in Ascend 910_95 AI Processors.
+* @li The input quant_offset is not supported in Ascend 950 AI Processors only.
+* @li The type of output y is fp8_e5m2, fp8_e4m3fn, fp4x2_e2m1 and fp4x2_e1m2 only supported in Ascend 950 AI Processors.
+* @li The attribute quant_mode is only supported 'dynamic' in Ascend 950 AI Processors.
+* @li The attribute dst_type is only supported in Ascend 950 AI Processors.
+* @li The attribute round_mode is only supported in Ascend 950 AI Processors.
+* @li The attribute activate_dim is only supported in Ascend 950 AI Processors.
+* @li The attribute swiglu_mode is not supported in Ascend 950 AI Processors.
+* @li The attribute clamp_limit is not supported in Ascend 950 AI Processors.
+* @li The attribute glu_alpha is not supported in Ascend 950 AI Processors.
+* @li The attribute glu_bias is not supported in Ascend 950 AI Processors.
 
 * @par Restrictions:
 * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.

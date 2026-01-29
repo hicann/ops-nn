@@ -41,7 +41,7 @@ protected:
 
 TEST_F(EluTilingTest, test_tiling_fp16_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -136,7 +136,7 @@ TEST_F(EluTilingTest, test_tiling_fp16_001)
 
 TEST_F(EluTilingTest, test_tiling_fp32_002)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -231,7 +231,7 @@ TEST_F(EluTilingTest, test_tiling_fp32_002)
 
 TEST_F(EluTilingTest, test_tiling_bf16_007)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -326,7 +326,7 @@ TEST_F(EluTilingTest, test_tiling_bf16_007)
 
 TEST_F(EluTilingTest, test_tiling_failed_bf16_fp32_008)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -417,7 +417,7 @@ TEST_F(EluTilingTest, test_tiling_failed_bf16_fp32_008)
 
 TEST_F(EluTilingTest, test_tiling_failed_empty_tensor_009)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -508,7 +508,7 @@ TEST_F(EluTilingTest, test_tiling_failed_empty_tensor_009)
 
 TEST_F(EluTilingTest, test_tiling_failed_unsupport_type_010)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,
@@ -599,7 +599,7 @@ TEST_F(EluTilingTest, test_tiling_failed_unsupport_type_010)
 
 TEST_F(EluTilingTest, test_tiling_failed_diff_shape_010)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
                                     "hardware_info": {
                                         "BT_SIZE": 0,

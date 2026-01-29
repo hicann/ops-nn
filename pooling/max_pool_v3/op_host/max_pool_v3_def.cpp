@@ -53,7 +53,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "max_pool_v3_apt");
-        this->AICore().AddConfig("ascend910_95", aiCoreConfig);
+        this->AICore().AddConfig("ascend950", aiCoreConfig);
         this->AICore().AddConfig("mc62cm12a", aiCoreConfig);
     }
 };

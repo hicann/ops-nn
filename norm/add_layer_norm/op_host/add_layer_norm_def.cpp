@@ -215,7 +215,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "add_layer_norm_apt");
-        this->AICore().AddConfig("ascend910_95", config_910d);
+        this->AICore().AddConfig("ascend950", config_910d);
         this->AICore().AddConfig("mc62cm12a", config_910d);
     }
 };

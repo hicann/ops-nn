@@ -727,9 +727,9 @@ TEST_F(l2_matmul_test, cubeMathType_4_fp32_fp32)
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
 
-TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_invalid)
+TEST_F(l2_matmul_test, ascend950_test_mm_slice_invalid)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({5,2,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({15, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -741,9 +741,9 @@ TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_invalid)
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
 }
 
-TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_valid)
+TEST_F(l2_matmul_test, ascend950_test_mm_slice_valid)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     op::SetCubeCoreNum(32U);
     auto tensor_1_desc = TensorDesc({5,3,7}, ACL_FLOAT, ACL_FORMAT_ND, {42,7,1}, 21, {210}).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({7, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -756,9 +756,9 @@ TEST_F(l2_matmul_test, ascend910_95_test_mm_slice_valid)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene1)
+TEST_F(l2_matmul_test, ascend950_test_bmm_transpose_scene1)
 {   
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     op::SetCubeCoreNum(32U);
     auto tensor_1_desc = TensorDesc({512, 150, 150}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     // 原始shape排布k b n 转换后 b k n
@@ -776,9 +776,9 @@ TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene1)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene2)
+TEST_F(l2_matmul_test, ascend950_test_bmm_transpose_scene2)
 {   
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     op::SetCubeCoreNum(32U);
     auto tensor_1_desc = TensorDesc({512, 150, 150}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     // 原始shape排布n b k [32 512 150] 转换后 b k n [512 150 32]
@@ -797,10 +797,10 @@ TEST_F(l2_matmul_test, ascend910_95_test_bmm_transpose_scene2)
 }
 // }
 
-// 接口整改异常用例 - 910_95
-TEST_F(l2_matmul_test, matmul_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - 950
+TEST_F(l2_matmul_test, matmul_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -812,9 +812,9 @@ TEST_F(l2_matmul_test, matmul_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, matmul_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -826,9 +826,9 @@ TEST_F(l2_matmul_test, matmul_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, matmul_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -840,9 +840,9 @@ TEST_F(l2_matmul_test, matmul_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, matmul_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -854,9 +854,9 @@ TEST_F(l2_matmul_test, matmul_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, matmul_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
@@ -868,9 +868,9 @@ TEST_F(l2_matmul_test, matmul_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, matmul_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({3, 4}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);

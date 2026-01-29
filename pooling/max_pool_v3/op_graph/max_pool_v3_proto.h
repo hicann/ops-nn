@@ -63,7 +63,7 @@ namespace ge {
 * For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
 * Atlas A3 Training Series Product: The stride of the H and W dimensions should be greater than 0 and
 * smaller than 64.  \n
-* For Ascend 910_95 AI Processor: The stride of the H and W dimensions should be greater than 0.
+* For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
 * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The output
 * shape at the H and W dimensions is calculated by below formula: \n
 * @code{.c}

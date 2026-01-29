@@ -29,7 +29,7 @@ using Cmct::CeilDiv;
 using Cmct::Gemm::GemmType;
 using Cmct::Gemm::KB_ELEM;
 using Cmct::Gemm::MmadAPrefetchBAntiquantScmc;
-using Cmct::Gemm::Arch::Ascend910_95;
+using Cmct::Gemm::Arch::Ascend950;
 using Cmct::Gemm::Block::BlockMmad;
 using Cmct::Gemm::Block::BlockSchedulerTailResplitExpanded;
 using Cmct::Gemm::Kernel::KernelMatmulAPrefetchBAntiquant;
@@ -308,7 +308,7 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_K = 256;
     static_assert(VF_K == ubMte2InnerSize);
     using Type = Cmct::Prologue::BAntiquantScmc<
-        Ascend910_95, HighBitType, ScaleType, !bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum,
+        Ascend950, HighBitType, ScaleType, !bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum,
         ubMte2InnerSize, VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE,
         ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
@@ -332,7 +332,7 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_N = 32;
     static constexpr uint64_t VF_K = 512;
     using Type = Cmct::Prologue::BAntiquantScmc<
-        Ascend910_95, HighBitType, ScaleType, !bTrans, true, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
+        Ascend950, HighBitType, ScaleType, !bTrans, true, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
         VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 
@@ -355,7 +355,7 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_N = bTrans ? 64 : 256;
     static constexpr uint64_t VF_K = bTrans ? 256 : 64;
     using Type = Cmct::Prologue::BAntiquantScmc<
-        Ascend910_95, HighBitType, ScaleType, bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
+        Ascend950, HighBitType, ScaleType, bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
         VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 
@@ -378,7 +378,7 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_N = bTrans ? 64 : 256;
     static constexpr uint64_t VF_K = bTrans ? 256 : 64;
     using Type = Cmct::Prologue::BAntiquantScmc<
-        Ascend910_95, HighBitType, ScaleType, bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
+        Ascend950, HighBitType, ScaleType, bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
         VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 
@@ -401,7 +401,7 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_N = static_cast<uint64_t>(32 * KB_ELEM<HighBitType> / ubMte2InnerSize);
     static constexpr uint64_t VF_K = static_cast<uint64_t>(ubMte2InnerSize);
     using Type = Cmct::Prologue::BAntiquantScmc<
-        Ascend910_95, HighBitType, ScaleType, !bTrans, true, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
+        Ascend950, HighBitType, ScaleType, !bTrans, true, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
         VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 

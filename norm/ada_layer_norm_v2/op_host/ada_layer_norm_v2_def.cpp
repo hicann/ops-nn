@@ -45,28 +45,28 @@ static const std::vector<ge::Format> format =
             this->AICore().AddConfig("ascend910b");
             this->AICore().AddConfig("ascend910_93");
             
-            OpAICoreConfig config_910_95;
-            config_910_95.Input("x").ParamType(REQUIRED).DataType(xDataType)
+            OpAICoreConfig config_950;
+            config_950.Input("x").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Input("scale").ParamType(REQUIRED).DataType(xDataType)
+            config_950.Input("scale").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Input("shift").ParamType(REQUIRED).DataType(xDataType)
+            config_950.Input("shift").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Input("weight").ParamType(OPTIONAL).DataType(weightDataType)
+            config_950.Input("weight").ParamType(OPTIONAL).DataType(weightDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Input("bias").ParamType(OPTIONAL).DataType(weightDataType)
+            config_950.Input("bias").ParamType(OPTIONAL).DataType(weightDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Output("out").ParamType(REQUIRED).DataType(xDataType)
+            config_950.Output("out").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Output("mean").ParamType(REQUIRED).DataType(xDataType)
+            config_950.Output("mean").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.Output("rstd").ParamType(REQUIRED).DataType(xDataType)
+            config_950.Output("rstd").ParamType(REQUIRED).DataType(xDataType)
                 .Format(format).UnknownShapeFormat(format);
-            config_910_95.DynamicCompileStaticFlag(true)
+            config_950.DynamicCompileStaticFlag(true)
                 .DynamicRankSupportFlag(true)
                 .DynamicShapeSupportFlag(true)
                 .ExtendCfgInfo("opFile.value", "ada_layer_norm_v2_apt");
-            this->AICore().AddConfig("ascend910_95", config_910_95);
+            this->AICore().AddConfig("ascend950", config_950);
         }
     };
     OP_ADD(AdaLayerNormV2);

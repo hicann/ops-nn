@@ -56,13 +56,13 @@ public:
         this->Attr("quant_axis").AttrType(OPTIONAL).Int(-1);
         this->Attr("reciprocal_scale").AttrType(OPTIONAL).Bool(false);
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
-        OpAICoreConfig config_910_95;
-        config_910_95.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "quant_update_scatter_apt");
-        this->AICore().AddConfig("ascend910_95", config_910_95);
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

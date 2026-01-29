@@ -54,7 +54,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_BF16};
 
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut, const aclTensor* countsOut) {
-  if (SocVersion::ASCEND910_95 == GetCurrentPlatformInfo().GetSocVersion()) {
+  if (SocVersion::ASCEND950 == GetCurrentPlatformInfo().GetSocVersion()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);  
   } else {
     auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_DTYPE_SUPPORT_LIST);
@@ -103,20 +103,20 @@ static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, bool r
   return ACLNN_SUCCESS;
 }
 
-static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND910_95 = {
+static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND950 = {
     op::DataType::DT_INT64,  op::DataType::DT_INT32,   op::DataType::DT_INT16,  op::DataType::DT_INT8,
     op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
     op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
 bool SupportAicore4Unique2(const aclTensor* self) {
     SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
-    OP_CHECK(SocVersion::ASCEND910_95 == version, OP_LOGW("Aicore Unique2 only support ASCEND910_95."),
+    OP_CHECK(SocVersion::ASCEND950 == version, OP_LOGW("Aicore Unique2 only support ASCEND950."),
              return false);
 
     size_t dimNums = self->GetStorageShape().GetDimNum();
     OP_LOGW("DimNums of self is %zu", dimNums);
     OP_CHECK(dimNums == 1, OP_LOGW("Aicore Unique only support 1D input."), return false);
-    OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND910_95),
+    OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND950),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
     return true;
 }
@@ -138,7 +138,7 @@ aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool return
     Shape dummyShape{1};
     aclTensor* dummyInverseOut = nullptr;
     aclTensor* dummyCountsOut = nullptr;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);
         dummyCountsOut = executor->AllocTensor(countsOut->GetStorageShape(), countsOut->GetDataType(), Format::FORMAT_ND);      
     } else {
@@ -165,7 +165,7 @@ aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool return
         CHECK_RET(newData != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto inverseIdx = l0op::ScatterElements(newData, sortedIndices, sumIdx, 0, "none", executor);
         const aclTensor* viewCopyInverseIdx = nullptr;
-        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
             viewCopyInverseIdx = l0op::ViewCopy(inverseIdx, inverseOut, executor);
             CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {

@@ -47,7 +47,7 @@ using Gemm::SetStride;
 using Gemm::SYNC_AIC_AIV_FLAG;
 using Gemm::SYNC_AIV_AIC_FLAG;
 using Gemm::SYNC_MODE4;
-using Gemm::Arch::Ascend910_95;
+using Gemm::Arch::Ascend950;
 using Gemm::Tile::CacheMode;
 using Gemm::Tile::CopyIf;
 
@@ -59,7 +59,7 @@ template <
     class TileShapeL1_>
 class BlockPrologue<
     BAntiquantScmc<
-        Ascend910_95, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
+        Ascend950, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
         UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize, AntiQuantScaleAfterCastSize>,
     BType_, ScaleType_, TileShapeL1_> {
 public:
@@ -72,7 +72,7 @@ public:
     using TileShapeL1 = TileShapeL1_;
     using ElementOut = HighBitType;
     using DispatchPolicy = BAntiquantScmc<
-        Ascend910_95, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
+        Ascend950, HighBitType, PrologueScaleType, false, false, AivNum, HasOffset_, UbInBufNum, InnerSize, VfN, VfK,
         UbOutBufNum, UbInSize, UbOutSize, ScaleSize, OffsetSize, AntiQuantScaleAfterCastSize>;
     using ArchTag = typename DispatchPolicy::ArchTag;
 

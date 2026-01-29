@@ -78,7 +78,7 @@ inline ge::DataType DtypeScalarToTensor2(ge::DataType dtype) {
     FOREACH_OPDEF_END_910B_ONLY(NAME)
 
 #define FOREACH_OPDEF_END_Atlas_A2_AND_910_93_AND_A5(NAME)                       \
-            this->AICore().AddConfig("ascend910_95");                  \
+            this->AICore().AddConfig("ascend950");                  \
     FOREACH_OPDEF_END_Atlas_A2_AND_910_93(NAME)
 
 #define FOREACH_TENSOR_DTYPE_AND_FORMAT_PREPARE(...)                \

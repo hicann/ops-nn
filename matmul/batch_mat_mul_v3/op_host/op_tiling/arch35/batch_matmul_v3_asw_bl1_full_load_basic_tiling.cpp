@@ -22,7 +22,7 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, ASCEND910_95, BL1_FULL_LOAD_BASIC);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTiling, ASCEND950, BL1_FULL_LOAD_BASIC);
 
 
 bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()

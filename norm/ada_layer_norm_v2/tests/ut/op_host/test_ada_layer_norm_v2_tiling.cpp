@@ -114,7 +114,7 @@ TEST_F(AdaLayerNormV2Tiling, AdaLayerNormV2Tiling_001)
 
 TEST_F(AdaLayerNormV2Tiling, AdaLayerNormV2Tiling_regbase_001)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                               "Intrinsic_fix_pipe_l0c2out": false,
@@ -193,7 +193,7 @@ TEST_F(AdaLayerNormV2Tiling, AdaLayerNormV2Tiling_regbase_001)
 
 TEST_F(AdaLayerNormV2Tiling, AdaLayerNormV2Tiling_regbase_002)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                               "Intrinsic_fix_pipe_l0c2out": false,

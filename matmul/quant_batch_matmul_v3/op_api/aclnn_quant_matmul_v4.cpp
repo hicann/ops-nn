@@ -875,7 +875,7 @@ static inline aclnnStatus CheckParamsA8W4Float(const TupleTensor &mandatoryTenso
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams910_95(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
+static aclnnStatus CheckParams950(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
                                      const aclTensor *out) {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);                                    
@@ -903,9 +903,9 @@ static bool IsFormatNZ(const aclTensor* tensor) {
            ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32;
 }
 
-static aclnnStatus CheckWeightNzParams910_95(const aclTensor *x1, const aclTensor *x2, const aclTensor *out)
+static aclnnStatus CheckWeightNzParams950(const aclTensor *x1, const aclTensor *x2, const aclTensor *out)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         return ACLNN_SUCCESS;
     }
 
@@ -948,8 +948,8 @@ static aclnnStatus CheckWeightNzParams910_95(const aclTensor *x1, const aclTenso
 
 static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
                                bool isA4W4, const aclTensor *out) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-        return CheckParams910_95(mandatoryTensors, optionalTensors, boolsTrans, out);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        return CheckParams950(mandatoryTensors, optionalTensors, boolsTrans, out);
     } else {
         // 1. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
         CHECK_RET(CheckDtypeValid(mandatoryTensors, optionalTensors, out, isA4W4), ACLNN_ERR_PARAM_INVALID);
@@ -1123,7 +1123,7 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4) {
         switch (socVersion) {
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:
-            case SocVersion::ASCEND910_95:
+            case SocVersion::ASCEND950:
             case SocVersion::ASCEND310P:
                 break;
             default: {
@@ -1176,9 +1176,9 @@ static aclnnStatus WeightNZCaseProcess(const aclTensor *&x2, bool &transposeX2, 
     bool isNotOneDim = viewShapeDim >= PENULTIMATE_DIM && viewShape[viewShapeDim - 1] != 1 &&
                        viewShape[viewShapeDim - PENULTIMATE_DIM] != 1;
     auto formatX2 = static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat()));
-    // if plateform is not 910_95 and weight is already in nz format, no need to set contiguous
+    // if plateform is not 950 and weight is already in nz format, no need to set contiguous
     if (formatX2 != op::Format::FORMAT_FRACTAL_NZ ||
-        (isNotOneDim && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95)) {
+        (isNotOneDim && GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950)) {
         CHECK_RET(TensorContiguousProcess(x2, transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
     }
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ) {
@@ -1376,7 +1376,7 @@ static bool IsX1Transdata(const aclTensor *x1, const aclTensor *x2, int64_t dtyp
 }
 
 static void A8W4ProcessYScaleTensor(const aclTensor *x1Scale, const aclTensor *yScale) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         // A8W4场景输入的INT64转为UINT64
         if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
             auto castYScale = const_cast<aclTensor*>(yScale);
@@ -1762,7 +1762,7 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const 
     if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), yScale, x1Offset, yOffset, groupSize)) {
         return ACLNN_ERR_PARAM_INVALID;
     }
-    auto ret = CheckWeightNzParams910_95(x1, x2, out);
+    auto ret = CheckWeightNzParams950(x1, x2, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (x2 == nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "QuantMatmul WeightNz do not support x2 is nullptr.");

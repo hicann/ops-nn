@@ -62,7 +62,7 @@ TEST_F(SoftmaxV2Tiling, softmax_v2_float32_ar_base)
                            "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                           "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                           "CORE_NUM": 64, "socVersion": "Ascend950"}
                            })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -149,7 +149,7 @@ TEST_F(SoftmaxV2Tiling, softmax_v2_bfloat16_ar_base)
                            "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                           "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+                           "CORE_NUM": 64, "socVersion": "Ascend950"}
                            })";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;

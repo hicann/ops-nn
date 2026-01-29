@@ -76,8 +76,8 @@ void TestSparseTensorDenseMatMulTiling(
     map<string, string> intrinsics;
     map<string, string> version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    version["Short_SoC_version"] = "Ascend910_95";
-    version["SoC_version"] = "Ascend910_9589";
+    version["Short_SoC_version"] = "Ascend950";
+    version["SoC_version"] = "Ascend950PR_9589";
 
     // platform info
     fe::PlatFormInfos platform_info;

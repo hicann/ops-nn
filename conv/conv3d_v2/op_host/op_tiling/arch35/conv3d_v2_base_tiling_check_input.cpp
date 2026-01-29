@@ -235,7 +235,7 @@ ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
 
 ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
 {
-    if (socVersion == SocVersion::ASCEND910_95 || socVersion == SocVersion::ASCEND910_55) {
+    if (socVersion == SocVersion::ASCEND950 || socVersion == SocVersion::ASCEND910_55) {
         bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
                                           descInfo_.weightFormat == ge::FORMAT_NCDHW &&
                                           descInfo_.outFormat == ge::FORMAT_NDHWC;

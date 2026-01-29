@@ -26,9 +26,9 @@
 namespace optiling {
 static constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 static constexpr int64_t DOUBLE_BUFFER = 2;
-static constexpr uint64_t TILING_KEY_HALF_910_95 = 10001;
-static constexpr uint64_t TILING_KEY_FLOAT_910_95 = 10002;
-static constexpr uint64_t TILING_KEY_BF16_910_95 = 10004;
+static constexpr uint64_t TILING_KEY_HALF_950 = 10001;
+static constexpr uint64_t TILING_KEY_FLOAT_950 = 10002;
+static constexpr uint64_t TILING_KEY_BF16_950 = 10004;
 static constexpr int64_t SINGLE_CORE_PROCESS_DATA = 4096;
 static constexpr int64_t FIRST_INPUT_IDX = 0;
 static constexpr int64_t SECOND_INPUT_IDX = 1;
@@ -328,11 +328,11 @@ uint64_t ForeachReduceRegbaseTiling::GetTilingKey() const
 {
     switch (dataType_) {
         case ge::DT_FLOAT:
-            return TILING_KEY_FLOAT_910_95;
+            return TILING_KEY_FLOAT_950;
         case ge::DT_FLOAT16:
-            return TILING_KEY_HALF_910_95;
+            return TILING_KEY_HALF_950;
         case ge::DT_BF16:
-            return TILING_KEY_BF16_910_95;
+            return TILING_KEY_BF16_950;
         default:
             return 0;
     }

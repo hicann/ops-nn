@@ -39,7 +39,7 @@ namespace ge {
 * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
 * Indicates the index of the R1 axis in the shape of x.
 * @li begin_params_axis: An optional attribute, the dtype is int32. Defaults to 0.
-* In Ascend 910_95 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
+* In Ascend 950 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
 * @li epsilon: An optional attribute, the dtype is float32. Defaults to 1e-5 . \n
 
 *@par Outputs:

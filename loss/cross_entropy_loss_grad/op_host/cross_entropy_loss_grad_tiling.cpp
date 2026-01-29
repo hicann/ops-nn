@@ -94,7 +94,7 @@ inline int64_t GetCeilAlign(const int64_t value1, const int64_t value2) {
 static bool IsRegbaseSocVersion4CELOSSGrad(platform_ascendc::SocVersion version)
 {
     const static std::set<platform_ascendc::SocVersion> regbaseSocVersions = {
-        platform_ascendc::SocVersion::ASCEND910_95
+        platform_ascendc::SocVersion::ASCEND950
     };
 
     return regbaseSocVersions.find(version) != regbaseSocVersions.end();

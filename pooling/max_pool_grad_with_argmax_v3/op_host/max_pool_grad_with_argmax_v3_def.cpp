@@ -66,7 +66,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "max_pool_grad_with_argmax_v3");
-        this->AICore().AddConfig("ascend910_95", aiCoreConfig);
+        this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
 

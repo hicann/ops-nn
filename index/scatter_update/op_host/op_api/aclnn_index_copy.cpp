@@ -65,7 +65,7 @@ static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_910B = 
   op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
   op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_910_95 = {
+static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_950 = {
   op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_COMPLEX64,
   op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
   // aicore
@@ -88,8 +88,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     return SELF_DTYPE_SUPPORT_LIST_910B;
-  } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-    return SELF_DTYPE_SUPPORT_LIST_910_95;
+  } else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    return SELF_DTYPE_SUPPORT_LIST_950;
   } else {
     return SELF_DTYPE_SUPPORT_LIST;
   }

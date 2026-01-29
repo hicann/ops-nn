@@ -20,7 +20,7 @@ uint64_t Conv3dBaseTilingV2::GetLoad3dMaxFilterHW()
 {
     uint64_t load3dMaxFilterHW = 0;
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NCDHW || descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
-        load3dMaxFilterHW = LOAD3D_MAX_FILTER_H_W_910_95;
+        load3dMaxFilterHW = LOAD3D_MAX_FILTER_H_W_950;
     }
     return load3dMaxFilterHW;
 }

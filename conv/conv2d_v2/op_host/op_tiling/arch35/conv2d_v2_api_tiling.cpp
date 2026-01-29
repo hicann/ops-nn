@@ -716,7 +716,7 @@ void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
 
 uint32_t Conv2dTiling::GetVecNumBySoc() const
 {
-    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND950) {
         return VEC_NUM_PER_CUBE_910D;
     } else {
         return 0;

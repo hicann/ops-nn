@@ -81,7 +81,7 @@ class EmbeddingHashTableExport : public OpDef {
                  .DynamicShapeSupportFlag(true)
                  .NeedCheckSupportFlag(false)
                  .ExtendCfgInfo("opFile.value", "embedding_hash_table_export");
-    this->AICore().AddConfig("ascend910_95", aicore_config);
+    this->AICore().AddConfig("ascend950", aicore_config);
   }
 };
 

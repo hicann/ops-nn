@@ -59,7 +59,7 @@ static void InitPlatForm(
     map<string, string>& intrinsics, map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
-        "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64, "socVersion": "Ascend910_95"}
+        "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
     GetPlatFormInfos(hardwareInfo.c_str(), socInfos, aicoreSpec, intrinsics, socVersion);
 
@@ -75,7 +75,7 @@ static void DoSmoothL1LossV2TilingCase(
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    map<string, string> socVersion = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socVersion = {{"Short_SoC_version", "Ascend950"}};
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersion);
 
     optiling::SmoothL1LossV2CompileInfo compileInfo;

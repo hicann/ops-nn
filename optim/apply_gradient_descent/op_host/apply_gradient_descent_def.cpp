@@ -49,7 +49,7 @@ class ApplyGradientDescent : public OpDef {
                 .DynamicShapeSupportFlag(true)
                 .PrecisionReduceFlag(false)
                 .ExtendCfgInfo("opFile.value", "apply_gradient_descent_apt");
-            this->AICore().AddConfig("ascend910_95", aicoreConfig);
+            this->AICore().AddConfig("ascend950", aicoreConfig);
         }
 };
 

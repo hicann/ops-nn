@@ -33,7 +33,7 @@ constexpr int32_t FULL_LOAD_BASE = 4;
 constexpr int32_t BASE = 999;
 
 const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> MatMulV3PrioritiesMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95,
+    {platform_ascendc::SocVersion::ASCEND950,
      {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::BASIC_STREAM_K, strategy::STREAM_K, strategy::BASIC_ASWT,
       strategy::FULL_LOAD_BASE}},
     {platform_ascendc::SocVersion::RESERVED_VERSION, {strategy::BASE}}, // supportMmadS8S4平台

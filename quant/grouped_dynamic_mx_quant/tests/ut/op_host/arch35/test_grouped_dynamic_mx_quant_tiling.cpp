@@ -65,7 +65,7 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, ge::Dat
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
     // platform info

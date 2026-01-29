@@ -39,7 +39,7 @@ namespace ge {
 
 * - Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product or Atlas Inference Series Product or
-* Ascend 910_95 AI Processor: \n
+* Ascend 950 AI Processor: \n
 * This operator supports use with the matmul operator, such as QuantBatchMatmulV3. \n
 * - Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component or
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product or Atlas Inference Series Product: \n

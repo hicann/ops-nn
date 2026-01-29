@@ -33,7 +33,7 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator GeluGrad.
 * @attention Constraints:
-* In Ascend 910_95 AI Processor, inputs and outputs support broadcasting.
+* In Ascend 950 AI Processor, inputs and outputs support broadcasting.
 */
 REG_OP(GeluGrad)
     .INPUT(dy, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))

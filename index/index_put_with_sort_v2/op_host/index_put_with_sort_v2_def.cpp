@@ -75,7 +75,7 @@ static const std::vector<ge::DataType> posType = {
              .DynamicFormatFlag(false)
              .DynamicRankSupportFlag(true)
              .DynamicShapeSupportFlag(true);
-             this->AICore().AddConfig("ascend910_95");
+             this->AICore().AddConfig("ascend950");
          }
      };
  

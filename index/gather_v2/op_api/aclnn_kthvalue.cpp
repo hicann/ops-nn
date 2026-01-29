@@ -44,7 +44,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_INT16, op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_BF16};
 
 // 910D Sort的self/value支持的dtype
-static const std::initializer_list<op::DataType> ASCEND910_95_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,  op::DataType::DT_BF16, op::DataType::DT_UINT8,
   op::DataType::DT_INT8,    op::DataType::DT_INT16,  op::DataType::DT_INT32, op::DataType::DT_INT64,
   op::DataType::DT_UINT16,  op::DataType::DT_UINT32, op::DataType::DT_UINT64};
@@ -53,8 +53,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
       GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     return ASCEND910B_DTYPE_SUPPORT_LIST;
-  }else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
-    return ASCEND910_95_DTYPE_SUPPORT_LIST;
+  }else if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    return ASCEND950_DTYPE_SUPPORT_LIST;
   }
   return ASCEND910A_DTYPE_SUPPORT_LIST;
 }
@@ -216,7 +216,7 @@ aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int6
     CHECK_RET(selfTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行sort计算
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
       lastDim = -1;
     }
     auto sortOut = l0op::Sort(selfTranspose, lastDim, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());
@@ -232,7 +232,7 @@ aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int6
     indicesSortOut = const_cast<aclTensor *>(l0op::Transpose(indicesSortOutNoTrans, axes, uniqueExecutor.get()));
     CHECK_RET(indicesSortOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
   } else {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
       positiveDim = -1;
     }
     auto sortOut = l0op::Sort(selfReshape, positiveDim, descending, stable, op::DataType::DT_INT32, uniqueExecutor.get());

@@ -85,7 +85,7 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("softsync.flag", "true")
             .ExtendCfgInfo("opFile.value", "gemm_v3_apt");
-        this->AICore().AddConfig("ascend910_95", aicConfig_95);
+        this->AICore().AddConfig("ascend950", aicConfig_95);
     }
 };
 

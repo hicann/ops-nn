@@ -292,7 +292,7 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool isSupportSocVersion =
         (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND910_95);
+         socVersion == SocVersion::ASCEND950);
     if (!isSupportSocVersion) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",

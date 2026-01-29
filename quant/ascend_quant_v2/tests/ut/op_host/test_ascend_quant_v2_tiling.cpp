@@ -785,7 +785,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_error_shape1)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_1)
+TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_1)
 {
     // test float16, blcok cut last axis
     fe::PlatFormInfos platform_info;
@@ -793,7 +793,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_1)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -871,7 +871,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_1)
 
 }
 
-TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_910_95_2)
+TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_950_2)
 {
     // test float16, blcok cut last axis
     fe::PlatFormInfos platform_info;
@@ -879,7 +879,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_910_95_2)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -961,7 +961,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_910_95_2)
 
 }
 
-TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_910_95_3)
+TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_950_3)
 {
     // test float16, blcok cut last axis
     fe::PlatFormInfos platform_info;
@@ -969,7 +969,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_910_95_3)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -1046,7 +1046,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_910_95_3)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_shape)
+TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_error_shape)
 {
     // test float, blcok cut first axis
     fe::PlatFormInfos platform_info;
@@ -1054,7 +1054,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_shape)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -1130,7 +1130,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_shape)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_axis)
+TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_error_axis)
 {
     // test float, blcok cut first axis
     fe::PlatFormInfos platform_info;
@@ -1138,7 +1138,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_910_95_error_axis)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     InitPlatForm(platform_info, soc_infos, aicore_spec, intrinsics);
-    map<string, string> socversions = {{"Short_SoC_version", "Ascend910_95"}};
+    map<string, string> socversions = {{"Short_SoC_version", "Ascend950"}};
     map<string, string> npuarchs = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

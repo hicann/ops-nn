@@ -105,7 +105,7 @@ void Conv3DDWV2BasicBlockTiling::SetBasicBlockAttrsTiling()
 }
 
 bool Conv3DDWV2BasicBlockTiling::IsCapable() {
-    // 当芯片型号为910_95时需要拦截，主要原因是共用tilingFunc和TilingParse
+    // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
     if (IsSocVersion91095()) {
         return false;
     }

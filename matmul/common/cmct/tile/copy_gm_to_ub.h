@@ -22,12 +22,12 @@ using Gemm::BYTE_PER_BLK;
 using Gemm::in_gm;
 using Gemm::in_ub;
 using Gemm::IsColumnMajor2D;
-using Gemm::Arch::Ascend910_95;
+using Gemm::Arch::Ascend950;
 namespace detail {
 // ND 转置场景(kn)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_gm<SrcTrait> && in_ub<DstTrait> && IsColumnMajor2D<decltype(DstTrait{}.GetLayout())>::value &&
         IsColumnMajor2D<decltype(SrcTrait{}.GetLayout())>::value>> {
@@ -52,7 +52,7 @@ struct CopyIfImpl<
 // ND 转置场景(nk)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_gm<SrcTrait> && in_ub<DstTrait> && IsRowMajor2D<decltype(DstTrait{}.GetLayout())>::value &&
         IsRowMajor2D<decltype(SrcTrait{}.GetLayout())>::value>> {
@@ -78,7 +78,7 @@ struct CopyIfImpl<
 // layout ((n0,n1),(k0,k1)):((_1,k1*k0*n0),(_16,_256))
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_gm<SrcTrait> && in_ub<DstTrait> && IsZn2D<decltype(DstTrait{}.GetLayout())>::value &&
         IsZn2D<decltype(SrcTrait{}.GetLayout())>::value>> {
@@ -107,7 +107,7 @@ struct CopyIfImpl<
 // layout (n,1):(1,n)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
 struct CopyIfImpl<
-    Ascend910_95, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
+    Ascend950, AscendC::LocalTensor<DstTrait>, AscendC::GlobalTensor<SrcTrait>, Shape, CacheMode,
     typename AscendC::Std::enable_if_t<
         in_gm<SrcTrait> && in_ub<DstTrait> && Is2D1Dim1<decltype(SrcTrait{}.GetLayout())>::value>> {
     __aicore__ inline static void Run(

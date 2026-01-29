@@ -82,7 +82,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.ExtendCfgInfo("opFile.value", "flat_quant_apt").ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
-        this->AICore().AddConfig("ascend910_95", aicConfig);
+        this->AICore().AddConfig("ascend950", aicConfig);
     }
 };
 OP_ADD(FlatQuant);

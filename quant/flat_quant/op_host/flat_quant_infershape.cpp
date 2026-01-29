@@ -20,7 +20,7 @@
 
 using namespace ge;
 namespace ops {
-static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend910_95"};
+static std::set<std::string> FlatQuantMXFP4DavidSupportSoc = {"Ascend950"};
 static const int32_t DTYPE_FLOAT4_E2M1 = 40;
 static constexpr size_t FLATQUANT_K_IDX = 0;
 static constexpr size_t FLATQUANT_M_IDX = 1;
@@ -56,7 +56,7 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
-    if (IsFlatQuantMxFp4DavidSupport()) { // Only for 910_95
+    if (IsFlatQuantMxFp4DavidSupport()) { // Only for 950
         const int32_t* outxDtype = nullptr;
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);
@@ -120,7 +120,7 @@ static ge::graphStatus InferDataType4FlatQuant(gert::InferDataTypeContext* conte
         return GRAPH_FAILED;
     }
 
-    if (IsFlatQuantMxFp4DavidSupport()) { // For 910_95
+    if (IsFlatQuantMxFp4DavidSupport()) { // For 950
         const int32_t* outxDtype = nullptr;
         if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);

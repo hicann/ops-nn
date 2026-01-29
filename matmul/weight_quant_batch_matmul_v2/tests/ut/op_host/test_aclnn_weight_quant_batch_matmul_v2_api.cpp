@@ -103,17 +103,17 @@ protected:
     }
 };
 
-class l2_weight_quant_batch_matmul_v2_test_910_95 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
+class l2_weight_quant_batch_matmul_v2_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
 {
 protected:
     static void SetUpTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910_95 SetUp" << endl;
+        cout << "l2_weight_quant_batch_matmul_v2_test_950 SetUp" << endl;
     }
 
     static void TearDownTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910_95 TearDown" << endl;
+        cout << "l2_weight_quant_batch_matmul_v2_test_950 TearDown" << endl;
     }
 };
 
@@ -292,7 +292,7 @@ TEST_P(l2_weight_quant_batch_matmul_v2_test_910, ascend910_generalTest)
     TestOneParamCase(param);
 }
 
-TEST_P(l2_weight_quant_batch_matmul_v2_test_910_95, ascend910_95_generalTest)
+TEST_P(l2_weight_quant_batch_matmul_v2_test_950, ascend950_generalTest)
 {
     WeightQuantBatchMatmulV2TestParam param = GetParam();
     TestOneParamCase(param);
@@ -2463,8 +2463,8 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910[] = {
      ACLNN_ERR_RUNTIME_ERROR},
 };
 
-static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
-    {"Ascend910_95_case_nd_f8_invalid_soc",
+static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
+    {"Ascend950_case_nd_f8_invalid_soc",
      {96, 11264},
      {11264, 1664},
      {1, 1664},
@@ -2489,7 +2489,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      false,
      false,
      ACLNN_SUCCESS},
-    {"Ascend910_95_case_nd_w4_nz_transweight_error",
+    {"Ascend950_case_nd_w4_nz_transweight_error",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -2517,7 +2517,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      TRANSPOSE_LAST_TWO_DIMS,
      TRANSPOSE_LAST_TWO_DIMS},
-    {"Ascend910_95_case_nd_aqoffset_int32_invalid",
+    {"Ascend950_case_nd_aqoffset_int32_invalid",
      {96, 11264},
      {11264, 1664},
      {1, 1664},
@@ -2542,7 +2542,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      false,
      false,
      ACLNN_ERR_PARAM_INVALID},
-    {"Ascend910_95_case_a16mxf4_nd_weight_fp4",
+    {"Ascend950_case_a16mxf4_nd_weight_fp4",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2570,7 +2570,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend910_95_case_a16mxf4_nd_weight_fp32",
+    {"Ascend950_case_a16mxf4_nd_weight_fp32",
      {2, 64},
      {64, 16},
      {2, 128},
@@ -2598,7 +2598,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend910_95_case_a16mxf4_nd_invalid_group_size",
+    {"Ascend950_case_a16mxf4_nd_invalid_group_size",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -2626,7 +2626,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend910_95_case_a16mxf4_nd_invalid_antiquant_offset",
+    {"Ascend950_case_a16mxf4_nd_invalid_antiquant_offset",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -2654,7 +2654,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend910_95_case_a16mxf4_nd_invalid_shape",
+    {"Ascend950_case_a16mxf4_nd_invalid_shape",
      {2, 64},
      {64, 129},
      {2, 129},
@@ -2694,8 +2694,8 @@ INSTANTIATE_TEST_SUITE_P(
     Ascend910_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910,
     testing::ValuesIn(casesParamsAscend910));
 INSTANTIATE_TEST_SUITE_P(
-    Ascend910_95_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910_95,
-    testing::ValuesIn(casesParamsAscend910_95));
+    Ascend950_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_950,
+    testing::ValuesIn(casesParamsAscend950));
 
 static void ThreadFunc(
     const WeightQuantBatchMatmulV2TestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
@@ -2737,9 +2737,9 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_910, ascend910_multi_thread)
     TestMultiThread(casesParamsAscend910, sizeof(casesParamsAscend910) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
 }
 
-TEST_F(l2_weight_quant_batch_matmul_v2_test_910_95, ascend910_95_multi_thread)
+TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
     TestMultiThread(
-        casesParamsAscend910_95, sizeof(casesParamsAscend910_95) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
+        casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
 }

@@ -8,5 +8,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(grouped_dynamic_block_quant "ascend910_9599" "-DORIG_DTYPE_X=DT_FLOAT16" )
+    AddOpTestCase(grouped_dynamic_block_quant "ascend950pr_9599" "-DORIG_DTYPE_X=DT_FLOAT16" )
 endif()

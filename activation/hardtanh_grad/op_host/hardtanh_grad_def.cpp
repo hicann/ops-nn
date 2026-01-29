@@ -51,7 +51,7 @@ class HardtanhGrad : public OpDef {
                 .NeedCheckSupportFlag(false)
                 .PrecisionReduceFlag(true)
                 .ExtendCfgInfo("opFile.value", "hardtanh_grad_apt");
-            this->AICore().AddConfig("ascend910_95", aicoreConfig);
+            this->AICore().AddConfig("ascend950", aicoreConfig);
         }
 };
 

@@ -71,7 +71,7 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
     case SocVersion::ASCEND910B: {
       return SELF_OUT_DTYPE_SUPPORT_910B_LIST;
     }
-    case SocVersion::ASCEND910_95: {
+    case SocVersion::ASCEND950: {
       return SELF_OUT_DTYPE_SUPPORT_910D_LIST;
     }
     case SocVersion::ASCEND910: {
@@ -436,7 +436,7 @@ static const aclTensor* ExecMaxPoolV3(const aclTensor* self, const aclTensor* se
   CHECK_RET(selfUnsqueezed != nullptr, nullptr);
 
   const aclTensor* selfProcsResult = selfUnsqueezed;
-  bool isDavid = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+  bool isDavid = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
   if (!isDavid) {
     // ND格式-> 5HD格式 NHWC/ NCHW
     selfProcsResult = Selfto5HDProcess(selfUnsqueezed, executor);

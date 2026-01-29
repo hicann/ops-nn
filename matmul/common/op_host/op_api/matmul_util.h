@@ -319,7 +319,7 @@ protected:
     aclnnStatus GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype);
 };
 
-// 适用soc: ASCEND910B, ASCEND910_93, ASCEND910_95,
+// 适用soc: ASCEND910B, ASCEND910_93, ASCEND950,
 class Ascend910BMatMulRule : public SocMatMulRuleBase {
 public:
     Ascend910BMatMulRule(op::SocVersion soc_version)

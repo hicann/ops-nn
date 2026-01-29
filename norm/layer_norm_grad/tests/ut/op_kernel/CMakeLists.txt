@@ -9,5 +9,5 @@
 # ----------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(layer_norm_grad "ascend910_9599" "-DDTYPE_DY=float -DDTYPE_GAMMA=float -DDTYPE_PD_GAMMA=float" )
+    AddOpTestCase(layer_norm_grad "ascend950pr_9599" "-DDTYPE_DY=float -DDTYPE_GAMMA=float -DDTYPE_PD_GAMMA=float" )
 endif()

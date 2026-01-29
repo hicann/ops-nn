@@ -214,7 +214,7 @@ public:
         int64_t curBlockIdx = AscendC::GetBlockIdx();
         int64_t blockNum = AscendC::GetBlockNum();
         bool enable2UB =
-            AscendC::Std::is_same_v<TileCopyParam, Tile::TileCopy<Arch::Ascend910_95, Tile::CopyOutSplitMWithParams>>;
+            AscendC::Std::is_same_v<TileCopyParam, Tile::TileCopy<Arch::Ascend950, Tile::CopyOutSplitMWithParams>>;
         if ASCEND_IS_AIV {
             if (!enable2UB && AscendC::GetSubBlockIdx() > 0) {
                 return;

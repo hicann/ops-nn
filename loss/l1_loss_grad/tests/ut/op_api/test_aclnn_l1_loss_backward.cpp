@@ -453,7 +453,7 @@ TEST_F(l2_l1_loss_backward_test, aclnnL1LossBackward_22_aclnnL1LossBackward_inpu
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_l1_loss_backward_test, ascend910_95_aclnnL1LossBackward_input_scalar_grads)
+TEST_F(l2_l1_loss_backward_test, ascend950_aclnnL1LossBackward_input_scalar_grads)
 {
     auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);

@@ -111,7 +111,7 @@ void Conv3dTiling::Infer5hdShape()
 bool Conv3dTiling::CheckInputFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
-    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_95) {
+    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND950) {
         conv3dSupportFormatSet = {
             {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}
         };
@@ -457,7 +457,7 @@ bool Conv3dTiling::CheckInputShape()
 bool Conv3dTiling::CheckSoc()
 {
     static unordered_set<platform_ascendc::SocVersion> supportedSoc = {platform_ascendc::SocVersion::ASCEND910B,
-                                                                       platform_ascendc::SocVersion::ASCEND910_95,
+                                                                       platform_ascendc::SocVersion::ASCEND950,
                                                                        platform_ascendc::SocVersion::ASCEND910_55};
     if (supportedSoc.find(this->platformInfo.socVersion) == supportedSoc.end()) {
         TILING_LOG_ERROR("current Soc Version is not support");

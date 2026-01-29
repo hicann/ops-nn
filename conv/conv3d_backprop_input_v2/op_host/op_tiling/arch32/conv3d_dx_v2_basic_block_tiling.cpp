@@ -58,7 +58,7 @@ namespace Conv {
 ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 {
     if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND910_95 ||
+            platform_ascendc::SocVersion::ASCEND950 ||
         context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
             platform_ascendc::SocVersion::ASCEND910_55) {
         return ge::GRAPH_SUCCESS;
@@ -100,7 +100,7 @@ ge::graphStatus Conv3DDXV2BasicBlockTiling::GetShapeAttrsInfo()
 bool Conv3DDXV2BasicBlockTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
-            platform_ascendc::SocVersion::ASCEND910_95 ||
+            platform_ascendc::SocVersion::ASCEND950 ||
         context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->shortSocVersion ==
             platform_ascendc::SocVersion::ASCEND910_55) {
         return false;

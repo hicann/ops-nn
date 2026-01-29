@@ -300,7 +300,7 @@ TEST_F(ModulateTiling, test_modulate_regbase_tiling_D) {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
 
     // platform info

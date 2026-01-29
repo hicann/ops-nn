@@ -78,7 +78,7 @@ static int64_t GetDtypeSize(const op::DataType dtype)
 static bool IsregBaseAiCoreSupport(const aclTensor* logProbs)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         return CheckType(logProbs->GetDataType(), V3_AICORE_DTYPE_SUPPORT_LIST);
     }
     return false;
@@ -217,7 +217,7 @@ const std::tuple<op::Shape, op::Shape> CtcLossNpuOutputShape(const aclTensor* lo
     }
     int64_t alphaTailSize = 2 * maxLength + 1;
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    int64_t alphaTailSizeAlign = (socVersion == SocVersion::ASCEND910_95) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
+    int64_t alphaTailSizeAlign = (socVersion == SocVersion::ASCEND950) ? alphaTailSize : (alphaTailSize + 7) / 8 * 8;
     op::Shape logAlphaShape = {inputN, inputT, alphaTailSizeAlign};
 
     if (logProbsShape.GetDimNum() == DIM_NUM_THREE) {

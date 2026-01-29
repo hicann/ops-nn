@@ -801,7 +801,7 @@ void GetOriPadFromPadModeConv2D(const string& padMode, uint32_t& padu, uint32_t&
 void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, ge::DataType dtype,
                     uint32_t isHasBias = 1, uint32_t isHasScale = 0, bool enableHf32Mode = false, uint32_t groups = 1,
-                    string padMode = "SPECIFIC", string socVersion = "Ascend910_9589", string shortSocVersion = "Ascend910_95",
+                    string padMode = "SPECIFIC", string socVersion = "Ascend950PR_9589", string shortSocVersion = "Ascend950",
                     bool isErrorCaseFlag = false, string format = "NCHW") {
     bool hasBias = isHasBias == 1;
     bool hasScale = isHasScale == 1;
@@ -1830,40 +1830,40 @@ TEST_F(Conv2dv2Tiling, run_conv2d_gencase_20) {
    Conv2DTestCase({28,66,9,12766}, {29,5,43}, {37,38,39,40}, {7,8}, {11,1}, ge::DT_FLOAT16, 1);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_58) {
-   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_59) {
-   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_60) {
-   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_61) {
-   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_62) {
-   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_63) {
-   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_64) {
-   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_65) {
-   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_66) {
-   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_67) {
-   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_68) {
-   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_69) {
-   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_70) {
    Conv2DTestCase({15,14,55,88}, {13,11,9}, {4,5,3,2}, {12,8}, {4,3}, ge::DT_FLOAT16, 1);
@@ -2140,15 +2140,15 @@ TEST_F(Conv2dv2Tiling, run_conv2d_gencase_228) {
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b16) {
- Conv2DTestCase({2,1280,36,28}, {134217712,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+ Conv2DTestCase({2,1280,36,28}, {134217712,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b8) {
- Conv2DTestCase({1,1280,32,32}, {67108832,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_INT8, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+ Conv2DTestCase({1,1280,32,32}, {67108832,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_INT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b32) {
- Conv2DTestCase({2,1280,36,28}, {268435448,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true);
+ Conv2DTestCase({2,1280,36,28}, {268435448,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_MorHWsplit_case1) {
@@ -2543,19 +2543,19 @@ TEST_F(Conv2dv2Tiling, run_conv2d_case_padMode_sameLower) {
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_fp16) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_bf16) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_BF16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_BF16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_fp32) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_hf32) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, true, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, true, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_soc_unsupport) {
@@ -2563,37 +2563,37 @@ TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_soc_unsupport) {
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_group_support) {
-   Conv2DTestCase({4,64,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({4,64,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_C04_not_support) {
-   Conv2DTestCase({4,3,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({4,3,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_hif8_not_support) {
-   Conv2DTestCase({1,20,3,1000}, {20,3,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true, "NHWC");
+   Conv2DTestCase({1,20,3,1000}, {20,3,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv1d_NHWC_hif8_not_support) {
-   Conv2DTestCase({1,20,1,1000000}, {20,1,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true, "NHWC");
+   Conv2DTestCase({1,20,1,1000000}, {20,1,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_valid) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "VALID", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "VALID", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_same) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_sameUpper) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_UPPER", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_UPPER", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_sameLower) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_LOWER", "Ascend910_9589", "Ascend910_95", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_LOWER", "Ascend950PR_9589", "Ascend950", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_exceed_fixpipe_instr_limit) {
-   Conv2DTestCase({1,2,3,180000}, {160000,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_9589", "Ascend910_95", true, "NHWC");
+   Conv2DTestCase({1,2,3,180000}, {160000,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
 }

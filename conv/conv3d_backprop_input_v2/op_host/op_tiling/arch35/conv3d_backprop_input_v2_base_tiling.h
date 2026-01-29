@@ -103,8 +103,8 @@ struct RunInfoParaV2 {
     int32_t kernel_d;
     int32_t kernel_h;
     int32_t kernel_w;
-    int32_t dedy_cout_g; // 910_95
-    int32_t dedx_cin_g;  // 910_95
+    int32_t dedy_cout_g; // 950
+    int32_t dedx_cin_g;  // 950
     int32_t dedy_cout1;
     int32_t dedx_cin1;
     int32_t real_g;
@@ -163,8 +163,8 @@ struct RunInfoParaV2 {
 
     int32_t load3d_special;
     int32_t hf32_flag;
-    int32_t groups;  // 910_95
-    int32_t enlarge; // 910_95
+    int32_t groups;  // 950
+    int32_t enlarge; // 950
     // format vars
     ge::Format outBackpropFormat;
     ge::Format filterFormat;

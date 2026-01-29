@@ -154,7 +154,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "scatter_elements_v2_apt");
-        this->AICore().AddConfig("ascend910_95", aiCoreConfig);
+        this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
 

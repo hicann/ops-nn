@@ -27,7 +27,7 @@ namespace strategy {
 constexpr int32_t BASE = 999;
 
 const static std::map<platform_ascendc::SocVersion, std::vector<int32_t>> TransposeBatchMatMulPrioritiesMap = {
-    { platform_ascendc::SocVersion::ASCEND910_95,
+    { platform_ascendc::SocVersion::ASCEND950,
     { strategy::BASE} },
 };
 

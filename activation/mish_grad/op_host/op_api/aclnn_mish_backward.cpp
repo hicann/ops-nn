@@ -43,7 +43,7 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
   switch (socVersion) {
     case SocVersion::ASCEND910B:
     case SocVersion::ASCEND910_93:
-    case SocVersion::ASCEND910_95: {
+    case SocVersion::ASCEND950: {
       return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     default: {

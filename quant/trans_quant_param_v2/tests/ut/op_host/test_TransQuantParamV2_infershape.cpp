@@ -87,14 +87,14 @@ TEST_F(TransQuantParamV2Test, trans_quant_paramV2_test_case_3)
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(TransQuantParamV2Test, ascend910_95_test_offset_greater_than_scale_1)
+TEST_F(TransQuantParamV2Test, ascend950_test_offset_greater_than_scale_1)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     ge::op::TransQuantParamV2 op;
@@ -115,14 +115,14 @@ TEST_F(TransQuantParamV2Test, ascend910_95_test_offset_greater_than_scale_1)
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(TransQuantParamV2Test, ascend910_95_test_offset_greater_than_scale_2)
+TEST_F(TransQuantParamV2Test, ascend950_test_offset_greater_than_scale_2)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     ge::op::TransQuantParamV2 op;
@@ -143,14 +143,14 @@ TEST_F(TransQuantParamV2Test, ascend910_95_test_offset_greater_than_scale_2)
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(TransQuantParamV2Test, ascend910_95_test_offset_less_than_scale_3)
+TEST_F(TransQuantParamV2Test, ascend950_test_offset_less_than_scale_3)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend910_95";
-    optiCompilationInfo.soc_version = "Ascend910_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_9589"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950PR_9589";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     ge::op::TransQuantParamV2 op;

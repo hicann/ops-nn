@@ -45,7 +45,7 @@ class MseLossGradTiling : public testing::Test {
 //     std::map<std::string, std::string> soc_infos;
 //     std::map<std::string, std::string> aicore_spec;
 //     std::map<std::string, std::string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     std::string compile_info_string = R"({
 //       "hardware_info": {
 //         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -135,7 +135,7 @@ class MseLossGradTiling : public testing::Test {
 //     std::map<std::string, std::string> soc_infos;
 //     std::map<std::string, std::string> aicore_spec;
 //     std::map<std::string, std::string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     std::string compile_info_string = R"({
 //       "hardware_info": {
 //         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -225,7 +225,7 @@ class MseLossGradTiling : public testing::Test {
 //     std::map<std::string, std::string> soc_infos;
 //     std::map<std::string, std::string> aicore_spec;
 //     std::map<std::string, std::string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     std::string compile_info_string = R"({
 //       "hardware_info": {
 //         "BT_SIZE": 0, "load3d_constraints": "1",
@@ -316,7 +316,7 @@ class MseLossGradTiling : public testing::Test {
 //     std::map<std::string, std::string> soc_infos;
 //     std::map<std::string, std::string> aicore_spec;
 //     std::map<std::string, std::string> intrinsics;
-//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910_95"}};
+//     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 //     std::string compile_info_string = R"({
 //       "hardware_info": {
 //         "BT_SIZE": 0, "load3d_constraints": "1",

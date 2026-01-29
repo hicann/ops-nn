@@ -403,7 +403,7 @@ static ge::graphStatus TilingPrepareForApplyAdamWV2(gert::TilingParseContext* co
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     auto socVersion = ascendcPlatform.GetSocVersion();
-    compileInfo->isRegbase = (socVersion == platform_ascendc::SocVersion::ASCEND910_95) ? true : false;
+    compileInfo->isRegbase = (socVersion == platform_ascendc::SocVersion::ASCEND950) ? true : false;
     OP_CHECK_IF(
         (compileInfo->totalCoreNum <= 0),
         OP_LOGE(context, "TilingPrepareForApplyAdamWV2 fail to get core num."), return ge::GRAPH_FAILED);

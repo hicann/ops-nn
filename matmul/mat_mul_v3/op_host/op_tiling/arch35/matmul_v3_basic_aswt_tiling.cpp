@@ -25,7 +25,7 @@ constexpr uint64_t FP32_SPLIT_K_THRESHOLD = 8192UL;
 using namespace strategy;
 
 // 注册BASIC_FULL_LOAD作为基础API实现的全载模板策略
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, ASCEND910_95, BASIC_ASWT);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, ASCEND950, BASIC_ASWT);
 
 bool MatMulV3BasicAswtTiling::IsCapable()
 {

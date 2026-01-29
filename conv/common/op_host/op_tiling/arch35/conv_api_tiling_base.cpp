@@ -78,7 +78,7 @@ uint32_t ConvTilingBase::GetBandWidthCof(platform_ascendc::SocVersion curSoc) co
     switch (curSoc) {
         case platform_ascendc::SocVersion::ASCEND910B:
             return 1;
-        case platform_ascendc::SocVersion::ASCEND910_95:
+        case platform_ascendc::SocVersion::ASCEND950:
             if (descInfo.fMapType.format == ConvFormat::NCHW || descInfo.fMapType.format == ConvFormat::NCDHW) {
                 return BAND_WIDTH_COEFF;
             }

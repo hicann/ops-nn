@@ -39,7 +39,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "init_embedding_hash_table_apt");
-        this->AICore().AddConfig("ascend910_95", aicore_config);
+        this->AICore().AddConfig("ascend950", aicore_config);
     }
 };
 

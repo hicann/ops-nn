@@ -76,7 +76,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "sparse_tensor_dense_mat_mul_apt");
-        this->AICore().AddConfig("ascend910_95", config);
+        this->AICore().AddConfig("ascend950", config);
     }
 };
 

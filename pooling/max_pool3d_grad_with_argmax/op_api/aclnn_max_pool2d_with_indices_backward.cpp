@@ -37,7 +37,7 @@ static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_NULL_LIST = {};
 // 输入为ND场景下，1980不支持任何数据类型
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910_LIST = {};
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910B_LIST = {op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910_95_LIST = {
+static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_950_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 // 输入为5HD场景下
 static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST = {
@@ -48,7 +48,7 @@ static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910
 static const std::initializer_list<op::DataType> MASK_INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT8};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_910_95_LIST = {
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_950_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_INT64};
 
 static const int DIMENTION_3 = 3;
@@ -84,8 +84,8 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
                 isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                             SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case SocVersion::ASCEND910_95: {
-            return SELF_OUT_DTYPE_SUPPORT_910_95_LIST;
+        case SocVersion::ASCEND950: {
+            return SELF_OUT_DTYPE_SUPPORT_950_LIST;
         }
         case SocVersion::ASCEND910: {
             return (isMask ? MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
@@ -100,8 +100,8 @@ static const inline std::initializer_list<op::DataType> GetIndicesDtypeSupportLi
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     switch (socVersion) {
-        case SocVersion::ASCEND910_95:
-            return INDICES_DTYPE_SUPPORT_910_95_LIST;
+        case SocVersion::ASCEND950:
+            return INDICES_DTYPE_SUPPORT_950_LIST;
         case SocVersion::ASCEND910_93:
         case SocVersion::ASCEND910B:
         case SocVersion::ASCEND910:
@@ -164,7 +164,7 @@ static bool CheckFormat(
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(gradInput->GetStorageFormat()) ||
         op::IsPrivateFormat(gradOutput->GetStorageFormat()) || op::IsPrivateFormat(indices->GetStorageFormat())) {
-        if (socVersion == SocVersion::ASCEND910_95) {
+        if (socVersion == SocVersion::ASCEND950) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW or NHWC");
         } else {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCHW");
@@ -422,7 +422,7 @@ static bool CheckShape(
     const aclIntArray& dilationRef = *dilation;
     const int64_t dilationH = dilationRef[0];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationH : dilationRef[1];
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         OP_CHECK(
             ((dilationH > 0) && (dilationW > 0)),
             OP_LOGE(
@@ -983,7 +983,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     OP_CHECK(
-        socVersion != SocVersion::ASCEND910_95,
+        socVersion != SocVersion::ASCEND950,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Please use aclnnMaxPool2dWithIndicesBackward."),
         return ACLNN_ERR_PARAM_INVALID);
     // 如果kernelSize符合切ND要求，在这里把isMask设置为false
@@ -1038,7 +1038,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(
         aclnnMaxPool2dWithIndicesBackward,
         DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
 
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         ret = ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
             gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, workspaceSize,
             executor);

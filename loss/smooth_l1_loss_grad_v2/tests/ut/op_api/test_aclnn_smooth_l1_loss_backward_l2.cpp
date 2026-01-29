@@ -461,7 +461,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910B2_case_dtype_bfloat16)
 }
 
 // empty tensor
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_empty_tensor)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_empty_tensor)
 {
   auto grad_output_desc = TensorDesc({ 1, 0, 4, 1 }, ACL_FLOAT, ACL_FORMAT_ND)
     .ValueRange(-2, 2);
@@ -482,7 +482,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_empty_tensor)
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_float32)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_float32)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({ 1,1,4,1 }, ACL_FLOAT, ACL_FORMAT_ND)
@@ -510,7 +510,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_float3
   }
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_float16)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_float16)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({ 1,1,4,1 }, ACL_FLOAT16, ACL_FORMAT_ND)
@@ -538,7 +538,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_float1
   }
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_bfloat16)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_bfloat16)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({ 1,1,4,1 }, ACL_BF16, ACL_FORMAT_ND)
@@ -566,7 +566,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_reduction_dtype_bfloat
   }
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_scalar_reduction_dtype_float32)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_float32)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({ 1, 0, 4, 1 }, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -591,7 +591,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_scalar_reduction_dtype
   }
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_scalar_reduction_dtype_float16)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_float16)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({ 1, 0, 4, 1 }, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
@@ -616,7 +616,7 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_scalar_reduction_dtype
   }
 }
 
-TEST_F(l2_smooth_l1_loss_backward_test, ascend910_95_case_scalar_reduction_dtype_bfloat16)
+TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_bfloat16)
 {
   for (int i = 0; i <= 3; i++) {
     auto grad_output_desc = TensorDesc({1, 0, 4, 1}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);

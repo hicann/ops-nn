@@ -214,7 +214,7 @@ static bool CheckAscendCScenario(
         OP_LOGI("Hit batch_mat_mul_v3 weightNz.");
         return true;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         return true;
     }
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
@@ -352,7 +352,7 @@ bool CheckSocIfBatchMatMulToMul91095(const aclTensor* self, const aclTensor* mat
 
 using CheckSocIfBatchMatMulToMulFunc = bool (*)(const aclTensor* self, const aclTensor* mat2, bool adjX1, bool adjX2);
 const static std::map<SocVersion, CheckSocIfBatchMatMulToMulFunc> CheckSocIfBatchMatMulToMulFuncMap = {
-    {SocVersion::ASCEND910_95, CheckSocIfBatchMatMulToMul91095},
+    {SocVersion::ASCEND950, CheckSocIfBatchMatMulToMul91095},
     {SocVersion::ASCEND910B, CheckSocIfBatchMatMulToMul910B},
     {SocVersion::ASCEND910_93, CheckSocIfBatchMatMulToMul910B},
 };
@@ -364,9 +364,9 @@ const aclTensor* GetBatchMatmulOp(
     auto bmmOpOut = selfTransdata;
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
         if (GetCurrentPlatformInfo().GetSocVersion() ==
-                SocVersion::ASCEND910_95 && // 1.多维*2维(左非转置)2.多维*多维batch为1
+                SocVersion::ASCEND950 && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
-             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅910_95路由该场景
+             (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) { // 仅950路由该场景
             int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
             return TransBmm2Mm(
                 selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);

@@ -58,7 +58,7 @@ const std::vector<Ops::NN::Conv::TilingBestBaseBlock> TILING_BEST_BASE_BLOCK_D1{
 };
 
 const std::map<platform_ascendc::SocVersion, std::vector<Ops::NN::Conv::TilingBestBaseBlock>> TILING_BEST_BASE{
-    {platform_ascendc::SocVersion::ASCEND910_95, TILING_BEST_BASE_BLOCK_D1},
+    {platform_ascendc::SocVersion::ASCEND950, TILING_BEST_BASE_BLOCK_D1},
 };
 } // namespace
 
@@ -113,7 +113,7 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::SetCoreMemSizeInfo()
 TilingBestBaseBlock Conv3DBackpropInputV2TilingArch35::GetBestBaseBlock(uint32_t baseBlockId)
 {
     if (IsSocVersionFuse(context_)) {
-        return TILING_BEST_BASE.at(platform_ascendc::SocVersion::ASCEND910_95).at(baseBlockId);
+        return TILING_BEST_BASE.at(platform_ascendc::SocVersion::ASCEND950).at(baseBlockId);
     }
 
     return TILING_BEST_BASE.at(shortSocVersion_).at(baseBlockId);
@@ -147,7 +147,7 @@ bool Conv3DBackpropInputV2TilingArch35::GetShapeFormatInfo()
 ge::graphStatus Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95 && !IsSocVersionFuse(context_)) {
+        platform_ascendc::SocVersion::ASCEND950 && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
     if (SetCoreMemSizeInfo() != ge::GRAPH_SUCCESS) {
@@ -164,7 +164,7 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo()
 bool Conv3DBackpropInputV2TilingArch35::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95 &&
+        platform_ascendc::SocVersion::ASCEND950 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }

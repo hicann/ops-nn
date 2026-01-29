@@ -174,9 +174,9 @@ TEST_F(l2_baddbmm_test, case_only_one_empty_tensor)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_case_two_empty_tensor)
+TEST_F(l2_baddbmm_test, baddbmm_950_case_two_empty_tensor)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({2, 3, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({2, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({2, 5, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -569,10 +569,10 @@ TEST_F(l2_baddbmm_test, case_alpha_is_not_one)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-// 接口整改异常用例 - 910_95
-TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - 950
+TEST_F(l2_baddbmm_test, baddbmm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -588,9 +588,9 @@ TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -606,9 +606,9 @@ TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -624,9 +624,9 @@ TEST_F(l2_baddbmm_test, baddbmm_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -642,9 +642,9 @@ TEST_F(l2_baddbmm_test, baddbmm_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -660,9 +660,9 @@ TEST_F(l2_baddbmm_test, baddbmm_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -788,10 +788,10 @@ TEST_F(l2_baddbmm_test, baddbmm_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
 }
 
 // 检查原地操作
-// 接口整改异常用例 - 910_95
-TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
+// 接口整改异常用例 - 950
+TEST_F(l2_baddbmm_test, baddbmm_inplace_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -807,9 +807,9 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_inplace_950_FP32_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -825,9 +825,9 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP32_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_inpalce_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_inpalce_950_FP32_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -843,9 +843,9 @@ TEST_F(l2_baddbmm_test, baddbmm_inpalce_910_95_FP32_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_inplace_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -861,9 +861,9 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP16_FP16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_inplace_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -879,9 +879,9 @@ TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_FP16_BF16_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_baddbmm_test, baddbmm_inplace_910_95_BF16_BF16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_baddbmm_test, baddbmm_inplace_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto self = TensorDesc({1, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch1 = TensorDesc({1, 3, 4}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
     auto batch2 = TensorDesc({1, 4, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);

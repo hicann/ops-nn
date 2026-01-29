@@ -81,7 +81,7 @@ protected:
     bool IsCapable() override
     {
         OP_LOGD(context_->GetNodeName(), "In SparseTensorDenseMatMulTilingArch35::IsCapable()");
-        return socVersion_ == platform_ascendc::SocVersion::ASCEND910_95;
+        return socVersion_ == platform_ascendc::SocVersion::ASCEND950;
     }
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override

@@ -45,7 +45,7 @@ namespace ge {
 
 * @par Restrictions:
 * Warning: The grad of input last dim size should be less than 8192 bytes and the
-*     sort_indices size should be larger than 32 for Ascend 910_95 AI Processors. \n
+*     sort_indices size should be larger than 32 for Ascend 950 AI Processors. \n
 */
 REG_OP(EmbeddingDenseGradV2)
     .INPUT(grad, TensorType({DT_FLOAT32, DT_FLOAT16, DT_BF16})) /* "First operand." */

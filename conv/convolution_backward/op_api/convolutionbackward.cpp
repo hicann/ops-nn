@@ -1650,7 +1650,7 @@ static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *o
  	                                                 const aclIntArray *pad6, const aclIntArray *dilation5, int groups){
   OP_LOGD("enter CheckPreNHTransposeEnable");
   SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion != SocVersion::ASCEND910_95) {
+  if (socVersion != SocVersion::ASCEND950) {
     OP_LOGD("unsupported soc, NH transpose disable.");
     return false;
   }

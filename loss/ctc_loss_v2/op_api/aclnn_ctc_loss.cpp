@@ -83,7 +83,7 @@ static bool CheckDtypeValid(
     bool is910bSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
-    bool IsRegbaseSocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool IsRegbaseSocVersion = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     int64_t inputN = logProbs->GetViewShape().GetDim(1);
     int64_t inputC = logProbs->GetViewShape().GetDim(CDIM);
     int64_t inputS = (logAlphaOut->GetViewShape().GetDim(SDIM) - 1) / DOUBLE;

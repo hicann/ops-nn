@@ -122,7 +122,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95 && !IsSocVersionFuse(context_)) {
+        platform_ascendc::SocVersion::ASCEND950 && !IsSocVersionFuse(context_)) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -199,7 +199,7 @@ bool Conv3DDXV2InnerProductTiling::CheckC04Enable()
 bool Conv3DDXV2InnerProductTiling::IsCapable()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->shortSocVersion !=
-        platform_ascendc::SocVersion::ASCEND910_95 &&
+        platform_ascendc::SocVersion::ASCEND950 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }

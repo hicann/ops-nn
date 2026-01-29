@@ -37,7 +37,7 @@ namespace ge {
 * For Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component: "ksize"
 length is 3. \n
 * For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "ksize" length is 3. \n
-* For Ascend 910_95 AI Processor: "ksize" length is 3, without the limit of [1, 255] and must be greater than 0. \n
+* For Ascend 950 AI Processor: "ksize" length is 3, without the limit of [1, 255] and must be greater than 0. \n
 * @li strides: List of ints. The stride of the sliding window for each dimension of the input tensor.
 * Restriction: "strides" value is in the range [1, 63]. \n
 * For Atlas Inference Series Product: "strides" length is 5. \n
@@ -45,7 +45,7 @@ length is 3. \n
 * For Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component: "strides"
 length is 3. \n
 * For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "strides" length is 3. \n
-* For Ascend 910_95 AI Processor: "strides" length is 3, without the limit of [1, 63] and must be greater than 0. \n
+* For Ascend 950 AI Processor: "strides" length is 3, without the limit of [1, 63] and must be greater than 0. \n
 * @li pads: List of ints, implicit zero paddings on both sides of the input.
 * Restriction: "pads" is in the range [0, ksize/2]. \n
 * For Atlas Inference Series Product: "pads" length is 6. \n
@@ -53,7 +53,7 @@ length is 3. \n
 * For Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component: "pads"
 length is 3. \n
 * For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: "pads" length is 3. \n
-* For Ascend 910_95 AI Processor: "pads" length is 3. \n
+* For Ascend 950 AI Processor: "pads" length is 3. \n
 * @li ceil_mode: An optional bool. When true, will use ceil instead of floor in the formula to
 * compute the output shape. Default value false.
 * @li count_include_pad: An optional bool. When true, will include the zero-padding in the
@@ -66,7 +66,7 @@ length is 3. \n
 * For Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component: only
 support "NDHWC". \n
 * For Atlas A3 Training Series Product/Atlas A3 Inference Series Product: only support "NDHWC". \n
-* For Ascend 910_95 AI Processor: only support "NDHWC". \n
+* For Ascend 950 AI Processor: only support "NDHWC". \n
 
 * @par Outputs:
 * output: A mutable tensor with the same shape as "orig_input_shape" and same type as "grads".

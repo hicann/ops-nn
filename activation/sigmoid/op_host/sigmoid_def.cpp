@@ -37,7 +37,7 @@ class Sigmoid : public OpDef {
                 .NeedCheckSupportFlag(false)
                 .PrecisionReduceFlag(true)
                 .ExtendCfgInfo("opFile.value", "sigmoid_apt");
-            this->AICore().AddConfig("ascend910_95", aicoreConfig);
+            this->AICore().AddConfig("ascend950", aicoreConfig);
             this->AICore().AddConfig("mc62cm12a", aicoreConfig);
         }
 };

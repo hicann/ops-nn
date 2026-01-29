@@ -55,11 +55,11 @@ class l2_QuantBatchMatmulV4_test_310P : public testing::TestWithParam<QuantBatch
   static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV4_test_310P TearDown" << endl; }
 };
 
-class l2_QuantBatchMatmulV4_test_910_95 : public testing::TestWithParam<QuantBatchMatmulV4TestParam> {
+class l2_QuantBatchMatmulV4_test_950 : public testing::TestWithParam<QuantBatchMatmulV4TestParam> {
   protected:
-      static void SetUpTestCase() { cout << "l2_QuantBatchMatmulV4_test_910_95 SetUp" << endl; }
+      static void SetUpTestCase() { cout << "l2_QuantBatchMatmulV4_test_950 SetUp" << endl; }
 
-      static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV4_test_910_95 TearDown" << endl; }
+      static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV4_test_950 TearDown" << endl; }
   };
 
 static void TestOneParamCase(const QuantBatchMatmulV4TestParam &param)
@@ -112,7 +112,7 @@ TEST_P(l2_QuantBatchMatmulV4_test_310P, ascend310P_generalTest)
     QuantBatchMatmulV4TestParam param = GetParam();
     TestOneParamCase(param);
 }
-TEST_P(l2_QuantBatchMatmulV4_test_910_95, ascend910_95_generalTest)
+TEST_P(l2_QuantBatchMatmulV4_test_950, ascend950_generalTest)
 {
     QuantBatchMatmulV4TestParam param = GetParam();
     TestOneParamCase(param);
@@ -163,20 +163,20 @@ static QuantBatchMatmulV4TestParam casesParamsAscend310P[] = {
     {"ascend310P_test_quant_bmm_v3_A8W8FP16_false_false_out_type_wrong", {16, 32}, {32, 16}, {16}, {}, {}, {16, 16}, {32, 1}, {16, 1}, ACL_UINT64, ACL_BF16, ACLNN_ERR_PARAM_INVALID},
 };
 
-static QuantBatchMatmulV4TestParam casesParams910_95[] = {
+static QuantBatchMatmulV4TestParam casesParams950[] = {
     //caseName, x1, x2, scale, offset, bias, out, x1_stride, x2_stride, scaleType, outType, expect_ret
-    {"ascend910_95_test_quant_bmm_v5_A8W8CB16_pertoken_scale_bfloat16_bias_none", {16, 32}, {32, 16}, {1}, {}, {}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
-    {"ascend910_95_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_int32", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
-    {"ascend910_95_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_float", {16, 32}, {32, 16}, {1}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
-    {"ascend910_95_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_bfloat16", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
-    {"ascend910_95_test_quant_bmm_v3_A8W8CB16_pertoken_scale_float_bias_float", {16, 32}, {32, 16}, {1}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_FLOAT,  ACL_BF16, ACLNN_SUCCESS},
-    {"ascend910_95_test_quant_bmm_v3_A8W8CB16_pertoken_scale_float_bias_bfloat16", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_FLOAT, ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v5_A8W8CB16_pertoken_scale_bfloat16_bias_none", {16, 32}, {32, 16}, {1}, {}, {}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_int32", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_float", {16, 32}, {32, 16}, {1}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_bfloat16", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_BF16, ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_float_bias_float", {16, 32}, {32, 16}, {1}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_FLOAT,  ACL_BF16, ACLNN_SUCCESS},
+    {"ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_float_bias_bfloat16", {16, 32}, {32, 16}, {16}, {}, {16}, {16, 16}, {32, 1}, {16, 1}, ACL_FLOAT, ACL_BF16, ACLNN_SUCCESS},
 };
 
 
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test, testing::ValuesIn(casesParams));
 INSTANTIATE_TEST_SUITE_P(Ascend310P_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_310P, testing::ValuesIn(casesParamsAscend310P));
-INSTANTIATE_TEST_SUITE_P(Ascend910_95_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_910_95, testing::ValuesIn(casesParams910_95));
+INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV4, l2_QuantBatchMatmulV4_test_950, testing::ValuesIn(casesParams950));
 
 static void ThreadFunc(const QuantBatchMatmulV4TestParam *params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
@@ -208,9 +208,9 @@ static void TestMultiThread(const QuantBatchMatmulV4TestParam *params, size_t te
 //     TestMultiThread(casesParamsAscend310P, sizeof(casesParamsAscend310P) / sizeof(QuantBatchMatmulV4TestParam), 3);
 // }
 
-TEST_F(l2_QuantBatchMatmulV4_test_910_95, ascend910_95_multi_thread)
+TEST_F(l2_QuantBatchMatmulV4_test_950, ascend950_multi_thread)
 {
-    TestMultiThread(casesParams910_95, sizeof(casesParams910_95) / sizeof(QuantBatchMatmulV4TestParam), 3);
+    TestMultiThread(casesParams950, sizeof(casesParams950) / sizeof(QuantBatchMatmulV4TestParam), 3);
 }
 
 TEST_F(l2_QuantBatchMatmulV4_test, ascend910B2_test_special_case_01)

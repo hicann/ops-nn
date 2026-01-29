@@ -784,7 +784,7 @@ that of %s is %zu, x1 is %zu",  GetX2ScaleName().c_str(),  GetX2ScaleName().c_st
 
 bool QuantMatmulChecker::CheckGroupSize() const
 {
-    if (socVersion_ != SocVersion::ASCEND910_95) {
+    if (socVersion_ != SocVersion::ASCEND950) {
         return true;
     }
     uint64_t groupSizeM = (static_cast<uint64_t>(groupSize_) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
@@ -889,7 +889,7 @@ bool QuantMatmulChecker::CheckFormat() const
     CHECK_RET(x1_->GetStorageFormat() == op::Format::FORMAT_ND, false);
     if (socVersion_ == SocVersion::ASCEND310P) {
         CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
-    } else if (socVersion_ == SocVersion::ASCEND910_95 && x1_->GetDataType() != op::DataType::DT_INT8) {
+    } else if (socVersion_ == SocVersion::ASCEND950 && x1_->GetDataType() != op::DataType::DT_INT8) {
         CHECK_RET(x2_->GetStorageFormat() == op::Format::FORMAT_ND, false);
     } else {
         CHECK_RET(x2StorageFormat == op::Format::FORMAT_ND || x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ, false);
@@ -1280,7 +1280,7 @@ but got %s and %s.",
         case SocVersion::ASCEND910_93:
             CHECK_RET(CheckDtypeOnlyL0c2out() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
-        case SocVersion::ASCEND910_95:
+        case SocVersion::ASCEND950:
             CHECK_RET(CheckDtypeL0c2outOrL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         case SocVersion::ASCEND310P:

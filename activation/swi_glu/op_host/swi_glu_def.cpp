@@ -56,7 +56,7 @@ public:
               .DynamicRankSupportFlag(true)
               .DynamicShapeSupportFlag(true)
               .ExtendCfgInfo("opFile.value", "swi_glu_apt");
-      this->AICore().AddConfig("ascend910_95", regbaseCfg);
+      this->AICore().AddConfig("ascend950", regbaseCfg);
     }
 };
 OP_ADD(SwiGlu);

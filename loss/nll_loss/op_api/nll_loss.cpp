@@ -41,7 +41,7 @@ static inline const std::initializer_list<op::DataType>& GetAiCoreDtypeSupportLi
         case SocVersion::ASCEND910_93: {
             return ASCEND910B_AICORE_DTYPE_SUPPORT_LIST;
         }
-        case SocVersion::ASCEND910_95: {
+        case SocVersion::ASCEND950: {
             return ASCEND91095_AICORE_DTYPE_SUPPORT_LIST;
         }
         case SocVersion::ASCEND910: {

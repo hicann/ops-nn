@@ -63,15 +63,15 @@ public:
             .AutoContiguous();
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
 
-        OpAICoreConfig config_910_95;
-        config_910_95.DynamicCompileStaticFlag(true)
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "add_rms_norm_cast_apt");
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910_95", config_910_95);
+        this->AICore().AddConfig("ascend950", config_950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

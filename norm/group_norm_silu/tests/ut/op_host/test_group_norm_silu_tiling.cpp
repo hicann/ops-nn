@@ -1194,8 +1194,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_014) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1287,8 +1287,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_015) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1380,8 +1380,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_016) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1470,8 +1470,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_017) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1561,8 +1561,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_018) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1654,8 +1654,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_empty) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info
@@ -1747,8 +1747,8 @@ TEST_F(GroupNormSiluTiling, group_norm_silu_tiling_mix_type) {
   map<string, string> intrinsics;
   map<string, string> version;
   GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-  version["Short_SoC_version"] = "Ascend910_95";
-  version["SoC_version"] = "Ascend910_9589";
+  version["Short_SoC_version"] = "Ascend950";
+  version["SoC_version"] = "Ascend950PR_9589";
   version["NpuArch"] = "3510";
 
   // platform info

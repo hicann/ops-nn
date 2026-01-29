@@ -74,7 +74,7 @@ static inline bool CheckDtypeValid(const aclTensor *self, const aclTensor *index
 static inline bool CheckOutShape(const aclTensor *self, int64_t dim, const aclTensor *index, int64_t batchDims, const aclTensor *out) {
   // 根据算子语义，推导算子输出shape
   Shape outShape;
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
     if (self->GetViewShape().GetDimNum() == 0) {
       outShape = self->GetViewShape();
     } else {
@@ -184,7 +184,7 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
   // 3. 检查shape是否满足约束
   CHECK_RET(CheckShape(self, dim, index, batchDims, out), ACLNN_ERR_PARAM_INVALID);
 
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
     CHECK_RET(CheckDimAndBatchdims(self, dim, index, batchDims), ACLNN_ERR_PARAM_INVALID);
   } else {
     if (dim != 0 || batchDims !=0 || mode != 1) {
@@ -245,7 +245,7 @@ aclnnStatus aclnnGatherV3GetWorkspaceSize(const aclTensor* self, int64_t dim, co
     CHECK_RET(indexParam != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
 
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910_95 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950 && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
     auto gatherV2Result = l0op::GatherV2(selfContiguous, dim, indexContiguous, uniqueExecutor.get(), batchDims);
     CHECK_RET(gatherV2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

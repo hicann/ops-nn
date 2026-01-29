@@ -188,7 +188,7 @@ TEST_F(l2_nonzero_test, ascend910B2_aclnnNonzero_16_bf16) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_nonzero_test, Ascend910_95_aclnnNonzero_11_input_not_contiguous) {
+TEST_F(l2_nonzero_test, Ascend950_aclnnNonzero_11_input_not_contiguous) {
   auto selfDesc = TensorDesc({5, 4}, ACL_INT8, ACL_FORMAT_HWCN, {1, 5}, 0, {4, 5});
   auto outDesc = TensorDesc({20, 2}, ACL_INT64, ACL_FORMAT_HWCN).Precision(0.0001, 0.0001);
 

@@ -245,7 +245,7 @@ bool UseScatterElementsV2(
     const std::string& reduction)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         return CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction));
     }
 
@@ -285,10 +285,10 @@ bool UseScatterElements(
     // Ascend310P无二进制，统一走acipu, ScatterElements目前仅在910A上使用
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     OP_CHECK(
-        socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND910_95,
-        OP_LOGD("ScatterElements only support Aicore for ASCEND910 and Ascend910_95"), return false);
+        socVersion == SocVersion::ASCEND910 || socVersion == SocVersion::ASCEND950,
+        OP_LOGD("ScatterElements only support Aicore for ASCEND910 and Ascend950"), return false);
 
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         if (AICORE_91095_DTYPE_SUPPORT_LIST.count(reduction) == 0 ||
             !CheckType(data->GetDataType(), AICORE_91095_DTYPE_SUPPORT_LIST.at(reduction))) {
             return false;

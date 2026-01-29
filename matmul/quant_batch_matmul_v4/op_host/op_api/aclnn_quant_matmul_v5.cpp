@@ -223,7 +223,7 @@ static inline bool CheckDimRange(TupleInput &inputTensors, TupleQuant &quantTens
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    if (x1Scale != nullptr && GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 &&
+    if (x1Scale != nullptr && GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950 &&
         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
         OP_CHECK_WRONG_DIMENSION(x2Scale, 1, return false);
@@ -366,7 +366,7 @@ static inline bool CheckFormat(const TupleInput &inputTensors, const TupleQuant 
     auto yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
 
     CHECK_RET(x1->GetStorageFormat() == op::Format::FORMAT_ND, false);
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         CHECK_RET(x2->GetStorageFormat() == op::Format::FORMAT_ND, false);
     }
     CHECK_RET(x2Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
@@ -471,7 +471,7 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must in [1, %ld], which is %ld", MAX_SHAPE_SIZE__A8W4_INT, x1KDim);
             return false;
         }
-    } else {    // A8W4FLOAT 910_95
+    } else {    // A8W4FLOAT 950
         if (x1KDim <= 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must be at least 1, which is %ld", x1KDim);
             return false;
@@ -495,7 +495,7 @@ static inline bool CheckX1X2Shape(const TupleInput &inputTensors, int64_t x1KDim
         return false;
     }
     bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
-    if (socVer == SocVersion::ASCEND910_95 && isX2Nz) {
+    if (socVer == SocVersion::ASCEND950 && isX2Nz) {
         if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ the n dim must be align to %ld, which is %ld",
                     SUPPORTED_N_ALIGN_NUM, x2NDim);
@@ -536,7 +536,7 @@ static inline bool CheckShape(const TupleInput &inputTensors, const TupleQuant &
 
 static inline aclnnStatus CheckParamsA8W4Float(const TupleInput &inputTensors, const TupleQuant &quantTensors,
                                           const TupleAttr &boolsTrans, const aclTensor *out) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         // 1. 校验dtype是否符合要求
         CHECK_RET(CheckDtype(inputTensors, quantTensors, out), ACLNN_ERR_PARAM_INVALID);
         // 2. 检查format是否符合要求
@@ -544,7 +544,7 @@ static inline aclnnStatus CheckParamsA8W4Float(const TupleInput &inputTensors, c
         // 3. 检查shape是否符合要求
         CHECK_RET(CheckShape(inputTensors, quantTensors, boolsTrans, out), ACLNN_ERR_PARAM_INVALID);
     } else {
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "A8W4 only Support socversion 910_95");
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "A8W4 only Support socversion 950");
         return ACLNN_ERR_RUNTIME_ERROR;
     }
     return ACLNN_SUCCESS;
@@ -715,7 +715,7 @@ static aclTensor* ProcessScaleTensor(const aclTensor *scale) {
 }
 
 static void A8W4ProcessYScaleTensor(const aclTensor *x1Scale, const aclTensor *yScale) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         // A8W4场景输入的INT64转为UINT64
         if (x1Scale == nullptr && yScale != nullptr && yScale->GetDataType() == op::DataType::DT_INT64) {
             auto castedYScale = const_cast<aclTensor*>(yScale);

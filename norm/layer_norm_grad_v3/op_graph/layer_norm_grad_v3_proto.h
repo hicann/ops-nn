@@ -74,7 +74,7 @@ namespace ge {
 * The output_mask[0] is false, means pd_x is meaningless.
 * The output_mask[1] is false, means pd_gamma is meaningless.
 * The output_mask[2] is false, means pd_beta is meaningless.
-* Except in Ascend 910_95 AI Processor, the output_mask just supports {true, true, true} in other AI Processor.
+* Except in Ascend 950 AI Processor, the output_mask just supports {true, true, true} in other AI Processor.
 
 *@par Restrictions:
 *Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.

@@ -40,7 +40,7 @@ bool ABL1FullLoadExtraCond91095(uint64_t al1SingleCoreSize, uint64_t bl1SingleCo
 
 using ABL1FullLoadExtraCondFunc = bool (*)(uint64_t, uint64_t);
 const static std::map<platform_ascendc::SocVersion, ABL1FullLoadExtraCondFunc> ABL1FullLoadExtraCondFuncMap = {
-    {platform_ascendc::SocVersion::ASCEND910_95, ABL1FullLoadExtraCond91095},
+    {platform_ascendc::SocVersion::ASCEND950, ABL1FullLoadExtraCond91095},
 };
 
 } // namespace
@@ -50,7 +50,7 @@ namespace matmul_v3_advanced {
 using namespace strategy;
 
 // 注册FULL_LOAD_BASE作为高阶API实现的全载模板策略
-MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, ASCEND910_95, FULL_LOAD_BASE);
+MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3AswFullLoadTiling, ASCEND950, FULL_LOAD_BASE);
 
 void MatMulV3AswFullLoadTiling::FullLoadPre()
 {

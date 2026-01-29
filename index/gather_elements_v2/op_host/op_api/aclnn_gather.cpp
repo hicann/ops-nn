@@ -84,7 +84,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const
     bool is910bSocVersion =
         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
          GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95);
+         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950);
     const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST =
         is910bSocVersion ? DTYPE_SUPPORT_910B_LIST : DTYPE_SUPPORT_LIST;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, CURRENT_DTYPE_SUPPORT_LIST, return false);
@@ -321,7 +321,7 @@ static const aclTensor* CalGather(
     bool dtypeAndSocCheckFlag = false;
     bool needTranspose =
         !IfUseGatherElementsV2(selfContiguous, indexContiguous, dimFinal, dimSize, dtypeAndSocCheckFlag);
-    if (dimFinal != dimSize - 1 && needTranspose && socVersion != SocVersion::ASCEND910_95) {
+    if (dimFinal != dimSize - 1 && needTranspose && socVersion != SocVersion::ASCEND950) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
         CHECK_RET(selfContiguous != nullptr, nullptr);
         indexContiguous = l0op::Transpose(indexContiguous, valuePerm, executor);
@@ -342,12 +342,12 @@ static const aclTensor* CalGather(
         CHECK_RET(indexContiguousCasted != nullptr, nullptr);
         gatherElementsResult = l0op::GatherElementsV2(selfContiguous, indexContiguousCasted, dimSize - 1, executor);
     } else {
-        int64_t dim = socVersion == SocVersion::ASCEND910_95 ? dimFinal : dimSize - 1;
+        int64_t dim = socVersion == SocVersion::ASCEND950 ? dimFinal : dimSize - 1;
         gatherElementsResult = l0op::GatherElements(selfContiguous, dim, indexContiguous, executor);
     }
     CHECK_RET(gatherElementsResult != nullptr, nullptr);
 
-    if (dimFinal != dimSize - 1 && needTranspose && socVersion != SocVersion::ASCEND910_95) {
+    if (dimFinal != dimSize - 1 && needTranspose && socVersion != SocVersion::ASCEND950) {
         gatherElementsResult = l0op::Transpose(gatherElementsResult, valuePerm, executor);
         CHECK_RET(gatherElementsResult != nullptr, nullptr);
     }
@@ -372,7 +372,7 @@ static bool IfMoeUseV2(const int64_t dim, const aclTensor* self, const aclTensor
 
 static bool IsUseNoContiguous(const aclTensor* self, const aclTensor* index)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95 || self->GetDataType() == DataType::DT_DOUBLE) {
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950 || self->GetDataType() == DataType::DT_DOUBLE) {
         return false;
     }
     auto selfDimNum = self->GetViewShape().GetDimNum();
@@ -405,7 +405,7 @@ static const aclTensor* CalGatherV2(
     // calculation by GatherV2
     const aclTensor* gatherElementsResult = nullptr;
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
         op::Shape newViewShape;
         newViewShape.SetDimNum(1);
         auto indexShape = index->GetViewShape();

@@ -74,7 +74,7 @@ TEST_F(l2_dynamic_quant_test, ascend910B2_dynamic_quant_bf16)
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 // }
 
-TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_fp16_int8_testcase_01)
+TEST_F(l2_dynamic_quant_test, ascend950PR_9589_dynamic_quant_fp16_int8_testcase_01)
 {
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc smooth_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -100,7 +100,7 @@ TEST_F(l2_dynamic_quant_test, ascend310P3_dynamic_quant_fp16_int8_testcase_01)
 }
 
 // 910D平台测试 bf16进 int4出
-TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_bf16_int4_testcase_fail_01)
+TEST_F(l2_dynamic_quant_test, ascend950PR_9589_dynamic_quant_bf16_int4_testcase_fail_01)
 {
     TensorDesc x_desc = TensorDesc({16, 31}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc smooth_desc = TensorDesc({31}, ACL_BF16, ACL_FORMAT_ND);
@@ -114,7 +114,7 @@ TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_bf16_int4_testcase_fa
 }
 
 // 910D平台测试 bf16进 int32出
-TEST_F(l2_dynamic_quant_test, ascend910_9589_dynamic_quant_bf16_int32_testcase_03)
+TEST_F(l2_dynamic_quant_test, ascend950PR_9589_dynamic_quant_bf16_int32_testcase_03)
 {
     TensorDesc x_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc smooth_desc = TensorDesc({32}, ACL_BF16, ACL_FORMAT_ND);

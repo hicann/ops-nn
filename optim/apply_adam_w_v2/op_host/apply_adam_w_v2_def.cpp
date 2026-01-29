@@ -119,7 +119,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "apply_adam_w_v2_apt")
             .ExtendCfgInfo("opInterface.value", "apply_adam_w_v2");
-        this->AICore().AddConfig("ascend910_95", aicoreRegbaseConfig);
+        this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
     }
 };
 

@@ -105,7 +105,7 @@ TEST_F(l2_trans_quant_param_v2_test, test_format_invalid_api)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-TEST_F(l2_trans_quant_param_v2_test, ascend910_95_test_trans_quant_param_first_dim_less_0)
+TEST_F(l2_trans_quant_param_v2_test, ascend950_test_trans_quant_param_first_dim_less_0)
 {
     TensorDesc scale_desc = TensorDesc({-1, 3}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({-1, 3}, ACL_UINT64, ACL_FORMAT_ND);

@@ -69,7 +69,7 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
     switch (socVersion) {
         case SocVersion::ASCEND910B:
         case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND910_95: {
+        case SocVersion::ASCEND950: {
             return ASCEND910B_DTYPE_SUPPORT_LIST;
         }
         case SocVersion::ASCEND910: {
@@ -266,7 +266,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
     op::DataType promoteType;
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         promoteType = self->GetDataType();
     } else {
         promoteType = self->GetDataType() == op::DataType::DT_BF16 ? op::DataType::DT_BF16 : op::DataType::DT_FLOAT;
@@ -281,7 +281,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
 
     int64_t squeezeDim = 0;
     const aclTensor* selfReshape = nullptr;
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         selfReshape = selfCast;
     } else {
         selfReshape = self->GetViewShape().GetDimNum() == 1 ?
@@ -295,7 +295,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
     CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     op::DataType targetPromoteType;
-    if (socVersion == SocVersion::ASCEND910_95) {
+    if (socVersion == SocVersion::ASCEND950) {
         targetPromoteType = target->GetDataType();
     } else {
         targetPromoteType =
@@ -320,7 +320,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(
     const aclTensor* loss;
     auto totalWeight = lossOut[1];
     if (self->GetViewShape().GetDimNum() == 1 && reduction == 0) {
-        loss = socVersion == SocVersion::ASCEND910_95 ? lossOut[0] :
+        loss = socVersion == SocVersion::ASCEND950 ? lossOut[0] :
                                                         l0op::SqueezeNd(lossOut[0], squeezeDim, uniqueExecutor.get());
     } else {
         loss = lossOut[0];

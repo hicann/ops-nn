@@ -951,7 +951,7 @@ TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910B2_abnormal_out_shape)
 }
 
 // 正常场景：ceilMode是true
-TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910_9591_normal_ceilMode_true)
+TEST_F(l2_max_pool2d_with_indices_backward_test, ascend950PR_9591_normal_ceilMode_true)
 {
     vector<int64_t> self_dims = {2, 3, 2, 2};
     vector<int64_t> kernel_dims = {2, 2};
@@ -984,7 +984,7 @@ TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910_9591_normal_ceilMode_
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 // 正常场景：ceilMode是false
-TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910_9591_normal_ceilMode_false)
+TEST_F(l2_max_pool2d_with_indices_backward_test, ascend950PR_9591_normal_ceilMode_false)
 {
     vector<int64_t> self_dims = {2, 3, 2, 2};
     vector<int64_t> kernel_dims = {2, 2};

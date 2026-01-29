@@ -216,7 +216,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_13)
 }
 
 // CheckDtypeValid for var and updates
-TEST_F(l2_tf_scatter_add_test, ascend910_95_case_1)
+TEST_F(l2_tf_scatter_add_test, ascend950_case_1)
 {
     vector<aclDataType> ValidList = {
         ACL_FLOAT,

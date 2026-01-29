@@ -373,12 +373,12 @@ static bool CheckAscendCScenario(
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
-         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) ||
+         GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) ||
         mmOpInfo.support_info.self_format != ge::FORMAT_ND) {
         OP_LOGI("Not mat_mul_v3 case for unsupported SOC version or unsupported Format.");
         return false;
     }
-    bool alwaysUseV3 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95;
+    bool alwaysUseV3 = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
     return (alwaysUseV3 || Ops::NN::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
                                                       mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
@@ -620,8 +620,8 @@ static const aclTensor* HandleEmptyTensor(const aclTensor* self, const aclTensor
 
 static bool IsUseNonContiguous(const aclTensor* tensor)
 {
-    // Only support ASCEND910_95
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95) {
+    // Only support ASCEND950
+    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         return false;
     }
     return !IsContiguous(tensor);
@@ -1521,7 +1521,7 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
     }
     // 当前支持平台
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910_95 && socVersion != SocVersion::ASCEND910B &&
+    if (socVersion != SocVersion::ASCEND950 && socVersion != SocVersion::ASCEND910B &&
         socVersion != SocVersion::ASCEND910_93) {
         OP_LOGI("Current SOC version does not support GemmV3.");
         return false;
@@ -1560,7 +1560,7 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclT
     }
     // 当前支持平台
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910_95 && socVersion != SocVersion::ASCEND910B &&
+    if (socVersion != SocVersion::ASCEND950 && socVersion != SocVersion::ASCEND910B &&
         socVersion != SocVersion::ASCEND910_93) {
         OP_LOGI("Current SOC version does not support GemmV3.");
         return false;
@@ -1635,7 +1635,7 @@ const aclTensor* ExecGemmV3Op(
 bool IsInputSupportFp32() {
   if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
       op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_95) {
+      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
     return false;
   }
   return true;
@@ -1695,7 +1695,7 @@ bool NeedToConvertBias(const aclTensor *self, const aclTensor *mat1, const aclTe
   bool isSplitK = false;
   if (op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910B &&
       op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_93 &&
-      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND910_95) {
+      op::GetCurrentPlatformInfo().GetSocVersion() != op::SocVersion::ASCEND950) {
     isSplitK = IsSplitk(&Tensor_matl, &Tensor_mat2);;
   }
   op::Shape selfShape = self->GetViewShape();
@@ -1757,7 +1757,7 @@ bool IsSplitk(const TensorInfo* self, const TensorInfo* mat2) {
 }
 
 bool IsFormatSupportNd(const aclTensor *self, const aclTensor *mat2) {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
     return true;
   }
   if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
@@ -2107,7 +2107,7 @@ const aclTensor *ContiguousBias(const aclTensor *self, const aclTensor *bias, ac
     CHECK_RET(contiguousBias != nullptr, nullptr);
     // bias为bf16时cast为fp32保证精度
     if ((contiguousBias->GetDataType() == DataType::DT_BF16 &&
-          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_95)||
+          GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950)||
         self->GetDataType() == DataType::DT_FLOAT) {
         contiguousBias = l0op::Cast(contiguousBias, op::DataType::DT_FLOAT, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
@@ -2412,7 +2412,7 @@ std::shared_ptr<SocMatMulRuleBase> SocMatMulRule::BuildRule() {
         op::SocVersion soc_version = GetCurrentPlatformInfo().GetSocVersion();
         if (soc_version == op::SocVersion::ASCEND910B ||
             soc_version == op::SocVersion::ASCEND910_93 ||
-            soc_version == op::SocVersion::ASCEND910_95) {
+            soc_version == op::SocVersion::ASCEND950) {
             return std::make_shared<Ascend910BMatMulRule>(soc_version);
         } else {
             return std::make_shared<Ascend310AMatMulRule>(soc_version);

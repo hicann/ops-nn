@@ -61,17 +61,17 @@ struct WeightQuantBatchMatmulNzTestParam {
     ContiguousType ctgsY = CONTIGUOUS;
 };
 
-class l2_weight_quant_batch_matmul_nz_test_910_95 : public testing::TestWithParam<WeightQuantBatchMatmulNzTestParam>
+class l2_weight_quant_batch_matmul_nz_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulNzTestParam>
 {
 protected:
     static void SetUpTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_nz_test_910_95 SetUp" << endl;
+        cout << "l2_weight_quant_batch_matmul_nz_test_950 SetUp" << endl;
     }
 
     static void TearDownTestCase()
     {
-        cout << "l2_weight_quant_batch_matmul_nz_test_910_95 TearDown" << endl;
+        cout << "l2_weight_quant_batch_matmul_nz_test_950 TearDown" << endl;
     }
 };
 
@@ -232,14 +232,14 @@ static void TestOneParamCase(const WeightQuantBatchMatmulNzTestParam& param)
     }
 }
 
-TEST_P(l2_weight_quant_batch_matmul_nz_test_910_95, ascend910_95_generalTest)
+TEST_P(l2_weight_quant_batch_matmul_nz_test_950, ascend950_generalTest)
 {
     WeightQuantBatchMatmulNzTestParam param = GetParam();
     TestOneParamCase(param);
 }
 
-static WeightQuantBatchMatmulNzTestParam casesParamsAscend910_95[] = {
-    {"Ascend910_95_case_a16mxf4_nd_weight_fp4",
+static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
+    {"Ascend950_case_a16mxf4_nd_weight_fp4",
      {2, 64},
      {64, 128},
      {2, 128},
@@ -267,7 +267,7 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend910_95[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-    {"Ascend910_95_case_nd_w4_nz_transweight_error",
+    {"Ascend950_case_nd_w4_nz_transweight_error",
      {2, 64},
      {64, 128},
      {1, 128},
@@ -298,8 +298,8 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend910_95[] = {
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    Ascend910_95_WeightQuantBatchMatmulNz, l2_weight_quant_batch_matmul_nz_test_910_95,
-    testing::ValuesIn(casesParamsAscend910_95));
+    Ascend950_WeightQuantBatchMatmulNz, l2_weight_quant_batch_matmul_nz_test_950,
+    testing::ValuesIn(casesParamsAscend950));
 
 static void ThreadFunc(
     const WeightQuantBatchMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
@@ -321,10 +321,10 @@ static void TestMultiThread(const WeightQuantBatchMatmulNzTestParam* params, siz
     }
 }
 
-TEST_F(l2_weight_quant_batch_matmul_nz_test_910_95, ascend910_95_multi_thread)
+TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND910_95);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     TestMultiThread(
-        casesParamsAscend910_95, sizeof(casesParamsAscend910_95) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
+        casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
 }
