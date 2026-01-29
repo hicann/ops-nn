@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -44,14 +44,19 @@ SocVersion PlatformInfo::GetSocVersion() const
     return g_socVersion;
 }
 
-
 NpuArch PlatformInfo::GetCurNpuArch() const
+{
+    return g_npuArch;
+}
+
+static NpuArch SocVersionToNpuArch(SocVersion socVersion)
 {
     static const std::map<SocVersion, NpuArch> soc2ArchMap = {
         {SocVersion::ASCEND910, NpuArch::DAV_1001},
         {SocVersion::ASCEND910B, NpuArch::DAV_2201},
         {SocVersion::ASCEND910_93, NpuArch::DAV_2201},
         {SocVersion::ASCEND910_95, NpuArch::DAV_3510},
+        {SocVersion::ASCEND310, NpuArch::DAV_2002},
         {SocVersion::ASCEND310P, NpuArch::DAV_2002},
         {SocVersion::ASCEND310B, NpuArch::DAV_3002},
         {SocVersion::ASCEND610LITE, NpuArch::DAV_3102}
@@ -60,7 +65,25 @@ NpuArch PlatformInfo::GetCurNpuArch() const
     if (it != soc2ArchMap.end()) {
         return it->second;
     }
-    return NpuArch::DAV_RESV;
+    return g_npuArch;
+}
+
+static SocVersion NpuArchToSocVersion(NpuArch npuArch)
+{
+    static const std::map<NpuArch, SocVersion> arch2SocMap = {
+        {NpuArch::DAV_1001, SocVersion::ASCEND910},
+        {NpuArch::DAV_2201, SocVersion::ASCEND910B},
+        {NpuArch::DAV_2201, SocVersion::ASCEND910_93},
+        {NpuArch::DAV_3510, SocVersion::ASCEND910_95},
+        {NpuArch::DAV_2002, SocVersion::ASCEND310P},
+        {NpuArch::DAV_3002, SocVersion::ASCEND310B},
+        {NpuArch::DAV_3102, SocVersion::ASCEND610LITE}
+    };
+    const auto it = arch2SocMap.find(npuArch);
+    if (it != arch2SocMap.end()) {
+        return it->second;
+    }
+    return g_socVersion;
 }
 
 const std::string PlatformInfo::GetSocLongVersion() const
@@ -146,9 +169,11 @@ SocVersionManager::~SocVersionManager()
 void SocVersionManager::SetPlatformSocVersion(SocVersion socVersion)
 {
     g_socVersion = socVersion;
+    g_npuArch = SocVersionToNpuArch(socVersion);
 }
 
-NpuArchManager::NpuArchManager(NpuArch newArch):originalArch_(GetCurrentPlatformInfo().GetCurNpuArch()){
+NpuArchManager::NpuArchManager(NpuArch newArch) : originalArch_(GetCurrentPlatformInfo().GetCurNpuArch())
+{
     SetPlatformNpuArch(newArch);
 }
 
@@ -160,6 +185,7 @@ NpuArchManager::~NpuArchManager()
 void NpuArchManager::SetPlatformNpuArch(NpuArch npuArch)
 {
     g_npuArch = npuArch;
+    g_socVersion = NpuArchToSocVersion(npuArch);
 }
 
 void SetCubeCoreNum(uint32_t coreNum)

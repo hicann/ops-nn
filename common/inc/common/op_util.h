@@ -8,11 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file op_util.h
- * \brief
- */
-
 #ifndef COMMON_INFERSHAPE_UTIL_H_
 #define COMMON_INFERSHAPE_UTIL_H_
 

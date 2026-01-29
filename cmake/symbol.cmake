@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------
-# This program is free software, you can redistribute it and/or modify.
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 # ophost shared
@@ -185,13 +185,13 @@ function(gen_opapi_symbol)
     )
 
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    add_dependencies(${OPAPI_NAME} opapi)
+    add_dependencies(${OPAPI_NAME} opapi_math)
   endif()
 
   target_link_libraries(
     ${OPAPI_NAME}
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE c_sec nnopbase $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi>>
+    PRIVATE c_sec nnopbase $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
     )
 
   install(
@@ -208,7 +208,7 @@ function(gen_cust_opapi_symbol)
   npu_op_library(cust_opapi ACLNN)
 
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    add_dependencies(cust_opapi opapi)
+    add_dependencies(cust_opapi opapi_math)
   endif()
 
   target_sources(
@@ -219,7 +219,7 @@ function(gen_cust_opapi_symbol)
   target_link_libraries(
     cust_opapi
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
-    PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi>>
+    PRIVATE $<$<BOOL:${BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG}>:$<BUILD_INTERFACE:opapi_math>>
     )
 endfunction()
 

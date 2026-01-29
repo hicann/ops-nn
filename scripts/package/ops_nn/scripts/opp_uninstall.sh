@@ -9,369 +9,257 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+OPERATE_FAILED="0x0001"
 PARAM_INVALID="0x0002"
 PARAM_INVALID_DES="Invalid input parameter."
+FILE_NOT_EXIST="0x0080"
+FILE_NOT_EXIST_DES="File not found."
 FILE_READ_FAILED="0x0082"
 FILE_READ_FAILED_DES="File read failed."
-OPERATE_FAILED="0x0001"
 
-_CURR_PATH=$(dirname $(readlink -f $0))
-_COMMON_INC_FILE="${_CURR_PATH}/common_func.inc"
-_OPP_COMMON_FILE="${_CURR_PATH}/opp_common.sh"
-. "${_COMMON_INC_FILE}"
-. "${_OPP_COMMON_FILE}"
+CURR_PATH=$(dirname $(readlink -f $0))
+COMMON_INC_FILE="${CURR_PATH}/common_func.inc"
+OPP_COMMON_FILE="${CURR_PATH}/opp_common.sh"
 
-logwitherrorlevel() {
-    _ret_status="$1"
-    _level="$2"
-    _msg="$3"
-    if [ "${_ret_status}" != 0 ]; then
-        if [ "${_level}" = "error" ]; then
-            logandprint "${_msg}"
-            exit 1
-        else
-            logandprint "${_msg}"
-        fi
-    fi
-}
+. "${COMMON_INC_FILE}"
+. "${OPP_COMMON_FILE}"
 
-checkdirectoryexist() {
-    _path="${1}"
-    if [ ! -d "${_path}" ]; then
-        logandprint "[ERROR]: ERR_NO:${FILE_READ_FAILED};ERR_DES:Installation directroy [${_path}] does not exist, uninstall failed."
-        return 1
-    else
-        return 0
-    fi
-}
+ARCH_INFO=$(uname -m)
+OPP_PLATFORM_DIR=ops_nn
+OPP_PLATFORM_UPPER=$(echo "${OPP_PLATFORM_DIR}" | tr '[:lower:]' '[:upper:]')
+FILELIST_FILE="${CURR_PATH}/filelist.csv"
+COMMON_PARSER_FILE="${CURR_PATH}/install_common_parser.sh"
 
-checkfileexist() {
-    _path_param="${1}"
-    if [ ! -f "${_path_param}" ];then
-        logandprint "[ERROR]: ERR_NO:${FILE_READ_FAILED};ERR_DES:The file (${_path_param}) does not existed."
-        return 1
-    else
-        return 0
-    fi
-}
+TARGET_INSTALL_PATH=""
+TARGET_VERSION_DIR="${CURR_PATH}/../../../.."
+TARGET_VERSION_DIR=$(readlink -f ${TARGET_VERSION_DIR})     # TARGET_INSTALL_PATH + PKG_VERSION_DIR
+TARGET_MOULDE_DIR=${TARGET_VERSION_DIR}/${OPP_PLATFORM_DIR} # TARGET_INSTALL_PATH + PKG_VERSION_DIR + OPP_PLATFORM_DIR
+TARGET_OPP_BUILT_IN=${TARGET_VERSION_DIR}/opp/built-in
+TARGET_SHARED_INFO_DIR=${TARGET_VERSION_DIR}/share/info
 
-# DFS sub-folders cleaner
-deleteemptyfolders() {
-    _init_dir="$1"
-    _aicpu_filter="$2"
-    find "${_init_dir}" -mindepth 1 -maxdepth 1 -type d ! \
-        -path "${_aicpu_filter}" 2> /dev/null | while read -r dir
-    do
-        if [ "$(echo "${dir}" | grep "custom")" = "" ]; then
-            deleteemptyfolders "${dir}"
-
-            if [ "$(find "${dir}" -mindepth 1 -type d)" = "" ] && \
-                [ "$(ls -A "${dir}")" = "" ] >/dev/null; then
-                rm -rf -d "${dir}"
-            fi
-        else
-            # remove custom folders which not contains sub-folder or any files
-            if [ "$(ls -A "${dir}")" = "" ]; then
-                rm -rf -d "${dir}"
-            fi
-        fi
-    done
-}
-
-checkinstalledtype() {
-    _type="$1"
-    if [ "${_type}" != "run" ] &&
-    [ "${_type}" != "full" ] &&
-    [ "${_type}" != "devel" ]; then
-        logandprint "[ERROR]: ERR_NO:${UNAME_NOT_EXIST};ERR_DES:Install type \
-[${_ugroup}] of ops_nn module is not right!"
-        return 1
-    else
-        return 0
-    fi
-}
-
-getinstallpath() {
-    docker_root_tmp="$(echo "${docker_root}" | sed "s#/\+\$##g")"
-    docker_root_regex="$(echo "${docker_root_tmp}" | sed "s#\/#\\\/#g")"
-    relative_path_val=$(echo "${_ABS_INSTALL_PATH}" | sed "s/^${docker_root_regex}//g" | sed "s/\/\+\$//g")
-    return
-}
-
-unsetenv() {
-    logandprint "[INFO]: Unset the environment path [ export ASCEND_OPS_NN_PATH=${relative_path_val}/${ops_nn_platform_dir} ]."
-    target_username=$(getinstalledinfo "${KEY_INSTALLED_UNAME}")
-    target_usergroup=$(getinstalledinfo "${KEY_INSTALLED_UGROUP}")
-    if [ "${is_docker_install}" = y ] ; then
-        uninstall_option="--docker-root=${docker_root}"
-    else
-        uninstall_option=""
-    fi
-}
-
-whl_uninstall_package() {
-    local _module="$1"
-    local _module_apth="$2"
-    if [ ! -d "${_module_apth}/${_module}" ]; then
-        pip3 show "${_module}" > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            logandprint "[WARNING]: ${_module} is not exist."
-        else
-            pip3 uninstall -y "${_module}" 1> /dev/null
-            local ret=$?
-            if [ $ret -ne 0 ]; then
-                logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
-                exit 1
-            else
-                logandprint "[INFO]: ${_module} uninstalled successfully!"
-            fi
-        fi
-    else
-        export PYTHONPATH="${_module_apth}"
-        pip3 uninstall -y "${_module}" > /dev/null 2>&1
-        local ret=$?
-        if [ $ret -ne 0 ]; then
-            logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
-            exit 1
-        else
-            logandprint "[INFO]: ${_module} uninstalled successfully!"
-        fi
-    fi
-}
-
-uninstall_es_whl() {
-    local python_es_whl_name="es_nn"
-    local whl_install_dir_path="${_TARGET_INSTALL_PATH}/python/site-packages"
-    chmod u+w "${whl_install_dir_path}" 2> /dev/null
-    chmod u+w -R "${whl_install_dir_path}"/es_nn 2> /dev/null
-    chmod u+w -R "${whl_install_dir_path}"/es_nn-*.dist-info 2> /dev/null
-    whl_uninstall_package "${python_es_whl_name}" "${whl_install_dir_path}"
-    chmod u-w "${whl_install_dir_path}" 2> /dev/null
-}
-
-installed_path="$1"
-uninstall_mode="$2"
-is_quiet="$3"
-_CHIP_TYPE="$4"
-is_docker_install="$5"
-docker_root="$6"
-pkg_version_dir="${7}"
-paramter_num="$#"
-
-logandprint "[INFO]: Command ops_nn_uninstall"
-
-if [ "${paramter_num}" != 0 ]; then
-    if [ "${installed_path}" = "" ] ||
-    [ "${uninstall_mode}" = "" ] ||
-    [ "${is_quiet}" = "" ] ; then
-        logandprint "[ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Empty paramters is invalid\
-for call uninstall functions."
-        exit 1
-    fi
-fi
-
-SCENE_FILE="${_CURR_PATH}""/../scene.info"
-platform_data=$(grep -e "arch" "$SCENE_FILE" | cut --only-delimited -d"=" -f2-)
-ops_nn_platform_old_dir=ops_nn_$platform_data-linux
-ops_nn_platform_dir=ops_nn
-upper_opp_platform=$(echo "${ops_nn_platform_dir}" | tr 'a-z' 'A-Z')
-_FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
-_COMMON_PARSER_FILE="${_CURR_PATH}""/install_common_parser.sh"
-_TARGET_INSTALL_PATH="${_CURR_PATH}""/../../../../"
-_INSTALL_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/ascend_install.info"
-_VERSION_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/version.info"
-
-# avoid relative path casued errors by delete floders
-_ABS_INSTALL_PATH=$(cd ${_TARGET_INSTALL_PATH}; pwd)
-getinstallpath
-relative_path_info=${relative_path}
+ASCEND_INSTALL_INFO="ascend_install.info"
 # init log file path
-_INSTALL_INFO_FILE="${_ABS_INSTALL_PATH}/${_INSTALL_INFO_SUFFIX}"
-if [ ! -f "${_INSTALL_INFO_FILE}" ]; then
-    _INSTALL_INFO_FILE="/etc/ascend_install.info"
-fi
-# this is ops_nn verion info file
-_VERSION_INFO_FILE="${_ABS_INSTALL_PATH}/${_VERSION_INFO_SUFFIX}"
+INSTALL_INFO_FILE="${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/${ASCEND_INSTALL_INFO}"
+
+VERSION_INFO_FILE="${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/version.info"
 
 # keys of infos in ascend_install.info
 KEY_INSTALLED_UNAME="USERNAME"
 KEY_INSTALLED_UGROUP="USERGROUP"
-KEY_INSTALLED_TYPE="${upper_opp_platform}_INSTALL_TYPE"
-KEY_INSTALLED_FEATURE="${upper_opp_platform}_Install_Feature"
-KEY_INSTALLED_PATH="${upper_opp_platform}_INSTALL_PATH_VAL"
-KEY_INSTALLED_VERSION="${upper_opp_platform}_VERSION"
-getinstalledinfo() {
-    _key="$1"
-    _res=""
-    if [ -f "${_INSTALL_INFO_FILE}" ]; then
-        chmod 644 "${_INSTALL_INFO_FILE}"> /dev/null 2>&1
-        case "${_key}" in
-        USERNAME)
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "USERNAME" | awk -F = '{print $2}')
-            ;;
-        USERGROUP)
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "USERGROUP" | awk -F = '{print $2}')
-            ;;
-        ${upper_opp_platform}_INSTALL_TYPE)
-            type="INSTALL_TYPE"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "${type}" | awk -F = '{print $2}')
-            ;;
-        ${upper_opp_platform}_INSTALL_PATH_VAL)
-            val="INSTALL_PATH_VAL"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep ${val} | awk -F = '{print $2}')
-            ;;
-        ${upper_opp_platform}_VERSION)
-            version="VERSION"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep ${version} | awk -F = '{print $2}')
-            ;;
-        ${upper_opp_platform}_INSTALL_PATH_PARAM)
-            param="INSTALL_PATH_PARAM"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep ${param} | awk -F = '{print $2}')
-            ;;
-        esac
+KEY_INSTALLED_TYPE="${OPP_PLATFORM_UPPER}_INSTALL_TYPE"
+KEY_INSTALLED_FEATURE="${OPP_PLATFORM_UPPER}_INSTALL_FEATURE"
+KEY_INSTALLED_PATH="${OPP_PLATFORM_UPPER}_INSTALL_PATH_VAL"
+KEY_INSTALLED_VERSION="${OPP_PLATFORM_UPPER}_VERSION"
+
+get_opts() {
+  INSTALLED_PATH="$1"
+  UNINSTALL_MODE="$2"
+  IS_QUIET="$3"
+  IN_FEATURE="$4"
+  IS_DOCKER_INSTALL="$5"
+  DOCKER_ROOT="$6"
+  PKG_VERSION_DIR="$7"
+  local paramter_num="$#"
+
+  if [ "${paramter_num}" != 0 ]; then
+    if [ "${INSTALLED_PATH}" = "" ] ||
+      [ "${UNINSTALL_MODE}" = "" ] ||
+      [ "${IS_QUIET}" = "" ]; then
+      logandprint "[ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Empty paramters is invalid\
+for call uninstall functions."
+      exit 1
     fi
-    echo "${res}"
+  fi
 }
 
-logandprint "[INFO]: Begin uninstall the ops_nn module."
+get_docker_install_path() {
+  local docker_root_tmp="$(echo "${DOCKER_ROOT}" | sed "s#/\+\$##g")"
+  local docker_root_regex="$(echo "${docker_root_tmp}" | sed "s#\/#\\\/#g")"
+  relative_path_val=$(echo "${TARGET_VERSION_DIR}" | sed "s/^${docker_root_regex}//g" | sed "s/\/\+\$//g")
+  return
+}
 
-# check install folder existed
-checkfileexist "${_INSTALL_INFO_FILE}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-checkfileexist "${_FILELIST_FILE}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-checkfileexist "${_COMMON_PARSER_FILE}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-ops_nn_sub_dir="${_ABS_INSTALL_PATH}""/share/info/${ops_nn_platform_dir}"
-checkdirectoryexist "${ops_nn_sub_dir}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-
-installed_type=$(getinstalledinfo "${KEY_INSTALLED_TYPE}")
-checkinstalledtype "${installed_type}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-
-_CUSTOM_PERM="755"
-_BUILTIN_PERM="555"
-# make the ops_nn and the upper folder can write files
-is_change_dir_mode="false"
-if [ "$(id -u)" != 0 ] && [ ! -w "${_TARGET_INSTALL_PATH}" ]; then
-    chmod u+w "${_TARGET_INSTALL_PATH}" 2> /dev/null
-    is_change_dir_mode="true"
-fi
-
-# change installed folder's permission except aicpu
-subdirs=$(ls "${_TARGET_INSTALL_PATH}/${ops_nn_platform_dir}" 2> /dev/null)
-for dir in ${subdirs}; do
-    if [ "${dir}" != "Ascend310" ] && [ "${dir}" != "Ascend310RC" ] && [ "${dir}" != "Ascend910" ] && [ "${dir}" != "Ascend310P" ] && [ "${dir}" != "Ascend" ] && [ "${dir}" != "aicpu" ]; then
-        chmod -R "${_CUSTOM_PERM}" "${_TARGET_INSTALL_PATH}/${ops_nn_platform_dir}/${dir}" 2> /dev/null
+log_with_errorlevel() {
+  local ret_status="$1"
+  local level="$2"
+  local msg="$3"
+  if [ "${ret_status}" != 0 ]; then
+    if [ "${level}" = "error" ]; then
+      logandprint "${msg}"
+      exit 1
+    else
+      logandprint "${msg}"
     fi
-done
-chmod "${_CUSTOM_PERM}" "${_TARGET_INSTALL_PATH}/${ops_nn_platform_dir}" 2> /dev/null
+  fi
+}
+
+check_directory_exist() {
+  local path="${1}"
+  if [ ! -d "${path}" ]; then
+    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};ERR_DES:Installation directroy [${path}] does not exist, uninstall failed."
+    exit 1
+  fi
+}
+
+check_file_exist() {
+  local path_param="${1}"
+  if [ ! -f "${path_param}" ]; then
+    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};ERR_DES:The file (${path_param}) does not existed."
+    exit 1
+  fi
+}
+
+check_installed_files() {
+  # check install folder existed
+  check_file_exist "${INSTALL_INFO_FILE}"
+
+  check_file_exist "${FILELIST_FILE}"
+
+  check_file_exist "${COMMON_PARSER_FILE}"
+}
+
+check_installed_type() {
+  local type="$1"
+  if [ "${type}" != "run" ] &&
+    [ "${type}" != "full" ] &&
+    [ "${type}" != "devel" ]; then
+    logandprint "[ERROR]: ERR_NO:${UNAME_NOT_EXIST};ERR_DES:Install type of opp module is not right!"
+    exit 1
+  fi
+}
+
+unsetenv() {
+  logandprint "[INFO]: Unset the environment path [ export ASCEND_OPP_PATH=${relative_path_val}/opp ]."
+  if [ "${IS_DOCKER_INSTALL}" = y ]; then
+    UNINSTALL_OPTION="--docker-root=${DOCKER_ROOT}"
+  else
+    UNINSTALL_OPTION=""
+  fi
+}
+
+get_installed_info() {
+  local key="$1"
+  local res=""
+  if [ -f "${INSTALL_INFO_FILE}" ]; then
+    chmod 644 "${INSTALL_INFO_FILE}" >/dev/null 2>&1
+    res=$(cat ${INSTALL_INFO_FILE} | grep "${key}" | awk -F = '{print $2}')
+  fi
+  echo "${res}"
+}
+
+get_installed_param() {
+  INSTALLED_TYPE=$(get_installed_info "${KEY_INSTALLED_TYPE}")
+  TARGET_USERNAME=$(get_installed_info "${KEY_INSTALLED_UNAME}")
+  TARGET_USERGROUP=$(get_installed_info "${KEY_INSTALLED_UGROUP}")
+  get_package_version "RUN_PKG_VERSION" "$VERSION_INFO_FILE"
+  if [ "${PKG_VERSION_DIR}" = "" ]; then
+    TARGET_INSTALL_PATH=${TARGET_VERSION_DIR}
+  else
+    TARGET_INSTALL_PATH=$(readlink -f "${TARGET_VERSION_DIR}/../")
+  fi
+}
+
+remove_module() {
+  chmod u+w ${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/scene.info
+
+  logandprint "[INFO]: Delete the installed opp source files in (${TARGET_VERSION_DIR})."
+
+  bash "${COMMON_PARSER_FILE}" --package="${OPP_PLATFORM_DIR}" --uninstall --remove-install-info \
+    --username="${TARGET_USERNAME}" --usergroup="${TARGET_USERGROUP}" --version=$RUN_PKG_VERSION \
+    --use-share-info --version-dir=$PKG_VERSION_DIR ${UNINSTALL_OPTION} "${INSTALLED_TYPE}" "${TARGET_INSTALL_PATH}" \
+    "${FILELIST_FILE}" "${IN_FEATURE}" --recreate-softlink
+  log_with_errorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall opp module failed."
+}
 
 remove_init_py() {
-  local built_in_impl_path=${_ABS_INSTALL_PATH}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn
+  local built_in_impl_path=${TARGET_OPP_BUILT_IN}/op_impl/ai_core/tbe/impl/ops_nn
 
   [ -e ${built_in_impl_path}/__init__.py ] && rm ${built_in_impl_path}/__init__.py > /dev/null 2>&1
 
   [ -e ${built_in_impl_path}/dynamic/__init__.py ] && rm ${built_in_impl_path}/dynamic/__init__.py > /dev/null 2>&1
 }
 
-remove_init_py
+remove_ops_nn() {
+  if [ "$(id -u)" != 0 ] && [ ! -w "${TARGET_OPP_BUILT_IN}" ]; then
+    chmod u+w -R "${TARGET_OPP_BUILT_IN}" 2>/dev/null
+  fi
 
-get_version "pkg_version" "$_VERSION_INFO_FILE"
+  remove_init_py
 
-# delete ops_nn source files
-unsetenv
+  remove_module
 
-uninstall_es_whl
-
-is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE "
-
-if [ "${pkg_version_dir}" = "" ]; then
-    FINAL_INSTALL_PATH=${_ABS_INSTALL_PATH}
-else
-    TMP_PATH="${_ABS_INSTALL_PATH}/.."
-    FINAL_INSTALL_PATH=$(cd ${TMP_PATH}; pwd)
-fi
-
-# 赋可写权限
-chmod +w -R "${_COMMON_PARSER_FILE}"
-
-sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --uninstall --recreate-softlink --username="${target_username}" --usergroup="${target_usergroup}" --version=$pkg_version \
-    --use-share-info --version-dir=$pkg_version_dir --remove-install-info ${uninstall_option} "${installed_type}" "${FINAL_INSTALL_PATH}" "${_FILELIST_FILE}" "${_CHIP_TYPE}" --recreate-softlink
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${OPERATE_FAILED};ERR_DES:Uninstall ops_nn module failed."
-
-
-# delete install.info file
-if [ "${uninstall_mode}" != "upgrade" ]; then
-    logandprint "[INFO]: Delete the install info file (${_INSTALL_INFO_FILE})."
-    rm -f "${_INSTALL_INFO_FILE}"
-    logwitherrorlevel "$?" "warn" "[WARNING]Delete ops_nn install info file failed, \
-please delete it by yourself."
-fi
-
-deleteopp(){
-    if [ -s "$1" -a -d "$1" ];then
-       for file in $(ls -a "$1")
-       do
-         if [ -f "$1/$file" ];then
-           return 1
-         fi
-        if test -d "$1/$file";then
-            if [ "$file" != '.' -a "$file" != '..' ];then
-                   return 1
-            fi
-        fi
-       done
-       rm -rf -d "$1"
-    fi
+  if [ "${UNINSTALL_MODE}" != "upgrade" ]; then
+    logandprint "[INFO]: Delete the install info file (${INSTALL_INFO_FILE})."
+    rm -f "${INSTALL_INFO_FILE}"
+    log_with_errorlevel "$?" "warn" "[WARNING] Delete ops install info file failed, please delete it by yourself."
+  fi
 }
 
-# delete the empty ops_nn folder it'self
-res_val=$(ls "${ops_nn_sub_dir}" 2> /dev/null)
-if [ "${res_val}" = "" ]; then
-    rm -rf -d "${ops_nn_sub_dir}" >> /dev/null 2>&1
-fi
+whl_uninstall_package() {
+  local _module="$1"
+  local _module_apth="$2"
+  if [ ! -d "${_module_apth}/${_module}" ]; then
+      pip3 show "${_module}" > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+          logandprint "[WARNING]: ${_module} is not exist."
+      else
+          pip3 uninstall -y "${_module}" 1> /dev/null
+          local ret=$?
+          if [ $ret -ne 0 ]; then
+              logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
+              exit 1
+          else
+              logandprint "[INFO]: ${_module} uninstalled successfully!"
+          fi
+      fi
+  else
+      export PYTHONPATH="${_module_apth}"
+      pip3 uninstall -y "${_module}" > /dev/null 2>&1
+      local ret=$?
+      if [ $ret -ne 0 ]; then
+          logandprint "[WARNING]: uninstall ${_module} failed, error code: $ret."
+          exit 1
+      else
+          logandprint "[INFO]: ${_module} uninstalled successfully!"
+      fi
+  fi
+}
 
-# change installed folder's permission except aicpu
-subdirs_param=$(ls "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}" 2> /dev/null)
-for dir in ${subdirs_param}; do
-    if [ "${dir}" != "Ascend310" ] && [ "${dir}" != "Ascend310RC" ] && [ "${dir}" != "Ascend910" ] && [ "${dir}" != "Ascend310P" ] && [ "${dir}" != "Ascend" ] && [ "${dir}" != "aicpu" ]; then
-        chmod "${_BUILTIN_PERM}" "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/${dir}" 2> /dev/null
-    fi
-done
+uninstall_es_whl() {
+    local python_es_whl_name="es_nn"
+    local whl_install_dir_path="${TARGET_VERSION_DIR}/python/site-packages"
+    chmod u+w "${whl_install_dir_path}" 2> /dev/null
+    chmod u+w -R "${whl_install_dir_path}"/es_nn 2> /dev/null
+    chmod u+w -R "${whl_install_dir_path}"/es_nn-*.dist-info 2> /dev/null
+    whl_uninstall_package "${python_es_whl_name}" "${whl_install_dir_path}"
+}
 
-if [ "${is_change_dir_mode}" = "true" ]; then
-    chmod u-w "${_ABS_INSTALL_PATH}" 2> /dev/null
-fi
+logandprint "[INFO]: Begin uninstall the opp module."
 
-temp=$(ls "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}" 2> /dev/null)
-if [ -d "${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/" ]; then
-    # find custom file in path and print log
-    for file in $(ls -A ${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/* 2> /dev/null)
-    do
-        if [ "${file##*.}" != "info" ] && [ "${file}" != "Ascend310" ] && [ "${file}" != "Ascend310RC" ] && [ "${file}" != "Ascend910" ] && [ "${file}" != "Ascend310P" ] && [ "${file}" != "Ascend" ] && [ "${file}" != "aicpu" ];then
-            logandprint "[WARNING]: ${file}, has files changed by users, cannot be delete."
-        fi
-    done
-fi
-# delete scene.info
-scene_dir="${_ABS_INSTALL_PATH}/${ops_nn_platform_dir}/scene.info"
-if [ -f ${scene_dir} ]; then
-    rm -f ${scene_dir}
-fi
+main() {
+  get_opts "$@"
 
-# delete the upper folder when it is empty
-dir_existed=$(ls "${_ABS_INSTALL_PATH}" 2> /dev/null)
-if [ "${dir_existed}" = "" ] && [ "${uninstall_mode}" != "upgrade" ]; then
-    rm -rf -d "${_ABS_INSTALL_PATH}" >> /dev/null 2>&1
-fi
+  get_docker_install_path
 
-subdirs_param_install=$(ls "${installed_path}" 2> /dev/null)
-if [ "${subdirs_param_install}" = "" ]; then
-    [ -n "${installed_path}" ] && rm -rf "${installed_path}"
-fi
+  check_installed_files
 
-logandprint "[INFO]: OPS_NN package uninstalled successfully! Uninstallation takes effect immediately."
+  get_installed_param
+
+  check_installed_type "${INSTALLED_TYPE}"
+
+  unsetenv
+
+  uninstall_es_whl
+
+  remove_ops_nn
+
+  if [ "${UNINSTALL_MODE}" != "upgrade" ]; then
+    remove_dir_if_empty ${TARGET_VERSION_DIR}
+  fi
+  remove_dir_if_empty ${INSTALLED_PATH}
+
+  logandprint "[INFO]: Opp package uninstalled successfully! Uninstallation takes effect immediately."
+}
+
+main "$@"
 exit 0
-

@@ -270,7 +270,7 @@ usage() {
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --run_example mat_mul_v3 eager"
-        echo "    bash build.sh --run_example mat_mul_v3 eager --soc=ascend910_95"
+        echo "    bash build.sh --run_example mat_mul_v3 eager --soc=ascend950"
         echo "    bash build.sh --run_example mat_mul_v3 graph"
         echo "    bash build.sh --run_example mat_mul_v3 eager --example_name=mm"
         echo "    bash build.sh --run_example mat_mul_v3 eager cust"
@@ -1032,11 +1032,7 @@ build_binary() {
       fi
     fi
     OPC_CMD_FILE="${BUILD_PATH}/binary/${unit}/bin/opc_cmd/opc_cmd.sh"
-    if [[ -f "$OPC_CMD_FILE" ]]; then
-      opc_list_num=$(wc -l < "$OPC_CMD_FILE" 2>/dev/null || echo 0);
-    else 
-      opc_list_num=0;
-    fi
+    [[ -f "$OPC_CMD_FILE" ]] && opc_list_num=$(wc -l < "$OPC_CMD_FILE") || opc_list_num=0
     CMAKE_ARGS="${CMAKE_ARGS} -DOPC_NUM_${unit}=${opc_list_num}"
   done
   cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS}
@@ -1165,15 +1161,15 @@ build_single_example() {
       export CUST_LIBRARY_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"     # 仅自定义算子需要
       export CUST_INCLUDE_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/include" # 仅自定义算子需要
       if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ]; then
-        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
+        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
       else
-        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi -lacl_rt -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
+        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
       fi
     elif [[ "${PKG_MODE}" == "" ]]; then
       if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ] || [ -f ${EAGER_LIBRARY_OPP_PATH}/libascendcl.so]; then
-        g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi -lascendcl -lnnopbase -o test_aclnn_${example}
+        g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example}
       else
-        g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi -lacl_rt -lnnopbase -o test_aclnn_${example}
+        g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example}
       fi
     else
       usage "run_example"

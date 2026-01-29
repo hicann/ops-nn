@@ -75,10 +75,4 @@ using optiling::GenWqbmmTiling;
 } // namespace NN
 } // namespace Ops
 #endif
-using Ops::NN::WQBMM_MSD;
-using Ops::NN::WQBMM_CUSTOM;
-using Ops::NN::TilingPrepareForOpCache;
-using Ops::NN::GenTiling;
-using Ops::NN::CheckSupportConditionQbmm;
-using Ops::NN::GenWqbmmTiling;
 #endif

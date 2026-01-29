@@ -10,23 +10,22 @@
 include(ExternalProject)
 set(PROTOBUF_VERSION_PKG protobuf-25.1.tar.gz)
 set(ASCEND_PROTOBUF_DIR ${CANN_3RD_LIB_PATH}/ascend_protobuf)
+find_path(Protobuf_PATH protoc PATHS ${CANN_3RD_LIB_PATH}/ascend_protobuf_build_nn NO_DEFAULT_PATH)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(ascend_protobuf_build_nn
     FOUND_VAR
     ascend_protobuf_build_nn_FOUND
     REQUIRED_VARS
-    ASCEND_PROTOBUF_SHARED_INCLUDE
+    Protobuf_PATH
 )
 
-set(ASCEND_PROTOBUF_SOURCE_DIR ${PROJECT_SOURCE_DIR}/third_party/ascend_protobuf)
 if(ascend_protobuf_build_nn_FOUND AND NOT FORCE_REBUILD_CANN_3RD)
     message(STATUS "[ThirdPartyLib][ascend protobuf] ascend_protobuf_shared found, skip compile.")
-    cmake_print_variables(ASCEND_PROTOBUF_SHARED_INCLUDE)
-    cmake_print_variables(ASCEND_PROTOC)
-    set(Protobuf_INCLUDE ${ASCEND_PROTOBUF_SHARED_INCLUDE})
-    set(Protobuf_PATH ${ASCEND_PROTOC})
+    set(Protobuf_INCLUDE ${ASCEND_PROTOBUF_DIR}/src)
     set(Protobuf_PROTOC_EXECUTABLE ${Protobuf_PATH}/protoc)
+    cmake_print_variables(Protobuf_INCLUDE)
+    cmake_print_variables(Protobuf_PATH)
     add_library(ascend_protobuf_build_nn INTERFACE)
 else()
     message(STATUS "[ThirdPartyLib][ascend protobuf] ascend protobuf shared not found, finding binary file.")
@@ -47,6 +46,7 @@ else()
     ExternalProject_Add(ascend_protobuf_build_nn
                         URL ${REQ_URL}
                         DOWNLOAD_DIR ${CANN_3RD_LIB_PATH}/pkg
+                        BINARY_DIR ${CANN_3RD_LIB_PATH}/ascend_protobuf_build_nn
                         PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/build/modules/patch/protobuf_25.1_change_version.patch
                         CONFIGURE_COMMAND ${CMAKE_COMMAND}
                             -DCMAKE_MESSAGE_LOG_LEVEL=ERROR
@@ -66,7 +66,7 @@ else()
                             -Dprotobuf_ABSL_PROVIDER=module
                             -DABSL_ROOT_DIR=${ABSL_SOURCE_DIR}
                             <SOURCE_DIR>
-                        SOURCE_DIR ${ASCEND_PROTOBUF_SOURCE_DIR}
+                        SOURCE_DIR ${ASCEND_PROTOBUF_DIR}
                         BUILD_COMMAND $(MAKE)
                         INSTALL_COMMAND ""
                         EXCLUDE_FROM_ALL TRUE
@@ -74,6 +74,11 @@ else()
     if(TARGET abseil_build_nn)
         add_dependencies(ascend_protobuf_build_nn abseil_build_nn)
     endif()
+
+    add_custom_command(TARGET ascend_protobuf_build_nn
+        PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CANN_3RD_LIB_PATH}/ascend_protobuf_build_nn
+    )
 
     ExternalProject_Get_Property(ascend_protobuf_build_nn SOURCE_DIR)
     ExternalProject_Get_Property(ascend_protobuf_build_nn BINARY_DIR)

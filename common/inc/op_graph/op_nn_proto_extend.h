@@ -191,7 +191,7 @@ REG_OP(AscendDequantS16)
  * Ceil: round to positive infinity(c language ceil). \n
  * Trunc: round to zero(c language trunc). \n
  * Hybrid: only valid when output dtype is hifloat8. \n
- * The following constraints apply to products other than Ascend 910_95 AI Processor: \n
+ * The following constraints apply to products other than Ascend 950 AI Processor: \n
  * @li When format is FRACTAL_NZ, shape supports 4D ~ 8D.
  * @li When "x" is dynamic shape, shape [-2] is not supported.
  * @li When "x" is dynamic shape, the data type of output "y" does not support int4.
@@ -695,7 +695,7 @@ REG_OP(InstanceNorm)
     * logits: A ND tensor. Must be one of the following data types: double, bfloat16, float16, float32 . \n
     *@par Attributes:
     * axes: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}" .
-    * In Ascend 910_95 AI Processor, only single-axis reduction is supported. \n
+    * In Ascend 950 AI Processor, only single-axis reduction is supported. \n
     *@par Outputs:
     * logsoftmax: A ND tensor. Has the same data type as "logits" . \n
     *@par Third-party framework compatibility
@@ -1314,16 +1314,16 @@ REG_OP(AvgPoolV2)
 * @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
 * Atlas A3 Training Series Product: "ksize_H" and "ksize_W" are positive integers within the range [1, 255].
 * ksize_H * ksize_W < 256. \n
-* For Ascend 910_95 AI Processor: The ksize of the H and W dimensions should be greater than 0.
+* For Ascend 950 AI Processor: The ksize of the H and W dimensions should be greater than 0.
 * @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
 * Atlas A3 Training Series Product: the values of "strides_h" and "strides_w" are positive integers within
 * the range [1, 63]. \n
-* For Ascend 910_95 AI Processor: The stride of the H and W dimensions should be greater than 0.
+* For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
 * @li When the C axis is greater than 1, if points with the same H and W dimensions in x contain one INF input
 * on the C axis, the output of the INF input covered by the sliding window on this C axis is INF, and the
 * outputs of other C axis without INF input covered by the sliding window are Nan. If points with the same
 * H and W dimensions in x contain more than one INF input on the C axis, the outputs of all INF input data
-* covered by the sliding window on the C axis are Nan. this constraints not for Ascend 910_95 AI Processor.
+* covered by the sliding window on the C axis are Nan. this constraints not for Ascend 950 AI Processor.
 * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
 output
 * shape at the H and W dimensions is calculated by below formula: \n
@@ -1361,7 +1361,7 @@ REG_OP(AvgPool)
 * The data is stored in the order of: [out_channels].
 * @li offset_w: An optional quantitative offset tensor. Reserved.
 *\n
-* The following are the supported data types and data formats (except IPV350 and Ascend 910_95 AI Processor):
+* The following are the supported data types and data formats (except IPV350 and Ascend 950 AI Processor):
 *\n
 | Tensor    | x        | filter   | bias     | y        |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -1384,7 +1384,7 @@ REG_OP(AvgPool)
 | Format    | NCHW    | NCHW    | ND      | NCHW    |\n
 |           | NHWC    | HWCN    | ND      | NHWC    |\n
 *\n
-* The following are the supported data types and data formats for Ascend 910_95 AI Processor:
+* The following are the supported data types and data formats for Ascend 950 AI Processor:
 *\n
 | Tensor    | x        | filter   | bias     | y        |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -1454,7 +1454,7 @@ REG_OP(AvgPool)
 * int32(2147483647), the product of each dimension of x/filter/bias/offset_w/y
 * shape exceeds max int32(2147483647) or the value of strides/pads/dilations/offset_x
 * exceeds the range in the above table, the correctness of the operator cannot be guaranteed. \n
-* In Ascend 910_95 AI Processor: If any dimension of x/filter/bias/offset_w/y shape exceeds max
+* In Ascend 950 AI Processor: If any dimension of x/filter/bias/offset_w/y shape exceeds max
 * 1000000, the product of each dimension of x/filter/bias/offset_w/y
 * shape exceeds max int32(2147483647) or the value of strides/pads/dilations/offset_x
 * exceeds the range in the above table, the correctness of the operator cannot be guaranteed.
@@ -1492,8 +1492,8 @@ REG_OP(Conv2D)
     * @li x: A required 5D tensor of input image.
             The format of x is NCDHW or NDHWC.
             The data is stored in the order of: [n, in_channels, d, h, w] or [n, d, h, w, in_channels]. \n
-            Any dimension of x shape must be in [1, 2147483646] except Ascend 910_95 AI Processor. \n
-            In Ascend 910_95 AI Processor, any dimension of x shape must be in [1, 1000000].
+            Any dimension of x shape must be in [1, 2147483646] except Ascend 950 AI Processor. \n
+            In Ascend 950 AI Processor, any dimension of x shape must be in [1, 1000000].
     * @li filter: A required 5D tensor of convolution kernel.
                 Must have the same type as "x".
                 The format support NCDHW or DHWCN.
@@ -1504,17 +1504,17 @@ REG_OP(Conv2D)
                 The kernel_h and kernel_w dimensions must be in [1, 511]. \n
                 The other values of filter_size must be in [1, 2147483646]. \n
                 When format is DHWCN and type is float32,
-                filter should be a constants except Ascend 910_95 AI Processor. \n
-                In Ascend 910_95 AI Processor, the kernel_h and kernel_w dimensions must be in [1, 255],
+                filter should be a constants except Ascend 950 AI Processor. \n
+                In Ascend 950 AI Processor, the kernel_h and kernel_w dimensions must be in [1, 255],
                 And the other values of filter_size must be in [1, 1000000].
     * @li bias: An optional 1D tensor of additive biases to the outputs.
                 The data is stored in the order of: [out_channels].
                 "out_channels" must equals to the "out_channels" of output y. \n
-                In Ascend 910_95 AI Processor, the out_channels dimension must be in [1, 1000000]
+                In Ascend 950 AI Processor, the out_channels dimension must be in [1, 1000000]
     * @li offset_w: An optional quantitative offset tensor. Reserved.
 *\n
 *\n
-* The following are the supported data types and data formats for Ascend 910_95 AI Processor:
+* The following are the supported data types and data formats for Ascend 950 AI Processor:
 *\n
 | Tensor    | x        | filter   | bias     |   y      |\n
 | :-------: | :------: | :------: | :------: | :------: |\n
@@ -1540,21 +1540,21 @@ REG_OP(Conv2D)
                 sliding window for each dimension of "x". The dimension order is determined by the data format of
 "x". The n and in_channels dimensions must be 1. \n When the format is "NDHWC", its shape is [1, stride_d, stride_h,
 stride_w, 1], when the format is "NCDHW", its shape is [1, 1, stride_d, stride_h, stride_w]. \n The stride_h and
-stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] except Ascend 910_95 AI Processor.
-\n In Ascend 910_95 AI Processor the stride_d must be in [1, 1000000].
+stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] except Ascend 950 AI Processor.
+\n In Ascend 950 AI Processor the stride_d must be in [1, 1000000].
     * @li pads: Required. A list of 6 integers. Supports only padding along the d, h and w dimensions in sequence of
                 pad_head, pad_tail, pad_top, pad_bottom, pad_left and pad_right. \n
                 The pad_top, pad_bottom, pad_left and pad_right must be in [0, 255].
-                The pad_head and pad_tail must be in [0, 2147483646] except Ascend 910_95 AI Processor. \n
-                In Ascend 910_95 AI Processor the pad_head and pad_tail must be in [1, 1000000].
+                The pad_head and pad_tail must be in [0, 2147483646] except Ascend 950 AI Processor. \n
+                In Ascend 950 AI Processor the pad_head and pad_tail must be in [1, 1000000].
     * @li dilations: Optional. A list of 5 integers. Specifies the dilation
                     factor for each dimension of "x". The dimension order is determined by the data format of "x". \n
                     When the format is "NDHWC", its shape is [1, dilation_d, dilation_h, dilation_w, 1],
                     when the format is "NCDHW", its shape is [1, 1, dilation_d, dilation_h, dilation_w]. \n
                     Default value is [1, 1, 1, 1, 1]. \n
                     The dilation_h and dilation_w dimensions must be in [1, 255].
-                    The dilation_d dimensions must be in [0, 2147483646] except Ascend 910_95 AI Processor. \n
-                    In Ascend 910_95 AI Processor the dilation_d dimensions must be in [1, 1000000].
+                    The dilation_d dimensions must be in [0, 2147483646] except Ascend 950 AI Processor. \n
+                    In Ascend 950 AI Processor the dilation_d dimensions must be in [1, 1000000].
     * @li groups: Optional. An integer of type int32. The number of groups
                 in group convolution. In_channels and out_channels must both be divisible by "groups".
                 The value of groups must be in [1, 65535]. Default value is 1.
@@ -1580,8 +1580,8 @@ stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] 
 *                  (dilation_w * (kernel_w - 1) + 1))
 *                 / stride_w + 1
 *\n
-        Any dimension of y shape must be in [1, 2147483646] except Ascend 910_95 AI Processor. \n
-        In Ascend 910_95 AI Processor, any dimension of y shape must be in [1, 1000000].
+        Any dimension of y shape must be in [1, 2147483646] except Ascend 950 AI Processor. \n
+        In Ascend 950 AI Processor, any dimension of y shape must be in [1, 1000000].
 * @attention Constraints:
     * @li The input x size after padding should be greater than the filter size.
     * @li The w dimension of the input x supports cases exceeding 4096, but it may
@@ -1590,7 +1590,7 @@ stride_w dimensions must be in [1, 63]. The stride_d must be in [1, 2147483646] 
     * the product of each dimension of x/filter/bias/y shape exceeds max int32 minus one (2147483646) or
     * the value of strides/pads/dilations/offset_x exceeds the range which is described in Attributes,
     * the correctness of the operator cannot be guaranteed. \n
-    * In Ascend 910_95 AI Processor: If any dimension of x/filter/bias/y shape exceeds max
+    * In Ascend 950 AI Processor: If any dimension of x/filter/bias/y shape exceeds max
     * 1000000, the product of each dimension of x/filter/bias/y
     * shape exceeds max int32(2147483647) or the value of stride/padding/dilation/offset_x
     * exceeds the range in the above table, the correctness of the operator cannot be guaranteed.
@@ -1907,7 +1907,7 @@ REG_OP(Adds)
 * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
 * Indicates the index of the R1 axis in the shape of x.
 * @li begin_params_axis: An optional attribute, the dtype is int32. Defaults to 0.
-* In Ascend 910_95 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
+* In Ascend 950 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
 * @li epsilon: An optional attribute, the dtype is float32. Defaults to 1e-7 . \n
 
 *@par Outputs:
@@ -1959,12 +1959,12 @@ REG_OP(LayerNorm)
 * @li "ksize" is a list that has length 4. The ksize of the H and W dimensions should be greater than 0.
 * The ksize of the N and C dimensions should be 1. e.g. For "data_format" is "NCHW", ksize[0] = 1 and ksize[1] = 1.
 * For "data_format" is "NHWC", ksize[0] = 1 and ksize[3] = 1. \n
-* For Non-Ascend 910_95 AI Processor: The produce of the ksize in H and W dimensions
+* For Non-Ascend 950 AI Processor: The produce of the ksize in H and W dimensions
 * should be less than or equal to 255. e.g. For "data_format" is "NCHW", ksize[2] * ksize[3] <= 255. \n
 * @li "strides" is a list that has length 4. The stride of the N and C dimensions should be 1. \n
-* For Non-Ascend 910_95 AI Processor: The stride of the H and W dimensions should be greater than 0 and
+* For Non-Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0 and
 * smaller than 64. \n
-* For Ascend 910_95 AI Processor: The stride of the H and W dimensions should be greater than 0.
+* For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
 * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
 output
 * shape at the H and W dimensions is calculated by below formula: \n

@@ -16,7 +16,6 @@
 #pragma once
 
 #include "register/op_impl_registry.h"
-#include "platform/soc_spec.h"
 #include "platform/platform_ascendc.h"
 #include "log/log.h"
 

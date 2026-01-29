@@ -9,44 +9,11 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-_CURR_OPERATE_USER="$(id -nu 2> /dev/null)"
-_CURR_OPERATE_GROUP="$(id -ng 2> /dev/null)"
-_DEFAULT_INSTALL_PATH=/usr/local/Ascend
-# defaults for general user
-if [ "$(id -u)" != "0" ]; then
-    _DEFAULT_USERNAME="${_CURR_OPERATE_USER}"
-    _DEFAULT_USERGROUP="${_CURR_OPERATE_GROUP}"
-    _DEFAULT_INSTALL_PATH="${HOME}/Ascend"
-fi
-
-# run package's files info
-SOURCEDIR="$PWD/ops_nn"
-_CURR_PATH=$(dirname $(readlink -f $0))
-_VERSION_INFO_FILE="${_CURR_PATH}""/../version.info"
-_FILELIST_FILE="${_CURR_PATH}""/filelist.csv"
-_COMMON_PARSER_FILE="${_CURR_PATH}""/install_common_parser.sh"
-SCENE_FILE="${_CURR_PATH}""/../scene.info"
-platform_data=$(grep -e "arch" "$SCENE_FILE" | cut --only-delimited -d"=" -f2-)
-ops_nn_platform_old_dir=ops_nn_$platform_data-linux
-ops_nn_platform_dir=ops_nn
-upper_ops_nn_platform=$(echo "${ops_nn_platform_dir}" | tr 'a-z' 'A-Z')
-
-
-_INSTALL_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/ascend_install.info"
-_VERSION_INFO_SUFFIX="share/info/${ops_nn_platform_dir}/version.info"
-
-_COMMON_INC_FILE="${_CURR_PATH}/common_func.inc"
-COMMON_FUNC_V2_PATH="${_CURR_PATH}/common_func_v2.inc"
-VERSION_CFG="${_CURR_PATH}/version_cfg.inc"
-_OPP_COMMON_FILE="${_CURR_PATH}/opp_common.sh"
-. "${_COMMON_INC_FILE}"
-. "${COMMON_FUNC_V2_PATH}"
-. "${VERSION_CFG}"
-. "${_OPP_COMMON_FILE}"
-
 PARAM_INVALID="0x0002"
 INSTALL_FAILED="0x0000"
 INSTALL_FAILED_DES="Update successfully."
+FILE_NOT_EXIST="0x0080"
+FILE_NOT_EXIST_DES="File not found."
 FILE_READ_FAILED="0x0082"
 FILE_READ_FAILED_DES="File read failed."
 FILE_WRITE_FAILED="0x0081"
@@ -54,454 +21,422 @@ FILE_WRITE_FAILED_DES="File write failed."
 PERM_DENIED="0x0093"
 PERM_DENIED_DES="Permission denied."
 
-logwitherrorlevel() {
-    _ret_status="$1"
-    _level="$2"
-    _msg="$3"
-    if [ "${_ret_status}" != 0 ]; then
-        if [ "${_level}" = "error" ]; then
-            logandprint "${_msg}"
-            exit 1
-        else
-            logandprint "${_msg}"
-        fi
-    fi
-}
+# run package's files info
+SOURCEDIR="$PWD/ops_nn"
+CURR_PATH=$(dirname $(readlink -f $0))
+VERSION_INFO_FILE="${CURR_PATH}/../version.info"
+FILELIST_FILE="${CURR_PATH}/filelist.csv"
+COMMON_PARSER_FILE="${CURR_PATH}/install_common_parser.sh"
+SCENE_FILE="${CURR_PATH}/../scene.info"
+ASCEND_INSTALL_INFO="ascend_install.info"
 
-#check ascend_install.info for the change in code warning
-checkascendinfo() {
-    file_param="${version_install_dir}/${_INSTALL_INFO_SUFFIX}"
-    if [ -f "${file_param}" ]; then
-        inst_type=$(cat ${file_param} | grep "Opp_Install_Type" | awk -F = '{print $2}')
-        uname_param=$(cat ${file_param} | grep "UserName" | awk -F = '{print $2}')
-        ugroup_param=$(cat ${file_param} | grep "UserGroup" | awk -F = '{print $2}')
-        path_param=$(cat ${file_param} | grep "Opp_Install_path_Param" | awk -F = '{print $2}')
-        path_params=$(cat ${file_param} | grep "Opp_Install_Path_Param" | awk -F = '{print $2}')
-        version_param=$(cat ${file_param} | grep "Opp_Version" | awk -F = '{print $2}')
-        if [ "$inst_type" != "" ]; then
-            echo "${upper_ops_nn_platform}_INSTALL_TYPE=${inst_type}" >> ${file_param}
-        fi
-        if [ "$uname_param" != "" ]; then
-            echo "USERNAME=${uname_param}" >> ${file_param}
-        fi
-        if [ "$ugroup_param" != "" ]; then
-            echo "USERGROUP=${ugroup_param}" >> ${file_param}
-        fi
-        if [ "$path_param" != "" ]; then
-		echo "${upper_ops_nn_platform}_INSTALL_PATH_VAL=${path_param}" >> ${file_param}
-        fi
-        if [ "$path_params" != "" ]; then
-            echo "${upper_ops_nn_platform}_INSTALL_PATH_PARAM=${path_params}" >> ${file_param}
-        fi
+ARCH_INFO=$(uname -m)
+OPP_PLATFORM_DIR=ops_nn
+OPP_PLATFORM_UPPER=$(echo "${OPP_PLATFORM_DIR}" | tr '[:lower:]' '[:upper:]')
 
-        if [ "$version_param" != "" ]; then
-            echo "${upper_ops_nn_platform}_VERSION=${version_param}" >> ${file_param}
-        fi
-    fi
-}
+TARGET_INSTALL_PATH=""
+TARGET_MOULDE_DIR=""  # TARGET_INSTALL_PATH + PKG_VERSION_DIR + OPP_PLATFORM_DIR
+TARGET_VERSION_DIR="" # TARGET_INSTALL_PATH + PKG_VERSION_DIR
+TARGET_SHARED_INFO_DIR="" # TARGET_INSTALL_PATH + PKG_VERSION_DIR + share/info
+TARGET_OPP_BUILT_IN=""
+
+COMMON_INC_FILE="${CURR_PATH}/common_func.inc"
+COMMON_FUNC_V2_PATH="${CURR_PATH}/common_func_v2.inc"
+VERSION_CFG="${CURR_PATH}/version_cfg.inc"
+OPP_COMMON_FILE="${CURR_PATH}/opp_common.sh"
+
+. "${COMMON_INC_FILE}"
+. "${COMMON_FUNC_V2_PATH}"
+. "${VERSION_CFG}"
+. "${OPP_COMMON_FILE}"
 
 # keys of infos in ascend_install.info
 KEY_INSTALLED_UNAME="USERNAME"
 KEY_INSTALLED_UGROUP="USERGROUP"
-KEY_INSTALLED_TYPE="${upper_ops_nn_platform}_INSTALL_TYPE"
-KEY_INSTALLED_FEATURE="${upper_ops_nn_platform}_Install_Feature"
-KEY_INSTALLED_CHIP="${upper_ops_nn_platform}_INSTALL_CHIP"
-KEY_INSTALLED_PATH="${upper_ops_nn_platform}_INSTALL_PATH_VAL"
-KEY_INSTALLED_VERSION="${upper_ops_nn_platform}_VERSION"
-getinstalledinfo() {
-    _key="$1"
-    _res=""
-    if [ -f "${_INSTALL_INFO_FILE}" ]; then
-        chmod 644 "${_INSTALL_INFO_FILE}"> /dev/null 2>&1
-        checkascendinfo
-        case "${_key}" in
-        USERNAME)
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "USERNAME" | awk -F = '{print $2}')
-            ;;
-        USERGROUP)
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "USERGROUP" | awk -F = '{print $2}')
-            ;;
-        ${upper_ops_nn_platform}_INSTALL_TYPE)
-            type="INSTALL_TYPE"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep "${type}" | awk -F = '{print $2}')
-            ;;
-        ${upper_ops_nn_platform}_INSTALL_PATH_VAL)
-            val="INSTALL_PATH_VAL"
-            res=$(cat ${_INSTALL_INFO_FILE} | grep ${val} | awk -F = '{print $2}')
-            ;;
-        ${upper_ops_nn_platform}_VERSION)
-            version="VERSION"
-	        res=$(cat ${_INSTALL_INFO_FILE} | grep ${version} | awk -F = '{print $2}')
-            ;;
-        ${upper_ops_nn_platform}_INSTALL_PATH_PARAM)
-            tmp_path_param="INSTALL_PATH_PARAM"
-	        res=$(cat ${_INSTALL_INFO_FILE} | grep ${param} | awk -F = '{print $2}')
-            ;;
-        esac
-    fi
-    echo "${res}"
+KEY_INSTALLED_TYPE="${OPP_PLATFORM_UPPER}_INSTALL_TYPE"
+KEY_INSTALLED_FEATURE="${OPP_PLATFORM_UPPER}_INSTALL_FEATURE"
+KEY_INSTALLED_CHIP="${OPP_PLATFORM_UPPER}_INSTALL_CHIP"
+KEY_INSTALLED_PATH="${OPP_PLATFORM_UPPER}_INSTALL_PATH_VAL"
+KEY_INSTALLED_VERSION="${OPP_PLATFORM_UPPER}_VERSION"
+
+get_opts() {
+  TARGET_INSTALL_PATH="$1"
+  TARGET_USERNAME="$2"
+  TARGET_USERGROUP="$3"
+  IN_FEATURE="$4"
+  INSTALL_TYPE="$5"
+  IS_FOR_ALL="$6"
+  IS_SETENV="$7"
+  IS_DOCKER_INSTALL="$8"
+  DOCKER_ROOT="$9"
+  PKG_VERSION_DIR="${10}"
+
+  if [ "${TARGET_INSTALL_PATH}" = "" ] || [ "${TARGET_USERNAME}" = "" ] ||
+    [ "${TARGET_USERGROUP}" = "" ] || [ "${INSTALL_TYPE}" = "" ]; then
+    logandprint "[ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Empty paramters is invalid for install."
+    exit 1
+  fi
+
+  INSTALL_FOR_ALL=""
+  if [ "${IS_FOR_ALL}" = "y" ]; then
+    INSTALL_FOR_ALL="--install_for_all"
+  fi
 }
 
-# keys of infos in run package
-KEY_RUNPKG_VERSION="Version"
-getrunpkginfo() {
-    _key_param="$1"
-    if [ -f "${_VERSION_INFO_FILE}" ]; then
-        . "${_VERSION_INFO_FILE}" 2> /dev/null
-        case "${_key_param}" in
-        Version)
-            echo ${Version}
-            ;;
-        esac
-    fi
+init_install_env() {
+  get_package_version "RUN_PKG_VERSION" "$VERSION_INFO_FILE"
+  if [ "${PKG_VERSION_DIR}" = "" ]; then
+    TARGET_VERSION_DIR=${TARGET_INSTALL_PATH}
+  else
+    TARGET_VERSION_DIR=${TARGET_INSTALL_PATH}/${PKG_VERSION_DIR}
+  fi
+  TARGET_MOULDE_DIR=${TARGET_VERSION_DIR}/${OPP_PLATFORM_DIR}
+  TARGET_OPP_BUILT_IN=${TARGET_VERSION_DIR}/opp/built-in
+  TARGET_SHARED_INFO_DIR=${TARGET_VERSION_DIR}/share/info
+  INSTALL_INFO_FILE=${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/${ASCEND_INSTALL_INFO}
+
+  if [ "$(id -u)" != "0" ]; then
+    LOG_PATH_PERM="740"
+    LOG_FILE_PERM="640"
+    INSTALL_INFO_PERM="600"
+  else
+    LOG_PATH_PERM="750"
+    LOG_FILE_PERM="640"
+    INSTALL_INFO_PERM="644"
+  fi
+
+  if [ "${IS_FOR_ALL}" = "y" ]; then
+    BUILTIN_PERM="555"
+    CUSTOM_PERM="755"
+    CREATE_DIR_PERM="755"
+    ONLYREAD_PERM="444"
+  else
+    BUILTIN_PERM="550"
+    CUSTOM_PERM="750"
+    CREATE_DIR_PERM="750"
+    ONLYREAD_PERM="440"
+  fi
 }
 
-updateinstallinfo() {
-    _key_val="$1"
-    _val="$2"
-    _is_new_gen="$3"
-    _old_val=$(getinstalledinfo "${_key_val}")
-    _target_install_info="${version_install_dir}/$4"
-    if [ -f "${_target_install_info}" ]; then
-        chmod 644 "${_target_install_info}"
-        if [ "${_old_val}"x = ""x ] || [ "${_is_new_gen}" = "true" ]; then
-            echo "${_key_val}=${_val}" >> "${_target_install_info}"
-        else
-            sed -i "/${_key_val}/c ${_key_val}=${_val}" "${_target_install_info}"
-        fi
+log_with_errorlevel() {
+  local ret_status="$1"
+  local level="$2"
+  local msg="$3"
+  if [ "${ret_status}" != 0 ]; then
+    if [ "${level}" = "error" ]; then
+      logandprint "${msg}"
+      exit 1
     else
-        echo "${_key_val}=${_val}" > "${_target_install_info}"
+      logandprint "${msg}"
     fi
-
-    chmod 644 "${_target_install_info}" 2> /dev/null
-    if [ "$(id -u)" != "0" ]; then
-        chmod 600 "${_target_install_info}" 2> /dev/null
-    fi
+  fi
 }
 
-updatefeatureandchipinfo() {
-    _key_val="$1"
-    _val="$2"
-    _old_val=$(getinstalledinfo "${_key_val}")
-    _is_new_gen="$3"
-    _target_install_info="${version_install_dir}/$4"
-    if [ -f "${_target_install_info}" ]; then
-        chmod 644 "${_target_install_info}"
-        if [ "${_is_new_gen}" = "true" ]; then
-            echo "${_key_val}=${_val}" >> "${_target_install_info}"
-        else
-            grep_res=$(cat ${_target_install_info} | grep "$_key_val")
-            if [ "${grep_res}x" = "x" ]; then
-                echo "${_key_val}=${_val}" >> "${_target_install_info}"
-            else
-                sed -i "/${_key_val}/c ${_key_val}=${_val}" "${_target_install_info}"
-            fi
-        fi
+get_installed_info() {
+  local key="$1"
+  local res=""
+  if [ -f "${INSTALL_INFO_FILE}" ]; then
+    res=$(cat ${INSTALL_INFO_FILE} | grep "${key}" | awk -F = '{print $2}')
+  fi
+  echo "${res}"
+}
+
+update_install_info() {
+  local key_val="$1"
+  local val="$2"
+  local old_val=$(get_installed_info "${key_val}")
+  if [ -f "${INSTALL_INFO_FILE}" ]; then
+    if [ "x${old_val}" = "x" ]; then
+      echo "${key_val}=${val}" >>"${INSTALL_INFO_FILE}"
     else
-        echo "${_key_val}=${_val}" > "${_target_install_info}"
+      sed -i "/${key_val}/c ${key_val}=${val}" "${INSTALL_INFO_FILE}"
     fi
-
-    chmod 644 "${_target_install_info}" 2> /dev/null
-    if [ "$(id -u)" != "0" ]; then
-        chmod 600 "${_target_install_info}" 2> /dev/null
-    fi
+  else
+    echo "${key_val}=${val}" >"${INSTALL_INFO_FILE}"
+  fi
 }
 
-updateinstallinfos() {
-    _uname="$1"
-    _ugroup="$2"
-    _type="$3"
-    _path="$4"
-    in_feature_new="$5"
-    chip_type_new="$6"
-    _version=$(getrunpkginfo "${KEY_RUNPKG_VERSION}")
-    _target_install_dir="${version_install_dir}/${_INSTALL_INFO_SUFFIX}"
-    _is_new_gen_param="false"
-    if [ ! -f "${_target_install_dir}" ]; then
-        _is_new_gen_param="true"
-    fi
-    updateinstallinfo "${KEY_INSTALLED_UNAME}" "${_uname}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updateinstallinfo "${KEY_INSTALLED_UGROUP}" "${_ugroup}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updateinstallinfo "${KEY_INSTALLED_TYPE}" "${_type}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updatefeatureandchipinfo "${KEY_INSTALLED_FEATURE}" "${in_feature_new}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updateinstallinfo "${KEY_INSTALLED_PATH}" "${_path}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updateinstallinfo "${KEY_INSTALLED_VERSION}" "${_version}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
-    updatefeatureandchipinfo "${KEY_INSTALLED_CHIP}" "${chip_type_new}" "${_is_new_gen_param}" "${_INSTALL_INFO_SUFFIX}"
+update_install_infos() {
+  local uname="$1"
+  local ugroup="$2"
+  local type="$3"
+  local path="$4"
+  local version
+  get_package_version "version" "$VERSION_INFO_FILE"
+  comm_create_file "${INSTALL_INFO_FILE}" "${INSTALL_INFO_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+  update_install_info "${KEY_INSTALLED_UNAME}" "${uname}"
+  update_install_info "${KEY_INSTALLED_UGROUP}" "${ugroup}"
+  update_install_info "${KEY_INSTALLED_TYPE}" "${type}"
+  update_install_info "${KEY_INSTALLED_PATH}" "${path}"
+  update_install_info "${KEY_INSTALLED_VERSION}" "${version}"
 }
 
-checkfileexist() {
-    _path_val="$1"
-    if [ ! -f "${_path_val}" ];then
-        logandprint "[ERROR]: ERR_NO:${FILE_READ_FAILED};ERR_DES:The file (${_path_val}) does not existed, install failed."
-        return 1
-    fi
-    return 0
+check_file_exist() {
+  local path_param="${1}"
+  if [ ! -f "${path_param}" ]; then
+    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};ERR_DES:The file (${path_param}) does not existed."
+    exit 1
+  fi
+}
+
+check_env() {
+  check_file_exist "${FILELIST_FILE}"
+  check_file_exist "${COMMON_PARSER_FILE}"
 }
 
 createsoftlink() {
-    _src_path="$1"
-    _dst_path="$2"
-    if [ -L "$2" ]; then
-        logandprint "[WARNING]: Soft link for ops is existed. Cannot create new soft link."
-        return 0
-    fi
-    ln -s "${_src_path}" "${_dst_path}" 2> /dev/null
-    if [ "$?" != "0" ]; then
-        return 1
+  local src_path="$1"
+  local dst_path="$2"
+  if [ -e "$dst_path" ]; then
+    if [ -L "$dst_path" ]; then
+      `rm -f $dst_path`
     else
-        return 0
+      return 0
     fi
+  fi
+  ln -s "${src_path}" "${dst_path}" 2>/dev/null
+  log_with_errorlevel "$?" "error" "[ERROR]: ERR_NO:${PERM_DENIED};ERR_DES:${src_path} Create softlink to  ${dst_path} failed."
 }
 
-getinstallpath() {
-    docker_root_tmp="$(echo "${docker_root}" | sed "s#/\+\$##g")"
-    docker_root_regex="$(echo "${docker_root_tmp}" | sed "s#\/#\\\/#g")"
-    relative_path=$(echo "${version_install_dir}" | sed "s/^${docker_root_regex}//g" | sed "s/\/\+\$//g")
-    return
+get_install_path() {
+  docker_root_tmp="$(echo "${DOCKER_ROOT}" | sed "s#/\+\$##g")"
+  docker_root_regex="$(echo "${docker_root_tmp}" | sed "s#\/#\\\/#g")"
+  relative_path_val=$(echo "${TARGET_VERSION_DIR}" | sed "s/^${docker_root_regex}//g" | sed "s/\/\+\$//g")
+  return
+}
+
+setenv() {
+  logandprint "[INFO]: Set the environment path [ export ASCEND_OPP_PATH=${relative_path_val}/opp ]."
+  if [ "${IS_DOCKER_INSTALL}" = y ]; then
+    INSTALL_OPTION="--docker-root=${DOCKER_ROOT}"
+  else
+    INSTALL_OPTION=""
+  fi
+  if [ "${IS_SETENV}" = "y" ]; then
+    INSTALL_OPTION="${INSTALL_OPTION} --setenv"
+  fi
+}
+
+# 创建单个文件的软链接，链接文件级别
+create_file_softlink() {
+  local src_file=$1
+  local dst_file=$2
+  local base_dir=$(dirname ${dst_file})
+
+  comm_create_dir "${base_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+  local relative_file_path=$(realpath -s --relative-to="${base_dir}" "${src_file}")
+  # 创建软连接
+  createsoftlink "${relative_file_path}" "${dst_file}"
+}
+
+# 创建单个目录的软连接，链接目录级别
+create_dir_softlink() {
+  local src_dir=$1
+  local dst_dir=$2
+  local base_dir=$(dirname ${dst_dir})
+
+  comm_create_dir "${base_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+  if [ ! -d "${src_dir}" ]; then
+    logandprint "[ERROR]: src dir ["${src_dir}"] not exists to create soft link."
+  fi
+
+  # 获取相对路径
+  relative_dir_path=$(realpath -s --relative-to="${base_dir}" "${src_dir}")
+  # 创建软连接
+  createsoftlink "${relative_dir_path}" "${dst_dir}"
+}
+
+# 创建目录下子目录的软连接，链接子目录级别
+create_softlink_for_dirs() {
+  local src_dir=$1
+  local dst_dir=$2
+
+  if [ ! -d "${src_dir}" ]; then
+    logandprint "[ERROR]: src dir ["${src_dir}"] not exists to create soft link."
+    exit 1
+  fi
+
+  comm_create_dir "${dst_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+  find "${src_dir}" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' src_dir_path; do
+    local sub_dir_name=$(basename ${src_dir_path})
+    local dst_dir_path="${dst_dir}/${sub_dir_name}"
+    # 计算目录相对路径
+    local relative_dir_path=$(realpath -s --relative-to="${dst_dir}" "${src_dir_path}")
+    # 创建软连接
+    createsoftlink "${relative_dir_path}" "${dst_dir_path}"
+  done
+}
+
+# 创建某目录下所有文件的软链接，链接文件级别，要求目录中不能有子目录
+create_softlink_for_files() {
+  local src_dir=$1
+  local dst_dir=$2
+  local exclude_list="$3"
+
+  if [ ! -d "${src_dir}" ]; then
+    logandprint "[ERROR]: src dir ["${src_dir}"] not exists, cannot create soft link."
+    exit 1
+  fi
+
+  comm_create_dir "${dst_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+
+  find "${src_dir}" -mindepth 1 -maxdepth 1 -type f -print0 | while IFS= read -r -d '' src_file_path; do
+    # 文件名
+    local file_name=$(basename ${src_file_path})
+    if $(echo ${exclude_list} | grep -wq ${file_name}); then
+      continue
+    fi
+    local dst_file_path="${dst_dir}/${file_name}"
+    # 获取相对路径
+    local relative_file_path=$(realpath --relative-to="${dst_dir}" "${src_file_path}")
+    # 创建软连接
+    createsoftlink "${relative_file_path}" "${dst_file_path}"
+  done
+}
+
+# 递归创建目录下所有文件的软链接，链接文件级别，目录中可以有子目录，对于子目录会创建对应目录不是链接
+create_softlink_for_files_and_dirs() {
+  local src_dir=$1
+  local dst_dir=$2
+
+  if [ ! -d "${src_dir}" ]; then
+    logandprint "[ERROR]: src dir ["${src_dir}"] not exists, cannot create soft link."
+    exit 1
+  fi
+
+  comm_create_dir "${dst_dir}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
+  find "${src_dir}" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' src_dir_path; do
+    local base_dir=$(basename ${src_dir_path})
+    local dst_dir_path="${dst_dir}/${base_dir}"
+    create_softlink_for_files_and_dirs ${src_dir_path} ${dst_dir_path}
+  done
+
+  create_softlink_for_files ${src_dir} ${dst_dir}
 }
 
 install_whl_package() {
-    local _package_path="$1"
-    local _package_name="$2"
-    local _pythonlocalpath="$3"
-    logandprint "[INFO]: start install python module package ${_package_name}."
-    if [ -f "$_package_path" ]; then
-        pip3 install --disable-pip-version-check --upgrade --no-deps --force-reinstall "${_package_path}" -t "${_pythonlocalpath}" 1> /dev/null
-        local ret=$?
-        if [ $ret -ne 0 ]; then
-            logandprint "[WARNING]: install ${_package_name} failed, error code: $ret."
-            exit 1
-        else
-            logandprint "[INFO]: ${_package_name} installed successfully!"
-        fi
-        chmod -R "${_BUILTIN_PERM}" "${_pythonlocalpath}"/es_nn 2> /dev/null
-        chmod -R "${_BUILTIN_PERM}" "${_pythonlocalpath}"/es_nn-*.dist-info 2> /dev/null
-    else
-        logandprint "[ERROR]: ERR_NO:0x0080;ERR_DES:install ${_package_name} failed, can not find the matched package for this platform."
+  local _package_path="$1"
+  local _package_name="$2"
+  local _pythonlocalpath="$3"
+  logandprint "[INFO]: start install python module package ${_package_name}."
+  if [ -f "$_package_path" ]; then
+    pip3 install --disable-pip-version-check --upgrade --no-deps --force-reinstall "${_package_path}" -t "${_pythonlocalpath}" 1> /dev/null
+    local ret=$?
+    if [ $ret -ne 0 ]; then
+        logandprint "[WARNING]: install ${_package_name} failed, error code: $ret."
         exit 1
+    else
+        logandprint "[INFO]: ${_package_name} installed successfully!"
     fi
+    chmod -R "${CUSTOM_PERM}" "${_pythonlocalpath}"/es_nn 2> /dev/null
+    chmod -R "${CUSTOM_PERM}" "${_pythonlocalpath}"/es_nn-*.dist-info 2> /dev/null
+  else
+    logandprint "[ERROR]: ERR_NO:0x0080;ERR_DES:install ${_package_name} failed, can not find the matched package for this platform."
+    exit 1
+  fi
 }
 
 install_es_whl()
 {
-    local es_whl_path="${SOURCEDIR}/es_packages/whl/es_nn-1.0.0-py3-none-any.whl"
-    local python_es_whl_name="es_nn"
-    local whl_install_dir_path="${TARGET_VERSION_DIR}/python/site-packages"
-    chmod u+w "${whl_install_dir_path}" 2> /dev/null
-    install_whl_package "${es_whl_path}" "${python_es_whl_name}" "${whl_install_dir_path}"
-    chmod u-w "${whl_install_dir_path}" 2> /dev/null
+  local es_whl_path="${SOURCEDIR}/es_packages/whl/es_nn-1.0.0-py3-none-any.whl"
+  local python_es_whl_name="es_nn"
+  chmod u+w "${TARGET_VERSION_DIR}/python" 2> /dev/null
+  local whl_install_dir_path="${TARGET_VERSION_DIR}/python/site-packages"
+  chmod u+w "${whl_install_dir_path}" 2> /dev/null
+  install_whl_package "${es_whl_path}" "${python_es_whl_name}" "${whl_install_dir_path}"
 }
-
-# init installation parameters
-_TARGET_INSTALL_PATH="$1"
-_TARGET_USERNAME="$2"
-_TARGET_USERGROUP="$3"
-_CHIP_TYPE="$4"
-install_type="$5"
-is_quiet="$6"
-_FIRST_NOT_EXIST_DIR="$7"
-is_the_last_dir_opp="$8"
-is_for_all="$9"
-is_setenv="${10}"
-is_docker_install="${11}"
-docker_root="${12}"
-is_install_path="${13}"
-in_feature_new="${14}"
-chip_type_new="${15}"
-pkg_version_dir="${16}"
-
-logandprint "[INFO]: Command ops_nn_install"
-
-in_install_for_all=""
-if [ "${is_for_all}" = y ] ; then
-    in_install_for_all="--install_for_all"
-fi
-
-if [ "${_TARGET_INSTALL_PATH}" = "" ] || [ "${_TARGET_USERNAME}" = "" ] ||
-[ "${_TARGET_USERGROUP}" = "" ] || [ "${install_type}" = "" ] ||
-[ "${is_quiet}" = "" ]; then
-    logandprint "[ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Empty paramters is invalid for install."
-    exit 1
-fi
-
-get_version "pkg_version" "$_VERSION_INFO_FILE"
-get_package_upgrade_version_dir "upgrade_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
-get_package_upgrade_version_dir "upgrade_old_version_dir" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_old_dir}"
-get_package_last_installed_version "last_installed" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_dir}"
-get_package_last_installed_version "last_installed_old" "$_TARGET_INSTALL_PATH" "${ops_nn_platform_old_dir}"
-last_installed_version=$(echo ${last_installed} | cut --only-delimited -d":" -f2-)
-last_installed_old_version=$(echo ${last_installed} | cut --only-delimited -d":" -f2-)
-
-is_multi_version_pkg "pkg_is_multi_version" "$_VERSION_INFO_FILE"
-if [ "$pkg_is_multi_version" = "true" ]; then
-    version_install_dir=${_TARGET_INSTALL_PATH}/${pkg_version_dir}
-else
-    version_install_dir=${_TARGET_INSTALL_PATH}
-fi
-getinstallpath
-relative_path_val=${relative_path}
-
-# Get target version
-TARGET_VERSION_DIR="" # _TARGET_INSTALL_PATH + PKG_VERSION_DIR
-get_version_dir "PKG_VERSION_DIR" "$_VERSION_INFO_FILE"
-if [ "${PKG_VERSION_DIR}" = "" ]; then
-    TARGET_VERSION_DIR=${_TARGET_INSTALL_PATH}
-else
-    TARGET_VERSION_DIR=${_TARGET_INSTALL_PATH}/${PKG_VERSION_DIR}
-fi
-
-#Last Installed Version
-install_lower_dir=$(ls "${_TARGET_INSTALL_PATH}" 2> /dev/null)
-last_version_data=$(echo $install_lower_dir | awk -F ' ' '{print $1}')
-
-# init log file path
-_INSTALL_INFO_FILE="${version_install_dir}/${_INSTALL_INFO_SUFFIX}"
-if [ ! -f "${_INSTALL_INFO_FILE}" ]; then
-    _INSTALL_INFO_FILE="/etc/ascend_install.info"
-fi
-
-if [ "$(id -u)" != "0" ]; then
-    _LOG_PATH_PERM="740"
-    _LOG_FILE_PERM="640"
-    _INSTALL_INFO_PERM="600"
-    _LOG_PATH_AND_FILE_GROUP="root"
-else
-    _LOG_PATH_PERM="750"
-    _LOG_FILE_PERM="640"
-    _INSTALL_INFO_PERM="644"
-fi
-
-logandprint "[INFO]: Begin install ops_nn module."
-checkfileexist "${_FILELIST_FILE}"
-if [ "$?" != 0 ]; then
-    exit 1
-fi
-
-checkfileexist "${_COMMON_PARSER_FILE}"
-if [ "$?" != 0 ]; then
-    exit 1
-fi
-
 
 add_init_py() {
-
-    local target_built_in=${version_install_dir}/opp/built-in
-    local opp_builtin_mod=""
-    local built_in_impl_path=${target_built_in}/op_impl/ai_core/tbe/impl/ops_nn
-    if [ -d ${built_in_impl_path} ]; then
-        opp_builtin_mod=$(stat -c %a ${built_in_impl_path})
-        if [ "$(id -u)" != 0 ] && [ ! -w "${built_in_impl_path}" ]; then
-        chmod u+w -R "${built_in_impl_path}" 2>/dev/null
-        fi
-        touch ${built_in_impl_path}/__init__.py
+  local opp_builtin_mod=""
+  local built_in_impl_path=${TARGET_OPP_BUILT_IN}/op_impl/ai_core/tbe/impl/ops_nn
+  if [ -d ${built_in_impl_path} ]; then
+    opp_builtin_mod=$(stat -c %a ${built_in_impl_path})
+    if [ "$(id -u)" != 0 ] && [ ! -w "${built_in_impl_path}" ]; then
+      chmod u+w -R "${built_in_impl_path}" 2>/dev/null
     fi
+  fi
+  touch ${built_in_impl_path}/__init__.py
 
+  [ -d ${built_in_impl_path}/dynamic ] && touch ${built_in_impl_path}/dynamic/__init__.py
 
-    [ -d ${built_in_impl_path}/dynamic ] && touch ${built_in_impl_path}/dynamic/__init__.py
-
-    if [ -n "${opp_builtin_mod}" ]; then
-        chmod ${opp_builtin_mod} -R "${built_in_impl_path}" 2>/dev/null
-    fi
+  if [ -n "${opp_builtin_mod}" ]; then
+    chmod ${opp_builtin_mod} -R "${built_in_impl_path}" 2>/dev/null
+  fi
 }
 
-_BUILTIN_PERM="550"
-_CUSTOM_PERM="750"
-_CREATE_DIR_PERM="750"
-_CREATE_FIRST_ASCEND_DIR_PERM="755"
-_ONLYREAD_PERM="440"
-if [ "${is_for_all}" = y ]; then
-    _BUILTIN_PERM="555"
-    _CUSTOM_PERM="755"
-    _CREATE_DIR_PERM="755"
-    _CREATE_FIRST_ASCEND_DIR_PERM="755"
-    _ONLYREAD_PERM="444"
-fi
-if [ "${_FIRST_NOT_EXIST_DIR}" != "" ]; then
-    mkdir -p "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
-    chmod -R "${_CREATE_DIR_PERM}" "${_FIRST_NOT_EXIST_DIR}" 2> /dev/null
-    chown -R "${_TARGET_USERNAME}":"${_TARGET_USERGROUP}" "${_FIRST_NOT_EXIST_DIR}" 2> /dev/null
-    if [ "$(id -u)" = "0" ] && [ "${is_the_last_dir_opp}" = "0" ]; then
-        chmod -R "${_CREATE_FIRST_ASCEND_DIR_PERM}" "${_FIRST_NOT_EXIST_DIR}" 2> /dev/null
-        chown -R "root":"root" "${_FIRST_NOT_EXIST_DIR}" 2> /dev/null
-    fi
-fi
-# make the ops_nn and the upper folder can write files
-is_change_dir_mode="false"
-if [ "$(id -u)" != 0 ] && [ ! -w "${version_install_dir}" ]; then
-    chmod u+w "${version_install_dir}" 2> /dev/null
-    is_change_dir_mode="true"
-fi
+install_opp() {
+  logandprint "[INFO]: Begin install opp module."
+  comm_create_dir "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}" "${CREATE_DIR_PERM}" "${TARGET_USERNAME}:${TARGET_USERGROUP}" "${IS_FOR_ALL}"
 
-# change installed folder's permission except aicpu
-subdirs_info=$(ls "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null)
-for dir in ${subdirs_info}; do
-    if [ "${dir}" != "Ascend310" ] && [ "${dir}" != "Ascend310RC" ] && [ "${dir}" != "Ascend910" ] && [ "${dir}" != "Ascend310P" ] && [ "${dir}" != "Ascend" ]  &&  [ "${dir}" != "aicpu" ] && [ "${dir}" != "script" ]; then
-        chmod -R "${_CUSTOM_PERM}" "${version_install_dir}/${ops_nn_platform_dir}/${dir}" 2> /dev/null
-    fi
-done
-chmod "${_CUSTOM_PERM}" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
+  setenv
 
-comm_create_dir "${version_install_dir}/share/info/${ops_nn_platform_dir}" "${_CREATE_DIR_PERM}" "${_TARGET_USERNAME}:${_TARGET_USERGROUP}" "${is_for_all}"
+  logandprint "[INFO]: Update the opp install info."
 
-logandprint "[INFO]: upgradePercentage:30%"
+  update_install_infos "${TARGET_USERNAME}" "${TARGET_USERGROUP}" "${INSTALL_TYPE}" "${relative_path_val}"
+  log_with_errorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Update opp install info failed."
 
-logandprint "[INFO]: Update the ops_nn install info."
+  bash "${COMMON_PARSER_FILE}" --package="${OPP_PLATFORM_DIR}" --install --username="${TARGET_USERNAME}" \
+    --usergroup="${TARGET_USERGROUP}" --set-cann-uninstall --version=$RUN_PKG_VERSION \
+    --use-share-info --version-dir=$PKG_VERSION_DIR $INSTALL_OPTION ${INSTALL_FOR_ALL} "--feature=all" "--chip=all" \
+    "${INSTALL_TYPE}" "${TARGET_INSTALL_PATH}" "${FILELIST_FILE}"
+  log_with_errorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Install opp module files failed."
 
-add_init_py
+  logandprint "[INFO]: upgradePercentage:30%"
 
-if [ "${in_feature_new}" = "" ]; then
-    in_feature_1="--feature=all"
-else
-    in_feature_1="--feature=${in_feature_new}"
-fi
+  add_init_py
 
-if [ "${chip_type_new}" = "" ]; then
-    chip_type_1="--chip=all"
-else
-    chip_type_1="--chip=${chip_type_new}"
-fi
+  install_es_whl
 
-updateinstallinfos "${_TARGET_USERNAME}" "${_TARGET_USERGROUP}" "${install_type}" "${relative_path_val}" "${in_feature_new}" "${chip_type_new}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Update ops_nn install info failed."
-sh "${_COMMON_PARSER_FILE}" --package="${ops_nn_platform_dir}" --install --username="${_TARGET_USERNAME}" --usergroup="${_TARGET_USERGROUP}" --set-cann-uninstall \
-    --use-share-info --version=$pkg_version --version-dir=$pkg_version_dir $install_option ${in_install_for_all} ${in_feature_1} ${chip_type_1}  "${install_type}" "${_TARGET_INSTALL_PATH}" "${_FILELIST_FILE}"
-logwitherrorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Install ops_nn module files failed."
+  logandprint "[INFO]: upgradePercentage:50%"
+}
 
-install_es_whl
+main() {
+  logandprint "[INFO]: Command opp_install"
 
-#chmod to support copy
-if [ -d "${version_install_dir}/${ops_nn_platform_dir}/vendors" ] && [ "$(id -u)" != "0" ]; then
-    chmod -R "${_CUSTOM_PERM}" ${version_install_dir}/${ops_nn_platform_dir}/vendors
-fi
+  get_opts "$@"
 
-logandprint "[INFO]: upgradePercentage:50%"
+  init_install_env
 
-# change log dir and file owner and rights
-chmod "${_LOG_PATH_PERM}" "${_LOG_PATH}" 2> /dev/null
-chmod "${_LOG_FILE_PERM}" "${_INSTALL_LOG_FILE}" 2> /dev/null
-chmod "${_LOG_FILE_PERM}" "${_OPERATE_LOG_FILE}" 2> /dev/null
+  get_package_upgrade_version_dir "upgrade_version_dir" "$TARGET_INSTALL_PATH" "${OPP_PLATFORM_DIR}"
+  get_package_last_installed_version "last_installed" "$TARGET_INSTALL_PATH" "${OPP_PLATFORM_DIR}"
+  last_installed_version=$(echo ${last_installed} | cut --only-delimited -d":" -f2-)
 
-if [ "$(id -u)" = "0" ]; then
-    chmod "755" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
-else
-    chmod "${_BUILTIN_PERM}" "${version_install_dir}/${ops_nn_platform_dir}" 2> /dev/null
-fi
+  get_install_path
 
-chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/share/info/${ops_nn_platform_dir}/scene.info" 2> /dev/null
-chmod "${_ONLYREAD_PERM}" "${version_install_dir}""/share/info/${ops_nn_platform_dir}/version.info" 2> /dev/null
-chmod 600 "${version_install_dir}""/share/info/${ops_nn_platform_dir}/ascend_install.info" 2> /dev/null
+  check_env
 
-if [ "${is_change_dir_mode}" = "true" ]; then
-    chmod u-w "${version_install_dir}" 2> /dev/null
-fi
+  install_opp
 
-rm -fr ${version_install_dir}/${ops_nn_platform_dir}
-logandprint "[INFO]: upgradePercentage:100%"
+  # change log dir and file owner and rights
+  chmod "${LOG_PATH_PERM}" "${COMM_LOG_DIR}" 2>/dev/null
+  chmod "${LOG_FILE_PERM}" "${COMM_LOGFILE}" 2>/dev/null
+  chmod "${LOG_FILE_PERM}" "${COMM_OPERATION_LOGFILE}" 2>/dev/null
 
-logandprint "[INFO]: Installation information listed below:"
-logandprint "[INFO]: Install log file path: (${_INSTALL_LOG_FILE})"
-logandprint "[INFO]: Operation log file path: (${_OPERATE_LOG_FILE})"
+  chmod "${ONLYREAD_PERM}" "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/scene.info" 2>/dev/null
+  chmod "${ONLYREAD_PERM}" "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/version.info" 2>/dev/null
+  chmod "${ONLYREAD_PERM}" "${INSTALL_INFO_FILE}" 2>/dev/null
 
-logandprint "[INFO]: OPS_NN package installed successfully! The new version takes effect immediately."
+  # change installed folder's owner and group except aicpu
+  log_with_errorlevel "$?" "error" "[ERROR]: ERR_NO:${INSTALL_FAILED};ERR_DES:Change opp onwership failed.."
+
+  logandprint "[INFO]: upgradePercentage:100%"
+
+  logandprint "[INFO]: Installation information listed below:"
+  logandprint "[INFO]: Install path: (${TARGET_VERSION_DIR}/opp)"
+  logandprint "[INFO]: Install log file path: (${COMM_LOGFILE})"
+  logandprint "[INFO]: Operation log file path: (${COMM_OPERATION_LOGFILE})"
+
+  if [ "${IS_SETENV}" != "y" ]; then
+    logandprint "[INFO]: Using requirements: when opp module install finished or before you run the opp module, execute the command \
+[ export ASCEND_OPP_PATH=${TARGET_INSTALL_PATH}/cann/opp ] to set the environment path."
+  fi
+
+  logandprint "[INFO]: Opp package installed successfully! The new version takes effect immediately."
+}
+
+main "$@"
 exit 0
-

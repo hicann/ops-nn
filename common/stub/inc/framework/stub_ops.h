@@ -642,7 +642,7 @@ REG_OP(FullyConnection)
 * noop_with_empty_axes: An optional bool. Defaults to "true" .
 * - If true, when axes = [], not reduce.
 * - If false, when axes = [], reduce all.
-* This attribute is valid only for Ascend910_95 AI Processors and later products.
+* This attribute is valid only for Ascend950 AI Processors and later products.
 
 * @par Outputs:
 * y: A multi-dimensional Tensor, specifying the maximum value of the
@@ -696,7 +696,7 @@ REG_OP(ReduceMax)
 *     It can only guarantee that the input data has no precision errors within the range of (-2147483648, 2147483583).
 * @li Atlas Inference Series Product in the scenarios where the data type is converted from INT64 to FLOAT32: \n
 *     It can only guarantee that the input data has no precision errors within the range of (-2147483648, 2147483647).
-* @li Ascend 910_95 AI Processor in the scenario where the data type is converted from INT32 to INT4: \n
+* @li Ascend 950 AI Processor in the scenario where the data type is converted from INT32 to INT4: \n
 *     The last dim of x must be an even number.
 */
 REG_OP(Cast)

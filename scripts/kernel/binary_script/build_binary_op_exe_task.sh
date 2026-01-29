@@ -30,12 +30,7 @@ main() {
   source build_env.sh
   opc_cmd_file="${task_path}/${OPC_TASK_NAME}"
 
-  if [[ -f "${opc_cmd_file}" && "$idx" =~ ^[0-9]+$ && "$idx" -gt 0 ]]; then
-    total_lines=$(wc -l < "${opc_cmd_file}")
-    if [ "$idx" -gt "$total_lines" ]; then
-      echo "[ERROR]task $idx is bigger than file:$opc_cmd_file lines: $total_lines, please check."
-      exit 1
-    fi
+  if [ -f "${opc_cmd_file}" ]; then
     # step1: do compile kernel
     cmd_task=$(sed -n ''${idx}'p;' ${opc_cmd_file})
     key=$(echo "${cmd_task}" | grep -oP '\w*\.json_\d*')

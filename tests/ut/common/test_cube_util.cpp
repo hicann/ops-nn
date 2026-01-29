@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -75,22 +75,22 @@ void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_inf
 }
 
 void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
-                      map<string, string> &intrinsics, map<string, string> &soc_version) {
+                      map<string, string> &intrinsics, map<string, string> &version) {
   GetPlatFormInfos(compile_info_str, soc_infos, aicore_spec, intrinsics);
   nlohmann::json compile_info_json = nlohmann::json::parse(compile_info_str);
   if (compile_info_json.type() != nlohmann::json::value_t::object) {
     return;
   }
 
-  map<string, string> soc_version_keys = {{"Short_SoC_version", "socVersion"}};
+  map<string, string> version_keys = {{"Short_SoC_version", "socVersion"}, {"NpuArch", "NpuArch"}};
 
-  for (auto &t : soc_version_keys) {
+  for (auto &t : version_keys) {
     if (compile_info_json.contains("hardware_info") && compile_info_json["hardware_info"].contains(t.second)) {
       auto &obj_json = compile_info_json["hardware_info"][t.second];
       if (obj_json.is_number_integer()) {
-        soc_version[t.first] = to_string(compile_info_json["hardware_info"][t.second].get<uint32_t>());
+        version[t.first] = to_string(compile_info_json["hardware_info"][t.second].get<uint32_t>());
       } else if (obj_json.is_string()) {
-        soc_version[t.first] = obj_json;
+        version[t.first] = obj_json;
       }
     }
   }

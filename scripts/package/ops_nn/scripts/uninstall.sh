@@ -9,7 +9,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-_CURR_PATH=$(dirname $(readlink -f $0))
+CURR_PATH=$(dirname $(readlink -f $0))
 
 # error number and description
 FILE_NOT_EXIST="0x0080"
@@ -24,9 +24,9 @@ getdate() {
 logandprint() {
     is_error_level=$(echo $1 | grep -E 'ERROR|WARN|INFO')
     if [ "${is_quiet}" != "y" ] || [ "${is_error_level}" != "" ]; then
-        echo "[OpsNN] [$(getdate)] ""$1"
+        echo "[OpsNn] [$(getdate)] ""$1"
     fi
-    echo "[OpsNN] [$(getdate)] ""$1" >> "${_INSTALL_LOG_FILE}"
+    echo "[OpsNn] [$(getdate)] ""$1" >> "${_INSTALL_LOG_FILE}"
 }
 
 if [ "$(id -u)" != "0" ]; then
@@ -50,11 +50,11 @@ if [ "$#" != "0" ]; then
     fi
 fi
 
-install_shell="${_CURR_PATH}/install.sh"
+install_shell="${CURR_PATH}/install.sh"
 
 # shell exist check
 if [ ! -f "${install_shell}" ]; then
-    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};OpsNN module is not installed or some ops_nn source files are lost.\
+    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};OpsNn module is not installed or some ops_nn source files are lost.\
 If there are any residual files, please manually remove those files."
     exit 1
 fi
@@ -67,7 +67,7 @@ to a right permission."
     exit 1
 fi
 
-installed_path="$(cd "${_CURR_PATH}/../../../../"; pwd)"
+installed_path="$(cd "${CURR_PATH}/../../../.."; pwd)"
 parent_installed_path="$(cd "${installed_path}/../"; pwd)"
 cd ~
 sh "${install_shell}" "--aa" "--aa" "--uninstall" "--install-path=${installed_path}" "${quiet_parameter}"
