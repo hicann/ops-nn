@@ -111,7 +111,7 @@ public:
         return {m_, n_, k_, b_};
     }
 
-    __aicore__ inline BlockCoord GetBlockCoord(int tileIdx)
+    __aicore__ inline BlockCoord GetBlockCoord(int64_t tileIdx)
     {
         return {0, 0, 0, tileIdx * iterBatchL1_};
     }

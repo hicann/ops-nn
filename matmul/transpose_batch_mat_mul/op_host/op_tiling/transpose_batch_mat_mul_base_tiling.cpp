@@ -52,6 +52,11 @@ constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256;
 
 namespace optiling {
 namespace transpose_batch_mat_mul {
+template <typename T>
+T GetAlignNumWithDataType(T size, ge::DataType dtype) {
+    return size / static_cast<T>(ge::GetSizeByDataType(dtype));
+}
+
 static inline uint64_t LastPower2(uint64_t n)
 {
     n |= n >> 1; // 前2位为1
@@ -227,10 +232,79 @@ static void TuneBaseMKN(matmul_v3::MatmulV3RunInfo &runInfo,
     OP_LOGD(args.opName, "after DoCommonTiling baseM, baseN, baseK[%lu, %lu, %lu]", baseM, baseN, baseK);
 }
 
+void TransposeBatchMatMulBaseTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
+{
+    uint64_t baseKAlignNum = (!args_.isATrans && args_.isBTrans) ?
+                                GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) :
+                                GetAlignNumWithDataType(DEFAULT_SIZE, args_.aType);
+    uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
+    uint64_t maxBaseK =
+        GetAlignNumWithDataType(compileInfo_.l0ASize / NUM_TWO, args_.aType) / std::max(tempBaseM, tempBaseN);
+    if (maxBaseK >= baseKAlignNum) {
+        runInfo_.baseM = tempBaseM;
+        runInfo_.baseN = tempBaseN;
+        maxBaseK = ops::FloorAlign(maxBaseK, baseKAlignNum);
+        runInfo_.baseK = std::min(kValueAlign, maxBaseK);
+    }
+}
+
+void TransposeBatchMatMulBaseTiling::BaseLoadBalance()
+{
+    uint64_t baseMAlignNum = args_.isATrans ? GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) :
+                                BLOCK_CUBE;
+    uint64_t baseNAlignNum = !args_.isBTrans ? GetAlignNumWithDataType(BASIC_BLOCK_SIZE_256, args_.aType) :
+                                BLOCK_CUBE;
+    uint64_t mMaxTile = ops::CeilDiv(args_.mValue, baseMAlignNum);
+    uint64_t nMaxTile = ops::CeilDiv(args_.nValue, baseNAlignNum);
+    uint64_t tempBaseM = runInfo_.baseM;
+    uint64_t tempBaseN = runInfo_.baseN;
+    uint64_t coreNumMN = compileInfo_.aicNum / batchInfo_.batchC;
+    if (mMaxTile * nMaxTile >= coreNumMN || (!args_.isATrans && args_.isBTrans)) {
+        uint64_t mCore = ops::CeilDiv(args_.mValue, runInfo_.baseM);
+        uint64_t nCore = ops::CeilDiv(args_.nValue, runInfo_.baseN);
+        if (mMaxTile < nMaxTile || (mMaxTile == nMaxTile && baseNAlignNum == BLOCK_CUBE)) {
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
+            mCore = ops::CeilDiv(args_.mValue, tempBaseM);
+            nCore = coreNumMN / mCore;
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
+        } else {
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
+            nCore = ops::CeilDiv(args_.nValue, tempBaseN);
+            mCore = coreNumMN / nCore;
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
+        }
+
+        while (tempBaseN >= tempBaseM * NUM_TWO && nCore < coreNumMN / NUM_TWO &&
+            tempBaseN != baseNAlignNum) {
+            nCore *= NUM_TWO;
+            mCore = coreNumMN / nCore;
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
+            mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
+            nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(tempBaseN));
+        }
+
+        while (tempBaseM >= tempBaseN * NUM_TWO && mCore < coreNumMN / NUM_TWO &&
+            tempBaseM != baseMAlignNum) {
+            mCore *= NUM_TWO;
+            nCore = coreNumMN / mCore;
+            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
+            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
+            mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
+            nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(tempBaseN));
+        }
+        ResetBasicBlock(tempBaseM, tempBaseN);
+    }
+}
 
 void TransposeBatchMatMulBaseTiling::DoCommonTiling()
 {
     TuneBaseMKN(runInfo_, args_, cBatchDimAll_, compileInfo_.aicNum);
+    uint64_t mCnt = ops::CeilDiv(args_.mValue, runInfo_.baseM);
+    uint64_t nCnt = ops::CeilDiv(args_.nValue, runInfo_.baseN);
+    if (mCnt * nCnt * batchInfo_.batchC < compileInfo_.aicNum) {
+        BaseLoadBalance();
+    }
     uint64_t baseM = runInfo_.baseM;
     uint64_t baseN = runInfo_.baseN;
     uint64_t baseK = runInfo_.baseK;
@@ -312,7 +386,8 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::PostTiling()
                     OP_LOGE(args_.opName, "tiling data size[%zu] is not aligned to 8", tilingDataSize),
                     return ge::GRAPH_FAILED);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(&tbmmTilingData_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+        reinterpret_cast<void *>(&tbmmTilingData_), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -384,7 +459,8 @@ static ge::graphStatus OpSpecificCheck(const optiling::matmul_v3::MatmulV3Args &
 {
     // format check
     OP_TILING_CHECK(
-        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.bFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
+        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.bFormat == ge::FORMAT_FRACTAL_NZ) ||
+        (args.outFormat == ge::FORMAT_FRACTAL_NZ),
         CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output format"), return ge::GRAPH_FAILED);
 
     // dtype check
@@ -432,7 +508,8 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShapeMKN(const gert::Shape &a
         n = bShape[bPerm[N_IDX]];
         args_.isBTrans = bPerm[KB_IDX] > bPerm[N_IDX];
     }
-    OP_TILING_CHECK(kA != kB, CUBE_INNER_ERR_REPORT(args_.opName, "unequal input kDim values"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(kA != kB,
+        CUBE_INNER_ERR_REPORT(args_.opName, "unequal input kDim values"), return ge::GRAPH_FAILED);
 
     auto isValidDimValue = [](int64_t dim) -> bool { return (dim > 0) && (dim <= INT32_MAX); };
     if (!isValidDimValue(m) || !isValidDimValue(kA) || !isValidDimValue(n)) {

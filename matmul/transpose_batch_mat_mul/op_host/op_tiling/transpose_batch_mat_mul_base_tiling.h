@@ -80,6 +80,8 @@ protected:
 
     bool CheckBMMTilingDataIsVaild() const;
     void DoCommonTiling();
+    void BaseLoadBalance();
+    void ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN);
     TBMMTilingData &tbmmTilingData_;
     BatchShapeInfo batchInfo_;
     TilingCalcSelect tilingSelect_ = TilingCalcSelect::ALL;

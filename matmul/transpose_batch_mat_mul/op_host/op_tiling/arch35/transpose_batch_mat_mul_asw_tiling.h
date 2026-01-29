@@ -47,6 +47,8 @@ protected:
 
 private:
     void GetTransposeBatchMatMulInfo();
+    void BaseLoadBalance();
+    void ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN);
 
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;
