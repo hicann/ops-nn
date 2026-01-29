@@ -51,6 +51,7 @@ constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
 constexpr static uint64_t OP_TYPE_ADD = 1UL;
 constexpr static uint64_t OP_TYPE_MUL = 2UL;
 constexpr static uint64_t OP_TYPE_RELU = 5UL;
+constexpr uint64_t BLOCK_BYTE_SIZE = 32;
 struct MatmulShape {
     int64_t m;
     int64_t n;

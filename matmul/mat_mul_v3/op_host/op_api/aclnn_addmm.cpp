@@ -391,13 +391,21 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
         return false;
     }
 
+    if ((mat2->GetViewShape())[0] == 1 || (mat2->GetViewShape())[1] == 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis or n-axis can not be 1.");
+        return false;
+    }
+
     return true;
 }
 
 static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool isSupportSocVersion = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
+    bool isSupportSocVersion =
+        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+         socVersion == SocVersion::ASCEND950);
+
     if (!isSupportSocVersion) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",

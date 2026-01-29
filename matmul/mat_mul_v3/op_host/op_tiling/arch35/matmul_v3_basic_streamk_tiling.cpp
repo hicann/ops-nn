@@ -150,8 +150,8 @@ MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
 
 bool MatMulV3BasicStreamKTiling::IsCapable()
 {
-    if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {
-        OP_LOGD(args_.opName, "ND is the only supported format for basic api");
+    if (args_.aFormat != ge::FORMAT_ND) {
+        OP_LOGD(args_.opName, "ND is the only supported format for tensor_a in basic api");
         return false;
     }
     if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
@@ -186,6 +186,13 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
         uint64_t skSingleCoreK = MathUtil::CeilDivision(args_.kValue, runInfo_.tailInfo.kCnt);
         runInfo_.tailInfo.kCnt = MathUtil::CeilDivision(args_.kValue, skSingleCoreK);
         runInfo_.singleCoreK = skSingleCoreK;
+    }
+    if (args_.bFormat != ge::FORMAT_ND) {
+        if (args_.bDtypeSize == DATA_SIZE_FP16 || (args_.bDtypeSize == DATA_SIZE_FP32 && !args_.isBTrans)) {
+            runInfo_.singleCoreK = ops::CeilAlign(runInfo_.singleCoreK, BASIC_BLOCK_SIZE_16);
+        } else {
+            runInfo_.singleCoreK = ops::CeilAlign(runInfo_.singleCoreK, BASIC_BLOCK_SIZE_16 / NUM_TWO);
+        }
     }
     uint64_t baseKAlignValue =
         !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize : BASIC_BLOCK_SIZE_16;

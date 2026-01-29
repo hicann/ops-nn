@@ -78,6 +78,8 @@ public:
     int64_t nL1TailLast_{0};
 
     static constexpr uint64_t WINDOW_LEN = 4UL;
+    static constexpr uint64_t BLOCK_SIZE_16 = 16UL;
+    static constexpr uint64_t BLOCK_SIZE_32 = 32UL;
     using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockL1L0Shape = Shape<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = Coord<int64_t, int64_t, int64_t, int64_t>;
@@ -183,6 +185,11 @@ public:
         return {sliceM_, srcNdStride_};
     }
 
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTailParams()
+    {
+        return {mL1NormCnt_, mL1TailMain_, nL1NormCnt_, nL1TailMain_};
+    }
+
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() {
         return {mL1_, nL1_, kL1_, 1};
     }
@@ -230,11 +237,18 @@ public:
         return {splitBlkM, splitBlkN, k_, batch_};
     }
 
+    template <CubeFormat LayoutB = CubeFormat::ND, bool TransB_ = false, class B_T>
     __aicore__ inline BlockL1L0Shape GetBlockShape(int64_t tileIdx, int64_t mOffset, int64_t nOffset)
     {
         UpdateMNTileIdx(tileIdx);
         int64_t blkM = mL1_;
         int64_t blkN = nL1_;
+        int64_t nAlignSize;
+        if constexpr (TransB_) {
+            nAlignSize = BLOCK_SIZE_16;
+        } else {
+            nAlignSize = BLOCK_SIZE_32 / sizeof(B_T);
+        }
         if (nTileIdx_ >= nL1NormCnt_) {
             blkN = nTileIdx_ == (nTileNum_ - 1) ? nL1TailLast_ : nL1TailMain_;
         }
@@ -252,6 +266,10 @@ public:
         // SplitM and SplitN
         int64_t splitBlkM = CeilDiv(blkM, mTailCnt_);
         int64_t splitBlkN = CeilDiv(blkN, nTailCnt_);
+        if constexpr (LayoutB == CubeFormat::NZ) {
+            splitBlkN = Align(splitBlkN, nAlignSize);
+            nTailCnt_ = CeilDiv(blkN, splitBlkN);
+        }
         int64_t mSplitIdx = (blockIdx_ % tailCnt_) % mTailCnt_;
         int64_t nSplitIdx = (blockIdx_ % tailCnt_) / mTailCnt_;
         mSplitOffset_ = mSplitIdx * splitBlkM;
@@ -275,7 +293,7 @@ public:
         }
         int64_t mOffset = mTileIdx_ * mL1_ + mSplitOffset_;
         int64_t nOffset = nTileIdx_ * nL1_ + nSplitOffset_;
-        int64_t ndNum = mL1_ > sliceM_? mL1_ / sliceM_ : 1;
+        int64_t ndNum = mL1_ > sliceM_ ? mL1_ / sliceM_ : 1;
         int64_t mOffsetNonContiguous = mTileIdx_ * (ndNum * (srcNdStride_ / k_)) + mSplitOffset_;
         if (mTileIdx_ > mL1NormCnt_) {
             mOffset = mL1NormCnt_ * mL1_ + (mTileIdx_ - mL1NormCnt_) * mL1TailMain_ + mSplitOffset_;
@@ -285,6 +303,24 @@ public:
         }
         // 当前不切k, 使用kOffset传递非连续场景mOffset
         return {mOffset, nOffset, mOffsetNonContiguous, batchIdx};
+    }
+
+    __aicore__ inline BlockCoord GetSingleBlockCoord(int tileIdx)
+    {
+        UpdateMNTileIdx(tileIdx);
+        int64_t batchIdx = 0;
+        if (batch_ > 1) {
+            batchIdx = tileIdx / tileNum_;
+        }
+        int64_t ndNum = mL1_ > sliceM_ ? mL1_ / sliceM_ : 1;
+        int64_t mOffsetNonContiguous = mTileIdx_ * (ndNum * (srcNdStride_ / k_)) + mSplitOffset_;
+        // 当前不切k, 使用kOffset传递非连续场景mOffset
+        return {mTileIdx_, nTileIdx_, mOffsetNonContiguous, batchIdx};
+    }
+
+    __aicore__ inline Shape<int64_t, int64_t> GetSplitOffset()
+    {
+        return {mSplitOffset_, nSplitOffset_};
     }
 
 private:

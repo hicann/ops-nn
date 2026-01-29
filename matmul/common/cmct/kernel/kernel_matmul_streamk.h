@@ -214,18 +214,18 @@ public:
                 }
                 auto singleCoreShape = bs.GetSingleCoreShape(tmpTileIdx);
                 auto singleCoreCoord = bs.GetSingleCoreCoord(tmpTileIdx);
-                auto blockOffset = GetOffsetStreamK(singleCoreCoord, problemShape_, tileL1,
-                                                    bs.GetCurKSingleCore(tmpTileIdx), aGlobal_, bGlobal_, cGlobal_,
-                                                    transA, transB, isBias_);
+                auto blockOffset = GetOffsetStreamK<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
+                    singleCoreCoord, problemShape_, tileL1, bs.GetCurKSingleCore(tmpTileIdx), transA, transB, isBias_);
                 int64_t offsetA = Get<MNK_M>(blockOffset);
                 int64_t offsetB = Get<MNK_N>(blockOffset);
                 int64_t offsetC = Get<2>(blockOffset);
                 int64_t offsetBias = Get<3>(blockOffset);
                 int64_t offsetWorkspace = (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum +
                                            Get<MNK_K>(singleCoreCoord)) * BLOCK_BASE_M * BLOCK_BASE_N;
-                blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
-                            workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
-                            bs.CheckIsSkScene(tmpTileIdx));
+                blockMmadOp.template operator()<BlockMmadBuilder::formatB>(
+                    cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
+                    workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
+                    bs.CheckIsSkScene(tmpTileIdx));
                 if (tmpTileIdx + usedCoreNum_ >= tileNum) {
                     CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG);
                     CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + FLAG_ID_MAX);

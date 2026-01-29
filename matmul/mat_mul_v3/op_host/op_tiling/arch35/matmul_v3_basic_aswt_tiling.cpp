@@ -29,11 +29,6 @@ MM_REGISTER_TILING_TEMPLATE(MatMulV3, MatMulV3BasicAswtTiling, ASCEND950, BASIC_
 
 bool MatMulV3BasicAswtTiling::IsCapable()
 {
-    // WeightNz暂未实现
-    if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {
-        OP_LOGD(args_.opName, "ND is the only supported format for basic api");
-        return false;
-    }
     // FP32大K场景需要核内切K 基础API暂未实现
     if (args_.aDtypeSize == DATA_SIZE_FP32 && !args_.isHf32 && args_.bFormat == ge::FORMAT_ND &&
         args_.kValue > FP32_SPLIT_K_THRESHOLD) {

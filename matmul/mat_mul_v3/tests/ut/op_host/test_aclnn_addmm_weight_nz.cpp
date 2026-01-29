@@ -428,7 +428,7 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP16_FP16_FP16FP32_KEEP_DTYPE)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_FP16_BF16_FP16FP32_KEEP_DTYPE)
@@ -464,7 +464,7 @@ TEST_F(l2_addmmWeightNz_test, addmm_NZ_950_BF16_BF16_FP16FP32_KEEP_DTYPE)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // 接口整改异常用例 - 310

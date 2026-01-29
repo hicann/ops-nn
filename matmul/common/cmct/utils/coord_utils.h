@@ -57,11 +57,10 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t> GetOffset(
     return {offsetA, offsetB, offsetC};
 }
 
-// GetOffsetWithoutLayout
-template <class BlockCoord, class ProblemShape, class ATensorType, class BTensorType, class CTensorType>
-__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(
-    BlockCoord blockCoord, ProblemShape problemShape, ATensorType aTensor, BTensorType bTensor, CTensorType cTensor,
-    bool transA, bool transB, bool isBias, AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL)
+template <class BlockCoord, class ProblemShape>
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetForNDLayout(
+    BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
+    AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -95,12 +94,80 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWi
     return {offsetA, offsetB, offsetC, offsetBias};
 }
 
+template <class BlockCoord, class ProblemShape, class B_T>
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetForNZLayout(
+    BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
+    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1 = {0, 0, 0, 0},
+    AscendC::Shape<int64_t, int64_t> SplitOffset = {0, 0},
+    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tailParams = {0, 0, 0, 0})
+{
+    int64_t C0_SIZE = BLOCK_BYTE_SIZE / sizeof(B_T);
+    int64_t m = Get<MNK_M>(problemShape);
+    int64_t n = Get<MNK_N>(problemShape);
+    int64_t k = Get<MNK_K>(problemShape);
+    int64_t mL1 = Get<MNK_M>(tileL1);
+    int64_t nL1 = Get<MNK_N>(tileL1);
+
+    int64_t mSplitOffset_ = Get<MNK_M>(SplitOffset);
+    int64_t nSplitOffset_ = Get<MNK_N>(SplitOffset);
+    int64_t mL1NormCnt_ = Get<0>(tailParams);
+    int64_t mL1TailMain_ = Get<1>(tailParams);
+    int64_t nL1NormCnt_ = Get<2>(tailParams);
+    int64_t nL1TailMain_ = Get<3>(tailParams);
+
+    int64_t mOffset = Get<MNK_M>(blockCoord) * mL1 + mSplitOffset_;
+    int64_t nOffset = Get<MNK_N>(blockCoord) * nL1 + nSplitOffset_;
+
+    if (Get<MNK_M>(blockCoord) > mL1NormCnt_) {
+        mOffset = mL1NormCnt_ * mL1 + (Get<MNK_M>(blockCoord) - mL1NormCnt_) * mL1TailMain_ + mSplitOffset_;
+    }
+    if (Get<MNK_N>(blockCoord) > nL1NormCnt_) {
+        nOffset = nL1NormCnt_ * nL1 + (Get<MNK_N>(blockCoord) - nL1NormCnt_) * nL1TailMain_ + nSplitOffset_;
+    }
+
+    int64_t offsetA = Get<MNK_B>(blockCoord) * m * k;
+    int64_t offsetB = Get<MNK_B>(blockCoord) * CeilAlign(n, OUTER_SIZE) * CeilAlign(k, C0_SIZE);
+    int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + mOffset * n + nOffset;
+    int64_t offsetBias = 0;
+
+    if (transA) {
+        offsetA += mOffset;
+    } else {
+        offsetA += mOffset * k;
+    }
+    if (transB) {
+        offsetB += nOffset * C0_SIZE;
+    } else {
+        offsetB += nOffset * CeilAlign(k, OUTER_SIZE);
+    }
+    if (isBias) {
+        offsetBias = nOffset;
+    }
+    return {offsetA, offsetB, offsetC, offsetBias};
+}
+
+// GetOffsetWithoutLayout
+template <class BlockCoord, class ProblemShape, CubeFormat LayoutB = CubeFormat::ND, class B_T>
+__aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWithoutLayout(
+    BlockCoord blockCoord, ProblemShape problemShape, bool transA, bool transB, bool isBias,
+    AscendC::Shape<int64_t, int64_t> sliceParams, uint64_t curML1 = 1UL,
+    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1 = {0, 0, 0, 0},
+    AscendC::Shape<int64_t, int64_t> SplitOffset = {0, 0},
+    AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tailParams = {0, 0, 0, 0})
+{
+    if constexpr (LayoutB == CubeFormat::ND) {
+        return GetOffsetForNDLayout(blockCoord, problemShape, transA, transB, isBias, sliceParams, curML1);
+    } else {
+        return GetOffsetForNZLayout<BlockCoord, ProblemShape, B_T>(
+            blockCoord, problemShape, transA, transB, isBias, tileL1, SplitOffset, tailParams);
+    }
+}
+
 // GetOffsetStreamK
-template <class BlockCoord_, class ProblemShape_, class ATensorType_, class BTensorType_, class CTensorType_>
+template <class BlockCoord_, class ProblemShape_, CubeFormat LayoutB = CubeFormat::ND, class B_T>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetStreamK(
     BlockCoord_ blockCoord, ProblemShape_ problemShape, AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1,
-    int64_t kSingleCore, ATensorType_ aTensor, BTensorType_ bTensor, CTensorType_ cTensor, bool transA, bool transB,
-    bool isBias)
+    int64_t kSingleCore, bool transA, bool transB, bool isBias)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -112,6 +179,8 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetSt
     int64_t offsetB = 0;
     int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + Get<MNK_M>(blockCoord) * mL1 * n + Get<MNK_N>(blockCoord) * nL1;
     int64_t offsetBias = 0;
+    int64_t C0_SIZE = BLOCK_BYTE_SIZE / sizeof(B_T);
+
     if (transA) {
         offsetA =
             Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 + Get<MNK_K>(blockCoord) * kSingleCore * m;
@@ -119,12 +188,22 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetSt
         offsetA =
             Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 * k + Get<MNK_K>(blockCoord) * kSingleCore;
     }
-    if (transB) {
-        offsetB =
-            Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * k + Get<MNK_K>(blockCoord) * kSingleCore;
+    if constexpr (LayoutB == CubeFormat::ND) {
+        if (transB) {
+            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * k +
+                      Get<MNK_K>(blockCoord) * kSingleCore;
+        } else {
+            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 +
+                      Get<MNK_K>(blockCoord) * kSingleCore * n;
+        }
     } else {
-        offsetB =
-            Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 + Get<MNK_K>(blockCoord) * kSingleCore * n;
+        if (transB) {
+            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * C0_SIZE +
+                      Get<MNK_K>(blockCoord) * kSingleCore * CeilAlign(n, OUTER_SIZE);
+        } else {
+            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * CeilAlign(k, C0_SIZE) +
+                      Get<MNK_K>(blockCoord) * kSingleCore * C0_SIZE;
+        }
     }
     if (isBias) {
         offsetBias = Get<MNK_B>(blockCoord) * n + Get<MNK_N>(blockCoord) * nL1;

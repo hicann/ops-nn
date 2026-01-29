@@ -267,6 +267,7 @@ aclnnStatus aclnnAddmmWeightNz(
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmWeightNz默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 不支持mat1与mat2两个输入中一个输入为BFLOAT16，另一个输入为FLOAT或者FLOAT16的数据类型推导。
+- 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 
 ## 调用示例

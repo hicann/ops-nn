@@ -143,23 +143,39 @@ public:
         AscendC::DataCopy(al1Local, aGlobal, nd2nzParams);
     }
 
+    template <CubeFormat LayoutB = CubeFormat::ND>
     __aicore__ inline void CopyInB1(
         const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
         uint64_t curKL1)
     {
-        AscendC::Nd2NzParams nd2nzParams;
-        nd2nzParams.ndNum = 1;
-        uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
-        uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
+        if constexpr (LayoutB == CubeFormat::ND) {
+            AscendC::Nd2NzParams nd2nzParams;
+            nd2nzParams.ndNum = 1;
+            uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
+            uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
 
-        nd2nzParams.nValue = nDim;
-        nd2nzParams.dValue = dDim;
-        nd2nzParams.srcNdMatrixStride = 1;
-        nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
-        nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
-        nd2nzParams.dstNzNStride = 1;
-        nd2nzParams.dstNzMatrixStride = 1;
-        AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
+            nd2nzParams.nValue = nDim;
+            nd2nzParams.dValue = dDim;
+            nd2nzParams.srcNdMatrixStride = 1;
+            nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
+            nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 1;
+            AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
+        } else {
+            AscendC::DataCopyExtParams dataCopyParams;
+            uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
+            uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
+            uint64_t nkDim = BType::isTrans ? n_ : k_;
+            dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(dDim, C0_SIZE);
+            dataCopyParams.blockLen = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE) * C0_BYTE_SIZE;
+            dataCopyParams.srcStride =
+                (Cmct::Gemm::Align(nkDim, AscendC::BLOCK_CUBE) - Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE)) *
+                C0_BYTE_SIZE;
+            dataCopyParams.dstStride = 0;
+            AscendC::DataCopyPadExtParams<B_T> padParams{false, 0, 0, 0};
+            AscendC::DataCopyPad(bl1Local, bGlobal, dataCopyParams, padParams);
+        }
     }
 
     __aicore__ inline void CopyInC1(
@@ -315,6 +331,7 @@ public:
         }
     }
 
+    template <CubeFormat LayoutB = CubeFormat::ND>
     __aicore__ inline void operator()(
         AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
         AscendC::GlobalTensor<Bias_T> biasGlobal, AscendC::GlobalTensor<float> workspaceGlobal, TupleShape tileShape,
@@ -352,12 +369,18 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(l1BufId);
 
             bl1Local = l1Local_[bL1Init_ + bL1OneBuffer_ * l1BufId];
-
             uint64_t offsetB = BType::isTrans ? iter0 * kL1_ : iter0 * kL1_ * n_;
+            if constexpr (LayoutB == CubeFormat::NZ) {
+                if constexpr (BType::isTrans) {
+                    offsetB = iter0 * kL1_ * Cmct::Gemm::Align(n_, AscendC::BLOCK_CUBE);
+                } else {
+                    offsetB = iter0 * kL1_ * C0_SIZE;
+                }
+            }
 
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId + L1_EVENT_ID_OFFSET);
 
-            CopyInB1(bGlobal[offsetB], bl1Local, curNL1, curKL1);
+            CopyInB1<LayoutB>(bGlobal[offsetB], bl1Local, curNL1, curKL1);
             AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(l1BufId + L1_EVENT_ID_OFFSET);
 
             uint64_t kL0Iter = (curKL1 + baseK_ - 1) / baseK_;

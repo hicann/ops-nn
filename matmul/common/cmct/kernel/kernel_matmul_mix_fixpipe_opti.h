@@ -174,7 +174,8 @@ public:
                 problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetSliceParams());
             blockMmadOp.SetDualParam(enable2UB);
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
-                blockMmadOp.CopyInB1(bGlobal_, Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_));
+                blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(
+                    bGlobal_, Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_));
                 blockMmadOp.CopyInC1(biasGlobal_, Get<MNK_N>(problemShape_));
             } else if constexpr (BlockScheduler::FULL_LOAD_MODE == A_FULL_LOAD_MODE) {
                 blockMmadOp.CopyInA1(aGlobal_, Get<MNK_M>(problemShape_), Get<MNK_K>(problemShape_));
@@ -192,18 +193,15 @@ public:
             for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
                 // nIter
                 for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
-                    TupleL1L0Shape blockShape = bs.GetBlockShape(tileIdx, mOffset, nOffset);
+                    TupleL1L0Shape blockShape =
+                        bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(tileIdx, mOffset, nOffset);
                     auto blockCoord = bs.GetBlockCoord(tileIdx);
-                    auto blockOffset = GetOffsetWithoutLayout(blockCoord,
-                        problemShape_,
-                        aGlobal_,
-                        bGlobal_,
-                        cGlobal_,
-                        transA,
-                        transB,
-                        isBias_,
-                        bs.GetSliceParams(),
-                        Get<MNK_M>(blockShape));
+                    if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
+                        blockCoord = bs.GetSingleBlockCoord(tileIdx);
+                    }
+                    auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
+                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetSliceParams(), Get<MNK_M>(blockShape),
+                        tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                         if (isHf32) {
@@ -225,12 +223,8 @@ public:
                             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
                                 AIV_SYNC_AIC_FLAG + (pingPongIdx) + FLAG_ID_MAX);
                         }
-                        blockMmadOp(cLocal,
-                            aGlobal_[offsetA],
-                            bGlobal_[offsetB],
-                            biasGlobal_[offsetBias],
-                            blockShape,
-                            mOffset,
+                        blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
+                            cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset,
                             nOffset);
                         CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + (pingPongIdx));
                         if (enable2UB) {

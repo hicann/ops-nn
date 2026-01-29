@@ -89,6 +89,7 @@ public:
     // Set unitflag state: 3 = final accumulation, 2 = non-final accumulation
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
+    constexpr static uint64_t BLOCK_BYTE_SIZE = 32;
     uint64_t abL1LoopCnt_{0};
     uint64_t l0PingPong_{0};
     uint64_t l0cPingPong_{0};
@@ -126,8 +127,9 @@ public:
 
 public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
-    __aicore__ inline void Init(const TupleShape &shape, const TupleShape &tileL1, const TupleShape &tileL0,
-        bool isBias, uint64_t l1BufNum, bool l0cDB, AscendC::Shape<int64_t, int64_t> sliceParams)
+    __aicore__ inline void Init(
+        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, uint64_t l1BufNum,
+        bool l0cDB, AscendC::Shape<int64_t, int64_t> sliceParams)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -208,22 +210,39 @@ public:
         AscendC::DataCopy(al1Local, aGlobal, nd2nzParams);
     }
 
-    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T> &bGlobal,
-        const AscendC::LocalTensor<B_T> &bl1Local, uint64_t curNL1, uint64_t curKL1)
+    template <CubeFormat LayoutB = CubeFormat::ND>
+    __aicore__ inline void CopyInB1(
+        const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
+        uint64_t curKL1)
     {
-        AscendC::Nd2NzParams nd2nzParams;
-        nd2nzParams.ndNum = 1;
-        uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
-        uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
+        if constexpr (LayoutB == CubeFormat::ND) {
+            AscendC::Nd2NzParams nd2nzParams;
+            nd2nzParams.ndNum = 1;
+            uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
+            uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
 
-        nd2nzParams.nValue = nDim;
-        nd2nzParams.dValue = dDim;
-        nd2nzParams.srcNdMatrixStride = 1;
-        nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
-        nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
-        nd2nzParams.dstNzNStride = 1;
-        nd2nzParams.dstNzMatrixStride = 1;
-        AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
+            nd2nzParams.nValue = nDim;
+            nd2nzParams.dValue = dDim;
+            nd2nzParams.srcNdMatrixStride = 1;
+            nd2nzParams.srcDValue = BType::isTrans ? k_ : n_;
+            nd2nzParams.dstNzC0Stride = (nDim + AscendC::BLOCK_CUBE - 1) / AscendC::BLOCK_CUBE * AscendC::BLOCK_CUBE;
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 1;
+            AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
+        } else {
+            AscendC::DataCopyExtParams dataCopyParams;
+            uint64_t nDim = BType::isTrans ? curNL1 : curKL1;
+            uint64_t dDim = BType::isTrans ? curKL1 : curNL1;
+            uint64_t nkDim = BType::isTrans ? n_ : k_;
+            dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilAlign(dDim, C0_SIZE), C0_SIZE);
+            dataCopyParams.blockLen = Cmct::Gemm::CeilAlign(nDim, AscendC::BLOCK_CUBE) * BLOCK_BYTE_SIZE;
+            dataCopyParams.srcStride =
+                (Cmct::Gemm::CeilAlign(nkDim, AscendC::BLOCK_CUBE) - Cmct::Gemm::CeilAlign(nDim, AscendC::BLOCK_CUBE)) *
+                BLOCK_BYTE_SIZE;
+            dataCopyParams.dstStride = 0;
+            AscendC::DataCopyPadExtParams<B_T> padParams{false, 0, 0, 0};
+            AscendC::DataCopyPad(bl1Local, bGlobal, dataCopyParams, padParams);
+        }
     }
 
     // 重载函数，适用于A全载场景
@@ -233,9 +252,10 @@ public:
     }
 
     // 重载函数，适用于B全载场景
-    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T> &bGlobal, uint64_t curNL1, uint64_t curKL1)
+    template <CubeFormat LayoutB = CubeFormat::ND>
+    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& bGlobal, uint64_t curNL1, uint64_t curKL1)
     {
-        CopyInB1(bGlobal, l1Local_[bL1Init_], curNL1, curKL1);
+        CopyInB1<LayoutB>(bGlobal, l1Local_[bL1Init_], curNL1, curKL1);
     }
 
     __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T> &biasGlobal, uint64_t curNL1)
@@ -453,18 +473,19 @@ public:
         AscendC::Fixpipe<C_T, float, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1LocalNext, fixpipeParams);
     }
 
-    template <typename T>
+    template <typename T, CubeFormat LayoutB = CubeFormat::ND>
     __aicore__ inline void operator()(
         T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
         AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t mOffset, uint64_t nOffset,
         bool isFirstTile = false, bool isAllLoc2Ub = false)
     {
         if (fullLoadMode_ == A_FULL_LOAD_MODE) {
-            return DoAFullLoad(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset);
+            return DoAFullLoad<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset);
         } else if (isAllLoc2Ub) {
             return DoAllLoc2UbAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset);
         } else {
-            return DoBFullLoadOrAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile);
+            return DoBFullLoadOrAswt<T, LayoutB>(
+                cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile);
         }
     }
 
@@ -578,10 +599,10 @@ public:
         }
     }
 
-    template <typename T>
-    __aicore__ inline void DoBFullLoadOrAswt(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
-        AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
-        uint64_t nL1Offset, bool isFirstTile)
+    template <typename T, CubeFormat LayoutB>
+    __aicore__ inline void DoBFullLoadOrAswt(
+        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
+        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t nL1Offset, bool isFirstTile)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
@@ -638,7 +659,14 @@ public:
                 // B搬运数据到L1，开启4buffer
                 bl1Local = l1Local_[bL1Init_ + bL1OneBuffer_ * l1BufId];
                 uint64_t offsetB = BType::isTrans ? kL1OffsetLength : kL1OffsetLength * n_;
-                CopyInB1(bGlobal[offsetB], bl1Local, curNL1, curKL1);
+                if constexpr (LayoutB == CubeFormat::NZ) {
+                    if constexpr (BType::isTrans) {
+                        offsetB = kL1OffsetLength * Cmct::Gemm::CeilAlign(n_, AscendC::BLOCK_CUBE);
+                    } else {
+                        offsetB = kL1OffsetLength * C0_SIZE;
+                    }
+                }
+                CopyInB1<LayoutB>(bGlobal[offsetB], bl1Local, curNL1, curKL1);
                 kbL1Size = curKL1;
             } else {
                 bl1Local = l1Local_[bL1Init_];
@@ -701,10 +729,10 @@ public:
     }
 
     // A全载mmad
-    template <typename T>
-    __aicore__ inline void DoAFullLoad(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
-        AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
-        uint64_t mL1Offset)
+    template <typename T, CubeFormat LayoutB>
+    __aicore__ inline void DoAFullLoad(
+        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
+        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t mL1Offset)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
@@ -734,7 +762,14 @@ public:
             uint64_t offsetBl1 = bL1Init_ + bL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             // B -> L1
-            CopyInB1(bGlobal[offsetB], l1Local_[offsetBl1], curNL1, curKL1);
+            if constexpr (LayoutB == CubeFormat::NZ) {
+                if constexpr (BType::isTrans) {
+                    offsetB = iter0 * kL1_ * CeilAlign(n_, AscendC::BLOCK_CUBE);
+                } else {
+                    offsetB = iter0 * kL1_ * C0_SIZE;
+                }
+            }
+            CopyInB1<LayoutB>(bGlobal[offsetB], l1Local_[offsetBl1], curNL1, curKL1);
 
             if (isBias_ && iter0 == 0) {
                 biasL1Local = biasL1LocalInit[nL1_ * l1BufId];
