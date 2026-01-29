@@ -152,6 +152,10 @@ bool MatMulV3StreamKTiling::IsCapable()
         OP_LOGD(args_.opName, "Due to the requirement of binary accumulation, current fp32 does not support StreamK");
         return false;
     }
+    if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
+        OP_LOGD(args_.opName, "NonContiguous self does not support StreamK");
+        return false;
+    }
     return (CheckStreamKSKTiling() || CheckStreamKDPSKTiling());
 }
 

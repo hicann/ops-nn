@@ -154,6 +154,10 @@ bool MatMulV3BasicStreamKTiling::IsCapable()
         OP_LOGD(args_.opName, "ND is the only supported format for basic api");
         return false;
     }
+    if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
+        OP_LOGD(args_.opName, "NonContiguous self does not support StreamK");
+        return false;
+    }
     return CheckStreamKSKTiling() || CheckStreamKDPSKTiling();
 }
 

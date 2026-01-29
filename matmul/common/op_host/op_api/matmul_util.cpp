@@ -532,12 +532,20 @@ static inline const aclTensor* GetPadTensor(int64_t padNum, int64_t padDim, aclO
 
 static bool CheckStreamKSKTiling(MmOpInfo& mmOpInfo)
 {
-    // 判断k轴是否大于32*512 / DtypeSize_, 小于就不走stream-k-sk
     uint64_t kAlign =
         static_cast<uint64_t>(CeilAlign(mmOpInfo.shapeInfo.kDim, static_cast<int64_t>(BASIC_BLOCK_SIZE_256)));
     uint64_t aiCoreCnt = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.aiCoreCnt));
     uint64_t dtypeASize = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.shapeInfo.dtypeASize));
-    uint64_t kThreshold = aiCoreCnt * NUM_HALF * BASIC_BLOCK_K_256_BYTE / dtypeASize;
+    constexpr uint64_t STREAM_K_MAX_K_THRESHOLD = 2000000UL;
+    // 如果dtype是fp32且k轴大于200万 则走基础模板来保证fp32的精度
+    if (dtypeASize == FP32_HF32_DTYPE_SIZE && !mmOpInfo.enableHf32 &&
+        static_cast<uint64_t>(mmOpInfo.shapeInfo.kDim) > STREAM_K_MAX_K_THRESHOLD) {
+        return false;
+    }
+    // 判断k轴是否大于8192 / DtypeSize_, 小于就不走stream-k-sk
+    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
+    uint64_t kThreshold =
+        std::max(STREAM_K_MIN_K_THRESHOLD, aiCoreCnt * BASIC_BLOCK_K_256_BYTE) / dtypeASize;
     if (kAlign < kThreshold) {
         return false;
     }
@@ -553,10 +561,11 @@ static bool CheckStreamKSKTiling(MmOpInfo& mmOpInfo)
 }
 
 static bool CheckStreamKDPSKTiling(MmOpInfo& mmOpInfo)
-{
+{   
+    constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
     uint64_t aiCoreCnt = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.aiCoreCnt));
     uint64_t dtypeASize = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.shapeInfo.dtypeASize));
-    uint64_t kThreshold = aiCoreCnt * BASIC_BLOCK_K_256_BYTE / dtypeASize;
+    uint64_t kThreshold = std::max(STREAM_K_MIN_K_THRESHOLD, aiCoreCnt * BASIC_BLOCK_SIZE_128) / dtypeASize;
     uint64_t kDim = static_cast<uint64_t>(mmOpInfo.shapeInfo.kDim);
     // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐 或 输入是fp32类型，不走stream-k-dpsk
     if (mmOpInfo.shapeInfo.mDim % BASIC_BLOCK_SIZE_256 != 0UL ||

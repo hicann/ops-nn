@@ -296,5 +296,16 @@ void MatMulV3TilingHelper::ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo)
     runInfo.tailInfo.mTailMain = 0UL;
     runInfo.tailInfo.nTailMain = 0UL;
 }
+
+bool MatMulV3TilingHelper::IsSelfNonContiguous(gert::TilingContext* context)
+{
+    auto selfShape = context->GetInputShape(0)->GetOriginShape();
+    auto mat2Shape = context->GetInputShape(1)->GetOriginShape();
+    auto selfStorageShape = context->GetInputShape(0)->GetStorageShape();
+    size_t selfDimNum = selfShape.GetDimNum();
+    size_t mat2DimNum = mat2Shape.GetDimNum();
+    // createView with TensorV2 & storageShape 1d ->  non contiguous
+    return (context->InputIsView(0) && selfStorageShape.GetDimNum() == 1 && selfDimNum == 3 && mat2DimNum == 2);
+}
 }  // namespace matmul_v3_advanced
 }  // namespace optiling
