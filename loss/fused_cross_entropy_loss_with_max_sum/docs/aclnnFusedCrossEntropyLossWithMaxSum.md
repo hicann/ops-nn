@@ -2,23 +2,27 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+| 产品                                                                                    | 是否支持 |
+| :-------------------------------------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>          |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>    |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>             |    ×     |
+| <term>Atlas 推理系列产品</term>                       |    ×     |
+| <term>Atlas 训练系列产品</term>                       |    ×     |
 
 ## 功能说明
 
 - 算子功能：本算子是词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。
 - 计算公式：
 
-          $$
-          lossOut = log(sum_exp_logits) - predicted_logits
-          $$
+    $$
+    lossOut = log(sum\_exp\_logits) - predicted\_logits
+    $$
 
-          $$
-          softMaxOutOptional = exp(vocab_parallel_logits -logits_max.unsqueeze(dim = -1)) \ sum_exp_logits.unsqueeze(dim = -1)
-          $$
+    $$
+    softMaxOutOptional = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) \ sum\_exp\_logits.unsqueeze(dim = -1)
+    $$
 
 
 ## 函数原型
