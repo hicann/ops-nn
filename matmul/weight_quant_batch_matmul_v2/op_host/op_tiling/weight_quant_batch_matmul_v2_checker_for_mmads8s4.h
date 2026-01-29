@@ -36,7 +36,7 @@ private:
     bool CheckInputShape(const gert::StorageShape *xShape, const gert::StorageShape *weightShape);
     bool CheckAntiQuantShape(const gert::StorageShape *antiQuantScaleShape,
                              const gert::StorageShape *antiQuantOffsetShape);
-    bool CheckBatchInfo(const gert::Shape &xShape, const gert::Shape &weightShape);
+    bool CheckBatchInfo(const gert::Shape &xShape, const gert::Shape &weightShape) const;
 
     gert::TilingContext *context_ = nullptr;
     WeightQuantBatchMatmulInfo inputParams_;

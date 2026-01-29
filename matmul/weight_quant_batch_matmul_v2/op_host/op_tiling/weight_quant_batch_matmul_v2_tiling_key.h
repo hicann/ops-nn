@@ -55,6 +55,7 @@ enum class OptimizationAlgorithmSubCategory : uint8_t
     N_FIRST_BASIC_BLOCK = 3,
     ASW = 4,
     ANTI_REG_SCSC = 5,
+    ITERATE_BATCH = 6,
 };
 
 // 对应6-9位 fixp模板自定义组合

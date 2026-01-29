@@ -38,7 +38,8 @@ constexpr int32_t FIXPIPE_PRIORITY = 5;
 constexpr int32_t WEIGHT_NZ_PRIORITY = 6;
 constexpr int32_t ADAPTIVE_SPLIT_PRIORITY = 7;
 constexpr int32_t ANTI_REG_PRIORITY = 8;
-constexpr int32_t ASW_PRIORITY = 9;
+constexpr int32_t ITERBATCH_PRIORITY = 9;
+constexpr int32_t ASW_PRIORITY = 10;
 
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingSplitK, SPLIT_K_PRIORITY);
 REGISTER_TILING_TEMPLATE("WeightQuantBatchMatmulV2", WeightQuantBatchMatmulV2TilingMsdGroup, MSD_GROUP_PRIORITY);
@@ -75,7 +76,7 @@ static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* c
                 wqbmmv2Checker.Check() != ge::GRAPH_SUCCESS,
                 VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "WeightQuantBatchMatMul para is illegal"),
                 return ge::GRAPH_FAILED);
-            std::vector<int32_t> registerList = {ASW_PRIORITY};
+            std::vector<int32_t> registerList = {ITERBATCH_PRIORITY, ASW_PRIORITY};
             return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
         } else {
             OP_LOGI(context->GetNodeName(), "Platform not support Intrinsic_mmad s8s4");

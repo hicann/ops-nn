@@ -34,7 +34,7 @@ constexpr uint32_t NUM_HALF = 2;
 constexpr uint32_t DB_SIZE = 2;
 constexpr uint32_t DATA_SIZE_L0C = 4;
 constexpr uint64_t WORKSPACE_SIZE = 16 * 1024 * 1024;
-constexpr int32_t ASW_PRIORITY = 9;
+constexpr int32_t ASW_PRIORITY = 10;
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingASW::DoOpTiling()
 {
@@ -330,6 +330,25 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASW::DoLibApiTiling()
     tilingData_->matmulTiling.dbL0A = 2;  // db switch, 1: off, 2: on
     tilingData_->matmulTiling.dbL0B = 2;  // db switch, 1: off, 2: on
     tilingData_->matmulTiling.dbL0C = basicTiling_.dbL0c;
+    if (basicTiling_.iterBatch > 0U) {
+        // additional tiling for bmm
+        tilingData_->matmulTiling.BatchNum = basicTiling_.iterBatch;
+        tilingData_->matmulTiling.ALayoutInfoB = basicTiling_.iterBatch;
+        tilingData_->matmulTiling.ALayoutInfoS = basicTiling_.singleCoreM;
+        tilingData_->matmulTiling.ALayoutInfoN = 1;
+        tilingData_->matmulTiling.ALayoutInfoG = 1;
+        tilingData_->matmulTiling.ALayoutInfoD = basicTiling_.singleCoreK;
+        tilingData_->matmulTiling.BLayoutInfoB = basicTiling_.iterBatch;
+        tilingData_->matmulTiling.BLayoutInfoS = basicTiling_.singleCoreN;
+        tilingData_->matmulTiling.BLayoutInfoN = 1;
+        tilingData_->matmulTiling.BLayoutInfoG = 1;
+        tilingData_->matmulTiling.BLayoutInfoD = basicTiling_.singleCoreK;
+        tilingData_->matmulTiling.CLayoutInfoB = basicTiling_.iterBatch;
+        tilingData_->matmulTiling.CLayoutInfoS1 = basicTiling_.singleCoreM;
+        tilingData_->matmulTiling.CLayoutInfoN = 1;
+        tilingData_->matmulTiling.CLayoutInfoG = 1;
+        tilingData_->matmulTiling.CLayoutInfoS2 = basicTiling_.singleCoreN;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

@@ -53,6 +53,7 @@ struct BasicTiling {
     uint32_t stepN = 1;
     uint32_t iterateOrder = 0;
     uint32_t dbL0c = 1;
+    uint32_t iterBatch = 0;
 };
 
 class WeightQuantBatchMatmulV2TilingASW : public WeightQuantBatchMatmulV2Tiling {
@@ -89,6 +90,7 @@ protected:
     bool CheckAntiQuantScale(uint64_t baseN, uint64_t dbL0c = 1) const;
     void SetTilingData();
     void SetBatchParams();
+    BasicTiling basicTiling_;
 
 private:
     OptimizationAlgorithmSubCategory algorithmSubCategory_ = OptimizationAlgorithmSubCategory::ASW;
@@ -96,7 +98,6 @@ private:
 
     // 滑窗相关信息
     AdaptiveSlidingWindow adaptiveWin_;
-    BasicTiling basicTiling_;
 };
 }  // namespace weight_quant_batch_matmul_v2
 }  // namespace optiling

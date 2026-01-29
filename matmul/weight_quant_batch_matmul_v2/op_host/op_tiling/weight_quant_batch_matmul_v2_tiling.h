@@ -31,6 +31,7 @@ enum class QuantType
     PER_CHANNEL = 2,
     PER_GROUP = 3,
     MX = 4,
+    PER_TOKEN = 5,
 };
 
 enum class KernelTemplateType
@@ -74,10 +75,10 @@ struct WeightQuantBatchMatmulInfo {
     bool transB = false;
     bool hasBias = false;
     bool hasAntiQuantOffset = false;
-    uint64_t groupSize = 0L;
-    uint64_t mSize = 0L;
-    uint64_t kSize = 0L;
-    uint64_t nSize = 0L;
+    uint64_t groupSize = 0UL;
+    uint64_t mSize = 0UL;
+    uint64_t kSize = 0UL;
+    uint64_t nSize = 0UL;
     ge::DataType aDtype = ge::DT_FLOAT16;
     ge::DataType bDtype = ge::DT_INT8;
     ge::DataType cDtype = ge::DT_FLOAT16;
@@ -91,22 +92,22 @@ struct WeightQuantBatchMatmulInfo {
     ge::Format bFormat = ge::FORMAT_ND;
     uint64_t innerPrecise = 0;
 
-    uint64_t batchX0 = 1L;
-    uint64_t batchX1 = 1L;
-    uint64_t batchX2 = 1L;
-    uint64_t batchX3 = 1L;
-    uint64_t batchWeight0 = 1L;
-    uint64_t batchWeight1 = 1L;
-    uint64_t batchWeight2 = 1L;
-    uint64_t batchWeight3 = 1L;
-    uint64_t batchY0 = 1L;
-    uint64_t batchY1 = 1L;
-    uint64_t batchY2 = 1L;
-    uint64_t batchY3 = 1L;
+    uint64_t batchX0 = 1UL;
+    uint64_t batchX1 = 1UL;
+    uint64_t batchX2 = 1UL;
+    uint64_t batchX3 = 1UL;
+    uint64_t batchWeight0 = 1UL;
+    uint64_t batchWeight1 = 1UL;
+    uint64_t batchWeight2 = 1UL;
+    uint64_t batchWeight3 = 1UL;
+    uint64_t batchY0 = 1UL;
+    uint64_t batchY1 = 1UL;
+    uint64_t batchY2 = 1UL;
+    uint64_t batchY3 = 1UL;
     bool biasWithBatch = false;
-    uint64_t batchX = 1L;
-    uint64_t batchWeight = 1L;
-    uint64_t batchY = 1L;
+    uint64_t batchX = 1UL;
+    uint64_t batchWeight = 1UL;
+    uint64_t batchY = 1UL;
 };
 
 struct WeightQuantBatchMatmulV2CompileInfo {
@@ -164,6 +165,17 @@ void GetDtype(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext*
 void GetAttrs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context);
 
 void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context);
+
+void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context);
+
+uint64_t GetBatchSize(const gert::Shape &shape);
+
+uint64_t InferOutBatchSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape);
+
+void DoBatchFusion(WeightQuantBatchMatmulInfo& matmulInfo, const uint64_t fusedDimValue);
+
+bool CheckFusionBatchA(const WeightQuantBatchMatmulInfo& matmulInfo, const gert::Shape &x1Shape,
+                       const gert::Shape &x2Shape, const uint64_t fusedDimValue);
 
 bool CheckInputShape(
     WeightQuantBatchMatmulInfo* inputParams, const gert::StorageShape* xShape, const gert::StorageShape* weightShape);

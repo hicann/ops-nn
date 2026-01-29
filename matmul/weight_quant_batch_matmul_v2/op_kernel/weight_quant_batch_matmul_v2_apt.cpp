@@ -39,6 +39,7 @@ using WeightQuantBatchMatmulV2::InvokeKernel;
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
 #include "arch35/weight_quant_batch_matmul_v2_adaptive_sliding_window.h"
+#include "arch35/weight_quant_batch_matmul_v2_iterbatch.h"
 #endif
 
 using namespace WeightQuantBatchMatmulV2;
@@ -84,6 +85,17 @@ static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFI
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
 #define INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(templateClass, ...)                                                  \
+    do {                                                                                                         \
+        GET_TILING_DATA_WITH_STRUCT(                                                                             \
+            wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn, tiling);    \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                               \
+        op.Init(                                                                                                 \
+            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+            &tPipe);                                                                                             \
+        op.Process();                                                                                            \
+    } while (0)
+
+#define INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(templateClass, ...)  \
     do {                                                                                                         \
         GET_TILING_DATA_WITH_STRUCT(                                                                             \
             wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn, tiling);    \
@@ -234,6 +246,12 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
                                             false, QuantType::PER_TENSOR);
     } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, false, QuantType::PER_CHANNEL,
+                                            false, QuantType::PER_TENSOR);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_TENSOR,
+                                            false, QuantType::PER_TENSOR);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
     }
 #endif

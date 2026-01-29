@@ -100,7 +100,7 @@ uint64_t GetBatchSize(const gert::Shape& shape)
 
 uint64_t InferOutBatchSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape)
 {
-    uint64_t batchC = 1U;
+    uint64_t batchC = 1UL;
     auto x1DimNum = x1Shape.GetDimNum();
     auto x2DimNum = x2Shape.GetDimNum();
     auto outDimNum = std::max(x1DimNum, x2DimNum);
@@ -115,21 +115,36 @@ uint64_t InferOutBatchSize(const gert::Shape& x1Shape, const gert::Shape& x2Shap
     return batchC;
 }
 
+void DoBatchFusion(WeightQuantBatchMatmulInfo& matmulInfo, const uint64_t fusedDimValue)
+{
+    matmulInfo.mSize = fusedDimValue;
+    matmulInfo.batchY3 = 1UL;
+    matmulInfo.batchY2 = 1UL;
+    matmulInfo.batchY1 = 1UL;
+    matmulInfo.batchY0 = 1UL;
+    matmulInfo.batchY = 1UL;
+    matmulInfo.batchX3 = 1UL;
+    matmulInfo.batchX2 = 1UL;
+    matmulInfo.batchX1 = 1UL;
+    matmulInfo.batchX0 = 1UL;
+    matmulInfo.batchX = 1UL;
+}
+
 void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
 {
     auto oriShapeA = context->GetInputShape(0)->GetOriginShape();
     auto oriShapeB = context->GetInputShape(1)->GetOriginShape();
     int32_t numDimA = static_cast<int32_t>(oriShapeA.GetDimNum());
     int32_t numDimB = static_cast<int32_t>(oriShapeB.GetDimNum());
-    matmulInfo.batchX3 = numDimA > IDX_K_LOW ? oriShapeA.GetDim(numDimA - IDX_K_HIGH) : 1;
-    matmulInfo.batchX2 = numDimA > IDX_K_HIGH ? oriShapeA.GetDim(numDimA - IDX_N_LOW) : 1;
-    matmulInfo.batchX1 = numDimA > IDX_N_LOW ? oriShapeA.GetDim(numDimA - IDX_N_HIGH) : 1;
-    matmulInfo.batchX0 = numDimA > IDX_N_HIGH ? oriShapeA.GetDim(numDimA - IDX_B_LOW) : 1;
+    matmulInfo.batchX3 = numDimA > IDX_K_LOW ? oriShapeA.GetDim(numDimA - IDX_K_HIGH) : 1UL;
+    matmulInfo.batchX2 = numDimA > IDX_K_HIGH ? oriShapeA.GetDim(numDimA - IDX_N_LOW) : 1UL;
+    matmulInfo.batchX1 = numDimA > IDX_N_LOW ? oriShapeA.GetDim(numDimA - IDX_N_HIGH) : 1UL;
+    matmulInfo.batchX0 = numDimA > IDX_N_HIGH ? oriShapeA.GetDim(numDimA - IDX_B_LOW) : 1UL;
     matmulInfo.batchX = GetBatchSize(oriShapeA);
-    matmulInfo.batchWeight3 = numDimB > IDX_K_LOW ? oriShapeB.GetDim(numDimB - IDX_K_HIGH) : 1;
-    matmulInfo.batchWeight2 = numDimB > IDX_K_HIGH ? oriShapeB.GetDim(numDimB - IDX_N_LOW) : 1;
-    matmulInfo.batchWeight1 = numDimB > IDX_N_LOW ? oriShapeB.GetDim(numDimB - IDX_N_HIGH) : 1;
-    matmulInfo.batchWeight0 = numDimB > IDX_N_HIGH ? oriShapeB.GetDim(numDimB - IDX_B_LOW) : 1;
+    matmulInfo.batchWeight3 = numDimB > IDX_K_LOW ? oriShapeB.GetDim(numDimB - IDX_K_HIGH) : 1UL;
+    matmulInfo.batchWeight2 = numDimB > IDX_K_HIGH ? oriShapeB.GetDim(numDimB - IDX_N_LOW) : 1UL;
+    matmulInfo.batchWeight1 = numDimB > IDX_N_LOW ? oriShapeB.GetDim(numDimB - IDX_N_HIGH) : 1UL;
+    matmulInfo.batchWeight0 = numDimB > IDX_N_HIGH ? oriShapeB.GetDim(numDimB - IDX_B_LOW) : 1UL;
     matmulInfo.batchWeight = GetBatchSize(oriShapeB);
     auto outShape = context->GetOutputShape(0)->GetStorageShape();
     int32_t numDimC = static_cast<int32_t>(outShape.GetDimNum());
@@ -138,6 +153,11 @@ void GetBatchInfo(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
     matmulInfo.batchY1 = numDimC > IDX_N_LOW ? outShape.GetDim(numDimC - IDX_N_HIGH) : 1UL;
     matmulInfo.batchY0 = numDimC > IDX_N_HIGH ? outShape.GetDim(numDimC - IDX_B_LOW) : 1UL;
     matmulInfo.batchY = InferOutBatchSize(oriShapeA, oriShapeB);
+
+    uint64_t fusedDimValue = matmulInfo.mSize * matmulInfo.batchX;
+    if (CheckFusionBatchA(matmulInfo, oriShapeA, oriShapeB, fusedDimValue)) {
+        DoBatchFusion(matmulInfo, fusedDimValue);
+    }
 }
 
 void GetInputs(WeightQuantBatchMatmulInfo& matmulInfo, const gert::TilingContext* context)
@@ -212,6 +232,31 @@ void WeightQuantBatchMatmulV2Tiling::ConfigureReuseScenarios() {
         matmulInfoPtr_->bFormat = ge::FORMAT_FRACTAL_NZ;
         OP_LOGI(opName_, "The conversion of weight format from fractal_nz_c0_2 to fractal_nz is completed.");
     }
+}
+
+bool CheckFusionBatchA(const WeightQuantBatchMatmulInfo& matmulInfo, const gert::Shape &x1Shape,
+                       const gert::Shape &x2Shape, const uint64_t fusedDimValue)
+{
+    auto x1ShapeLen = x1Shape.GetDimNum();
+    auto x2ShapeLen = x2Shape.GetDimNum();
+    if (matmulInfo.quantType == QuantType::PER_TOKEN) { // pertoken dim equals to original m dim, cannot fuse
+        return false;
+    }
+    if (matmulInfo.biasWithBatch) { // bias dim greater than 1, cannot fuse
+        return false;
+    }
+    if (static_cast<int64_t>(fusedDimValue) > static_cast<int64_t>(MAX_INT32)) { // exceed axis limit, cannot fuse
+        return false;
+    }
+    // only fusion when x2 shape length is 2
+    if (x2ShapeLen == MM_SHAPE_LEN_ND && matmulInfo.transA == false && x1ShapeLen > MM_SHAPE_LEN_ND) {
+        // mx量化模式不能batch合轴
+        if (matmulInfo.antiQuantType == QuantType::MX) {
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()

@@ -89,9 +89,10 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckDtype()
     if (biasDesc != nullptr) {
         inputParams_.biasDtype = biasDesc->GetDataType();
         OP_TILING_CHECK(inputParams_.biasDtype != ge::DT_FLOAT16 && inputParams_.biasDtype != ge::DT_INT32,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input bias dtype must be FLOAT16/INT32, but is [%s]",
-                                                    ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
-                    return false);
+                        VECTOR_INNER_ERR_REPORT_TILIING(
+                            inputParams_.opName,"Input bias dtype must be FLOAT16/INT32, but is [%s]",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+                        return false);
     }
     return true;
 }
@@ -176,7 +177,7 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckShape()
     // check batch
     OP_TILING_CHECK(!CheckBatchInfo(xShape->GetOriginShape(), weightShape->GetOriginShape()),
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                    "Batch dimension can not be broadcasted."),
+                                                    "Batch dimension should be equal when their value not 1."),
                     return false);
     // check antiquant scale, antiquant offset
     OP_TILING_CHECK(!CheckAntiQuantShape(antiQuantScaleShape, antiQuantOffsetShape),
@@ -264,7 +265,8 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::Stora
     return true;
 }
 
-bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckBatchInfo(const gert::Shape &xShape, const gert::Shape &weightShape)
+bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckBatchInfo(const gert::Shape &xShape,
+                                                              const gert::Shape &weightShape) const
 {
     auto x1DimNum = xShape.GetDimNum();
     auto x2DimNum = weightShape.GetDimNum();
