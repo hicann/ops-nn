@@ -34,6 +34,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeGluV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeGluV3”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeGluV3GetWorkspaceSize(
   const aclTensor   *self,
@@ -163,13 +164,14 @@ aclnnStatus aclnnGeGluV3(
   </tbody>
   </table>
   
-   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
-  
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -206,7 +208,6 @@ aclnnStatus aclnnGeGluV3(
       <td>out、outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnGeGluV3
 
@@ -245,7 +246,6 @@ aclnnStatus aclnnGeGluV3(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -418,4 +418,3 @@ int main()
     return 0;
 }
 ```
-

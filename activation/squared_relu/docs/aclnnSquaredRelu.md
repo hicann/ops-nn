@@ -1,11 +1,17 @@
 # aclnnSquaredRelu
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/squared_relu)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -119,7 +125,9 @@ aclnnStatus aclnnSquaredRelu(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -284,85 +292,85 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
-  // 根据自己的实际device填写deviceId
-  int32_t deviceId = 0;
-  aclrtStream stream;
-  auto ret = Init(deviceId, &stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+// 1. （固定写法）device/stream初始化，参考acl API手册
+// 根据自己的实际device填写deviceId
+int32_t deviceId = 0;
+aclrtStream stream;
+auto ret = Init(deviceId, &stream);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {2, 4};
+// 2. 构造输入与输出，需要根据API的接口自定义构造
+std::vector<int64_t> inputShape = {2, 4};
 
-  std::vector<float> inputHostData = {0, 1.0, 2, -33.0, 4, 5, 6, 7};
+std::vector<float> inputHostData = {0, 1.0, 2, -33.0, 4, 5, 6, 7};
 
-  void* inputDeviceAddr = nullptr;
+void* inputDeviceAddr = nullptr;
 
-  aclTensor* input = nullptr;
-  // 创建input aclTensor
-  ret = CreateAclTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+aclTensor* input = nullptr;
+// 创建input aclTensor
+ret = CreateAclTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
+CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  //   char* approximate = "tanh";
+//   char* approximate = "tanh";
 
-  std::vector<int64_t> outShape = {2, 4};
-  std::vector<float> outHostData(2 * 4, 1);
-  aclTensor* out = nullptr;
-  void* outDeviceAddr = nullptr;
-  // 创建out aclTensor
-  ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+std::vector<int64_t> outShape = {2, 4};
+std::vector<float> outHostData(2 * 4, 1);
+aclTensor* out = nullptr;
+void* outDeviceAddr = nullptr;
+// 创建out aclTensor
+ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
-  uint64_t workspaceSize = 16 * 1024 * 1024;
-  aclOpExecutor* executor;
+// 3. 调用CANN算子库API，需要修改为具体的Api名称
+uint64_t workspaceSize = 16 * 1024 * 1024;
+aclOpExecutor* executor;
 
-  PrintInResult(inputShape, &inputDeviceAddr);
+PrintInResult(inputShape, &inputDeviceAddr);
 
-  // 调用aclnnSquaredRelu第一段接口
-  ret = aclnnSquaredReluGetWorkspaceSize(
-  input,
-  out,
-  &workspaceSize,
-  &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSquaredReluGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+// 调用aclnnSquaredRelu第一段接口
+ret = aclnnSquaredReluGetWorkspaceSize(
+input,
+out,
+&workspaceSize,
+&executor);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSquaredReluGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) {
-  ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
+// 根据第一段接口计算出的workspaceSize申请device内存
+void* workspaceAddr = nullptr;
+if (workspaceSize > 0) {
+ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+}
 
-  // 调用aclnnSquaredRelu第二段接口
-  ret = aclnnSquaredRelu(
-  workspaceAddr,
-  workspaceSize,
-  executor,
-  stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSquaredRelu failed. ERROR: %d\n", ret); return ret);
+// 调用aclnnSquaredRelu第二段接口
+ret = aclnnSquaredRelu(
+workspaceAddr,
+workspaceSize,
+executor,
+stream);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSquaredRelu failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
-  ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+// 4. （固定写法）同步等待任务执行结束
+ret = aclrtSynchronizeStream(stream);
+CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
-  PrintOutResult(outShape, &outDeviceAddr);
+// 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
+PrintOutResult(outShape, &outDeviceAddr);
 
-  // 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
-  aclDestroyTensor(input);
-  aclDestroyTensor(out);
+// 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
+aclDestroyTensor(input);
+aclDestroyTensor(out);
 
-  // 7.释放device资源，需要根据具体API的接口定义修改
-  aclrtFree(inputDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
-  aclrtFree(workspaceAddr);
-  }
-  aclrtDestroyStream(stream);
-  aclrtResetDevice(deviceId);
-  aclFinalize();
+// 7.释放device资源，需要根据具体API的接口定义修改
+aclrtFree(inputDeviceAddr);
+aclrtFree(outDeviceAddr);
+if (workspaceSize > 0) {
+aclrtFree(workspaceAddr);
+}
+aclrtDestroyStream(stream);
+aclrtResetDevice(deviceId);
+aclFinalize();
 
-  return 0;
+return 0;
 }
 ```

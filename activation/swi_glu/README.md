@@ -12,8 +12,11 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
-- 接口功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。
+
+- 接口功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。  
+
 - 计算公式：  
+
   <p style="text-align: center">
   out<sub>i</sub> = SwiGlu(x<sub>i</sub>)=Swish(A<sub>i</sub>)*B<sub>i</sub>
   </p>
@@ -59,7 +62,6 @@
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    
   </tbody></table>
 
 - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
@@ -74,5 +76,3 @@
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_swi_glu](./examples/test_aclnn_swi_glu.cpp) | 通过[aclnnSwiGlu](./docs/aclnnSwiGlu.md)接口方式调用SwiGlu算子。    |
 | 图模式调用 | -   | 通过[算子IR](./op_graph/swi_glu_proto.h)构图方式调用SwiGlu算子。 |
-
-

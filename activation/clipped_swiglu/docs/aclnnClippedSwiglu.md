@@ -1,23 +1,29 @@
 # aclnnClippedSwiglu
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/clipped_swiglu)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |    ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |    ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
-- 算子功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
-- 计算公式：
+- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
+
+- 计算公式：  
 
   对给定的输入张量 x ，其维度为[a,b,c,d,e,f,g…]，aclnnClippedSwiglu对其进行以下计算：
 
   1. 将 x 基于输入参数 dim 进行合轴，合轴后维度为[pre,cut,after]。其中 cut 轴为合轴之后需要切分为两个张量的轴，切分方式分为前后切分或者奇偶切分；pre，after 可以等于1。例如当 dim 为3，合轴后 x 的维度为[a * b * c, d, e * f * g * …]。此外，由于after轴的元素为连续存放，且计算操作为逐元素的，因此将cut轴与after轴合并，得到x的维度为[pre,cut]。
 
   2. 根据输入参数 group_index, 对 x 的pre轴进行过滤处理，公式如下：
-
      $$
      sum = \text{Sum}(group\_index)
      $$
@@ -25,13 +31,11 @@
      $$
      x = x[ : sum, : ]
      $$
-
      其中sum表示group_index的所有元素之和。当不输入 group_index 时，跳过该步骤。
 
   3. 根据输入参数 interleaved，对 x 进行切分，公式如下：
 
      当 interleaved 为 true 时，表示奇偶切分：
-
      $$
      A = x[ : , : : 2]
      $$
@@ -41,7 +45,6 @@
      $$
 
      当 interleaved 为 false 时，表示前后切分：
-
      $$
      h = x.shape[1] // 2
      $$
@@ -55,7 +58,6 @@
      $$
 
   4. 根据输入参数 alpha、limit、bias 进行变体SwiGlu计算，公式如下：
-
      $$
      A = A.clamp(min=None, max=limit)
      $$
@@ -76,27 +78,31 @@
 
 ## 函数原型
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnClippedSwigluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnClippedSwiglu”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnClippedSwigluGetWorkspaceSize(
-    const aclTensor *x,
-    const aclTensor *groupIndexOptional,
-    int64_t          dim,
-    double           alpha,
-    double           limit,
-    double           bias,
-    bool             interleaved,
-    const aclTensor *out,
-    uint64_t        *workspaceSize,
+    const aclTensor *x, 
+    const aclTensor *groupIndexOptional, 
+    int64_t          dim, 
+    double           alpha, 
+    double           limit, 
+    double           bias, 
+    bool             interleaved, 
+    const aclTensor *out, 
+    uint64_t        *workspaceSize, 
     aclOpExecutor   **executor)
 ```
+
 ```Cpp
 aclnnStatus aclnnClippedSwiglu(
-    void          *workspace,
-    uint64_t       workspaceSize,
-    aclOpExecutor *executor,
+    void          *workspace, 
+    uint64_t       workspaceSize, 
+    aclOpExecutor *executor, 
     aclrtStream    stream)
 ```
+
 ## aclnnClippedSwigluGetWorkspaceSize
+
 - **参数说明**
   <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
   <col style="width: 170px">
@@ -223,7 +229,6 @@ aclnnStatus aclnnClippedSwiglu(
   </tbody>
   </table>
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -263,6 +268,7 @@ aclnnStatus aclnnClippedSwiglu(
   </table>
 
 ## aclnnClippedSwiglu
+
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
@@ -299,7 +305,6 @@ aclnnStatus aclnnClippedSwiglu(
   </tbody>
   </table>
 
-
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -308,8 +313,8 @@ aclnnStatus aclnnClippedSwiglu(
 
 确定性计算： aclnnClippedSwiglu默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
 
-
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp

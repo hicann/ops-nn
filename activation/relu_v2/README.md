@@ -14,12 +14,15 @@
 ## 功能说明
 
 - 算子功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
+
 - 计算公式：
+
 $$
 relu_v2(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}
 $$
 
 ## 参数说明
+
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">

@@ -65,7 +65,6 @@ aclnnStatus aclnnGeluBackwardV2(
   const aclrtStream stream)
 ```
 
-
 ## aclnnGeluBackwardV2GetWorkspaceSize
 
 - **参数说明：**
@@ -155,8 +154,7 @@ aclnnStatus aclnnGeluBackwardV2(
   </tbody>
   </table>
   
-   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
-
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - **返回值：**
 
@@ -199,7 +197,6 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody></table>
 
-
 ## aclnnGeluBackwardV2
 
 - **参数说明：**
@@ -239,7 +236,6 @@ aclnnStatus aclnnGeluBackwardV2(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -250,7 +246,9 @@ aclnnStatus aclnnGeluBackwardV2(
   - aclnnGeluBackwardV2默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

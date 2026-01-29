@@ -11,27 +11,36 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行GELU激活后，对激活的结果进行量化，输出量化后的结果。
 
 - 计算公式：
+
 1. 先计算GELU计算得到geluOut
+
   - approximate = tanh
+
   $$
   geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
   $$
+
   - approximate = none
+
   $$
    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
   $$
+  
 2. 再对geluOut进行量化操作
+
   - quant_mode = static
+
   $$
   y = round\_to\_dst\_type(geluOut * inputScaleOptional + inputOffsetOptional, round\_mode)
   $$
+  
   - quant_mode = dynamic
+
     $$
     geluOut = geluOut * inputScaleOptional
     $$
@@ -144,4 +153,3 @@ inputScaleOptional的数据类型与self的类型一致，或者在类型不一�
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_gelu_quant](tests/ut/op_host/test_aclnn_gelu_quant.cpp) | 通过[aclnnGeluQuant](./docs/aclnnGeluQuant.md)接口方式调用GeluQuant算子。    |
 | 图模式调用 | [test_geir_gelu_quant](./examples/test_geir_gelu_quant.cpp)   | 通过[算子IR](./op_graph/gelu_quant_proto.h)构图方式调用GeluQuant算子。 |
-

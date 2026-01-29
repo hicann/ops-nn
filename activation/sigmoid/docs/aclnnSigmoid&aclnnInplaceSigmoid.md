@@ -25,6 +25,7 @@ out = {\frac{1} {1+{e}^{-input}}}
 $$
 
 ## 函数原型
+
 - aclnnSigmoid和aclnnInplaceSigmoid实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSigmoid：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSigmoid：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
@@ -135,7 +136,9 @@ aclnnStatus aclnnInplaceSigmoid(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -163,7 +166,6 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>self和out的shape不匹配。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnSigmoid
 
@@ -203,7 +205,6 @@ aclnnStatus aclnnInplaceSigmoid(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -273,7 +274,9 @@ aclnnStatus aclnnInplaceSigmoid(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -298,7 +301,6 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>selfRef的数据类型不在支持的范围之内。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnInplaceSigmoid
 
@@ -339,7 +341,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -350,7 +351,9 @@ aclnnStatus aclnnInplaceSigmoid(
   - aclnnSigmoid&aclnnInplaceSigmoid默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -412,7 +415,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1. （固定写法）device/stream初始化，参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -451,21 +454,6 @@ int main() {
   ret = aclnnSigmoid(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSigmoid failed. ERROR: %d\n", ret); return ret);
 
-  uint64_t inplaceWorkspaceSize = 0;
-  aclOpExecutor* inplaceExecutor;
-  // 调用aclnnInplaceSigmoid第一段接口
-  ret = aclnnInplaceSigmoidGetWorkspaceSize(self, &inplaceWorkspaceSize, &inplaceExecutor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceSigmoidGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  void* inplaceWorkspaceAddr = nullptr;
-  if (inplaceWorkspaceSize > 0) {
-    ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
-  }
-  // 调用aclnnInplaceSigmoid第二段接口
-  ret = aclnnInplaceSigmoid(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceSigmoid failed. ERROR: %d\n", ret); return ret);
-
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -478,14 +466,6 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
-  }
-
-  auto inplaceSize = GetShapeSize(selfShape);
-  std::vector<float> inplaceResultData(inplaceSize, 0);
-  ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]),             selfDeviceAddr, inplaceSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < inplaceSize; i++) {
-    LOG_PRINT("inplaceResult[%ld] is: %f\n", i, inplaceResultData[i]);
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改

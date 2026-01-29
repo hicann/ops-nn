@@ -15,6 +15,7 @@
 
 - 算子功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
 - 计算公式：
+
 $$
 relu(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}
 $$
@@ -56,7 +57,7 @@ $$
 
 ## 约束说明
 
-- 无
+无
 
 ## 调用说明
 
@@ -64,3 +65,4 @@ $$
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_relu](./examples/test_aclnn_relu.cpp) | 通过[aclnnRelu](./docs/aclnnRelu.md)接口方式调用Relu算子。 |
 | aclnn调用 | [test_aclnn_inplace_relu](./examples/test_aclnn_inplace_relu.cpp) | 通过[aclnnInplaceRelu](./docs/aclnnInplaceRelu.md)接口方式调用Relu算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/relu_proto.h)构图方式调用Relu算子。 |

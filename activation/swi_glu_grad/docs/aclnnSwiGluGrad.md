@@ -14,9 +14,11 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
+
 - 接口功能：完成[aclnnSwiGlu](../../swi_glu/docs/aclnnSwiGlu.md)的反向计算，完成x的SwiGlu反向梯度计算。
 
-- 计算公式： 
+- 计算公式：
+
   <p style="text-align: center">
   out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A)*A)]*B
   </p>
@@ -26,6 +28,7 @@
   其中，A表示输入x根据指定dim维度一分为二后的前部分张量，B表示x均分后的后半部分张量。out<sub>A</sub>和out<sub>B</sub>合并为out。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwiGluGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwiGluGrad”接口执行计算。
 
 ```Cpp
@@ -46,8 +49,8 @@ aclnnStatus aclnnSwiGluGrad(
   aclrtStream      stream)
 ```
 
-
 ## aclnnSwiGluGradGetWorkspaceSize
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
@@ -137,11 +140,12 @@ aclnnStatus aclnnSwiGluGrad(
   
     - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
-  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -169,7 +173,6 @@ aclnnStatus aclnnSwiGluGrad(
       <td>dim不在取值范围内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSwiGluGrad 
 
@@ -209,7 +212,6 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

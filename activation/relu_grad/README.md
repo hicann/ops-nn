@@ -18,6 +18,7 @@
 - 算子功能：对应Relu操作的反向传播梯度。
 
 - 计算公式：
+
       $$
       gradInput = gradOutput *
       \begin{cases}
@@ -66,8 +67,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
-
 
 ## 调用说明
 

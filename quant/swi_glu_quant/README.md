@@ -4,16 +4,19 @@
 
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
+| <term>Atlas 推理系列产品</term>                             |    ×    |
+| <term>Atlas 训练系列产品</term>                              |    ×    |
 
 ## 功能说明
 
 - 算子功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。
 - 算子功能差异点说明：相比于aclnnSwiGluQuant接口，aclnnSwiGluQuantV2新增支持groupIndexOptional传入cumsum模式和count模式，通过groupListType控制不同的模式；新增支持非MoE（groupIndexOptional传空）的场景；新增支持int8或int4量化输出yOut，通过dstType控制不同的量化输出数据类型。
 - 算子支持范围：当前SwiGluQuant支持MoE场景（传入groupIndexOptional）和非MoE场景（groupIndexOptional传空），SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
-- MoE场景动态量化计算公式：
-
+- MoE场景动态量化计算公式：  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act[0\colon g[0],\colon] * smooth\_scales[0\colon g[0],\colon], i=0 \\
@@ -24,26 +27,20 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
-
      其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。int8量化时，$dstTypeScale = 127$（127是int8的最大值）；int4量化时，$dstTypeScale = 7$（7是int4的最大值）。
-
-- MoE场景静态量化计算公式：
-
+  
+- MoE场景静态量化计算公式：  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}^0 = Act(0\colon g[0],\colon) * smooth\_scales[0\colon g[0],\colon] + offsets[0\colon g[0],\colon], i=0 \\
     Y_{tmp}^i = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[g[i]\colon g[i+1], \colon] + offsets[g[i]\colon g[i+1], \colon], i \in (0, G) \cap \mathbb{Z}\\
   $$
-
-
   $$
     Y = Cast(Y_{tmp})
   $$
-
   其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
-- 非MoE场景（groupIndexOptional传空）动态量化计算公式：
-
+- 非MoE场景（groupIndexOptional传空）动态量化计算公式：  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp} = Act* smooth\_scales(0,\colon)\\
@@ -53,21 +50,16 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
-
      其中，A表示输入x的前半部分，B表示输入x的后半部分。int8量化时，$dstTypeScale = 127$（127是int8的最大值）；int4量化时，$dstTypeScale = 7$（7是int4的最大值）。
-
-- 非MoE场景（groupIndexOptional传空）静态量化计算公式：
-
+  
+- 非MoE场景（groupIndexOptional传空）静态量化计算公式：  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp} = Act * smooth\_scales(0,\colon) + offsets(0,\colon) \\
   $$
-
-
   $$
     Y = Cast(Y_{tmp})
   $$
-
   其中，A表示输入x的前半部分，B表示输入x的后半部分。
 
 ## 参数说明
@@ -158,9 +150,7 @@
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
-
   </tbody></table>
-
 
 ## 约束说明
 

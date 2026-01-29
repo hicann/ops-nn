@@ -16,8 +16,9 @@
 - 算子功能：
   输入fast_gelu的计算结果。
 - 计算公式：
+
  $$ FastGelu(x_i) = \frac {x_i} {1 + \exp(-1.702 * \left| x_i \right|)} * \exp(0851 * (x_i - \left| x_i \right|)) $$
- 
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
@@ -57,6 +58,7 @@
 无
 
 ## 调用说明
+
 | 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_fast_gelu](examples/test_aclnn_fast_gelu.cpp) | 通过[aclnnFastGelu](docs/aclnnFastGelu.md)接口方式调用fast_gelu算子。 |

@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-    - 当is_result是True时：
+  - 当is_result是True时：
 
       $$
       gradInput = gradOutput *
@@ -29,7 +29,7 @@
       \end{cases}
       $$
 
-    - 当is_result是False时：
+  - 当is_result是False时：
 
       $$
       gradInput = gradOutput *
@@ -38,7 +38,6 @@
       inputScale \ast \alpha \ast scale \ast exp(x \ast inputScale), \quad x \leq 0
       \end{cases}
       $$
-
 
 ## 参数说明
 
@@ -108,8 +107,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
-
 
 ## 调用说明
 

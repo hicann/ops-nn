@@ -181,10 +181,8 @@ aclnnStatus aclnnEluBackward(
       <td>-</td>
     </tr>
   </tbody>
-  </table>
-  
+  </table>  
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
-
 
 - **返回值：**
 
@@ -233,7 +231,6 @@ aclnnStatus aclnnEluBackward(
     </tr>
   </tbody></table>
 
-
 ## aclnnEluBackward
 
 - **参数说明：**
@@ -272,7 +269,6 @@ aclnnStatus aclnnEluBackward(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

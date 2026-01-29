@@ -1,11 +1,17 @@
 # aclnnCelu&aclnnInplaceCelu
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/celu_v2)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -59,10 +65,11 @@ aclnnStatus aclnnInplaceCelu(
   aclrtStream     stream)
 ```
 
+
 ## aclnnCeluGetWorkspaceSize
 
 - **参数说明：**
-
+  
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
   <col style="width: 171px">
   <col style="width: 115px">
@@ -137,7 +144,9 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
-
+  
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -182,6 +191,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody></table>
 
+
 ## aclnnCelu
 
 - **参数说明：**
@@ -220,6 +230,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
+
 
 - **返回值：**
 
@@ -293,6 +304,8 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
 
@@ -332,6 +345,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody></table>
 
+
 ## aclnnInplaceCelu
 
 - **参数说明：**
@@ -370,7 +384,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -605,8 +619,8 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);
-
+  CHECK_RET(alpha != nullptr, return ret);    
+    
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
@@ -637,7 +651,7 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-
+    
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(selfRef);
   aclDestroyScalar(alpha);

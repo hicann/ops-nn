@@ -1,14 +1,20 @@
 # aclnnDequantSwigluQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dequant_swiglu_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
+
 - 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。  
 - 计算公式：  
 
@@ -59,11 +65,11 @@ aclnnStatus aclnnDequantSwigluQuant(
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1480px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 201px">
   <col style="width: 115px">
   <col style="width: 200px">
-  <col style="width: 300px">
+  <col style="width: 370px">
   <col style="width: 177px">
   <col style="width: 104px">
   <col style="width: 238px">
@@ -95,16 +101,16 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>weightScaleOptional</td>
       <td>输入</td>
       <td>weight的反量化scale，公式中的weightScaleOptional。</td>
-      <td>-</td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape表示为[H]，且取值H和x最后一维保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
-      <td>-</td>
+      <td>1或2</td>
       <td>√</td>
     </tr>
       <td>activationScaleOptional</td>
       <td>输入</td>
       <td>激活函数的反量化scale，公式中的activationScaleOptional。</td>
-      <td>-</td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape为[N..., 1]，最后一维为1，其余和x保持一致。</li><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -124,17 +130,17 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>quantScaleOptional</td>
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
-      <td>-</td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
-      <td>-</td>
+      <td>1或2</td>
       <td>√</td>
     </tr>
        <tr>
       <td>quantOffsetOptional</td>
       <td>输入</td>
       <td>量化的offset，公式中的quantOffsetOptional。</td>
-      <td>-</td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。</li><li><term>Ascend 950PR/Ascend 950DT</term>：暂时不支持此参数。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -144,7 +150,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>groupIndexOptional</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td>-</td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持INT64。shape为[groupNum]，groupNum大于等于1。可选参数，支持传空指针。</li><li>可选参数，支持传空指针。</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -164,7 +170,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>quantModeOptional</td>
       <td>输入</td>
       <td>表示使用动态量化还是静态量化。</td>
-      <td>支持“dynamic”和“static"。</td>
+      <td><ul><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持“dynamic”和“static"。</li><li><term>Ascend 950PR/Ascend 950DT</term>：仅支持“dynamic”，支持传入空指针，传入空指针时，则默认使用“static”。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -174,7 +180,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>yOut</td>
       <td>输出</td>
       <td>-</td>
-      <td>-</td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N...,H/2]，yOut的尾轴需要小于5120。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>-</td>
@@ -184,7 +190,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>scaleOut</td>
       <td>输出</td>
       <td>-</td>
-      <td>-</td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape不超过7维，不小于1维，shape为[N,...]，shape与yOut去除尾轴后的shape一致。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -213,38 +219,24 @@ aclnnStatus aclnnDequantSwigluQuant(
   </tbody>
   </table>
 
-    - weightScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，shape支持1维，shape表示为[H]，且取值H和x最后一维保持一致。可选参数，支持传空指针。
-    - activationScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，shape为[N..., 1]，最后一维为1，其余和x保持一致。可选参数，支持传空指针。
-    - quantScaleOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - quantOffsetOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]：quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - groupIndexOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持INT32、INT64，shape支持1维Tensor。可选参数，支持传空指针。
-    - quantModeOptional参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持“dynamic”和“static"。
-    - yOut参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持INT8。
-    - scaleOut参数：
-      - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT。
 - **返回值：**
 
-aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-第一段接口会完成入参校验，出现以下场景时报错：
-<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
-<col style="width: 316px">
-<col style="width: 111px">
-<col style="width: 723px">
-</colgroup>
-<thead>
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  第一段接口会完成入参校验，出现以下场景时报错：
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 316px">
+  <col style="width: 111px">
+  <col style="width: 723px">
+  </colgroup>
+  <thead>
   <tr>
     <th>返回码</th>
     <th>错误码</th>
     <th>描述</th>
   </tr></thead>
-<tbody>
+  <tbody>
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
@@ -269,16 +261,17 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>561002</td>
     <td>输入张量的内存大小超过上限。</td>
   </tr>
-</tbody>
-</table>
+  </tbody>
+  </table>
 
 ## aclnnDequantSwigluQuant
 
 - **参数说明：**
-<table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
-<col style="width: 167px">
-<col style="width: 123px">
-<col style="width: 860px">
+
+  <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
+  <col style="width: 167px">
+  <col style="width: 123px">
+  <col style="width: 860px">
   </colgroup>
   <thead>
     <tr>
@@ -322,6 +315,14 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+- <term>昇腾950 AI处理器</term>：
+  - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
+  - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
+  - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
+  - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
+  - 输出yOut的尾轴不超过5120.
+
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 + （activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 
 ## 调用示例
@@ -355,7 +356,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，资源初始化
+  // (Fixed writing) Initialize AscendCL.
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -369,36 +370,36 @@ template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                     aclDataType dataType, aclTensor** tensor) {
   auto size = GetShapeSize(shape) * sizeof(T);
-  // 调用aclrtMalloc申请device侧内存
+  // Call aclrtMalloc to allocate memory on the device.
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-  // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
+  // Call aclrtMemcpy to copy the data on the host to the memory on the device.
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // 计算连续tensor的strides
+  // Compute the strides of the contiguous tensor.
   std::vector<int64_t> strides(shape.size(), 1);
   for (int64_t i = shape.size() - 2; i >= 0; i--) {
     strides[i] = shape[i + 1] * strides[i + 1];
   }
 
-  // 调用aclCreateTensor接口创建aclTensor
+  // Call aclCreateTensor to create an aclTensor.
   *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
-  // 根据自己的实际device填写deviceId
+  // 1. (Fixed writing) Initialize the device and stream. For details, see the list of external AscendCL APIs.
+  // Set the device ID in use.
   int32_t deviceId = 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
+  // 2. Construct the input and output based on the API.
   std::vector<int64_t> xShape = {2, 32};
-  std::vector<int64_t> scaleShape = {16};
+  std::vector<int64_t> scaleShape = {1};
   std::vector<int64_t> offsetShape = {1};
   std::vector<int64_t> outShape = {2, 16};
   std::vector<int64_t> scaleOutShape = {2};
@@ -419,43 +420,43 @@ int main() {
   std::vector<float> offsetHostData = {1};
   std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   std::vector<float> scaleOutHostData = {0, 0};
-  
-  // 创建x aclTensor
+
+  // Create an x aclTensor.
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-   // 创建scale aclTensor
+   // Create a scale aclTensor.
   ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-   // 创建offset aclTensor
+   // Create an offset aclTensor.
   ret = CreateAclTensor(offsetHostData, offsetShape, &offsetDeviceAddr, aclDataType::ACL_FLOAT, &offset);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建out aclTensor
+  // Create an out aclTensor.
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT8, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建scaleOut aclTensor
+  // Create scaleOut aclTensor.
   ret = CreateAclTensor(scaleOutHostData, scaleOutShape, &scaleOutDeviceAddr, aclDataType::ACL_FLOAT, &scaleOut);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
+  // 3. Call the CANN operator library API, which needs to be replaced with the actual API.
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // 调用aclnnDequantSwigluQuant第一段接口
-  ret = aclnnDequantSwigluQuantGetWorkspaceSize(x, nullptr, nullptr, nullptr, scale, nullptr, nullptr, false, "dynamic", out, scaleOut, &workspaceSize, &executor);
+  // Call the first-phase API of aclnnDequantSwigluQuant.
+  ret = aclnnDequantSwigluQuantGetWorkspaceSize(x, nullptr, nullptr, nullptr, scale, offset, nullptr, false, "static", out, scaleOut, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDequantSwigluQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
+  // Allocate device memory based on the computed workspaceSize.
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnDequantSwigluQuant第二段接口
+  // Call the second-phase API of aclnnDequantSwigluQuant.
   ret = aclnnDequantSwigluQuant(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDequantSwigluQuant failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4. (Fixed writing) Wait until the task execution is complete.
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+  // 5. Obtain the output value and copy the result from the device memory to the host. Modify the configuration based on the API definition.
   auto size = GetShapeSize(outShape);
   std::vector<int8_t> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
@@ -463,13 +464,13 @@ int main() {
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
   }
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+  // 6. Release aclTensor and aclScalar. Modify the configuration based on the API definition.
   aclDestroyTensor(x);
   aclDestroyTensor(scale);
   aclDestroyTensor(offset);
   aclDestroyTensor(out);
   aclDestroyTensor(scaleOut);
-  // 7. 释放device资源，需要根据具体API的接口定义修改
+  // 7. Release device resources. Modify the configuration based on the API definition.
   aclrtFree(xDeviceAddr);
   aclrtFree(scaleDeviceAddr);
   aclrtFree(offsetDeviceAddr);

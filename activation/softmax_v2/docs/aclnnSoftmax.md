@@ -129,7 +129,9 @@ aclnnStatus aclnnSoftmax(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -160,7 +162,6 @@ aclnnStatus aclnnSoftmax(
       <td>self的数据类型不在支持的范围内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSoftmax
 
@@ -215,6 +216,7 @@ aclnnStatus aclnnSoftmax(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 ```Cpp
+
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -345,4 +347,3 @@ int main() {
   return 0;
 }
 ```
-

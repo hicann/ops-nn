@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品 </term>    |     √    |
 | <term>Atlas 训练系列产品</term>    |     √    |
 
-
 ## 功能说明
 
 - 算子功能：高斯误差线性单元激活函数。
@@ -21,8 +20,6 @@
   $$
   out=GELU(self)=self × Φ(self)=0.5 * self * (1 + tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
   $$
-
-
 
 ## 参数说明
 
@@ -70,8 +67,7 @@
 
   </tbody>
   </table>
-
-  - <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
+ - <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 ## 约束说明
 

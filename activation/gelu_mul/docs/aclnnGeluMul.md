@@ -1,11 +1,17 @@
 # aclnnGeluMul
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/gelu_mul)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -14,35 +20,28 @@
   将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Gelu计算，将计算结果与x2相乘。
 
 - 计算公式：
-
+  
   给定输入张量 `input`，最后一维的长度为 `2d`，函数 `GeluMul` 进行以下计算：
 
   1. 将 `input` 分割为两部分：
-
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
 
   2. 对x1应用GELU激活函数，"tanh"模式公式如下：
-
      $$
      \text{GELU}(x) = 0.5 \cdot x \cdot \left( 1 + \tanh\left( \sqrt{\frac{2}{\pi}} \cdot \left( x + 0.044715 x^3 \right) \right) \right)
      $$
-
      “none”对应的erf模式公式如下：
-
      $$
      \text{GELU}(x) = 0.5 \cdot x \left( 1 + \text{erf}\left( \frac{x}{\sqrt{2}} \right) \right)
      $$
-
      因此，计算：
-
      $$
      x_1 = \text{GELU}(x_1)
      $$
 
   3. 最终输出是x1和x2的逐元素乘积：
-
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -50,6 +49,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeluMulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnGeluMul”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeluMulGetWorkspaceSize(
   const aclTensor *input,
@@ -355,6 +355,7 @@ int main() {
 
   // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
   PrintOutResult(outShape, &outDeviceAddr);
+
 
   // 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensor(input);

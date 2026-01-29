@@ -94,3 +94,4 @@
 | 调用方式   | 样例代码           | 说明                                                                         |
 | ---------------- | --------------------------- |----------------------------------------------------------------------------|
 | aclnn接口  | [test_aclnn_sigmoid_grad.cpp](examples/test_aclnn_sigmoid_grad.cpp) | 通过[aclnnSigmoidBackward](docs/aclnnSigmoidBackward.md)接口方式调用SigmoidGrad算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/sigmoid_grad_proto.h)构图方式调用SigmoidGrad算子。 |

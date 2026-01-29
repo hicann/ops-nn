@@ -1,4 +1,4 @@
-# Hardtanh_grad
+# HardtanhGrad
 
 ##  产品支持情况
 
@@ -94,4 +94,5 @@ result、grad和out的shape和数据类型需要一致。
 
 | 调用方式 | 调用样例 | 说明 |
 | ---- |---- | ---- |
-| aclnn调用 | [test_aclnn_hardtanh_grad](examples/test_aclnn_hardtanh_grad.cpp) | 通过[aclnnHardtanhBackWard](docs/aclnnHardtanhBackward.md)方式调用hardtanh_grad算子。|
+| aclnn调用 | [test_aclnn_hardtanh_grad](examples/test_aclnn_hardtanh_grad.cpp) | 通过[aclnnHardtanhBackWard](docs/aclnnHardtanhBackward.md)方式调用HardtanhGrad算子。|
+| 图模式 | - | 通过[算子IR](op_graph/hardtanh_grad_proto.h)构图方式调用HardtanhGrad算子。 |

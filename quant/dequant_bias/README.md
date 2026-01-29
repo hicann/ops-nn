@@ -4,8 +4,12 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -15,19 +19,15 @@
   $$
   y = A \times \text{weight\_scale} \times \text{activate\_scale}
   $$
-
-
   $$
     y = (A + \text{bias}) \times \text{weight\_scale} \times \text{activate\_scale}
 
   $$
-
-
   $$
     y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 
   $$
-
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
@@ -100,4 +100,3 @@
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_dequant_bias](./examples/test_aclnn_dequant_bias.cpp) | 通过[aclnnDequantBias](./docs/aclnnDequantBias.md)接口方式调用DequantBias算子。    |
 | 图模式调用 | -   | 通过[算子IR](./op_graph/dequant_bias_proto.h)构图方式调用DequantBias算子。 |
-

@@ -130,11 +130,12 @@ aclnnStatus aclnnSigmoidBackward(
   
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -162,7 +163,6 @@ aclnnStatus aclnnSigmoidBackward(
       <td>gradOutput、output或gradInput shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSigmoidBackward
 
@@ -202,7 +202,6 @@ aclnnStatus aclnnSigmoidBackward(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

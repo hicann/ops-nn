@@ -44,7 +44,6 @@ aclnnStatus aclnnGeluV2(
   const aclrtStream stream)
 ```
 
-
 ## aclnnGeluV2GetWorkspaceSize
 
 - **参数说明：**
@@ -122,10 +121,8 @@ aclnnStatus aclnnGeluV2(
       <td>-</td>
     </tr>
   </tbody>
-  </table>
-  
+  </table>  
    - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16。
-
 
 - **返回值：**
 
@@ -161,7 +158,6 @@ aclnnStatus aclnnGeluV2(
       <td>x和y的shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnGeluV2
 
@@ -201,7 +197,6 @@ aclnnStatus aclnnGeluV2(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

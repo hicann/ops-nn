@@ -1,18 +1,24 @@
 # aclnnSwiGluQuant
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/swi_glu_quant)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
 - 接口功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算
 - 算子支持范围：当前SwiGluQuant**仅支持MoE场景**，SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
-- 动态量化计算公式：
-
+- 动态量化计算公式：  
+  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon], i=0 \\
@@ -23,26 +29,24 @@
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
-
      其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
 - 静态量化计算公式：
-
+  
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon] + offsets[0,\colon], i=0 \\
     Y_{tmp}[g[i]\colon g[i+1], \colon] = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[i+1, \colon] + offsets[i+1, \colon], i \in (0, G) \cap \mathbb{Z}\\
   $$
-
   $$
     Y = Cast(Y_{tmp})
   $$
-
   其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwiGluQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwiGluQuant”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSwiGluQuantGetWorkspaceSize(
   const aclTensor *x,
@@ -193,11 +197,13 @@ aclnnStatus aclnnSwiGluQuant(
     </tr>
   </tbody>
   </table>
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -230,6 +236,7 @@ aclnnStatus aclnnSwiGluQuant(
   </tbody></table>
 
 ## aclnnSwiGluQuant
+
 - **参数说明：**
 
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>

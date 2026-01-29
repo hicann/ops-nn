@@ -12,9 +12,11 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
+
 - 接口功能：完成[aclnnSwiGlu](../swi_glu/docs/aclnnSwiGlu.md)的反向计算，完成x的SwiGlu反向梯度计算。
 
-- 计算公式： 
+- 计算公式：
+
   <p style="text-align: center">
   out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A)*A)]*B
   </p>
@@ -70,7 +72,7 @@
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    
+
   </tbody></table>
 
 - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
@@ -85,6 +87,3 @@
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_swi_glu_grad](./examples/test_aclnn_swi_glu_grad.cpp) | 通过[aclnnSwiGluGrad](./docs/aclnnSwiGluGrad.md)接口方式调用SwiGluGrad算子。    |
 | 图模式调用 | -   | 通过[算子IR](./op_graph/swi_glu_grad_proto.h)构图方式调用SwiGluGrad算子。 |
-
-
-

@@ -1,11 +1,17 @@
 # aclnnHardsigmoid&aclnnInplaceHardsigmoid
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/hard_sigmoid)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -128,11 +134,15 @@ aclnnStatus aclnnInplaceHardsigmoid(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -208,7 +218,7 @@ aclnnStatus aclnnInplaceHardsigmoid(
 
 - **返回值：**
 
-	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceHardsigmoidGetWorkspaceSize
 
@@ -268,11 +278,15 @@ aclnnStatus aclnnInplaceHardsigmoid(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -342,7 +356,7 @@ aclnnStatus aclnnInplaceHardsigmoid(
 
 - **返回值：**
 
-	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -354,6 +368,7 @@ aclnnStatus aclnnInplaceHardsigmoid(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 aclnnHardsigmoid
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -453,11 +468,11 @@ int main() {
   // 调用aclnnHardsigmoid第二段接口
   ret = aclnnHardsigmoid(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardsigmoid failed. ERROR: %d\n", ret); return ret);
-
+  
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
+  
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
@@ -471,7 +486,7 @@ int main() {
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
-
+ 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
@@ -486,6 +501,7 @@ int main() {
 ```
 
 aclnnInplaceHardsigmoid
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -578,11 +594,11 @@ int main() {
   // 调用aclnnInplaceHardsigmoid第二段接口
   ret = aclnnInplaceHardsigmoid(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceHardsigmoid failed. ERROR: %d\n", ret); return ret);
-
+  
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
+  
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(selfShape);
   std::vector<float> resultData(size, 0);
@@ -595,7 +611,7 @@ int main() {
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
-
+ 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   if (inplaceWorkspaceSize > 0) {

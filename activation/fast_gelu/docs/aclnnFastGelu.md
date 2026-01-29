@@ -112,7 +112,6 @@ aclnnStatus aclnnFastGelu(
   </tbody>
   </table>
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -150,7 +149,6 @@ aclnnStatus aclnnFastGelu(
       <td>self的shape维度大于8维。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnFastGelu
 
@@ -190,7 +188,6 @@ aclnnStatus aclnnFastGelu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

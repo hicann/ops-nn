@@ -22,7 +22,6 @@
   Softmax\left ( {{x}_{i}} \right )= {\frac {{e}^{{x}_{i}}} {\sum ^{n-1}_{j=0} {{e}^{{x}_{j}}}}}
   $$
 
-
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 820px"><colgroup>
@@ -70,7 +69,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
 
 ## 调用说明
 

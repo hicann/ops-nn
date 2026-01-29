@@ -19,7 +19,7 @@
 计算公式：
 
 $$
-output = 
+output =
 \begin{cases}
 gradOutput, &if\ self \gt 0 \\
 gradOutput*negativeSlope, &if\ self \le 0
@@ -150,11 +150,12 @@ aclnnStatus aclnnLeakyReluBackward(
   
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：gradOutput、self、和out的数据类型支持FLOAT、FLOAT16、DOUBLE。negativeSlope的数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT8、BOOL、INT16、UINT8。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -188,7 +189,6 @@ aclnnStatus aclnnLeakyReluBackward(
       <td>selfIsResult为true时，negativeSlope是负数。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnLeakyReluBackward
 
@@ -229,7 +229,6 @@ aclnnStatus aclnnLeakyReluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -242,6 +241,7 @@ aclnnStatus aclnnLeakyReluBackward(
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>

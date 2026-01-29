@@ -62,7 +62,7 @@ $$
 
 ## 约束说明
 
-- 无
+无
 
 ## 调用说明
 
@@ -70,3 +70,4 @@ $$
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_sigmoid](./examples/test_aclnn_sigmoid.cpp) | 通过[aclnnSigmoid](./docs/aclnnSigmoid.md)接口方式调用Sigmoid算子。 |
 | aclnn调用 | [test_aclnn_inplace_sigmoid](./examples/test_aclnn_inplace_sigmoid.cpp) | 通过[aclnnInplaceSigmoid](./docs/aclnnInplaceSigmoid.md)接口方式调用Sigmoid算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/sigmoid_proto.h)构图方式调用Sigmoid算子。 |

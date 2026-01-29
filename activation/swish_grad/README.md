@@ -28,7 +28,7 @@
 
   s^\prime(x)= \beta s(x)+\sigma(\beta x)(1-\beta s(x))= \sigma(\beta x)*(1+\beta x(1-\sigma(\beta x)))
 
-  $$    
+  $$
 
   $$
   gradInput = gradOutput * s^\prime(x)
@@ -96,6 +96,7 @@
   </tbody></table>
 
 ## 约束说明
+
 无
 
 ## 调用说明
@@ -103,3 +104,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口 | [test_aclnn_swish_grad](examples/test_aclnn_swish_grad.cpp) | 通过[aclnnSwishBackward](docs/aclnnSwishBackward.md)接口方式调用SwishGrad算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/swish_grad_proto.h)构图方式调用SwishGrad算子。 |

@@ -169,9 +169,7 @@ aclnnStatus aclnnInplaceElu(
     </tr>
   </tbody>
   </table>
-  
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE。
-
 
 - **返回值：**
 
@@ -214,7 +212,6 @@ aclnnStatus aclnnInplaceElu(
     </tr>
   </tbody></table>
 
-
 ## aclnnElu
 
 - **参数说明：**
@@ -253,7 +250,6 @@ aclnnStatus aclnnInplaceElu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -347,9 +343,7 @@ aclnnStatus aclnnInplaceElu(
     </tr>
   </tbody>
   </table>
-  
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE。
-
 
 - **返回值：**
 
@@ -385,7 +379,6 @@ aclnnStatus aclnnInplaceElu(
       <td>参数selfRef的维度大于8。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceElu
 

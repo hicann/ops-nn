@@ -64,7 +64,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
   aclrtStream     stream)
 ```
 
-
 ## aclnnLeakyReluGetWorkspaceSize
 
 - **参数说明：**
@@ -145,12 +144,13 @@ aclnnStatus aclnnInplaceLeakyRelu(
   </table>
   
    - <term>Atlas 训练系列产品</term>：FLOAT、FLOAT16、DOUBLE。
- 
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -184,7 +184,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>out的shape与self不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnLeakyRelu
 
@@ -224,7 +223,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -301,11 +299,12 @@ aclnnStatus aclnnInplaceLeakyRelu(
   
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -330,7 +329,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>selfRef的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceLeakyRelu
 
@@ -370,7 +368,6 @@ aclnnStatus aclnnInplaceLeakyRelu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -527,6 +524,7 @@ int main() {
 ```
 
 **aclnnInplaceLeakyRelu示例代码：**
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -654,4 +652,3 @@ int main() {
   return 0;
 }
 ```
-

@@ -14,6 +14,7 @@
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
+
 [FastGelu](../../fast_gelu/docs/aclnnFastGelu.md)的反向计算。
 FastGeluBackward定义如下：
 
@@ -121,7 +122,6 @@ aclnnStatus aclnnFastGeluBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -159,7 +159,6 @@ aclnnStatus aclnnFastGeluBackward(
       <td>self的shape维度大于8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnFastGeluBackward
 
@@ -199,7 +198,6 @@ aclnnStatus aclnnFastGeluBackward(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 

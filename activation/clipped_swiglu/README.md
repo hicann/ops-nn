@@ -4,20 +4,24 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |    ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |    ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
-- 算子功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
-- 计算流程：
+- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
+- 计算流程：  
+  
   对给定的输入张量 x ，其维度为[a,b,c,d,e,f,g…]，算子ClippedSwiglu对其进行以下计算：
 
   1. 将 x 基于输入参数 dim 进行合轴，合轴后维度为[pre,cut,after]。其中 cut 轴为合轴之后需要切分为两个张量的轴，切分方式分为前后切分或者奇偶切分；pre，after 可以等于1。例如当 dim 为3，合轴后 x 的维度为[a * b * c, d, e * f * g * …]。此外，由于after轴的元素为连续存放，且计算操作为逐元素的，因此将cut轴与after轴合并，得到x的维度为[pre,cut]。
 
   2. 根据输入参数 group_index, 对 x 的pre轴进行过滤处理，公式如下：
-
      $$
      sum = \text{Sum}(group\_index)
      $$
@@ -25,13 +29,11 @@
      $$
      x = x[ : sum, : ]
      $$
-
      其中sum表示group_index的所有元素之和。当不输入 group_index 时，跳过该步骤。
 
   3. 根据输入参数 interleaved，对 x 进行切分，公式如下：
 
      当 interleaved 为 true 时，表示奇偶切分：
-
      $$
      A = x[ : , : : 2]
      $$
@@ -41,7 +43,6 @@
      $$
 
      当 interleaved 为 false 时，表示前后切分：
-
      $$
      h = x.shape[1] // 2
      $$
@@ -55,7 +56,6 @@
      $$
 
   4. 根据输入参数 alpha、limit、bias 进行变体SwiGlu计算，公式如下：
-
      $$
      A = A.clamp(min=None, max=limit)
      $$
@@ -149,7 +149,6 @@
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
-
   </tbody></table>
 
 ## 约束说明
@@ -161,5 +160,3 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_clipped_swiglu](./examples/test_aclnn_clipped_swiglu.cpp) | 通过[aclnnClippedSwiglu](./docs/aclnnClippedSwiglu.md)接口方式调用ClippedSwiglu算子。    |
-
-

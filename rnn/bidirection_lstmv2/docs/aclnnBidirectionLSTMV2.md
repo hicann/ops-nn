@@ -74,7 +74,6 @@ aclnnStatus aclnnBidirectionLSTMV2(
   aclrtStream    stream)
 ```
 
-
 ## aclnnBidirectionLSTMV2GetWorkspaceSize
 
 - **参数说明：**
@@ -324,11 +323,12 @@ aclnnStatus aclnnBidirectionLSTMV2(
   </tbody>
   </table>
 
-
 - **返回值：**
 
 aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
 第一段接口会完成入参校验，出现以下场景时报错：
+
 <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
 <col style="width: 319px">
 <col style="width: 108px">
@@ -358,8 +358,6 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   </tr>
 </tbody>
 </table>
-
-
 
 ## aclnnBidirectionLSTMV2
 
@@ -400,7 +398,6 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -411,6 +408,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   - aclnnBidirectionLSTMV2默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp

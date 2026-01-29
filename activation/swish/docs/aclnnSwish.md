@@ -131,11 +131,12 @@ aclnnStatus aclnnSwish(
   
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -166,7 +167,6 @@ aclnnStatus aclnnSwish(
       <td>self和out的shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSwish
 
@@ -207,8 +207,6 @@ aclnnStatus aclnnSwish(
   </tbody>
   </table>
 
-  
-
 - **返回值：**
 
     aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -219,7 +217,9 @@ aclnnStatus aclnnSwish(
   - aclnnSwish默认确定性实现。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
 ```Cpp
 #include <iostream>
 #include <vector>
@@ -288,7 +288,7 @@ int main() {
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> outShape = {4, 2};
@@ -300,11 +300,11 @@ int main() {
   std::vector<float> selfHostData = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   float betaValue = 1.1f;
-  
+
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
   // 创建betaOptional aclScalar
   betaOptional = aclCreateScalar(&betaValue, aclDataType::ACL_FLOAT);
   CHECK_RET(betaOptional != nullptr, return ret);

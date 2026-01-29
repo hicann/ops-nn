@@ -24,15 +24,15 @@
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1000px">
-  	<colgroup>
-  		<col style="width: 150px">
-  		<col style="width: 150px">
-  		<col style="width: 300px">
-  		<col style="width: 250px">
-  		<col style="width: 150px">
-  	</colgroup>
-  	<thead>
-		<tr>
+<colgroup>
+<col style="width: 150px">
+<col style="width: 150px">
+<col style="width: 300px">
+<col style="width: 250px">
+<col style="width: 150px">
+</colgroup>
+<thead>
+	<tr>
 		<th>参数名</th>
 		<th>输入/输出</th>
 		<th>描述</th>
@@ -60,7 +60,7 @@
   
 ## 约束说明
 
-- 输入x和输出y的shape和数据类型需要一致
+输入x和输出y的shape和数据类型需要一致
 
 ## 调用说明
 

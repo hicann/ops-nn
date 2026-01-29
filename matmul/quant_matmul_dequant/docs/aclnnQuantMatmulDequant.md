@@ -10,7 +10,6 @@
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品 </term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Atlas 200/300/500 推理产品</term>       |     ×    |
 
 ## 功能说明
 
@@ -36,12 +35,12 @@
 
   4.矩阵乘+反量化
   - 4.1 若输入的$scale_{weight}$数据类型为FLOAT32, 则：
-    
+
     $$
       out = (x_{quantized}@weight_{quantized} + bias) * scale_{weight} * scale_{x}
     $$
   - 4.2 若输入的$scale_{weight}$数据类型为INT64, 则：
-    
+
     $$
       scale_{weight} = torch.tensor(np.frombuffer(scale_{weight}.numpy().astype(np.int32).tobytes(), dtype=np.float32)) \\
       out = (x_{quantized}@weight_{quantized} + bias) * scale_{weight}
@@ -80,7 +79,6 @@ aclnnStatus aclnnQuantMatmulDequant(
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
-
 
 ## aclnnQuantMatmulDequantGetWorkspaceSize
 
@@ -238,7 +236,6 @@ aclnnStatus aclnnQuantMatmulDequant(
       - 在transposeWeight为false情况下各个维度表示：（n1，k1，k0，n0），其中k0 = 16，n0 = 32，k1和x的k需要满足以下关系：ceilDiv（k，16）= k1。
       - 可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到FRACTAL_NZ格式的转换。
 
-
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -274,7 +271,6 @@ aclnnStatus aclnnQuantMatmulDequant(
     </tr>
   </tbody>
   </table>
-
 
 ## aclnnQuantMatmulDequant
 
@@ -314,7 +310,6 @@ aclnnStatus aclnnQuantMatmulDequant(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值**
 

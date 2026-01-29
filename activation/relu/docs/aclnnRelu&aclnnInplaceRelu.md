@@ -18,6 +18,7 @@
 
 - 接口功能：激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。
 - 计算公式：
+
 $$
 relu(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}
 $$
@@ -60,7 +61,6 @@ aclnnStatus aclnnInplaceRelu(
   aclOpExecutor    *executor,
   const aclrtStream stream)
 ```
-
 
 ## aclnnReluGetWorkspaceSize
 
@@ -133,11 +133,12 @@ aclnnStatus aclnnInplaceRelu(
   
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT8、INT32、INT64、UINT8。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -168,7 +169,6 @@ aclnnStatus aclnnInplaceRelu(
       <td>self和out的shape超过8维，或者两者shape不一致。</td>
     </tr>
    </tbody></table>
-
 
 ## aclnnRelu
 
@@ -209,11 +209,9 @@ aclnnStatus aclnnInplaceRelu(
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-
 
 ## aclnnInplaceReluGetWorkspaceSize
 
@@ -276,11 +274,12 @@ aclnnStatus aclnnInplaceRelu(
   
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT8、INT32、INT64、UINT8。
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -308,7 +307,6 @@ aclnnStatus aclnnInplaceRelu(
       <td>self的shape超过8维。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnInplaceRelu
 
@@ -348,7 +346,6 @@ aclnnStatus aclnnInplaceRelu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值**
 
@@ -456,22 +453,6 @@ int main() {
   ret = aclnnRelu(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRelu failed. ERROR: %d\n", ret); return ret);
 
-  // aclnnInplaceRelu接口调用示例
-  uint64_t inplaceWorkspaceSize = 0;
-  aclOpExecutor* inplaceExecutor;
-  // 调用aclnnInplaceRelu第一段接口
-  ret = aclnnInplaceReluGetWorkspaceSize(self, &inplaceWorkspaceSize, &inplaceExecutor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceReluGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  void* inplaceWorkspaceAddr = nullptr;
-  if (inplaceWorkspaceSize > 0) {
-    ret = aclrtMalloc(&inplaceWorkspaceAddr, inplaceWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
-  // 调用aclnnInplaceRelu第二段接口
-  ret = aclnnInplaceRelu(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceRelu failed. ERROR: %d\n", ret); return ret);
-
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -486,14 +467,6 @@ int main() {
     LOG_PRINT("aclnnRelu result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  auto inplaceSize = GetShapeSize(selfShape);
-  std::vector<float> inplaceResultData(inplaceSize, 0);
-  ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), selfDeviceAddr, inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < inplaceSize; i++) {
-    LOG_PRINT("aclnnInplaceRelu result[%ld] is: %f\n", i, inplaceResultData[i]);
-  }
-
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
@@ -503,9 +476,6 @@ int main() {
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
-  }
-  if (inplaceWorkspaceSize > 0) {
-    aclrtFree(inplaceWorkspaceAddr);
   }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);

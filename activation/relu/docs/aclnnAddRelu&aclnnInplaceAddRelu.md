@@ -27,8 +27,8 @@
   relu(self) = \begin{cases} self, & self\gt 0 \\ 0, & self\le 0 \end{cases}
   $$
 
-
 ## 函数原型
+
 - aclnnAddRelu和aclnnInplaceAddRelu实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
 
   - aclnnAddRelu：需新建一个输出张量对象存储计算结果。
@@ -45,6 +45,7 @@
     uint64_t          *workspaceSize,
     aclOpExecutor    **executor)
   ```
+
   ```Cpp
   aclnnStatus aclnnAddRelu(
     void             *workspace,
@@ -52,6 +53,7 @@
     aclOpExecutor    *executor,
     aclrtStream       stream)
   ```
+
   ```Cpp
   aclnnStatus aclnnInplaceAddReluGetWorkspaceSize(
     aclTensor         *selfRef,
@@ -60,6 +62,7 @@
     uint64_t          *workspaceSize,
     aclOpExecutor    **executor)
   ```
+
   ```Cpp
   aclnnStatus aclnnInplaceAddRelu(
     void             *workspace,
@@ -155,7 +158,7 @@
         <td>-</td>
       </tr>
     </tbody></table>
-    
+
     - <term>Atlas 训练系列产品</term>：参数`self`、`other`、`alpha`、`out`的数据类型不支持BFLOAT16。
 
 - **返回值：**
@@ -320,7 +323,7 @@
         <td>-</td>
       </tr>
     </tbody></table>
-    
+
     - <term>Atlas 训练系列产品</term>：参数`selfRef`、`other`、`alpha`的数据类型不支持BFLOAT16。
 
 - **返回值：**
@@ -405,12 +408,12 @@
   </tbody>
   </table>
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+
 - 确定性计算：
   - aclnnAddRelu&aclnnInplaceAddRelu默认确定性实现。
 
@@ -418,6 +421,7 @@
     由于cast算子将INT32转换成INT8类型时存在精度问题（具体参见[aclnnCast](https://gitcode.com/cann/ops-math/blob/master/math/cast/docs/aclnnCast.md)），该场景下输出结果精度无法保证。
 
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
@@ -548,35 +552,6 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-    
-  // aclnnInplaceAddRelu接口调用示例  
-  // 3. 调用CANN算子库API
-  LOG_PRINT("\ntest aclnnInplaceAddRelu\n");
-  // 调用aclnnInplaceAddRelu第一段接口
-  ret = aclnnInplaceAddReluGetWorkspaceSize(self, other, alpha, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddReluGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
-  // 调用aclnnInplaceAddRelu第二段接口
-  ret = aclnnInplaceAddRelu(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceAddRelu failed. ERROR: %d\n", ret); return ret);
-
-  // 4. （固定写法）同步等待任务执行结束
-  ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr,
-                    size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
-  }  
-     
-    
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(other);

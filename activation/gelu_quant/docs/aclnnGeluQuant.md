@@ -11,27 +11,36 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-
 ## 功能说明
 
 - 接口功能：将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行Gelu激活后，对激活的结果进行量化，输出量化后的结果。
 
 - 计算公式：
+
 1. 先计算gelu计算得到geluOut
+
   - approximate = tanh
+
   $$
   geluOut=Gelu(self)=self × Φ(self)=0.5 * self * (1 + Tanh( \sqrt{2 / \pi} * (self + 0.044715 * self^{3})))
   $$
+
   - approximate = none
+
   $$
    geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
   $$
+
 2. 再对geluOut进行量化操作
+
   - quant_mode = static
+
   $$
   y = round\_to\_dst\_type(geluOut * inputScaleOptional + inputOffsetOptional, round\_mode)
   $$
+
   - quant_mode = dynamic
+
     $$
     geluOut = geluOut * inputScaleOptional
     $$
@@ -57,6 +66,7 @@
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeluQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeluQuant”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnGeluQuantGetWorkspaceSize(
     const aclTensor* self,
@@ -252,7 +262,6 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 </tbody>
 </table>
 
- 
 ## aclnnGeluQuant
 
 - **参数说明：**
@@ -302,8 +311,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 
 - inputScaleOptional的数据类型与self的类型一致，或者在类型不一致时采用精度更高的类型。
 
-
 ## 调用示例
+
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
   
 ```Cpp

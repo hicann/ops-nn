@@ -182,7 +182,6 @@
     </tr>
   </tbody></table>
 
-
 ## 约束说明
 
 无
@@ -193,4 +192,3 @@
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_bidirection_lstm](./examples/test_aclnn_bidirection_lstm.cpp) | 通过[aclnnBidirectionLSTM](./docs/aclnnBidirectionLSTM.md)接口方式调用BidirectionLSTM算子。    |
 | 图模式调用 | -  | 通过[算子IR](./op_graph/bidirection_lstm_proto.h)构图方式调用BidirectionLSTM算子。 |
-

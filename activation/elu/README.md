@@ -99,8 +99,7 @@
       <td>√</td>
     </tr>
   </tbody>
-  </table>
-  
+  </table>  
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE。
 
 ## 约束说明

@@ -1,11 +1,17 @@
 # aclnnHardswish&aclnnInplaceHardswish
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/hard_swish)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -17,7 +23,7 @@
   x, & x\gt3 \\
   0, &  x\le -3 \\
   \frac{x · (x + 3)}{6}, & otherwise
-
+  
    \end{cases}
   $$
 
@@ -128,11 +134,15 @@ aclnnStatus aclnnInplaceHardswish(
     </tr>
   </tbody>
   </table>
+  
+   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -205,7 +215,7 @@ aclnnStatus aclnnInplaceHardswish(
 
 - **返回值：**
 
-	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceHardswishGetWorkspaceSize
 
@@ -265,12 +275,13 @@ aclnnStatus aclnnInplaceHardswish(
     </tr>
   </tbody>
   </table>
-
-
+  
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -337,7 +348,7 @@ aclnnStatus aclnnInplaceHardswish(
 
 - **返回值：**
 
-	aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -448,11 +459,11 @@ int main() {
   // 调用aclnnHardswish第二段接口
   ret = aclnnHardswish(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardswish failed. ERROR: %d\n", ret); return ret);
-
+  
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
+  
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
@@ -462,7 +473,7 @@ int main() {
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
-
+ 
   // aclnnInplaceHardswish接口调用示例
   // 3. 调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceHardswish\n");
@@ -480,11 +491,11 @@ int main() {
   // 调用aclnnInplaceHardswish第二段接口
   ret = aclnnInplaceHardswish(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceHardswish failed. ERROR: %d\n", ret); return ret);
-
+  
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
+  
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   size = GetShapeSize(outShape);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr, size * sizeof(float),
@@ -497,7 +508,7 @@ int main() {
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
-
+ 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);

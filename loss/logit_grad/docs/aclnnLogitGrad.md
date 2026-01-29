@@ -1,11 +1,17 @@
 # aclnnLogitGrad
 
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/loss/logit_grad)
+
 ## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|  <term>昇腾910_95 AI处理器</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品 </term>    |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -17,7 +23,7 @@
 
 $$
 dx_i=
-\begin{cases}
+\begin{cases} 
 NaN, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
 0, & \text{if } x < \text{eps} \text{ or } x > 1 - \text{eps},eps \geq 0 \\
 \frac{dy_i}{x_i \cdot (1 - x_i)}, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
@@ -30,19 +36,19 @@ $$
 
 ```Cpp
 aclnnStatus aclnnLogitGradGetWorkspaceSize(
-  const aclTensor *x,
-  const aclTensor *dy,
-  double           eps,
-  const aclTensor *out,
-  uint64_t        *workspaceSize,
+  const aclTensor *x, 
+  const aclTensor *dy, 
+  double           eps, 
+  const aclTensor *out, 
+  uint64_t        *workspaceSize, 
   aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnLogitGrad(
-  void            *workspace,
-  uint64_t         workspaceSize,
-  aclOpExecutor   *executor,
+  void            *workspace, 
+  uint64_t         workspaceSize, 
+  aclOpExecutor   *executor, 
   aclrtStream      stream)
 ```
 
@@ -138,7 +144,9 @@ aclnnStatus aclnnLogitGrad(
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

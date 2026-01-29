@@ -14,15 +14,20 @@
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
+
 - 接口功能：Swish门控线性单元激活函数，实现x的SwiGlu计算。  
+
 - 计算公式：  
+
   <p style="text-align: center">
   out<sub>i</sub> = SwiGlu(x<sub>i</sub>)=Swish(A<sub>i</sub>)*B<sub>i</sub>
   </p>
   其中，A<sub>i</sub>表示x<sub>i</sub>按指定dim维度一分为二的前半部分张量，B<sub>i</sub>表示x<sub>i</sub>按指定dim维度一分为二的后半部分张量。
 
 ## 函数原型
+
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwiGluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwiGlu”接口执行计算。
+
 ```Cpp
 aclnnStatus aclnnSwiGluGetWorkspaceSize(
   const aclTensor *x,
@@ -121,11 +126,12 @@ aclnnStatus aclnnSwiGlu(
   
     - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。shape不支持非64字节对齐。不支持空Tensor。
   
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -153,7 +159,6 @@ aclnnStatus aclnnSwiGlu(
       <td>dim不在取值范围内。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSwiGlu
 
@@ -193,7 +198,6 @@ aclnnStatus aclnnSwiGlu(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值：**
 
@@ -287,7 +291,7 @@ int main() {
                                     23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
                                     43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63};
   std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
+
   int dim = -1;
   // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
