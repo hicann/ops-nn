@@ -79,7 +79,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>损失函数对sigmoid输出的梯度，公式中的grad\_output。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与output，grad_input一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与output满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、COMPLEX64、COMPLEX128</td>
       <td>ND</td>
       <td>1-8</td>
@@ -89,7 +89,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>output</td>
       <td>输入</td>
       <td>前向sigmoid的输出，公式中的out。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与grad_output，grad_input一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、COMPLEX64、COMPLEX128</td>
       <td>ND</td>
       <td>1-8</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnSigmoidBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>为self的梯度值，公式中的grad\_input。</td>
-      <td>数据类型、shape需要与grad_output，output一致。</td>
+      <td><ul><li>shape需要与gradOutput，output满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>数据类型需要是gradOutput，output可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、COMPLEX64、COMPLEX128</td>
       <td>ND</td>
       <td>1-8</td>
