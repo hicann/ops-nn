@@ -57,6 +57,16 @@ TILING_DATA_FIELD_DEF(int64_t, argmaxWInner);
 TILING_DATA_FIELD_DEF(int64_t, argmaxWOuter);
 TILING_DATA_FIELD_DEF(int64_t, argmaxWTail);
 TILING_DATA_FIELD_DEF(int64_t, argmaxInnerLoop);
+TILING_DATA_FIELD_DEF(int64_t, argmaxNcInnerTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxNcOuterTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxNcTailTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxHInnerTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxHOuterTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxHTailTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxWInnerTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxWOuterTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxWTailTail);
+TILING_DATA_FIELD_DEF(int64_t, argmaxInnerLoopTail);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3_301, MaxPoolGradWithArgmaxV3NCHWScalarTilingData);
@@ -88,6 +98,16 @@ public:
     int64_t argmaxWOuter = 0;
     int64_t argmaxWTail = 0;
     int64_t argmaxInnerLoop = 0;
+    int64_t argmaxNcInnerTail = 0;
+ 	int64_t argmaxNcOuterTail = 0;
+ 	int64_t argmaxNcTailTail = 0;
+ 	int64_t argmaxHInnerTail = 0;
+ 	int64_t argmaxHOuterTail = 0;
+ 	int64_t argmaxHTailTail = 0;
+ 	int64_t argmaxWInnerTail = 0;
+ 	int64_t argmaxWOuterTail = 0;
+ 	int64_t argmaxWTailTail = 0;
+ 	int64_t argmaxInnerLoopTail = 0;
 
 public:
     std::string ToString() const
@@ -106,7 +126,11 @@ public:
              << ", argmaxHInner:" << argmaxHInner << ", argmaxHOuter:" << argmaxHOuter
              << ", argmaxHTail:" << argmaxHTail << ", argmaxWInner:" << argmaxWInner
              << ", argmaxWOuter:" << argmaxWOuter << ", argmaxWTail:" << argmaxWTail
-             << ", argmaxInnerLoop:" << argmaxInnerLoop;
+             << ", argmaxInnerLoop:" << argmaxInnerLoop << ", argmaxNcInnerTail:" << argmaxNcInnerTail << ", argmaxNcOuterTail:"
+ 	         << argmaxNcOuterTail << ", argmaxNcTailTail:" << argmaxNcTailTail << ", argmaxHInnerTail:" << argmaxHInnerTail
+ 	         << ", argmaxHOuterTail:" << argmaxHOuterTail << ", argmaxHTailTail:" << argmaxHTailTail << ", argmaxWInnerTail:"
+ 	         << argmaxWInnerTail << ", argmaxWOuterTail:" << argmaxWOuterTail << ", argmaxWTailTail:" << argmaxWTailTail
+ 	         << ", argmaxInnerLoopTail:" << argmaxInnerLoopTail;
         info << " }";
         return info.str();
     }
@@ -130,9 +154,14 @@ protected:
     void CalcBase();
     void CalcParamsEachCore();
     ge::graphStatus CalcGradArgmaxInner(int64_t argmaxCountInUB);
+    ge::graphStatus CalcGradArgmaxInnerTail(int64_t argmaxCountInUB);
     ge::graphStatus CalcGradArgmax();
+    void SetNormalInner();
+    void SetTailInner();
     MaxPoolGradWithArgmaxV3NCHWScalarTilingData tilingData_;
     MaxPoolGradWithArgmaxV3ScalarTilingInfo scalarTilingData_;
+    int64_t hInputInner_ {0};
+    int64_t wInputInner_ {0};
 };
 
 } // namespace optiling

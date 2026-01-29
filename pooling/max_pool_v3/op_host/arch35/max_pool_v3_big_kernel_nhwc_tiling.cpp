@@ -153,5 +153,6 @@ void MaxPoolV3NHWCBigKernelTiling::DumpTilingInfo()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolV3, MaxPoolV3NHWCBigKernelTiling, 4);
+REGISTER_OPS_TILING_TEMPLATE(MaxPoolV2, MaxPoolV2NHWCBigKernelTiling, 4);
 
 } // namespace optiling

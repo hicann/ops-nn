@@ -20,6 +20,8 @@
 #include "./arch35/max_pool_grad_with_argmax_v3_nchw_kernel.h"
 #include "./arch35/max_pool_grad_with_argmax_v3_nhwc_kernel.h"
 #include "./arch35/max_pool_grad_with_argmax_v3_nchw_scalar.h"
+#include "./arch35/max_pool_grad_with_argmax_v3_ksize_one.h"
+#include "./arch35/max_pool_grad_with_argmax_v3_simt.h"
 
 #define NO_CHECK_RANGE_TILING_KEY_NCHW 100
 #define CHECK_RANGE_TILING_KEY_NCHW 101
@@ -31,6 +33,12 @@
 #define CHECK_RANGE_TILING_KEY_NCHW_INT64 111
 #define NO_CHECK_RANGE_TILING_KEY_NHWC_INT64 210
 #define CHECK_RANGE_TILING_KEY_NHWC_INT64 211
+#define KSIZE_ONE_TILING_KEY 800
+#define SIMT_NCHW_INT32_TILING_KEY  900
+#define SIMT_NCHW_INT64_TILING_KEY  901
+
+constexpr int NCHW = 0;
+constexpr int NHWC = 1;
 
 extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(
     GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
@@ -81,6 +89,22 @@ extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(
         GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxV3NCHWScalarTilingData, tilingDataIn, tiling);
         MaxPoolGradWithArgmaxV3NCHWScalarNameSpace::MaxPoolGradWithArgmaxV3NCHWScalar<DTYPE_X, DTYPE_ARGMAX> op(
             tilingDataIn, pipeBase);
+        op.Init(x, grad, argmax, y);
+        op.Process();
+    } else if (TILING_KEY_IS(KSIZE_ONE_TILING_KEY)) {
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxV3KSizeOneTilingData, tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxV3KsizeOneNameSpace::MaxPoolGradWithArgmaxV3KsizeOne<DTYPE_X> op(
+            tilingDataIn, pipeBase);
+        op.Init(x, grad, argmax, y);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NCHW_INT32_TILING_KEY)) {
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxV3SimtTilingData, tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxV3Simt<DTYPE_X, DTYPE_ARGMAX, NCHW, int32_t, uint32_t> op(&pipeBase, &tilingDataIn);
+        op.Init(x, grad, argmax, y);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NCHW_INT64_TILING_KEY)) {
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxV3SimtTilingData, tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxV3Simt<DTYPE_X, DTYPE_ARGMAX, NCHW, int64_t, uint64_t> op(&pipeBase, &tilingDataIn);
         op.Init(x, grad, argmax, y);
         op.Process();
     }

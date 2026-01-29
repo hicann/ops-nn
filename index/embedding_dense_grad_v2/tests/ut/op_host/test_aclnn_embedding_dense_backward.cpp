@@ -11,7 +11,7 @@
 #include <array>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_embedding_dense_backward.h"
+#include "../../../op_api/aclnn_embedding_dense_backward.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -638,7 +638,7 @@ TEST_F(l2_embedding_dense_backward_test, case_33) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
   // SAMPLE: precision simulate
-  
+
 }
 
 // nhwc ndhwc
@@ -661,7 +661,7 @@ TEST_F(l2_embedding_dense_backward_test, case_34) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
   // SAMPLE: precision simulate
-  
+
 }
 
 // hwcn ndhwc
@@ -684,7 +684,7 @@ TEST_F(l2_embedding_dense_backward_test, case_35) {
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 
   // SAMPLE: precision simulate
-  
+
 }
 
 // 空tensor

@@ -51,6 +51,8 @@ END_TILING_DATA_DEF;
 // 300001 - no padding, 300002 - padding
 REGISTER_TILING_DATA_CLASS(MaxPoolV3_300001, MaxPoolV3SmallKernelTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPoolV3_300002, MaxPoolV3SmallKernelTilingData);
+REGISTER_TILING_DATA_CLASS(MaxPoolV2_300001, MaxPoolV3SmallKernelTilingData);
+REGISTER_TILING_DATA_CLASS(MaxPoolV2_300002, MaxPoolV3SmallKernelTilingData);
 
 class MaxPoolV3SmallKernelTiling : public MaxPoolV3BaseTiling {
 public:
@@ -59,7 +61,7 @@ public:
     ~MaxPoolV3SmallKernelTiling() override
     {}
 
-private:
+protected:
     void DoUBTiling();
     void DoUBTilingSingle();
     void DoBlockTiling();
@@ -100,6 +102,15 @@ private:
     int64_t onceCopyRow_{1};
     int64_t splitMode_{0};
     bool isZero_{false};
+};
+
+class MaxPoolV2SmallKernelTiling : public MaxPoolV3SmallKernelTiling
+{
+public:
+    explicit MaxPoolV2SmallKernelTiling(gert::TilingContext* context) : MaxPoolV3SmallKernelTiling(context)
+    {}
+    ~MaxPoolV2SmallKernelTiling() override
+    {}
 };
 
 } // namespace optiling

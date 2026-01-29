@@ -37,6 +37,8 @@ const uint32_t TOP_PAD_INDEX = 0;
 const uint32_t BOTTOM_PAD_INDEX = 1;
 const uint32_t LEFT_PAD_INDEX = 2;
 const uint32_t RIGHT_PAD_INDEX = 3;
+const int32_t INPUT_KSIZE_IDX = 1;
+const int32_t INPUT_STRIDES_IDX = 2;
 
 BEGIN_TILING_DATA_DEF(MaxPoolV3TilingData)
 TILING_DATA_FIELD_DEF(int64_t, hInDim);
@@ -59,6 +61,7 @@ TILING_DATA_FIELD_DEF(int64_t, tilingMode);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPoolV3, MaxPoolV3TilingData);
+REGISTER_TILING_DATA_CLASS(MaxPoolV2, MaxPoolV3TilingData);
 
 struct InputInfo {
     int64_t batches;

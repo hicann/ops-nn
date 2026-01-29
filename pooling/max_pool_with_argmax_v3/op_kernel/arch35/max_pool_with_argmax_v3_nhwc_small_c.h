@@ -683,7 +683,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3SmallC<T1, T2, IS_PAD>::ComputeSingleR
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);
     uint16_t hStride = static_cast<uint16_t>(this->hStride_);
-    uint16_t wStride = static_cast<uint16_t>(this->hStride_);
+    uint16_t wStride = static_cast<uint16_t>(this->wStride_);
     uint16_t padH = static_cast<uint16_t>(this->padTop_);
     uint16_t padW = static_cast<uint16_t>(this->padLeft_);
     int32_t wInput = static_cast<int32_t>(this->wInput_);

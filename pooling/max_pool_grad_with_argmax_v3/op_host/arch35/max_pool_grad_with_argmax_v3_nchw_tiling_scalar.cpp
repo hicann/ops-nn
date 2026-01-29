@@ -95,46 +95,91 @@ void MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcParamsEachCore()
         totalCount - (scalarTilingData_.usedCoreNum - 1) * scalarTilingData_.normalCoreProcessNum;
     return;
 }
-ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInner(int64_t argmaxCountInUB)
+void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetNormalInner()
 {
-    int64_t hInputInner = Ops::Base::CeilDiv(scalarTilingData_.hOutputInner + inputData.hKernel - 1, inputData.hStride);
-    int64_t wInputInner = Ops::Base::CeilDiv(scalarTilingData_.wOutputInner + inputData.wKernel - 1, inputData.wStride);
-    hInputInner = std::min(hInputInner, inputData.hGrad);
-    wInputInner = std::min(wInputInner, inputData.wGrad);
-    if (hInputInner == 0 || wInputInner == 0) {
+    scalarTilingData_.argmaxNcOuter = Ops::Base::CeilDiv(scalarTilingData_.highAxisInner, scalarTilingData_.argmaxNcInner);
+    scalarTilingData_.argmaxHOuter = Ops::Base::CeilDiv(hInputInner_, scalarTilingData_.argmaxHInner);
+    scalarTilingData_.argmaxWOuter = Ops::Base::CeilDiv(wInputInner_, scalarTilingData_.argmaxWInner);
+    scalarTilingData_.argmaxNcTail =
+        scalarTilingData_.highAxisInner - (scalarTilingData_.argmaxNcOuter - 1) * scalarTilingData_.argmaxNcInner;
+    scalarTilingData_.argmaxHTail = hInputInner_ - (scalarTilingData_.argmaxHOuter - 1) * scalarTilingData_.argmaxHInner;
+    scalarTilingData_.argmaxWTail = wInputInner_ - (scalarTilingData_.argmaxWOuter - 1) * scalarTilingData_.argmaxWInner;
+    scalarTilingData_.argmaxInnerLoop =
+        scalarTilingData_.argmaxNcOuter * scalarTilingData_.argmaxHOuter * scalarTilingData_.argmaxWOuter;
+    return ;
+}
+void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetTailInner()
+{
+    scalarTilingData_.argmaxNcOuterTail = Ops::Base::CeilDiv(scalarTilingData_.highAxisTail, scalarTilingData_.argmaxNcInnerTail);
+    scalarTilingData_.argmaxHOuterTail = Ops::Base::CeilDiv(hInputInner_, scalarTilingData_.argmaxHInnerTail);
+    scalarTilingData_.argmaxWOuterTail = Ops::Base::CeilDiv(wInputInner_, scalarTilingData_.argmaxWInnerTail);
+    scalarTilingData_.argmaxNcTailTail =
+        scalarTilingData_.highAxisTail - (scalarTilingData_.argmaxNcOuterTail - 1) * scalarTilingData_.argmaxNcInnerTail;
+    scalarTilingData_.argmaxHTailTail = hInputInner_ - (scalarTilingData_.argmaxHOuterTail - 1) * scalarTilingData_.argmaxHInnerTail;
+    scalarTilingData_.argmaxWTailTail = wInputInner_ - (scalarTilingData_.argmaxWOuterTail - 1) * scalarTilingData_.argmaxWInnerTail;
+    scalarTilingData_.argmaxInnerLoopTail =
+        scalarTilingData_.argmaxNcOuterTail * scalarTilingData_.argmaxHOuterTail * scalarTilingData_.argmaxWOuterTail;
+    return ;
+}
+ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInnerTail(int64_t argmaxCountInUB)
+{
+    hInputInner_ = Ops::Base::CeilDiv(scalarTilingData_.hOutputInner + inputData.hKernel - 1, inputData.hStride);
+    wInputInner_ = Ops::Base::CeilDiv(scalarTilingData_.wOutputInner + inputData.wKernel - 1, inputData.wStride);
+    hInputInner_ = std::min(hInputInner_, inputData.hGrad);
+    wInputInner_ = std::min(wInputInner_, inputData.wGrad);
+    if (hInputInner_ == 0 || wInputInner_ == 0) {
         return ge::GRAPH_FAILED;
     }
-    int64_t inputPlaneSize = hInputInner * wInputInner;
-    if (scalarTilingData_.highAxisInner * hInputInner * wInputInner <= argmaxCountInUB) {
+    int64_t inputPlaneSize = hInputInner_ * wInputInner_;
+    if (scalarTilingData_.highAxisTail * hInputInner_ * wInputInner_ <= argmaxCountInUB) {
+        scalarTilingData_.argmaxNcInnerTail = scalarTilingData_.highAxisTail;
+        scalarTilingData_.argmaxHInnerTail = hInputInner_;
+        scalarTilingData_.argmaxWInnerTail = wInputInner_;
+    } else if (inputPlaneSize <= argmaxCountInUB) {
+        scalarTilingData_.argmaxNcInnerTail = argmaxCountInUB / inputPlaneSize;
+        scalarTilingData_.argmaxHInnerTail = hInputInner_;
+        scalarTilingData_.argmaxWInnerTail = wInputInner_;
+    } else if (wInputInner_ <= argmaxCountInUB) {
+        scalarTilingData_.argmaxNcInnerTail = 1;
+        scalarTilingData_.argmaxHInnerTail = argmaxCountInUB / wInputInner_;
+        scalarTilingData_.argmaxWInnerTail = wInputInner_;
+    } else {
+        scalarTilingData_.argmaxNcInnerTail = 1;
+        scalarTilingData_.argmaxHInnerTail = 1;
+        scalarTilingData_.argmaxWInnerTail = argmaxCountInUB;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInner(int64_t argmaxCountInUB)
+{
+    hInputInner_ = Ops::Base::CeilDiv(scalarTilingData_.hOutputInner + inputData.hKernel - 1, inputData.hStride);
+    wInputInner_ = Ops::Base::CeilDiv(scalarTilingData_.wOutputInner + inputData.wKernel - 1, inputData.wStride);
+    hInputInner_ = std::min(hInputInner_, inputData.hGrad);
+    wInputInner_ = std::min(wInputInner_, inputData.wGrad);
+    if (hInputInner_ == 0 || wInputInner_ == 0) {
+        return ge::GRAPH_FAILED;
+    }
+    int64_t inputPlaneSize = hInputInner_ * wInputInner_;
+    if (scalarTilingData_.highAxisInner * hInputInner_ * wInputInner_ <= argmaxCountInUB) {
         scalarTilingData_.argmaxNcInner = scalarTilingData_.highAxisInner;
-        scalarTilingData_.argmaxHInner = hInputInner;
-        scalarTilingData_.argmaxWInner = wInputInner;
+        scalarTilingData_.argmaxHInner = hInputInner_;
+        scalarTilingData_.argmaxWInner = wInputInner_;
     } else if (inputPlaneSize <= argmaxCountInUB) {
         scalarTilingData_.argmaxNcInner = argmaxCountInUB / inputPlaneSize;
-        scalarTilingData_.argmaxHInner = hInputInner;
-        scalarTilingData_.argmaxWInner = wInputInner;
-    } else if (wInputInner <= argmaxCountInUB) {
+        scalarTilingData_.argmaxHInner = hInputInner_;
+        scalarTilingData_.argmaxWInner = wInputInner_;
+    } else if (wInputInner_ <= argmaxCountInUB) {
         scalarTilingData_.argmaxNcInner = 1;
-        scalarTilingData_.argmaxHInner = argmaxCountInUB / wInputInner;
-        scalarTilingData_.argmaxWInner = wInputInner;
+        scalarTilingData_.argmaxHInner = argmaxCountInUB / wInputInner_;
+        scalarTilingData_.argmaxWInner = wInputInner_;
     } else {
         scalarTilingData_.argmaxNcInner = 1;
         scalarTilingData_.argmaxHInner = 1;
         scalarTilingData_.argmaxWInner = argmaxCountInUB;
     }
-
-    scalarTilingData_.argmaxNcOuter =
-        Ops::Base::CeilDiv(scalarTilingData_.highAxisInner, scalarTilingData_.argmaxNcInner);
-    scalarTilingData_.argmaxHOuter = Ops::Base::CeilDiv(hInputInner, scalarTilingData_.argmaxHInner);
-    scalarTilingData_.argmaxWOuter = Ops::Base::CeilDiv(wInputInner, scalarTilingData_.argmaxWInner);
-    scalarTilingData_.argmaxNcTail =
-        scalarTilingData_.highAxisInner - (scalarTilingData_.argmaxNcOuter - 1) * scalarTilingData_.argmaxNcInner;
-    scalarTilingData_.argmaxHTail = hInputInner - (scalarTilingData_.argmaxHOuter - 1) * scalarTilingData_.argmaxHInner;
-    scalarTilingData_.argmaxWTail = wInputInner - (scalarTilingData_.argmaxWOuter - 1) * scalarTilingData_.argmaxWInner;
-    scalarTilingData_.argmaxInnerLoop =
-        scalarTilingData_.argmaxNcOuter * scalarTilingData_.argmaxHOuter * scalarTilingData_.argmaxWOuter;
     return ge::GRAPH_SUCCESS;
 }
+
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmax()
 {
     int64_t totalGradArgmaxUBSize = hardwareData.ubSize / DOUBLE_BUFFER / HALF;
@@ -148,7 +193,19 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmax()
     argmaxCountInUB = argmaxCountInUB / baseAlignedCount * baseAlignedCount;
     scalarTilingData_.gradBufferSize = argmaxCountInUB * ge::GetSizeByDataType(inputData.inputDtype);
     scalarTilingData_.argmaxBufferSize = argmaxCountInUB * ge::GetSizeByDataType(inputData.indexDtype);
-    return CalcGradArgmaxInner(argmaxCountInUB);
+    ge::graphStatus result = CalcGradArgmaxInner(argmaxCountInUB);
+    if (result != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_->GetNodeName(), "calc normal interal loop failure.");
+        return result;
+    }
+    SetNormalInner();
+    result = CalcGradArgmaxInnerTail(argmaxCountInUB);
+    if (result != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_->GetNodeName(), "calc normal tail loop failure.");
+        return result;
+    }
+    SetTailInner();
+    return result;
 }
 uint64_t MaxPoolGradWithArgmaxV3NCHWScalarTiling::GetTilingKey() const
 {
@@ -194,6 +251,16 @@ void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetTilingData()
     tilingData_.set_argmaxWOuter(scalarTilingData_.argmaxWOuter);
     tilingData_.set_argmaxWTail(scalarTilingData_.argmaxWTail);
     tilingData_.set_argmaxInnerLoop(scalarTilingData_.argmaxInnerLoop);
+    tilingData_.set_argmaxNcInnerTail(scalarTilingData_.argmaxNcInnerTail);
+    tilingData_.set_argmaxNcOuterTail(scalarTilingData_.argmaxNcOuterTail);
+    tilingData_.set_argmaxNcTailTail(scalarTilingData_.argmaxNcTailTail);
+    tilingData_.set_argmaxHInnerTail(scalarTilingData_.argmaxHInnerTail);
+    tilingData_.set_argmaxHOuterTail(scalarTilingData_.argmaxHOuterTail);
+    tilingData_.set_argmaxHTailTail(scalarTilingData_.argmaxHTailTail);
+    tilingData_.set_argmaxWInnerTail(scalarTilingData_.argmaxWInnerTail);
+    tilingData_.set_argmaxWOuterTail(scalarTilingData_.argmaxWOuterTail);
+    tilingData_.set_argmaxWTailTail(scalarTilingData_.argmaxWTailTail);
+    tilingData_.set_argmaxInnerLoopTail(scalarTilingData_.argmaxInnerLoopTail);
     return;
 }
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::PrintData() const

@@ -67,7 +67,7 @@ void MaxPoolV3SmallKernelTiling::InitializationVars()
     }
     indiceUbSize_ = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM], maxGatherScatterElm_) *
                     Ops::Base::GetVRegSize(context_);
-    availableUb_ = static_cast<int64_t>(ubSize - UB_RESVERVED_SIZE) / dtypeSize;
+    availableUb_ = static_cast<int64_t>(ubSize - UB_RESVERVED_SIZE - indiceUbSize_) / dtypeSize;
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / dtypeSize;
     // 并发度
     paraNum_ = Ops::Base::GetVRegSize(context_) / DIGIT_TWO / dtypeSize;
@@ -422,5 +422,6 @@ void MaxPoolV3SmallKernelTiling::DumpTilingInfo()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolV3, MaxPoolV3SmallKernelTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(MaxPoolV2, MaxPoolV2SmallKernelTiling, 0);
 
 } // namespace optiling

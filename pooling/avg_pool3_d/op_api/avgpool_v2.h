@@ -18,6 +18,11 @@ const aclTensor *AvgPoolNchw(const aclTensor *x, const aclIntArray *window, cons
                              const std::string &paddingMode, const aclIntArray *pad, const std::string &dataFormat,
                              const bool globalPooling, const bool ceilMode, const bool exclusive,
                              const int64_t divisorOverride, aclOpExecutor *executor);
+
+const aclTensor *AvgPoolV2(const aclTensor *x, const aclIntArray *ksize, const aclIntArray *strides,
+                             const std::string &paddingMode, const aclIntArray *pads, const std::string &dataFormat,
+                             const bool globalPooling, const bool ceilMode, const bool exclusive,
+                             const int64_t divisorOverride, aclOpExecutor *executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_AVGPOOL_V2_OP_H_

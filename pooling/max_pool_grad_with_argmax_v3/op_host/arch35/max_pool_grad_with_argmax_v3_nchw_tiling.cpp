@@ -425,6 +425,6 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3NCHWTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3NCHWTiling, 2);
 
 } // namespace optiling

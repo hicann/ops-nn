@@ -726,7 +726,7 @@ static aclnnStatus BuildAvgPoolGraph(
 static bool CheckBigKernel(const aclIntArray *kernelSize, const aclTensor *avgpoolIn, const aclTensor *out)
 {
     int64_t sumK = (*kernelSize)[DIM0] * (*kernelSize)[DIM1] * (*kernelSize)[DIM2];
-    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT || 
+    bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT ||
                         (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
 
     auto avgpoolInShape = avgpoolIn->GetViewShape();
@@ -791,7 +791,7 @@ static aclnnStatus BuildAvgPool2dTo3dGraph(
         avgpoolOut = l0op::Transpose(avgpoolOut, permPost, uniqueExecutor.get());
         CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    
+
     //Reshape 5D to 4D or 3D NCDHW->NCHW(NCL)
     shape = op::ToShapeVector(out->GetViewShape());
     shapeArray = uniqueExecutor->AllocIntArray(shape.data(), shape.size());
@@ -918,6 +918,17 @@ aclnnStatus aclnnAvgPool2dGetWorkspaceSize(
     OP_LOGD("Current isSupport2dTo3d flag is: %d", isSupport2dTo3d);
 
     auto cDims = self4d->GetViewShape().GetDim(NCHW_C_IDX);
+    static const std::string paddingMode = "CALCULATED";
+    static const std::string dataFormat = FORMAT_NCHW_STR;
+    const bool globalPooling = false;
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_95) {
+        auto avgPoolingOut = l0op::AvgPoolV2(self4d, kernel4, stride4, paddingMode, paddings4, dataFormat,
+                    globalPooling, ceilMode, !countIncludePad, divisorOverride, uniqueExecutor.get());
+        CHECK_RET(ACLNN_SUCCESS == HandleOut(out, avgPoolingOut, uniqueExecutor), ACLNN_ERR_INNER);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
     // 计算图构建
     if (CheckGlobalPool(avgPoolInfo)) {
         const aclTensor *cast4dTensor = nullptr;

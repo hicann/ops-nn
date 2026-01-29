@@ -41,6 +41,7 @@ TILING_DATA_FIELD_DEF(int64_t, isSigOut);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MaxPoolV3_311110, MaxPoolV3BigKernelTilingData);
+REGISTER_TILING_DATA_CLASS(MaxPoolV2_311110, MaxPoolV3BigKernelTilingData);
 
 class MaxPoolV3BigKernelTiling : public MaxPoolV3BaseTiling {
 public:
@@ -49,7 +50,7 @@ public:
     ~MaxPoolV3BigKernelTiling() override
     {}
 
-private:
+protected:
     void DoUBTiling();
     void SetTilingData();
     uint64_t GetTilingKey() const override;
@@ -64,6 +65,15 @@ private:
     int64_t maxCount_{0};
     int64_t isSigOut_{0};
     int64_t coreNums_{0};
+};
+
+class MaxPoolV2BigKernelTiling : public MaxPoolV3BigKernelTiling
+{
+public:
+    explicit MaxPoolV2BigKernelTiling(gert::TilingContext* context) : MaxPoolV3BigKernelTiling(context)
+    {}
+    ~MaxPoolV2BigKernelTiling() override
+    {}
 };
 
 } // namespace optiling

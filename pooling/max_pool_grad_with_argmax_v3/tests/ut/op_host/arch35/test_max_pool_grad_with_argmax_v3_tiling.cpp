@@ -154,7 +154,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test1)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 30720 30720 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -177,7 +177,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test2)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -200,7 +200,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test3)
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -223,7 +223,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test4)
     int64_t index_dtype = 9;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -246,7 +246,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test5)
     int64_t index_dtype = 9;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -269,7 +269,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test6)
     int64_t index_dtype = 9;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 301;
+    uint64_t except_tilingkey = 900;
     std::string expect =
         "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
     ExecuteTestCase(
@@ -292,7 +292,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test7)
     int64_t index_dtype = 3;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1152 384 384 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
@@ -314,7 +314,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test8)
     int64_t index_dtype = 3;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 768 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
@@ -336,7 +336,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test9)
     int64_t index_dtype = 3;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 768 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
@@ -358,7 +358,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test10)
     int64_t index_dtype = 9;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1152 384 768 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
@@ -380,7 +380,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test11)
     int64_t index_dtype = 9;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 1536 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
@@ -402,7 +402,7 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test12)
     int64_t index_dtype = 9;
     bool ceil_mode = true;
     std::string data_format = "NCHW";
-    uint64_t except_tilingkey = 100;
+    uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 1536 1 1 100 ";
     ExecuteTestCase(
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,

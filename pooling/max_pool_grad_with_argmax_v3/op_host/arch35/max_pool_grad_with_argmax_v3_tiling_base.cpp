@@ -57,7 +57,7 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetPlatformInfo()
         hardwareData.ubSize = compileInfoPtr->ubSize;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        hardwareData.coreNum = ascendcPlatform.GetCoreNum();
+        hardwareData.coreNum = ascendcPlatform.GetCoreNumAiv();
 
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
@@ -165,7 +165,7 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
             context_->GetNodeName(), "MaxPoolGradWithArgmaxV3: grad shape size %ld less than zero failed",
             gradShape.GetShapeSize()),
         return ge::GRAPH_FAILED);
-
+    inputData.gradShapeSize = gradShape.GetShapeSize();
     auto inputArgmax = context_->GetInputShape(INPUT_ARGMAX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputArgmax);
     auto argmaxShape = Ops::Base::EnsureNotScalar(inputArgmax->GetStorageShape());

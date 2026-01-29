@@ -52,6 +52,7 @@ struct MaxPoolGradWithArgmaxV3InputInfo {
     int64_t hGrad{1};
     int64_t wGrad{1};
     bool ceilMode{false};
+    int64_t gradShapeSize{0};
     ge::DataType inputDtype{ge::DataType::DT_FLOAT};
     ge::DataType indexDtype{ge::DataType::DT_INT32};
     ge::Format inputFormat{ge::Format::FORMAT_NCHW};

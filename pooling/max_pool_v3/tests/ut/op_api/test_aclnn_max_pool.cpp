@@ -63,459 +63,459 @@ TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase01) {
     ut.TestPrecision();
 }
 
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase02) {
-    vector<int64_t> self_dims = {10, 1, 1, 122};
-    vector<int64_t> kernel_dims = {1, 2};
-    vector<int64_t> stride_dims = {1, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 1, 1, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase03) {
-    vector<int64_t> self_dims = {10, 64, 40, 244};
-    vector<int64_t> kernel_dims = {1, 2};
-    vector<int64_t> stride_dims = {1, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 64, 40, 122};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase04) {
-    vector<int64_t> self_dims = {10, 80, 40, 122};
-    vector<int64_t> kernel_dims = {2, 2};
-    vector<int64_t> stride_dims = {2, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 80, 20, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase05) {
-    vector<int64_t> self_dims = {10, 104, 20, 61};
-    vector<int64_t> kernel_dims = {2, 1};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 104, 10, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-// 正常场景：数据类型为float16
-TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase06) {
-    vector<int64_t> self_dims = {10, 1, 1, 244};
-    vector<int64_t> kernel_dims = {1, 2};
-    vector<int64_t> stride_dims = {1, 2};
-    const int64_t autoPad= 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 1, 1, 122};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase07) {
-    vector<int64_t> self_dims = {10, 1, 1, 122};
-    vector<int64_t> kernel_dims = {1, 2};
-    vector<int64_t> stride_dims = {1, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 1, 1, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase08) {
-    vector<int64_t> self_dims = {10, 64, 40, 244};
-    vector<int64_t> kernel_dims = {1, 2};
-    vector<int64_t> stride_dims = {1, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 64, 40, 122};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase09) {
-    vector<int64_t> self_dims = {10, 80, 40, 122};
-    vector<int64_t> kernel_dims = {2, 2};
-    vector<int64_t> stride_dims = {2, 2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 80, 20, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase10) {
-    vector<int64_t> self_dims = {10, 104, 20, 61};
-    vector<int64_t> kernel_dims = {2, 1};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 104, 10, 61};
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_precision_testcase11) {
-    vector<int64_t> self_dims = {10, 104, 20, 61};
-    vector<int64_t> kernel_dims = {2, 1};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 104, 10, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-100, 100);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_float16_precision_testcase12) {
-    vector<int64_t> self_dims = {10, 104, 20, 61};
-    vector<int64_t> kernel_dims = {2, 1};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0, 0, 0, 0};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 104, 10, 61};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-100, 100);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-// 测试3D tensor 输入场景
-// 正常场景：format是CHW,dtype是float;
-TEST_F(l2_max_pool_test, ascend910B2_normal_float_self_3D_testcase13) {
-    vector<int64_t> self_dims = {3, 2, 2};
-    vector<int64_t> kernel_dims = {2};
-    vector<int64_t> stride_dims = {2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0};
-    vector<int64_t> dilation_dims = {1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {3, 1, 1};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCL);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCL);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-// 正常场景：format是CHW,dtype是float16;
-TEST_F(l2_max_pool_test, ascend910_normal_float16_self_3D_testcase14) {
-    vector<int64_t> self_dims = {3, 2, 2};
-    vector<int64_t> kernel_dims = {2};
-    vector<int64_t> stride_dims = {2};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {0};
-    vector<int64_t> dilation_dims = {1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {3, 1, 1};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-// 测试 pads非零值，dilation二元组的任意值场景
-TEST_F(l2_max_pool_test, ascend910_normal_pads_4D_testcase15) {
-    vector<int64_t> self_dims = {10, 16, 50, 32};
-    vector<int64_t> kernel_dims = {5, 3};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {2, 1};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {10, 16, 26, 32};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
-
-TEST_F(l2_max_pool_test, ascend910_normal_pads_3D_testcase16) {
-    vector<int64_t> self_dims = {16, 50, 32};
-    vector<int64_t> kernel_dims = {5, 3};
-    vector<int64_t> stride_dims = {2, 1};
-    const int64_t autoPad = 0;
-    vector<int64_t> padding_dims = {2, 1};
-    vector<int64_t> dilation_dims = {1, 1};
-    int64_t ceilMode = 1;
-    vector<int64_t> out_dims = {16, 26, 32};
-
-
-    auto kernel_desc = IntArrayDesc(kernel_dims);
-    auto stride_desc = IntArrayDesc(stride_dims);
-    auto padding_desc = IntArrayDesc(padding_dims);
-    auto dilation_desc = IntArrayDesc(dilation_dims);
-
-    auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
-    auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
-
-    auto ut = OP_API_UT(aclnnMaxPool,
-                        INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
-                              ceilMode),
-                        OUTPUT(out_tensor_desc));
-
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-    ut.TestPrecision();
-}
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase02) {
+//     vector<int64_t> self_dims = {10, 1, 1, 122};
+//     vector<int64_t> kernel_dims = {1, 2};
+//     vector<int64_t> stride_dims = {1, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 1, 1, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase03) {
+//     vector<int64_t> self_dims = {10, 64, 40, 244};
+//     vector<int64_t> kernel_dims = {1, 2};
+//     vector<int64_t> stride_dims = {1, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 64, 40, 122};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase04) {
+//     vector<int64_t> self_dims = {10, 80, 40, 122};
+//     vector<int64_t> kernel_dims = {2, 2};
+//     vector<int64_t> stride_dims = {2, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 80, 20, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_testcase05) {
+//     vector<int64_t> self_dims = {10, 104, 20, 61};
+//     vector<int64_t> kernel_dims = {2, 1};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 104, 10, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// // 正常场景：数据类型为float16
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase06) {
+//     vector<int64_t> self_dims = {10, 1, 1, 244};
+//     vector<int64_t> kernel_dims = {1, 2};
+//     vector<int64_t> stride_dims = {1, 2};
+//     const int64_t autoPad= 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 1, 1, 122};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase07) {
+//     vector<int64_t> self_dims = {10, 1, 1, 122};
+//     vector<int64_t> kernel_dims = {1, 2};
+//     vector<int64_t> stride_dims = {1, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 1, 1, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase08) {
+//     vector<int64_t> self_dims = {10, 64, 40, 244};
+//     vector<int64_t> kernel_dims = {1, 2};
+//     vector<int64_t> stride_dims = {1, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 64, 40, 122};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase09) {
+//     vector<int64_t> self_dims = {10, 80, 40, 122};
+//     vector<int64_t> kernel_dims = {2, 2};
+//     vector<int64_t> stride_dims = {2, 2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 80, 20, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_testcase10) {
+//     vector<int64_t> self_dims = {10, 104, 20, 61};
+//     vector<int64_t> kernel_dims = {2, 1};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 104, 10, 61};
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_precision_testcase11) {
+//     vector<int64_t> self_dims = {10, 104, 20, 61};
+//     vector<int64_t> kernel_dims = {2, 1};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 104, 10, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-100, 100);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_precision_testcase12) {
+//     vector<int64_t> self_dims = {10, 104, 20, 61};
+//     vector<int64_t> kernel_dims = {2, 1};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0, 0, 0, 0};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 104, 10, 61};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-100, 100);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// // 测试3D tensor 输入场景
+// // 正常场景：format是CHW,dtype是float;
+// TEST_F(l2_max_pool_test, ascend910B2_normal_float_self_3D_testcase13) {
+//     vector<int64_t> self_dims = {3, 2, 2};
+//     vector<int64_t> kernel_dims = {2};
+//     vector<int64_t> stride_dims = {2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0};
+//     vector<int64_t> dilation_dims = {1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {3, 1, 1};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCL);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCL);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// // 正常场景：format是CHW,dtype是float16;
+// TEST_F(l2_max_pool_test, ascend910_normal_float16_self_3D_testcase14) {
+//     vector<int64_t> self_dims = {3, 2, 2};
+//     vector<int64_t> kernel_dims = {2};
+//     vector<int64_t> stride_dims = {2};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {0};
+//     vector<int64_t> dilation_dims = {1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {3, 1, 1};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// // 测试 pads非零值，dilation二元组的任意值场景
+// TEST_F(l2_max_pool_test, ascend910_normal_pads_4D_testcase15) {
+//     vector<int64_t> self_dims = {10, 16, 50, 32};
+//     vector<int64_t> kernel_dims = {5, 3};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {2, 1};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {10, 16, 26, 32};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
+
+// TEST_F(l2_max_pool_test, ascend910_normal_pads_3D_testcase16) {
+//     vector<int64_t> self_dims = {16, 50, 32};
+//     vector<int64_t> kernel_dims = {5, 3};
+//     vector<int64_t> stride_dims = {2, 1};
+//     const int64_t autoPad = 0;
+//     vector<int64_t> padding_dims = {2, 1};
+//     vector<int64_t> dilation_dims = {1, 1};
+//     int64_t ceilMode = 1;
+//     vector<int64_t> out_dims = {16, 26, 32};
+
+
+//     auto kernel_desc = IntArrayDesc(kernel_dims);
+//     auto stride_desc = IntArrayDesc(stride_dims);
+//     auto padding_desc = IntArrayDesc(padding_dims);
+//     auto dilation_desc = IntArrayDesc(dilation_dims);
+
+//     auto tensor_self_desc = TensorDesc(self_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
+//     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCL);
+
+//     auto ut = OP_API_UT(aclnnMaxPool,
+//                         INPUT(tensor_self_desc, kernel_desc, stride_desc, autoPad, padding_desc, dilation_desc,
+//                               ceilMode),
+//                         OUTPUT(out_tensor_desc));
+
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_EQ(aclRet, ACL_SUCCESS);
+//     ut.TestPrecision();
+// }
 
 // 异常场景
 // 异常场景：数据类型是int32

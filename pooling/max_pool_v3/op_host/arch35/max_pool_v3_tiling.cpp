@@ -38,5 +38,9 @@ ge::graphStatus TilingPrepare4MaxPoolV3(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(MaxPoolV3).Tiling(Tiling4MaxPoolV3).TilingParse<MaxPoolV3CompileInfo>(TilingPrepare4MaxPoolV3);
+IMPL_OP_OPTILING(MaxPoolV2)
+    .TilingInputsDataDependency({INPUT_KSIZE_IDX, INPUT_STRIDES_IDX})
+    .Tiling(Tiling4MaxPoolV3)
+    .TilingParse<MaxPoolV3CompileInfo>(TilingPrepare4MaxPoolV3);
 
 } // namespace optiling

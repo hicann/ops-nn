@@ -4,10 +4,13 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-|  <term>Ascend 950PR/Ascend 950DT</term>|√|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品 </term>                             |    ×     |
+| <term>Atlas 训练系列产品</term>                              |    √     |
+| <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 ## 功能说明
 
 实现[aclnnEmbedding](../../gather_v2/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应`grad`的一行累加到`out`上。
@@ -143,6 +146,8 @@ aclnnStatus aclnnEmbeddingDenseBackward(
       </tr>
     </tbody></table>
 
+    - <term>Atlas 训练系列产品</term>：数据类型不支持BFLOAT16。
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -221,7 +226,7 @@ aclnnStatus aclnnEmbeddingDenseBackward(
       </tr>
       </tbody>
     </table>
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -231,7 +236,27 @@ aclnnStatus aclnnEmbeddingDenseBackward(
 - 确定性计算：
   - aclnnEmbeddingDenseBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas 训练系列产品</term>：
+  - 对于scale为true的场景，设定grad最后一维为embeddingDim，其大小超出指定范围时会被拦截报错。其合理范围如下：
+    - indices为int32时，需满足
+
+    $$
+    embeddingDim < \frac{180192 - countsSize * 4}{36}
+    $$
+
+    - indices为int64时，需满足
+
+    $$
+    embeddingDim < \frac{180192 - countsSize * 8}{20}
+    $$
+
+    - 其中，countsSize的公式如下，coreNum代表AI处理器核数：
+
+    $$
+    countsSize = numWeights / coreNum + numWeights \% coreNum
+    $$
+
+- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)
     - numWeights超过INT32_MAX(2147483647)

@@ -227,3 +227,37 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_kernel_size
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// BF16，输入是四维，不支持的芯片插Mul, cubeMathType = 0 支持的走3d
+TEST_F(l2_avgpool2dbackward_test, ascend310P_test_avgpool2dbackwardbackward_global_avg_pool_bf16)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND310P);
+    vector<int64_t> vector_grad_output = {5, 4, 6, 6};
+    vector<int64_t> vector_self = {5, 4, 13, 13};
+    vector<int64_t> vector_kernel_size = {3, 3};
+    vector<int64_t> vector_stride = {2, 2};
+    vector<int64_t> vector_padding = {1, 1};
+    vector<int64_t> vector_grad_input = {5, 4, 13, 13};
+    bool count_include_pad = false;
+    bool ceil_mode = false;
+    int64_t divisor_override = 300;
+    int8_t cubeMathTypeZero = 0;
+
+    auto grad_output_desc = TensorDesc(vector_grad_output, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(-1.0, 1.0);
+    auto self_desc = TensorDesc(vector_self, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(-1.0, 1.0);
+
+    auto kernel_size_desc = IntArrayDesc(vector_kernel_size);
+    auto stride_desc = IntArrayDesc(vector_stride);
+    auto padding_desc = IntArrayDesc(vector_padding);
+    auto grad_input_desc = TensorDesc(vector_grad_input, ACL_BF16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+    auto ut = OP_API_UT(
+        aclnnAvgPool2dBackward, // host api第二段接口名称
+        INPUT(
+            grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+            divisor_override, cubeMathTypeZero), // host api输入
+        OUTPUT(grad_input_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

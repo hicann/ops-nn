@@ -725,8 +725,9 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
         for (uint16_t n = 0; n < nOutputActual; n++) {
             int32_t nOffset = n * nStartOffset;
             // top
+            uint32_t topCountTmp = topCount;
             for (uint16_t i = 0; i < topRepeatTimes; i++) {
-                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(topCount);
+                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(topCountTmp);
                 AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
             }
 
@@ -751,8 +752,9 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
             }
 
             // down
+            uint32_t downCountTmp = downCount;
             for (uint16_t i = 0; i < downRepeatTimes; i++) {
-                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(downCount);
+                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(downCountTmp);
                 AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg, preg);
             }
         }
