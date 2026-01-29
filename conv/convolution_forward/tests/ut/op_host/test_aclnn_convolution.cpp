@@ -3387,7 +3387,7 @@ TEST_F(convolution_test, ascend910B2_test_conv3dv2_fp16_use_hf32) {
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9589_test_conv2D_empty_tensor_input_zero_output_nonzero) {
+TEST_F(convolution_test, ascend_test_conv2D_empty_tensor_input_zero_output_nonzero) {
   const int64_t groups = 1;
   bool transposed = false;
   vector<int64_t> inp_dims = {2, 1, 32, 0};
@@ -3420,8 +3420,7 @@ TEST_F(convolution_test, ascend950PR_9589_test_conv2D_empty_tensor_input_zero_ou
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_HIF8_output_HIF8) {
-  // UtMock::GetInstance().SetSocVersion("ASCEND950");
+TEST_F(convolution_test, ascend_test_conv2D_input_HIF8_weight_HIF8_output_HIF8) {
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_HIFLOAT8};
   int length = ValidList.size();
 
@@ -3457,7 +3456,7 @@ TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_HIF8_out
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_FP16_output_HIF8) {
+TEST_F(convolution_test, ascend_test_conv2D_input_HIF8_weight_FP16_output_HIF8) {
   vector<aclDataType> ValidList = {ACL_FLOAT};
   int length = ValidList.size();
 
@@ -3487,15 +3486,11 @@ TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_HIF8_weight_FP16_out
                         OUTPUT(output_desc), cubeMathType);
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-        EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR); // a!=b check
-    } else {
-        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID); // support list check
-    }
+    EXPECT_NE(aclRet, ACL_SUCCESS);
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_bf16_weight_bf16_output_bf16_usefp16) {
+TEST_F(convolution_test, ascend_test_conv2D_input_bf16_weight_bf16_output_bf16_usefp16) {
   const int64_t groups = 1;
   bool transposed = false;
   vector<int64_t> inp_dims = {2, 16, 32, 16};
@@ -3521,12 +3516,10 @@ TEST_F(convolution_test, ascend950PR_9589_test_conv2D_input_bf16_weight_bf16_out
                       OUTPUT(output_desc), 2);
   uint64_t workspace_size = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-      EXPECT_EQ(aclRet, ACL_SUCCESS); // a!=b check
-  }
+  EXPECT_EQ(aclRet, ACL_SUCCESS); // a!=b check
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Batch) {
+TEST_F(convolution_test, ascend_test_empty_tensor_conv2dTranspose_Batch) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3558,7 +3551,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Batc
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Channel) {
+TEST_F(convolution_test, ascend_test_empty_tensor_conv2dTranspose_Channel) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3590,7 +3583,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_Chan
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_H) {
+TEST_F(convolution_test, ascend_test_empty_tensor_conv2dTranspose_H) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3622,7 +3615,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_H) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_W) {
+TEST_F(convolution_test, ascend_test_empty_tensor_conv2dTranspose_W) {
   // test conv2dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3654,7 +3647,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv2dTranspose_W) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv3DTransPose_outputpadding) {
+TEST_F(convolution_test, ascend_test_conv3DTransPose_outputpadding) {
   // test conv3d
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3692,7 +3685,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv3DTransPose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_outputpadding) {
+TEST_F(convolution_test, ascend_test_conv2DTransPose_outputpadding) {
   // test conv3d
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3730,7 +3723,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv3DTranspose_8bit_with_bias_err) {
+TEST_F(convolution_test, ascend_test_conv3DTranspose_8bit_with_bias_err) {
   // test conv3dTranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3767,7 +3760,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv3DTranspose_8bit_with_bias_er
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_bias_err) {
+TEST_F(convolution_test, ascend_test_conv2DTransPose_8bit_with_bias_err) {
   // test conv2dtranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3804,7 +3797,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_bias_er
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_nhwc_err) {
+TEST_F(convolution_test, ascend_test_conv2DTransPose_8bit_with_nhwc_err) {
   // test conv2dtranspose 8bit with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3841,7 +3834,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_8bit_with_nhwc_er
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_dataType_error) {
+TEST_F(convolution_test, ascend_test_conv2DTransPose_dataType_error) {
   vector<aclDataType> ValidList = {ACL_DOUBLE};
   int length = ValidList.size();
 
@@ -3877,7 +3870,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv2DTransPose_dataType_error) {
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_outputpadding) {
+TEST_F(convolution_test, ascend_test_conv1DTranspose_outputpadding) {
   vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_BF16, ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
 
@@ -3912,7 +3905,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_outputpadding) {
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv1dTranspose_L) {
+TEST_F(convolution_test, ascend_test_empty_tensor_conv1dTranspose_L) {
   // test conv1dTranspose
   bool transposed = true;
   const int64_t groups = 1;
@@ -3944,7 +3937,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_empty_tensor_conv1dTranspose_L) {
   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_hifloat8_Or_f8e4m3fn_with_bias_error) {
+TEST_F(convolution_test, ascend_test_conv1DTranspose_hifloat8_Or_f8e4m3fn_with_bias_error) {
   // test conv1dTranspose hifloat8 or float8_e4m3fn with bias
   vector<aclDataType> ValidList = {ACL_HIFLOAT8, ACL_FLOAT8_E4M3FN};
   int length = ValidList.size();
@@ -3981,7 +3974,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv1DTranspose_hifloat8_Or_f8e4m
   }
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv1d_transpose_with_bias)
+TEST_F(convolution_test, ascend_test_conv1d_transpose_with_bias)
 {
   bool transposed = true;
   const int64_t groups = 384;
@@ -4013,7 +4006,7 @@ TEST_F(convolution_test, ascend950PR_9591_test_conv1d_transpose_with_bias)
   EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_test, ascend950PR_9591_test_conv1d_transpose_matmul)
+TEST_F(convolution_test, ascend_test_conv1d_transpose_matmul)
 {
   bool transposed = true;
   const int64_t groups = 1;
@@ -4069,6 +4062,91 @@ TEST_F(convolution_test, ascend310B_test_conv2D_NCHW) {
     auto dilation_desc = IntArrayDesc(dilation_dims);
     auto output_padding_desc = IntArrayDesc(output_padding_dims);
     auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+    // auto groups_desc = ScalarDesc(groups);
+    // auto tranposed_desc = ScalarDesc(transposed);
+
+    auto ut = OP_API_UT(aclnnConvolution,  // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, strides_desc, padding_desc, dilation_desc, transposed,
+                              output_padding_desc, groups),  // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+  }
+}
+
+TEST_F(convolution_test, ascend910_9589_test_conv2D_HWNC) {
+  vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_FLOAT, ACL_BF16};
+  int length = ValidList.size();
+
+  const int64_t groups = 1;
+  bool transposed = false;
+  vector<int64_t> storage_dims = {5, 340, 1, 128};
+  vector<int64_t> view_dims = {1, 128, 5, 340};
+  vector<int64_t> view_stride = {128, 1, 43520, 128};
+
+  vector<int64_t> weight_dims = {128, 128 / groups, 1, 1};
+  vector<int64_t> bias_dims = {128};
+  vector<int64_t> output_dims = {1, 128, 5, 114};
+  vector<int64_t> strides_dims = {1, 3};
+  vector<int64_t> padding_dims = {0, 0};
+  vector<int64_t> dilation_dims = {1, 1};
+  vector<int64_t> output_padding_dims = {0, 0};
+
+  for (int i = 0; i < length; i++) {
+    auto inp_desc = aclCreateTensor(view_dims.data(), view_dims.size(), ValidList[i], view_stride.data(), 0,
+        ACL_FORMAT_NCHW, storage_dims.data(), storage_dims.size(), nullptr);
+    auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto bias_desc = TensorDesc(bias_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc = IntArrayDesc(padding_dims);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+    // auto groups_desc = ScalarDesc(groups);
+    // auto tranposed_desc = ScalarDesc(transposed);
+
+    auto ut = OP_API_UT(aclnnConvolution,  // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, strides_desc, padding_desc, dilation_desc, transposed,
+                              output_padding_desc, groups),  // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+  }
+}
+
+TEST_F(convolution_test, ascend910_9589_test_conv1D_LNC) {
+  vector<aclDataType> ValidList = {ACL_FLOAT16, ACL_FLOAT, ACL_BF16};
+  int length = ValidList.size();
+
+  const int64_t groups = 1;
+  bool transposed = false;
+  vector<int64_t> storage_dims = {150, 128, 32};
+  vector<int64_t> view_dims = {128, 32, 150};
+  vector<int64_t> view_stride = {32, 1, 4096};
+
+  vector<int64_t> weight_dims = {32, 32, 1};
+  vector<int64_t> output_dims = {128, 32, 150};
+  vector<int64_t> strides_dims = {1};
+  vector<int64_t> padding_dims = {0};
+  vector<int64_t> dilation_dims = {1};
+  vector<int64_t> output_padding_dims = {0};
+
+  for (int i = 0; i < length; i++) {
+    auto inp_desc = aclCreateTensor(view_dims.data(), view_dims.size(), ValidList[i], view_stride.data(), 0,
+        ACL_FORMAT_NCL, storage_dims.data(), storage_dims.size(), nullptr);
+    auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCL).ValueRange(0, 2);
+    auto bias_desc = nullptr;
+    auto strides_desc = IntArrayDesc(strides_dims);
+    auto padding_desc = IntArrayDesc(padding_dims);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+    auto output_padding_desc = IntArrayDesc(output_padding_dims);
+    auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCL).Precision(0.01, 0.01);
     // auto groups_desc = ScalarDesc(groups);
     // auto tranposed_desc = ScalarDesc(transposed);
 

@@ -23,7 +23,7 @@
 
 namespace optiling {
 namespace conv_ops_tiling {
-ge::graphStatus Conv2dBaseTiling::GetQuantConv2dCompileInfo(platform_ascendc::SocVersion &curShortSoc)
+ge::graphStatus Conv2dBaseTiling::GetQuantConv2dCompileInfo()
 {
     auto compileInfoPtr =
         static_cast<const Conv2DTilingParseInfo*>(context_->GetCompileInfo());
@@ -38,44 +38,45 @@ ge::graphStatus Conv2dBaseTiling::GetQuantConv2dCompileInfo(platform_ascendc::So
     opInfo_->ubSize = opInfo.ubSize;
     opInfo_->btSize = opInfo.btSize;
     opInfo_->l2Rate = opInfo.l2Rate;
-    opInfo_->socVersion = opInfo.socVersion;
-    opInfo_->shortSocVersion = opInfo.shortSocVersion;
-    if (socConvertMap.find(opInfo_->socVersion) == socConvertMap.end()) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: GetPlatform SocVersion failed.",
-                paramInfo_.nodeType.c_str());
-        return ge::GRAPH_FAILED;
+    if (socConvertMap.find(opInfo.shortSocVersion) == socConvertMap.end()) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: GetPlatform SocVersion %s not in socConvert.",
+                                         paramInfo_.nodeType.c_str(), opInfo.shortSocVersion.c_str());
     }
-    curShortSoc = socConvertMap.at(opInfo_->socVersion);
+    opInfo_->npuArch = socConvertMap.at(opInfo.shortSocVersion); 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 {
     // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
-    platform_ascendc::SocVersion curShortSoc;
+    NpuArch npuArch;
     paramInfo_.nodeType = context_->GetNodeType();
     Conv2dTilingCache& tilingCache = Conv2dTilingCache::GetInstance();
     opInfo_ = tilingCache.GetPlatFormInfo();
-    curShortSoc =  tilingCache.GetSocVersion();
-    if (curShortSoc == platform_ascendc::SocVersion::RESERVED_VERSION) {
-        auto platformInfoPtr = context_->GetPlatformInfo();
+    npuArch = tilingCache.GetSocVersion();
+    if (npuArch == NpuArch::DAV_RESV) {
+        fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
         if (platformInfoPtr == nullptr && paramInfo_.nodeType == "QuantConv2D") {
-            if (GetQuantConv2dCompileInfo(curShortSoc) != ge::GRAPH_SUCCESS) {
+            if (GetQuantConv2dCompileInfo() != ge::GRAPH_SUCCESS) {
                 return ge::GRAPH_FAILED;
             }
         }
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
-        curShortSoc = ascendcPlatform.GetSocVersion();
+        opInfo_->npuArch = ascendcPlatform.GetCurNpuArch();
+        opInfo_->aivNum = ascendcPlatform.GetCoreNumAiv();
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, opInfo_->l1Size);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, opInfo_->l0aSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, opInfo_->l0bSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, opInfo_->l0cSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, opInfo_->ubSize);
-        tilingCache.SetSocVersion(curShortSoc, *opInfo_);       
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::BT, opInfo_->btSize);
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::FB, opInfo_->fbSize);
+        tilingCache.SetSocVersion(opInfo_->npuArch, *opInfo_);
     }
-    SetApiInputPlatformInfo(curShortSoc);
+    apiInputPlatformInfo.aivPerAic = opInfo_->aivNum / opInfo_->aicoreNum;
+    SetApiInputPlatformInfo();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -90,22 +91,21 @@ ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv2dBaseTiling::SetApiInputPlatformInfo(const platform_ascendc::SocVersion& curShortSoc)
+void Conv2dBaseTiling::SetApiInputPlatformInfo()
 {
-    apiInputPlatformInfo.socVersion = curShortSoc;
-    this->socVersion = curShortSoc;
+    apiInputPlatformInfo.npuArch = opInfo_->npuArch;
     apiInputPlatformInfo.l1Size = opInfo_->l1Size;
     apiInputPlatformInfo.l0CSize = opInfo_->l0cSize;
     apiInputPlatformInfo.l0ASize = opInfo_->l0aSize;
     apiInputPlatformInfo.l0BSize = opInfo_->l0bSize;
     apiInputPlatformInfo.ubSize = opInfo_->ubSize;
-    apiInputPlatformInfo.btSize = socBTsizeMap.at(curShortSoc);
-    apiInputPlatformInfo.fbSize = socFBsizeMap.at(curShortSoc);
+    apiInputPlatformInfo.btSize = opInfo_->btSize;
+    apiInputPlatformInfo.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld," \
-            "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
-            opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, apiInputPlatformInfo.btSize, apiInputPlatformInfo.fbSize,
-            socNameTab.at(curShortSoc).c_str());
+        "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld, " \
+        "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
+        opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize,
+        opInfo_->fbSize, socNameTab.at(opInfo_->npuArch).c_str());
 }
 
 bool Conv2dBaseTiling::CheckDim(int64_t dimValue, uint64_t maxDimValue) const
@@ -123,7 +123,7 @@ bool Conv2dBaseTiling::EnableOptGroup()
     if (descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z) {
         return true;
     }
-    
+
     auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
     auto n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX);
     return ConvAlignB(optGroupInfo_.cinOpt, k0) * shapeInfo_.kh * shapeInfo_.kw *
@@ -232,7 +232,7 @@ void Conv2dBaseTiling::GetDescInfo()
         descInfo_.biasFormat =
             static_cast<ge::Format>(GetPrimaryFormat(context_->GetOptionalInputDesc(biasIndex)->GetStorageFormat()));
     }
-    if (IsMdcSoc(apiInputPlatformInfo.socVersion)) {
+    if (IsMdcSoc(opInfo_->npuArch)) {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
     } else {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
@@ -246,12 +246,8 @@ void Conv2dBaseTiling::GetDescInfo()
 
 bool Conv2dBaseTiling::IsEnableC04()
 {
-    if (IsMdcSoc(apiInputPlatformInfo.socVersion)) {
+    if (IsMdcSoc(opInfo_->npuArch)) {
         return descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
-    }
-
-    if (apiInputPlatformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55) {
-        return false;
     }
 
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
@@ -288,7 +284,7 @@ bool Conv2dBaseTiling::IsEnableC04()
                 paramInfo_.nodeType.c_str());
         return false;
     }
- 
+
     return true;
 }
 
@@ -333,7 +329,7 @@ ge::graphStatus Conv2dBaseTiling::GetConv2DAxisPosInfo()
 {
     auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapDesc);
-    string fmapOriFormat = ge::TypeUtils::FormatToSerialString(fMapDesc->GetOriginFormat());    
+    string fmapOriFormat = ge::TypeUtils::FormatToSerialString(fMapDesc->GetOriginFormat());
     OP_TILING_CHECK(fmapOriFormat != "NCHW" && fmapOriFormat != "NHWC",
                     OP_LOGE(context_->GetNodeName(), "%s AscendC: unsupported fmapOriFormat %s.",
                             paramInfo_.nodeType.c_str(), fmapOriFormat.c_str()),
@@ -346,8 +342,7 @@ ge::graphStatus Conv2dBaseTiling::GetConv2DAxisPosInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-
-ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
+ge::graphStatus Conv2dBaseTiling::GetAndCheckInfo()
 {
     if (GetNodeType() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -361,12 +356,16 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     if (GetConv2DAxisPosInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    SetQuantFlag();
-    SetHasBias();
-    GetDescInfo();
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus Conv2dBaseTiling::ParseAndCheckInfo()
+{
     if (!GetConvParamsIdx(paramInfo_.paramsFormat, paramInfo_.paramsIdxVec)) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: conv2d get param Index failed.", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (GetDisContinuousFlag() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (ParseFmapShape() != ge::GRAPH_SUCCESS || ParseWeightShape() != ge::GRAPH_SUCCESS ||
@@ -382,6 +381,22 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     if (ParseExtendDualOutputShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
+{
+    if (GetAndCheckInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    SetQuantFlag();
+    SetHasBias();
+    GetDescInfo();
+
+    if (ParseAndCheckInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    
     GetShapeInfo();
     GetAttrsInfo(); // include flagInfo update
     InitblockDimConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
@@ -392,6 +407,11 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     if (GetFeatureFlag() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    std::stringstream dmaWarningLog;
+    dmaWarningLog << "The conv2d has entered the DMA processing process. A timeout AiCore error may be reported."
+                  << " If a timeout AiCore error is reported, reduce the conv2d specifications and try again.";
+    OP_LOGW_IF(featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG,
+               context_->GetNodeName(), "%s", dmaWarningLog.str().c_str());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -430,7 +450,15 @@ ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
         if (CheckDmaLimits() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }
+        if (flagInfo_.disContinuousFlag) {
+            OP_LOGE(context_->GetNodeName(), "%s AscendC: DMA not support disContinuous input.",
+                paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
         featureFlagInfo_ = ConvAscendcFeatureFlag::IS_DMA_FLAG;
+        if (attrInfo_.groups > 1) {
+            flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
+        }
         return ge::GRAPH_SUCCESS;
     }
 
@@ -473,7 +501,7 @@ ge::graphStatus Conv2dBaseTiling::DoLibApiTiling()
         OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add fast tiling to cache",
                 paramInfo_.nodeType.c_str());
     }
- 
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -492,6 +520,9 @@ ge::graphStatus Conv2dBaseTiling::DoOpTiling()
         if (AddTilingToCache()) {
             OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add repo tiling to cache", paramInfo_.nodeType.c_str());
         }
+    }
+    if (CheckDisContinuousInstrLimits() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
         SetBlockDimRes();

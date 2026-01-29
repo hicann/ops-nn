@@ -22,10 +22,7 @@ using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
     // using op_tiling register capability in "tiling_templates_registry" for AscendC extendconv2d operator
-    CONV_REGISTER_TILING_TEMPLATE(ExtendConv2D, Conv2dBaseTiling,
-        static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND950), 0);
-    CONV_REGISTER_TILING_TEMPLATE(ExtendConv2D, Conv2dBaseTiling,
-        static_cast<int32_t>(platform_ascendc::SocVersion::MC62CM12A), 1);
+    CONV_REGISTER_TILING_TEMPLATE(ExtendConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_3510), 0);
 
     IMPL_OP_OPTILING(ExtendConv2D)
     .Tiling(ConvTilingFunc)

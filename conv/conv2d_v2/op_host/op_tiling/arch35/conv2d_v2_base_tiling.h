@@ -60,13 +60,13 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
+    ge::graphStatus GetAndCheckInfo();
+    ge::graphStatus ParseAndCheckInfo();
     ge::graphStatus Conv2DInfoInitAndCheck();
 
     void SetBlockDimRes();
     bool GetTilingFromRepo();
     bool QueryTilingBank(std::string socHardWareVersion, uint32_t aicoreNum);
-    bool GetConv2DTilingFromRepo();
-    bool GetQuantConv2DTilingFromRepo();
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
     void TranslateApiTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
@@ -138,9 +138,6 @@ private:
 
     Conv2dOriginFormatAixsPosInfo conv2dOriginFormatAixsPosInfo_;
 
-    // soc version
-    platform_ascendc::SocVersion socVersion;
-
 private:
     bool CheckDim(int64_t dimValue, uint64_t maxDimValue) const;
     ge::graphStatus CheckStrideLegal();
@@ -161,6 +158,7 @@ private:
     ge::graphStatus CheckL1SizeLimitsKernelFullLoad();
     ge::graphStatus CheckL1SizeLimitsKernelSplit();
     ge::graphStatus CheckInstructionLimits();
+    ge::graphStatus CheckDisContinuousInstrLimits();
     ge::graphStatus CheckQuantDescLegal();
     ge::graphStatus CheckQuantScaleLegal();
     ge::graphStatus CheckRoundModeLegal();
@@ -194,8 +192,8 @@ private:
     void Conv2dOpTilingSetAttr();
     void Conv2dApiTilingSetShape();
     void Conv2dApiTilingSetAttrs();
-    void SetApiInputPlatformInfo(const platform_ascendc::SocVersion& curShortSoc);
-    ge::graphStatus GetQuantConv2dCompileInfo(platform_ascendc::SocVersion &curShortSoc);
+    void SetApiInputPlatformInfo();
+    ge::graphStatus GetQuantConv2dCompileInfo();
     ge::graphStatus GetPlatformInfoInner();
     ge::graphStatus InitConv2dApiTiling();
     ge::graphStatus SetTilingKey();
@@ -221,6 +219,7 @@ private:
     void SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     uint64_t GetC04UbLoadMaxNsize();
     ge::graphStatus PrepareTiling();
+    ge::graphStatus GetDisContinuousFlag();
     ge::graphStatus ParseFmapShape();
     ge::graphStatus ParseWeightShape();
     ge::graphStatus ParseBiasShape();

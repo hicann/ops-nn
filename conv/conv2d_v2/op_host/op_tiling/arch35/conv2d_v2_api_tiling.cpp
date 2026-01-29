@@ -38,7 +38,7 @@ int64_t Conv2dTiling::GetTiling(optiling::TConv2DTiling &tiling)
     InferCubeInfo();
     Infer5hdShape();
 
-    platformInfo.abL1mte2BandWidthCof = GetBandWidthCof(platformInfo.socVersion);
+    platformInfo.abL1mte2BandWidthCof = GetBandWidthCof();
     int64_t ret = Compute();
     if (ret == -1) {
         TILING_LOG_ERROR("conv2d api tiling compute failed.");
@@ -175,7 +175,7 @@ uint64_t Conv2dTiling::CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_
     uint64_t kernelHxkernelW = params.orgkH * params.orgkW;
     uint64_t weightDtypeSize = DTYPE_SIZE_TAB.at(params.weightDtype);
 
-    return (ci1Ub * kernelHxkernelW * params.k0 * co1Ub * params.n0 * WEIGHT_UB_BUFF_NUMS * weightDtypeSize +
+    return (ci1Ub * kernelHxkernelW * params.k0 * co1Ub * params.n0 * platformInfo.aivPerAic * weightDtypeSize +
             VGATHER_REGISTER_SIZE);
 }
 
@@ -334,7 +334,7 @@ void Conv2dTiling::SetUbTiling(optiling::TConv2DTiling& tiling)
 
     uint64_t kernelHxkernelW = shapeInfo.orgkH * shapeInfo.orgkW;
     uint64_t weightKSize = AlignB(shapeInfo.orgCi, cubeInfo.k0) * kernelHxkernelW;
-    bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * VEC_NUM_PER_CUBE_910D *
+    bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * platformInfo.aivPerAic *
         DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <= (platformInfo.ubSize - VGATHER_REGISTER_SIZE);
     bool weightUbFlag = attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
  	    !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
@@ -674,6 +674,11 @@ void Conv2dTiling::SetRoundMode(int8_t roundMode)
     attrInfo.roundMode = roundMode;
 }
 
+void Conv2dTiling::SetDisContinuousFlag(bool disContinuousFlag)
+{
+    this->disContinuousFlag = disContinuousFlag;
+}
+
 void Conv2dTiling::SetGroups(int32_t groups)
 {
     attrInfo.groups = groups;
@@ -714,15 +719,6 @@ void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
 }
 
-uint32_t Conv2dTiling::GetVecNumBySoc() const
-{
-    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND950) {
-        return VEC_NUM_PER_CUBE_910D;
-    } else {
-        return 0;
-    }
-}
-
 uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const
 {
     uint64_t fullLoadK = AlignB(c04Info.orgkH * c04Info.orgkW * C04_CIN_SIZE, c04Info.k0);
@@ -744,7 +740,7 @@ uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
     if (c04Info.pbBL1 == 1) {
         bUbNStep = c04Info.curNBL1 > nMaxStep ? nMaxStep : c04Info.curNBL1;
     } else {
-        uint32_t vecNum = GetVecNumBySoc();
+        uint32_t vecNum = platformInfo.aivPerAic;
         if (vecNum == 0) {
             TILING_LOG_DEBUG("can't get vector num per cube by soc version");
             return 0;

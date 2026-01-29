@@ -31,7 +31,7 @@ using namespace conv3d;
 #endif
 
 using namespace conv;
- 
+
 constexpr uint8_t SINGLE_BLOCK_SIZE = 32;
 constexpr uint8_t M0 = 16;
 constexpr uint8_t N0 = 16;
@@ -207,7 +207,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
 {
     CalcStartAddrCommon(din, dout);
 
-    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize;
+    if constexpr (CONV::DIS_CONTINUOUS) {
+        fmStartAddr = convOps->batchIdxStart * convRunInfo->cin;
+    } else {
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize;
+    }
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
         weightStartAddr = convOps->nIdxStart * convOps->k0;
     } else {
@@ -240,14 +244,23 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
     int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convRunInfo->strideH) -
         static_cast<int64_t>(convRunInfo->padTop);
     convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
-    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
-        convRunInfo->win;
+    if constexpr (CONV::DIS_CONTINUOUS) {
+        fmStartAddr = convOps->singleCoreHiStartPos * convRunInfo->win * convRunInfo->batch * convRunInfo->cin +
+                      convOps->batchIdxStart * convRunInfo->cin;
+    } else {
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
+                      convRunInfo->win;
+    }
     convOps->singleCoreHiStartPos = hiStartPosTmp;
     if constexpr (CONV::A_FORMAT == ConvFormat::NCHW) {
         int64_t wiStartPosTmp = static_cast<int64_t>(convOps->woIdxStart * convRunInfo->strideW) -
                                 static_cast<int64_t>(convRunInfo->padLeft);
         convOps->singleCoreWiStartPos = wiStartPosTmp < 0 ? 0 : wiStartPosTmp;
-        fmStartAddr += convOps->singleCoreWiStartPos;
+        if constexpr (CONV::DIS_CONTINUOUS) {
+            fmStartAddr += convOps->singleCoreWiStartPos * convRunInfo->batch * convRunInfo->cin;
+        } else {
+            fmStartAddr += convOps->singleCoreWiStartPos;
+        }
         convOps->singleCoreWiStartPos = wiStartPosTmp;
     }
 
@@ -418,7 +431,7 @@ __aicore__ __forceinline__ void ConvCommon<CONV, RUN_INFO>::
         convOps->biasGm.SetGlobalBuffer(
             reinterpret_cast<__gm__ typename CONV::BIAS_T*>(bias + biasStartAddr * sizeof(typename CONV::BIAS_T)));
     }
- 
+
     InitFixpipeBuffer(extendParams);
 }
 

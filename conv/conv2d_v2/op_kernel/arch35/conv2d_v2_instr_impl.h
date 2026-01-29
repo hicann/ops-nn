@@ -145,6 +145,27 @@ public:
         intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
     }
 
+    __aicore__ inline void SetNd2NzIntriParamsInputHWNC(Nd2NzParams &intriParams, uint64_t kAL1Iter)
+    {
+        intriParams.ndNum = hiLoadL1;
+        intriParams.nValue = wiLoadL1;
+        intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
+            self_->ctx.convTiling->cinATailInCore : self_->ctx.convTiling->cinAInCore;
+        intriParams.srcNdMatrixStride = self_->ctx.orgWi * self_->ctx.orgCi * self_->ctx.orgBatch;
+        intriParams.srcDValue = self_->ctx.orgCi * self_->ctx.orgBatch;
+        intriParams.dstNzC0Stride = hiLoadL1 * wiLoadL1;
+        intriParams.dstNzNStride = 1;
+        intriParams.dstNzMatrixStride = wiLoadL1 * Intf::k0;
+    }
+
+    __aicore__ inline void SetNd2NzIntriParamsC04InputHWNC(Nd2NzParams &intriParams)
+    {
+        intriParams.ndNum = 1;
+        intriParams.nValue = hiLoadL1 * wiLoadL1;
+        intriParams.dValue = self_->ctx.orgCi;
+        intriParams.srcDValue = self_->ctx.orgCi * self_->ctx.orgBatch;
+    }
+
     __aicore__ inline void LoadAl1Data(uint64_t kAL1Iter, uint64_t batchIter)
     {
         // Calculate aL1GmOffset
@@ -155,7 +176,7 @@ public:
                               batchIter * self_->ctx.fmapOneBatchSize;
 
         Dn2NzParams intriParams;
-        if constexpr(Intf::c04Flag) {
+        if constexpr (Intf::c04Flag) {
             SetDn2NzIntriParamsC04(intriParams);
             DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         } else {
@@ -175,11 +196,29 @@ public:
                               kAL1Iter * self_->ctx.convTiling->cinAInCore;
 
         Nd2NzParams intriParams;
-        if constexpr(Intf::c04Flag) {
+        if constexpr (Intf::c04Flag) {
             SetNd2NzIntriParamsC04(intriParams);
             DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         } else {
             SetNd2NzIntriParams(intriParams, kAL1Iter);
+            DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+        }
+    }
+
+    __aicore__ inline void LoadAL1DataInputHWNC(uint64_t kAL1Iter, uint64_t batchIter)
+    {
+        int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
+        int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
+        int64_t aL1GmOffset = realHiTopGmIdx * self_->ctx.orgWi * self_->ctx.orgBatch * self_->ctx.orgCi +
+                              realWiTopGmIdx * self_->ctx.orgBatch * self_->ctx.orgCi +
+                              batchIter * self_->ctx.orgCi + kAL1Iter * self_->ctx.convTiling->cinAInCore;
+
+        Nd2NzParams intriParams;
+        if constexpr (Intf::c04Flag) {
+            SetNd2NzIntriParamsC04InputHWNC(intriParams);
+            DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+        } else {
+            SetNd2NzIntriParamsInputHWNC(intriParams, kAL1Iter);
             DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         }
     }
@@ -201,7 +240,9 @@ public:
             return;
         }
 
-        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
+        if constexpr (Intf::disContinuousFlag) {
+            LoadAL1DataInputHWNC(kAL1Iter, batchIter);
+        } else if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             LoadAl1Data(kAL1Iter, batchIter);
         } else {
             LoadAl1DataHWC(kAL1Iter, batchIter);
@@ -256,7 +297,9 @@ public:
             return;
         }
 
-        if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
+        if constexpr (Intf::disContinuousFlag) {
+            LoadAL1InputHWNC(kAL1Iter, mAL1Iter, batchIter);
+        } else if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
             uint64_t aL1GmOffset = batchIter * self_->ctx.fmapOneBatchSize +
                                    kAL1Iter * self_->ctx.convTiling->cinOffsetBlockInGM +
                                    hiIdx * self_->ctx.orgWi;
@@ -282,6 +325,20 @@ public:
                 SetNd2NzIntriParams(intriParams, kAL1Iter);
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
             }
+        }
+    }
+
+    __aicore__ inline void LoadAL1InputHWNC(uint64_t kAL1Iter, uint64_t mAL1Iter, uint64_t batchIter)
+    {
+        uint64_t aL1GmOffset = hiIdx * self_->ctx.orgWi * self_->ctx.orgBatch * self_->ctx.orgCi +
+                               batchIter * self_->ctx.orgCi + kAL1Iter * self_->ctx.convTiling->cinAInCore;
+        Nd2NzParams intriParams;
+        if constexpr (Intf::c04Flag) {
+            SetNd2NzIntriParamsC04InputHWNC(intriParams);
+            DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
+        } else {
+            SetNd2NzIntriParamsInputHWNC(intriParams, kAL1Iter);
+            DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
         }
     }
 
@@ -391,6 +448,26 @@ private:
         intriParams.srcDValue = self_->ctx.convTiling->orgCi;
         intriParams.dstNzNStride = 1;
         intriParams.dstNzC0Stride = aL1Mi;
+    }
+
+    __aicore__ inline void SetNd2NzIntriParamsInputHWNC(Nd2NzParams &intriParams, uint64_t kAL1Iter)
+    {
+        uint64_t aL1Mi = hiLoadL1 * self_->ctx.orgWi;
+        intriParams.ndNum = 1;
+        intriParams.nValue = aL1Mi;
+        intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
+            self_->ctx.convTiling->cinATailInCore : self_->ctx.convTiling->cinAInCore;
+        intriParams.srcDValue = self_->ctx.convTiling->orgCi * self_->ctx.orgBatch;
+        intriParams.dstNzNStride = 1;
+        intriParams.dstNzC0Stride = aL1Mi;
+    }
+
+    __aicore__ inline void SetNd2NzIntriParamsC04InputHWNC(Nd2NzParams &intriParams)
+    {
+        intriParams.ndNum = 1;
+        intriParams.nValue = hiLoadL1 * self_->ctx.orgWi;
+        intriParams.dValue = self_->ctx.convTiling->singleCoreCi;
+        intriParams.srcDValue = self_->ctx.convTiling->singleCoreCi * self_->ctx.orgBatch;
     }
 
     __aicore__ inline bool IsMAL1Tail(uint64_t mAL1Iter)

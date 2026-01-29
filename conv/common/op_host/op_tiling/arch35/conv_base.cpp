@@ -102,7 +102,7 @@ void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector
     }
 }
 
-void GetSupportedDataTypes(const platform_ascendc::SocVersion& socVersion, bool quantFlag, 
+void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, 
     ge::Format fMapFormat, bool exendConvFlag, std::vector<std::vector<ConvDtype>>& supportTypes)
 {
     if (exendConvFlag) {
@@ -272,13 +272,15 @@ bool ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32
     return true;
 }
 
-void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, const platform_ascendc::SocVersion socVersion,
+void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,
     std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats)
 {
     const std::string& nodeType = context_->GetNodeType();
     bool extendConvFlag = nodeType == "ExtendConv2D";
     ss <<"The support params format list [fmap, weight, output] for scene ";
-    if (socVersion == platform_ascendc::SocVersion::ASCEND950) {
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
         if (extendConvFlag) {
             supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST;
             ss << "(extendConvFlag is enable) is ";
@@ -293,12 +295,12 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, const platform
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
             ss << "(quantFlag is disable and inputDtype is HIFLOAT8) is ";
         }
-    } else if (socVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    } else if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_5102) {
         if (extendConvFlag) {
-            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MC62CM12A;
+            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC;
             ss << "(extendConvFlag is enable) is ";
         } else {
-            supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MC62CM12A;
+            supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MDC;
             ss << "(extendConvFlag is disable) is ";
         }
     } else {

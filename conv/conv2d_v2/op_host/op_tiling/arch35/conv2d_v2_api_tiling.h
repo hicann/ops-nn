@@ -98,6 +98,7 @@ public:
     void SetOffsetx(int8_t offsetx);
     void SetC04Flag(bool isC04Enable);
     void SetRoundMode(int8_t roundMode);
+    void SetDisContinuousFlag(bool disContinuousFlag);
     void SetOutputOrder(int8_t outOrder);
     void SetTilingAlgorithmType(int8_t tilingAlgorithmType);
     bool GetCoreBindingDecisionFactor(Conv2DBasicBlockInfo& conv2DBasicBlockInfo);
@@ -147,7 +148,6 @@ private:
     bool CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo);
     void PrintConv2DBasicBlockInfoPhase1(const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const;
     void PrintConv2DBasicBlockInfoPhase2(const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const;
-    uint32_t GetVecNumBySoc() const;
     bool CheckL1SizeLimitsKernelFullLoad();
 };
 } // namespace conv_tiling

@@ -20,6 +20,7 @@
 #include "../../common/arch35/conv_tilingkey.h"
 #endif
 #include "conv2d_v2_inner_batch_tilingkey.h"
+#include "conv2d_v2_input_hwnc_tilingkey.h"
 
 namespace Conv2DV2Key {
 using namespace ConvKey;
@@ -46,7 +47,9 @@ ASCENDC_TPL_UINT_DECL(WeightUbTrans, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
 ASCENDC_TPL_UINT_DECL(FmapCopyMode, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
     CONV_FMAP_LOAD3D_MODE, CONV_FMAP_DMA_MODE),
 ASCENDC_TPL_UINT_DECL(InnerBatch, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_INNER_BATCH_SINGLE, CONV_INNER_BATCH_KERNEL_1X1_MULTI, CONV_INNER_BATCH_MULTI)
+    CONV_INNER_BATCH_SINGLE, CONV_INNER_BATCH_KERNEL_1X1_MULTI, CONV_INNER_BATCH_MULTI),
+ASCENDC_TPL_UINT_DECL(DisContinuous, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
+    CONV_DIS_CONTINUOUS_CLOSE, CONV_DIS_CONTINUOUS_INPUT_HWNC)
 );
 
 #define CONV2D_COMMON_C04_TPL_UINT_SEL()                                                                             \
@@ -57,7 +60,9 @@ ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                        
 ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
     CONV_FMAP_LOAD3D_MODE),                                                                                          \
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE)
 
 #define CONV2D_COMMON_C04_MIXCORE_TPL_UINT_SEL()                                                                     \
 ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
@@ -67,7 +72,9 @@ ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                        
 ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
     CONV_FMAP_LOAD3D_MODE),                                                                                          \
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE, CONV_DIS_CONTINUOUS_INPUT_HWNC)
 
 #define CONV2D_ONLY_MN_FULLLOAD_SEL()                                                                                \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
@@ -171,7 +178,9 @@ ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                        
 ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
     CONV_FMAP_LOAD3D_MODE),                                                                                          \
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE)
 
 #define CONV2D_ORI_GROUP_SEL()                                                                                       \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
@@ -183,12 +192,28 @@ ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                        
 ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
     CONV_FMAP_LOAD3D_MODE),                                                                                          \
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE)
 
 // Weight Ub Trans Mode TilingKey SEL
 #if (!defined(ASCENDC_TPL_PRE) && !defined(ASCENDC_TPL_KERNEL)) ||                                                   \
      (defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCHW &&       \
      ((defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW) || (defined(FORMAT_Y0) && FORMAT_Y0 == FORMAT_NCHW)))
+
+#define CONV2D_COMMON_WEIGHT_UB_SEL()                                                                                \
+ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
+    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
+ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
+    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
+ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
+ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
+    CONV_FMAP_LOAD3D_MODE),                                                                                          \
+ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE, CONV_DIS_CONTINUOUS_INPUT_HWNC)
 
 #define CONV2D_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()                                                                      \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
@@ -204,16 +229,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_M_MODE),                                                                                       \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_LOAD3D_MODE),                                                                                          \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_WEIGHT_UB_SEL()
 
 #define CONV2D_WEIGHT_UB_ONLY_AL1_FULLLOAD_SEL()                                                                     \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
@@ -229,16 +245,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_LOAD3D_MODE),                                                                                          \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_WEIGHT_UB_SEL()
 
 #define CONV2D_WEIGHT_UB_NO_FULLLOAD_AL0_OPEN_SEL()                                                                  \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
@@ -254,16 +261,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_LOAD3D_MODE),                                                                                          \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_WEIGHT_UB_SEL()
 
 #define CONV2D_WEIGHT_UB_NO_FULLLOAD_BL0_OPEN_SEL()                                                                  \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
@@ -279,16 +277,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_LOAD3D_MODE),                                                                                          \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_WEIGHT_UB_SEL()
 
 #define CONV2D_WEIGHT_UB_NO_FULLLOAD_ALL_OPEN_SEL()                                                                  \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
@@ -304,16 +293,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_LOAD3D_MODE),                                                                                          \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_WEIGHT_UB_SEL()
 
 #else
 #define CONV2D_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()
@@ -324,6 +304,20 @@ ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                           
 #endif
 
 // Fmap DMA Mode TilingKey SEL
+#define CONV2D_COMMON_DMA_SEL()                                                                                      \
+ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
+    CONV_GROUP_TYPE_NORMAL_CONV, CONV_GROUP_TYPE_ORI_GROUP_CONV),                                                    \
+ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
+    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
+ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
+ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
+    CONV_FMAP_DMA_MODE),                                                                                             \
+ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE)
+
 #define CONV2D_DMA_L1_FULLLOAD_L0B_CLOSE_SEL()                                                                       \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_FULLLOAD_AL1),                                                                                  \
@@ -337,16 +331,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_DMA_MODE),                                                                                             \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_DMA_SEL()
  
 #define CONV2D_DMA_L1_FULLLOAD_ONLY_L0B_OPEN_SEL()                                                                   \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
@@ -361,16 +346,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_DMA_MODE),                                                                                             \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_DMA_SEL()
  
 #define CONV2D_DMA_L1_FULLLOAD_ALL_OPEN_SEL()                                                                        \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
@@ -385,16 +361,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_DMA_MODE),                                                                                             \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_DMA_SEL()
 
 #define CONV2D_DMA_AL1_NO_FULLLOAD_M_FIRST_SEL()                                                                     \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
@@ -409,16 +376,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_DMA_MODE),                                                                                             \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_DMA_SEL()
  
 #define CONV2D_DMA_BL1_NO_FULLLOAD_N_FIRST_SEL()                                                                     \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
@@ -433,16 +391,7 @@ ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                          
     CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
 ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
     CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV),                                                                                    \
-ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
-    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
-ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_FMAP_DMA_MODE),                                                                                             \
-ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_INNER_BATCH_SINGLE)
+CONV2D_COMMON_DMA_SEL()
 
 ASCENDC_TPL_SEL(
 ASCENDC_TPL_ARGS_SEL(CONV2D_ONLY_MN_FULLLOAD_SEL()),
@@ -486,6 +435,22 @@ ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), CONV_INN
 ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), CONV_INNER_BATCH_ONLY_BL1_FULLLOAD_SEL()),
 ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), CONV_INNER_BATCH_ABL1_FULLLOAD_M_FIRST_SEL()),
 ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), CONV_INNER_BATCH_ABL1_FULLLOAD_N_FIRST_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_ONLY_MN_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_NO_FULLLOAD_AL0_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_NO_FULLLOAD_BL0_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_NO_FULLLOAD_ALL_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_ONLY_AL1_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_ONLY_BL1_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_ABL1_FULLLOAD_M_FIRST_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INPUT_HWNC_ABL1_FULLLOAD_N_FIRST_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_ONLY_MN_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_NO_FULLLOAD_AL0_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_NO_FULLLOAD_BL0_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_NO_FULLLOAD_ALL_OPEN_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_ONLY_AL1_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_ONLY_BL1_FULLLOAD_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_ABL1_FULLLOAD_M_FIRST_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_INNER_BATCH_INPUT_HWNC_ABL1_FULLLOAD_N_FIRST_SEL()),
 );
 
 }

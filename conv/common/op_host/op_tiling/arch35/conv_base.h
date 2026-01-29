@@ -26,31 +26,17 @@
 namespace optiling {
 namespace conv_ops_tiling {
 
-static std::map<platform_ascendc::SocVersion, std::string> socNameTab = {
-    {platform_ascendc::SocVersion::ASCEND950, "Ascend950"},
-    {platform_ascendc::SocVersion::ASCEND910_55, "Ascend910_55"},
-    {platform_ascendc::SocVersion::MC62CM12A, "MC62CM12A"},
-    {platform_ascendc::SocVersion::RESERVED_VERSION, "RESERVED_VERSION"}
+static std::map<NpuArch, std::string> socNameTab = {
+    {NpuArch::DAV_3510, "Ascend950"},
+    {NpuArch::DAV_5102, "MC62CM12A"}
 };
 
-static map<string, platform_ascendc::SocVersion> socConvertMap = {
-    {"Ascend950PR_9589", platform_ascendc::SocVersion::ASCEND950},
-    {"Ascend910_5591", platform_ascendc::SocVersion::ASCEND910_55},
-    {"MC62CM12AA", platform_ascendc::SocVersion::MC62CM12A},
-};
-
-static map<platform_ascendc::SocVersion, uint64_t> socBTsizeMap = {
-    {platform_ascendc::SocVersion::ASCEND950, BT_SIZE_950},
-    {platform_ascendc::SocVersion::ASCEND910_55, BT_SIZE_910_55},
-    {platform_ascendc::SocVersion::MC62CM12A, BT_SIZE_MC62CM12A},
-    {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
-};
-
-static map<platform_ascendc::SocVersion, uint64_t> socFBsizeMap = {
-    {platform_ascendc::SocVersion::ASCEND950, FB_SIZE_950},
-    {platform_ascendc::SocVersion::ASCEND910_55, FB_SIZE_910_55},
-    {platform_ascendc::SocVersion::MC62CM12A, FB_SIZE_MC62CM12A},
-    {platform_ascendc::SocVersion::RESERVED_VERSION, 0}
+static std::map<string, NpuArch> socConvertMap = {
+    {"DAV_3510", NpuArch::DAV_3510},
+    {"Ascend950", NpuArch::DAV_3510},
+    {"Ascend910_95", NpuArch::DAV_3510},
+    {"MC62CM12AA", NpuArch::DAV_5102},
+    {"DAV_5102", NpuArch::DAV_5102}
 };
 
 static std::map<ge::DataType, std::string> dtypeToStrTab = {
@@ -87,7 +73,7 @@ static std::map<ge::Format, ConvFormat> formatMap = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_950 = {
+const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_DAV = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
@@ -99,14 +85,13 @@ const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_950 = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_MC62CM12A = {
+const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_MDC = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16}
 };
 
-const std::map<platform_ascendc::SocVersion, std::vector<std::vector<ConvDtype>>> SOC_CONV_SUPPORTED_TYPES =
-{
-    {platform_ascendc::SocVersion::ASCEND950, CONV_SUPPORTED_TYPES_950},
-    {platform_ascendc::SocVersion::MC62CM12A, CONV_SUPPORTED_TYPES_MC62CM12A}
+const std::map<NpuArch, std::vector<std::vector<ConvDtype>>> SOC_CONV_SUPPORTED_TYPES = {
+    {NpuArch::DAV_3510, CONV_SUPPORTED_TYPES_DAV},
+    {NpuArch::DAV_5102, CONV_SUPPORTED_TYPES_MDC}
 };
 
 // [fmap, weight, output, bias]
@@ -149,13 +134,13 @@ const std::vector<std::vector<ConvDtype>> QUANTCONV_SUPPORTED_TYPES = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A = {
+const std::vector<std::vector<ConvDtype>> EXTENDCONV2D_SUPPORTED_TYPES_MDC = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16}
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32}
 };
 
 // [fmap, weight, output, bias]
@@ -182,16 +167,16 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16}
 };
 
-const std::map<platform_ascendc::SocVersion,
+const std::map<NpuArch,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
-    {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
-    {platform_ascendc::SocVersion::ASCEND950, EXTENDCONV_SUPPORTED_TYPES_NCHW}
+    {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC},
+    {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW}
 };
 
-const std::map<platform_ascendc::SocVersion,
+const std::map<NpuArch,
     std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
-    {platform_ascendc::SocVersion::MC62CM12A, EXTENDCONV2D_SUPPORTED_TYPES_MC62CM12A},
-    {platform_ascendc::SocVersion::ASCEND950, EXTENDCONV_SUPPORTED_TYPES_NHWC}
+    {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC},
+    {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NHWC}
 };
 
 struct ShapeBound {
@@ -279,7 +264,7 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
 ge::graphStatus ShapeAttrSynthesisCheckAux(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
                                            gert::TilingContext* context);
 void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ConvDtype>>& supportTypes);
-void GetSupportedDataTypes(const platform_ascendc::SocVersion& socVersion, bool quantFlag,
+void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag,
                            ge::Format fMapFormat, bool exendConvFlag,
                            std::vector<std::vector<ConvDtype>>& supportTypes);
 bool GetConvParamsIdx(const std::vector<ge::Format> formatVec, std::vector<std::vector<std::size_t>>& idxVec);
@@ -336,7 +321,7 @@ public:
     void SetBytesFromUint32(uint64_t& number, uint32_t highPart, uint32_t lowPart) const;
     bool GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
     uint32_t GetWeightBandWidthCoeff();
-    void GetSupportedFormats(bool quantFlag, bool is2dFlag, const platform_ascendc::SocVersion socVersion,
+    void GetSupportedFormats(bool quantFlag, bool is2dFlag,
                              std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats);
     void ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo);
     bool CheckValidString(const string &inputStr, const gert::TilingContext* context) const;

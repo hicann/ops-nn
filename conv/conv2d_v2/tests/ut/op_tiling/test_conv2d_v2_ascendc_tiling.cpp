@@ -39,6 +39,7 @@ uint64_t n0 = 16;
 uint64_t mAL1_min = 16;
 uint64_t m0 = 16;
 uint64_t C0_SIZE = 32;
+bool dma_flag = false;
 
 class Conv2dv2Tiling : public testing::Test {
     protected:
@@ -610,7 +611,7 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, u
         // woL0 does not reach the upper limit, thus hoL0 must be 1.
         EXPECT_EQ(tilingData.hoL0, 1);
     }
-    if (tilingData.hoL0 > 1) {
+    if (tilingData.hoL0 > 1 && !(dma_flag && tilingData.groups > 1)) {
         EXPECT_EQ(tilingData.woL0, tilingData.orgWo);
         EXPECT_EQ(tilingData.woL1, tilingData.orgWo);
     }
@@ -636,6 +637,9 @@ void CheckHWModeTilingDataValidForConv2d(TilingParam &tilingData, uint64_t m0, u
         // if tilingData.orgHi == 1, process is same as NO_C04_SITUATION
         // fmap fullload in L1, woL1 == AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0)
         // woL1 may not be able to divide woL0 exactly
+    } else if (dma_flag && tilingData.groups > 1) {
+        EXPECT_EQ(tilingData.kAL1 % (k0 * tilingData.khL1 * tilingData.kwL1), 0);
+        EXPECT_EQ(tilingData.kBL1 % (k0 * tilingData.khL1 * tilingData.kwL1), 0);
     } else {
         EXPECT_LE(tilingData.kAL1, ConvCeilDiv(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW);
         // Mmode KBL1 iter when Cin is Max, will multi kd in some case. This is a loose validation condition.
@@ -692,8 +696,12 @@ void CheckValidTilingData(TilingParam &tilingData,
                           uint64_t aicoreNum)
 {
     bool isC04Flag = (tilingData.bUbNStep > 0 && tilingData.bUbKStep == 0) ? true : false;
+    dma_flag = (tilingKey & 0x4000) >> 14;
     if (tilingData.groups > 1) {
         CheckGroupsTiling(tilingData, n0, tilingKey);
+        if (dma_flag) {
+          EXPECT_TRUE((tilingKey & 0x400) >> 10);
+        }
     }
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL0 = pBuffer & 0x01;
@@ -801,7 +809,7 @@ void GetOriPadFromPadModeConv2D(const string& padMode, uint32_t& padu, uint32_t&
 void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, ge::DataType dtype,
                     uint32_t isHasBias = 1, uint32_t isHasScale = 0, bool enableHf32Mode = false, uint32_t groups = 1,
-                    string padMode = "SPECIFIC", string socVersion = "Ascend950PR_9589", string shortSocVersion = "Ascend950",
+                    string padMode = "SPECIFIC",
                     bool isErrorCaseFlag = false, string format = "NCHW") {
     bool hasBias = isHasBias == 1;
     bool hasScale = isHasScale == 1;
@@ -852,19 +860,11 @@ void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     // 对于可选输入，不传时用nullptr占位
     std::vector<void*> input_shape_ref;
 
-    if (hasScale) {
-      if (hasBias) {
-          input_shape_ref = {&featuremap, &weight, &quantScale, &bias, nullptr};
-      } else {
-          input_shape_ref = {&featuremap, &weight, &quantScale, nullptr, nullptr};
-      }
-    } else {
-      if (hasBias) {
-          input_shape_ref = {&featuremap, &weight, &bias, nullptr};
-      } else {
-          input_shape_ref = {&featuremap, &weight, nullptr, nullptr};
-      }
-    }
+   if (hasBias) {
+         input_shape_ref = {&featuremap, &weight, &bias, nullptr};
+   } else {
+         input_shape_ref = {&featuremap, &weight, nullptr, nullptr};
+   }
     std::vector<void*> output_shapes_ref = {&output};
     std::vector<int64_t> strides = {1, 1, strideH, strideW};
     std::vector<int64_t> pads = {padu, padd, padl, padr};
@@ -875,7 +875,7 @@ void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
       dilations = {1, dilationH, dilationW, 1};
     }
 
-    std::string op_type = hasScale ? "QuantConv2D" : "Conv2DV2";
+    std::string op_type = "Conv2DV2";
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     uint64_t L1_SIZE = 524288;
@@ -887,32 +887,21 @@ void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     uint64_t aicoreNum = 32;
 
     string compile_info_string = R"({"hardware_info": 
-      {"BT_SIZE": 0, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
-       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 196608,
-       "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096, "BT_SIZE": 4096,"L0C_SIZE": 262144, "CORE_NUM": 32}})";
-    if (shortSocVersion == "Ascend910_55") {
-      aicoreNum = 24;
-      compile_info_string = R"({"hardware_info": 
-      {"BT_SIZE": 0, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
-       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 196608,
-       "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 24}})";
-    }
+      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
+       "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
+       "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
+       "core_type_list": "CubeCore,VectorCore"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", shortSocVersion}};
+    map<string, string> soc_version_infos = {{"NpuArch", "3510"}};
+    aicore_spec.insert({"fb0_size", "4096"});
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
-    compile_info.aicoreNum = aicoreNum;
-    compile_info.socVersion = socVersion;
-    compile_info.shortSocVersion = shortSocVersion;
 
-    optiling::Conv2DTilingParseInfo quant_compile_info;
-    quant_compile_info.opType = op_type;
-    quant_compile_info.socVersion = socVersion;
-    quant_compile_info.shortSocVersion = shortSocVersion;
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
@@ -927,34 +916,7 @@ void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     uint32_t featuremapDtyeSize = dtypesizeMap.at(dtype);
     ge::DataType bias_dtype = (!hasScale && dtype == ge::DT_HIFLOAT8) ? ge::DT_FLOAT : dtype;
 
-    auto holder = hasScale ?
-                      gert::TilingContextFaker().SetOpType(op_type)
-                                                .NodeIoNum(5, 1)
-                                                .IrInstanceNum({1, 1, 1, 1, 1})
-                                                .InputShapes(input_shape_ref)
-                                                .OutputShapes(output_shapes_ref)
-                                                .CompileInfo(&quant_compile_info)
-                                                .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                                                .NodeInputTd(0, ge::DT_INT8, fmapFormat, fmapFormat)
-                                                .NodeInputTd(1, ge::DT_INT8, weightFormat, weightFormat)
-                                                .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                                .NodeOutputTd(0, ge::DT_FLOAT16, outputFormat, outputFormat)
-                                                .NodeAttrs({
-                                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(groups)},
-                                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(format)},
-                                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")}
-                                                  })
-                                                .TilingData(tilingDataPtr.get())
-                                                .Workspace(ws_size)
-                                                .Build() :
-                      gert::TilingContextFaker().SetOpType(op_type)
+    auto holder = gert::TilingContextFaker().SetOpType(op_type)
                                                 .NodeIoNum(4, 1)
                                                 .IrInstanceNum({1, 1, 1, 1})
                                                 .InputShapes(input_shape_ref)
@@ -995,7 +957,7 @@ void Conv2DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
       TilingParam tilingParam = *buf;
       uint64_t tilingKey = tiling_context->GetTilingKey();
       // printf("tilingKey is equal to %lu\n", tilingKey);
-      EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim, compile_info.aicoreNum);
+      EXPECT_LE(tilingParam.batchDim * tilingParam.hoDim * tilingParam.nDim * tilingParam.groupDim, aicoreNum);
       EXPECT_GE(tilingParam.batchDim, 1);
       EXPECT_GE(tilingParam.hoDim, 1);
       EXPECT_GE(tilingParam.nDim, 1);
@@ -1830,40 +1792,40 @@ TEST_F(Conv2dv2Tiling, run_conv2d_gencase_20) {
    Conv2DTestCase({28,66,9,12766}, {29,5,43}, {37,38,39,40}, {7,8}, {11,1}, ge::DT_FLOAT16, 1);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_58) {
-   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_59) {
-   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_60) {
-   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_61) {
-   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({134217712,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_62) {
-   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,134217712,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_63) {
-   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,1,134217712}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_64) {
-   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_65) {
-   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_66) {
-   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_67) {
-   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({67108832,1,1,1}, {1,1,1}, {1,1,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_68) {
-   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,67108832,1}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_69) {
-   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+   Conv2DTestCase({1,1,1,67108832}, {1,1,1}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 TEST_F(Conv2dv2Tiling, run_conv2d_gencase_70) {
    Conv2DTestCase({15,14,55,88}, {13,11,9}, {4,5,3,2}, {12,8}, {4,3}, ge::DT_FLOAT16, 1);
@@ -2140,15 +2102,15 @@ TEST_F(Conv2dv2Tiling, run_conv2d_gencase_228) {
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b16) {
- Conv2DTestCase({2,1280,36,28}, {134217712,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+ Conv2DTestCase({2,1280,36,28}, {134217712,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b8) {
- Conv2DTestCase({1,1280,32,32}, {67108832,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_INT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+ Conv2DTestCase({1,1280,32,32}, {67108832,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_INT8, 1, 0, false, 1, "SPECIFIC", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv_bound_CO_b32) {
- Conv2DTestCase({2,1280,36,28}, {268435448,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true);
+ Conv2DTestCase({2,1280,36,28}, {268435448,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", true);
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_MorHWsplit_case1) {
@@ -2543,57 +2505,117 @@ TEST_F(Conv2dv2Tiling, run_conv2d_case_padMode_sameLower) {
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_fp16) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_bf16) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_BF16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_BF16, 1, 0, false, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_fp32) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, false, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_hf32) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, true, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT, 1, 0, true, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_soc_unsupport) {
-   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend910_5591", "Ascend910_55", true, "NHWC");
+   Conv2DTestCase({1,2,3,16}, {16,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_group_support) {
-   Conv2DTestCase({4,64,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({4,64,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_C04_not_support) {
-   Conv2DTestCase({4,3,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({4,3,64,64}, {32,3,3}, {1,1,1,1}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_hif8_not_support) {
-   Conv2DTestCase({1,20,3,1000}, {20,3,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
+   Conv2DTestCase({1,20,3,1000}, {20,3,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", true, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv1d_NHWC_hif8_not_support) {
-   Conv2DTestCase({1,20,1,1000000}, {20,1,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
+   Conv2DTestCase({1,20,1,1000000}, {20,1,30}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 1, "SPECIFIC", true, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_valid) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "VALID", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "VALID", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_same) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_sameUpper) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_UPPER", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_UPPER", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_NHWC_case_padMode_sameLower) {
-   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_LOWER", "Ascend950PR_9589", "Ascend950", false, "NHWC");
+   Conv2DTestCase({1,1,256,256}, {1,3,4}, {9999,9999,9999,9999}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SAME_LOWER", false, "NHWC");
 }
 
 TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_exceed_fixpipe_instr_limit) {
-   Conv2DTestCase({1,2,3,180000}, {160000,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", "Ascend950PR_9589", "Ascend950", true, "NHWC");
+   Conv2DTestCase({1,2,3,180000}, {160000,2,7}, {0,0,0,0}, {1,1}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 1, "SPECIFIC", true, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_1) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 5, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_2) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_3) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 4, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_4) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 8, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_5) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {65,65,65,65}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 8, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_6) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT, 1, 0, false, 5, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NHWC_dma_groups_7) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_BF16, 1, 0, false, 5, "SPECIFIC", false, "NHWC");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_1) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_HIFLOAT8, 1, 0, false, 5, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_2) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 5, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_3) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 2, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_4) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 4, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_5) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 8, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_6) {
+   Conv2DTestCase({4,32,224,224}, {768,32,79}, {65,65,65,65}, {32,32}, {1,1}, ge::DT_FLOAT16, 1, 0, false, 8, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_7) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_FLOAT, 1, 0, false, 5, "SPECIFIC", false, "NCHW");
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_case_NCHW_dma_groups_8) {
+   Conv2DTestCase({4,35,224,224}, {765,32,79}, {3,3,3,3}, {32,32}, {1,1}, ge::DT_BF16, 1, 0, false, 5, "SPECIFIC", false, "NCHW");
 }

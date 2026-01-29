@@ -90,7 +90,7 @@ constexpr int64_t MAX_PAD_W_SHAPE = 255;
 constexpr uint64_t LOAD3D_MAX_STRIDE_H_W = 63;
 constexpr uint64_t LOAD3D_MAX_DILATION_H_W = 255;
 constexpr uint64_t LOAD3D_MAX_PAD = 255;
-constexpr uint64_t LOAD3D_MAX_FILTER_H_W_950 = 511;
+constexpr uint64_t LOAD3D_MAX_FILTER_H_W_DAV = 511;
 
 constexpr uint32_t BLOCKDIM_DEC_NUM = 5;
 constexpr uint32_t BLOCKDIM_BATCH_IDX = 0;

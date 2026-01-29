@@ -27,7 +27,8 @@ using namespace conv2d;
 
 template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
         int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
-        int8_t InnerBatch, IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE, typename Output1T = half>
+        int8_t InnerBatch, int8_t DisContinuous = 0, IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE,
+        typename Output1T = half>
 struct Conv2DV1Param : public Conv2dParam {
     __aicore__ inline Conv2DV1Param() {}
     constexpr static int8_t fmapTiling = FmapTiling;
@@ -41,6 +42,7 @@ struct Conv2DV1Param : public Conv2dParam {
     constexpr static int8_t weightUbTrans = WeightUbTrans;
     constexpr static int8_t fmapCopyMode = FmapCopyMode;
     constexpr static int8_t innerBatch = InnerBatch;
+    constexpr static int8_t disContinuous = DisContinuous;
     constexpr static int8_t isExtendConv2d = static_cast<int8_t>(ExtendConv2DFlag);
     using Output1Dtype = Output1T;
 };
@@ -98,7 +100,7 @@ public:
     GlobalTensor<SCALE_T> scaleGm;
     Extendconv2dFixpipeParams<SCALE_T, RELU_WEIGHT_T, CLIP_VALUE_0_T, CLIP_VALUE_1_T> fixpipeParams;
 
-     uint64_t batchIdxStart = 0;
+    uint64_t batchIdxStart = 0;
     uint64_t nIdxStart = 0;
     uint64_t mIdxStart = 0;
     uint64_t hoIdxStart = 0;
@@ -142,6 +144,8 @@ public:
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static int8_t IS_EXTEND_CONV2D = CONV_CFG::isExtendConv2d;
+    constexpr static bool DIS_CONTINUOUS =
+        CONV_CFG::disContinuous == static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);
 
     constexpr static uint8_t k0 = SINGLE_BLOCK_SIZE / sizeof(WEIGHT_T);
 };
@@ -286,7 +290,7 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
         if (unlikely(isNDimTail || isMDimTail || isBatchDimTail)) {
             conv.SetSingleOutputShape(singleCoreN, singleCoreM, singleCoreBatch);
         }
- 
+
         conv.SetFmapStartPosition(mIdxStart);
     } else {
         if (unlikely(isNDimTail || isHoDimTail || isWoDimTail || isBatchDimTail)) {
@@ -308,6 +312,9 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     }
 
     conv.SetFmap(fmapGm);
+    if constexpr (CONV_CFG::disContinuous) {
+        conv.SetOrgBatch(conv2dRunInfo->batch);
+    }
     if constexpr (CONV_CFG::isExtendConv2d) {
         if (dualOutput) {
             conv.IterateAll(outputGm, output1Gm);

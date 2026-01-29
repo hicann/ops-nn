@@ -71,10 +71,10 @@ void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv2DV2In
   const int32_t *opImplMode = nullptr;
   if (conv2dArgs->aDtype == ge::DT_FLOAT && tuningtiling::opImplModeIdx < attrs->GetAttrNum()) {
       opImplMode = attrs->GetAttrPointer<int32_t>(tuningtiling::opImplModeIdx);
-      if (opImplMode != nullptr && *opImplMode >= 0) {
+      if (opImplMode != nullptr) {
         // op_impl_mode_enum: 1: default 2: high_performance 4: high_precision 8: super_performance
         // 16: support_of_bound_index  32: enable_float_32_execution  64: enable_hi_float_32_execution
-        conv2dArgs->hf32Flag = static_cast<bool>(static_cast<uint32_t>(*opImplMode) & 0x40);
+        conv2dArgs->hf32Flag = static_cast<bool>(*opImplMode & 0x40);
       }
   }
 }

@@ -46,7 +46,7 @@ void ClearRange(ConvTilingAlgorithmHWmode* algo)
 PlatformInfo SetPlatFormInfo()
 {
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND950;
+    platformInfo.npuArch = NpuArch::DAV_3510;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 65536;
     platformInfo.l0BSize = 65536;
@@ -54,6 +54,7 @@ PlatformInfo SetPlatFormInfo()
     platformInfo.ubSize = 262144;
     platformInfo.btSize = 4096;
     platformInfo.fbSize = 4096;
+    platformInfo.aivPerAic = 2;
     return platformInfo;
 }
 void SetDtype(ConvTilingBase &testTiling,
@@ -1923,7 +1924,7 @@ TEST_F(TestConv2dTiling, test_algo_HW_CheckKL1FullLoad)
 TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_FULL_LOAD_AL1)
 {
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND910B;
+    platformInfo.npuArch = NpuArch::DAV_3510;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 65536;
     platformInfo.l0BSize = 65536;
@@ -1947,7 +1948,7 @@ TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_FULL_LOAD_AL1)
 TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_NoneKABL1FullLoadIter)
 {
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND910B;
+    platformInfo.npuArch = NpuArch::DAV_3510;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 65536;
     platformInfo.l0BSize = 65536;
@@ -4086,7 +4087,7 @@ TEST_F(TestConv2dTiling, test_algo_HW_UpdateHoL0WoL0_2)
 TEST_F(TestConv2dTiling, test_algo_HW_UpdateHoL0WoL0_3)
 {
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND950;
+    platformInfo.npuArch = NpuArch::DAV_3510;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 1;
     platformInfo.l0BSize = 65536;

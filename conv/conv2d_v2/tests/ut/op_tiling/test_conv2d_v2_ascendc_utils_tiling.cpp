@@ -17,6 +17,7 @@
 
 #include "platform/platform_info.h"
 #include "test_conv2d_v2_ascendc_utils_tiling.h"
+#include <platform/soc_spec.h>
 
 namespace conv_api_tiling_test {
 
@@ -408,7 +409,7 @@ void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
     }
 
     PlatformInfo platformInfo;
-    platformInfo.socVersion = platform_ascendc::SocVersion::ASCEND950;
+    platformInfo.npuArch = NpuArch::DAV_3510;
     platformInfo.l1Size = 524288;
     platformInfo.l0ASize = 65536;
     platformInfo.l0BSize = 65536;
@@ -416,6 +417,7 @@ void Conv2DCase(vector<uint64_t> fmShape, vector<uint64_t> weightShape,
     platformInfo.ubSize = 262144;
     platformInfo.btSize = 4096;
     platformInfo.fbSize = 4096;
+    platformInfo.aivPerAic = 2;
 
     Conv2dTiling testTiling(platformInfo);
     testTiling.SetOrgWeightShape(orgCo, orgKh, orgKw);

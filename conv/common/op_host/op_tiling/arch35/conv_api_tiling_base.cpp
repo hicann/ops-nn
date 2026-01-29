@@ -22,7 +22,7 @@ using namespace std;
 namespace conv_tiling {
 ConvTilingBase::ConvTilingBase(const PlatformInfo& platform)
 {
-    platformInfo.socVersion = platform.socVersion;
+    platformInfo.npuArch = platform.npuArch;
     platformInfo.l1Size = platform.l1Size;
     platformInfo.l0ASize = platform.l0ASize;
     platformInfo.l0BSize = platform.l0BSize;
@@ -30,6 +30,7 @@ ConvTilingBase::ConvTilingBase(const PlatformInfo& platform)
     platformInfo.ubSize = platform.ubSize;
     platformInfo.btSize = platform.btSize;
     platformInfo.fbSize = platform.fbSize;
+    platformInfo.aivPerAic = platform.aivPerAic;
 }
 
 void ConvTilingBase::InferCubeInfo()
@@ -69,25 +70,17 @@ int64_t ConvTilingBase::CheckTilingRes()
     return 0;
 }
 
-uint32_t ConvTilingBase::GetBandWidthCof(platform_ascendc::SocVersion curSoc) const
+uint32_t ConvTilingBase::GetBandWidthCof() const
 {
     if (descInfo.weightType.format == ConvFormat::FRACTAL_Z ||
         descInfo.weightType.format == ConvFormat::FRACTAL_Z_C04) {
         return 1;
     }
-    switch (curSoc) {
-        case platform_ascendc::SocVersion::ASCEND910B:
-            return 1;
-        case platform_ascendc::SocVersion::ASCEND950:
-            if (descInfo.fMapType.format == ConvFormat::NCHW || descInfo.fMapType.format == ConvFormat::NCDHW) {
-                return BAND_WIDTH_COEFF;
-            }
-            return 1;
-        case platform_ascendc::SocVersion::ASCEND910_55:
-            return BAND_WIDTH_COEFF;
-        default:
-            return 0;
+
+    if (descInfo.fMapType.format == ConvFormat::NCHW || descInfo.fMapType.format == ConvFormat::NCDHW) {
+        return BAND_WIDTH_COEFF;
     }
+    return 1;
 }
 
 bool ConvTilingBase::CheckQuantUniqueAttr()
@@ -243,11 +236,6 @@ bool ConvTilingBase::CheckLoad3DLimits()
  
 bool ConvTilingBase::CheckDmaLimits()
 {
-    if (attrInfo.groups != 1) {
-        TILING_LOG_ERROR("DMA only support groups=1, actual groups=%u.", attrInfo.groups);
-        return false;
-    }
-
     uint64_t woAL1Min = cubeInfo.m0;
     uint64_t hoAL1Min = 1;
  

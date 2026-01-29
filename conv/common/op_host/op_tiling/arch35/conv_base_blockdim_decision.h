@@ -42,6 +42,7 @@ public:
     ge::graphStatus GetBlockDimInfo(ConvAscendcTilingInfo& tilingInfo);
     void ConvBaseInitAttrInfo(const ConvAscendcAttrInfo& attrInfo);
     void GetConvBaseCoreInfo(ConvOpsConstParams& convOpsConstParams);
+    void ConvBaseInitNodeInfo (const string& nodeName, const string& nodeType);
     void InitblockDimConstParas();
     bool CheckInstrLimitsHWmode();
     bool CheckInstrLimitsMmode();
@@ -57,7 +58,6 @@ private:
     void ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo,
                       const ConvAscendcDescInfo& descInfo, const ConvAscendcTilingFlag& flagInfo);
     void ConvBaseInitPlatformInfo (const ConvAscendcPlatformInfo& platformInfo);
-    void ConvBaseInitNodeInfo (const string& nodeName, const string& nodeType);
     void GetBlockDimRangeCommon();
     void GetBlockDimRangeMsplitMode();
     void GetBlockDimInitMsplitMode();

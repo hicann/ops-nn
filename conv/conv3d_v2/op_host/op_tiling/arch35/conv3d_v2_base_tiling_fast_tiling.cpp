@@ -23,6 +23,7 @@ ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck() {
     convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
     convBase_.InitblockDimConstParas();
     convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
+    convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
 
     if (CheckL1SizeLimits() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

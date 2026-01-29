@@ -59,6 +59,9 @@ namespace ConvKey {
 #define CONV_INNER_BATCH_KERNEL_1X1_MULTI 1
 #define CONV_INNER_BATCH_MULTI 2
 
+#define CONV_DIS_CONTINUOUS_CLOSE 0
+#define CONV_DIS_CONTINUOUS_INPUT_HWNC 1
+
 #define CONV_COMMON_ONLY_MN_FULLLOAD_SEL()                                                                           \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0),                                                                       \

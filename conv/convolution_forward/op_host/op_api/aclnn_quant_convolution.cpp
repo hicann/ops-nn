@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DEFAULT = {
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_FLOAT16}
 };
 
-const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_950 = {
+const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_GROUPS_DAV = {
     // input, weight, output, bias
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT16, DataType::DT_INT32},
     {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_BF16, DataType::DT_FLOAT},
@@ -148,14 +148,14 @@ namespace {
 
 static bool IsSocSupportND()
 {
-    return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
 }
 
 }
 
 static std::vector<std::vector<DataType>> GetSupportedDtypesBySoc()
 {
-    return IsSocSupportND() ? SUPPORTED_DTYPES_GROUPS_950 : SUPPORTED_DTYPES_GROUPS_DEFAULT;
+    return IsSocSupportND() ? SUPPORTED_DTYPES_GROUPS_DAV : SUPPORTED_DTYPES_GROUPS_DEFAULT;
 }
 
 static FVector<int64_t> ConstructV2Padding(const FVector<int64_t> &oldPad, const FVector<int64_t> &inputShape)
@@ -914,12 +914,14 @@ public:
     aclnnStatus Check([[maybe_unused]] QuantConvEngine &engine) override
     {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+            OP_LOGD("Get Current NpuArch: DAV_3510.");
+            return ACLNN_SUCCESS;
+        }
         switch (socVersion) {
             case SocVersion::ASCEND910B:
                 break;
             case SocVersion::ASCEND910_93:
-                break;
-            case SocVersion::ASCEND950:
                 break;
             default:
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,

@@ -52,10 +52,14 @@ struct ConvTilingParseInfo: CubeTilingCommonParseInfo {
     uint64_t l2Rate = 0;
     std::string socVersion = "";
     std::string shortSocVersion = "";
+    NpuArch npuArch = NpuArch::DAV_RESV;
+    uint32_t aivNum = 0;
+    uint64_t fbSize = 0;
     ConvTilingParseInfo& operator=(const ConvTilingParseInfo* other) {
         if (this != other) {  // 防止自赋值
             // 复制所有的成员变量
             aicoreNum = other->aicoreNum;
+            aivNum = other->aivNum;
             l2Size = other->l2Size;
             l1Size = other->l1Size;
             l0aSize = other->l0aSize;
@@ -63,9 +67,11 @@ struct ConvTilingParseInfo: CubeTilingCommonParseInfo {
             l0cSize = other->l0cSize;
             ubSize = other->ubSize;
             btSize = other->btSize;
+            fbSize = other->fbSize;
             l2Rate = other->l2Rate;
             socVersion = other->socVersion;
             shortSocVersion = other->shortSocVersion;
+            npuArch = other->npuArch;
         }
         return *this;
     }
@@ -123,7 +129,7 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
 };
 
-const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MC62CM12A = {
+const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MDC = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}
@@ -158,7 +164,7 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST = {
 };
 
 // ExtendConv2D fmap, weight, output supprot format list
-const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MC62CM12A = {
+const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}

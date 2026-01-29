@@ -241,7 +241,7 @@ public:
 
         dstStrideBase = (self_->ctx.convTiling->kwL1 - self_->ctx.convTiling->kwUb) * Intf::k0;
         ci1StrideBase = self_->ctx.convTiling->khL1 * self_->ctx.convTiling->kwL1 * Intf::k0;
-        khStrideBase = self_->ctx.convTiling->khUb * self_->ctx.convTiling->kernelW * Intf::k0;
+        khStrideBase = self_->ctx.convTiling->khUb * self_->ctx.convTiling->kwL1 * Intf::k0;
         kwStrideBase = self_->ctx.convTiling->kwUb * Intf::k0;
     }
 

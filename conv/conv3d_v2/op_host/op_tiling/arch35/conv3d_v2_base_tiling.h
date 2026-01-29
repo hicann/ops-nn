@@ -100,9 +100,6 @@ private:
     Conv3dOriginFormatAixsPosInfo conv3dOriginFormatAixsPosInfo_;
     ConvInputArgs cacheInputArgs_;
 
-    // soc version
-    platform_ascendc::SocVersion socVersion;
-
     bool useTilingRepo_ = false;
 
 private:
@@ -154,6 +151,7 @@ private:
     ge::graphStatus ParseQuantOffsetXLegal();
     ge::graphStatus ParseQuantRoundModeLegal();
     ge::graphStatus SetTilingKey();
+    ge::graphStatus GetNodeType();
     void SetQuantFlag();
     void SetScaleBiasFlag();
     ge::graphStatus GetConv3DAxisPosInfo();
@@ -162,7 +160,7 @@ private:
     ge::graphStatus ApplySamesPad(const string& padMode);
     ge::graphStatus PrepareTiling();
     ge::graphStatus CheckBiasShape();
-    void SetApiInputPlatformInfo(const platform_ascendc::SocVersion& curShortSoc);
+    void SetApiInputPlatformInfo();
 };
 }
 }

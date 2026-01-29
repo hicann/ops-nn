@@ -543,7 +543,7 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, ge::DataType dtype,
                     uint32_t isHasBias = 1, uint32_t groups = 1, int64_t fixBatcho = 0, int64_t fixDo = 0, int64_t fixHo = 0,
                     int64_t fixWo = 0, bool isErrorCaseFlag = false, string padMode = "SPECIFIC", bool enableHf32 = false,
-                    string shortSocVersion = "Ascend950", ge::Format format = ge::Format::FORMAT_NCDHW,
+                    ge::Format format = ge::Format::FORMAT_NCDHW,
                     ge::Format outformat = ge::Format::FORMAT_NCDHW,
                     bool isConv3dDequant=false, bool hasScale = false, ge::DataType biasDtypeIn = ge::DT_FLOAT16,
                     ge::DataType outputDtypeIn = ge::DT_FLOAT16, ge::DataType scaleDtypeIn = ge::DT_FLOAT16) {
@@ -642,24 +642,23 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     uint64_t L0b_SIZE = 65536;
     uint64_t L0c_SIZE = 262144;
     uint64_t aicoreNum = 32;
-    string compile_info_string = R"({
-          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                            "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
-                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-                            "CORE_NUM": 32}
-                            })";
+
+    string compile_info_string = R"({"hardware_info": 
+      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
+       "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
+       "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
+       "core_type_list": "CubeCore,VectorCore"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", shortSocVersion}};
+    map<string, string> soc_version_infos = {{"NpuArch", "3510"}};
+    aicore_spec.insert({"fb0_size", "4096"});
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
-    compile_info.tilingType = op_type;
-    compile_info.aicoreNum = aicoreNum;
-    compile_info.shortSocVersion = shortSocVersion;
+
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
@@ -723,7 +722,7 @@ void Conv3DV2TestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
 	    auto buf = (TilingParam*)tiling_context->GetRawTilingData()->GetData();
       TilingParam tilingParam = *buf;
       uint64_t tilingKey = tiling_context->GetTilingKey();
-      EXPECT_LE(tilingParam.batchDim * tilingParam.doDim * tilingParam.hoDim * tilingParam.nDim, compile_info.aicoreNum);
+      EXPECT_LE(tilingParam.batchDim * tilingParam.doDim * tilingParam.hoDim * tilingParam.nDim, aicoreNum);
       EXPECT_GE(tilingParam.batchDim, 1);
       EXPECT_GE(tilingParam.doDim, 1);
       EXPECT_GE(tilingParam.hoDim, 1);
@@ -2713,56 +2712,36 @@ TEST_F(Conv3dv2Tiling, run_conv3dv2_group_case8) {
   Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 2);
 }
 
-TEST_F(Conv3dv2Tiling, run_solomon_conv3dv2_group_not_equal_one_case1) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 2, 0, 0, 0, 0, true, "VALID", false, "Ascend910_55");
-}
-
-TEST_F(Conv3dv2Tiling, run_solomon_conv3dv2_group_not_equal_one_case2) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_BF16, 0, 2, 0, 0, 0, 0, true, "VALID", false, "Ascend910_55");
-}
-
-TEST_F(Conv3dv2Tiling, run_solomon_conv3dv2_group_not_equal_one_case3) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT, 0, 2, 0, 0, 0, 0, true, "VALID", false, "Ascend910_55");
-}
-
-TEST_F(Conv3dv2Tiling, run_solomon_conv3dv2_group_not_equal_one_case4) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_HIFLOAT8, 0, 2, 0, 0, 0, 0, true, "VALID", false, "Ascend910_55");
-}
-
-TEST_F(Conv3dv2Tiling, run_solomen_conv3dv2_NDHWC_case1) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 1, 0, 0, 0, 0,  true, "SPECIFIC",false, "Ascend910_55",ge::FORMAT_NDHWC);
-}
-
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case1) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case2) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_BF16, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_BF16, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case3) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case4) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_HIFLOAT8, 0, 1, 0, 0, 0, 0,  true, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_HIFLOAT8, 0, 1, 0, 0, 0, 0,  true, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_group_not_equal_one_case5) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 2, 0, 0, 0, 0,  false, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT16, 0, 2, 0, 0, 0, 0,  false, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case6) {
-  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",true, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,123,3984,16}, {22,3,23,2}, {0,0,14,14,0,0}, {54,47,15}, {20,10,6}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",true, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case7) {
-  Conv3DV2TestCase({1,20,16,16,1000000}, {1000000,3,3,3}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  true, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,20,16,16,1000000}, {1000000,3,3,3}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  true, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_NDHWC_case8) {
-  Conv3DV2TestCase({1,1000000,16,1000000,512}, {16,3,3,3}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, "Ascend950",ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({1,1000000,16,1000000,512}, {16,3,3,3}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0,  false, "SPECIFIC",false, ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_case_1) {
@@ -2782,91 +2761,91 @@ TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_case_4) {
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_ndhwc_case_1) {
-  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false,  ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_ndhwc_case_2) {
-  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_BF16, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_BF16, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false,  ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_ndhwc_case_3) {
-  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {10,10,31,31,31,31}, {1,1,1}, {1,1,1}, ge::DT_FLOAT, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false,  ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_valid) {
-  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, "Ascend950");
+  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_pad_ge_kernel_ndhwc_valid) {
-  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NDHWC);
+  Conv3DV2TestCase({2,256,19,160,160}, {256,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false,  ge::FORMAT_NDHWC);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp16_Mmode) {
   Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp32_Mmode) {
   Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasbf16_Mmode) {
   Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasfp32_Mmode) {
   Conv3DV2TestCase({1,16,16,17,16},{20,4,3,3},{1,1,1,1,2,2},{1,1,2},{1,1,2}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp16) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputfp16_biasfp32) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasbf16) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_outputbf16_biasfp32) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    false, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+    false, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_scaledtype) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_dtype_group) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_format_group) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_groups) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 2, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_bias_null) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 0, 1, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }
 
 TEST_F(Conv3dv2Tiling, run_conv3dv2_dequant_error_sclae_null) {
   Conv3DV2TestCase({1,6,87,3400,39},{45,3,18,2},{0,0,11,11,1,1},{4,15,52},{6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0,
-    true, "SPECIFIC", false, "Ascend950", ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, false, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
+    true, "SPECIFIC", false,  ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, false, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT);
 }

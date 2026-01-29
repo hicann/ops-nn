@@ -393,16 +393,16 @@ public:
         return cachedTiling.size();
     }
 
-    platform_ascendc::SocVersion GetSocVersion()
+    NpuArch GetSocVersion()
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        return socVersion_;
+        return npuArch_;
     }
 
-    void SetSocVersion(platform_ascendc::SocVersion socVersion, ConvTilingParseInfo convTilingParseInfo)
+    void SetSocVersion(NpuArch npuArch, ConvTilingParseInfo convTilingParseInfo)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        socVersion_ = std::move(socVersion);
+        npuArch_ = std::move(npuArch);
         convTilingParseInfo_ = std::move(convTilingParseInfo);
     }
 
@@ -415,7 +415,7 @@ protected:
     std::unordered_map<ConvInputArgs, Tiling, ConvInputArgsHash> cachedTiling;
     const size_t cacheSize = MAX_CACHE_SIZE;
     std::mutex mutex_;
-    platform_ascendc::SocVersion socVersion_ = platform_ascendc::SocVersion::RESERVED_VERSION;
+    NpuArch npuArch_ = NpuArch::DAV_RESV;
     ConvTilingParseInfo convTilingParseInfo_;
 };
 

@@ -47,7 +47,7 @@ constexpr uint32_t ATTR_GROUP_INDEX = 3;
 constexpr uint32_t ATTR_DATAFORMAT_INDEX = 4;
 constexpr uint32_t ATTR_PAD_MODE_INDEX = 6;
 constexpr uint32_t ATTR_ENABLE_HF32_INDEX = 7;
- 
+
 constexpr uint32_t ATTR_QUANT_DTYPE_INDEX = 0;
 constexpr uint32_t ATTR_QUANT_STRIDE_INDEX = 1;
 constexpr uint32_t ATTR_QUANT_PAD_INDEX = 2;
@@ -101,6 +101,15 @@ constexpr uint32_t BASICBLOCK_INIT_VALUE_1024 = 1024;
 constexpr uint32_t COUT_LIMIT_128 = 128;
 constexpr uint32_t ENABLE_MMODE_CONV1D_WO_LIMIT_128 = 128;
 
+// idxList
+constexpr size_t DIS_CONTINUOUS_N_IDX = 2;
+constexpr size_t DIS_CONTINUOUS_C_IDX = 3;
+constexpr size_t DIS_CONTINUOUS_H_IDX = 0;
+constexpr size_t DIS_CONTINUOUS_W_IDX = 1;
+
+// Nd2nzParam's max nValue
+constexpr uint64_t SRC_D_VALUE_MAX = 65535;
+
 struct Conv2dOriginFormatAixsPosInfo {
     uint32_t nIndex = 0;
     uint32_t cIndex = 0;
@@ -109,9 +118,9 @@ struct Conv2dOriginFormatAixsPosInfo {
 };
 
 // the function used by new MDC chip supporting fix-point operation
-inline bool IsMdcSoc(const platform_ascendc::SocVersion shortSoc)
+inline bool IsMdcSoc(const NpuArch shortSoc)
 {
-    return shortSoc == platform_ascendc::SocVersion::MC62CM12A;
+    return shortSoc == NpuArch::DAV_5102;
 }
 
 // the function used by judgeing operation type

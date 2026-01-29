@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 /*!
  * \file conv_api_tiling_util.h
  * \brief
@@ -74,7 +73,6 @@ struct ConvType {
 };
 
 struct PlatformInfo {
-    platform_ascendc::SocVersion socVersion;
     uint32_t abL1mte2BandWidthCof = 0;
     uint64_t l1Size = 0;
     uint64_t l0CSize = 0;
@@ -83,6 +81,8 @@ struct PlatformInfo {
     uint64_t l0BSize = 0;
     uint64_t btSize = 0;
     uint64_t fbSize = 0;
+    uint64_t aivPerAic = 0;
+    NpuArch npuArch = NpuArch::DAV_RESV;
 };
 
 enum class BoundType {
@@ -223,8 +223,6 @@ constexpr uint64_t CONST_VALUE_1 = 1;
 constexpr uint64_t C04_CIN_SIZE = 4;
 constexpr uint32_t CONST_VALUE_2 = 2;
 constexpr uint32_t C04_VEC_USE_BUFF_NUM = 2;
-constexpr uint64_t WEIGHT_UB_BUFF_NUMS = 2;
-constexpr uint32_t VEC_NUM_PER_CUBE_910D = 2;
 constexpr uint32_t VGATHER_REGISTER_SIZE = 256;
 constexpr uint32_t VGATHER_PERF_LIMIT = 8;
 constexpr uint32_t BAND_WIDTH_COEFF = 4;

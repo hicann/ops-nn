@@ -216,20 +216,19 @@ TEST_P(Conv3DTilingRepo, general_cases_001) {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     uint32_t aicoreNum = 32;
-    string compile_info_string = R"({
-          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", 
-                            "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
-                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, 
-                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288, 
-                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, 
-                            "CORE_NUM": 32}
-                            })";
+    string compile_info_string = R"({"hardware_info": 
+      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
+       "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
+       "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
+       "core_type_list": "CubeCore,VectorCore"}})";
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    map<string, string> soc_version_infos = {{"NpuArch", "3510"}};
+    aicore_spec.insert({"fb0_size", "4096"});
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;

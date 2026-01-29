@@ -16,6 +16,41 @@
  
 namespace optiling {
 namespace conv_ops_tiling {
+ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
+{
+    uint32_t attrPadIndex = flagInfo_.quantFlag ? ATTR_QUANT_PAD_INDEX : ATTR_PAD_INDEX;
+    attrPadIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_PADS_INDEX : attrPadIndex;
+    auto padPtr = context_->GetAttrs()->GetListInt(attrPadIndex);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, padPtr);
+    if (padPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
+                padPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
+        return ge::GRAPH_FAILED;
+    }
+    oriShapeAttrInfo_.oriPadTop = padPtr->GetData()[PAD_TOP_INDEX];
+    oriShapeAttrInfo_.oriPadBottom = padPtr->GetData()[PAD_BOTTOM_INDEX];
+    oriShapeAttrInfo_.oriPadLeft = padPtr->GetData()[PAD_LEFT_INDEX];
+    oriShapeAttrInfo_.oriPadRight = padPtr->GetData()[PAD_RIGHT_INDEX];
+
+    OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED,  context_->GetNodeName(),
+        "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
+
+    if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 ||
+        oriShapeAttrInfo_.oriPadLeft < 0 || oriShapeAttrInfo_.oriPadRight < 0 ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > MAX_ATTRS_SHAPE ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > MAX_ATTRS_SHAPE) {
+        OP_LOGE(context_->GetNodeName(),
+            "%s AscendC: pad (top: %ld, bottom: %ld, left: %ld, right: %ld) is out of range[0, %lu].",
+                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriPadTop, oriShapeAttrInfo_.oriPadBottom,
+                oriShapeAttrInfo_.oriPadLeft, oriShapeAttrInfo_.oriPadRight,
+                MAX_ATTRS_SHAPE);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
 {
     uint32_t attrStrideIndex = flagInfo_.quantFlag ? ATTR_QUANT_STRIDE_INDEX : ATTR_STRIDE_INDEX;
@@ -81,41 +116,6 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
-{
-    uint32_t attrPadIndex = flagInfo_.quantFlag ? ATTR_QUANT_PAD_INDEX : ATTR_PAD_INDEX;
-    attrPadIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_PADS_INDEX : attrPadIndex;
-    auto padPtr = context_->GetAttrs()->GetListInt(attrPadIndex);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, padPtr);
-    if (padPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
-                padPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
-        return ge::GRAPH_FAILED;
-    }
-    oriShapeAttrInfo_.oriPadTop = padPtr->GetData()[PAD_TOP_INDEX];
-    oriShapeAttrInfo_.oriPadBottom = padPtr->GetData()[PAD_BOTTOM_INDEX];
-    oriShapeAttrInfo_.oriPadLeft = padPtr->GetData()[PAD_LEFT_INDEX];
-    oriShapeAttrInfo_.oriPadRight = padPtr->GetData()[PAD_RIGHT_INDEX];
-
-    OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED,  context_->GetNodeName(),
-        "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
-
-    if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 ||
-        oriShapeAttrInfo_.oriPadLeft < 0 || oriShapeAttrInfo_.oriPadRight < 0 ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > MAX_ATTRS_SHAPE) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: pad (top: %ld, bottom: %ld, left: %ld, right: %ld) is out of range[0, %lu].",
-                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriPadTop, oriShapeAttrInfo_.oriPadBottom,
-                oriShapeAttrInfo_.oriPadLeft, oriShapeAttrInfo_.oriPadRight,
-                MAX_ATTRS_SHAPE);
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
 ge::graphStatus Conv2dBaseTiling::CheckRoundModeLegal()
 {
     if (!flagInfo_.quantFlag && !flagInfo_.extendConvFlag) {
@@ -157,29 +157,13 @@ ge::graphStatus Conv2dBaseTiling::CheckRoundModeLegal()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
+ge::graphStatus Conv2dBaseTiling::CheckQuantDtypeLegal()
 {
-    auto attrGroupsIndex = flagInfo_.quantFlag ? ATTR_QUANT_GROUP_INDEX : ATTR_GROUP_INDEX;
-    attrGroupsIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_GROUPS_INDEX : attrGroupsIndex;
-    auto groupsPtr = context_->GetAttrs()->GetInt(attrGroupsIndex);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, groupsPtr);
-    oriShapeAttrInfo_.oriGroups = *groupsPtr;
-
-    if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: groups(%ld) from attr are out of range[1, %lu].",
-            paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriGroups, MAX_GROUP_SHAPE);
-        return ge::GRAPH_FAILED;
+    if (!flagInfo_.quantFlag) {
+        return ge::GRAPH_SUCCESS;
     }
-
-    if (paramInfo_.nodeType == "Conv2DV2" && oriShapeAttrInfo_.oriGroups == 1 && oriShapeAttrInfo_.oriWeightC != 0) {
-        if (oriShapeAttrInfo_.oriFmapC % oriShapeAttrInfo_.oriWeightC == 0) {
-            oriShapeAttrInfo_.oriGroups = oriShapeAttrInfo_.oriFmapC / oriShapeAttrInfo_.oriWeightC;
-            OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: Attr groups is implicitly changed. ori groups %lu actual groups %lu",
-                paramInfo_.nodeType.c_str(), *groupsPtr, oriShapeAttrInfo_.oriGroups);
-        }
-    }
-    
+    auto quantDtypePtr = context_->GetAttrs()->GetInt(ATTR_QUANT_DTYPE_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, quantDtypePtr);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -208,16 +192,6 @@ bool Conv2dBaseTiling::UpdateOriPadFromPadMode()
     return true;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckQuantDtypeLegal()
-{
-    if (!flagInfo_.quantFlag) {
-        return ge::GRAPH_SUCCESS;
-    }
-    auto quantDtypePtr = context_->GetAttrs()->GetInt(ATTR_QUANT_DTYPE_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, quantDtypePtr);
-    return ge::GRAPH_SUCCESS;
-}
- 
 ge::graphStatus Conv2dBaseTiling::CheckDataFormatLegal()
 {
     auto attrDataFormatIndex = flagInfo_.quantFlag ? ATTR_QUANT_DATAFORMAT_INDEX : ATTR_DATAFORMAT_INDEX;
@@ -230,6 +204,38 @@ ge::graphStatus Conv2dBaseTiling::CheckDataFormatLegal()
                 paramInfo_.nodeType.c_str(), dataFormat.c_str());
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
+{
+    auto attrGroupsIndex = flagInfo_.quantFlag ? ATTR_QUANT_GROUP_INDEX : ATTR_GROUP_INDEX;
+    attrGroupsIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_GROUPS_INDEX : attrGroupsIndex;
+    auto groupsPtr = context_->GetAttrs()->GetInt(attrGroupsIndex);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, groupsPtr);
+    oriShapeAttrInfo_.oriGroups = *groupsPtr;
+
+    if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: groups(%ld) from attr are out of range[1, %lu].",
+            paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriGroups, MAX_GROUP_SHAPE);
+        return ge::GRAPH_FAILED;
+    }
+
+    if (oriShapeAttrInfo_.oriGroups > 1 && flagInfo_.disContinuousFlag) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: GroupConv2d not support disContinuous input.",
+                paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    if (paramInfo_.nodeType == "Conv2DV2" && oriShapeAttrInfo_.oriGroups == 1 && oriShapeAttrInfo_.oriWeightC != 0) {
+        if (oriShapeAttrInfo_.oriFmapC % oriShapeAttrInfo_.oriWeightC == 0) {
+            oriShapeAttrInfo_.oriGroups = oriShapeAttrInfo_.oriFmapC / oriShapeAttrInfo_.oriWeightC;
+            OP_LOGD(context_->GetNodeName(),
+                "%s AscendC: Attr groups is implicitly changed. ori groups %lu actual groups %lu",
+                paramInfo_.nodeType.c_str(), *groupsPtr, oriShapeAttrInfo_.oriGroups);
+        }
+    }
+    
     return ge::GRAPH_SUCCESS;
 }
 
@@ -327,6 +333,46 @@ ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
     return ge::GRAPH_SUCCESS;
 }
 
+// optiling recaculate pad for kernel directed call process
+void Conv2dBaseTiling::GetOriPadFromPadMode(const string& padMode)
+{
+    if (padMode == "SPECIFIC") {
+        return;
+    }
+
+    if (padMode == "VALID") {
+        oriShapeAttrInfo_.oriPadTop = 0;
+        oriShapeAttrInfo_.oriPadBottom = 0;
+        oriShapeAttrInfo_.oriPadLeft = 0;
+        oriShapeAttrInfo_.oriPadRight = 0;
+        return;
+    } else {
+        int64_t padH = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapH, oriShapeAttrInfo_.oriStrideH) - 1) *
+                    oriShapeAttrInfo_.oriStrideH + oriShapeAttrInfo_.oriDilationH * (oriShapeAttrInfo_.oriWeightH - 1) -
+                    oriShapeAttrInfo_.oriFmapH + 1;
+        int64_t padW = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapW, oriShapeAttrInfo_.oriStrideW) - 1) *
+                    oriShapeAttrInfo_.oriStrideW + oriShapeAttrInfo_.oriDilationW * (oriShapeAttrInfo_.oriWeightW - 1) -
+                    oriShapeAttrInfo_.oriFmapW + 1;
+        if (padMode == "SAME" || padMode == "SAME_UPPER") {
+            if (padMode == "SAME") {
+                padH = padH < 0 ? 0 : padH;
+                padW = padW < 0 ? 0 : padW;
+            }
+            oriShapeAttrInfo_.oriPadBottom = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadTop = padH - oriShapeAttrInfo_.oriPadBottom;
+            oriShapeAttrInfo_.oriPadRight = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadLeft = padW - oriShapeAttrInfo_.oriPadRight;
+        } else {
+            // padMode is "SAME_LOWER"
+            oriShapeAttrInfo_.oriPadTop = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadBottom = padH - oriShapeAttrInfo_.oriPadTop;
+            oriShapeAttrInfo_.oriPadLeft = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
+            oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;
+        }
+    }
+    return;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckExtendConv2dReluWeightAndClipValue(const uint32_t outputIdx, uint8_t& reluMode)
 {
     // get input and attr desc according to outputIdx
@@ -376,46 +422,6 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputLegal()
     attrInfo_.dualOutput = static_cast<uint8_t>(*dualOutputPtr);
     fixpipeInfo_.dualOutput = attrInfo_.dualOutput;
     return ge::GRAPH_SUCCESS;
-}
-
-// optiling recaculate pad for kernel directed call process
-void Conv2dBaseTiling::GetOriPadFromPadMode(const string& padMode)
-{
-    if (padMode == "SPECIFIC") {
-        return;
-    }
-
-    if (padMode == "VALID") {
-        oriShapeAttrInfo_.oriPadTop = 0;
-        oriShapeAttrInfo_.oriPadBottom = 0;
-        oriShapeAttrInfo_.oriPadLeft = 0;
-        oriShapeAttrInfo_.oriPadRight = 0;
-        return;
-    } else {
-        int64_t padH = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapH, oriShapeAttrInfo_.oriStrideH) - 1) *
-                    oriShapeAttrInfo_.oriStrideH + oriShapeAttrInfo_.oriDilationH * (oriShapeAttrInfo_.oriWeightH - 1) -
-                    oriShapeAttrInfo_.oriFmapH + 1;
-        int64_t padW = (ConvCeilDiv(oriShapeAttrInfo_.oriFmapW, oriShapeAttrInfo_.oriStrideW) - 1) *
-                    oriShapeAttrInfo_.oriStrideW + oriShapeAttrInfo_.oriDilationW * (oriShapeAttrInfo_.oriWeightW - 1) -
-                    oriShapeAttrInfo_.oriFmapW + 1;
-        if (padMode == "SAME" || padMode == "SAME_UPPER") {
-            if (padMode == "SAME") {
-                padH = padH < 0 ? 0 : padH;
-                padW = padW < 0 ? 0 : padW;
-            }
-            oriShapeAttrInfo_.oriPadBottom = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadTop = padH - oriShapeAttrInfo_.oriPadBottom;
-            oriShapeAttrInfo_.oriPadRight = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadLeft = padW - oriShapeAttrInfo_.oriPadRight;
-        } else {
-            // padMode is "SAME_LOWER"
-            oriShapeAttrInfo_.oriPadTop = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadBottom = padH - oriShapeAttrInfo_.oriPadTop;
-            oriShapeAttrInfo_.oriPadLeft = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
-            oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;
-        }
-    }
-    return;
 }
 
 ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()

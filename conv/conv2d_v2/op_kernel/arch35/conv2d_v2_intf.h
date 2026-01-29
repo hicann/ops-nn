@@ -92,16 +92,16 @@ struct Conv2dIntf {
     constexpr static bool WEIGHT_NZ_FLAG = Config::WEIGHT_NZ_FLAG;
     constexpr static uint64_t k0 = C0_SIZE / sizeof(WeightT);
     constexpr static uint64_t k0FmapTail = C0_SIZE / sizeof(FmapT);
-    constexpr static bool isFixedPoint = (AscendC::IsSameType<FmapT, half>::value &&
+    constexpr static bool isFixedPoint = (AscendC::IsSameType<WeightT, half>::value &&
                                           AscendC::IsSameType<L0cT, int32_t>::value);
-    constexpr static bool isQuantScene = 
+    constexpr static bool isQuantScene =
         !isFixedPoint &&
         ((AscendC::IsSameType<L0cT, int32_t>::value && AscendC::IsSameType<OutputT, half>::value) ||
         (AscendC::IsSameType<L0cT, int32_t>::value && AscendC::IsSameType<OutputT, int8_t>::value) ||
         AscendC::IsSameType<FmapT, hifloat8_t>::value ||
         AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value);
 
-    constexpr static bool c04Flag = 
+    constexpr static bool c04Flag =
         ConvParam::enableSmallChannel == static_cast<int8_t>(ConvEnableSmallChannel::OPEN);
     constexpr static bool c04NDFlag = formatWeight != ConvFormat::FRACTAL_Z_C04 &&
         ConvParam::enableSmallChannel == static_cast<int8_t>(ConvEnableSmallChannel::OPEN);
@@ -115,7 +115,7 @@ struct Conv2dIntf {
     constexpr static bool isInnerBatchFlag =
         ConvParam::innerBatch != static_cast<int8_t>(ConvInnerBatch::SINGLE_BATCH);
 
-    constexpr static bool groupOptFlag = 
+    constexpr static bool groupOptFlag =
         ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV);
     constexpr static bool groupOptNDFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
                                            formatWeight != ConvFormat::FRACTAL_Z;
@@ -123,6 +123,8 @@ struct Conv2dIntf {
                                            formatWeight == ConvFormat::FRACTAL_Z;
     constexpr static bool isConv3D = false;
     constexpr static bool isDeQuantFlag = false;
+    constexpr static bool disContinuousFlag =
+        ConvParam::disContinuous == static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);
 
     constexpr static uint8_t sizeOfFmap = sizeof(FmapT);
     constexpr static uint8_t sizeOfWeight = sizeof(WeightT);
@@ -185,6 +187,14 @@ public:
         }
     }
 
+    __aicore__ inline void SetOrgBatch(uint64_t orgBatch)
+    {
+        using local = typename Ext::SetOrgBatch;
+        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, orgBatch)) {
+            local::call(this, orgBatch);
+        }
+    }
+
     __aicore__ inline void SetOrgFmapShape(uint64_t orgCi, uint64_t orgHi, uint64_t orgWi)
     {
         using local = typename Ext::SetOrgFmapShape;
@@ -226,7 +236,7 @@ public:
             local::call(this, singleCo, singleHo, singleWo, singleCoreBatch);
         }
     }
- 
+
     __aicore__ inline void SetSingleOutputShape(uint64_t singleCo, uint64_t singleM, uint64_t singleCoreBatch)
     {
         using local = typename Ext::SetSingleOutputShape;
@@ -282,7 +292,7 @@ public:
             local::call(this);
         }
     }
-    
+
     __aicore__ inline void ConvPostProcess()
     {
         using local = typename Ext::ConvPostProcess;

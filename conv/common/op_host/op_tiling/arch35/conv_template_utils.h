@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include "graph/operator_reg.h"
+#include <platform/soc_spec.h>
 
 namespace optiling {
 namespace conv_ops_tiling {
@@ -186,15 +187,6 @@ constexpr uint32_t MKN_VALUE_DEFAULT = 16;
 
 constexpr uint64_t L1_SIZE = 524288;
 constexpr uint64_t L0C_SIZE = 262144;
-constexpr uint64_t FB_SIZE_910_55 = 6144;
-constexpr uint64_t FB_SIZE_950 = 4096;
-constexpr uint64_t FB_SIZE_910B = 2048;
-constexpr uint64_t FB_SIZE_MC62CM12A = 6144;
-constexpr uint64_t BT_SIZE_910_55 = 4096;
-constexpr uint64_t BT_SIZE_950 = 4096;
-constexpr uint64_t BT_SIZE_910B = 1024;
-constexpr uint64_t BT_SIZE_MC62CM12A = 4096;
-constexpr uint64_t BIAS_TABLE_SIZE = 4096;
 constexpr uint64_t OPT_GROUP_RESERVED_SIZE = 256;
 constexpr uint64_t WEIGHT_UB_NUMS = 2;
 constexpr uint32_t MKN_M_IDX = 0;
@@ -337,7 +329,7 @@ struct ConvAscendcPlatformInfo{
     uint64_t ubSize = 0;
     uint64_t btSize = 0;
     uint64_t l2Rate = 0;
-    std::string socVersion = "";
+    NpuArch npuArch = NpuArch::DAV_RESV;
 };
 
 struct ConvAscendcTilingFlag {
@@ -352,6 +344,7 @@ struct ConvAscendcTilingFlag {
     bool useTilingRepo = false;
     bool useTilingCache = false;
     bool isConv3dDequant = false;
+    bool disContinuousFlag = false;
     ge::Format scaleFormat = ge::FORMAT_ND;
 };
 
@@ -431,6 +424,7 @@ struct ConvTilingKeyPara {
     uint64_t weightUbTrans = 0;
     uint64_t fmapCppyMode = 0;
     uint64_t innerBatch = 0;
+    uint64_t disContinuous = 0;
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {

@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv2d_v2_base_tiling_check_input.cpp
  * \brief
  */
 #include "conv2d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::CheckOptionalInputLeagal()
@@ -36,44 +36,48 @@ ge::graphStatus Conv2dBaseTiling::CheckOptionalInputLeagal()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::ParseFmapShape()
+ge::graphStatus Conv2dBaseTiling::GetDisContinuousFlag()
 {
-    auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapShapePtr);
-    auto fMapShape = fMapShapePtr->GetStorageShape();
-    if (fMapShape.GetDimNum() != CONV2D_DIM_SIZE_LIMIT) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input feature map shape dim num: %zu != %u.",
-                paramInfo_.nodeType.c_str(), fMapShape.GetDimNum(), CONV2D_DIM_SIZE_LIMIT);
-        return ge::GRAPH_FAILED;
+    auto viewShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, viewShapePtr);
+    auto viewShape = viewShapePtr->GetOriginShape();
+    if (!context_->InputIsView(INPUT_FMAP_INDEX)) {
+        return ge::GRAPH_SUCCESS;
+    }
+    auto viewStridePtr = context_->GetInputStride(INPUT_FMAP_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, viewStridePtr);
+    // check continuous
+    if (viewStridePtr->GetStride(FORMAT_NCHW_N_INDEX) == 0) {
+        return ge::GRAPH_SUCCESS;
     }
 
-    oriShapeAttrInfo_.oriFmapN = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriFmapC = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriFmapH = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriFmapW = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_W_IDX]);
+    if (descInfo_.fMapDtype != ge::DataType::DT_FLOAT && descInfo_.fMapDtype != ge::DataType::DT_FLOAT16 &&
+        descInfo_.fMapDtype != ge::DataType::DT_BF16) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: disContinuous dtype: %d, should be fp16/bf16/fp32",
+                paramInfo_.nodeType.c_str(), descInfo_.fMapDtype);
+        return ge::GRAPH_FAILED;
+    }
+        
+    if (context_->GetInputOffset(0) != 0) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: disContinuous inputOffset should be 0",
+        paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    // check view_shape is HWNC & storage_shape is NCHW
+    std::vector<int64_t> expectStride = {viewShape[FORMAT_NCHW_C_INDEX], 1,
+        viewShape[FORMAT_NCHW_W_INDEX] * viewShape[FORMAT_NCHW_N_INDEX] * viewShape[FORMAT_NCHW_C_INDEX],
+        viewShape[FORMAT_NCHW_N_INDEX] * viewShape[FORMAT_NCHW_C_INDEX]};
+    for (size_t i = 0; i < CONV2D_DIM_SIZE_LIMIT; i++) {
+        if (viewStridePtr->GetStride(i) != expectStride[i]) {
+            OP_LOGE(context_->GetNodeName(),
+                    "%s AscendC: disContinuous Input not satisfy viewShape(HWNC) storageShape(NCHW)",
+                    paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
 
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckFmapShape()
-{
-    uint64_t batchMaxSize = shapeBoundTab.at("N").GetUpperBound(descInfo_.fMapDtype);
-    uint64_t cInMaxSize = shapeBoundTab.at("Ci").GetUpperBound(descInfo_.fMapDtype);
-    uint64_t hInMaxSize = shapeBoundTab.at("H").GetUpperBound(descInfo_.fMapDtype);
-    uint64_t wInMaxSize = shapeBoundTab.at("W").GetUpperBound(descInfo_.fMapDtype);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapN, batchMaxSize), ge::GRAPH_FAILED,  context_->GetNodeName(),
-        "%s AscendC: Batch (%ld) is out of range[1, %lu].",
-        paramInfo_.nodeType.c_str(),oriShapeAttrInfo_.oriFmapN, batchMaxSize);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapC, cInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-        "%s AscendC: Cin (%ld) is out of range[1, %lu].",
-        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapC, cInMaxSize);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapH, hInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-        "%s AscendC: Hin (%ld) is out of range[1, %lu].",
-        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapH, hInMaxSize);
-    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapW, wInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
-        "%s AscendC: Win (%ld) is out of range[1, %lu].",
-        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapW, wInMaxSize);
-
+    flagInfo_.disContinuousFlag = true;
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: disContinuous HWNC input", paramInfo_.nodeType.c_str());
     return ge::GRAPH_SUCCESS;
 }
 
@@ -120,6 +124,56 @@ ge::graphStatus Conv2dBaseTiling::CheckWeightShape()
         OP_LOGE(context_->GetNodeName(), "%s AscendC: Get k0 = 0", paramInfo_.nodeType.c_str());
         return ge::GRAPH_FAILED;
     }
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::ParseFmapShape()
+{
+    auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapShapePtr);
+    auto fMapShape = fMapShapePtr->GetStorageShape();
+    if (fMapShape.GetDimNum() != CONV2D_DIM_SIZE_LIMIT) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input feature map shape dim num: %zu != %u.",
+                paramInfo_.nodeType.c_str(), fMapShape.GetDimNum(), CONV2D_DIM_SIZE_LIMIT);
+        return ge::GRAPH_FAILED;
+    }
+
+    if (flagInfo_.disContinuousFlag) {
+        // fMapShape is storage shape, but paramsIdxVec is from view format
+        oriShapeAttrInfo_.oriFmapN = fMapShape.GetDim(DIS_CONTINUOUS_N_IDX);
+        oriShapeAttrInfo_.oriFmapC = fMapShape.GetDim(DIS_CONTINUOUS_C_IDX);
+        oriShapeAttrInfo_.oriFmapH = fMapShape.GetDim(DIS_CONTINUOUS_H_IDX);
+        oriShapeAttrInfo_.oriFmapW = fMapShape.GetDim(DIS_CONTINUOUS_W_IDX);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    oriShapeAttrInfo_.oriFmapN = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriFmapC = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriFmapH = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriFmapW = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_W_IDX]);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::CheckFmapShape()
+{
+    uint64_t batchMaxSize = shapeBoundTab.at("N").GetUpperBound(descInfo_.fMapDtype);
+    uint64_t cInMaxSize = shapeBoundTab.at("Ci").GetUpperBound(descInfo_.fMapDtype);
+    uint64_t hInMaxSize = shapeBoundTab.at("H").GetUpperBound(descInfo_.fMapDtype);
+    uint64_t wInMaxSize = shapeBoundTab.at("W").GetUpperBound(descInfo_.fMapDtype);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapN, batchMaxSize), ge::GRAPH_FAILED,  context_->GetNodeName(),
+        "%s AscendC: Batch (%ld) is out of range[1, %lu].",
+        paramInfo_.nodeType.c_str(),oriShapeAttrInfo_.oriFmapN, batchMaxSize);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapC, cInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+        "%s AscendC: Cin (%ld) is out of range[1, %lu].",
+        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapC, cInMaxSize);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapH, hInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+        "%s AscendC: Hin (%ld) is out of range[1, %lu].",
+        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapH, hInMaxSize);
+    OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapW, wInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
+        "%s AscendC: Win (%ld) is out of range[1, %lu].",
+        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapW, wInMaxSize);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -247,7 +301,7 @@ ge::graphStatus Conv2dBaseTiling::ParseExtendDualOutputShape()
                 paramInfo_.nodeType.c_str(), output1Shape.GetDimNum(), CONV2D_DIM_SIZE_LIMIT);
         return ge::GRAPH_FAILED;
     }
-    
+
     oriShapeAttrInfo_.oriOutput1N =
         output1Shape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_N_IDX]);
     oriShapeAttrInfo_.oriOutput1C =
@@ -266,7 +320,7 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputShape()
     const std::vector<int64_t> expectedDims = {oriShapeAttrInfo_.oriOutputN, oriShapeAttrInfo_.oriOutputC,
                                                oriShapeAttrInfo_.oriOutputH, oriShapeAttrInfo_.oriOutputW};
     const std::vector<std::string> dimNames = {"N", "C", "H", "W"};
-    
+
     for (size_t i = 0; i < CONV2D_DIM_SIZE_LIMIT; ++i) {
         OP_LOGE_IF(output1Dims[i] != expectedDims[i], ge::GRAPH_FAILED, context_->GetNodeName(),
                    "%s AscendC: Output1 %s dimension (%ld) is not equal to expected (%ld).",
@@ -280,7 +334,7 @@ ge::graphStatus Conv2dBaseTiling::CheckInputDesc()
     bool formatMatchTag = false;
     std::vector<std::vector<ge::Format>> supportFormats;
     std::stringstream ss;
-    convBase_.GetSupportedFormats(flagInfo_.quantFlag, true, apiInputPlatformInfo.socVersion, ss, supportFormats);
+    convBase_.GetSupportedFormats(flagInfo_.quantFlag, true, ss, supportFormats);
     for (uint8_t kindId = 0; kindId < supportFormats.size(); kindId++) {
         if (ConvArrMatch(paramInfo_.paramsFormat, supportFormats[kindId], paramInfo_.paramsFormat.size())) {
             formatMatchTag = true;
@@ -299,7 +353,6 @@ ge::graphStatus Conv2dBaseTiling::CheckInputDesc()
     return ge::GRAPH_SUCCESS;
 }
 
-
 ge::graphStatus Conv2dBaseTiling::CheckParamsDtype()
 {
     // check int8 input not support  c04
@@ -310,7 +363,7 @@ ge::graphStatus Conv2dBaseTiling::CheckParamsDtype()
     }
 
     std::vector<std::vector<ConvDtype>> supportedTypesList;
-    GetSupportedDataTypes(apiInputPlatformInfo.socVersion, flagInfo_.quantFlag,
+    GetSupportedDataTypes(apiInputPlatformInfo.npuArch, flagInfo_.quantFlag,
                           descInfo_.fMapFormat, flagInfo_.extendConvFlag, supportedTypesList);
     OP_TILING_CHECK(supportedTypesList.size() == 0,
                     OP_LOGE(context_->GetNodeName(), "%s AscendC: Get supported types list fail.",

@@ -59,7 +59,7 @@ int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
     InferCubeInfo();
     Infer5hdShape();
 
-    platformInfo.abL1mte2BandWidthCof = GetBandWidthCof(platformInfo.socVersion);
+    platformInfo.abL1mte2BandWidthCof = GetBandWidthCof();
     int64_t ret = Compute();
     if (ret == RET_FAIL) {
         TILING_LOG_ERROR("conv3d api tiling compute failed.");
@@ -111,15 +111,9 @@ void Conv3dTiling::Infer5hdShape()
 bool Conv3dTiling::CheckInputFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
-    if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND950) {
-        conv3dSupportFormatSet = {
-            {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}
-        };
-    } else if (platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND910_55) {
-        conv3dSupportFormatSet = {
-            {ConvFormat::NCDHW, ConvFormat::NCDHW}
-        };
-    }
+    conv3dSupportFormatSet = {
+        {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}
+    };
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv3dSupportFormatSet.end()) {
@@ -456,10 +450,7 @@ bool Conv3dTiling::CheckInputShape()
 
 bool Conv3dTiling::CheckSoc()
 {
-    static unordered_set<platform_ascendc::SocVersion> supportedSoc = {platform_ascendc::SocVersion::ASCEND910B,
-                                                                       platform_ascendc::SocVersion::ASCEND950,
-                                                                       platform_ascendc::SocVersion::ASCEND910_55};
-    if (supportedSoc.find(this->platformInfo.socVersion) == supportedSoc.end()) {
+    if (this->platformInfo.npuArch != NpuArch::DAV_3510) {
         TILING_LOG_ERROR("current Soc Version is not support");
         return false;
     }

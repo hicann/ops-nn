@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv2d_v2_base_tiling_fast_tiling.cpp
  * \brief
  */
 #include "conv2d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::PrepareTiling()
@@ -38,6 +38,26 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
         return ge::GRAPH_FAILED;
     }
     if (Conv2DInfoInitAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
+{
+    convBase_.ConvBaseInitAttrInfo(attrInfo_);
+    convBase_.ConvBaseInitOpInfo(opInfo_);
+    convBase_.updatePlatformInfoFromOpInfo();
+    convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
+    convBase_.InitblockDimConstParas();
+    convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
+    convBase_.ConvBaseInitNodeInfo(context_->GetNodeName(), paramInfo_.nodeType.c_str());
+    // check if enable c04 mode
+    flagInfo_.enableC04Flag = IsEnableC04();
+
+    convBase_.ConvBaseInitFeatureFlag(featureFlagInfo_);
+
+    if (GetTilingSplitMode() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -78,25 +98,6 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
             blockDimRes.nDim, blockDimRes.groupDim, blockDimRes.minCost);
     }
     if (GetConv2dOpsTiling() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
-{
-    convBase_.ConvBaseInitAttrInfo(attrInfo_);
-    convBase_.ConvBaseInitOpInfo(opInfo_);
-    convBase_.updatePlatformInfoFromOpInfo();
-    convBase_.ConvBaseInitFixpipeInfo(fixpipeInfo_);
-    convBase_.InitblockDimConstParas();
-    convBase_.GetConvBaseCoreInfo(convOpsConstParams_);
-    // check if enable c04 mode
-    flagInfo_.enableC04Flag = IsEnableC04();
-
-    convBase_.ConvBaseInitFeatureFlag(featureFlagInfo_);
-
-    if (GetTilingSplitMode() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -194,6 +195,25 @@ void Conv2dBaseTiling::SelectMModeAlgorithm()
     return;
 }
 
+ge::graphStatus Conv2dBaseTiling::GetConv2dApiTiling()
+{
+    Conv2dApiTilingSetShape();
+
+    if (flagInfo_.mBasicBlockFlag) {
+        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_.conv2dApiTiling)) {
+            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        if (conv2dApiTiling_.GetTiling(tilingData_.conv2dApiTiling) == -1) {
+            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 void Conv2dBaseTiling::Conv2dApiTilingSetShape()
 {
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
@@ -234,43 +254,6 @@ void Conv2dBaseTiling::Conv2dApiTilingSetShape()
     OP_LOGD(context_->GetNodeName(), "%s AscendC: api got: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
 }
 
-ge::graphStatus Conv2dBaseTiling::GetConv2dApiTiling()
-{
-    Conv2dApiTilingSetShape();
-
-    if (flagInfo_.mBasicBlockFlag) {
-        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_.conv2dApiTiling)) {
-            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
-            return ge::GRAPH_FAILED;
-        }
-    } else {
-        if (conv2dApiTiling_.GetTiling(tilingData_.conv2dApiTiling) == -1) {
-            OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
-            return ge::GRAPH_FAILED;
-        }
-    }
-
-    return ge::GRAPH_SUCCESS;
-}
-
-void Conv2dBaseTiling::Conv2dOpTilingSetAttr()
-{
-    int8_t outputOrder = flagInfo_.mSplitModeFlag ? 1: 0;
-    conv2dApiTiling_.SetOutputOrder(outputOrder);
-    conv2dApiTiling_.SetQuantScale(flagInfo_.quantFlag || fixpipeInfo_.channelWiseCoeff > 0);
-    conv2dApiTiling_.SetFixpipeParams(fixpipeInfo_);
-    conv2dApiTiling_.SetOffsetx(static_cast<int8_t>(attrInfo_.offsetx));
-    conv2dApiTiling_.SetC04Flag(flagInfo_.enableC04Flag);
-    conv2dApiTiling_.SetRoundMode(static_cast<int8_t>(attrInfo_.roundMode));
-    bool isHF32 = (attrInfo_.hf32Mode == 1);
-    if (isHF32) {
-        bool hf32TransMode = false;
-        conv2dApiTiling_.SetHF32(isHF32, hf32TransMode);
-    }
- 
-    conv2dApiTiling_.SetGroups(static_cast<int32_t>(attrInfo_.groups));
-}
-
 void Conv2dBaseTiling::Conv2dOpTilingSetShape()
 {
     uint64_t orgCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV && flagInfo_.mBasicBlockFlag ?
@@ -284,12 +267,12 @@ void Conv2dBaseTiling::Conv2dOpTilingSetShape()
                                 static_cast<int32_t>(attrInfo_.padLeft), static_cast<int32_t>(attrInfo_.padRight));
     conv2dApiTiling_.SetDilation(static_cast<int32_t>(attrInfo_.dilationH), static_cast<int32_t>(attrInfo_.dilationW));
     conv2dApiTiling_.SetStride(static_cast<int32_t>(attrInfo_.strideH), static_cast<int32_t>(attrInfo_.strideW));
- 
+
     conv2dApiTiling_.SetWeightType(TPosition::GM, formatMap.at(descInfo_.weightFormat),
                                    dtypeMap.at(descInfo_.weightDtype));
     conv2dApiTiling_.SetFmapType(TPosition::GM, formatMap.at(descInfo_.fMapFormat), dtypeMap.at(descInfo_.fMapDtype));
     conv2dApiTiling_.SetOutputType(TPosition::CO1, formatMap.at(descInfo_.outFormat), dtypeMap.at(descInfo_.outDtype));
- 
+
     if (flagInfo_.hasBias) {
         conv2dApiTiling_.SetBiasType(TPosition::GM, formatMap.at(descInfo_.biasFormat),
                                      dtypeMap.at(descInfo_.biasDtype));
@@ -307,7 +290,7 @@ void Conv2dBaseTiling::Conv2dOpTilingSetShape()
        << ", singleCorekh: " << static_cast<int64_t>(shapeInfo_.kh)
        << ", singleCorekw: " << static_cast<int64_t>(shapeInfo_.kw);
     OP_LOGD(context_->GetNodeName(), "%s AscendC: api got: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
- 
+
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         // set enlarge for BasicBlock
         conv2dApiTiling_.SetOptGroupParams(static_cast<int32_t>(optGroupInfo_.enlarge), attrInfo_.groups,
@@ -317,6 +300,25 @@ void Conv2dBaseTiling::Conv2dOpTilingSetShape()
     convBase_.SetMKN(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_M_IDX),
                      CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_K_IDX),
                      CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX));
+}
+
+void Conv2dBaseTiling::Conv2dOpTilingSetAttr()
+{
+    int8_t outputOrder = flagInfo_.mSplitModeFlag ? 1: 0;
+    conv2dApiTiling_.SetOutputOrder(outputOrder);
+    conv2dApiTiling_.SetQuantScale(flagInfo_.quantFlag || fixpipeInfo_.channelWiseCoeff > 0);
+    conv2dApiTiling_.SetFixpipeParams(fixpipeInfo_);
+    conv2dApiTiling_.SetOffsetx(static_cast<int8_t>(attrInfo_.offsetx));
+    conv2dApiTiling_.SetC04Flag(flagInfo_.enableC04Flag);
+    conv2dApiTiling_.SetRoundMode(static_cast<int8_t>(attrInfo_.roundMode));
+    conv2dApiTiling_.SetDisContinuousFlag(flagInfo_.disContinuousFlag);
+    bool isHF32 = (attrInfo_.hf32Mode == 1);
+    if (isHF32) {
+        bool hf32TransMode = false;
+        conv2dApiTiling_.SetHF32(isHF32, hf32TransMode);
+    }
+ 
+    conv2dApiTiling_.SetGroups(static_cast<int32_t>(attrInfo_.groups));
 }
 
 ge::graphStatus Conv2dBaseTiling::GetConv2dOpsTiling()

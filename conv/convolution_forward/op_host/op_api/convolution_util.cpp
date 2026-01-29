@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -32,6 +32,10 @@
 using namespace op;
 using namespace ge;
 using namespace l0op;
+
+static uint64_t g_ubSize = 0;
+static uint64_t g_l1Size = 0;
+
 namespace SplitWInfo {
 constexpr int STRIDEH_MAX = 63;
 constexpr int DILATION_MAX = 255;
@@ -254,7 +258,7 @@ aclIntArray* View2DSwapHWForAttr(const aclIntArray* intArray, aclOpExecutor* exe
 }
 
 const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* executor)
-{   
+{
     auto dims = input->GetViewShape().GetDimNum();
     CHECK_RET(dims == SplitWInfo::CONV_2D_DIM_SIZE, nullptr);
     auto shape = op::ToShapeVector(input->GetViewShape());
@@ -326,6 +330,144 @@ const aclTensor* View5dAs4dForOutput(const aclTensor* input, aclOpExecutor* exec
     CHECK_RET(reformatInput != nullptr, nullptr);
 
     return reformatInput;
+}
+
+bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>& newStrides, uint32_t dims)
+{
+    auto viewStrides = input->GetViewStrides();
+    uint32_t totalDims = std::min(viewStrides.size(), newStrides.size());
+    if (dims > totalDims) {
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "Invalid dims");
+    }
+    for (size_t i = 0; i < dims; i++) {
+        if (viewStrides[i] != newStrides[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void GetUbSize()
+{
+    if (g_ubSize != 0) {
+        return;
+    }
+    uint64_t ubSize = 0;
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo == nullptr) {
+        OP_LOGW("Platform info is null, ubSize fallback to 0.");
+        return;
+    }
+    platformInfo->GetLocalMemSize(fe::LocalMemType::UB, ubSize);
+    OP_LOGD("GetUbSize returned: %lu", ubSize);
+    g_ubSize = ubSize - RESERVED_SIZE_8K;
+}
+
+void GetL1Size()
+{
+    if (g_l1Size != 0) {
+        return;
+    }
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo == nullptr) {
+        OP_LOGW("Platform info is null, ubSize fallback to 0.");
+        return;
+    }
+    platformInfo->GetLocalMemSize(fe::LocalMemType::L1, g_l1Size);
+    OP_LOGD("GetL1Size returned: %lu", g_l1Size);
+}
+
+bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
+    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias)
+{
+    int64_t orgKh = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::HI_INDEX));
+    int64_t orgKw = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
+    int64_t hin = static_cast<int64_t>(input->GetViewShape().GetDim(SplitWInfo::HI_INDEX));
+    int64_t win = static_cast<int64_t>(input->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
+    int64_t strideH = (*stride)[0];
+    int64_t strideW = (*stride)[1];
+    int64_t dilationH = (*dilation)[0];
+    int64_t dilationW = (*dilation)[1];
+    int64_t padLeft = (*padding)[SplitWInfo::LEFT_INDEX_ATTR];
+    int64_t padRight = (*padding)[SplitWInfo::RIGHT_INDEX_ATTR];
+    int64_t m0 = SplitWInfo::BLK_M;
+    int64_t n0 = SplitWInfo::BLK_N;
+    int64_t k0 = SplitWInfo::BLK_LEN / SplitWInfo::gDataTypeSizeTab[opInfo->weightDtype];
+    uint32_t inputDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->inputDtype];
+    uint32_t weightDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->weightDtype];
+    uint32_t biasDtypeSize = SplitWInfo::gDataTypeSizeTab[opInfo->biasDtype];
+    uint64_t nBL1min = n0;
+
+    if (orgKh * orgKw * k0 > SplitWInfo::POSK_LIMIT) {
+        return true;
+    }
+
+    uint64_t biasL1Size = 0;
+    if (bias != nullptr) {
+        biasL1Size = ConvAlignB(nBL1min * biasDtypeSize, SplitWInfo::BLK_LEN);
+    }
+
+    uint64_t kBL1min = k0 * orgKh * orgKw;
+    uint64_t weightL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, SplitWInfo::BLK_LEN);
+    uint64_t inputL1Size = 0;
+    uint64_t orgWo = (win + padLeft + padRight - (dilationW * (orgKw - 1) + 1)) / strideW + 1;
+    uint64_t hoAL1min = orgWo < m0 ? (m0 + orgWo - 1) / orgWo : 1;
+    uint64_t khDilated = (orgKh - 1) * dilationH + 1; 
+    uint64_t hiAL1min = Conv2DInferHiL1(hoAL1min, khDilated, hin, strideH);
+    uint64_t kAL1min = k0;
+    uint64_t woAL1min = m0;
+    uint64_t kwDilated = (orgKw - 1) * dilationW + 1;
+    uint64_t wiAL1min = Conv2DInferHiL1(woAL1min, kwDilated, win, strideW);
+    inputL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * inputDtypeSize, SplitWInfo::BLK_LEN);
+
+    GetL1Size();
+    uint64_t minL1LoadSize = biasL1Size + inputL1Size + weightL1Size;
+    if (minL1LoadSize > g_l1Size) {
+        return true;
+    }
+
+    return !CheckL1SizeLimitsDma(inputDtypeSize, biasL1Size, weightDtypeSize, k0);
+}
+
+bool CheckL1SizeLimitsDma(uint32_t inputDtypeSize, uint64_t biasL1Size, uint32_t weightDtypeSize, int64_t k0)
+{
+    uint64_t hoAL1Min = 1;
+    GetUbSize();
+    uint64_t inputUbSizeMin = ConvAlignB(hoAL1Min * SplitWInfo::BLK_M * k0 * inputDtypeSize, SplitWInfo::BLK_LEN);
+    if (inputUbSizeMin > g_ubSize) {
+        OP_LOGD("DMA min ub size not enough: ubSize=%lu, inputUbSizeMin=%lu.", g_ubSize, inputUbSizeMin);
+        return false;
+    }
+
+    uint64_t nBL1min = SplitWInfo::BLK_M;
+    uint64_t kBL1min = k0;
+    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, SplitWInfo::BLK_LEN);
+    uint64_t kAL1min = k0;
+    uint64_t woAL1min = SplitWInfo::BLK_M;
+    uint64_t inputUsedL1Size = ConvAlignB(hoAL1Min * woAL1min * kAL1min * inputDtypeSize, SplitWInfo::BLK_LEN);
+    uint64_t minL1LoadSize = biasL1Size + inputUsedL1Size + weightUsedL1Size;
+    GetL1Size();
+    if (minL1LoadSize > g_l1Size) {
+        return false;
+    }
+    return true;
+}
+
+uint64_t Conv2DInferHiL1(uint64_t inputHoL1, uint64_t khDilated, uint64_t hi, uint64_t strideH)
+{
+    uint64_t tmpHiL1 = (inputHoL1 - 1) * strideH + khDilated;
+    if (tmpHiL1 > hi) {
+        tmpHiL1 = hi;
+    }
+    return tmpHiL1;
+}
+
+uint64_t ConvAlignB(uint64_t a, uint64_t b)
+{
+    if (b == 0) {
+        return 0;
+    }
+    return ((a + b - 1) / b) * b;
 }
 
 } // namespace ConvolutionUtil

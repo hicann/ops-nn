@@ -31,6 +31,7 @@ using namespace ConvFunc;
 using namespace conv;
 
 CONV_DECLARE_REG_IMPL(Init);
+CONV_DECLARE_REG_IMPL(SetOrgBatch);
 CONV_DECLARE_REG_IMPL(SetOrgFmapShape);
 CONV_DECLARE_REG_IMPL(SetOrgWeightShape);
 CONV_DECLARE_REG_IMPL(SetOrgOutputShape);
@@ -195,6 +196,14 @@ struct Init {
         self->ctx.singleCoreWo = self->ctx.convTiling->singleCoreWo; // Wo Size in Single Core
         InitHoDirectionValue<Intf>(self);
         InitWoDirectionValue<Intf>(self);
+    }
+};
+
+template <class Intf, uint32_t ImplType>
+struct SetOrgBatch {
+    static __aicore__ inline void call(Intf *self, uint64_t orgBatch)
+    {
+        self->ctx.orgBatch = orgBatch;
     }
 };
 

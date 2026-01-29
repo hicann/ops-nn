@@ -25,49 +25,50 @@ using namespace optiling::conv_ops_tiling;
 namespace optiling {
 
 CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2,
-    static_cast<int32_t>(platform_ascendc::SocVersion::ASCEND950), 0);
+    static_cast<int32_t>(NpuArch::DAV_3510), 0);
 
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
 {
     // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
-    paramInfo_.nodeType = context_->GetNodeType();
-    platform_ascendc::SocVersion curShortSoc;
     Conv3dTilingCache& tilingCache = Conv3dTilingCache::GetInstance();
     opInfo_ = tilingCache.GetPlatFormInfo();
-    curShortSoc =  tilingCache.GetSocVersion();
-    if (curShortSoc == platform_ascendc::SocVersion::RESERVED_VERSION) {
-        auto platformInfoPtr = context_->GetPlatformInfo();
+    if (tilingCache.GetSocVersion() == NpuArch::DAV_RESV) {
+        fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
-        curShortSoc = ascendcPlatform.GetSocVersion();
+        opInfo_->npuArch = ascendcPlatform.GetCurNpuArch();
+        opInfo_->aivNum = ascendcPlatform.GetCoreNumAiv();
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, opInfo_->l1Size);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, opInfo_->l0aSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, opInfo_->l0bSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, opInfo_->l0cSize);
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, opInfo_->ubSize);
-        tilingCache.SetSocVersion(curShortSoc, *opInfo_);
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::BT, opInfo_->btSize);
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::FB, opInfo_->fbSize);
+        tilingCache.SetSocVersion(opInfo_->npuArch, *opInfo_);
     }
-    SetApiInputPlatformInfo(curShortSoc);
+    apiInputPlatformInfo_.aivPerAic = opInfo_->aivNum / opInfo_->aicoreNum;
+    SetApiInputPlatformInfo();
     return ge::GRAPH_SUCCESS;
 }
  
-void Conv3dBaseTilingV2::SetApiInputPlatformInfo(const platform_ascendc::SocVersion& curShortSoc)
+void Conv3dBaseTilingV2::SetApiInputPlatformInfo()
 {
-    apiInputPlatformInfo_.socVersion = curShortSoc;
-    this->socVersion = curShortSoc;
+    apiInputPlatformInfo_.npuArch = opInfo_->npuArch;
     apiInputPlatformInfo_.l1Size = opInfo_->l1Size;
     apiInputPlatformInfo_.l0CSize = opInfo_->l0cSize;
     apiInputPlatformInfo_.l0ASize = opInfo_->l0aSize;
     apiInputPlatformInfo_.l0BSize = opInfo_->l0bSize;
     apiInputPlatformInfo_.ubSize = opInfo_->ubSize;
-    apiInputPlatformInfo_.btSize = socBTsizeMap.at(curShortSoc);
-    apiInputPlatformInfo_.fbSize = socFBsizeMap.at(curShortSoc);
+    apiInputPlatformInfo_.btSize = opInfo_->btSize;
+    apiInputPlatformInfo_.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
-        "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld" \
+        "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld " \
         "btSize: %ld, fbSize: %ld, socName: %s.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
-        opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, apiInputPlatformInfo_.btSize, apiInputPlatformInfo_.fbSize,
-        socNameTab.at(curShortSoc).c_str());
+        opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize,
+        socNameTab.at(opInfo_->npuArch).c_str());
 }
 
 ge::graphStatus Conv3dBaseTilingV2::ApiTilingGetPlatformInfo()
@@ -144,6 +145,9 @@ ge::graphStatus Conv3dBaseTilingV2::CheckNullPtr()
 
 ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
 {
+    if (GetNodeType() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (ApiTilingGetPlatformInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -180,6 +184,13 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
     OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
         context_->GetNodeName(), "%s AscendC: Update Hf32Mode failed.",paramInfo_.nodeType.c_str());
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv3dBaseTilingV2::GetNodeType()
+{
+    auto nodeType = context_->GetNodeType();
+    paramInfo_.nodeType = nodeType;
     return ge::GRAPH_SUCCESS;
 }
 

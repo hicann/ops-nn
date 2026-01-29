@@ -235,26 +235,24 @@ ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
 
 ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
 {
-    if (socVersion == SocVersion::ASCEND950 || socVersion == SocVersion::ASCEND910_55) {
-        bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
-                                          descInfo_.weightFormat == ge::FORMAT_NCDHW &&
-                                          descInfo_.outFormat == ge::FORMAT_NDHWC;
-        std::stringstream ss;
-        ss <<"The support params format list [fmap, weight, output] for scene ";
-        ss <<"(conv3d dequant) is [NCDHW, NCDHW, NDHWC]";
-        if (flagInfo_.isConv3dDequant && !isConv3dDequantFormatLegal) {
-            OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",
-                paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
-                formatToStrTab.at(descInfo_.weightFormat).c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
-                ss.str().c_str());
-            return ge::GRAPH_FAILED;
-        }
+    bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
+                                        descInfo_.weightFormat == ge::FORMAT_NCDHW &&
+                                        descInfo_.outFormat == ge::FORMAT_NDHWC;
+    std::stringstream ss;
+    ss <<"The support params format list [fmap, weight, output] for scene ";
+    ss <<"(conv3d dequant) is [NCDHW, NCDHW, NDHWC]";
+    if (flagInfo_.isConv3dDequant && !isConv3dDequantFormatLegal) {
+        OP_LOGE(context_->GetNodeName(),
+            "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",
+            paramInfo_.nodeType.c_str(), formatToStrTab.at(descInfo_.fMapFormat).c_str(),
+            formatToStrTab.at(descInfo_.weightFormat).c_str(), formatToStrTab.at(descInfo_.outFormat).c_str(),
+            ss.str().c_str());
+        return ge::GRAPH_FAILED;
+    }
 
-        auto res = CheckInputDescForND();
-        if (res != ge::GRAPH_SUCCESS) {
-            return res;
-        }
+    auto res = CheckInputDescForND();
+    if (res != ge::GRAPH_SUCCESS) {
+        return res;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -378,7 +376,7 @@ ge::graphStatus Conv3dBaseTilingV2::CheckInputDescForND()
     bool formatMatchTag = false;
     std::vector<std::vector<ge::Format>> supportFormats;
     std::stringstream ss;
-    convBase_.GetSupportedFormats(flagInfo_.quantFlag, false, apiInputPlatformInfo_.socVersion, ss, supportFormats);
+    convBase_.GetSupportedFormats(flagInfo_.quantFlag, false, ss, supportFormats);
     for (uint8_t kindId = 0; kindId < supportFormats.size(); kindId++) {
         if (ConvArrMatch(paramInfo_.paramsFormat, supportFormats[kindId], paramInfo_.paramsFormat.size())) {
             formatMatchTag = true;

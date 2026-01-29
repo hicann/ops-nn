@@ -18,11 +18,6 @@ namespace optiling {
 namespace conv_ops_tiling {
 bool Conv2dBaseTiling::CheckSupportCacheTiling()
 {
-    if (apiInputPlatformInfo.socVersion != platform_ascendc::SocVersion::ASCEND950 &&
-        apiInputPlatformInfo.socVersion != platform_ascendc::SocVersion::MC62CM12A) {
-        return false;
-    }
-
     if (paramInfo_.nodeType == "QuantConv2D") {
         return false;
     }

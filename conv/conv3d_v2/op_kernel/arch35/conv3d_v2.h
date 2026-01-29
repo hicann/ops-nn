@@ -117,6 +117,7 @@ public:
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static bool IS_EXTEND_CONV2D = false;
+    constexpr static bool DIS_CONTINUOUS = false;
 };
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>

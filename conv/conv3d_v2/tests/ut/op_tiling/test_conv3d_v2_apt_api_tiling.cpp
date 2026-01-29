@@ -33,7 +33,7 @@ protected:
     }
     static void TearDownTestCase() {}
     virtual void SetUp() {
-        platform.socVersion = platform_ascendc::SocVersion::ASCEND950;
+        platform.npuArch = NpuArch::DAV_3510;
         platform.l1Size = 524288;
         platform.l0ASize = 65536;
         platform.l0BSize = 65536;
@@ -41,6 +41,7 @@ protected:
         platform.ubSize = 262144;
         platform.btSize = 4096;
         platform.fbSize = 4096;
+        platform.aivPerAic = 2;
     }
     virtual void TearDown() {}
     conv_tiling::PlatformInfo platform;
@@ -155,14 +156,14 @@ TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
     tilingData.conv3dRunInfo.hasBias = 0;
 
     conv_tiling::PlatformInfo platform;
-    platform.socVersion = platform_ascendc::SocVersion::ASCEND950;
+    platform.npuArch = NpuArch::DAV_3510;
     platform.l1Size = 524288;
     platform.l0ASize = 65536;
     platform.l0BSize = 65536;
     platform.l0CSize = 262144;
     platform.ubSize = 262144;
     platform.btSize = 4096;
-
+    platform.aivPerAic = 2;
     tilingInfo.convOpsConstParams.m0 = 16;
     tilingInfo.convOpsConstParams.k0 = 8;
     tilingInfo.convOpsConstParams.n0 = 16;
@@ -386,7 +387,7 @@ void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling &testTiling)
                         testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM, 1);
-    if (testTiling.platformInfo.socVersion == platform_ascendc::SocVersion::ASCEND950) {
+    if (testTiling.platformInfo.npuArch == NpuArch::DAV_3510) {
         testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
@@ -401,7 +402,7 @@ void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling &testTiling)
 
 void SetType(conv_tiling::Conv3dTiling &testTiling, conv_tiling::PlatformInfo &platform)
 {
-    if (platform.socVersion == platform_ascendc::SocVersion::ASCEND950) {
+    if (platform.npuArch == NpuArch::DAV_3510) {
         testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetOutputType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);

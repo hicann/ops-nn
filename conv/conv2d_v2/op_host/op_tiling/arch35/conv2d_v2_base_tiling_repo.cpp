@@ -22,10 +22,19 @@ namespace conv_ops_tiling {
 bool Conv2dBaseTiling::GetTilingFromRepo()
 {
     string nodeType = context_->GetNodeType();
+    string tmpSocVer;
     if (nodeType == "QuantConv2D") {
-        return GetQuantConv2DTilingFromRepo();
+        auto compileInfoPtr = static_cast<const Conv2DTilingParseInfo*>(context_->GetCompileInfo());
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
+        auto quantConvOpInfoTmp = *compileInfoPtr;
+        tmpSocVer = quantConvOpInfoTmp.socVersion;
+    } else {
+        auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
+        auto convOpInfoTmp = *compileInfoPtr;
+        tmpSocVer = convOpInfoTmp.socVersion;
     }
-    return GetConv2DTilingFromRepo();
+    return QueryTilingBank(tmpSocVer, opInfo_->aicoreNum);
 }
 
 bool Conv2dBaseTiling::QueryTilingBank(std::string socHardWareVersion, uint32_t aicoreNum)
@@ -40,26 +49,6 @@ bool Conv2dBaseTiling::QueryTilingBank(std::string socHardWareVersion, uint32_t 
         return false;
     }
     return TranslateRepoTiling(tuningTiling);
-}
-
-bool Conv2dBaseTiling::GetQuantConv2DTilingFromRepo()
-{
-    auto compileInfoPtr =
-        static_cast<const Conv2DTilingParseInfo*>(context_->GetCompileInfo());
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-    auto opInfo_tmp = *compileInfoPtr;
-
-    return QueryTilingBank(opInfo_tmp.socVersion, opInfo_->aicoreNum);
-}
-
-bool Conv2dBaseTiling::GetConv2DTilingFromRepo()
-{
-    auto compileInfoPtr =
-        static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-    auto opInfo_tmp = *compileInfoPtr;
-
-    return QueryTilingBank(opInfo_tmp.socVersion, opInfo_->aicoreNum);
 }
 
 void Conv2dBaseTiling::GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &size)

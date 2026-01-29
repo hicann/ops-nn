@@ -186,9 +186,9 @@ namespace op {
 
 static bool IsSupportND()
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    return socVersion == SocVersion::ASCEND950;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
 }
+
 static const aclTensor* L0FuncWarperByOpType(
     std::map<std::string, L0FUNCTION> l0Functions, std::string functionType, const aclTensor* input,
     const aclTensor* weight, const aclTensor* bias, op::DataType outputDtype, const aclIntArray* stride,
@@ -1314,7 +1314,7 @@ private:
 
     static aclnnStatus CheckEmptyTensorTransposed(ConvEngine& engine)
     {
-        if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
             return ACLNN_SUCCESS;
         }
 
@@ -1600,7 +1600,7 @@ private:
                     inputShapeSpace);
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && transposed &&
+            if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && transposed &&
                 weight.IsZeroTensor()) {
                 continue;
             }
@@ -1930,6 +1930,10 @@ public:
     aclnnStatus Check(ConvEngine& engine) override
     {
         size_t inputDim = engine.meta.input.shape.size();
+        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+            OP_LOGD("Get Current NpuArch: DAV_3510.");
+            return ACLNN_SUCCESS;
+        }
         // 除了910A 910B 310P，其余暂不支持
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
         switch (socVersion) {
@@ -1937,7 +1941,6 @@ public:
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:
             case SocVersion::ASCEND310P:
-            case SocVersion::ASCEND950:
                 break;
             case SocVersion::ASCEND310B: {
                 if (engine.params.transposed || inputDim != CONV_2D_DIM_SIZE) {
@@ -1964,6 +1967,10 @@ public:
     ~TemporarySoftwareLimitCheckerTbc() override = default;
     aclnnStatus Check([[maybe_unused]] ConvEngine& engine) override
     { // 3D暂不支持
+        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+            OP_LOGD("Get Current NpuArch: DAV_3510.");
+            return ACLNN_SUCCESS;
+        }
         // 除了910A 910B 310P，其余暂不支持
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
         switch (socVersion) {
@@ -1971,7 +1978,6 @@ public:
             case SocVersion::ASCEND910B:
             case SocVersion::ASCEND910_93:
             case SocVersion::ASCEND310P:
-            case SocVersion::ASCEND950:
                 break;
             default: {
                 OP_LOGE(
@@ -2206,9 +2212,9 @@ static aclnnStatus ProcessBias(
 }
 
 // 实现公共数据预处理，将数据准备为L0可接受的形式
-static aclnnStatus CommonPreProcess(
-    const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias, const int64_t groups,
-    const bool transposed, const ConvolutionOpInfo& opInfo, bool changeFormat, bool contiguous, aclOpExecutor* executor)
+static aclnnStatus CommonPreProcess(const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias,
+    const int64_t groups, const bool transposed, const ConvolutionOpInfo& opInfo, bool changeFormat, bool contiguous,
+    aclOpExecutor* executor, bool inputDisContinuous = false)
 {
     // 非连续转连续 + cast + transdata
     // input
@@ -2216,8 +2222,10 @@ static aclnnStatus CommonPreProcess(
     auto contiguousWeight = weight;
     auto contiguousBias = bias;
     if (contiguous) {
-        contiguousInput = l0op::Contiguous(input, executor);
-        CHECK_RET(contiguousInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (!inputDisContinuous) {
+            contiguousInput = l0op::Contiguous(input, executor);
+            CHECK_RET(contiguousInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
 
         if (op::GetPrimaryFormat(weight->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_Z) {
             contiguousWeight = l0op::Contiguous(weight, executor);
@@ -2427,8 +2435,9 @@ static void UpdateInputDtype(
     opInfo.weightDtype = upperDtype;
     if (bias != nullptr) {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+        bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
         if (transposed && (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-                           socVersion == SocVersion::ASCEND950)) {
+                           isDAV3510)) {
             upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
         }
         opInfo.biasDtype = upperDtype;
@@ -2470,6 +2479,8 @@ constexpr int DILATION_DMA = 255;
 constexpr int PAD_DMA = 255;
 constexpr int weight_DMA = 511;
 constexpr int CONV_2D_DIMS_NUM = 4;
+constexpr uint32_t CONV_1D_DIMS = 3;
+constexpr uint32_t CONV_2D_DIMS = 4;
 static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 {
     if (padding->Size() == CONV_2D_PAD_DIM) {
@@ -2482,9 +2493,9 @@ static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 }
 // padding = [pad_top, pad_bottom, pad_left, pad_right]
 // 1. 不满足DMA的规格   2. load3d L1最小切分要在L1能够放下
-static bool isNotDMA(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation)
+static bool isNotDMA( const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+    struct ConvolutionOpInfo* opInfo = nullptr)
 {
     int64_t inputHeight = (int64_t)input->GetViewShape().GetDim(2);
     int64_t inputWidth = (int64_t)input->GetViewShape().GetDim(3);
@@ -2512,10 +2523,18 @@ static bool isNotDMA(
     // stride wh <=63, dilation wh<=255, padding <=255, weight wh<=511, align(weightH * weightW * 4, BLK_K) <= 65535
     // 以上条件同时满足表示不满足DMA规格
     bool isDMASpec = (strideH > STRIDEH_DMA) || (strideW > STRIDEH_DMA) || (dilationH > DILATION_DMA) ||
-                     (dilationW > DILATION_DMA) || (weightH > weight_DMA) || (weightW > weight_DMA) || !alignResult;
+                     (dilationW > DILATION_DMA) || (weightH > weight_DMA) || (weightW > weight_DMA);
     isDMASpec = isNotDMAFromPad(isDMASpec, padding);
     if (isDMASpec) {
         OP_LOGD("Fulfill DMA requirement，return False");
+        return false;
+    }
+
+    if (IsSupportND()) {
+        return !CheckDmaLimits(opInfo, input, weight, stride, padding, dilation, bias);
+    }
+
+    if (!alignResult) {
         return false;
     }
 
@@ -2913,6 +2932,26 @@ static aclnnStatus CheckConv2dWithWeightFZ(const aclTensor* input, const aclTens
     return ACLNN_SUCCESS;
 }
 
+bool isSupportInputHWNC(const aclTensor* input, const ConvolutionOpInfo& opInfo, const int64_t groups)
+{
+    if (groups > 1) {
+        return false;
+    }
+
+    if (opInfo.inputDtype != ge::DataType::DT_FLOAT16 && opInfo.inputDtype != ge::DataType::DT_BF16 &&
+        opInfo.inputDtype != ge::DataType::DT_FLOAT) {
+        return false;
+    }
+
+    int64_t batch = input->GetViewShape().GetDim(N_DIM_NCHW_INDEX);
+    int64_t cin = input->GetViewShape().GetDim(C_DIM_NCHW_INDEX);
+    if (batch * cin > UINT16_MAX) {
+        return false;
+    }
+
+    return true;
+}
+
 static aclnnStatus CommonPostProcessForBmm(const aclTensor* output, const aclTensor*& convOut, aclOpExecutor* executor)
 {
     // ND --> NCDHW
@@ -2952,6 +2991,8 @@ static aclnnStatus GetAndCastConvolutionOpDtype(ConvEngine& engine, aclOpExecuto
     GetConvolutionOpDtype(
         engine.params.input, engine.params.weight, engine.params.bias, engine.params.output, opInfo,
         engine.params.transposed, engine.params.cubeMathType);
+    opInfo.biasFormat = Format::FORMAT_ND;
+ 	OP_LOGD("Reset bias format=%s", op::ToString(opInfo.biasFormat).GetString());
     return CommonPreProcess(
         engine.params.input, engine.params.weight, engine.params.bias, engine.params.groups, engine.params.transposed,
         opInfo, false, true, executor);
@@ -3042,8 +3083,7 @@ static aclnnStatus GenInOutByConvTranspose1DToBmm(
 
 static bool IsSupportConvTranspose1DToBmm(ConvEngine engine)
 {
-    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND950) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return false;
     }
     if (engine.meta.input.format != op::Format::FORMAT_NCL) {
@@ -3077,8 +3117,9 @@ static ConvTranspose1DToBmmMode GetConvTranspose1DToBmmMode(ConvEngine engine)
 static bool IsSupportConvToBmm(ConvEngine engine)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    bool isNotDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510;
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
-        socVersion != SocVersion::ASCEND950) {
+        isNotDAV3510) {
         return false;
     }
 
@@ -3343,9 +3384,30 @@ public:
         } else {
             OP_LOGD("Conv2d entering normal branch");
         }
+
+        bool inputDisContinuous = false;
+        auto viewShape = input->GetViewShape();
+        std::vector<int64_t> newStrides = {viewShape[C_DIM_NCHW_INDEX], 1,
+            viewShape[N_DIM_NCHW_INDEX] * viewShape[C_DIM_NCHW_INDEX] * viewShape[W_DIM_NCHW_INDEX],
+            viewShape[N_DIM_NCHW_INDEX] * viewShape[C_DIM_NCHW_INDEX]};
+        bool strideFlag = CheckDisContinuousStride(input, newStrides, CONV_2D_DIMS);
+        if (strideFlag && input->GetViewOffset() == 0 && isSupportInputHWNC(input, opInfo, groups) &&
+            isNotDMA(input, weight, bias, output, stride, padding, dilation, &opInfo)) {
+            OP_LOGD("Conv2d entering disContinuous branch");
+            op::Shape newStorageShapeOp = op::Shape({viewShape[H_DIM_NCHW_INDEX], viewShape[W_DIM_NCHW_INDEX],
+                                                    viewShape[N_DIM_NCHW_INDEX], viewShape[C_DIM_NCHW_INDEX]});
+            input = executor->CreateView(input, input->GetViewShape(), newStorageShapeOp, input->GetViewStrides(), 0);
+            const_cast<aclTensor*>(input)->SetStorageShape(newStorageShapeOp);
+            const_cast<aclTensor*>(input)->SetOriginalShape(viewShape);
+            const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NCHW);
+            const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NCHW);
+            OP_LOGD("Conv2DV2: Skip discontiguous to contiguous conversion for HWNC input.");
+            inputDisContinuous = true;
+        }
         // 调用静态函数PreProcess
         bool needChangeFormat = !op::IsSupportND();
-        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor,
+                                inputDisContinuous);
     };
 
     aclnnStatus Impl() override
@@ -3487,9 +3549,6 @@ public:
         dilation = View1dAs2d(dilation, 1, executor);
         CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        input = View3dAs4d(input, executor);
-        CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
         weight = View3dAs4d(weight, executor);
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -3502,6 +3561,40 @@ public:
             }
             CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
+
+        GetConvolutionOpDtype(input, weight, bias, output, opInfo, transposed, cubeMathType);
+        auto viewShape = input->GetViewShape();
+        bool inputDisContinuous = false;
+        std::vector<int64_t> newStrides =
+            {viewShape[C_DIM_NCL_INDEX], 1, viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]};
+        bool strideFlag = CheckDisContinuousStride(input, newStrides, CONV_1D_DIMS);
+        if (strideFlag && input->GetViewOffset() == 0 && isSupportInputHWNC(input, opInfo, groups)) {
+            op::Shape viewShape2d =
+                op::Shape({viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX], 1, viewShape[L_DIM_NCL_INDEX]});
+            op::Shape storageShape2d = 
+                op::Shape({1, viewShape[L_DIM_NCL_INDEX], viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX]});
+            op::Strides newStridesOp({viewShape[C_DIM_NCL_INDEX], 1,
+                viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX] * viewShape[L_DIM_NCL_INDEX],
+                viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]});
+            
+            auto inputView = executor->CreateView(input, viewShape2d, input->GetViewShape(), newStridesOp, 0);
+            if (isNotDMA(inputView, weight, bias, output, stride, padding, dilation, &opInfo)) {
+                const_cast<aclTensor*>(inputView)->SetStorageShape(storageShape2d);
+                const_cast<aclTensor*>(inputView)->SetOriginalShape(viewShape2d);
+                const_cast<aclTensor*>(inputView)->SetViewFormat(Format::FORMAT_NCHW);
+                const_cast<aclTensor*>(inputView)->SetStorageFormat(Format::FORMAT_NCHW);
+                const_cast<aclTensor*>(inputView)->SetOriginalFormat(Format::FORMAT_NCHW);
+                input = inputView;
+                OP_LOGD("Conv1D: Skip discontiguous to contiguous conversion for HWNC input.");
+                inputDisContinuous = true;
+            }
+        }
+
+        if (!inputDisContinuous) {
+            input = View3dAs4d(input, executor);
+            CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
         OP_LOGD(
@@ -3511,7 +3604,8 @@ public:
         specialConv1d = isSpecialConv1d(input, weight, stride, padding, dilation) && (groups == 1);
         // 调用静态函数PreProcess
         bool needChangeFormat = op::IsSupportND() ? false : !specialConv1d;
-        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor,
+                                inputDisContinuous);
     };
 
     aclnnStatus Impl() override
@@ -4085,6 +4179,25 @@ public:
         return ACLNN_SUCCESS;
     }
 
+    aclnnStatus ProcessResult() {
+        OP_LOGD("Check N2H available.");
+        auto storageFormat = convOut->GetStorageFormat();
+        auto viewFormat = convOut->GetViewFormat();
+        if (storageFormat == op::Format::FORMAT_NDHWC && viewFormat == op::Format::FORMAT_NCDHW) {
+            OP_LOGD("Start N2H optimize.");
+            FVector<int64_t> shapeDims = {2, 4, 1, 0, 3};
+            auto perm = executor->AllocIntArray(shapeDims.data(), shapeDims.size());
+            CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = l0op::Transpose(convOut, perm, executor);
+            // change output format
+            CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            const_cast<aclTensor *>(convOut)->SetOriginalFormat(Format::FORMAT_NCDHW);
+            const_cast<aclTensor *>(convOut)->SetStorageFormat(Format::FORMAT_NCDHW);
+            const_cast<aclTensor *>(convOut)->SetViewFormat(Format::FORMAT_NCDHW);
+        }
+        return ACLNN_SUCCESS;
+    }
+
     virtual aclnnStatus ProcessConvOut()
     {
         return ProcessBias(output->GetStorageFormat());
@@ -4092,6 +4205,9 @@ public:
 
     aclnnStatus PostProcess() override
     {
+        auto n2h = ProcessResult();
+        CHECK_RET(n2h == ACLNN_SUCCESS, n2h);
+
         auto res = ProcessConvOut();
         CHECK_RET(res == ACLNN_SUCCESS, res);
 
@@ -4418,7 +4534,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
     auto ret = CheckParamsNullptrTbc(self, weight, bias, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         ret = CheckParamsEmpty(output, bias);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }

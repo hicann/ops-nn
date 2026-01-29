@@ -21,15 +21,12 @@ namespace conv_ops_tiling {
 bool Conv3dBaseTilingV2::GetTilingFromRepo()
 {
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
-    auto compileInfoPtr =
-        static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-    auto opInfo_tmp = *compileInfoPtr;
     std::shared_ptr<void> inputArgs = nullptr;
     std::size_t inputArgsSize = 0;
     GetTilingInputArgs(inputArgs, inputArgsSize);
-
-    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DV2", opInfo_tmp.socVersion,
+    auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
+    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DV2", compileInfoPtr->socVersion,
         opInfo_->aicoreNum, tuningTiling);
     if (ret != 0 || tuningTiling == nullptr) {
         return false;

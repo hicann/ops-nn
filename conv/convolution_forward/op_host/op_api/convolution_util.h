@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ namespace NN {
 }
 
 namespace ConvolutionUtil {
+
+constexpr int64_t RESERVED_SIZE_8K = 8 * 1024;
 
 struct ConvolutionOpInfo {
     op::DataType inputDtype;
@@ -79,6 +81,14 @@ const aclTensor* View5dAs4dForOutput(const aclTensor* input, aclOpExecutor* exec
 aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expendValue, aclOpExecutor* executor, bool isPad);
 aclIntArray* View2DSwapHWForAttr(const aclIntArray* intArray, aclOpExecutor* executor);
 const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* executor);
+bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>& newStrides, uint32_t dims);
+void GetUbSize();
+void GetL1Size();
+bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
+    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias);
+bool CheckL1SizeLimitsDma(uint32_t inputDtypeSize, uint64_t biasL1Size, uint32_t weightDtypeSize, int64_t k0);
+uint64_t Conv2DInferHiL1(uint64_t inputHoL1, uint64_t khDilated, uint64_t hi, uint64_t strideH);
+uint64_t ConvAlignB(uint64_t a, uint64_t b);
 } // namespace ConvolutionUtil
 
 #endif  // OP_API_SRC_CONVOLUTION_UTIL_H

@@ -313,6 +313,11 @@ void ConvTilingAlgorithmHWmode::SetL1TilingRes()
         }
     }
     tilingIns_->l1TilingInfo.kBL1 = l1Params.kBL1;
+    if (tilingIns_->isDmaFlag) {
+        uint64_t minKL1 = std::min(tilingIns_->l1TilingInfo.kAL1, tilingIns_->l1TilingInfo.kBL1);
+        tilingIns_->l1TilingInfo.kAL1 = minKL1;
+        tilingIns_->l1TilingInfo.kBL1 = minKL1;
+    }
     tilingIns_->l1TilingInfo.hoAL1 = l1Params.hoAL1;
     tilingIns_->l1TilingInfo.woAL1 = l1Params.woAL1;
     tilingIns_->l1TilingInfo.nBL1 = l1Params.nBL1;
@@ -1431,7 +1436,7 @@ void ConvTilingAlgorithmHWmode::ScaleBiasUbTilingDecision()
     if (woUb == l0Params.woL0) {
         if (l0Params.hoL0 == 1) {
             // like m mode, split w
-            woUb = CeilDiv(l0Params.woL0, VEC_NUM_PER_CUBE_910D);
+            woUb = CeilDiv(l0Params.woL0, tilingIns_->platformInfo.aivPerAic);
         }
     }
     tilingIns_->ubTilingInfo.mUb = woUb;

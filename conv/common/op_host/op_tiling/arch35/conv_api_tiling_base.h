@@ -53,8 +53,8 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_W
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT8_E4M3FN},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT8}
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::FLOAT16},
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::INT8}
 };
 
 // [fmap, weight, output]
@@ -225,6 +225,7 @@ public:
     bool optGroupFlag = false;
     bool enableInnerBatch = false;
     uint32_t innerBatch = 1;
+    bool disContinuousFlag = false;
 
     // used for extendconv2d
     bool extendConvFlag = false;
@@ -240,7 +241,7 @@ protected:
     std::vector<std::vector<ConvDtype>> GetSupportedDataTypes() const;
     bool CheckLoad3DLimits();
     bool CheckDmaLimits();
-    uint32_t GetBandWidthCof(platform_ascendc::SocVersion curSoc) const;
+    uint32_t GetBandWidthCof() const;
 };
 } // namespace conv_tiling
 

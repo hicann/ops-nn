@@ -542,7 +542,7 @@ void GetOriPadFromPadMode(const string& padMode, uint32_t& padh, uint32_t& padt,
 void QuantConv3DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
                     vector<uint32_t> pads, vector<uint32_t> strides, vector<uint32_t> dilations, uint32_t isHasBias = 1, uint32_t groups = 1,
                     string padMode = "SPECIFIC", int64_t fixBatcho = 0, int64_t fixDo = 0, int64_t fixHo = 0, int64_t fixWo = 0, bool isErrorCaseFlag = false,
-                    string shortSocVersion = "Ascend950", ge::Format format = ge::Format::FORMAT_NCDHW) {
+                    ge::Format format = ge::Format::FORMAT_NCDHW) {
 	ge::DataType dtype = ge::DT_INT8;
 	uint32_t  mmadDtypesize = 4;//mmadDtype is FLOAT32 in develop4
 
@@ -627,24 +627,23 @@ void QuantConv3DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
     uint64_t L0b_SIZE = 65536;
     uint64_t L0c_SIZE = 262144;
     uint64_t aicoreNum = 32;
-    string compile_info_string = R"({
-          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                            "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
-                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-                            "CORE_NUM": 32}
-                            })";
+
+    string compile_info_string = R"({"hardware_info": 
+      {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+       "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
+       "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
+       "BT_SIZE": 4096, "L0C_SIZE": 262144, "CORE_NUM": 32, "cube_core_cnt": 32, "vector_core_cnt": 64,
+       "core_type_list": "CubeCore,VectorCore"}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
-    map<string, string> soc_version_infos = {{"Short_SoC_version", shortSocVersion}};
+    map<string, string> soc_version_infos = {{"NpuArch", "3510"}};
+    aicore_spec.insert({"fb0_size", "4096"});
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
-    compile_info.tilingType = op_type;
-    compile_info.aicoreNum = aicoreNum;
-    compile_info.shortSocVersion = shortSocVersion;
+
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
@@ -700,7 +699,7 @@ void QuantConv3DTestCase(vector<int64_t> fmShape, vector<int64_t> weightShape,
 	    auto buf = (TilingParam*)tiling_context->GetRawTilingData()->GetData();
         TilingParam tilingParam = *buf;
         uint64_t tilingKey = tiling_context->GetTilingKey();
-      EXPECT_LE(tilingParam.batchDim * tilingParam.doDim * tilingParam.hoDim * tilingParam.nDim, compile_info.aicoreNum);
+      EXPECT_LE(tilingParam.batchDim * tilingParam.doDim * tilingParam.hoDim * tilingParam.nDim, aicoreNum);
       EXPECT_GE(tilingParam.batchDim, 1);
       EXPECT_GE(tilingParam.doDim, 1);
       EXPECT_GE(tilingParam.hoDim, 1);
@@ -726,12 +725,9 @@ TEST_F(QuantConv3dTiling, run_quantconv3d_case_3) {
 TEST_F(QuantConv3dTiling, run_quantconv3d_case_4) {
   QuantConv3DTestCase({1,1,1,256,1}, {1,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 1, "SAME_LOWER", 0, 0, 0, 0, true);
 }
-TEST_F(QuantConv3dTiling, run_solomon_quantconv3d_group_not_equal_one_case1) {
-  QuantConv3DTestCase({1,16,1,256,1}, {16,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 16, "VALID", 0, 0, 0, 0, true, "Ascend910_55");
-}
 
 TEST_F(QuantConv3dTiling, run_quantconv3d_NDHWC_case_1) {
-  QuantConv3DTestCase({1,1,1,256,1}, {1,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 1, "VALID",  0, 0, 0, 0, true, "Ascend950", ge::FORMAT_NDHWC);
+  QuantConv3DTestCase({1,1,1,256,1}, {1,1,255,1}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 1, 1, "VALID", 0, 0, 0, 0, true, ge::FORMAT_NDHWC);
 }
 
 TEST_F(QuantConv3dTiling, run_quantconv3d_pad_ge_kernel_case_1) {

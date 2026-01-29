@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_config.h
  * \brief
@@ -147,6 +147,11 @@ enum class ConvInnerBatch : std::uint8_t {
 enum class IsExtendConv2D : std::uint8_t {
     FALSE = 0,
     TRUE
+};
+
+enum class ConvDisContinuous : std::uint8_t {
+    CLOSE = 0,
+    INPUT_HWNC
 };
 
 struct ConvParam {
@@ -321,18 +326,18 @@ public:
         uint64_t maxWoL1Iter = 0;
         uint64_t maxHoL0Iter = 0;
         uint64_t maxWoL0Iter = 0;
-        
+
         uint64_t ddr2l1LoopH = 0;
         uint64_t ddr2l1LoopW = 0;
         uint64_t l12l0LoopH = 0;
         uint64_t l12l0LoopW = 0;
-        
+
         uint64_t hoAL1Tail = 0; // AL1上ho方向的尾块大小
         uint64_t woAL1Tail = 0; // AL1上wo方向的尾块大小
         uint64_t woL1SmallTail = 0; // wo方向16不对齐场景会存在小尾块
         uint64_t hoL0Tail = 0;
         uint64_t woL0Tail = 0;
-        
+
         uint64_t currentHoL1 = 0;
         uint64_t currentWoL1 = 0;
         uint64_t currentHoL0 = 0;
@@ -437,6 +442,7 @@ public:
         uint16_t cl0PingPongFlag = 0;
 
         // Input shape info
+        uint64_t orgBatch = 0;  // fmap上batch大小
         uint64_t orgCi = 0;     // fmap上cin大小
         uint64_t orgCo = 0;     // weight上cout大小
         uint64_t orgHi = 0;     // fmap上h大小

@@ -9,11 +9,18 @@
  */
 
 /*!
- * \file conv_cube_util.h
+ * \file extend_conv2d_mdc_tiling.cpp
  * \brief
  */
+#include "error_util.h"
+#include "conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
+#include "tiling_base/tiling_templates_registry.h"
+#include "register/op_def_registry.h"
+#include "../../../common/op_host/op_tiling/conv_tiling_templates_registry.h"
 
-#ifndef OP_API_CONV_CUBE_UTIL_H_
-#define OP_API_CONV_CUBE_UTIL_H_
-#include "matmul/common/op_host/op_api/cube_util.h"
-#endif
+using namespace optiling::conv_ops_tiling;
+
+namespace optiling {
+    // using op_tiling register capability in "tiling_templates_registry" for AscendC extendconv2d operator
+    CONV_REGISTER_TILING_TEMPLATE(ExtendConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_5102), 1);
+}

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv2d_v2_base_tiling_tilingkey.cpp
  * \brief
@@ -19,6 +19,36 @@
 namespace optiling {
 namespace conv_ops_tiling {
 using namespace Conv2DV2Key;
+
+uint64_t Conv2dBaseTiling::GetFmpTilingVal()
+{
+    if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
+        return FMP_OTHER;
+    }
+    uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
+    uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
+                        shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                        ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    bool kAL1FullloadFlag = tilingData_.conv2dApiTiling.get_kAL1() == fmpKSize;
+    if (flagInfo_.mSplitModeFlag) {
+        return GetFmpTilingValForMSplit(kAL1FullloadFlag);
+    }
+    return GetFmpTilingValForHWSplit(kAL1FullloadFlag);
+}
+ 
+uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
+{
+    bool mL1FullloadFlag = tilingData_.conv2dApiTiling.get_innerBatch() == 1 ?
+        tilingData_.conv2dApiTiling.get_singleCoreHo() <= tilingData_.conv2dApiTiling.get_hoL1() :
+        tilingData_.conv2dApiTiling.get_innerBatch() == tilingData_.conv2dApiTiling.get_singleCoreBatch();
+    bool mL0FullloadFlag = tilingData_.conv2dApiTiling.get_hoL1() == tilingData_.conv2dApiTiling.get_hoL0();
+    if (kAL1FullloadFlag && mL1FullloadFlag) {
+        return FULLLOAD_AL1;
+    } else if (!kAL1FullloadFlag && mL1FullloadFlag && mL0FullloadFlag) {
+        return ONLY_M_FULLLOAD_AL1_AL0;
+    }
+    return FMP_OTHER;    
+}
 
 uint64_t Conv2dBaseTiling::GetL0PingPongVal()
 {
@@ -61,36 +91,6 @@ uint64_t Conv2dBaseTiling::GetOutputOrderVal()
         return 1;
     }
     return 0;
-}
-
-uint64_t Conv2dBaseTiling::GetFmpTilingVal()
-{
-    if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
-        return FMP_OTHER;
-    }
-    uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
-    uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                        shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                        ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    bool kAL1FullloadFlag = tilingData_.conv2dApiTiling.get_kAL1() == fmpKSize;
-    if (flagInfo_.mSplitModeFlag) {
-        return GetFmpTilingValForMSplit(kAL1FullloadFlag);
-    }
-    return GetFmpTilingValForHWSplit(kAL1FullloadFlag);
-}
- 
-uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
-{
-    bool mL1FullloadFlag = tilingData_.conv2dApiTiling.get_innerBatch() == 1 ?
-        tilingData_.conv2dApiTiling.get_singleCoreHo() <= tilingData_.conv2dApiTiling.get_hoL1() :
-        tilingData_.conv2dApiTiling.get_innerBatch() == tilingData_.conv2dApiTiling.get_singleCoreBatch();
-    bool mL0FullloadFlag = tilingData_.conv2dApiTiling.get_hoL1() == tilingData_.conv2dApiTiling.get_hoL0();
-    if (kAL1FullloadFlag && mL1FullloadFlag) {
-        return FULLLOAD_AL1;
-    } else if (!kAL1FullloadFlag && mL1FullloadFlag && mL0FullloadFlag) {
-        return ONLY_M_FULLLOAD_AL1_AL0;
-    }
-    return FMP_OTHER;    
 }
  
 uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
@@ -186,10 +186,11 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     tilingKeyPara_.outputOrder = GetOutputOrderVal();
     tilingKeyPara_.iterOrder = static_cast<uint64_t>(tilingData_.conv2dApiTiling.get_iterateMNOrder());
     tilingKeyPara_.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
-    tilingKeyPara_.enableSmallChannel = flagInfo_.enableC04Flag;
+    tilingKeyPara_.enableSmallChannel = static_cast<uint64_t>(flagInfo_.enableC04Flag);
     tilingKeyPara_.weightUbTrans = GetWeightUbTrans();
     tilingKeyPara_.fmapCppyMode = GetFmapCopyMode();
     tilingKeyPara_.innerBatch =  GetEnableInnerBatch();
+    tilingKeyPara_.disContinuous = static_cast<uint64_t>(flagInfo_.disContinuousFlag);
     ReSetTilingKeyPara();
     tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,
                                     tilingKeyPara_.weightTiling,
@@ -201,7 +202,8 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
                                     tilingKeyPara_.enableSmallChannel,
                                     tilingKeyPara_.weightUbTrans,
                                     tilingKeyPara_.fmapCppyMode,
-                                    tilingKeyPara_.innerBatch);
+                                    tilingKeyPara_.innerBatch,
+                                    tilingKeyPara_.disContinuous);
 
     OP_LOGD(context_->GetNodeName(), "%s AscendC: c04 mode status is: %d",
             paramInfo_.nodeType.c_str(), flagInfo_.enableC04Flag);

@@ -40,6 +40,7 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, SetBias);
     CONV_REG_IMPL(Config, ConvFunc, SetScale);
     CONV_REG_IMPL(Config, ConvFunc, SetFixpipeParams);
+    CONV_REG_IMPL(Config, Conv2dFunc, SetOrgBatch);
     CONV_REG_IMPL(Config, Conv2dFunc, SetOrgFmapShape);
     CONV_REG_IMPL(Config, Conv2dFunc, SetOrgWeightShape);
     CONV_REG_IMPL(Config, Conv2dFunc, SetOrgOutputShape);
@@ -119,7 +120,7 @@ public:
         TBuf<TPosition::A1> aL1TBuf;
         TBuf<TPosition::VECIN> ubBuf;
         LocalTensor<typename Intf::FmapT> img2ColTensor;
- 
+
         uint16_t aL1LoadTimes = 0;
         uint16_t vecCi1Iter = 0;
         uint16_t maxVecCi1Iter = 0;
@@ -130,7 +131,7 @@ public:
         uint16_t maxVecKwIter = 0;
         uint16_t vecKwLoopTimes = 0;
         uint16_t ddr2l1LoopKA = 0;
- 
+
         uint32_t ciTail = 0;
         uint32_t currentHoL1xWoL1Align = 0;
         uint32_t currentCi1Ub = 0;

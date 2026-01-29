@@ -685,7 +685,7 @@ TEST_F(quant_convolution_test, ascend910B2_test_quantConv3d_input_nullptr) {
   }
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dtypes_group) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_dtypes_group) {
     std::vector<vector<aclDataType>> legalDtype = {
             {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT, aclDataType::ACL_INT32},
             {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
@@ -751,7 +751,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dtypes_group) {
     }
 }
 
-TEST_F(quant_convolution_test, ascend950_test_quant_conv3d_dtypes_group) {
+TEST_F(quant_convolution_test, ascend_test_quant_conv3d_dtypes_group) {
     std::vector<vector<aclDataType>> legalDtype = {
             {aclDataType::ACL_INT8, aclDataType::ACL_INT8, aclDataType::ACL_FLOAT16, aclDataType::ACL_INT32},
             {aclDataType::ACL_HIFLOAT8, aclDataType::ACL_HIFLOAT8, aclDataType::ACL_FLOAT, aclDataType::ACL_FLOAT},
@@ -816,7 +816,7 @@ TEST_F(quant_convolution_test, ascend950_test_quant_conv3d_dtypes_group) {
     }
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scaledtype_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_scaledtype_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -850,7 +850,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scaledtype_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_inputdim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_inputdim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -886,7 +886,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_inputdim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_weightdim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_weightdim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1, 1};
@@ -922,7 +922,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_weightdim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_outputdim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_outputdim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -958,7 +958,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_outputdim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dimsame_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_dimsame_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -994,7 +994,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dimsame_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_offsetx_check2) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_offsetx_check2) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1028,7 +1028,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_offsetx_check2) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scaledim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_scaledim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1064,7 +1064,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scaledim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_biasdim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_biasdim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1100,7 +1100,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_biasdim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_stridedim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_stridedim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1136,7 +1136,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_stridedim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dilationdim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_dilationdim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1172,7 +1172,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_dilationdim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_paddim_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_paddim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1206,7 +1206,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_paddim_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_quant_conv3d_paddim_check) {
+TEST_F(quant_convolution_test, ascend_test_quant_conv3d_paddim_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1, 1};
@@ -1241,7 +1241,7 @@ TEST_F(quant_convolution_test, ascend950_test_quant_conv3d_paddim_check) {
 
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_input_format_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_input_format_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1275,7 +1275,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_input_format_check) 
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scale_format_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_scale_format_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1309,7 +1309,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_scale_format_check) 
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_bias_format_check) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_bias_format_check) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1343,7 +1343,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_bias_format_check) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check1) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_roundmode_check1) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1377,7 +1377,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check1) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check2) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_roundmode_check2) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1411,7 +1411,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check2) {
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check3) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_roundmode_check3) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
@@ -1445,7 +1445,7 @@ TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_roundmode_check3) {
     EXPECT_NE(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(quant_convolution_test, ascend950_test_extend_conv2d_offsetx_check1) {
+TEST_F(quant_convolution_test, ascend_test_extend_conv2d_offsetx_check1) {
     const int64_t groups = 1;
     vector<int64_t> input_dims = {1, 1, 1, 1};
     vector<int64_t> weight_dims = {1, 1 / groups, 1, 1};
