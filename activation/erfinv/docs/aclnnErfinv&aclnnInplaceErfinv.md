@@ -92,7 +92,7 @@ aclnnStatus aclnnInplaceErfinv(
       <td>输入</td>
       <td>待进行erfinv计算的入参。对应计算公式中的x。</td>
       <td><ul><li>shape需要与out一致。</li><li>支持空Tensor。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、BOOL、INT8、INT16、INT32、INT64、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
