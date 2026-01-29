@@ -286,7 +286,7 @@ void WeightQuantBatchMatmulV2RegBase::GetBubTilingA16W4NZ(int64_t& nBubSize, int
     } else {
         nBubSize = nBl1Size;
         if (matmulInfoPtr_->groupSize > 0 && kBl1Size > static_cast<int64_t>(matmulInfoPtr_->groupSize)) {
-            kBubSize = ops::CeilDiv(static_cast<int64_t>(kBl1Size / matmulInfoPtr_->groupSize), BUFF_NUM_2) *
+            kBubSize = ops::CeilDiv((ops::CeilDiv(kBl1Size, static_cast<int64_t>(matmulInfoPtr_->groupSize))), BUFF_NUM_2) *
                        matmulInfoPtr_->groupSize;
         } else {
             kBubSize = ops::CeilDiv(kBl1Size / GROUP_ALIGN_SIZE, BUFF_NUM_2) * GROUP_ALIGN_SIZE;

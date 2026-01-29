@@ -1554,20 +1554,23 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
                 // v0 (n1, k1, k0, n0)
                 // v1 (n1, k1, k0, n0)
                 if (bubKLen < bubNLen) {
-                    params.blockCount = (BLOCK_CUBE >> 1) * bubNLen * sizeof(xType) / VECTOR_REG_WIDTH;
-                    params.srcStride = (CeilDiv(vecKBL1Len_, BLOCK_CUBE) * 2 - 1) * BLOCK_NUM_REG;
-                    params.dstStride = (kBL1Len_ * BLOCK_CUBE - VECTOR_REG_WIDTH) / ONE_BLK_SIZE;
-                    for (int32_t idxK = 0; idxK < CeilDiv(bubKLen, BLOCK_CUBE >> 1); idxK++) {
-                        DataCopy(l1Local_[l1Offset], ubLocal, params);
-                        l1Offset += VECTOR_REG_WIDTH;
+                    params.blockCount = CeilDiv(bubNLen, BLOCK_CUBE);
+                    params.srcStride = (CeilDiv(bubKLen, BLOCK_CUBE) * 2 * bubpingpong_- 1) * BLOCK_NUM_REG;
+                    params.dstStride = CeilAlign(kBL1Len_, BLOCK_CUBE) - BLOCK_NUM_REG;
+                                    // (CeilAlign(kBL1Len_, BLOCK_CUBE) * BLOCK_CUBE - VEC_MAX_ELEM_B16) / BLOCK_CUBE
+                    uint64_t ubOffset = bubpingpong_ * VEC_MAX_ELEM_B16;
+                    for (int32_t idxK = 0; idxK < CeilDiv(bubKLen, BLOCK_CUBE) * 2; idxK++) {
+                        DataCopy(l1Local_[l1Offset], ubLocal[idxK * ubOffset], params);
+                        l1Offset += VEC_MAX_ELEM_B16;
                     }
                 } else {
-                    params.blockCount = bubKLen * BLOCK_CUBE * sizeof(xType) / VECTOR_REG_WIDTH;
+                    params.blockCount = CeilDiv(bubKLen, BLOCK_CUBE) * 2;
                     params.srcStride = (bubpingpong_ - 1) * BLOCK_NUM_REG;
                     params.dstStride = 0;
+                    uint64_t ubOffset = CeilDiv(bubKLen, BLOCK_CUBE) * 2 * bubpingpong_ * VEC_MAX_ELEM_B16;
                     for (int32_t idxN = 0; idxN < CeilDiv(bubNLen, BLOCK_CUBE); idxN++) {
-                        DataCopy(l1Local_[l1Offset], ubLocal, params);
-                        l1Offset += (kBL1Len_ - bubKLen) * BLOCK_CUBE / ONE_BLK_SIZE;
+                        DataCopy(l1Local_[l1Offset], ubLocal[idxN * ubOffset], params);
+                        l1Offset += CeilAlign(kBL1Len_, BLOCK_CUBE) * BLOCK_CUBE;
                     }
                 }
             } else {
@@ -1908,10 +1911,15 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         WaitFlag<HardEvent::MTE1_MTE2>(biasEventIdsMte1ToMte2[biasIdx_]);
 
         int64_t biasOffset = nBlockOffset_ + curNL0Idx_ * biasL1DataSize_;
+        DataCopyExtParams intriParams;
+        DataCopyPadExtParams<biasType> padParams;
+        intriParams.blockCount = 1;
+        intriParams.blockLen = baseUseN_ * sizeof(biasType);
+        intriParams.srcStride = 0;
         if (biasIdx_ == 0) {
-            DataCopy(biasL1LocalBuf0_, biasGlobal_[biasOffset], CeilAlign(baseUseN_, 16L));
+            DataCopyPad(biasL1LocalBuf0_, biasGlobal_[biasOffset], intriParams, padParams);
         } else {
-            DataCopy(biasL1LocalBuf1_, biasGlobal_[biasOffset], CeilAlign(baseUseN_, 16L));
+            DataCopyPad(biasL1LocalBuf1_, biasGlobal_[biasOffset], intriParams, padParams);
         }
 
         SetFlag<HardEvent::MTE2_MTE1>(biasIdx_ + al1pingpong_);
