@@ -527,7 +527,7 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     uint64_t coutNum = std::max(l1Params.stepKa * l0Params.baseK / kernelHW, ONE_U64);
     uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l1Params.stepM * l0Params.baseM, isL1SplitHk)) *
         runInfo_.dedy_w * runInfo_.stride_w * coutNum;
-    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK || (tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w == 1)) {
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
         a1PixelNum = BASIC_BLOCK_SIZE_256 * coutNum;    // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
     }
     uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
