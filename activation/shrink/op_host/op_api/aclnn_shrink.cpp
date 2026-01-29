@@ -56,11 +56,28 @@ static inline bool CheckLambdValue(const aclScalar* lambd){
     return true;
 }
 
+inline static bool CheckFormat(const aclTensor* self, const aclTensor* out)
+{
+    if (op::IsPrivateFormat(self->GetStorageFormat())) {
+        OP_LOGW(
+            "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW、NCL. Actual: self:[%s], output:[%s] ",
+            op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString());
+    }
+    OP_CHECK(
+        self->GetViewFormat() == out->GetViewFormat(),
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, self [%s], output [%s].",
+            op::ToString(self->GetViewFormat()).GetString(), op::ToString(out->GetViewFormat()).GetString()),
+        return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, const aclScalar* bias, const aclTensor* out){
     CHECK_RET(CheckNotNull(self, lambd, bias, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckLambdValue(lambd), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
