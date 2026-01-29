@@ -52,6 +52,13 @@ constexpr uint32_t BF16_DB_UB_SIZE = 13;
 constexpr uint32_t BF16_SMOOTH_UB_SIZE = 17;
 constexpr uint32_t BF16_UB_SIZE = 11;
 
+constexpr uint32_t ONE_REPEAT_ELE = 64;
+constexpr uint32_t MEMORY_ALLOC_COEFFICIENT = 12;
+constexpr uint32_t MIN_ROW_LENGTH_THRESHOLD = 128;
+constexpr uint32_t NUM_TWO_FIVE_SIX = 256;
+constexpr uint32_t MULTI_ROW_HAS_SMOOTH_SPLIT = 15;
+constexpr uint32_t MULTI_ROW_NO_SMOOTH_SPLIT = 11;
+
 constexpr uint32_t SYS_WORKSPACE_SIZE = 16777216;
 constexpr uint32_t COMPARE_INT = 255;
 constexpr uint32_t B_ASCEND_HW_NUMCORES = 40;
@@ -72,6 +79,7 @@ constexpr int64_t TILING_KEY_DB_HALF = 3;
 constexpr int64_t TILING_KEY_LARGE_SHAPE = 6;
 constexpr int64_t TILING_KEY_MOE = 7;
 constexpr int64_t TILING_KEY_MOE_LARGE_SHAPE = 8;
+constexpr int64_t TILING_KEY_MULTI_ROW = 10;
 constexpr int64_t TILING_KEY_SPECIAL_LAST_DIM = 100;
 constexpr uint32_t MAX_ROW_LEN_SPECIAL = 16384;
 constexpr int64_t EVEN_FACTOR = 2;
@@ -107,6 +115,9 @@ private:
     void SetTilingData(gert::TilingContext* context, ge::DataType xDtype);
     void CalculateMaxUbSizePerRow(ge::DataType xDtype);
     bool SetSpecialTilingForDs(gert::TilingContext* context);
+    bool CalcTilingForMultiRow(gert::TilingContext* context);
+    bool CheckMultiRowPreconditions(gert::TilingContext* context, uint32_t& maxUbLen);
+    void CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop, uint32_t& extraRows);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
 
 private:
@@ -537,6 +548,103 @@ bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
     return true;
 }
 
+bool DynamicQuantTiling::CheckMultiRowPreconditions(gert::TilingContext* context, uint32_t& maxUbLen)
+{
+    // 仅非moe场景、对称量化可以使用当前模板
+    auto groupDesc = context->GetOptionalInputDesc(GROUP_INDEX);
+    if (groupDesc != nullptr) {
+        return false;
+    }
+
+    if (context->GetComputeNodeOutputNum() == OUTPUT_NUM_DYNAMIC_QUANT_V2) {
+        return false;
+    }
+
+    maxUbLen = ubSize - RESERVED_LENGTH - (NUM_TWO_FIVE_SIX + ONE_REPEAT_ELE + MEMORY_ALLOC_COEFFICIENT * ONE_REPEAT_ELE * sizeof(float));
+
+    if (hasSmooth) {
+        maxUbLen = maxUbLen / MULTI_ROW_HAS_SMOOTH_SPLIT / ONE_REPEAT_ELE * ONE_REPEAT_ELE;
+    } else {
+        maxUbLen = maxUbLen / MULTI_ROW_NO_SMOOTH_SPLIT / ONE_REPEAT_ELE * ONE_REPEAT_ELE;
+    }
+
+    maxUbLen = std::min(maxUbLen, static_cast<uint32_t>(COMPARE_INT * ONE_REPEAT_ELE)); // 限制单个指令repeat的次数
+
+    // 仅尾轴8的倍数对齐场景走入分支
+    if (rowLen < MIN_ROW_LENGTH_THRESHOLD || rowLen > maxUbLen || rowLen % ALIGEN_EIGHT != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+void DynamicQuantTiling::CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop, uint32_t& extraRows)
+{
+    // 先用满ub再分核
+    uint32_t maxHandleRowsPerUb = maxUbLen / rowLen; // 单个核单次处理的行数
+    maxHandleRowsPerUb = std::min(maxHandleRowsPerUb, rowNum);
+
+    uint32_t perCoreMinLoop = 1; // 每个核至少计算的循环次数，用于调优，当前固定为1
+    uint32_t rowLoops = maxHandleRowsPerUb == 0 ? 0 : rowNum / maxHandleRowsPerUb; // 所有核完整循环计算的总次数
+    perCoreLoop = rowLoops / vectorCoreNum; // 每个核计算的循环次数
+
+    if (perCoreLoop < perCoreMinLoop) {
+        coreNum = rowLoops / perCoreMinLoop;
+        if (likely(coreNum != 0)) {
+            perCoreLoop = perCoreMinLoop;
+        } else {
+            perCoreLoop = 0;
+            coreNum = 1;
+        }
+    } else {
+        coreNum = perCoreLoop == 0 ? 1 : rowLoops / perCoreLoop;
+    }
+    coreNum = std::min(vectorCoreNum, coreNum);
+
+    extraRows = rowNum - coreNum * perCoreLoop * maxHandleRowsPerUb; // 未平均分配的行数
+}
+
+bool DynamicQuantTiling::CalcTilingForMultiRow(gert::TilingContext* context)
+{
+    uint32_t maxUbLen;
+    if (!CheckMultiRowPreconditions(context, maxUbLen)) {
+        return false;
+    }
+
+    context->SetTilingKey(TILING_KEY_MULTI_ROW);
+
+    uint32_t perCoreLoop, extraRows;
+    CalculateMultiRowCoreDistribution(maxUbLen, perCoreLoop, extraRows);
+
+    uint32_t maxHandleRowsPerUb = maxUbLen / rowLen;
+    maxHandleRowsPerUb = std::min(maxHandleRowsPerUb, rowNum);
+
+    uint32_t perCoreTailRows = extraRows / coreNum; // 未平均分配的行数均分至当前所有核上
+    headCoreNum = extraRows % coreNum; // 需额外多处理一行的核数
+    tilingData.set_coreNum(coreNum);
+    tilingData.set_rowLen(rowLen);
+    tilingData.set_headCoreNum(headCoreNum); // headCore的核数,会比非headCore多处理一行
+    tilingData.set_rowPerHeadCore(perCoreLoop * maxHandleRowsPerUb + perCoreTailRows + 1); // 每个headCore要处理的行数
+
+    tilingData.set_multiRowNumHeadCore(maxHandleRowsPerUb); // 每次ub最多载入的行数
+    tilingData.set_multiRowNumTailCore(maxHandleRowsPerUb); // 暂时用不到
+
+    tilingData.set_hasSmooth(hasSmooth ? 1 : 0);
+    tilingData.set_ubSize(ubSize);
+    OP_LOGI(context, "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
+        "headCoreNum:%u rowPerHeadCore:%u multiRowNumHeadCore:%u multiRowNumTailCore:%u hasSmooth:%d",
+        rowNum, vectorCoreNum, rowLen, tilingData.get_coreNum(), tilingData.get_headCoreNum(),
+        tilingData.get_rowPerHeadCore(), tilingData.get_multiRowNumHeadCore(),
+        tilingData.get_multiRowNumTailCore(), hasSmooth);
+
+    size_t* workSpaces = context->GetWorkspaceSizes(1);
+    workSpaces[0] = SYS_WORKSPACE_SIZE;
+    tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    context->SetBlockDim(coreNum);
+    return true;
+}
+
 ge::graphStatus DynamicQuantTiling::RunFusionKernelTiling(gert::TilingContext* context)
 {
     ResetLargeTilingParams();
@@ -565,14 +673,13 @@ ge::graphStatus DynamicQuantTiling::RunFusionKernelTiling(gert::TilingContext* c
         return ge::GRAPH_SUCCESS;
     }
 
+    if (CalcTilingForMultiRow(context)) {
+        return ge::GRAPH_SUCCESS;
+    }
     // For 910B
     rowNumPerMinTask = 1U;
     scaleNumPerMinTask = 1U;
-    // For 310P
-    if (vectorCoreNum < B_ASCEND_HW_NUMCORES) {
-        rowNumPerMinTask = (UB_ALIG_NUM + rowLen - 1U) / rowLen;
-        scaleNumPerMinTask = P_ASCEND_HUW_NUMCORE;
-    }
+
     rowNumPerTask = std::max(rowNumPerMinTask, scaleNumPerMinTask);
     wholeTaskNum = rowNum / rowNumPerTask;
 

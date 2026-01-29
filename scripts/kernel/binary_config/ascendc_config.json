@@ -453,7 +453,7 @@
     {"name":"SubMulConcat", "compute_units": ["ascend910b"], "auto_sync" : false},
     {"name":"DynamicQuantUpdateScatter", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : true},
     {"name":"DynamicQuantUpdateScatterV2", "compute_units": ["ascend910b", "ascend910_93", "kirinx90"], "auto_sync" : true},
-    {"name":"DynamicQuant", "compute_units": ["ascend310p", "ascend910b", "ascend910", "ascend910_93", "ascend950", "kirinx90"], "auto_sync": true, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
+    {"name":"DynamicQuant", "compute_units": ["ascend310p", "ascend910b", "ascend910", "ascend910_93", "ascend950", "kirinx90"], "auto_sync": {"ascend310p": true, "ascend910b": false,"ascend910": true, "ascend910_93": false, "ascend950": true, "kirinx90": true}, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"DynamicQuantV2", "compute_units": ["ascend310p", "ascend910b", "ascend910_93", "ascend950", "kirinx90"], "auto_sync": true, "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"GroupedBiasAddGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"BroadcastTo", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode":""},

@@ -19,11 +19,12 @@
 #include "dynamic_quant_unalign_large_310p.h"
 #else
 #include "dynamic_quant_single_row.h"
-#endif
+#include "dynamic_quant_multi_row.h"
 #include "dynamic_quant_db.h"
 #include "dynamic_quant_large_shape_opt.h"
 #include "dynamic_quant_moe.h"
 #include "dynamic_quant_moe_large_shape.h"
+#endif
 
 #ifdef __CCE_KT_TEST__
 #define KERNEL_LINKAGE static
@@ -33,6 +34,26 @@
 
 using namespace AscendC;
 using namespace DynamicQuantNDOpt;
+
+#if __CCE_AICORE__ < 220
+#define INIT_AND_PROCESS_310P                       \
+    do {                                            \
+        op.Init(x, y, scale, nullptr, &tilingData); \
+        op.Process();                               \
+    } while (0)
+#else
+#define INIT_AND_PROCESS                                                      \
+    do {                                                                      \
+        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData); \
+        op.Process();                                                         \
+    } while (0)
+
+#define INIT_AND_PROCESS_MOE                                                               \
+    do {                                                                                   \
+        op.Init(x, smooth_scales, group_index, y, scale, nullptr, workSpace, &tilingData); \
+        op.Process();                                                                      \
+    } while (0)
+#endif
 
 KERNEL_LINKAGE __global__ __aicore__ void dynamic_quant(
     GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
@@ -52,48 +73,39 @@ KERNEL_LINKAGE __global__ __aicore__ void dynamic_quant(
     }
 
     TPipe pipe;
-
 #if __CCE_AICORE__ < 220
     if (TILING_KEY_IS(10100)) {
         DynamicQuantAlign310p op;
-        op.Init(x, y, scale, nullptr, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS_310P;
     } else if (TILING_KEY_IS(11000)) {
         DynamicQuantUnalign310P op;
-        op.Init(x, y, scale, nullptr, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS_310P;
     } else if (TILING_KEY_IS(11001)) {
         DynamicQuantUnalignLarge310P op;
-        op.Init(x, y, scale, nullptr, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS_310P;
     }
 #else
     if (TILING_KEY_IS(0) || TILING_KEY_IS(1)) {
         DynamicQuant<DTYPE_X, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(2) || TILING_KEY_IS(3)) {
         DynamicQuantDbOpt<DTYPE_X, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(6)) {
         DynamicQuantLargeShapeOpt<DTYPE_X, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(7)) {
         DynamicQuantMoe<DTYPE_X, int32_t, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, group_index, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS_MOE;
     } else if (TILING_KEY_IS(8)) {
         DynamicQuantMoeLargeShape<DTYPE_X, DTYPE_X, int32_t, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, group_index, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS_MOE;
+    } else if (TILING_KEY_IS(10)) {
+        DynamicQuantMultiRow<DTYPE_X, DTYPE_Y> op(&pipe);
+        INIT_AND_PROCESS;
     } else if (TILING_KEY_IS(100)) {
         DynamicQuantSingleRow<DTYPE_X, DTYPE_Y> op(&pipe);
-        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, &tilingData);
-        op.Process();
+        INIT_AND_PROCESS;
     }
 #endif
-    else {
-    }
 }

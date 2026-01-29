@@ -31,6 +31,7 @@ constexpr uint32_t THIRTY_ONE = 31;
 constexpr uint32_t THIRTY_TWO = 32;
 constexpr uint32_t SIXTY_THREE = 63;
 constexpr uint32_t SIXTY_FOUR = 64;
+constexpr uint32_t QUANT_TEMP_LEN = 128;
 constexpr uint32_t MAX_VALUE_NUM = 8;
 constexpr uint32_t MAX_REPEAT = 255;
 constexpr uint32_t UB_RESERVED_LENGTH = 1024;
@@ -72,14 +73,14 @@ public:
 
     __aicore__ inline void InitBaseBuffer()
     {
-        pPipe->InitBuffer(tempScale, THIRTY_TWO);
-        pPipe->InitBuffer(tempCastUb, sizeHalfLen * sizeof(float));
+        pPipe->InitBuffer(quantTemp, QUANT_TEMP_LEN * sizeof(float));
+        pPipe->InitBuffer(tempCastUb, (sizeHalfLen + SIXTY_THREE) / SIXTY_FOUR * SIXTY_FOUR  * sizeof(float));
         pPipe->InitBuffer(fp32_buf_, sizeHalfLen * sizeof(float));
     }
 
     __aicore__ inline void InitLargeShapeBaseBuffer()
     {
-        pPipe->InitBuffer(tempScale, THIRTY_TWO);
+        pPipe->InitBuffer(quantTemp, THIRTY_TWO);
         pPipe->InitBuffer(tempCastUb, tilingData_.innerLoopEle * sizeof(float));
         pPipe->InitBuffer(fp32_buf_, tilingData_.innerLoopEle * sizeof(float));
     }
@@ -87,11 +88,18 @@ public:
     __aicore__ inline void DuplicateConst()
     {
         if (!isAsymmetrical) {
-            constScale = tempScale.Get<float>();
-            if (ORIG_DTYPE_Y == DT_INT4) {
+            LocalTensor<uint8_t> tmp = quantTemp.Get<uint8_t>();
+            constScale = tmp.ReinterpretCast<float>();
+            constInvScale = tmp[MAX_VALUE_NUM * sizeof(float)].ReinterpretCast<float>();
+            scaleTmp = tmp[MAX_VALUE_NUM * sizeof(float) * 2].ReinterpretCast<float>();
+            quantScaleTmp = tmp[MAX_VALUE_NUM * sizeof(float) * 3].ReinterpretCast<float>();
+            brcbTmp = tmp[MAX_VALUE_NUM * sizeof(float) * 4].ReinterpretCast<float>();
+            if constexpr (ORIG_DTYPE_Y == DT_INT4) {
                 Duplicate<float>(constScale, DYNAMIC_QUANT_INT4_SYM_SCALE, MAX_VALUE_NUM);
+                Duplicate<float>(constInvScale, float(1) / DYNAMIC_QUANT_INT4_SYM_SCALE, MAX_VALUE_NUM);
             } else {
                 Duplicate<float>(constScale, DYNAMIC_QUANT_INT8_SYM_SCALE, MAX_VALUE_NUM);
+                Duplicate<float>(constInvScale, float(1) / DYNAMIC_QUANT_INT8_SYM_SCALE, MAX_VALUE_NUM);
             }
         }
     }
@@ -270,10 +278,10 @@ protected:
     bool isPad = false;
     bool isAsymmetrical = false;
 
-    AscendC::TBuf<AscendC::TPosition::VECCALC> tempScale, fp32_buf_, tempCastUb;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> quantTemp, fp32_buf_, tempCastUb;
 
     /* local memory */
-    LocalTensor<float> constScale;
+    LocalTensor<float> constScale, constInvScale, scaleTmp, brcbTmp, quantScaleTmp;
 };
 } // namespace DynamicQuantNDOpt
 #endif // DynamicQuantBase
