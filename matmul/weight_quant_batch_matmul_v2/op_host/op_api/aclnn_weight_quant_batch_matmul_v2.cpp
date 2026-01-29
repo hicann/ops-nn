@@ -350,14 +350,6 @@ static bool CheckMicroScalingCondition(
             antiquantOffsetOptional == nullptr,
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "antiquantOffset is not supported on fp4 micro-scaling condition."),
             return false);
-        int64_t kWeight = GetWeightK(weight);
-        int64_t nWeight = GetWeightN(weight);
-        OP_CHECK(
-            kWeight % N_ALIGN_VALUE == 0 && nWeight % N_ALIGN_VALUE == 0,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "N[%ld], K[%ld] should be 32B aligned on fp4 micro-scaling condition.",
-                nWeight, kWeight),
-            return false);
     }
 
     return true;

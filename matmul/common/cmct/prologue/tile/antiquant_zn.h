@@ -358,8 +358,6 @@ struct AntiquantImpl<
     using DtypeIn = AscendC::PrimT<AscendC::Std::remove_cvref_t<TensorTraitIn>>;
     using DtypeOut = AscendC::PrimT<AscendC::Std::remove_cvref_t<decltype(TensorOut{}.GetTensorTrait())>>;
     using Policy = AntiquantFixTilePrivate<N, K, BufNum, HasAntiQuantOffset>;
-    static constexpr MicroAPI::LoadDist LD_DIST_SCALE = MicroAPI::LoadDist::DIST_BLK;
-    static constexpr MicroAPI::LoadDist LD_DIST_W = MicroAPI::LoadDist::DIST_UNPACK4_B8;
     static constexpr uint64_t MX_GROUPSIZE = 32UL;
     static constexpr uint64_t BLOCK_CUBE = 16UL;
     __aicore__ inline static void Run(
@@ -375,42 +373,110 @@ struct AntiquantImpl<
             Cmct::Gemm::Get<2>(shape) * C0<DtypeOut>, static_cast<uint64_t>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>));
         uint64_t innerDstStride = VECTOR_REG_SIZE<DtypeOut, DtypeIn> * Policy::BUF_NUM;
         uint64_t groupDstStride = loopInnerNum * innerDstStride;
-        uint64_t loopN1DstStride = loopGroupNum * groupDstStride;
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<DtypeOut> antiQuantScaleVreg;
-            MicroAPI::RegTensor<DtypeIn> weightFp4Vreg;
-            MicroAPI::RegTensor<DtypeOut> weightF16Vreg;
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            __ubuf__ DtypeOut* antiQuantScalePhyAddr;
-            for (uint16_t loopN1Idx = 0; loopN1Idx < loopN1; loopN1Idx++) {
-                for (uint16_t loopGroupIdx = 0; loopGroupIdx < loopGroupNum; loopGroupIdx++) {
-                    // DIST_BLK 的含义为读取一个32B(即16个数)的数据，广播到256B(即128个数)
-                    // MX NZ场景下，scale Stride固定为（k/groupSize,128）
-                    antiQuantScalePhyAddr = antiQuantScaleBasePhyAddr + loopN1Idx * BLOCK_CUBE +
-                                            loopGroupIdx * 128; // 128，相邻group的scale Stride为128
-                    MicroAPI::LoadAlign<DtypeOut, LD_DIST_SCALE>(antiQuantScaleVreg, antiQuantScalePhyAddr);
-                    for (uint16_t loopGroupInnerIdx = 0; loopGroupInnerIdx < loopInnerNum; loopGroupInnerIdx++) {
-                        // DIST_UNPACK4_B8 表示搬运模式如下，Vn中一个数字4bit(0.5Byte)：
-                        // Vn 0 1 2 3 4 5 6 7 8 9 a b c d e f
-                        // Vd 0 1 x x x x x x 2 3 x x x x x x
-                        // 4bit物理地址位移 = 逻辑索引 >> 1
-                        MicroAPI::AddrReg weightFp4AddrReg = MicroAPI::CreateAddrReg<DtypeIn>(
-                            loopN1Idx, BLOCK_CUBE * Policy::K >> 1, loopGroupIdx, MX_GROUPSIZE * BLOCK_CUBE >> 1,
-                            loopGroupInnerIdx, VECTOR_REG_SIZE<DtypeOut, DtypeIn> >> 1);
-                        MicroAPI::LoadAlign<DtypeIn, LD_DIST_W>(
-                            weightFp4Vreg, (__ubuf__ DtypeIn*)weightLowBitPhyAddr, weightFp4AddrReg);
-                        CastLowBitToF16(weightF16Vreg, weightFp4Vreg, maskAll);
-                        MicroAPI::Mul(weightF16Vreg, weightF16Vreg, antiQuantScaleVreg, maskAll);
+        bool isGroupAligned = (Cmct::Gemm::Get<1>(shape) == Cmct::Gemm::Get<2>(shape) * loopGroupNum);
+        uint64_t loopN1DstStride =
+            isGroupAligned ? loopGroupNum * groupDstStride
+                           : Cmct::CeilAlign(Cmct::Gemm::Get<1>(shape), BLOCK_CUBE) * BLOCK_CUBE * Policy::BUF_NUM;
+        Params p = Params{
+            .antiQuantScaleBasePhyAddr = antiQuantScaleBasePhyAddr,
+            .weightLowBitPhyAddr = weightLowBitPhyAddr,
+            .weightHighBitPhyAddr = weightHighBitPhyAddr,
+            .loopN1 = loopN1,
+            .loopGroupNum = loopGroupNum,
+            .loopInnerNum = loopInnerNum,
+            .innerDstStride = innerDstStride,
+            .groupDstStride = groupDstStride,
+            .loopN1DstStride = loopN1DstStride};
+        if (isGroupAligned) {
+            RunWithoutMemBar(p);
+        } else {
+            RunWithMemBar(p);
+        }
+    }
 
-                        MicroAPI::AddrReg weightHighBitPhyAddrReg = MicroAPI::CreateAddrReg<DtypeOut>(
-                            loopN1Idx, loopN1DstStride, loopGroupIdx, groupDstStride, loopGroupInnerIdx,
-                            innerDstStride);
-                        MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
-                            weightHighBitPhyAddr, weightF16Vreg, weightHighBitPhyAddrReg, maskAll);
-                    }
+private:
+    struct Params {
+        __ubuf__ DtypeOut* antiQuantScaleBasePhyAddr;
+        __ubuf__ DtypeIn* weightLowBitPhyAddr;
+        __ubuf__ DtypeOut* weightHighBitPhyAddr;
+        uint16_t loopN1;
+        uint16_t loopGroupNum;
+        uint16_t loopInnerNum;
+        uint64_t innerDstStride;
+        uint64_t groupDstStride;
+        uint64_t loopN1DstStride;
+    };
+
+    __simd_vf__ inline static void RunWithoutMemBar(const Params p)
+    {
+        MicroAPI::RegTensor<DtypeOut> antiQuantScaleVreg;
+        MicroAPI::RegTensor<DtypeIn> weightFp4Vreg;
+        MicroAPI::RegTensor<DtypeOut> weightF16Vreg;
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        __ubuf__ DtypeOut* antiQuantScalePhyAddr;
+        for (uint16_t loopN1Idx = 0; loopN1Idx < p.loopN1; loopN1Idx++) {
+            for (uint16_t loopGroupIdx = 0; loopGroupIdx < p.loopGroupNum; loopGroupIdx++) {
+                // DIST_BLK 的含义为读取一个32B(即16个数)的数据，广播到256B(即128个数)
+                // MX NZ场景下，scale Stride固定为（k/groupSize,128）
+                antiQuantScalePhyAddr = p.antiQuantScaleBasePhyAddr + loopN1Idx * BLOCK_CUBE +
+                                        loopGroupIdx * 128; // 128，相邻group的scale Stride为128
+                MicroAPI::LoadAlign<DtypeOut, MicroAPI::LoadDist::DIST_BLK>(antiQuantScaleVreg, antiQuantScalePhyAddr);
+                for (uint16_t loopGroupInnerIdx = 0; loopGroupInnerIdx < p.loopInnerNum; loopGroupInnerIdx++) {
+                    // DIST_UNPACK4_B8 表示搬运模式如下，Vn中一个数字4bit(0.5Byte)：
+                    // Vn 0 1 2 3 4 5 6 7 8 9 a b c d e f
+                    // Vd 0 1 x x x x x x 2 3 x x x x x x
+                    // 4bit物理地址位移 = 逻辑索引 >> 1
+                    MicroAPI::AddrReg weightFp4AddrReg = MicroAPI::CreateAddrReg<DtypeIn>(
+                        loopN1Idx, (BLOCK_CUBE * Policy::K) >> 1, loopGroupIdx, (MX_GROUPSIZE * BLOCK_CUBE) >> 1,
+                        loopGroupInnerIdx, VECTOR_REG_SIZE<DtypeOut, DtypeIn> >> 1);
+                    MicroAPI::LoadAlign<DtypeIn, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
+                        weightFp4Vreg, p.weightLowBitPhyAddr, weightFp4AddrReg);
+                    CastLowBitToF16(weightF16Vreg, weightFp4Vreg, maskAll);
+                    MicroAPI::Mul(weightF16Vreg, weightF16Vreg, antiQuantScaleVreg, maskAll);
+
+                    MicroAPI::AddrReg weightHighBitPhyAddrReg = MicroAPI::CreateAddrReg<DtypeOut>(loopN1Idx, 
+                        p.loopN1DstStride, loopGroupIdx, p.groupDstStride, loopGroupInnerIdx, p.innerDstStride);
+                    MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                        p.weightHighBitPhyAddr, weightF16Vreg, weightHighBitPhyAddrReg, maskAll);
                 }
             }
+        }
+    }
+
+    __simd_vf__ inline static void RunWithMemBar(const Params p)
+    {
+        MicroAPI::RegTensor<DtypeOut> antiQuantScaleVreg;
+        MicroAPI::RegTensor<DtypeIn> weightFp4Vreg;
+        MicroAPI::RegTensor<DtypeOut> weightF16Vreg;
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        __ubuf__ DtypeOut* antiQuantScalePhyAddr;
+        for (uint16_t loopN1Idx = 0; loopN1Idx < p.loopN1; loopN1Idx++) {
+            for (uint16_t loopGroupIdx = 0; loopGroupIdx < p.loopGroupNum; loopGroupIdx++) {
+                // DIST_BLK 的含义为读取一个32B(即16个数)的数据，广播到256B(即128个数)
+                // MX NZ场景下，scale Stride固定为（k/groupSize,128）
+                antiQuantScalePhyAddr = p.antiQuantScaleBasePhyAddr + loopN1Idx * BLOCK_CUBE +
+                                        loopGroupIdx * 128; // 128，相邻group的scale Stride为128
+                MicroAPI::LoadAlign<DtypeOut, MicroAPI::LoadDist::DIST_BLK>(antiQuantScaleVreg, antiQuantScalePhyAddr);
+                for (uint16_t loopGroupInnerIdx = 0; loopGroupInnerIdx < p.loopInnerNum; loopGroupInnerIdx++) {
+                    // DIST_UNPACK4_B8 表示搬运模式如下，Vn中一个数字4bit(0.5Byte)：
+                    // Vn 0 1 2 3 4 5 6 7 8 9 a b c d e f
+                    // Vd 0 1 x x x x x x 2 3 x x x x x x
+                    // 4bit物理地址位移 = 逻辑索引 >> 1
+                    MicroAPI::AddrReg weightFp4AddrReg = MicroAPI::CreateAddrReg<DtypeIn>(
+                        loopN1Idx, (BLOCK_CUBE * Policy::K) >> 1, loopGroupIdx, (MX_GROUPSIZE * BLOCK_CUBE) >> 1,
+                        loopGroupInnerIdx, VECTOR_REG_SIZE<DtypeOut, DtypeIn> >> 1);
+                    MicroAPI::LoadAlign<DtypeIn, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
+                        weightFp4Vreg, p.weightLowBitPhyAddr, weightFp4AddrReg);
+                    CastLowBitToF16(weightF16Vreg, weightFp4Vreg, maskAll);
+                    MicroAPI::Mul(weightF16Vreg, weightF16Vreg, antiQuantScaleVreg, maskAll);
+
+                    MicroAPI::AddrReg weightHighBitPhyAddrReg = MicroAPI::CreateAddrReg<DtypeOut>(loopN1Idx, 
+                        p.loopN1DstStride, loopGroupIdx, p.groupDstStride, loopGroupInnerIdx, p.innerDstStride);
+                    MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
+                        p.weightHighBitPhyAddr, weightF16Vreg, weightHighBitPhyAddrReg, maskAll);
+                }
+            }
+            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
         }
     }
 };
